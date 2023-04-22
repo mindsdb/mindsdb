@@ -46,27 +46,34 @@ class HackerNewsHandler(APIHandler):
         )
 
     def call_hackernews_api(self, method_name: str = None, params: dict = None):
-        if method_name == 'get_top_stories':
-            url = f'{self.base_url}/topstories.json'
-            response = requests.get(url)
-            data = response.json()
-            df = pd.DataFrame(data, columns=['id'])
-        elif method_name == 'get_comments':
-            item_id = params.get('item_id')
-            url = f'{self.base_url}/item/{item_id}.json'
-            response = requests.get(url)
-            item_data = response.json()
-            if 'kids' in item_data:
-                comments_data = []
-                for comment_id in item_data['kids']:
-                    url = f'{self.base_url}/item/{comment_id}.json'
+            if method_name == 'get_top_stories':
+                url = f'{self.base_url}/topstories.json'
+                response = requests.get(url)
+                data = response.json()
+                stories_data = []
+                for story_id in data:
+                    url = f'{self.base_url}/item/{story_id}.json'
                     response = requests.get(url)
-                    comment_data = response.json()
-                    comments_data.append(comment_data)
-                df = pd.DataFrame(comments_data)
+                    story_data = response.json()
+                    stories_data.append(story_data)
+                df = pd.DataFrame(stories_data, columns=['id', 'time', 'title', 'url', 'score', 'descendants'])
+            elif method_name == 'get_comments':
+                item_id = params.get('item_id')
+                url = f'{self.base_url}/item/{item_id}.json'
+                response = requests.get(url)
+                item_data = response.json()
+                if 'kids' in item_data:
+                    comments_data = []
+                    for comment_id in item_data['kids']:
+                        url = f'{self.base_url}/item/{comment_id}.json'
+                        response = requests.get(url)
+                        comment_data = response.json()
+                        comments_data.append(comment_data)
+                    df = pd.DataFrame(comments_data)
+                else:
+                    df = pd.DataFrame()
             else:
-                df = pd.DataFrame()
-        else:
-            raise ValueError(f'Unknown method_name: {method_name}')
+                raise ValueError(f'Unknown method_name: {method_name}')
 
-        return df
+            return df
+

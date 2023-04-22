@@ -2,169 +2,145 @@ import pandas as pd
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-
-
-
+from typing import List, Tuple
+import requests
 class StoriesTable(APITable):
-
-    def __init__(self, handler):
-        super().__init__(handler)
-
-        self.name = 'stories'
-        self.primary_key = 'id'
-
-    def get(self, select=None, where=None, group_by=None, having=None, order_by=None, limit=None):
-
-        if 'id' not in select:
-            select.append('id')
-
-        if not where:
-            where = []
-
-        if group_by or having or order_by:
-            raise NotImplementedError('This method does not support group_by, having, or order_by arguments')
-
-        query_string = f'get_top_stories({where})'
-        response = self.handler.native_query(query_string)
-
-        data_frame = response.data_frame
-
-        data_frame = data_frame[select]
-
-        if limit:
-            data_frame = data_frame.head(limit)
-
-        return data_frame
-
-class CommentsTable(APITable):
-
-    def __init__(self, handler):
-        super().__init__(handler)
-
-        self.name = 'comments'
-        self.primary_key = 'id'
-
-    def get(self, select=None, where=None, group_by=None, having=None, order_by=None, limit=None):
-
-        if 'id' not in select:
-            select.append('id')
-
-        item_id = None
-        for condition in where:
-            if condition[0] == 'item_id':
-                item_id = condition[2]
-                break
-
-        if item_id is None:
-            raise ValueError("An 'item_id' must be provided in the 'where' condition")
-
-        if group_by or having or order_by:
-            raise NotImplementedError('This method does not support group_by, having, or order_by arguments')
-
-        query_string = f'get_comments(item_id={item_id})'
-        response = self.handler.native_query(query_string)
-
-        data_frame = response.data_frame
-
-        data_frame = data_frame[select]
-
-        if limit:
-            data_frame = data_frame.head(limit)
-
-        return data_frame
-
-
-
-class PostTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
-        '''Select data from the post table and return it as a pandas DataFrame.
+        """Select data from the stories table and return it as a pandas DataFrame.
         Args:
             query (ast.Select): The SQL query to be executed.
         Returns:
             pandas.DataFrame: A pandas DataFrame containing the selected data.
-        '''
+        """
+        hn_handler = self.handler
 
-        # Get the query parameters from the WHERE clause
-        author = None
-        score = None
-        conditions = self.extract_comparison_conditions(query.where)
-        for condition in conditions:
-            if condition[1] == 'author':
-                author = condition[2]
-            elif condition[1] == 'score':
-                score = int(condition[2])
+        # Extract the limit value from the SQL query, if it exists
+        limit = None
+        if query.limit is not None:
+            limit = query.limit.value
 
-        # Retrieve data from the Hacker News API
-        url = 'https://hacker-news.firebaseio.com/v0/topstories.json'
+        # Call the Hacker News API to get the top stories
+        url = f'{hn_handler.base_url}/topstories.json'
         response = requests.get(url)
-        ids = response.json()
+        data = response.json()
 
-        result = []
-        for post_id in ids:
-            post_url = f'https://hacker-news.firebaseio.com/v0/item/{post_id}.json'
-            post_response = requests.get(post_url)
-            post = post_response.json()
+        # Fetch the details of the top stories, up to the specified limit
+        stories_data = []
+        for story_id in data[:limit]:
+            url = f'{hn_handler.base_url}/item/{story_id}.json'
+            response = requests.get(url)
+            story_data = response.json()
+            stories_data.append(story_data)
 
-            # Filter by author and score if specified
-            if (not author or post.get('by') == author) and (score is None or post.get('score') == score):
-                data = {
-                    'id': post.get('id'),
-                    'title': post.get('title'),
-                    'url': post.get('url'),
-                    'text': post.get('text'),
-                    'author': post.get('by'),
-                    'score': post.get('score'),
-                    'time': post.get('time'),
-                    'descendants': post.get('descendants'),
-                }
-                result.append(data)
+        # Create a DataFrame from the fetched data
+        df = pd.DataFrame(stories_data, columns=['id', 'time', 'title', 'url', 'score', 'descendants'])
 
-        result = pd.DataFrame(result)
-        self.filter_columns(result, query)
-        return result
+        # Apply any WHERE clauses in the SQL query to the DataFrame
+        conditions = extract_comparison_conditions(query.where)
+        for condition in conditions:
+            if condition[0] == '=' and condition[1] == 'id':
+                df = df[df['id'] == int(condition[2])]
+            elif condition[0] == '>' and condition[1] == 'time':
+                timestamp = int(condition[2])
+                df = df[df['time'] > timestamp]
+
+        # Filter the columns in the DataFrame according to the SQL query
+        self.filter_columns(df, query)
+
+        return df
 
 
     def get_columns(self):
-        '''Get the list of column names for the post table.
+        """Get the list of column names for the stories table.
         Returns:
-            list: A list of column names for the post table.
-        '''
+            list: A list of column names for the stories table.
+        """
+        return ['id', 'time', 'title', 'url', 'score', 'descendants']
+
+    def filter_columns(self, df, query):
+        """Filter the columns in the DataFrame according to the SQL query.
+        Args:
+            df (pandas.DataFrame): The DataFrame to filter.
+            query (ast.Select): The SQL query to apply to the DataFrame.
+        """
+        columns = []
+        for target in query.targets:
+            if isinstance(target, ast.Star):
+                columns = self.get_columns()
+                break
+            elif isinstance(target, ast.Identifier):
+                columns.append(target.value)
+        df = df[columns]
+        return df
+
+
+class CommentsTable(APITable):
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Select data from the comments table and return it as a pandas DataFrame.
+        Args:
+            query (ast.Select): The SQL query to be executed.
+        Returns:
+            pandas.DataFrame: A pandas DataFrame containing the selected data.
+        """
+        hn_handler = self.handler
+
+        # Get the limit value from the SQL query, if it exists
+        limit = None
+        if query.limit is not None:
+            limit = query.limit.value
+
+        # Get the item ID from the SQL query
+        item_id = None
+        conditions = extract_comparison_conditions(query.where)
+        for condition in conditions:
+            if condition[0] == '=' and condition[1] == 'item_id':
+                item_id = condition[2]
+
+        if item_id is None:
+            raise ValueError('Item ID is missing in the SQL query')
+
+        # Call the Hacker News API to get the comments for the specified item
+        comments_df = hn_handler.call_hackernews_api('get_comments', params={'item_id': item_id})
+
+        # Fill NaN values with 'deleted'
+        comments_df = comments_df.fillna('deleted')
+        # Filter the columns to those specified in the SQL query
+        self.filter_columns(comments_df, query)
+
+        # Limit the number of results if necessary
+        if limit is not None:
+            comments_df = comments_df.head(limit)
+
+        return comments_df
+    def get_columns(self) -> List[str]:
+        """Get the list of column names for the comments table.
+        Returns:
+            list: A list of column names for the comments table.
+        """
         return [
             'id',
-            'title',
-            'url',
+            'by',
+            'parent',
             'text',
-            'author',
-            'score',
             'time',
-            'descendants',
+            'type',
         ]
 
-    def filter_columns(self, result: pd.DataFrame, query: ast.Select = None):
+    def filter_columns(self, result: pd.DataFrame, query: ast.Select = None) -> None:
+        """Filter the columns of a DataFrame to those specified in an SQL query.
+        Args:
+            result (pandas.DataFrame): The DataFrame to filter.
+            query (ast.Select): The SQL query containing the column names to filter on.
+        """
+        if query is None:
+            return
+
         columns = []
-        if query is not None:
-            for target in query.targets:
-                if isinstance(target, ast.Star):
-                    columns = self.get_columns()
-                    break
-                elif isinstance(target, ast.Identifier):
-                    columns.append(target.parts[-1])
-                else:
-                    raise NotImplementedError
-        else:
-            columns = self.get_columns()
+        for target in query.targets:
+            if isinstance(target, ast.Star):
+                return
+            elif isinstance(target, ast.Identifier):
+                columns.append(target.value)
 
-        columns = [name.lower() for name in columns]
-
-        if len(result) == 0:
-            result = pd.DataFrame([], columns=columns)
-        else:
-            for col in set(columns) & set(result.columns) ^ set(columns):
-                result[col] = None
-
+        if len(columns) > 0:
             result = result[columns]
-
-        if query is not None and query.limit is not None:
-            return result.head(query.limit.value)
-
-        return result

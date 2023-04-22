@@ -1,15 +1,25 @@
 
 import ast
+from collections import OrderedDict
 from typing import Any
 
 import pandas as pd
+from requests import Response
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from newsapi import NewsApiClient, NewsAPIException
+from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.microservices_grpc.db.common_pb2 import StatusResponse
 import urllib
+from mindsdb.utilities.config import Config
+import os
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+
+
 
 class NewsAPIArticleTable(APITable):
 
@@ -59,7 +69,7 @@ class NewsAPIArticleTable(APITable):
             else: 
                 raise ValueError("Multiple order by condition is not supported by the API")
 
-        result = self.handler.call_newsapi_api(params=params)
+        result = self.handler.call_application_api(params=params)
 
         selected_columns = []
         for target in query.targets:
@@ -90,28 +100,67 @@ class NewsAPIArticleTable(APITable):
             'excludedDomains',
         ]
 
-class NewsAPIHandler(APIHandler):
+class NewsAPIHandler(DatabaseHandler):
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
+        print(f"TEST ---- {name}")
         self.api = None
-        self.api = NewsApiClient(api_key=kwargs['api_key'])
+        self._tables = {}
+
+        args = kwargs.get('connection_data', {})
+        self.connection_args = {}
+        handler_config = Config().get('newsAPI_handler', {})
+        for k in ['api_key']:
+            if k in args:
+                self.connection_args[k] = args[k]
+            elif f'NEWSAPI_{k.upper()}' in os.environ:
+                self.connection_args[k] = os.environ[f'NEWSAPI_{k.upper()}']
+            elif k in handler_config:
+                self.connection_args[k] = handler_config[k]
 
         self.is_connected = False
 
         article = NewsAPIArticleTable(self)
-        self._register_table('tweets', article)
+        self._register_table('article', article)
+
+    def __del__(self):
+        if self.is_connected is True:
+            self.disconnect()
+
+    def disconnect(self):
+        """
+        Close any existing connections.
+        """
+
+        if self.is_connected is False:
+            return
+
+        self.is_connected = False
+        return self.is_connected
+    
+    def create_connection(self):
+        return NewsApiClient(**self.connection_args)
+
     
     def _register_table(self, table_name: str, table_class: Any):
-        return super()._register_table(table_name, table_class)
+        self._tables[table_name] = table_class
 
-    def connect(self):
-        return self.api
+    def connect(self) -> HandlerStatusResponse:
+        if self.is_connected is True:
+            return self.api
+
+        self.api = self.create_connection()
+
+        self.is_connected = True
+        return HandlerStatusResponse(success=True)
     
     def check_connection(self) -> HandlerStatusResponse:
-        response = StatusResponse(False)
+        response = HandlerStatusResponse(False)
 
         try:
+            self.connect()
+            
             self.api.get_top_headlines()
             response.success = True
 
@@ -122,8 +171,10 @@ class NewsAPIHandler(APIHandler):
     
     def native_query(self, query: Any) -> HandlerResponse:
         return super().native_query(query)
+
+
     
-    def call_newsapi_api(self, method_name:str = None, params:dict = None):
+    def call_application_api(self, method_name:str = None, params:dict = None) -> pd.DataFrame:
         # This will implement api base on the native query
         # By processing native query to convert it to api callable parameters
         pages = params['pages']
@@ -131,7 +182,7 @@ class NewsAPIHandler(APIHandler):
         
         for page in range(pages):
             params['pages'] = page
-            result = self.api.get_everything(params)
+            result = self.api.get_everything(**params)
             articles = result['articles']
             articles['source_id'] = articles['source']['id']
             articles['source_name'] = articles['source']['name']
@@ -145,3 +196,13 @@ class NewsAPIHandler(APIHandler):
             
         return pd.DataFrame(data=data)
         
+connection_args = OrderedDict(
+    api_key={
+        'type': ARG_TYPE.STR,
+        'description': 'The API key for the Airtable API.'
+    }
+)
+
+connection_args_example = OrderedDict(
+    api_key='knlsndlknslk'
+)

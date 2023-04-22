@@ -493,6 +493,15 @@ class TestJobs(BaseExecutorDummyML):
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_jobs(self, data_handler):
+        from mindsdb.interfaces.jobs.scheduler import Scheduler
+        scheduler = Scheduler({})
+
+        try:
+            self.jobs_test(data_handler, scheduler)
+        finally:
+            scheduler.stop_thread()
+
+    def jobs_test(self, data_handler, scheduler):
         df1 = pd.DataFrame([
             {'a': 1, 'c': 1, 'b': dt.datetime(2020, 1, 1)},
             {'a': 2, 'c': 1, 'b': dt.datetime(2020, 1, 2)},
@@ -546,8 +555,7 @@ class TestJobs(BaseExecutorDummyML):
 
         # run scheduler once
         data_handler.reset_mock()
-        from mindsdb.interfaces.jobs.scheduler import Scheduler
-        scheduler = Scheduler({})
+
         scheduler.check_timetable()
 
         # check query to integration

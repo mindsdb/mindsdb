@@ -1,33 +1,16 @@
-import re
-import os
-import datetime as dt
-import ast
-import time
-from collections import defaultdict
-import pytz
-import io
 import requests
-
 import pandas as pd
-from yarl import URL
-
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
-
 from mindsdb_sql.parser import ast
-
-from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from mindsdb.integrations.utilities.date_utils import parse_utc_date
-
-from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-    RESPONSE_TYPE
-)
+from mindsdb.integrations.libs.api_handler import APIHandler, APITable
+from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse, HandlerResponse as Response, RESPONSE_TYPE
 from .hn_table import StoriesTable, CommentsTable
+
 class HackerNewsHandler(APIHandler):
-    """A class for handling connections and interactions with the Hacker News API."""
+    """
+    A class for handling connections and interactions with the Hacker News API.
+    """
 
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
@@ -40,12 +23,20 @@ class HackerNewsHandler(APIHandler):
         comments = CommentsTable(self)
         self._register_table('comments', comments)
 
+    def connect(self):
+        return
+
     def check_connection(self) -> StatusResponse:
-        response = StatusResponse(True)
-        return response
+        try:
+            response = requests.get(f'{self.base_url}/maxitem.json')
+            response.raise_for_status()
+            return StatusResponse(True)
+        except Exception as e:
+            log.error(f'Error checking connection: {e}')
+            return StatusResponse(False, str(e))
 
     def native_query(self, query_string: str = None):
-        method_name, params = FuncParser().from_string(query_string)
+        method_name, params = self.parse_native_query(query_string)
 
         df = self.call_hackernews_api(method_name, params)
 
@@ -54,7 +45,7 @@ class HackerNewsHandler(APIHandler):
             data_frame=df
         )
 
-    def call_hackernews_api(self, method_name: str = None, params: dict = None, filters: list = None):
+    def call_hackernews_api(self, method_name: str = None, params: dict = None):
         if method_name == 'get_top_stories':
             url = f'{self.base_url}/topstories.json'
             response = requests.get(url)
@@ -79,4 +70,3 @@ class HackerNewsHandler(APIHandler):
             raise ValueError(f'Unknown method_name: {method_name}')
 
         return df
-

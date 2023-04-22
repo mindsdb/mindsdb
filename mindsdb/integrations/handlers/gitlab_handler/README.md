@@ -42,3 +42,7 @@ SELECT number, state, creator, assignee, title, labels
   ORDER BY created ASC, creator DESC
   LIMIT 10
 ~~~~
+
+## What is next??
+- GitLab Merge Requests table for a given Repository 
+- GitLab ....

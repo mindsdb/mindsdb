@@ -92,8 +92,8 @@ class GitlabIssuesTable(APITable):
 
         gitlab_issues_df = pd.DataFrame(columns=self.get_columns())
 
-        n = True
-        while n:
+        start = True
+        while start:
             try:
                 issues = self.handler.connection.projects.get(
                     self.handler.repository
@@ -108,7 +108,7 @@ class GitlabIssuesTable(APITable):
                             pd.DataFrame(
                                 [
                                     {
-                                        "issue_id": issue.iid,
+                                        "number": issue.iid,
                                         "title": issue.title,
                                         "state": issue.state,
                                         "creator": issue.author["name"],
@@ -134,16 +134,15 @@ class GitlabIssuesTable(APITable):
                         ]
                     )
 
-                    if len(issues) <= total_results:
-                        n = False
-                
                     if gitlab_issues_df.shape[0] >= total_results:
                         break
             except IndexError:
                 break
-
+            
             if gitlab_issues_df.shape[0] >= total_results:
                 break
+            else:
+                start = False
 
         selected_columns = []
         for target in query.targets:
@@ -178,7 +177,7 @@ class GitlabIssuesTable(APITable):
         """
 
         return [
-            "issue_id",
+            "number",
             "title",
             "state",
             "creator",

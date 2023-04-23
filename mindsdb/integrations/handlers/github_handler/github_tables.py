@@ -315,3 +315,158 @@ class GithubIssuesTable(APITable):
             "updated",
             "closed",
         ]
+
+
+class GithubPullRequestsTable(APITable):
+    """The GitHub Issue Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Pulls data from the GitHub "List repository pull requests" API
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+            GitHub pull requests matching the query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+
+        conditions = extract_comparison_conditions(query.where)
+
+        total_results = 20
+
+        self.handler.connect()
+
+        github_pull_requests_df = pd.DataFrame(columns=self.get_columns())
+
+        start = 0
+
+        while True:
+            try:
+                for a_pull in self.handler.connection.get_repo(
+                    self.handler.repository
+                ).get_pulls(state="all")[start : start + 10]:
+
+                    github_pull_requests_df = pd.concat(
+                        [
+                            github_pull_requests_df,
+                            pd.DataFrame(
+                                [
+                                    {
+                                        "number": a_pull.number,
+                                        "title": a_pull.title,
+                                        "state": a_pull.state,
+                                        "creator": a_pull.user.login,
+                                        "labels": ",".join(
+                                            [label.name for label in a_pull.labels]
+                                        ),
+                                        "milestone": a_pull.milestone.title
+                                        if a_pull.milestone
+                                        else None,
+                                        "assignees": ",".join(
+                                            [
+                                                assignee.login
+                                                for assignee in a_pull.assignees
+                                            ]
+                                        ),
+                                        "reviewers": ",".join(
+                                            [
+                                                reviewer.login
+                                                for reviewer in a_pull.requested_reviewers
+                                            ]
+                                        ),
+                                        "teams": ",".join(
+                                            [
+                                                team.name
+                                                for team in a_pull.requested_teams
+                                            ]
+                                        ),
+                                        "comments": a_pull.comments,
+                                        "review_comments": a_pull.review_comments,
+                                        "draft": a_pull.draft,
+                                        "is_merged": a_pull.merged,
+                                        "mergeable": a_pull.mergeable,
+                                        "mergeable_state": a_pull.mergeable_state,
+                                        "merged_by": a_pull.merged_by.login
+                                        if a_pull.merged_by
+                                        else None,
+                                        "rebaseable": a_pull.rebaseable,
+                                        "body": a_pull.body,
+                                        "base": a_pull.base.ref
+                                        if a_pull.base
+                                        else None,
+                                        "head": a_pull.head.ref
+                                        if a_pull.head
+                                        else None,
+                                        "commits": a_pull.commits,
+                                        "additions": a_pull.additions,
+                                        "deletions": a_pull.deletions,
+                                        "changed_files": a_pull.changed_files,
+                                        "created": a_pull.created_at,
+                                        "updated": a_pull.updated_at,
+                                        "merged": a_pull.merged_at,
+                                        "closed": a_pull.closed_at,
+                                    }
+                                ]
+                            ),
+                        ]
+                    )
+
+                    if github_pull_requests_df.shape[0] >= total_results:
+                        break
+            except IndexError:
+                break
+
+            if github_pull_requests_df.shape[0] >= total_results:
+                break
+            else:
+                start += 10
+
+        return github_pull_requests_df
+
+    def get_columns(self) -> List[str]:
+        """Gets all columns to be returned in pandas DataFrame responses
+
+        Returns
+        -------
+        List[str]
+            List of columns
+        """
+        return [
+            "number",
+            "title",
+            "state",
+            "creator",
+            "labels",
+            "milestone",
+            "assignees",
+            "reviewers",
+            "teams",
+            "comments",
+            "review_comments",
+            "draft",
+            "is_merged",
+            "mergeable",
+            "mergeable_state",
+            "merged_by",
+            "rebaseable",
+            "body",
+            "base",
+            "head",
+            "commits",
+            "additions",
+            "deletions",
+            "changed_files",
+            "created",
+            "updated",
+            "merged",
+            "closed",
+        ]

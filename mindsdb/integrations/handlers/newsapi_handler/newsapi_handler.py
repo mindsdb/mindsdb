@@ -1,7 +1,7 @@
 
-import ast
 from collections import OrderedDict
 from typing import Any
+from mindsdb_sql.parser import ast
 
 import pandas as pd
 from requests import Response
@@ -10,7 +10,7 @@ from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncPars
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from newsapi import NewsApiClient, NewsAPIException
+from newsapi import NewsApiClient
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.microservices_grpc.db.common_pb2 import StatusResponse
@@ -18,6 +18,7 @@ import urllib
 from mindsdb.utilities.config import Config
 import os
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from mindsdb_sql import parse_sql
 
 
 
@@ -35,7 +36,7 @@ class NewsAPIArticleTable(APITable):
         for op, arg1, arg2 in conditions:
 
             if arg1 == 'query':
-                params['query'] = urllib.parse.quote_plus(arg2)
+                params['q'] = urllib.parse.quote_plus(arg2)
             elif arg1 == 'sources':
                 if len(arg2.split(",")) > 20:
                     raise ValueError("The number of items it sources should be 20 or less")
@@ -54,18 +55,23 @@ class NewsAPIArticleTable(APITable):
         
         if query.limit:
             if query.limit.value > 100:
-                params['page_size'], params['page'] = divmod(query.limit.value, 100)
-            params['page_size'] = query.limit.value
-            params['page'] = 1
+                params['page'], params['page_size'] = divmod(query.limit.value, 100)
+                if params['page_size']  == 0:
+                    params['page_size'] = 100
+                print("Page Size : ", params['page'])
+            else: 
+                params['page_size'] = query.limit.value
+                params['page'] = 1
         else:
             params['page_size'] = 100
             params['page'] = 1
         
         if query.order_by:
+            print("Order by : ", query.order_by[0])
             if len(query.order_by) == 1:
-                if query.order_by[0] not in ['query', 'publishedAt']:
+                if (query.order_by[0] in ['query', 'publishedAt']):
                     raise NotImplementedError("Not supported ordering by this field")
-                params['sortBy'] == query.order_by[0]
+                params['sort_by'] = str(query.order_by[0])
             else: 
                 raise ValueError("Multiple order by condition is not supported by the API")
 
@@ -100,7 +106,7 @@ class NewsAPIArticleTable(APITable):
             'excludedDomains',
         ]
 
-class NewsAPIHandler(DatabaseHandler):
+class NewsAPIHandler(APIHandler):
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
@@ -111,6 +117,7 @@ class NewsAPIHandler(DatabaseHandler):
         args = kwargs.get('connection_data', {})
         self.connection_args = {}
         handler_config = Config().get('newsAPI_handler', {})
+        
         for k in ['api_key']:
             if k in args:
                 self.connection_args[k] = args[k]
@@ -120,6 +127,7 @@ class NewsAPIHandler(DatabaseHandler):
                 self.connection_args[k] = handler_config[k]
 
         self.is_connected = False
+        self.api = self.create_connection()
 
         article = NewsAPIArticleTable(self)
         self._register_table('article', article)
@@ -146,6 +154,9 @@ class NewsAPIHandler(DatabaseHandler):
     def _register_table(self, table_name: str, table_class: Any):
         self._tables[table_name] = table_class
 
+    def get_table(self, table_name: str):
+        return self._tables.get(table_name)
+
     def connect(self) -> HandlerStatusResponse:
         if self.is_connected is True:
             return self.api
@@ -164,36 +175,48 @@ class NewsAPIHandler(DatabaseHandler):
             self.api.get_top_headlines()
             response.success = True
 
-        except NewsAPIException as e:
+        except Exception as e:
             response.error_message = e.message
 
         return response
     
-    def native_query(self, query: Any) -> HandlerResponse:
-        return super().native_query(query)
+    def native_query(self, query: Any):
 
-
+        ast = parse_sql(query, dialect="mindsdb")
+        table = self.get_table("article")
+        data = table.select(ast)
+        print(data)
+        return HandlerResponse(
+            RESPONSE_TYPE.TABLE,
+            data_frame=data
+        )
     
     def call_application_api(self, method_name:str = None, params:dict = None) -> pd.DataFrame:
         # This will implement api base on the native query
         # By processing native query to convert it to api callable parameters
-        pages = params['pages']
+        if self.is_connected is False:
+            self.connect()
+            
+        print("Pages : ", params)
+        pages = params['page']
         data = []
+        print("Pages : ", params)
         
-        for page in range(pages):
-            params['pages'] = page
+        for page in range(1, pages+1):
+            params['page'] = page
             result = self.api.get_everything(**params)
             articles = result['articles']
-            articles['source_id'] = articles['source']['id']
-            articles['source_name'] = articles['source']['name']
-            del articles['source']
-            articles['query'] = params['query']
-            articles['searchIn'] = params['qintitle']
-            articles['domains'] = params['domains']
-            articles['excludedDomains'] = params['exclude_domains']
-
-            data.extend(articles)
-            
+            for article in articles:
+                print("Result : ", articles)
+                article['source_id'] = article['source']['id']
+                article['source_name'] = article['source']['name']
+                del article['source']
+                article['query'] = params.get('q')
+                article['searchIn'] = params.get('searchIn')
+                article['domains'] = params.get('domains')
+                article['excludedDomains'] = params.get('exclude_domains')
+                data.append(article)
+        
         return pd.DataFrame(data=data)
         
 connection_args = OrderedDict(

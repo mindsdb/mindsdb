@@ -1,79 +1,75 @@
-import requests
+import os
 import pandas as pd
-from mindsdb.utilities import log
+from qbosdk import QuickbooksOnlineSDK
+from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+    RESPONSE_TYPE
+)
 from mindsdb.utilities.config import Config
-from mindsdb_sql.parser import ast
-from mindsdb.integrations.libs.api_handler import APIHandler, APITable
-from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse, HandlerResponse as Response, RESPONSE_TYPE
-from .quickbooks_table import StoriesTable, CommentsTable
+from mindsdb.utilities import log
 
-class QuickBooksHandler(APIHandler):
-    """
-    A class for handling connections and interactions with the Hacker News API.
-    """
+from .quickbooks_table import AccountsTable
+
+
+class QuickbooksHandler(APIHandler):
 
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
 
-        self.base_url = 'https://hacker-news.firebaseio.com/v0'
+        args = kwargs.get('connection_data', {})
 
-        stories = StoriesTable(self)
-        self._register_table('stories', stories)
+        self.connection_args = {}
+        handler_config = Config().get('quickbooks_handler', {})
+        for k in ['client_id', 'client_secret', 'refresh_token', 'realm_id',  'environment']:
+            if k in args:
+                self.connection_args[k] = args[k]
+            elif f'QUICKBOOKS_{k.upper()}' in os.environ:
+                self.connection_args[k] = os.environ[f'QUICKBOOKS_{k.upper()}']
+            elif k in handler_config:
+                self.connection_args[k] = handler_config[k]
 
-        comments = CommentsTable(self)
-        self._register_table('comments', comments)
+        self.quickbooks = None
+        self.is_connected = False
+
+        accountso = AccountsTable(self)
+        self._register_table('accountso', accountso)
 
     def connect(self):
-        return
+        if self.is_connected is True:
+            return self.quickbooks
+
+        self.quickbooks = QuickbooksOnlineSDK(
+            client_id=self.connection_args['client_id'],
+            client_secret=self.connection_args['client_secret'],
+            realm_id=self.connection_args['realm_id'],
+            refresh_token=self.connection_args['refresh_token'],
+            environment=self.connection_args['environment']
+        )
+        self.is_connected = True
+        return self.quickbooks
 
     def check_connection(self) -> StatusResponse:
+        response = StatusResponse(False)
+
         try:
-            response = requests.get(f'{self.base_url}/maxitem.json')
-            response.raise_for_status()
-            return StatusResponse(True)
+            quickbooks = self.connect()
+            quickbooks.accounts.get()
+            log.logger.info(quickbooks.accounts.get())
+            print('Connected to Quickbooks API')
+            response.success = True
+
         except Exception as e:
-            log.error(f'Error checking connection: {e}')
-            return StatusResponse(False, str(e))
+            response.error_message = f'Error connecting to Quickbooks API: {e}. '
+            log.logger.error(response.error_message)
+
+        if response.success is False and self.is_connected is True:
+            print('Disconnected from Quickbooks API')
+            self.is_connected = False
+
+        return response
 
     def native_query(self, query_string: str = None):
-        method_name, params = self.parse_native_query(query_string)
-
-        df = self.call_hackernews_api(method_name, params)
-
-        return Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=df
-        )
-
-    def call_hackernews_api(self, method_name: str = None, params: dict = None):
-            if method_name == 'get_top_stories':
-                url = f'{self.base_url}/topstories.json'
-                response = requests.get(url)
-                data = response.json()
-                stories_data = []
-                for story_id in data:
-                    url = f'{self.base_url}/item/{story_id}.json'
-                    response = requests.get(url)
-                    story_data = response.json()
-                    stories_data.append(story_data)
-                df = pd.DataFrame(stories_data, columns=['id', 'time', 'title', 'url', 'score', 'descendants'])
-            elif method_name == 'get_comments':
-                item_id = params.get('item_id')
-                url = f'{self.base_url}/item/{item_id}.json'
-                response = requests.get(url)
-                item_data = response.json()
-                if 'kids' in item_data:
-                    comments_data = []
-                    for comment_id in item_data['kids']:
-                        url = f'{self.base_url}/item/{comment_id}.json'
-                        response = requests.get(url)
-                        comment_data = response.json()
-                        comments_data.append(comment_data)
-                    df = pd.DataFrame(comments_data)
-                else:
-                    df = pd.DataFrame()
-            else:
-                raise ValueError(f'Unknown method_name: {method_name}')
-
-            return df
-
+        # Add your native query parsing and execution here.
+        pass

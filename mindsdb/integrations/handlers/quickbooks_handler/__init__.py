@@ -3,7 +3,7 @@ from mindsdb.integrations.libs.const import HANDLER_TYPE
 from .__about__ import __version__ as version, __description__ as description
 try:
     from .quickbooks_handler import (
-        QuickBooksHandler as Handler
+        QuickbooksHandler as Handler
     )
     import_error = None
 except Exception as e:

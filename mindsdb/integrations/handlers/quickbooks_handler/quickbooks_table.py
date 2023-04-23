@@ -6,10 +6,21 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 
 class AccountsTable(APITable):
 
+    def flatten_dict(self, data: dict, prefix: str = ""):
+        flat_data = {}
+        for key, value in data.items():
+            if isinstance(value, dict):
+                flattened_sub_dict = self.flatten_dict(value, f"{key}_")
+                flat_data.update(flattened_sub_dict)
+            else:
+                flat_data[f"{prefix}{key}"] = value
+        return flat_data
+
     def select(self, query: ast.Select) -> pd.DataFrame:
         qbo = self.handler.connect()
         accounts_data = qbo.accounts.get()
-        result = pd.DataFrame(accounts_data)
+        flattened_accounts_data = [self.flatten_dict(account) for account in accounts_data]
+        result = pd.DataFrame(flattened_accounts_data)
         self.filter_columns(result, query)
         return result
 
@@ -24,12 +35,14 @@ class AccountsTable(APITable):
             'AccountSubType',
             'CurrentBalance',
             'CurrentBalanceWithSubAccounts',
-            'CurrencyRef',
+            'CurrencyRef_value',
+            'CurrencyRef_name',
             'domain',
             'sparse',
             'Id',
             'SyncToken',
-            'MetaData',
+            'MetaData_CreateTime',
+            'MetaData_LastUpdatedTime',
         ]
 
     def filter_columns(self, result: pd.DataFrame, query: ast.Select = None):

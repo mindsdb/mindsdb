@@ -14,7 +14,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
     Integration with the Hugging Face Inference API.
     """
 
-    name = 'huggingface_inference_api'
+    name = 'huggingface_api'
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         if 'using' not in args:

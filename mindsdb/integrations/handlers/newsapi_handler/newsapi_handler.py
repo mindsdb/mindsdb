@@ -69,7 +69,7 @@ class NewsAPIArticleTable(APITable):
         if query.order_by:
             print("Order by : ", query.order_by[0])
             if len(query.order_by) == 1:
-                if (query.order_by[0] in ['query', 'publishedAt']):
+                if (str(query.order_by[0])  not in ['relevancy', 'publishedAt']):
                     raise NotImplementedError("Not supported ordering by this field")
                 params['sort_by'] = str(query.order_by[0])
             else: 

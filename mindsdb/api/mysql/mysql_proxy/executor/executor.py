@@ -200,7 +200,7 @@ class Executor:
                 try:
                     from mindsdb_text_to_sql import GPTTextToSQL
 
-                    text_to_sql = GPTTextToSQL(os.getenv('OPENAI_API_KEY'))
+                    text_to_sql = GPTTextToSQL(self._get_openai_api_key())
                     query = text_to_sql.convert_text_to_sql(sql)
                     logger.info("%s.parse: converted query - %s", self.__class__.__name__, query)
                     self.query = parse_sql(query, dialect="mindsdb")

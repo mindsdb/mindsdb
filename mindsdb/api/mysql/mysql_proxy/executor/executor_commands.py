@@ -5,7 +5,7 @@ from functools import reduce
 
 import pandas as pd
 from mindsdb_sql.parser.dialects.mindsdb import (
-    CreateDatasource,
+    CreateDatabase,
     RetrainPredictor,
     CreatePredictor,
     FinetunePredictor,
@@ -87,10 +87,10 @@ import mindsdb.utilities.profiler as profiler
 
 
 def _get_show_where(
-    statement: ASTNode,
-    from_name: Optional[str] = None,
-    like_name: Optional[str] = None,
-    initial: Optional[ASTNode] = None,
+        statement: ASTNode,
+        from_name: Optional[str] = None,
+        like_name: Optional[str] = None,
+        initial: Optional[ASTNode] = None,
 ) -> ASTNode:
     """combine all possible show filters to single 'where' condition
     SHOW category [FROM name] [LIKE filter] [WHERE filter]
@@ -148,7 +148,7 @@ class ExecuteCommands:
             sql = self.executor.sql
             sql_lower = self.executor.sql_lower
 
-        if type(statement) == CreateDatasource:
+        if type(statement) == CreateDatabase:
             return self.answer_create_database(statement)
         elif type(statement) == CreateMLEngine:
             return self.answer_create_ml_engine(statement)
@@ -317,10 +317,10 @@ class ExecuteCommands:
                 query = SQLQuery(new_statement, session=self.session)
                 return self.answer_select(query)
             elif sql_category in (
-                "variables",
-                "session variables",
-                "session status",
-                "global variables",
+                    "variables",
+                    "session variables",
+                    "session status",
+                    "global variables",
             ):
                 new_statement = Select(
                     targets=[
@@ -338,7 +338,7 @@ class ExecuteCommands:
                     if is_session and var_name.startswith("session.") is False:
                         continue
                     if var_name.startswith("session.") or var_name.startswith(
-                        "GLOBAL."
+                            "GLOBAL."
                     ):
                         name = var_name.replace("session.", "").replace("GLOBAL.", "")
                         data[name] = var_data[0]
@@ -358,6 +358,16 @@ class ExecuteCommands:
 
                 return ExecuteAnswer(
                     answer_type=ANSWER_TYPE.TABLE, columns=columns, data=data
+                )
+            elif sql_category == "search_path":
+                return ExecuteAnswer(
+                    answer_type=ANSWER_TYPE.TABLE,
+                    columns=[
+                        Column(
+                            name="search_path", table_name="search_path", type="str"
+                        )
+                    ],
+                    data=[["\"$user\", public"]]
                 )
             elif "show status like 'ssl_version'" in sql_lower:
                 return ExecuteAnswer(
@@ -476,9 +486,9 @@ class ExecuteCommands:
             else:
                 raise ErNotSupportedYet(f"Statement not implemented: {sql}")
         elif type(statement) in (
-            StartTransaction,
-            CommitTransaction,
-            RollbackTransaction,
+                StartTransaction,
+                CommitTransaction,
+                RollbackTransaction,
         ):
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Set:
@@ -534,8 +544,8 @@ class ExecuteCommands:
             if statement.table.parts[-1].lower() == "models_versions":
                 return self.answer_delete_model_version(statement)
             if (
-                self.session.database != "mindsdb"
-                and statement.table.parts[0] != "mindsdb"
+                    self.session.database != "mindsdb"
+                    and statement.table.parts[0] != "mindsdb"
             ):
                 raise ErBadTableError(
                     "Only 'DELETE' from database 'mindsdb' is possible at this moment"
@@ -559,9 +569,9 @@ class ExecuteCommands:
                 SQLQuery(statement, session=self.session, execute=True)
                 return ExecuteAnswer(ANSWER_TYPE.OK)
         elif (
-            type(statement) == Alter
-            and ("disable keys" in sql_lower)
-            or ("enable keys" in sql_lower)
+                type(statement) == Alter
+                and ("disable keys" in sql_lower)
+                or ("enable keys" in sql_lower)
         ):
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Select:
@@ -639,20 +649,20 @@ class ExecuteCommands:
         )
 
     def answer_describe_predictor(self, statement):
-        # describe attr
-        predictor_attrs = ("model", "features", "ensemble", "progress")
+
+        # try full name
         attribute = None
-        if statement.value.parts[-1] in predictor_attrs:
-            attribute = statement.value.parts.pop(-1)
+        model_info = self._get_model_info(statement.value)
+        if model_info is None:
+            parts = statement.value.parts.copy()
+            attribute = parts.pop(-1)
+            model_info = self._get_model_info(Identifier(parts=parts))
+            if model_info is None:
+                raise SqlApiException(f'Model not found: {statement.value}')
 
-        if len(statement.value.parts) > 1:
-            project_name = statement.value.parts[0]
-        else:
-            project_name = self.session.database
-
-        model_name = statement.value.parts[-1]
-
-        df = self.session.model_controller.describe_model(self.session, project_name, model_name, attribute)
+        df = self.session.model_controller.describe_model(
+            self.session, model_info['project_name'], model_info['model_record'].name, attribute
+        )
 
         df_dict = df.to_dict('split')
 
@@ -666,15 +676,24 @@ class ExecuteCommands:
             data=df_dict['data']
         )
 
-    def _get_model_record(self, statement):
-        if len(statement.name.parts) == 1:
-            statement.name.parts = [self.session.database, statement.name.parts[0]]
-        database_name, model_name = statement.name.parts
+    def _get_model_info(self, identifier, except_absent=True):
+        if len(identifier.parts) == 1:
+            identifier.parts = [self.session.database, identifier.parts[0]]
+
+        if len(identifier.parts) == 2:
+            database_name, model_name = identifier.parts[-2:]
+        else:
+            return None
 
         model_record = get_model_record(
-            name=model_name, project_name=database_name, except_absent=True
+            name=model_name, project_name=database_name, except_absent=except_absent
         )
-        return model_record
+        if not model_record:
+            return None
+        return {
+            'model_record': model_record,
+            'project_name': database_name
+        }
 
     def _sync_predictor_check(self, phase_name):
         """ Checks if there is already a predictor retraining or fine-tuning
@@ -699,7 +718,7 @@ class ExecuteCommands:
                 )
 
     def answer_retrain_predictor(self, statement):
-        model_record = self._get_model_record(statement)
+        model_record = self._get_model_info(statement.name)['model_record']
 
         if statement.integration_name is None:
             if model_record.data_integration_ref is None:
@@ -746,7 +765,7 @@ class ExecuteCommands:
         return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
 
     def answer_finetune_predictor(self, statement):
-        model_record = self._get_model_record(statement)
+        model_record = self._get_model_info(statement.name)['model_record']
 
         if statement.using is not None:
             # repack using with lower names
@@ -894,7 +913,10 @@ class ExecuteCommands:
             statement (ASTNode): data for creating database/project
         """
 
-        database_name = statement.name
+        if len(statement.name.parts) != 1:
+            raise Exception("Database name should contain only 1 part.")
+
+        database_name = statement.name.parts[0]
         engine = statement.engine
         if engine is None:
             engine = "mindsdb"
@@ -1076,11 +1098,11 @@ class ExecuteCommands:
             self.session.datahub["mindsdb"].delete_predictor(predictor_name)
 
     def answer_show_columns(
-        self,
-        target: Identifier,
-        where: Optional[Operation] = None,
-        like: Optional[str] = None,
-        is_full=False,
+            self,
+            target: Identifier,
+            where: Optional[Operation] = None,
+            like: Optional[str] = None,
+            is_full=False,
     ):
         if len(target.parts) > 1:
             db = target.parts[0]
@@ -1156,6 +1178,7 @@ class ExecuteCommands:
                     "current_user": self.session.username,
                     "user": self.session.username,
                     "version": "8.0.17",
+                    "current_schema": "public"
                 }
 
                 column_name = f"{target.op}()"
@@ -1175,7 +1198,11 @@ class ExecuteCommands:
                 column_alias = "NULL"
             elif target_type == Identifier:
                 result = ".".join(target.parts)
-                raise Exception(f"Unknown column '{result}'")
+                if result == "session_user":
+                    column_name = result
+                    result = self.session.username
+                else:
+                    raise Exception(f"Unknown column '{result}'")
             else:
                 raise ErSqlWrongArguments(f"Unknown constant type: {target_type}")
 

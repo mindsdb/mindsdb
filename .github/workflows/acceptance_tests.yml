@@ -31,6 +31,15 @@ jobs:
         mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
     - name: Run Learning Hub Tests
       run: |
+          echo -e "\n===============MySQL Handler===============\n"
+          pytest -svx tests/handler_tests/test_mysql_handler.py
+
+          echo -e "\n===============PostgreSQL Handler===============\n"
+          pytest -svx tests/handler_tests/test_postgres_handler.py
+
+          echo -e "\n===============MariaDB Handler===============\n"
+          pytest -svx tests/handler_tests/test_mariadb_handler.py
+
           echo -e "\n===============Home Rental Home Prices===============\n"
           pytest -vx tests/integration_tests/flows/test_home_rental_prices_tutorial.py
 

@@ -6,11 +6,8 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
-
-
-logger = get_log("integrations.sendinblue_handler")
 
 
 class SendinblueHandler(APIHandler):
@@ -58,3 +55,29 @@ class SendinblueHandler(APIHandler):
         self.is_connected = True
 
         return self.connection
+
+    def check_connection(self) -> StatusResponse:
+        """
+        Check connection to the handler.
+        Returns:
+            HandlerStatusResponse
+        """
+
+        response = StatusResponse(False)
+        need_to_close = self.is_connected is False
+
+        try:
+            configuration = self.connect()
+            api_instance = sib_api_v3_sdk.AccountApi(sib_api_v3_sdk.ApiClient(configuration))
+            api_instance.get_account()
+            response.success = True
+        except Exception as e:
+            log.logger.error(f'Error connecting to Sendinblue!')
+            response.error_message = str(e)
+        finally:
+            if response.success is True and need_to_close:
+                self.disconnect()
+            if response.success is False and self.is_connected is True:
+                self.is_connected = False
+
+        return response

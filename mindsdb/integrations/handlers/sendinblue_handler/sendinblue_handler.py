@@ -38,3 +38,23 @@ class SendinblueHandler(APIHandler):
 
         email_campaigns_data = EmailCampaignsTable(self)
         self._register_table("email_campaigns", email_campaigns_data)
+
+    def connect(self) -> StatusResponse:
+        """
+        Set up the connection required by the handler.
+        Returns
+        -------
+        StatusResponse
+            connection object
+        """
+        if self.is_connected is True:
+            return self.connection
+
+        configuration = sib_api_v3_sdk.Configuration()
+        configuration.api_key['api-key'] = self.connection_data['api_key']
+
+        self.connection = configuration
+
+        self.is_connected = True
+
+        return self.connection

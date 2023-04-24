@@ -5,7 +5,7 @@ from functools import reduce
 
 import pandas as pd
 from mindsdb_sql.parser.dialects.mindsdb import (
-    CreateDatasource,
+    CreateDatabase,
     RetrainPredictor,
     CreatePredictor,
     FinetunePredictor,
@@ -84,10 +84,10 @@ import mindsdb.utilities.profiler as profiler
 
 
 def _get_show_where(
-    statement: ASTNode,
-    from_name: Optional[str] = None,
-    like_name: Optional[str] = None,
-    initial: Optional[ASTNode] = None,
+        statement: ASTNode,
+        from_name: Optional[str] = None,
+        like_name: Optional[str] = None,
+        initial: Optional[ASTNode] = None,
 ) -> ASTNode:
     """combine all possible show filters to single 'where' condition
     SHOW category [FROM name] [LIKE filter] [WHERE filter]
@@ -145,7 +145,7 @@ class ExecuteCommands:
             sql = self.executor.sql
             sql_lower = self.executor.sql_lower
 
-        if type(statement) == CreateDatasource:
+        if type(statement) == CreateDatabase:
             return self.answer_create_database(statement)
         elif type(statement) == CreateMLEngine:
             return self.answer_create_ml_engine(statement)
@@ -314,10 +314,10 @@ class ExecuteCommands:
                 query = SQLQuery(new_statement, session=self.session)
                 return self.answer_select(query)
             elif sql_category in (
-                "variables",
-                "session variables",
-                "session status",
-                "global variables",
+                    "variables",
+                    "session variables",
+                    "session status",
+                    "global variables",
             ):
                 new_statement = Select(
                     targets=[
@@ -335,7 +335,7 @@ class ExecuteCommands:
                     if is_session and var_name.startswith("session.") is False:
                         continue
                     if var_name.startswith("session.") or var_name.startswith(
-                        "GLOBAL."
+                            "GLOBAL."
                     ):
                         name = var_name.replace("session.", "").replace("GLOBAL.", "")
                         data[name] = var_data[0]
@@ -355,6 +355,16 @@ class ExecuteCommands:
 
                 return ExecuteAnswer(
                     answer_type=ANSWER_TYPE.TABLE, columns=columns, data=data
+                )
+            elif sql_category == "search_path":
+                return ExecuteAnswer(
+                    answer_type=ANSWER_TYPE.TABLE,
+                    columns=[
+                        Column(
+                            name="search_path", table_name="search_path", type="str"
+                        )
+                    ],
+                    data=[["\"$user\", public"]]
                 )
             elif "show status like 'ssl_version'" in sql_lower:
                 return ExecuteAnswer(
@@ -473,9 +483,9 @@ class ExecuteCommands:
             else:
                 raise ErNotSupportedYet(f"Statement not implemented: {sql}")
         elif type(statement) in (
-            StartTransaction,
-            CommitTransaction,
-            RollbackTransaction,
+                StartTransaction,
+                CommitTransaction,
+                RollbackTransaction,
         ):
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Set:
@@ -531,8 +541,8 @@ class ExecuteCommands:
             if statement.table.parts[-1].lower() == "models_versions":
                 return self.answer_delete_model_version(statement)
             if (
-                self.session.database != "mindsdb"
-                and statement.table.parts[0] != "mindsdb"
+                    self.session.database != "mindsdb"
+                    and statement.table.parts[0] != "mindsdb"
             ):
                 raise ErBadTableError(
                     "Only 'DELETE' from database 'mindsdb' is possible at this moment"
@@ -556,9 +566,9 @@ class ExecuteCommands:
                 SQLQuery(statement, session=self.session, execute=True)
                 return ExecuteAnswer(ANSWER_TYPE.OK)
         elif (
-            type(statement) == Alter
-            and ("disable keys" in sql_lower)
-            or ("enable keys" in sql_lower)
+                type(statement) == Alter
+                and ("disable keys" in sql_lower)
+                or ("enable keys" in sql_lower)
         ):
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Select:
@@ -871,7 +881,10 @@ class ExecuteCommands:
             statement (ASTNode): data for creating database/project
         """
 
-        database_name = statement.name
+        if len(statement.name.parts) != 1:
+            raise Exception("Database name should contain only 1 part.")
+
+        database_name = statement.name.parts[0]
         engine = statement.engine
         if engine is None:
             engine = "mindsdb"
@@ -1053,11 +1066,11 @@ class ExecuteCommands:
             self.session.datahub["mindsdb"].delete_predictor(predictor_name)
 
     def answer_show_columns(
-        self,
-        target: Identifier,
-        where: Optional[Operation] = None,
-        like: Optional[str] = None,
-        is_full=False,
+            self,
+            target: Identifier,
+            where: Optional[Operation] = None,
+            like: Optional[str] = None,
+            is_full=False,
     ):
         if len(target.parts) > 1:
             db = target.parts[0]
@@ -1133,6 +1146,7 @@ class ExecuteCommands:
                     "current_user": self.session.username,
                     "user": self.session.username,
                     "version": "8.0.17",
+                    "current_schema": "public"
                 }
 
                 column_name = f"{target.op}()"
@@ -1152,7 +1166,11 @@ class ExecuteCommands:
                 column_alias = "NULL"
             elif target_type == Identifier:
                 result = ".".join(target.parts)
-                raise Exception(f"Unknown column '{result}'")
+                if result == "session_user":
+                    column_name = result
+                    result = self.session.username
+                else:
+                    raise Exception(f"Unknown column '{result}'")
             else:
                 raise ErSqlWrongArguments(f"Unknown constant type: {target_type}")
 

@@ -1,4 +1,7 @@
-# AI Tables Intro
+---
+title: AI Tables
+sidebarTitle: AI Tables
+---
 
 There is an ongoing transformational shift within the modern business world from the “what happened and why” based on historical data analysis to the “what will we predict can happen and how can we make it happen” based on machine learning predictive modeling.
 
@@ -60,10 +63,12 @@ When a table doesn’t have an exact match the query will return a null value. T
 Let’s create a debt model that allows us to approximate the debt value for any income value. We’ll train this debt model using the income table’s data.
 
 ```sql
-CREATE PREDICTOR mindsdb.debt_model FROM income_table PREDICT debt;
+CREATE MODEL mindsdb.debt_model FROM income_table PREDICT debt;
 ```
 
-MindsDB provides the **CREATE PREDICTOR** statement. When we execute this statement, the predictive model works in the background, automatically creating a vector representation of the data that can be visualized as follows.
+Please note that `debt_model` is our AI Table.
+
+MindsDB provides the **CREATE MODEL** statement. When we execute this statement, the predictive model works in the background, automatically creating a vector representation of the data that can be visualized as follows.
 
 ![Income vs Debt model](/assets/sql/tutorials/snowflake-superset/7-debt-income-query-ml.jpg)
 
@@ -74,4 +79,3 @@ SELECT income, debt FROM debt_model WHERE income = 90120;
 ```
 
 ![Income vs Debt model](/assets/sql/tutorials/snowflake-superset/7-debt-income-query-ml-table.jpg)
-

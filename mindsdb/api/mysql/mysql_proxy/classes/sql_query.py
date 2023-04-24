@@ -841,10 +841,9 @@ class SQLQuery():
                 version = int(step.predictor.parts[-1])
 
             # temporarily add executor (used with LLM agents)
+            params = {'__mdb_executor': self.executor, '__mdb_integrations': self.session.integration_controller}
             if step.params is not None:
-                params = {**step.params, '__mdb_executor': self.executor}
-            else:
-                params = {'__mdb_executor': self.executor}
+                params = {**params, **step.params}
 
             predictions = project_datanode.predict(
                 model_name=predictor_name,
@@ -854,6 +853,7 @@ class SQLQuery():
             )
 
             params.pop('__mdb_executor')
+            params.pop('__mdb_integrations')
 
             columns_dtypes = dict(predictions.dtypes)
             predictions = predictions.to_dict(orient='records')

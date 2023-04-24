@@ -231,7 +231,7 @@ class TableResource(Resource):
 
         try:
             integration_handler = session.integration_controller.get_handler(database_name)
-        except:
+        except Exception:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR, f'Could not get database handler for {database_name}')
         try:
             result = integration_handler.query(drop_ast)

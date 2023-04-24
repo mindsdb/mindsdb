@@ -4,6 +4,8 @@ from mindsdb_sql.parser import ast
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from typing import List, Tuple
 import requests
+
+
 class StoriesTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Select data from the stories table and return it as a pandas DataFrame.
@@ -33,7 +35,10 @@ class StoriesTable(APITable):
             stories_data.append(story_data)
 
         # Create a DataFrame from the fetched data
-        df = pd.DataFrame(stories_data, columns=['id', 'time', 'title', 'url', 'score', 'descendants'])
+        df = pd.DataFrame(
+            stories_data, 
+            columns=['id', 'time', 'title', 'url', 'score', 'descendants']
+            )
 
         # Apply any WHERE clauses in the SQL query to the DataFrame
         conditions = extract_comparison_conditions(query.where)
@@ -112,6 +117,8 @@ class CommentsTable(APITable):
             comments_df = comments_df.head(limit)
 
         return comments_df
+    
+    
     def get_columns(self) -> List[str]:
         """Get the list of column names for the comments table.
         Returns:

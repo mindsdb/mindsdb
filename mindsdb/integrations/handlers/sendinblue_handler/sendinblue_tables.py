@@ -64,7 +64,7 @@ class EmailCampaignsTable(APITable):
 
         configuration = self.handler.connect()
         email_campaigns_api_instance = sib_api_v3_sdk.EmailCampaignsApi(sib_api_v3_sdk.ApiClient(configuration))
-        email_campaigns = email_campaigns_api_instance.get_email_campaigns()
+        email_campaigns = email_campaigns_api_instance.get_email_campaigns(limit=total_results)
 
         email_campaigns_df = pd.json_normalize(email_campaigns['campaigns'])
 

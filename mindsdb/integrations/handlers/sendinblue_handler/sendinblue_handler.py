@@ -81,3 +81,17 @@ class SendinblueHandler(APIHandler):
                 self.is_connected = False
 
         return response
+
+    def native_query(self, query: str) -> StatusResponse:
+        """Receive and process a raw query.
+        Parameters
+        ----------
+        query : str
+            query in a native format
+        Returns
+        -------
+        StatusResponse
+            Request status
+        """
+        ast = parse_sql(query, dialect="mindsdb")
+        return self.query(ast)

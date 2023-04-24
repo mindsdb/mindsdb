@@ -127,7 +127,10 @@ def profile(tag: str = None):
     def decorator(function):
         @wraps(function)
         def wrapper(*args, **kwargs):
-            with Context(tag or f'{function.__name__}|{function.__module__}'):
+            if profiling_enabled() is True:
+                with Context(tag or f'{function.__name__}|{function.__module__}'):
+                    result = function(*args, **kwargs)
+            else:
                 result = function(*args, **kwargs)
             return result
         return wrapper

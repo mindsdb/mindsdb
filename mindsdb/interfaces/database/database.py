@@ -1,13 +1,13 @@
 from typing import Optional
 from collections import OrderedDict
 
-from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.database.projects import ProjectController
 
 
 class DatabaseController:
     def __init__(self):
-        self.integration_controller = IntegrationController()
+        self.integration_controller = integration_controller
         self.project_controller = ProjectController()
 
     def delete(self, name: str):

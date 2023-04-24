@@ -82,9 +82,11 @@ class LangChainHandler(OpenAIHandler):
         is supported.
         """
         executor = args['executor']  # used as tool in custom tool for the agent to have mindsdb-wide access
+        integrations = args['integrations_controller']
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
         args['executor'] = executor
+        args['integrations'] = integrations
 
         df = df.reset_index(drop=True)
 
@@ -138,6 +140,9 @@ class LangChainHandler(OpenAIHandler):
         model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
 
         # langchain tool setup
+        # TODO: implement additional tool with integrations_controller to get: table.columns, table.data_types, table.rows
+        # args['integrations'].get_handler('files').get_tables().data_frame  # returns DF with TABLE_NAME, TABLE_ROWS, TABLE_TYPE
+        # args['integrations'].get_handler('files').get_columns('diamonds').data_frame  # returns DF with Field, Type
         tools = self._setup_tools(model_kwargs, pred_args, args['executor'])
 
         # langchain agent setup

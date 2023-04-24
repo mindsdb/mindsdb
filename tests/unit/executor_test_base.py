@@ -147,12 +147,11 @@ class BaseExecutorTest(BaseUnitTest):
         from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 
         from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
-        from mindsdb.interfaces.database.integrations import IntegrationController
+        from mindsdb.interfaces.database.integrations import integration_controller
         from mindsdb.interfaces.file.file_controller import FileController
         from mindsdb.interfaces.model.model_controller import ModelController
         from mindsdb.utilities.context import context as ctx
 
-        integration_controller = IntegrationController()
         self.file_controller = FileController()
 
         if mock_model_controller:

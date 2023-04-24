@@ -30,7 +30,7 @@ class GoogleFitHandler(APIHandler):
         handler_config = Config().get('google_handler', {})
         #TODO: make sure the arguments can read a list from user input when the database is created, since "redirect_uris" is a list.
         for k in ['client_id', 'project_id', 'auth_uri',
-                  'token_uri', 'auth_provider_x509_cert_url', 'client_secret',"redirect_uris"]:
+                  'token_uri', 'auth_provider_x509_cert_url', 'client_secret','redirect_uris']:
             if k in args:
                 self.connection_args[k] = args[k]
             elif f'GOOGLE_FIT_{k.upper()}' in os.environ:

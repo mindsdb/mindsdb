@@ -32,18 +32,15 @@ def install_deps():
     """
     default = open('requirements.txt', 'r').readlines()
     new_pkgs = []
-    links = []
     for resource in default:
         if 'git+https' in resource:
             pkg = resource.split('#')[-1]
-            links.append(resource.strip() + '-9876543210')
-            new_pkgs.append(pkg.replace('egg=', '').rstrip())
+            new_pkgs.append(resource.strip() + '-9876543210')
         else:
             new_pkgs.append(resource.strip())
-    return new_pkgs, links
+    return new_pkgs
 
-
-pkgs, new_links = install_deps()
+pkgs = install_deps()
 
 setup(
     name=about['__title__'],
@@ -58,7 +55,6 @@ setup(
     long_description_content_type="text/markdown",
     packages=find_packages(),
     install_requires=pkgs,
-    dependency_links=new_links,
     include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",

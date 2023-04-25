@@ -1,4 +1,5 @@
 # Strava Handler
+
 Strava handler for MindsDB provides interfaces to connect with strava via APIs and pull the workout data of your fitness club into MindsDB.
 
 ## Strava
@@ -28,13 +29,14 @@ Please follow this (link)[https://developers.strava.com/docs/getting-started/] t
 
 ## Example Usage
 
-The first step is to create a database with the new `strava` engine.
+The first step is to create a database with the new `confluence` engine.
 
 ~~~~sql
 CREATE DATABASE mindsdb_strava
 WITH ENGINE = 'strava',
 PARAMETERS = {
-  "strava_api_token": "ccf04d25ed81a5df8632afb11fdf902691e2dfb3"  
+  "strava_client_id": "<your-strava-client-id>",
+  "strava_access_token": "<your-strava-api-key-token>"  
 };
 ~~~~
 
@@ -52,7 +54,7 @@ WHERE strava_club_id = 158786;
 ~~~~
 
 
-Advanced queries for the Strava handler
+Advanced queries for the confluence handler
 
 ~~~~sql
 SELECT id,localized_sport_type,country,member_count FROM 

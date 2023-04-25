@@ -12,13 +12,13 @@ import requests
 import pandas as pd
 import json
 
-logger = get_log("integrations.jira_handler")
+logger = get_log("integrations.strava_handler")
 
 class StravaAllClubsTable(APITable):
     """Strava List all Clubs Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
-        """Pulls data from the Strava  "List Athlete Clubs" API endpoint
+        """Pulls data from the Strava  "getLoggedInAthleteClubs" API endpoint
         Parameters
         ----------
         query : ast.Select
@@ -95,7 +95,7 @@ class StravaAllClubsTable(APITable):
         return [
         'id',
         'name',
-        'localized_sport_type',
+        'sport_type',
         'city',
         'state',
         'country',
@@ -110,21 +110,16 @@ class StravaAllClubsTable(APITable):
         pd.DataFrame of all the records of the "List Athlete Clubs" API end point
         """
 
-        all_strava_clubs_df = pd.DataFrame()
-        headers = {
-            "Authorization": f"Bearer {self.handler.connection_data['strava_api_token']}",
-        }
-        new_results = True
-        page = 1
-        while new_results:
-            strava_url = f"https://www.strava.com/api/v3/athlete/clubs?page={page}&per_page=100"
-            strava_records = requests.get(strava_url,headers=headers).json()
-            new_results = bool(strava_records)
-            df = pd.json_normalize(strava_records)
-            all_strava_clubs_df = pd.concat([all_strava_clubs_df,df], axis=0)
-            page += 1
-        
-        all_strava_clubs_df = all_strava_clubs_df[self.get_columns()]
+        clubs = self.handler.connect().get_athlete_clubs() 
+
+        club_cols = self.get_columns()
+        data = []
+
+        for club in clubs:
+            club_dict = club.dict()
+            data.append([club_dict.get(x) for x in club_cols])
+
+        all_strava_clubs_df = pd.DataFrame(data, columns=club_cols)
 
         return all_strava_clubs_df
 
@@ -233,23 +228,20 @@ class StravaClubActivitesTable(APITable):
     
         Returns
         -------
-        pd.DataFrame of all the records of the "List Athlete Clubs" API end point
+        pd.DataFrame of all the records of the "getClubActivitiesById" API end point
         """
 
-        all_strava_club_activities_df = pd.DataFrame()
-        headers = {
-            "Authorization": f"Bearer {self.handler.connection_data['strava_api_token']}",
-        }
-        new_results = True
-        page = 1
-        while new_results:
-            strava_url = f"https://www.strava.com/api/v3/clubs/{club_id}/activities?page={page}&per_page=100"
-            strava_records = requests.get(strava_url,headers=headers).json()
-            new_results = bool(strava_records)
-            df = pd.json_normalize(strava_records)
-            all_strava_club_activities_df = pd.concat([all_strava_club_activities_df,df], axis=0)
-            page += 1
-        
-        all_strava_club_activities_df = all_strava_club_activities_df[self.get_columns()]
+        club_activities = self.handler.connect().get_club_activities(club_id)
+
+        club_cols = self.get_columns()
+        data = []
+
+        for club in club_activities:
+            club_dict = club.dict()
+            data.append([club_dict.get(x) for x in club_cols])
+
+        all_strava_club_activities_df = pd.DataFrame(data, columns=club_cols)
 
         return all_strava_club_activities_df
+
+

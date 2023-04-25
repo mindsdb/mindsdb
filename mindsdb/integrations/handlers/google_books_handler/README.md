@@ -10,16 +10,23 @@ your future book recommendations.
 
 ## Connect to the Google Books API
 
-You will need to have a Google account and have enabled the Google Books API and to have an API Key.
-You can find more information on how to do
+We start by creating a database to connect to the Google Books API. Currently, there is no need for an API key:
+
+However, you will need to have a Google account and have enabled the Google Books API.
+Also, you will need to have the credentials
+in a json file. You can find more information on how to do
 this [here](https://developers.google.com/books/docs/v1/getting_started).
 
+**Optional:**  The credentials file can be stored in the google_books handler folder in
+the [mindsdb/integrations/google_books_handler](mindsdb/integrations/handlers/google_books_handler) directory.
+
+~~~~sql
 ~~~~sql
 CREATE
 DATABASE my_books
 WITH  ENGINE = 'google_books',
 parameters = {
-    'api_key': 'YOUR_API_KEY'
+    'credentials': 'C:\\Users\\panagiotis\\Desktop\\GitHub\\mindsdb\\mindsdb\\integrations\\handlers\\google_books_handler\\credentials.json'
 };    
 ~~~~
 

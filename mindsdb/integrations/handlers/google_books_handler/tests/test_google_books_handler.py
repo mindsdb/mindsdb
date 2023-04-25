@@ -9,7 +9,8 @@ class GoogleBooksHandlerTest(unittest.TestCase):
     def setUpClass(cls):
         cls.kwargs = {
             "connection_data": {
-                "api_key": "YOUR_API_KEY",
+                "credentials": "C:\\Users\\panagiotis\\Desktop\\GitHub\\mindsdb\\mindsdb\\integrations\\handlers"
+                               "\\google_books_handler\\credentials.json"
             }
         }
         cls.handler = GoogleBooksHandler('test_google_books_handler', **cls.kwargs)

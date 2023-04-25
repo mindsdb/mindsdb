@@ -10,7 +10,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
 
-from .quickbooks_table import AccountsTable, PurchasesTable, BillPaymentsTable
+from .quickbooks_table import AccountsTable, PurchasesTable, BillPaymentsTable, VendorsTable, BillsTable, EmployeesTable
 
 
 class QuickbooksHandler(APIHandler):
@@ -39,6 +39,12 @@ class QuickbooksHandler(APIHandler):
         self._register_table('purchases', purchases)
         bills_payments = BillPaymentsTable(self)
         self._register_table('bills_payments', bills_payments)
+        vendors = VendorsTable(self)
+        self._register_table('vendors', vendors)
+        bills = BillsTable(self)
+        self._register_table('bills', bills)
+        employees= EmployeesTable(self)
+        self._register_table('employees', employees)
 
     def connect(self):
         if self.is_connected is True:

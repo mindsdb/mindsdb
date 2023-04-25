@@ -3,73 +3,53 @@ title: Trino
 sidebarTitle: Trino
 ---
 
-This is the implementation of the TrinoDB handler for MindsDB.
+This is the implementation of the Trino data handler for MindsDB.
 
-## TrinoDB
-Trino is an apache 2.0 licensed, distributed SQL query engine, which was forked from the original Presto project whose Github repo was called PrestoDB. As such, it was designed from the ground up for fast queries against any amounts of data.
+[Trino](https://trino.io/) is an open-source distributed SQL query engine designed to query large data sets distributed over one or more heterogeneous data sources.
 
-https://trino.io/
+## Implementation
 
-## syntax
-MindsDB lets you connect to your favorite databases, data warehouses, data lakes, etc., via the CREATE DATABASE command.
+This handler is implemented using `pyhive`, a collection of Python DB-API and SQLAlchemy interfaces for Presto and Hive.
 
-The MindsDB SQL API supports creating connections to integrations by passing the connection parameters specific per integration.
+The required arguments to establish a connection are as follows:
 
-Let’s review the syntax for the CREATE DATABASE command of TrinoDB.
+* `user` is the database user.
+* `password` is the database password.
+* `host` is the host name, IP address, or URL.
+* `port` is the port used to make TCP/IP connection.
 
-```sql
+There are some optional arguments as follows:
 
-CREATE DATABASE trino_datasource          --- display name for the database
-WITH ENGINE = 'trino',                    --- name of the MindsDB handler
-PARAMETERS = {
-  "host": " ",                            --- host name or IP address
-  "port": ,                               --- port used to make TCP/IP connection
-  "auth": " ",                            --- optional, authentication method, currently only `basic` is supported
-  "http_scheme": " ",                     --- optional, `http`(default) or `https`
-  "user": " ",                            --- database user
-  "password": " ",                        --- database password
-  "catalog": " ",                         --- optional, catalog
-  "schema": " "                           --- optional, schema
-  "with":                                 --- optional, default WITH-clause (properties) for ALL tables
-                                              --- this parameter is experimental and might be changed or removed in future release
-};
+* `auth` is the authentication method. Currently, only `basic` is supported.
+* `http_scheme` takes the value of `http`by default. It can be set to `https` as well.
+* `catalog` is the catalog.
+* `schema` is the schema name.
+* `with` defines default WITH-clause (properties) for ALL tables. This parameter is experimental and might be changed or removed in future release.
 
-```
+## Usage
 
+In order to make use of this handler and connect to the Trino database in MindsDB, the following syntax can be used:
 
-## Example 1
 ```sql
 CREATE DATABASE trino_datasource
-WITH ENGINE = 'trino',
-PARAMETERS = {
-  "host": "127.0.0.1",
-  "port": 8080,
-  "user": "trino",
-  "password": "password",
-  "catalog": "default",
-  "schema": "test"
-};
+WITH
+  ENGINE = 'trino',
+  PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": 443,
+    "auth": "basic",
+    "http_scheme": "https",
+    "user": "trino",
+    "password": "password",
+    "catalog": "default",
+    "schema": "test",
+    "with": "with (transactional = true)"
+  };
 ```
-## Example 2
+
+You can use this established connection to query your table as follows:
 
 ```sql
-
-CREATE DATABASE trino_datasource
-WITH ENGINE = 'trino',
-PARAMETERS = {
-  "host": "127.0.0.1",
-  "port": 443,
-  "auth": "basic",
-  "http_scheme": "https",
-  "user": "trino",
-  "password": "password",
-  "catalog": "default",
-  "schema": "test",
-  "with": "with (transactional = true)"
-};
-
+SELECT *
+FROM trino_datasource.demo_table;
 ```
-
-## Querying
-
-SELECT * FROM trino_datasource.Test;

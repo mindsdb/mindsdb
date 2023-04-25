@@ -86,7 +86,6 @@ exclude =
   tests/unit/test_merlion_handler.py
   tests/handler_tests/test_mysql_handler.py
   tests/handler_tests/test_mariadb_handler.py
-  tests/handler_tests/test_postgres_handler.py
   mindsdb/integrations/handlers/byom_handler/byom_handler.py
   mindsdb/integrations/handlers/byom_handler/proc_wrapper.py
   mindsdb/integrations/handlers/*

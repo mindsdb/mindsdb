@@ -14,7 +14,7 @@ Quickbooks handler for MindsDB provides interfaces to connect to Quickbooks via 
 ---
 ## About Quickbooks
 
-Quickbooks is a social news website that provides a platform for users to submit links, create content, and have discussions about various topics. It was created by the startup incubator Y Combinator.
+Quickbooks is an accounting software package developed and marketed by Intuit. Quickbooks products are geared mainly toward small and medium-sized businesses and offer on-premises accounting applications as well as cloud-based versions that accept business payments, manage and pay bills, and payroll functions.
 
 ## Quickbooks Handler Implementation
 
@@ -23,33 +23,43 @@ This handler was implemented using the official Quickbooks API. It provides a si
 
 ## Implemented Features
 
-- Fetch submissions from a subreddit based on sorting type and limit.
-- (Add other implemented features here)
-
+- Fetch the following TABLES
+  - vendors
+  - employees
+  - purchases
+  - accounts
+  - bills
+  - bill_payments
+  
 ## TODO
 
 - (List any pending features or improvements here)
 
 ## Example Usage
 ```
-CREATE DATABASE my_Quickbooks;
+CREATE DATABASE my_qboo
 With 
-    ENGINE = 'Quickbooks',
+    ENGINE = "quickbooks",
+    PARAMETERS = {
+     "client_id": "<YOUR_CLIENT_ID>",
+     "client_secret": "<YOUR_CLIENT_SECRET>",
+     "realm_id":"<YOUR_REALM_ID>",
+     "refresh_token":"<YOUR_REFRESH_TOKEN>",
+     "environment":'<sandbox / production>'
+    };
+
 ```
 
 After setting up the Quickbooks Handler, you can use SQL queries to fetch data from Quickbooks:
 
 ```sql
 SELECT *
-FROM my_Quickbooks.stories
-LIMIT 2;
+FROM my_qboo.vendors;
 ```
 
-Each Post has a unique ID. You can use this ID to fetch comments for a particular post.
+To fetch data from the employees table:
 
-```
+```sql
 SELECT *
-FROM mysql_datasource.comments
-WHERE item_id=35662571
-LIMIT 1;
+FROM my_qboo.employees;
 ```

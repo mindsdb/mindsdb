@@ -69,7 +69,8 @@ class VolumesTable(APITable):
             params['maxResults'] = query.limit.value
 
         # Get the volumes from the Google Books API.
-        bookshelves = self.handler.call_application_api(method_name='get_volumes', params=params)
+        bookshelves = self.handler.\
+            call_application_api(method_name='get_volumes', params=params)
 
         selected_columns = []
         for target in query.targets:
@@ -147,7 +148,8 @@ class BookshelvesTable(APITable):
                 raise NotImplementedError
 
         # Get the bookshelves from the Google Books API.
-        bookshelves = self.handler.call_application_api(method_name='get_bookshelves', params=params)
+        bookshelves = self.handler.\
+            call_application_api(method_name='get_bookshelves', params=params)
 
         selected_columns = []
         for target in query.targets:

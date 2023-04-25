@@ -73,6 +73,15 @@ jobs:
           cat mindsdb/interfaces/storage/db.py | grep integration
 
           env PYTHONPATH=./ pytest tests/unit/test_executor.py
+
+          echo -e "\n===============MySQL Handler===============\n"
+          pytest -svx tests/handler_tests/test_mysql_handler.py
+
+          echo -e "\n===============PostgreSQL Handler===============\n"
+          pytest -svx tests/handler_tests/test_postgres_handler.py
+
+          echo -e "\n===============MariaDB Handler===============\n"
+          pytest -svx tests/handler_tests/test_mariadb_handler.py
         
           # need fix in LW. not working yet 
           env PYTHONPATH=./ pytest tests/unit/test_project_structure.py

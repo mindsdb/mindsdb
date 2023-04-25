@@ -5,7 +5,7 @@ make book and bookshelf data available to use for model training and predictions
 
 ## Example: Automate your book recommendations
 
-To see how the Google Calendar handler is used, let's walk through a simple example to create a model to predict
+To see how the Google Books handler is used, let's walk through a simple example to create a model to predict
 your future book recommendations.
 
 ## Connect to the Google Books API

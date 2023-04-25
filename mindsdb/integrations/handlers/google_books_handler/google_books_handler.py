@@ -1,11 +1,10 @@
 import os
 from google.auth.transport.requests import Request
+from google.oauth2 import service_account
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 import pandas as pd
 from pandas import DataFrame
-
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from .google_books_tables import BookshelvesTable, VolumesTable
 from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
@@ -63,8 +62,8 @@ class GoogleBooksHandler(APIHandler):
                 if self.credentials and self.credentials.expired and self.credentials.refresh_token:
                     self.credentials.refresh(Request())
                 else:
-                    flow = InstalledAppFlow.from_client_secrets_file(
-                        self.credentials_file, self.scopes)
+                    flow = service_account.Credentials.from_service_account_file(
+                        self.credentials_file, scopes=self.scopes)
                     self.credentials = flow.run_local_server(port=0)
             # Save the credentials for the next run
             with open('token_books.json', 'w') as token:

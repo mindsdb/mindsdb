@@ -10,14 +10,18 @@ from mindsdb_sql import parse_sql
 import requests
 import pandas as pd
 import json
+from collections import OrderedDict
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
-logger = get_log("integrations.stravahandler")
+from stravalib.client import Client
+
+logger = get_log("integrations.strava_handler")
 
 class StravaHandler(APIHandler):
     """Strava handler implementation"""
 
     def __init__(self, name=None, **kwargs):
-        """Initialize the Confluence handler.
+        """Initialize the Strava handler.
         Parameters
         ----------
         name : str
@@ -28,7 +32,6 @@ class StravaHandler(APIHandler):
         connection_data = kwargs.get("connection_data", {})
 
         self.parser = parse_sql
-        self.dialect = 'strava'
         self.connection_data = connection_data
         self.kwargs = kwargs
         self.connection = None
@@ -50,17 +53,10 @@ class StravaHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        strava_url = f"https://www.strava.com/api/v3/athlete/clubs"
-        headers = {
-            "Authorization": f"Bearer {self.connection_data['strava_api_token']}",
-        }
-        response = requests.request("GET",strava_url,headers=headers)
-
-        if response.status_code == 200:
-            self.connection = response
-        else:
-            raise Exception('Not able to connect with Strava API. Possibly wrong API Key')
-
+        client = Client()
+        url = client.authorization_url(client_id=self.connection_data['strava_client_id'], redirect_uri='http://127.0.0.1:5000/authorization')
+        client.access_token = self.connection_data['strava_access_token']
+        self.connection = client
 
         return self.connection
 
@@ -99,4 +95,19 @@ class StravaHandler(APIHandler):
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
 
-        
+
+connection_args = OrderedDict(
+    strava_client_id={
+        'type': ARG_TYPE.STR,
+        'description': 'Client id for accessing Strava Application API'
+    },
+    strava_access_token={
+        'type': ARG_TYPE.STR,
+        'description': 'Access Token for accessing Strava Application API'
+    }
+)
+
+connection_args_example = OrderedDict(
+    strava_client_id ='<your-strava-client_id>',
+    strava_access_token ='<your-strava-api-token>'
+)

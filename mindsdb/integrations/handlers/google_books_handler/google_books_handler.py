@@ -1,5 +1,5 @@
 import json
-
+from urllib.parse import urlencode
 import requests
 import pandas as pd
 from pandas import DataFrame
@@ -65,7 +65,8 @@ class GoogleBooksHandler(APIHandler):
             if self.api_key is None:
                 raise Exception('Missing API key')
             response = requests.get(
-                'https://www.googleapis.com/books/v1/volumes?q=flowers+inauthor:keyes&key=' + self.api_key)
+                'https://www.googleapis.com/books/v1/volumes'
+                '?q=flowers+inauthor:keyes&key=' + self.api_key)
             if response.status_code != 200:
                 raise Exception(f'Error connecting to Google Books API: {response.text}')
             response.success = True
@@ -88,7 +89,6 @@ class GoogleBooksHandler(APIHandler):
         method_name, params = FuncParser().from_string(query)
 
         df = self.call_application_api(method_name, params)
-        self.query()
 
         return Response(
             RESPONSE_TYPE.TABLE,
@@ -107,7 +107,11 @@ class GoogleBooksHandler(APIHandler):
         minShelf = None
         maxShelf = None
         if params['shelf']:
-            url = f"https://www.googleapis.com/books/v1/users/{params['userId']}/bookshelves/{params['shelf']}?source={params['source']}&fields={params['fields']}&key={self.api_key}"
+            # Build the request URL
+            base_url = f"https://www.googleapis.com/books/v1/users/{params['userId']}/bookshelves/{params['shelf']}"
+            url = base_url + "?" + urlencode(params) + f"&key={self.api_key}"
+            if not (params['source'] and params['fields']):
+                url = base_url + f"?key={self.api_key}"
             response = response = requests.get(url)
             # Check if the request was successful (i.e., status code 200)
             if response.status_code == 200:
@@ -127,8 +131,12 @@ class GoogleBooksHandler(APIHandler):
             minShelf = int(params['minShelf'])
             maxShelf = int(params['maxShelf'])
 
-        url = f"https://www.googleapis.com/books/v1/users/{params['userId']}/bookshelves?source={params['source']}" \
-              f"&fields={params['fields']}&key={self.api_key}"
+        # Build the request URL
+        base_url = f"https://www.googleapis.com/books/v1/users/{params['userId']}/bookshelves"
+        url = base_url + "?" + urlencode(params) + f"&key={self.api_key}"
+        if not (params['source'] and params['fields']):
+            url = base_url + f"?key={self.api_key}"
+
         response = requests.get(url)
         if response.status_code == 200:
             data = json.loads(response.text)
@@ -150,11 +158,9 @@ class GoogleBooksHandler(APIHandler):
             DataFrame
         """
         df = pd.DataFrame(columns=self.volumes.get_columns())
-        url = f"https://www.googleapis.com/books/v1/volumes?q={params['q']}&download={params['download']}" \
-              f"&filter={params['filter']}&langRestrict={params['langRestrict']}&libraryRestrict={params['libraryRestrict']}" \
-              f"&maxAllowedMaturityRating={params['maxAllowedMaturityRating']}&maxResults={params['maxResults']}" \
-              f"&orderBy={params['orderBy']}&printType={params['printType']}&projection={params['projection']}" \
-              f"&source={params['source']}&startIndex={params['startIndex']}&key={self.api_key}"
+        # Build the request URL
+        base_url = f"https://www.googleapis.com/books/v1/volumes"
+        url = base_url + "?" + urlencode(params) + f"&key={self.api_key}"
         response = requests.get(url)
         if response.status_code == 200:
             data = json.loads(response.text)

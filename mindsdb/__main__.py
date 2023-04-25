@@ -14,6 +14,7 @@ from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
+from mindsdb.api.postgres.start import start as start_postgres
 from mindsdb.interfaces.jobs.scheduler import start as start_scheduler
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
@@ -21,7 +22,7 @@ from mindsdb.utilities.functions import args_parse, get_versions_where_predictor
 from mindsdb.utilities import log
 from mindsdb.interfaces.stream.stream import StreamController
 from mindsdb.interfaces.stream.utilities import STOP_THREADS_EVENT
-from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.interfaces.database.integrations import integration_controller
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
 from mindsdb.utilities.fs import create_dirs_recursive
@@ -167,7 +168,6 @@ if __name__ == '__main__':
         # Figure this one out later
         pass
 
-    integration_controller = IntegrationController()
     if args.install_handlers is not None:
         handlers_list = [s.strip() for s in args.install_handlers.split(',')]
         # import_meta = handler_meta.get('import', {})
@@ -282,6 +282,7 @@ if __name__ == '__main__':
         'http': start_http,
         'mysql': start_mysql,
         'mongodb': start_mongo,
+        'postgres': start_postgres,
         'jobs': start_scheduler,
     }
 

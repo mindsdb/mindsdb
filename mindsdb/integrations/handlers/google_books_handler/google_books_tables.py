@@ -174,6 +174,7 @@ class BookshelvesTable(APITable):
         return [
             'kind',
             'id',
+            'selfLink',
             'title',
             'description',
             'access',
@@ -181,5 +182,4 @@ class BookshelvesTable(APITable):
             'created',
             'volumeCount',
             'volumesLastUpdated'
-            'selfLink'
         ]

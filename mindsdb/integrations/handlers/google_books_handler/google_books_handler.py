@@ -1,6 +1,8 @@
-import json
-from urllib.parse import urlencode
-import requests
+import os
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
 import pandas as pd
 from pandas import DataFrame
 
@@ -28,8 +30,12 @@ class GoogleBooksHandler(APIHandler):
             kwargs (dict): additional arguments
         """
         super().__init__(name)
+        self.token = None
+        self.service = None
         self.connection_data = kwargs.get('connection_data', {})
-        self.api_key = self.connection_data.get('api_key')
+        self.credentials_file = self.connection_data.get('credentials', None)
+        self.credentials = None
+        self.scopes = ['https://www.googleapis.com/auth/books']
         self.is_connected = False
         self.connection = None
         bookshelves = BookshelvesTable(self)
@@ -39,7 +45,7 @@ class GoogleBooksHandler(APIHandler):
         self.volumes = volumes
         self._register_table('volumes', volumes)
 
-    def connect(self) -> StatusResponse:
+    def connect(self):
         """
         Set up any connections required by the handler
         Should return output of check_connection() method after attempting
@@ -47,11 +53,24 @@ class GoogleBooksHandler(APIHandler):
         Returns:
             HandlerStatusResponse
         """
-        if self.is_connected is True:
-            return self.connection
 
-        self.connection = self.check_connection()
-        return self.connection
+        if self.is_connected is True:
+            return self.service
+        if self.credentials_file:
+            if os.path.exists('token_books.json'):
+                self.credentials = Credentials.from_authorized_user_file('token.json', self.scopes)
+            if not self.credentials or not self.credentials.valid:
+                if self.credentials and self.credentials.expired and self.credentials.refresh_token:
+                    self.credentials.refresh(Request())
+                else:
+                    flow = InstalledAppFlow.from_client_secrets_file(
+                        self.credentials_file, self.scopes)
+                    self.credentials = flow.run_local_server(port=0)
+            # Save the credentials for the next run
+            with open('token.json', 'w') as token:
+                token.write(self.credentials.to_json())
+            self.service = build('books', 'v1', credentials=self.credentials)
+        return self.service
 
     def check_connection(self) -> StatusResponse:
         """
@@ -59,16 +78,11 @@ class GoogleBooksHandler(APIHandler):
         Returns:
             HandlerStatusResponse
         """
+
         response = StatusResponse(False)
 
         try:
-            if self.api_key is None:
-                raise Exception('Missing API key')
-            response = requests.get(
-                'https://www.googleapis.com/books/v1/volumes'
-                '?q=flowers+inauthor:keyes&key=' + self.api_key)
-            if response.status_code != 200:
-                raise Exception(f'Error connecting to Google Books API: {response.text}')
+            service = self.connect()
             response.success = True
         except Exception as e:
             log.logger.error(f'Error connecting to Google Books API: {e}!')
@@ -103,23 +117,18 @@ class GoogleBooksHandler(APIHandler):
         Returns:
             DataFrame
         """
-        df = pd.DataFrame(columns=self.bookshelves.get_columns())
+        service = self.connect()
         minShelf = None
         maxShelf = None
         if params['shelf']:
-            # Build the request URL
-            base_url = f"https://www.googleapis.com/books/v1/users/{params['userId']}/bookshelves/{params['shelf']}"
-            url = base_url + "?" + urlencode(params) + f"&key={self.api_key}"
-            if not (params['source'] and params['fields']):
-                url = base_url + f"?key={self.api_key}"
-            response = response = requests.get(url)
-            # Check if the request was successful (i.e., status code 200)
-            if response.status_code == 200:
-                # Parse the response JSON into a Python dictionary
-                data = json.loads(response.text)
-                df = pd.DataFrame(data)
+            shelf = int(params['shelf'])
+            if params['source']:
+                df = service.mylibrary().bookshelves().get(shelf=shelf, userid=params['userid'],
+                                                           source=params['source']).execute()
             else:
-                log.logger.error(f"Error retrieving bookshelf information: {response.status_code}")
+                df = service.mylibrary().bookshelves().get(shelf=shelf, userid=params['userid']).execute()
+
+            df = pd.DataFrame(df, columns=self.bookshelves.get_columns())
             return df
         elif not params['minShelf'] and params['maxShelf']:
             minShelf = int(params['maxShelf']) - 10
@@ -131,21 +140,15 @@ class GoogleBooksHandler(APIHandler):
             minShelf = int(params['minShelf'])
             maxShelf = int(params['maxShelf'])
 
-        # Build the request URL
-        base_url = f"https://www.googleapis.com/books/v1/users/{params['userId']}/bookshelves"
-        url = base_url + "?" + urlencode(params) + f"&key={self.api_key}"
-        if not (params['source'] and params['fields']):
-            url = base_url + f"?key={self.api_key}"
+        args = {
+            key: value for key, value in params.items() if key not in ['minShelf', 'maxShelf'] and value is not None
+        }
+        bookshelves = service.bookshelves().list(userid=params['userid'], **args).execute()
 
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = json.loads(response.text)
-            df = pd.DataFrame(data['items'])
-            if minShelf is not None or maxShelf is not None:
-                # Drop bookshelves that are not in the id range
-                df = df.drop(df[(df['id'] < minShelf) | (df['id'] > maxShelf)].index)
-        else:
-            log.logger.error(f"Error retrieving bookshelf information: {response.status_code}")
+        df = pd.DataFrame(bookshelves['items'], columns=self.bookshelves.get_columns())
+        if minShelf is not None or maxShelf is not None:
+            # Drop bookshelves that are not in the id range
+            df = df.drop(df[(df['id'] < minShelf) | (df['id'] > maxShelf)].index)
 
         return df
 
@@ -157,17 +160,12 @@ class GoogleBooksHandler(APIHandler):
         Returns:
             DataFrame
         """
-        df = pd.DataFrame(columns=self.volumes.get_columns())
-        # Build the request URL
-        base_url = f"https://www.googleapis.com/books/v1/volumes"
-        url = base_url + "?" + urlencode(params) + f"&key={self.api_key}"
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = json.loads(response.text)
-            df = pd.DataFrame(data['items'])
-        else:
-            log.logger.error(f"Error retrieving volume information: {response.status_code}")
-
+        service = self.connect()
+        args = {
+            key: value for key, value in params.items() if value is not None
+        }
+        volumes = service.volumes().list(**args).execute()
+        df = pd.DataFrame(volumes['items'], columns=self.volumes.get_columns())
         return df
 
     def call_application_api(self, method_name: str = None, params: dict = None) -> DataFrame:

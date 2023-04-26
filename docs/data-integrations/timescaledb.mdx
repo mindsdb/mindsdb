@@ -28,19 +28,19 @@ In order to make use of this handler and connect to the TimescaleDB server in Mi
 ```sql
 CREATE DATABASE timescaledb_datasource
 WITH
-engine = 'timescaledb',
-parameters = {
-    "host": "examplehost.timescaledb.com",
-    "port": 5432,
-    "user": "example_user",
-    "password": "my_password",
-    "database": "tsdb"
-};
+    engine = 'timescaledb',
+    parameters = {
+        "host": "examplehost.timescaledb.com",
+        "port": 5432,
+        "user": "example_user",
+        "password": "my_password",
+        "database": "tsdb"
+    };
 ```
 
 You can use this established connection to query your table as follows,
 
 ```sql
 SELECT *
-FROM timescaledb_datasource.sensor;
+FROM timescaledb_datasource.sensor
 ```

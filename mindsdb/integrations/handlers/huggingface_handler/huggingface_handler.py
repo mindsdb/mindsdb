@@ -30,6 +30,7 @@ class HuggingFaceHandler(BaseMLEngine):
                            'zero-shot-classification',
                            'translation',
                            'summarization',
+                           'text2text-generation',
                            'fill-mask']
 
         if metadata.pipeline_tag not in supported_tasks:
@@ -179,6 +180,12 @@ class HuggingFaceHandler(BaseMLEngine):
             final[args['target']] = result['summary_text']
 
             return final
+        
+        def tidy_output_text2text(args, result):
+            final = {}
+            final[args['target']] = result['generated_text']
+
+            return final
 
         def tidy_output_fill_mask(args, result):
             final = {}
@@ -240,9 +247,14 @@ class HuggingFaceHandler(BaseMLEngine):
                                          max_length=args['max_output_length'])
             output_list_tidy = [tidy_output_summarization(args, x) for x in output_list_messy]
 
+        elif task == 'text2text-generation':
+            output_list_messy = pipeline(input_list_str, max_length=args['max_length'])
+            output_list_tidy = [tidy_output_text2text(args, x) for x in output_list_messy]
+
         elif task == 'fill-mask':
             output_list_messy = pipeline(input_list_str)
             output_list_tidy = [tidy_output_fill_mask(args, x) for x in output_list_messy]
+
         else:
             raise RuntimeError(f'Unknown task: {task}')
 

@@ -21,6 +21,7 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.analysis import ns_conf as analysis_ns
 from mindsdb.api.http.namespaces.auth import ns_conf as auth_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
+from mindsdb.api.http.namespaces.databases import ns_conf as databases_ns
 from mindsdb.api.http.namespaces.default import ns_conf as default_ns, check_auth
 from mindsdb.api.http.namespaces.file import ns_conf as file_ns
 from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
@@ -31,7 +32,7 @@ from mindsdb.api.http.namespaces.tab import ns_conf as tab_ns
 from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
 from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
-from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.interfaces.storage import db
@@ -206,7 +207,8 @@ def initialize_app(config, no_studio, with_nlp):
         analysis_ns,
         handlers_ns,
         tree_ns,
-        projects_ns
+        projects_ns,
+        databases_ns
     ]
     if with_nlp:
         protected_namespaces.append(nlp_ns)
@@ -340,7 +342,7 @@ def initialize_flask(config, init_static_thread, no_studio):
 
 
 def initialize_interfaces(app):
-    app.integration_controller = IntegrationController()
+    app.integration_controller = integration_controller
     app.database_controller = DatabaseController()
     app.file_controller = FileController()
     config = Config()

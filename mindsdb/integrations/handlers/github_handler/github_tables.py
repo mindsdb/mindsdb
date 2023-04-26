@@ -182,6 +182,117 @@ class GithubIssuesTable(APITable):
 
         return github_issues_df
 
+    def insert(self, query: ast.Insert):
+        """Inserts data into the GitHub "Create an issue" API
+
+        Parameters
+        ----------
+        query : ast.Insert
+           Given SQL INSERT query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+
+        if self.handler.connection_data.get("api_key", None) is None:
+            raise ValueError(
+                "Need an authenticated connection in order to insert a GitHub issue"
+            )
+
+        self.handler.connect()
+        current_repo = self.handler.connection.get_repo(self.handler.repository)
+
+        columns = [col.name for col in query.columns]
+
+        supported_columns = {"title", "body", "assignees", "milestone", "labels"}
+
+        if not set(columns).issubset(supported_columns):
+            unsupported_columns = set(columns).difference(supported_columns)
+            raise ValueError(
+                "Unsupported columns for GitHub issue insert: "
+                + ", ".join(unsupported_columns)
+            )
+
+        for a_row in query.values:
+            insert_kwargs = {}
+            a_value = dict(zip(columns, a_row))
+
+            if a_value.get("title", None) is None:
+                raise ValueError("Title parameter is required to insert a GitHub issue")
+
+            if a_value.get("body", None):
+                insert_kwargs["body"] = a_value["body"]
+
+            if a_value.get("assignees", None):
+                insert_kwargs["assignees"] = []
+                for an_assignee in a_value["assignees"].split(","):
+                    an_assignee = an_assignee.replace(" ", "")
+                    try:
+                        github_user = self.handler.connection.get_user(an_assignee)
+                    except Exception as e:
+                        raise ValueError(
+                            f'Encountered an exception looking up assignee "{an_assignee}" in GitHub: '
+                            f"{type(e).__name__} - {e}"
+                        )
+
+                    insert_kwargs["assignees"].append(github_user)
+
+            if a_value.get("milestone", None):
+                current_milestones = current_repo.get_milestones()
+
+                found_existing_milestone = False
+                for a_milestone in current_milestones:
+                    if a_milestone.title == a_value["milestone"]:
+                        insert_kwargs["milestone"] = a_milestone
+                        found_existing_milestone = True
+                        break
+
+                if not found_existing_milestone:
+                    logger.debug(
+                        f"Milestone \"{a_value['milestone']}\" not found, creating it"
+                    )
+                    insert_kwargs["milestone"] = current_repo.create_milestone(
+                        a_value["milestone"]
+                    )
+                else:
+                    logger.debug(f"Milestone \"{a_value['milestone']}\" already exists")
+
+            if a_value.get("labels", None):
+                insert_kwargs["labels"] = []
+
+                inserted_labels = []
+                for a_label in a_value["labels"].split(","):
+                    a_label = a_label.replace(" ", "")
+                    inserted_labels.append(a_label)
+
+                existing_labels = current_repo.get_labels()
+
+                existing_labels_set = set([label.name for label in existing_labels])
+
+                if not set(inserted_labels).issubset(existing_labels_set):
+                    new_inserted_labels = set(inserted_labels).difference(
+                        existing_labels_set
+                    )
+                    logger.debug(
+                        "Inserting new labels: " + ", ".join(new_inserted_labels)
+                    )
+                    for a_new_label in new_inserted_labels:
+                        current_repo.create_label(a_new_label, "000000")
+
+                for a_label in existing_labels:
+                    if a_label.name in inserted_labels:
+                        insert_kwargs["labels"].append(a_label)
+
+            try:
+                current_repo.create_issue(a_value["title"], **insert_kwargs)
+            except Exception as e:
+                raise ValueError(
+                    f"Encountered an exception creating an issue in GitHub: "
+                    f"{type(e).__name__} - {e}"
+                )
+
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
 

@@ -1,4 +1,4 @@
-# Google Search API Integration
+# Google Search Console API Integration
 
 This handler integrates with the [Google Search API](https://developers.google.com/webmaster-tools)
 to allow you to use Google Search data in your SQL queries.

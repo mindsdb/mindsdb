@@ -1,6 +1,6 @@
 from bson.int64 import Int64
 
-from mindsdb_sql.parser.ast import Join, Select, Identifier, Describe
+from mindsdb_sql.parser.ast import Join, Select, Identifier, Describe, Show
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import Responder
 from mindsdb.api.mongo.utilities.mongodb_ast import MongoToAst
@@ -86,7 +86,7 @@ class Responce(Responder):
             }
 
         # system queries
-        if query['find'] == 'system.version':
+        elif query['find'] == 'system.version':
             # For studio3t
             data = [{
                 "_id": "featureCompatibilityVersion",
@@ -102,7 +102,11 @@ class Responce(Responder):
                 'ok': 1
             }
 
-        ast_query = find_to_ast(query, database)
+        elif query['find'] == 'ml_engines':
+            ast_query = Show('ml_engines')
+
+        else:
+            ast_query = find_to_ast(query, database)
 
         # add _id for objects
         table_name = None

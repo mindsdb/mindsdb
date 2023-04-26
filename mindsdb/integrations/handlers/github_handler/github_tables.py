@@ -346,6 +346,42 @@ class GithubPullRequestsTable(APITable):
         else:
             total_results = 20
 
+        issues_kwargs = {}
+        order_by_conditions = {}
+
+        if query.order_by and len(query.order_by) > 0:
+            order_by_conditions["columns"] = []
+            order_by_conditions["ascending"] = []
+
+            for an_order in query.order_by:
+                if an_order.field.parts[0] != "pull_requests":
+                    next
+
+                if an_order.field.parts[1] in [
+                    "created",
+                    "updated",
+                    "popularity",
+                    "long-running",
+                ]:
+                    if issues_kwargs != {}:
+                        raise ValueError(
+                            "Duplicate order conditions found for created/updated/popularity/long-running"
+                        )
+
+                    issues_kwargs["sort"] = an_order.field.parts[1]
+                    issues_kwargs["direction"] = an_order.direction
+                elif an_order.field.parts[1] in self.get_columns():
+                    order_by_conditions["columns"].append(an_order.field.parts[1])
+
+                    if an_order.direction == "ASC":
+                        order_by_conditions["ascending"].append(True)
+                    else:
+                        order_by_conditions["ascending"].append(False)
+                else:
+                    raise ValueError(
+                        f"Order by unknown column {an_order.field.parts[1]}"
+                    )
+
         self.handler.connect()
 
         github_pull_requests_df = pd.DataFrame(columns=self.get_columns())
@@ -356,7 +392,7 @@ class GithubPullRequestsTable(APITable):
             try:
                 for a_pull in self.handler.connection.get_repo(
                     self.handler.repository
-                ).get_pulls(state="all")[start : start + 10]:
+                ).get_pulls(**issues_kwargs)[start : start + 10]:
 
                     github_pull_requests_df = pd.concat(
                         [

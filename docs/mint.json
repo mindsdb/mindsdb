@@ -169,13 +169,25 @@
                 {
                   "group": "CREATE",
                   "pages": [
-                    "sql/create/databases",
+                    "sql/create/database",
                     "sql/create/project",
                     "sql/create/model",
                     "sql/create/table",
                     "sql/create/view",
                     "sql/create/ml-engine",
                     "sql/create/jobs"
+                  ]
+                },
+                {
+                  "group": "DROP",
+                  "pages": [
+                    "sql/drop/database",
+                    "sql/drop/project",
+                    "sql/drop/model",
+                    "sql/drop/table",
+                    "sql/drop/view",
+                    "sql/drop/ml-engine",
+                    "sql/drop/jobs"
                   ]
                 },
                 "sql/api/update",

@@ -5,14 +5,16 @@ import docker
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
-HANDLER_KWARGS = {"connection_data": {
-                    "host": "localhost",
-                    "port": "15432",
-                    "user": "postgres",
-                    "password": "supersecret",
-                    "database": "test",
-             }
+HANDLER_KWARGS = {
+    "connection_data": {
+        "host": "localhost",
+        "port": "15432",
+        "user": "postgres",
+        "password": "supersecret",
+        "database": "test",
+    }
 }
+
 
 def waitReadiness(container, timeout=30):
     threshold = time.time() + timeout
@@ -39,12 +41,12 @@ def handler(request):
     container = None
     try:
         container = docker_client.containers.run(
-                    image_name,
-                    command=command,
-                    detach=True,
-                    environment={"POSTGRES_PASSWORD":"supersecret"},
-                    ports={"5432/tcp": 15432},
-                )
+            image_name,
+            command=command,
+            detach=True,
+            environment={"POSTGRES_PASSWORD": "supersecret"},
+            ports={"5432/tcp": 15432},
+        )
         waitReadiness(container)
     except Exception as e:
         if container is not None:
@@ -55,6 +57,7 @@ def handler(request):
     yield handler
     container.kill()
     docker_client.close()
+
 
 class TestPostgresHandler:
     def test_connect(self, handler):

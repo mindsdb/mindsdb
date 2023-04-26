@@ -6,17 +6,13 @@ from typing import Any
 import pandas as pd
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser import ast
-from mindsdb_sql.parser.ast.base import ASTNode
 from newsapi import NewsApiClient
-from requests import Response
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
-from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from mindsdb.microservices_grpc.db.common_pb2 import StatusResponse
 from mindsdb.utilities.config import Config
 
 

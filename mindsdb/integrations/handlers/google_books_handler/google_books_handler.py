@@ -62,9 +62,8 @@ class GoogleBooksHandler(APIHandler):
                 if self.credentials and self.credentials.expired and self.credentials.refresh_token:
                     self.credentials.refresh(Request())
                 else:
-                    flow = service_account.Credentials.from_service_account_file(
+                    self.credentials = service_account.Credentials.from_service_account_file(
                         self.credentials_file, scopes=self.scopes)
-                    self.credentials = flow.run_local_server(port=0)
             # Save the credentials for the next run
             with open('token_books.json', 'w') as token:
                 token.write(self.credentials.to_json())

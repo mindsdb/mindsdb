@@ -61,9 +61,8 @@ class GoogleSearchConsoleHandler(APIHandler):
                 if self.credentials and self.credentials.expired and self.credentials.refresh_token:
                     self.credentials.refresh(Request())
                 else:
-                    flow = InstalledAppFlow.from_client_secrets_file(
-                        self.credentials_file, self.scopes)
-                    self.credentials = flow.run_local_server(port=0)
+                    self.credentials = service_account.Credentials.from_service_account_file(
+                        self.credentials_file, scopes=self.scopes)
             # Save the credentials for the next run
             with open('token_search.json', 'w') as token:
                 token.write(self.credentials.to_json())

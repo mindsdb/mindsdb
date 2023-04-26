@@ -341,7 +341,10 @@ class GithubPullRequestsTable(APITable):
 
         conditions = extract_comparison_conditions(query.where)
 
-        total_results = 20
+        if query.limit:
+            total_results = query.limit.value
+        else:
+            total_results = 20
 
         self.handler.connect()
 

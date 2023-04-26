@@ -28,7 +28,7 @@ The optional arguments are as follows:
 In order to make use of this handler and connect to the DuckDB database in MindsDB, the following syntax can be used:
 
 ```sql
-CREATE DATABASE duckdb_datasource
+CREATE DATABASE duckdb_datasource;
 WITH
     engine = 'duckdb',
     parameters = {
@@ -39,6 +39,6 @@ WITH
 You can use this established connection to query your table as follows:
 
 ```sql
-SELECT *
+SELECT *;
 FROM duckdb_datasource.my_table
 ```

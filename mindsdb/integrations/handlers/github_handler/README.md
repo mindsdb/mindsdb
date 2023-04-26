@@ -41,19 +41,22 @@ Read about creating a GitHub API key [here](https://docs.github.com/en/github/au
 
 ## Implemented Features
 
-- [x] GitHub Issues table for a given Repository
-  - [x] Support LIMIT
-  - [x] Support WHERE
-  - [x] Support ORDER BY
-  - [x] Support column selection
+- [x] GitHub Issues Table for a given Repository
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
+  - [x] Support INSERT
+    - [x] Support title, body, assignee, milestone, and labels columns
 
 ## TODO
 
-- [ ] GitHub Pull Requests table for a given Repository
-- [ ] GitHub Commits table for a given Repository
-- [ ] GitHub Releases table for a given Repository
-- [ ] GitHub Contributors table for a given Repository
-- [ ] GitHub Branches table for a given Repository
+- [ ] GitHub Pull Requests Table for a given Repository
+- [ ] GitHub Commits Table for a given Repository
+- [ ] GitHub Releases Table for a given Repository
+- [ ] GitHub Contributors Table for a given Repository
+- [ ] GitHub Branches Table for a given Repository
 
 ## Example Usage
 

@@ -30,6 +30,7 @@ class HuggingFaceHandler(BaseMLEngine):
                            'zero-shot-classification',
                            'translation',
                            'summarization',
+                           'text2text-generation',
                            'fill-mask']
 
         if metadata.pipeline_tag not in supported_tasks:
@@ -183,11 +184,18 @@ class HuggingFaceHandler(BaseMLEngine):
         return final
 
     def predict_summarization(self, pipeline, item, args):
-
         result = pipeline([item], min_length=args['min_output_length'], max_length=args['max_output_length'])[0]
 
         final = {}
         final[args['target']] = result['summary_text']
+
+        return final
+
+    def predict_text2text(self, pipeline, item, args):
+        result = pipeline([item], max_length=args['max_length'])[0]
+
+        final = {}
+        final[args['target']] = result['generated_text']
 
         return final
 

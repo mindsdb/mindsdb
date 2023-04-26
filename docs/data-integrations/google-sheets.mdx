@@ -5,10 +5,10 @@ sidebarTitle: Google Sheets
 
 This is the implementation of the Google Sheets data handler for MindsDB.
 
-[Google Sheets](https://en.wikipedia.org/wiki/Google_Sheets) is a spreadsheet program included as a part of the free, web-based Google Docs Editors suite offered by Google.
+[Google Sheets](https://www.google.com/sheets/about/) is a spreadsheet program included as a part of the free, web-based Google Docs Editors suite offered by Google.
 
 <Warning>
-Please note that it works with public sheets only.
+Please note that the integration of MindsDB with Google Sheets works for public sheets only.
 </Warning>
 
 ## Implementation
@@ -17,7 +17,10 @@ This handler is implemented using `duckdb`, a library that allows SQL queries to
 
 In essence, when querying a particular sheet, the entire sheet is first pulled into a `pandas` DataFrame using the [Google Visualization API](https://developers.google.com/chart/interactive/docs/reference). Once this is done, SQL queries can be run on the DataFrame using `duckdb`.
 
+<Tip>
 Since the entire sheet needs to be pulled into memory first (DataFrame), it is recommended to be somewhat careful when querying large datasets so as not to overload your machine.
+</Tip>
+
 The required arguments to establish a connection are as follows:
 
 * `spreadsheet_id` is the unique ID of the Google Sheet.
@@ -30,11 +33,11 @@ In order to make use of this handler and connect to a Google Sheet in MindsDB, t
 ```sql
 CREATE DATABASE sheets_datasource
 WITH
-engine = 'sheets',
-parameters = {
-"spreadsheet_id": "12wgS-1KJ9ymUM-6VYzQ0nJYGitONxay7cMKLnEE2_d0",
-"sheet_name": "iris"
-};
+    engine = 'sheets',
+    parameters = {
+      "spreadsheet_id": "12wgS-1KJ9ymUM-6VYzQ0nJYGitONxay7cMKLnEE2_d0",
+      "sheet_name": "iris"
+    };
 ```
 
 You can use this established connection to query your table as follows:

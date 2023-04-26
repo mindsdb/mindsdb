@@ -17,13 +17,13 @@ from mindsdb.utilities import log
 
 class GoogleSearchConsoleHandler(APIHandler):
     """
-        A class for handling connections and interactions with the Google Search API.
+        A class for handling connections and interactions with the Google Search Console API.
     """
     name = 'google_search'
 
     def __init__(self, name: str, **kwargs):
         """
-        Initialize the Google Search API handler.
+        Initialize the Google Search Console API handler.
         Args:
             name (str): name of the handler
             kwargs (dict): additional arguments
@@ -179,7 +179,7 @@ class GoogleSearchConsoleHandler(APIHandler):
 
     def call_application_api(self, method_name: str = None, params: dict = None) -> DataFrame:
         """
-        Call Google Search API and map the data to pandas DataFrame
+        Call Google Search Console API and map the data to pandas DataFrame
         Args:
             method_name (str): method name
             params (dict): query parameters

@@ -12,7 +12,7 @@ logger = get_log("integrations.jira_handler")
 
 class JiraProjectsTable(APITable):
     """Jira Projects Table implementation"""
-
+    _MAX_API_RESULTS = 100
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Pulls data from the Jira "get_all_project_issues" API endpoint
         Parameters
@@ -42,7 +42,7 @@ class JiraProjectsTable(APITable):
 
             for an_order in query.order_by:
                 if an_order.field.parts[0] != "key":
-                    next    
+                    continue    
                 if an_order.field.parts[1] in ["reporter","assignee","status"]:
                     if issues_kwargs != {}:
                         raise ValueError(
@@ -77,16 +77,17 @@ class JiraProjectsTable(APITable):
 
         if len(jira_project_df) == 0:
             jira_project_df = pd.DataFrame([], columns=selected_columns)
-        else:
-            jira_project_df.columns = self.get_columns()
-            for col in set(jira_project_df.columns).difference(set(selected_columns)):
-                jira_project_df = jira_project_df.drop(col, axis=1)
+            return jira_project_df
 
-            if len(order_by_conditions.get("columns", [])) > 0:
-                jira_project_df = jira_project_df.sort_values(
-                    by=order_by_conditions["columns"],
-                    ascending=order_by_conditions["ascending"],
-                )
+        jira_project_df.columns = self.get_columns()
+        for col in set(jira_project_df.columns).difference(set(selected_columns)):
+            jira_project_df = jira_project_df.drop(col, axis=1)
+
+        if len(order_by_conditions.get("columns", [])) > 0:
+            jira_project_df = jira_project_df.sort_values(
+                by=order_by_conditions["columns"],
+                ascending=order_by_conditions["ascending"],
+            )
         
         if query.limit:
             jira_project_df = jira_project_df.head(total_results)
@@ -113,8 +114,9 @@ class JiraProjectsTable(APITable):
 
         jira = self.handler.connect()
         max_records = jira.get_project_issues_count(project)
+        max_records = 100
         jql_query = self.handler.construct_jql()
-        max_results = 100
+        max_results = self._MAX_API_RESULTS 
         start_index = 0
         total = 1
         fields = [
@@ -137,7 +139,13 @@ class JiraProjectsTable(APITable):
             all_jira_issues_df = pd.concat([all_jira_issues_df, df], axis=0)
 
 
-        all_jira_issues_df = all_jira_issues_df.rename(columns={'key': 'key', 'fields.summary': 'summary','fields.reporter.name':'reporter','fields.assignee.name':'assignee','fields.priority.name':'priority','fields.status.name':'status'})
+        all_jira_issues_df = all_jira_issues_df.rename(columns={
+                                                                'key': 'key', 
+                                                                'fields.summary': 'summary',
+                                                                'fields.reporter.name':'reporter',
+                                                                'fields.assignee.name':'assignee',
+                                                                'fields.priority.name':'priority',
+                                                                'fields.status.name':'status'})
         
         return all_jira_issues_df
 

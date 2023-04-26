@@ -29,11 +29,10 @@ class JiraHandler(APIHandler):
             **kwargs: arbitrary keyword arguments.
         """
         super().__init__(name)
-        connection_data = kwargs.get("connection_data", {})
+        self.connection_data = kwargs.get("connection_data", {})
 
         self.parser = parse_sql
         self.dialect = 'jira'
-        self.connection_data = connection_data
         self.kwargs = kwargs
         self.connection = None
         self.is_connected = False
@@ -61,9 +60,7 @@ class JiraHandler(APIHandler):
 
         self.connection = Jira(url= self.connection_data['jira_url'], session=s)
         self.is_connected = True
-        
-        
-        self.is_connected = True
+
 
         return self.connection
 

@@ -14,7 +14,7 @@ from mindsdb.utilities.telemetry import (
     telemetry_file_exists,
     inject_telemetry_to_static
 )
-from mindsdb.api.http.initialize import update_static
+from mindsdb.api.http.gui import update_static
 
 
 @ns_conf.route('/ping')

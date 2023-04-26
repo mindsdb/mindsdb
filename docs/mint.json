@@ -11,6 +11,10 @@
     "light": "#55D799",
     "dark": "#117866"
   },
+  "feedback": {
+    "suggestEdit": true,
+    "raiseIssue": true
+  },
   "openapi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
   "api": {
     "baseUrl": [
@@ -166,7 +170,8 @@
                   "group": "CREATE",
                   "pages": [
                     "sql/create/databases",
-                    "sql/create/predictor",
+                    "sql/create/project",
+                    "sql/create/model",
                     "sql/create/table",
                     "sql/create/view",
                     "sql/create/ml-engine",
@@ -189,7 +194,7 @@
                   ]
                 },
                 "sql/api/use",
-                "sql/api/adjust"
+                "sql/api/finetune"
               ]
             }
           ]

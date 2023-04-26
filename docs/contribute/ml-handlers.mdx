@@ -83,7 +83,7 @@ And here are the optional methods that you can implement alongside the mandatory
 * [The update() method](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L171) is used to update, fine-tune, or adjust an existing model without resetting its internal state.
 
 ```py
-def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """
         Optional.
         Used to update/fine-tune/adjust a pre-existing model without resetting its internal state (e.g. weights).
@@ -223,6 +223,19 @@ We would appreciate your feedback regarding usage & feature roadmap for the abov
         </Accordion>
 
 </AccordionGroup>
+
+<Note>
+Please note that `pytest` is the recommended testing package. Use `pytest` to confirm your ML handler implementation is correct.
+</Note>
+
+<Tip>
+**Templates for Unit Tests**
+
+If you implement a time-series ML handler, create your unit tests following the structure of the [StatsForecast unit tests](https://github.com/mindsdb/mindsdb/blob/staging/tests/unit/ml_handlers/test_statsforecast.py).
+
+If you implement an NLP ML handler, create your unit tests following the structure of the [Hugging Face unit tests](https://github.com/mindsdb/mindsdb/blob/staging/tests/unit/ml_handlers/test_huggingface.py).
+</Tip>
+
 
 ## Check out our Machine Learning Handlers!
 

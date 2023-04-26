@@ -85,7 +85,7 @@ class GithubIssuesTable(APITable):
                 continue
             if a_where[1] == "labels":
                 if a_where[0] != "=":
-                    raise ValueError("Unsupported where operation for state")
+                    raise ValueError("Unsupported where operation for labels")
 
                 issues_kwargs["labels"] = a_where[2].split(",")
 
@@ -357,18 +357,21 @@ class GithubPullRequestsTable(APITable):
                 if an_order.field.parts[0] != "pull_requests":
                     next
 
-                if an_order.field.parts[1] in [
-                    "created",
-                    "updated",
-                    "popularity",
-                    "long-running",
-                ]:
+                if an_order.field.parts[1] in ["created", "updated", "popularity"]:
                     if issues_kwargs != {}:
                         raise ValueError(
-                            "Duplicate order conditions found for created/updated/popularity/long-running"
+                            "Duplicate order conditions found for created/updated/popularity"
                         )
 
                     issues_kwargs["sort"] = an_order.field.parts[1]
+                    issues_kwargs["direction"] = an_order.direction
+                elif an_order.field.parts[1] == "long_running":
+                    if issues_kwargs != {}:
+                        raise ValueError(
+                            "Duplicate order conditions found for long_running"
+                        )
+
+                    issues_kwargs["sort"] = "long-running"
                     issues_kwargs["direction"] = an_order.direction
                 elif an_order.field.parts[1] in self.get_columns():
                     order_by_conditions["columns"].append(an_order.field.parts[1])
@@ -381,6 +384,26 @@ class GithubPullRequestsTable(APITable):
                     raise ValueError(
                         f"Order by unknown column {an_order.field.parts[1]}"
                     )
+
+        for a_where in conditions:
+            if a_where[1] == "state":
+                if a_where[0] != "=":
+                    raise ValueError("Unsupported where operation for state")
+                if a_where[2] not in ["open", "closed", "all"]:
+                    raise ValueError(
+                        f"Unsupported where argument for state {a_where[2]}"
+                    )
+
+                issues_kwargs["state"] = a_where[2]
+
+                continue
+            if a_where[1] in ["head", "base"]:
+                if a_where[0] != "=":
+                    raise ValueError(f"Unsupported where operation for {a_where[1]}")
+
+                issues_kwargs[a_where[1]] = a_where[2]
+            else:
+                raise ValueError(f"Unsupported where argument {a_where[1]}")
 
         self.handler.connect()
 
@@ -468,6 +491,31 @@ class GithubPullRequestsTable(APITable):
                 break
             else:
                 start += 10
+
+        selected_columns = []
+        for target in query.targets:
+            if isinstance(target, ast.Star):
+                selected_columns = self.get_columns()
+                break
+            elif isinstance(target, ast.Identifier):
+                selected_columns.append(target.parts[-1])
+            else:
+                raise ValueError(f"Unknown query target {type(target)}")
+
+        if len(github_pull_requests_df) == 0:
+            github_pull_requests_df = pd.DataFrame([], columns=selected_columns)
+        else:
+            github_pull_requests_df.columns = self.get_columns()
+            for col in set(github_pull_requests_df.columns).difference(
+                set(selected_columns)
+            ):
+                github_pull_requests_df = github_pull_requests_df.drop(col, axis=1)
+
+            if len(order_by_conditions.get("columns", [])) > 0:
+                github_pull_requests_df = github_pull_requests_df.sort_values(
+                    by=order_by_conditions["columns"],
+                    ascending=order_by_conditions["ascending"],
+                )
 
         return github_pull_requests_df
 

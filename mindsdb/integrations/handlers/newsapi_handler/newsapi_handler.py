@@ -168,7 +168,7 @@ class NewsAPIHandler(APIHandler):
         try:
             self.connect()
 
-            self.api.get_top_headlines()
+            self.api.get_top_headlines(page_size=1, page=1)
             response.success = True
 
         except Exception as e:
@@ -212,7 +212,7 @@ class NewsAPIHandler(APIHandler):
 
 
 connection_args = OrderedDict(
-    api_key={"type": ARG_TYPE.STR, "description": "The API key for the Airtable API."}
+    api_key={"type": ARG_TYPE.STR, "description": "The API key for the newsAPI API."}
 )
 
 connection_args_example = OrderedDict(api_key="knlsndlknslk")

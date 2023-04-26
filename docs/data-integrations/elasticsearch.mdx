@@ -1,6 +1,6 @@
 ---
 title: Elasticsearch
-sidebarTitle: Elastic
+sidebarTitle: Elasticsearch
 ---
 
 This is the implementation of the Elasticsearch data handler for MindsDB.
@@ -13,10 +13,10 @@ This handler is implemented using the `elasticsearch` library, the Python Elasti
 
 The required arguments to establish a connection are as follows:
 
-* `hosts` is the host name(s) or IP address(es) of the Elasticsearch server(s). If multiple host name(s) or IP address(es) exist, they should be separated by commas. This parameter is optional, but it should be provided if `cloud_id` is not.
-* `cloud_id` is the unique ID to your hosted Elasticsearch cluster on Elasticsearch Service. This parameter is optional, but it should be provided if `hosts` is not.
-* `username` is the username used to authenticate with the Elasticsearch server. This parameter is optional.
-* `password` is the password used to authenticate the user with the Elasticsearch server. This parameter is optional.
+- `hosts` is the host name(s) or IP address(es) of the Elasticsearch server(s). If multiple host name(s) or IP address(es) exist, they should be separated by commas. This parameter is optional, but it should be provided if `cloud_id` is not.
+- `cloud_id` is the unique ID to your hosted Elasticsearch cluster on Elasticsearch Service. This parameter is optional, but it should be provided if `hosts` is not.
+- `username` is the username used to authenticate with the Elasticsearch server. This parameter is optional.
+- `password` is the password used to authenticate the user with the Elasticsearch server. This parameter is optional.
 
 ## Usage
 
@@ -39,5 +39,7 @@ FROM elasticsearch_datasource.example_index;
 ```
 
 <Note>
-There are certain limitations that need to be taken into account when issuing queries to Elasticsearch. You can find a detailed guide [here](https://www.elastic.co/guide/en/elasticsearch/reference/current/sql-limitations.html).
+  There are certain limitations that need to be taken into account when issuing
+  queries to Elasticsearch. You can find a detailed guide
+  [here](https://www.elastic.co/guide/en/elasticsearch/reference/current/sql-limitations.html).
 </Note>

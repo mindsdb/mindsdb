@@ -251,6 +251,8 @@ class LangChainHandler(OpenAIHandler):
                 func=_mdb_exec_call,
                 description="useful to read from databases or tables connected to the mindsdb machine learning package. the action must be a valid simple SQL query. For example, you can do `show databases` to list the available data sources, and `show tables` to list the available tables within each data source."  # noqa
             )
+
+        # TODO: add sample rows to tool!
         mdb_meta_tool = Tool(
             name="MDB-Metadata",
             func=_mdb_exec_metadata_call,
@@ -293,14 +295,10 @@ class LangChainHandler(OpenAIHandler):
 
     def sql_agent_completion(self, df, args=None, pred_args=None):
         """This completion will be used to answer based on information passed by any MindsDB DB or API engine."""
-        # TODO: implement additional tool with integrations_controller to get: table.columns, table.data_types, table.rows
-        # args['integrations'].get_handler('files').get_tables().data_frame  # returns DF with TABLE_NAME, TABLE_ROWS, TABLE_TYPE
-        # args['integrations'].get_handler('files').get_columns('diamonds').data_frame  # returns DF with Field, Type
-
-        # TODO: figure out best way to pass DB/API dataframes to LLM handlers
+        # TODO: improve DB/API dataframe passing to LLM handlers
         db = MindsDBSQL(
             engine=args['executor'],
-            schema=None,  # TODO ?
+            metadata=args['integrations'],  # pass the integration controller to obtain metadata from any table
             include_tables=[]  # args['include_tables'],  # TODO get from data query instead, or model creation perhaps?
         )
         toolkit = SQLDatabaseToolkit(db=db)

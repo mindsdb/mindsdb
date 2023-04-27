@@ -846,9 +846,9 @@ Check out the Firebird data handler details [here](/data-integrations/firebird).
     WITH ENGINE = 'bigquery',                 --- name of the MindsDB handler
     PARAMETERS = {
       "project_id": " ",                      --- globally unique project identifier
-      "service_account_keys": {               --- service account keys file
-        "path": " "                               --- either "path" or "url"
-      }
+      "dataset": " ",                         --- default dataset
+      "service_account_keys": " ",            --- service account keys file
+      "service_account_json": {...}           --- it is an alternative to using 'service_account_keys'
     };
     ```
     </Tab>
@@ -858,9 +858,7 @@ Check out the Firebird data handler details [here](/data-integrations/firebird).
     WITH ENGINE = 'bigquery',
     PARAMETERS = {
       "project_id": "badger-345908",
-      "service_account_keys": {
-        "path": "/home/Downloads/badger-345908.json"
-      }
+      "service_account_keys": "/home/Downloads/badger-345908.json"
     };
     ```
     </Tab>
@@ -874,6 +872,29 @@ Check out the Firebird data handler details [here](/data-integrations/firebird).
         "url": "https://url/badger-345908.json"
       }
     };
+    ```
+    </Tab>
+    <Tab title="Example without JSON File">
+    ```sql
+    CREATE DATABASE bq
+    WITH
+      ENGINE = 'bigquery',
+      PARAMETERS =  {
+        "project_id": "bgtest-1111",
+        "dataset": "mydataset",
+        "service_account_json": {
+          "type": "service_account",
+          "project_id": "bgtest-1111",
+          "private_key_id": "aaaaaaaaaa",
+          "private_key": "---------BIG STRING WITH KEY-------\n",
+          "client_email": "testbigquery@bgtest-11111.iam.gserviceaccount.com",
+          "client_id": "1111111111111",
+          "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+          "token_uri": "https://oauth2.googleapis.com/token",
+          "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/testbigquery%40bgtest-11111.iam.gserviceaccount.com"
+          }
+        };
     ```
     </Tab>
 </Tabs>

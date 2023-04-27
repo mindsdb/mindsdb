@@ -8,6 +8,7 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
@@ -28,13 +29,18 @@ class GmailHandler(APIHandler):
 
     """
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, **kwargs):
         super().__init__(name)
-        self.credentials = None
         self.token = None
         self.service = None
         self.credentials_file = None
         self.scopes = None
+        args = kwargs.get('connection_data', {})
+        self.credentials = {}
+        if 'path_to_credentials_file' in args:
+            self.credentials_file = args['path_to_credentials_file']
+        if 'scopes' in args:
+            self.scopes = args['scopes']
 
     def connect(self):
         """Authenticate with Gmail API using OAuth 2.0 Client ID that you create on Google Apis page.The implementation uses trhe credentials.json file that google give you in order to verify you."""
@@ -53,17 +59,28 @@ class GmailHandler(APIHandler):
             # Save the credentials for the next run
             with open('token.json', 'w') as token:
                 token.write(self.credentials.to_json())
+            self.is_connected = True
             self.service = build('gmail', 'v1', credentials=self.credentials)
 
     def check_connection(self) -> StatusResponse:
-        pass
+        """Checks connection to Gmail Api by getting the user's profile.
+
+        Returns StatusResponse indicating whether the handler is connected."""
+        response = StatusResponse(False)
+        try:
+            # Call the Gmail API to get the user's profile
+            profile = self.service.users().getProfile(userId='me').execute()
+            # Check if the API call was successful
+            if 'emailAddress' in profile:
+                response.success = True
+        except HttpError as error:
+            response.error_message = error
+        return response
 
     def native_query(self, query: Any) -> Response:
         pass
 
-    def get_last_n_emails(self,numberOfEmails):
-        self.credentials_file = "credentials.json"
-        self.scopes = ['https://www.googleapis.com/auth/gmail.readonly']
+    def get_last_n_emails(self, numberOfEmails):
         method = "list"
         params = {'userId': 'me', 'maxResults': numberOfEmails}
         result = self.call_gmail_api(method, **params)
@@ -92,7 +109,7 @@ class GmailHandler(APIHandler):
                     if part['mimeType'].startswith('text'):
                         body = part['body'].get('data')
                         if body:
-                            text = gmail.extract_text_from_email_body(body, part['mimeType'])
+                            text = self.extract_text_from_email_body(body, part['mimeType'])
             data.append({'Subject': subject, 'From': sender, 'Date': date, 'Body': text})
         return pd.DataFrame(data)
 
@@ -105,7 +122,7 @@ class GmailHandler(APIHandler):
             api_method = getattr(api_method, part)
         return api_method(**kwargs)
 
-    def extract_text_from_email_body(self,email_body, mime_type):
+    def extract_text_from_email_body(self, email_body, mime_type):
         if mime_type == 'text/plain':
             # if MIME type is plain text, simply print the decoded body
             decoded_data = base64.urlsafe_b64decode(email_body.encode('ASCII'))
@@ -120,10 +137,4 @@ class GmailHandler(APIHandler):
         else:
             # handle other MIME types here as necessary
             return None
-
-gmail = GmailHandler("gmail")
-emails =gmail.get_last_n_emails(10)
-print(emails)
-
-
 

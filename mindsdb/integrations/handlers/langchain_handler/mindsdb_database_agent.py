@@ -1,6 +1,6 @@
 """
-    Wrapper around MindsDB's executor following the implementation of the original
-    langchain.sql_database.SQLDatabase class to replicate its behavior.
+    Wrapper around MindsDB's executor and integration controller following the implementation of the original
+    langchain.sql_database.SQLDatabase class to partly replicate its behavior.
 """
 import warnings
 from typing import Any, Iterable, List, Optional
@@ -18,7 +18,7 @@ class MindsDBSQL(SQLDatabase):
     """ Class has to be named to replace LangChain's one, as it does a class name check with Pydantic."""
     def __init__(
         self,
-        engine,  # ref to the mindsdb executor
+        engine,
         schema: Optional[str] = None,
         metadata: Optional = None,
         ignore_tables: Optional[List[str]] = None,  # TODO: use this
@@ -26,42 +26,36 @@ class MindsDBSQL(SQLDatabase):
         sample_rows_in_table_info: int = 3,
         indexes_in_table_info: bool = False,
         custom_table_info: Optional[dict] = None,
-        view_support: Optional[bool] = True,  # TODO: true by default?
+        view_support: Optional[bool] = True,  # TODO: use this
     ):
         # Some args above are not used in this class, but are kept for compatibility
-        # TODO: call this from within the handler, two modes, either as tool or as DB.
-        self._engine = engine   # TODO add executor here, `engine` should be the reference to the executor
-        self._schema = schema  # TODO what is this?
-        self._metadata = metadata  # TODO Can we avoid this?
-        self._all_tables = self._usable_tables = set(include_tables)  # TODO: set according to select data query/using
+        self._engine = engine   # executor instance
+        self._schema = schema  # unused (TODO check if it's better to pass integration controller here instead)
+        self._metadata = metadata  # instance of the IntegrationController through which metadata can be obtained
+        self._all_tables = set(include_tables)  # TODO: set according to integration controller
         self._sample_rows_in_table_info = int(sample_rows_in_table_info)
-        self._indexes_in_table_info = indexes_in_table_info
-        self._custom_table_info = custom_table_info
 
-        # TODO: should we support this?
-        if self._custom_table_info:
-            if not isinstance(self._custom_table_info, dict):
-                raise TypeError(
-                    "table_info must be a dictionary with table names as keys and the "
-                    "desired table info as values"
-                )
-            # only keep the tables that are also present in the database
-            intersection = set(self._custom_table_info).intersection(self._all_tables)
-            self._custom_table_info = dict(
-                (table, self._custom_table_info[table])
-                for table in self._custom_table_info
-                if table in intersection
-            )
+        # ###### TODO: temporal ref, delete later ########
+        # implement additional tool with integrations_controller to get: table.columns, table.data_types, table.rows
+        # args['integrations'].get_handler('files').get_tables().data_frame  # returns DF with TABLE_NAME, TABLE_ROWS, TABLE_TYPE  # noqa
+        # args['integrations'].get_handler('files').get_columns('diamonds').data_frame  # returns DF with Field, Type
+        # ## end TODO: temporal ref, delete later ########
 
-    @classmethod
-    def from_uri(cls, database_uri: str, engine_args: Optional[dict] = None, **kwargs: Any):
-        pass  # TODO: implement?
+    # TODO: double check and remove if superflous
+    # @classmethod
+    # def from_uri(cls, database_uri: str, engine_args: Optional[dict] = None, **kwargs: Any):
+    #     pass
 
     @property
     def dialect(self) -> str:
         return 'mindsdb'
 
     def get_usable_table_names(self) -> Iterable[str]:
+        controller = self._metadata
+        usable_tables = []
+        for integration in controller.get_handlers():  # TODO: check that get_handlers exist!
+            int_df = controller.get_handler(integration).get_tables().data_frame  # also contains TABLE_ROWS, TABLE_TYPE
+            usable_tables.extend([f'{integration}.{t}' for t in int_df['TABLE_NAME'].to_list()])
         return self._usable_tables
 
     def get_table_names(self) -> Iterable[str]:
@@ -79,9 +73,6 @@ class MindsDBSQL(SQLDatabase):
         If `sample_rows_in_table_info`, the specified number of sample rows will be
         appended to each table description. This can increase performance as demonstrated in the paper.
         """
-        # #################### #
-        # TODO: implement this right
-        # #################### #
         all_table_names = self.get_usable_table_names()
         if table_names is not None:
             missing_tables = set(table_names).difference(all_table_names)
@@ -91,24 +82,39 @@ class MindsDBSQL(SQLDatabase):
 
         tables = []
         for table in all_table_names:
-            if self._custom_table_info and table in self._custom_table_info:
-                tables.append(self._custom_table_info[table])
-                continue
-
-            table_info = f"{table.rstrip()}"  # TODO: how to pass the table's column, data types, etc?
-            has_extra_info = (self._indexes_in_table_info or self._sample_rows_in_table_info)
-            if has_extra_info:
-                table_info += "\n\n/*"
+            table_info = self._get_single_table_info(table)
             if self._sample_rows_in_table_info:
+                table_info += "\n\n/*"
                 table_info += f"\n{self._get_sample_rows(table)}\n"
-            if has_extra_info:
                 table_info += "*/"
             tables.append(table_info)
 
         final_str = "\n\n".join(all_table_names)
         return final_str
 
-    # TODO: double check we don't need the _get_table_indexes() method, else, implement
+    def _get_single_table_info(self, table_str: str) -> str:
+        controller = self._metadata
+        integration, table_name = table_str.split('.')
+
+        tbl_name, n_rows, tbl_type = controller.get_handler(integration).get_tables().data_frame.iloc[0].to_list()
+        cols_df = controller.get_handler(integration).get_columns(table_name).data_frame
+        fields = cols_df['Field'].to_list()
+        dtypes = cols_df['Types'].to_list()
+
+        # get basic info
+        info = f'Table named `{tbl_name}, type `{tbl_type}`, row count: {n_rows}.\n'
+
+        # TODO: add sample rows to tool!
+        info += f'Here is a sample with {self._sample_rows_in_table_info} rows:\n'
+
+        # TODO: implement
+        # add sample rows
+        # sample_rows_df = self._get_sample_rows()
+        info += "\t".join([f'`{col_name}` (data type: {col_dtype})' for col_name, col_dtype in zip(fields, dtypes)])
+
+        return info
+
+    # TODO: ensure _get_table_indexes() is not needed, implement otherwise
 
     def _get_sample_rows(self, table: str) -> str:
         command = f"select * from {table} limit {self._sample_rows_in_table_info};"
@@ -139,11 +145,6 @@ class MindsDBSQL(SQLDatabase):
         If the statement returns rows, a string of the results is returned.
         If the statement returns no rows, an empty string is returned.
         """
-        # TODO:
-        # self._engine should be the mindsdb executor
-        # pass str sql command to mindsdb executor
-        # if fetch all, return all rows
-        # if fetch one, return one row
         result = self._engine.execute_command(command)
         if fetch == "all":
             result = result.fetchall()  # TODO fix

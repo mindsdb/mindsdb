@@ -74,7 +74,7 @@ class OpenAIHandler(BaseMLEngine):
 
         self.model_storage.json_set('args', args)
 
-    def _get_api_key(self, args, key_name='openai_api_key', strict=True):
+    def _get_openai_api_key(self, args, strict=True):
         """ 
         API_KEY preference order:
             1. provided at model creation
@@ -83,24 +83,24 @@ class OpenAIHandler(BaseMLEngine):
             4. openai.api_key setting in config.json
         """  # noqa
         # 1
-        if key_name in args:
-            return args[key_name]
+        if 'api_key' in args:
+            return args['api_key']
         # 2
         connection_args = self.engine_storage.get_connection_args()
-        if key_name in connection_args:
-            return connection_args[key_name]
+        if 'api_key' in connection_args:
+            return connection_args['api_key']
         # 3
-        api_key = os.getenv(key_name.upper())  # e.g. "OPENAI_API_KEY"
+        api_key = os.getenv('OPENAI_API_KEY')
         if api_key is not None:
             return api_key
         # 4
         config = Config()
         openai_cfg = config.get('openai', {})
-        if key_name in openai_cfg:
-            return openai_cfg[key_name]
+        if 'api_key' in openai_cfg:
+            return openai_cfg['api_key']
 
         if strict:
-            raise Exception(f'Missing API key "{key_name}". Either re-create this ML_ENGINE specifying the `{key_name}` parameter,\
+            raise Exception(f'Missing API key "api_key". Either re-create this ML_ENGINE specifying the `api_key` parameter,\
                  or re-create this model and pass the API key with `USING` syntax.')  # noqa
 
     def predict(self, df, args=None):
@@ -222,7 +222,7 @@ class OpenAIHandler(BaseMLEngine):
         # remove prompts without signal from completion queue
         prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
 
-        api_key = self._get_api_key(args)
+        api_key = self._get_openai_api_key(args)
         api_args = {k: v for k, v in api_args.items() if v is not None}  # filter out non-specified api args
         completion = self._completion(model_name, prompts, api_key, api_args, args, df)
 
@@ -417,16 +417,21 @@ class OpenAIHandler(BaseMLEngine):
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         # TODO: Update to use update() artifacts
+
         args = self.model_storage.json_get('args')
-        api_key = self._get_api_key(args)
 
-        model_name = args.get('model_name', self.default_model)
-        meta = openai.Model.retrieve(model_name, api_key=api_key)
+        if attribute == 'args':
+            return pd.DataFrame(args.items(), columns=['key', 'value'])
+        elif attribute == 'metadata':
+            api_key = self._get_openai_api_key(args)
+            model_name = args.get('model_name', self.default_model)
+            meta = openai.Model.retrieve(model_name, api_key=api_key)
+            return pd.DataFrame(meta.items(), columns=['key', 'value'])
+        else:
+            tables = ['args', 'metadata']
+            return pd.DataFrame(tables, columns=['tables'])
 
-        return pd.DataFrame([[meta['id'], meta['object'], meta['owned_by'], meta['permission'], args]],
-                            columns=['id', 'object', 'owned_by', 'permission', 'model_args'])
-
-    def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """
         Fine-tune OpenAI GPT models. Steps are roughly:
           - Analyze input data and modify it according to suggestions made by the OpenAI utility tool
@@ -438,7 +443,7 @@ class OpenAIHandler(BaseMLEngine):
           - Modify model metadata so that the new version triggers the fine-tuned version of the model (stored in the user's OpenAI account)
 
         Caveats: 
-          - As base fine-tuning models, OpenAI only supports the original GPT ones: `ada`, `babbage`, `curie`, `davinci`. This means if you adjust successively more than once, any fine-tuning other than the most recent one is lost.
+          - As base fine-tuning models, OpenAI only supports the original GPT ones: `ada`, `babbage`, `curie`, `davinci`. This means if you fine-tune successively more than once, any fine-tuning other than the most recent one is lost.
         """  # noqa
 
         args = args if args else {}
@@ -453,11 +458,11 @@ class OpenAIHandler(BaseMLEngine):
         args = {**using_args, **args}
         prev_model_name = self.base_model_storage.json_get('args').get('model_name', '')
 
-        openai.api_key = self._get_api_key(args)
-        adjust_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        openai.api_key = self._get_openai_api_key(args)
+        finetune_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
         temp_storage_path = tempfile.mkdtemp()
-        temp_file_name = f"ft_{adjust_time}"
+        temp_file_name = f"ft_{finetune_time}"
         temp_model_storage_path = f"{temp_storage_path}/{temp_file_name}.jsonl"
         df.to_json(temp_model_storage_path, orient='records', lines=True)
 
@@ -533,7 +538,7 @@ class OpenAIHandler(BaseMLEngine):
 
         result_file_id = openai.FineTune.retrieve(id=ft_result.id)['result_files'][0].id
         name_extension = openai.File.retrieve(id=result_file_id).filename
-        result_path = f'{temp_storage_path}/ft_{adjust_time}_result_{name_extension}'
+        result_path = f'{temp_storage_path}/ft_{finetune_time}_result_{name_extension}'
         with open(result_path, 'wb') as f:
             f.write(openai.File.download(id=result_file_id))
 
@@ -556,6 +561,8 @@ class OpenAIHandler(BaseMLEngine):
         spans = []
         matches = list(re.finditer("{{(.*?)}}", base_template))
 
+        assert len(matches) > 0, 'No placeholders found in the prompt, please provide a valid prompt template.'
+
         first_span = matches[0].start()
         last_span = matches[-1].end()
 
@@ -563,10 +570,10 @@ class OpenAIHandler(BaseMLEngine):
             columns.append(m[0].replace('{', '').replace('}', ''))
             spans.extend((m.start(), m.end()))
 
-        spans = spans[1:-1]
-        template = [base_template[s:e] for s, e in zip(spans, spans[1:])]
-        template.insert(0, base_template[0:first_span])
-        template.append(base_template[last_span:])
+        spans = spans[1:-1]  # omit first and last, they are added separately
+        template = [base_template[s:e] for s, e in list(zip(spans, spans[1:]))[::2]]  # take every other to skip placeholders  # noqa
+        template.insert(0, base_template[0:first_span])  # add prompt start
+        template.append(base_template[last_span:])  # add prompt end
 
         empty_prompt_ids = np.where(df[columns].isna().all(axis=1).values)[0]
 
@@ -575,7 +582,7 @@ class OpenAIHandler(BaseMLEngine):
             atom = template[i]
             if i < len(columns):
                 col = df[columns[i]].replace(to_replace=[None], value='')  # add empty quote if data is missing
-                df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom) + col
+                df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom) + col.astype("string")
             else:
                 df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom)
         prompts = list(df['__mdb_prompt'])

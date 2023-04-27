@@ -59,8 +59,8 @@ t.number_of_rooms,  t.number_of_bathrooms, t.sqft, t.location, t.days_on_market
 FROM example_db.demo_data.home_rentals as t
 JOIN mindsdb.home_rentals_model as m limit 100;
     """
-    adjust_model = """
-ADJUST mindsdb.home_rentals_model
+    finetune_model = """
+FINETUNE mindsdb.home_rentals_model
 FROM example_db (
     SELECT * FROM demo_data.home_rentals
 );
@@ -109,8 +109,8 @@ class TestHomeRentalPrices(HTTPHelperMixin):
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
         assert len(resp['data']) == 100
 
-    def test_adjust_model(self):
-        sql = QueryStorage.adjust_model
+    def test_finetune_model(self):
+        sql = QueryStorage.finetune_model
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
         assert len(resp['data']) == 1
         print(f"CREATE_MODEL_REPONSE - {resp}")

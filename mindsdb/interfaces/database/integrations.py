@@ -44,8 +44,7 @@ class IntegrationController:
 
     def add(self, name, engine, connection_args):
         if engine in ['redis', 'kafka']:
-            self._add_integration_record(name, engine, connection_args)
-            return
+            return self._add_integration_record(name, engine, connection_args)
 
         logger.debug(
             "%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
@@ -229,7 +228,7 @@ class IntegrationController:
         if handler_type == 'files':
             handler_ars['file_controller'] = FileController()
         elif self.handler_modules.get(handler_type, False).type == HANDLER_TYPE.ML:
-            handler_ars['handler_controller'] = IntegrationController()
+            handler_ars['handler_controller'] = self
             handler_ars['company_id'] = ctx.company_id
 
         return handler_ars
@@ -262,7 +261,10 @@ class IntegrationController:
         )
 
         logger.debug("%s.create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
-        return DBClient(handler_type, **handler_ars)
+        if DBClient.is_local:
+            return self.handler_modules[handler_type].Handler(**handler_ars)
+        else:
+            return DBClient(handler_type, **handler_ars)
 
     def get_handler(self, name, case_sensitive=False):
         if case_sensitive:
@@ -295,14 +297,14 @@ class IntegrationController:
         )
 
         if isinstance(connection_args, (dict, OrderedDict)):
-            files_to_get = [
-                arg_name for arg_name in connection_data
+            files_to_get = {
+                arg_name: arg_value for arg_name, arg_value in connection_data.items()
                 if arg_name in connection_args and connection_args.get(arg_name)['type'] == ARG_TYPE.PATH
-            ]
+            }
             if len(files_to_get) > 0:
 
-                for file_name in files_to_get:
-                    connection_data[file_name] = fs_store.get_path(file_name)
+                for file_name, file_path in files_to_get.items():
+                    connection_data[file_name] = fs_store.get_path(file_path)
 
         handler_ars = self._make_handler_args(integration_engine, connection_data)
         handler_ars['name'] = name
@@ -330,7 +332,10 @@ class IntegrationController:
         else:
 
             logger.info("%s.get_handler: create a client to db service of %s type, args - %s", self.__class__.__name__, integration_engine, handler_ars)
-            handler = DBClient(integration_engine, **handler_ars)
+            if DBClient.is_local:
+                handler = HandlerClass(**handler_ars)
+            else:
+                handler = DBClient(integration_engine, **handler_ars)
 
         return handler
 
@@ -446,3 +451,6 @@ class IntegrationController:
 
     def get_handlers_import_status(self):
         return self.handlers_import_status
+
+
+integration_controller = IntegrationController()

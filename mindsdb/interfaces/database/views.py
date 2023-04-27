@@ -33,6 +33,22 @@ class ViewController:
         db.session.add(view_record)
         db.session.commit()
 
+    def update(self, name, query, project_name):
+        project_record = db.session.query(db.Project).filter_by(
+            name=project_name,
+            company_id=ctx.company_id,
+            deleted_at=None
+        ).first()
+        rec = db.session.query(db.View).filter(
+            db.View.name == name,
+            db.View.company_id == ctx.company_id,
+            db.View.project_id == project_record.id
+        ).first()
+        if rec is None:
+            raise Exception(f'View not found: {name}')
+        rec.query = query
+        db.session.commit()
+
     def delete(self, name, project_name):
         project_record = db.session.query(db.Project).filter_by(
             name=project_name,

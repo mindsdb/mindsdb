@@ -12,7 +12,7 @@ migrate.migrate_to_head()
 
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.utilities.test_utils import HandlerControllerMock, PG_HANDLER_NAME, PG_CONNECTION_DATA
-from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.lightwood_handler import LightwoodHandler
 # from mindsdb.integrations.handlers.lightwood_handler.lightwood_handler.utils import load_predictor
 from mindsdb.interfaces.storage.fs import FsStore
@@ -45,7 +45,7 @@ class LightwoodHandlerTest(unittest.TestCase):
         db.session.commit()
         # endregion
 
-        handler_controller = IntegrationController()
+        handler_controller = integration_controller
 
         cls.handler = LightwoodHandler(
             'lightwood',

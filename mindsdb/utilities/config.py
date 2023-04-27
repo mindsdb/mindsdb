@@ -113,6 +113,7 @@ class Config():
                 "autoupdate": True
             },
             "debug": False,
+            "environment": "local",
             "integrations": {},
             "api": {
                 "http": {
@@ -129,6 +130,11 @@ class Config():
                 "mongodb": {
                     "host": api_host,
                     "port": "47336",
+                    "database": "mindsdb"
+                },
+                "postgres": {
+                    "host": api_host,
+                    "port": "55432",
                     "database": "mindsdb"
                 }
             },

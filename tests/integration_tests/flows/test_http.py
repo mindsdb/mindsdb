@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from .conftest import make_test_csv, CONFIG_PATH
+from .conftest import make_test_csv
 
 
 # used by mindsdb_app fixture in conftest
@@ -15,9 +15,9 @@ OVERRIDE_CONFIG = {
     'integrations': {},
 }
 # used by (required for) mindsdb_app fixture in conftest
-API_LIST = ["http",]
+API_LIST = ["http"]
 
-HTTP_API_ROOT = f'http://127.0.0.1:47334/api'
+HTTP_API_ROOT = 'http://127.0.0.1:47334/api'
 
 
 @pytest.mark.usefixtures("mindsdb_app")
@@ -41,7 +41,7 @@ class TestHTTP:
             'query': request,
             'context': context
         }
-        response = self.api_request('post', f'/sql/query', payload)
+        response = self.api_request('post', '/sql/query', payload)
 
         assert response.status_code == 200, f"sql/query is not accessible - {response.text}"
         response = response.json()
@@ -84,7 +84,6 @@ class TestHTTP:
     def show_databases(self):
         resp = self.sql_via_http('show databases', RESPONSE_TYPE.TABLE)
         return [x[0] for x in resp['data']]
-
 
     @pytest.mark.parametrize("util_uri", ["util/ping", "util/ping_native", "config/vars"])
     def test_utils(self, util_uri):
@@ -135,10 +134,9 @@ class TestHTTP:
         assert response.status_code == 403
 
         response = session.post(f'{HTTP_API_ROOT}/login', json={
-                'username': 'mindsdb',
-                'password': 'mindsdb'
-            }
-        )
+            'username': 'mindsdb',
+            'password': 'mindsdb'
+        })
         assert response.status_code == 200
 
         response = session.get(f'{HTTP_API_ROOT}/tree/')
@@ -151,10 +149,9 @@ class TestHTTP:
         assert response.status_code == 403
 
         response = session.post(f'{HTTP_API_ROOT}/login', json={
-                'username': 'mindsdb',
-                'password': 'mindsdb'
-            }
-        )
+            'username': 'mindsdb',
+            'password': 'mindsdb'
+        })
         assert response.status_code == 200
 
         response = session.put(f'{HTTP_API_ROOT}/config/', json={
@@ -493,8 +490,8 @@ class TestHTTP:
 
         # prediction
         payload = {
-           'data': [{'sqft': '1000'},
-                    {'sqft': '500'}]
+            'data': [{'sqft': '1000'},
+                     {'sqft': '500'}]
         }
         response = self.api_request('post', f'/projects/{project_name}/models/{model_name}/predict', payload=payload)
         assert response.status_code == 200, 'Error to make prediction'
@@ -508,22 +505,20 @@ class TestHTTP:
 
         assert len(response.json()) == 2
 
-    @pytest.mark.parametrize("method,payload,expected_code,result,headers",
-                             [
-                                 ("post", {}, 200, {}, {"company-id": "1"}),
-                                 ("get", {}, 200, {}, {"company-id": "1"}),
-                                 ("post", {"tab1": "select * from foo.bar limit 1"}, 200, {}, {"company-id": "1"}),
-                                 ("get", {}, 200, {"tab1": "select * from foo.bar limit 1"}, {"company-id": "1"}),
-                                 ("get", {}, 200, {}, {"company-id": "2"}),
-                             ]
-    )
+    @pytest.mark.parametrize("method,payload,expected_code,result,headers", [
+        ("post", {}, 200, {}, {"company-id": "1"}),
+        ("get", {}, 200, {}, {"company-id": "1"}),
+        ("post", {"tab1": "select * from foo.bar limit 1"}, 200, {}, {"company-id": "1"}),
+        ("get", {}, 200, {"tab1": "select * from foo.bar limit 1"}, {"company-id": "1"}),
+        ("get", {}, 200, {}, {"company-id": "2"}),
+    ])
     def test_tabs(self, method, payload, expected_code, result, headers):
         uri = '/tabs/'
         call_desc = f"{method.upper()} - {uri} payload={payload} headers={headers}"
         resp = self.api_request(method, uri, payload=payload, headers=headers)
         assert resp.status_code == expected_code, \
-                f"expected to have {expected_code} for {call_desc}, but got {resp.status_code}"
+               f"expected to have {expected_code} for {call_desc}, but got {resp.status_code}"
         # no needs to check reponse body for POST request
         if method != "post":
             assert result == resp.json(), \
-                    f"expected to have {result} for {call_desc}, but got {resp.json()}"
+                   f"expected to have {result} for {call_desc}, but got {resp.json()}"

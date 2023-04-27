@@ -5,7 +5,7 @@ from functools import reduce
 
 import pandas as pd
 from mindsdb_sql.parser.dialects.mindsdb import (
-    CreateDatasource,
+    CreateDatabase,
     RetrainPredictor,
     CreatePredictor,
     FinetunePredictor,
@@ -16,6 +16,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     CreateView,
     CreateJob,
     DropJob,
+    Evaluate
 )
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.dialects.mysql import Variable
@@ -49,6 +50,8 @@ from mindsdb_sql.parser.ast import (
     Union,
 )
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+
+from mindsdb_evaluator.accuracy.general import evaluate_accuracy
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities import log
@@ -145,7 +148,7 @@ class ExecuteCommands:
             sql = self.executor.sql
             sql_lower = self.executor.sql_lower
 
-        if type(statement) == CreateDatasource:
+        if type(statement) == CreateDatabase:
             return self.answer_create_database(statement)
         elif type(statement) == CreateMLEngine:
             return self.answer_create_ml_engine(statement)
@@ -498,6 +501,11 @@ class ExecuteCommands:
                     else:
                         profiler.disable()
                         self.session.profiling = False
+                elif statement.arg.args[0].parts[0].lower() == 'predictor_cache':
+                    if statement.arg.args[1].value in (1, True):
+                        self.session.predictor_cache = True
+                    else:
+                        self.session.predictor_cache = False
                 return ExecuteAnswer(ANSWER_TYPE.OK)
             elif category == "autocommit":
                 return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -590,6 +598,9 @@ class ExecuteCommands:
             return self.answer_create_job(statement)
         elif type(statement) == DropJob:
             return self.answer_drop_job(statement)
+        elif type(statement) == Evaluate:
+            statement.data = parse_sql(statement.query_str, dialect='mindsdb')
+            return self.answer_evaluate_metric(statement)
         else:
             log.logger.warning(f"Unknown SQL statement: {sql}")
             raise ErNotSupportedYet(f"Unknown SQL statement: {sql}")
@@ -615,6 +626,32 @@ class ExecuteCommands:
         jobs_controller.delete(job_name, project_name)
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_evaluate_metric(self, statement):
+        try:
+            sqlquery = SQLQuery(statement.data, session=self.session)
+        except Exception as e:
+            raise Exception(f'Nested query failed to execute with error: "{e}", please check and try again.')
+        result = sqlquery.fetch(self.session.datahub)
+        df = pd.DataFrame.from_dict(result["result"])
+        df.columns = [str(t.alias) if hasattr(t, 'alias') else str(t.parts[-1]) for t in statement.data.targets]
+
+        for col in ['actual', 'prediction']:
+            assert col in df.columns, f'`{col}` column was not provided, please try again.'
+            assert df[col].isna().sum() == 0, f'There are missing values in the `{col}` column, please try again.'
+
+        metric_name = statement.name.parts[-1]
+        target_series = df.pop('prediction')
+        using_clause = statement.using if statement.using is not None else {}
+        metric_value = evaluate_accuracy(df, target_series, metric_name,
+                                         target='actual',
+                                         ts_analysis=using_clause.get('ts_analysis', {}),  # will be deprecated soon
+                                         n_decimals=using_clause.get('n_decimals', 3))  # 3 decimals by default
+        return ExecuteAnswer(
+            answer_type=ANSWER_TYPE.TABLE,
+            columns=[Column(name=metric_name, table_name='', type='str')],
+            data=[[metric_value]]
+        )
 
     def answer_describe_predictor(self, statement):
 
@@ -881,7 +918,10 @@ class ExecuteCommands:
             statement (ASTNode): data for creating database/project
         """
 
-        database_name = statement.name
+        if len(statement.name.parts) != 1:
+            raise Exception("Database name should contain only 1 part.")
+
+        database_name = statement.name.parts[0]
         engine = statement.engine
         if engine is None:
             engine = "mindsdb"

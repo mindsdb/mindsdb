@@ -3,56 +3,49 @@ title: MySQL
 sidebarTitle: MySQL
 ---
 
-## MySQL
-MySQL is a fast, reliable and scalable open source database. MySQL has been in development for more than 25 years and has been used in many production environments since.
+This is the implementation of the MySQL data handler for MindsDB.
+
+[MySQL](https://www.mysql.com/) is a fast, reliable, and scalable open-source database. It has been in development for more than 25 years and has been used in many production environments since.
 
 ## Implementation
 
 This handler is implemented using the `mysql-connector-python` library. It's a Python client for MySQL that doesn't depend on any MySQL C libraries.
 
-The required arguments to establish a connection are:
+The required arguments to establish a connection are as follows:
 
-* `user`: database user
-* `password`: database password
-* `host`: host IP address or URL
-* `port`: port used to make TCP/IP connection
-* `database`: database name *optional.
+* `user` is the database user.
+* `password` is the database password.
+* `host` is the host name, IP address, or URL.
+* `port` is the port used to make TCP/IP connection.
+* `database` is the database name.
 
 There are several optional arguments that can be used as well.
 
-* `ssl`: the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
-* `ssl_ca`: SSL Certificate Authority
-* `ssl_cert`: SSL certificates
-* `ssl_key`: SSL keys
+* `ssl` is the `ssl` parameter value that indicates whether SSL is enabled (`True`) or disabled (`False`).
+* `ssl_ca` is the SSL Certificate Authority.
+* `ssl_cert` stores SSL certificates.
+* `ssl_key` stores SSL keys.
 
 ## Usage
 
-In order to make use of this handler and connect to MySQL in MindsDB, the following syntax can be used.
+In order to make use of this handler and connect to the MySQL database in MindsDB, the following syntax can be used:
 
 ```sql
-CREATE DATABASE mysql_datasource            --- display name for the database
-WITH ENGINE = 'mysql',                      --- name of the MindsDB handler
-PARAMETERS = {
-  "host": " ",                              --- host IP address or URL
-  "port": ,                                 --- port used to make TCP/IP connection
-  "database": " ",                          --- database name
-  "user": " ",                              --- database user
-  "password": " ",                          --- database password
-  "ssl": ,                                  --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
-  "ssl_ca": {                               --- optional, SSL Certificate Authority
-    "path": " "                             --- either "path" or "url"
-  },
-  "ssl_cert": {                             --- optional, SSL certificates
-    "url": " "                              --- either "path" or "url"
-  },
-  "ssl_key": {                              --- optional, SSL keys
-    "path": " "                             --- either "path" or "url"
-  }
-};
+CREATE DATABASE mysql_datasource
+WITH
+  ENGINE = 'mysql',
+  PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": 3306,
+    "database": "mysql",
+    "user": "root",
+    "password": "password"
+  };
 ```
 
-Now, you can use this established connection to query your database as follows.
+You can use this established connection to query your table as follows:
 
 ```sql
-SELECT * FROM mysql_datasource.example_table
+SELECT *
+FROM mysql_datasource.example_table;
 ```

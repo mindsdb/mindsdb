@@ -1,6 +1,4 @@
 import sys
-from mindsdb_sql.parser.ast import Identifier, Constant, BinaryOperation
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 
 
 def format_exception_error(exception):

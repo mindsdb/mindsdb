@@ -36,7 +36,7 @@ class SendinblueHandler(APIHandler):
         email_campaigns_data = EmailCampaignsTable(self)
         self._register_table("email_campaigns", email_campaigns_data)
 
-    def connect(self) -> StatusResponse:
+    def connect(self):
         """
         Set up the connection required by the handler.
         Returns
@@ -50,7 +50,7 @@ class SendinblueHandler(APIHandler):
         configuration = sib_api_v3_sdk.Configuration()
         configuration.api_key['api-key'] = self.connection_data['api_key']
 
-        self.connection = configuration
+        self.connection = sib_api_v3_sdk.ApiClient(configuration)
 
         self.is_connected = True
 
@@ -64,21 +64,17 @@ class SendinblueHandler(APIHandler):
         """
 
         response = StatusResponse(False)
-        need_to_close = self.is_connected is False
 
         try:
-            configuration = self.connect()
-            api_instance = sib_api_v3_sdk.AccountApi(sib_api_v3_sdk.ApiClient(configuration))
+            connection = self.connect()
+            api_instance = sib_api_v3_sdk.AccountApi(connection)
             api_instance.get_account()
             response.success = True
         except Exception as e:
             log.logger.error(f'Error connecting to Sendinblue!')
             response.error_message = str(e)
-        finally:
-            if response.success is True and need_to_close:
-                self.disconnect()
-            if response.success is False and self.is_connected is True:
-                self.is_connected = False
+
+        self.is_connected = response.success
 
         return response
 

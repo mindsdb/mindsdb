@@ -140,10 +140,7 @@ class LangChainHandler(OpenAIHandler):
         model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
 
         # langchain tool setup
-        # TODO: implement additional tool with integrations_controller to get: table.columns, table.data_types, table.rows
-        # args['integrations'].get_handler('files').get_tables().data_frame  # returns DF with TABLE_NAME, TABLE_ROWS, TABLE_TYPE
-        # args['integrations'].get_handler('files').get_columns('diamonds').data_frame  # returns DF with Field, Type
-        tools = self._setup_tools(model_kwargs, pred_args, args['executor'])
+        tools = self._setup_tools(model_kwargs, pred_args, args['executor'], args['integrations'])
 
         # langchain agent setup
         llm = OpenAI(**model_kwargs)  # TODO: use ChatOpenAI for chat models
@@ -217,7 +214,7 @@ class LangChainHandler(OpenAIHandler):
 
         return pred_df
 
-    def _setup_tools(self, model_kwargs, pred_args, executor):
+    def _setup_tools(self, model_kwargs, pred_args, executor, integrations):
         def _mdb_exec_call(query: str) -> str:
             """ We define it like this to pass the executor through the closure, as custom classes don't allow custom field assignment. """  # noqa
             try:
@@ -232,11 +229,33 @@ class LangChainHandler(OpenAIHandler):
                 data = f"mindsdb tool failed with error:\n{str(e)}"   # let the agent know
             return data
 
+        def _mdb_exec_metadata_call(query: str) -> str:
+            try:
+                parts = query.split('.')
+                assert len(parts) == 2, 'query must be in the format: <integration>.<command>'
+                integration, table = parts[:-1]
+                handler = integrations.get_handler(integration)
+
+                fields = handler.get_columns(table).data_frame['Field'].to_list()
+                types = handler.get_columns(table).data_frame['Type'].to_list()
+                table_name, nrows, table_type = handler.get_tables().data_frame.iloc[0].to_list()  # returns
+                data = f'Metadata for table {table_name}:\n\tRow count: {nrows}\n\tTable type: {table_type}\n'
+                data += f'List of columns and types:\n'
+                data += '\n'.join([f'Column: {field}\tType: {typ}' for field, typ in zip(fields, types)])
+            except Exception as e:
+                data = f"mindsdb tool failed with error:\n{str(e)}"  # let the agent know
+            return data
+
         mdb_tool = Tool(
                 name="MindsDB",
                 func=_mdb_exec_call,
-                description="useful to read from databases or tables connected to the mindsdb machine learning package. the action must be a valid simple SQL query."  # noqa
+                description="useful to read from databases or tables connected to the mindsdb machine learning package. the action must be a valid simple SQL query. For example, you can do `show databases` to list the available data sources, and `show tables` to list the available tables within each data source."  # noqa
             )
+        mdb_meta_tool = Tool(
+            name="MDB-Metadata",
+            func=_mdb_exec_metadata_call,
+            description="useful to get metadata from a mindsdb data source. the command should be a string with two substrings separated by a period. The first one is the integration (or data source) name, and the second one is the table name. For example, `files.my_table`. The command will return the table name, table type, column names, data types per column, and amount of rows of the specified table."  # noqa
+        )
         toolkit = pred_args.get('tools', self.default_agent_tools)
         tools = load_tools(toolkit)
         if model_kwargs.get('serper_api_key', False):
@@ -249,6 +268,7 @@ class LangChainHandler(OpenAIHandler):
 
         # add connection to mindsdb  # TODO: should limit to read only access
         tools.append(mdb_tool)
+        tools.append(mdb_meta_tool)
 
         return tools
 
@@ -273,6 +293,10 @@ class LangChainHandler(OpenAIHandler):
 
     def sql_agent_completion(self, df, args=None, pred_args=None):
         """This completion will be used to answer based on information passed by any MindsDB DB or API engine."""
+        # TODO: implement additional tool with integrations_controller to get: table.columns, table.data_types, table.rows
+        # args['integrations'].get_handler('files').get_tables().data_frame  # returns DF with TABLE_NAME, TABLE_ROWS, TABLE_TYPE
+        # args['integrations'].get_handler('files').get_columns('diamonds').data_frame  # returns DF with Field, Type
+
         # TODO: figure out best way to pass DB/API dataframes to LLM handlers
         db = MindsDBSQL(
             engine=args['executor'],

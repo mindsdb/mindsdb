@@ -1,48 +1,51 @@
 ---
-title: Matrixone
-sidebarTitle: Matrixone
+title: MatrixOne
+sidebarTitle: MatrixOne
 ---
 
-# Matrixone Handler
+This is the implementation of the MatrixOne data handler for MindsDB.
 
-This is the implementation of the  Matrixone handler for MindsDB.
-
-##  Matrixone
-MatrixOne is a future-oriented hyper-converged cloud and edge native DBMS that supports transactional, analytical, and streaming workloads with a simplified and distributed database engine, across multiple data centers, clouds, edges and other heterogeneous infrastructures.
-
-For more Info Click [HERE](https://github.com/matrixorigin/matrixone)
+[MatrixOne](https://github.com/matrixorigin/matrixone) is a future-oriented hyper-converged cloud and edge native DBMS that supports transactional, analytical, and streaming workloads with a simplified and distributed database engine, across multiple data centers, clouds, edges, and other heterogeneous infrastructures.
 
 ## Implementation
-This handler was implemented using the `PyMySQL`, a Python library that allows you to use Python code to run SQL commands on Matrixone Database.
 
-The required arguments to establish a connection are,
-* `user`: username associated with database
-* `password`: password to authenticate your access
-* `host`: host to server IP Address or hostname
-* `port`: port through which TCPIP connection is to be made
-* `database`: Database name to be connected
-* `ssl`: If you want to enable SSL Security **(Boolean)**
-* `ssl_ca`: Path or URL of the Certificate Authority (CA) certificate file
-* `ssl_cert`: Path name or URL of the server public key certificate file
-* `ssl_key`: The path name or URL of the server private key file
+This handler is implemented using `PyMySQL`, a Python library that allows you to use Python code to run SQL commands on the MatrixOne database.
+
+The required arguments to establish a connection are as follows:
+
+* `user` is the username associated with the database.
+* `password` is the password to authenticate your access.
+* `host` is the hostname or IP address of the database.
+* `port` is the port through which TCP/IP connection is to be made.
+* `database` is the database name to be connected.
+
+There are several optional arguments that can be used as well.
+
+* `ssl` indicates whether SSL is enabled (`True`) or disabled (`False`).
+* `ssl_ca` is the SSL Certificate Authority.
+* `ssl_cert` stores the SSL certificates.
+* `ssl_key` stores the SSL keys.
   
-
 ## Usage
-In order to make use of this handler and connect to Matrixone in MindsDB, the following syntax can be used,
+
+In order to make use of this handler and connect to the MatrixOne database in MindsDB, the following syntax can be used:
+
 ```sql
 CREATE DATABASE matrixone_datasource
 WITH
-engine='matrixone',
-parameters={
-    "user":"dump",
-    "password":"111",
-    "host":"127.0.0.1",
-    "port":6001,
-    "database":"mo_catalog"
-};
+    engine = 'matrixone',
+    parameters = {
+        "user": "dump",
+        "password": "111",
+        "host": "127.0.0.1",
+        "port": 6001,
+        "database": "mo_catalog"
+    };
 ```
 
-Now, you can use this established connection to query your database as follows,
+You can use this established connection to query your table as follows:
+
 ```sql
-SELECT * FROM Matrixone_datasource.demo;
+SELECT *
+FROM Matrixone_datasource.demo;
 ```

@@ -1,10 +1,11 @@
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb_sql.parser import ast
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.planner.utils import query_traversal
 
 
 def make_sql_session():
+    from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+
     sql_session = SessionController()
     sql_session.database = 'mindsdb'
     return sql_session

@@ -26,7 +26,7 @@ directory.
 ~~~~sql
 CREATE
 DATABASE my_content
-WITH  ENGINE = 'google_content_shopping_handler',
+WITH  ENGINE = 'google_content_shopping',
 parameters = {
     'credentials': 'C:\\Users\\panagiotis\\Desktop\\GitHub\\mindsdb\\mindsdb\\integrations\\handlers\\google_content_shopping_handler\\credentials.json'
 };    

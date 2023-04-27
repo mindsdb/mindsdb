@@ -28,12 +28,10 @@ class GmailApiTable(APITable):
         pass
 
 
-
 gmail = GmailHandler(name='gmail', connection_data={'path_to_credentials_file': '/home/marios/PycharmProjects/mindsdb'
                                                                                 '/mindsdb/integrations/handlers'
                                                                                 '/gmail_handler/credentials.json',
-                                                    'scopes': 'https://www.googleapis.com'
-                                                              '/auth/gmail.readonly'})
+                                                    'scopes': 'https://www.googleapis.com/auth/gmail.readonly'})
 
 gmail.connect()
 print(gmail.check_connection())

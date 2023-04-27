@@ -36,11 +36,13 @@ class GmailHandler(APIHandler):
         self.credentials_file = None
         self.scopes = None
         args = kwargs.get('connection_data', {})
+        print(args)
         self.credentials = {}
         if 'path_to_credentials_file' in args:
             self.credentials_file = args['path_to_credentials_file']
         if 'scopes' in args:
             self.scopes = args['scopes']
+        self.connect()
 
     def connect(self):
         """Authenticate with Gmail API using OAuth 2.0 Client ID that you create on Google Apis page.The implementation uses trhe credentials.json file that google give you in order to verify you."""

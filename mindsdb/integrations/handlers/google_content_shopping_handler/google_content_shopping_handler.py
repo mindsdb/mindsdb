@@ -4,7 +4,6 @@ from pandas import DataFrame
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from .google_content_shopping_tables import AccountsTable, OrdersTable, ProductsTable

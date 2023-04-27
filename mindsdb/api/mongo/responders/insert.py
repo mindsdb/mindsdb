@@ -1,6 +1,6 @@
 import pandas as pd
 
-from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor, CreateJob, RetrainPredictor, AdjustPredictor
+from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor, CreateJob, RetrainPredictor, FinetunePredictor
 from mindsdb_sql.parser.ast import Identifier, OrderBy, Insert, TableColumn, Constant
 
 import mindsdb.api.mongo.functions as helpers
@@ -138,8 +138,8 @@ class Responce(Responder):
             Class = CreatePredictor
             if action == 'retrain':
                 Class = RetrainPredictor
-            elif action == 'adjust':
-                Class = AdjustPredictor
+            elif action == 'finetune':
+                Class = FinetunePredictor
 
             create_predictor_ast = Class(
                 name=Identifier(f"{request_env['database']}.{doc['name']}"),

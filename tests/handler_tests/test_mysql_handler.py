@@ -9,18 +9,20 @@ import docker
 from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
-HANDLER_KWARGS = {"connection_data": {
-                    "host": "localhost",
-                    "port": "3307",
-                    "user": "root",
-                    "password": "supersecret",
-                    "database": "test",
-                    "ssl": False
-             }
+HANDLER_KWARGS = {
+    "connection_data": {
+        "host": "localhost",
+        "port": "3307",
+        "user": "root",
+        "password": "supersecret",
+        "database": "test",
+        "ssl": False
+    }
 }
 
 CERTS_ARCHIVE = "certs.tar"
 CERTS_DIR = "mysql"
+
 
 def get_certs():
     certs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mysql")
@@ -29,6 +31,7 @@ def get_certs():
         cert_file = os.path.join(certs_dir, fname)
         certs[cert_key] = cert_file
     return certs
+
 
 def get_certificates(container):
     cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -49,13 +52,14 @@ def waitReadiness(container, timeout=30):
     ready_msg = "/usr/sbin/mysqld: ready for connections. Version: '8.0.27'"
     while True:
         lines = container.logs().decode()
-            # container fully ready
-            # because it reloads the db server during initialization
-            # need to check that the 'ready for connections' has found second time
+        # container fully ready
+        # because it reloads the db server during initialization
+        # need to check that the 'ready for connections' has found second time
         if lines.count(ready_msg) >= 2:
             break
         if time.time() > threshold:
             raise Exception("timeout exceeded, container is still not ready")
+
 
 @pytest.fixture(scope="module", params=[{"ssl": False}, {"ssl": True}], ids=["NoSSL", "SSL"])
 def handler(request):
@@ -65,12 +69,12 @@ def handler(request):
     container = None
     try:
         container = docker_client.containers.run(
-                    image_name,
-                    command="--secure-file-priv=/",
-                    detach=True,
-                    environment={"MYSQL_ROOT_PASSWORD":"supersecret"},
-                    ports={"3306/tcp": 3307},
-                )
+            image_name,
+            command="--secure-file-priv=/",
+            detach=True,
+            environment={"MYSQL_ROOT_PASSWORD": "supersecret"},
+            ports={"3306/tcp": 3307},
+        )
         waitReadiness(container)
     except Exception as e:
         if container is not None:
@@ -151,8 +155,8 @@ class TestMySQLHandler:
     def check_valid_response(self, res):
         if res.resp_type == RESPONSE_TYPE.TABLE:
             assert res.data_frame is not None, "expected to have some data, but got None"
-        assert res.error_code == 0, f"expected to have zero error_code, but got {df.error_code}"
-        assert res.error_message is None, f"expected to have None in error message, but got {df.error_message}"
+        assert res.error_code == 0, f"expected to have zero error_code, but got {res.error_code}"
+        assert res.error_message is None, f"expected to have None in error message, but got {res.error_message}"
 
     def get_table_names(self, handler):
         res = handler.get_tables()

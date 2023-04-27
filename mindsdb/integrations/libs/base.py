@@ -169,11 +169,11 @@ class BaseMLEngine:
         """
         raise NotImplementedError
 
-    def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """
         Optional.
 
-        Used to update/fine-tune/adjust a pre-existing model without resetting its internal state (e.g. weights).
+        Used to fine-tune a pre-existing model without resetting its internal state (e.g. weights).
 
         Availability will depend on underlying integration support, as not all ML models can be partially updated.
         """

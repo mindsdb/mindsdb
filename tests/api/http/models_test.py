@@ -84,8 +84,8 @@ def test_train_model_no_query_aborts(client):
 
 
 def test_train_model_no_project_aborts(client):
-    response = client.post('/api/projects/nani/models', json={}, follow_redirects=True)
-    assert '400' in response.status
+    response = client.post('/api/projects/nani/models', json={'query': ''}, follow_redirects=True)
+    assert '404' in response.status
 
 
 def test_train_model_invalid_query_aborts(client):

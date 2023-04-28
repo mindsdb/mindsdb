@@ -1,7 +1,7 @@
 from http import HTTPStatus
 
 from flask import request
-from flask_restx import Resource, abort
+from flask_restx import Resource
 from sqlalchemy.exc import NoResultFound
 
 

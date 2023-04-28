@@ -10,7 +10,7 @@
      target="_blank"
      rel="noopener"
 />
-<img
+  <img
         style="width: 260px; height: 56px"
         src="https://runacap.com/wp-content/uploads/2023/02/Annual_ROSS_badge_white_2022.svg"
         alt="ROSS Index - Fastest Growing Open-Source Startups | Runa Capital"
@@ -50,17 +50,17 @@
 
 </div>
 
----
+----------------------------------------
 
 [MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) is an emerging low-code machine learning platform to help developers easily build #AI-powered solutions [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Build%20AI-Powered%20Applications%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,nlp,machine_learning,neural_networks,databases,gpt3)
 
-**NEW!** Check-out the [rewards and community programs.](https://mindsdb.com/community?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)
+-**NEW!** Check-out the [rewards and community programs.](https://mindsdb.com/community?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)
 
----
+----------------------------------------
 
 [Installation](https://github.com/mindsdb/mindsdb#installation) - [Overview](https://github.com/mindsdb/mindsdb#overview) - [Features](https://github.com/mindsdb/mindsdb#features) - [Database Integrations](https://github.com/mindsdb/mindsdb#database-integrations) - [Quickstart](https://github.com/mindsdb/mindsdb#quickstart) - [Documentation](https://github.com/mindsdb/mindsdb#documentation) - [Support](https://github.com/mindsdb/mindsdb#support) - [Contributing](https://github.com/mindsdb/mindsdb#contributing) - [Mailing lists](https://github.com/mindsdb/mindsdb#mailing-lists) - [License](https://github.com/mindsdb/mindsdb#license)
 
----
+----------------------------------------
 
 MindsDB automates and integrates top machine learning frameworks (including GPT-4) into the data stack as "AI Tables" to streamline the integration of AI into applications, making it accessible to developers of all skill levels.
 "[AI tables](https://www.youtube.com/watch?v=tnB4Y9T1E2k)" allow you to get predictions via SQL queries and continuously learn from your data.
@@ -76,12 +76,12 @@ MindsDB automates and integrates top machine learning frameworks (including GPT-
 
 Here are some popular use cases you can build with MindsDB:
 
-- Conversational AI: Leverage MindsDB native integrations with data platforms and pre-trained large language models, like OpenAI's GPT, to quickly build conversational AI solutions without the overhead of managing complex data pipelines.
-- Fraud Detection: MindsDB can help developers build models to detect fraudulent activity in financial transactions, eCommerce platforms etc.
-- Sales Forecasting: MindsDB can be used to develop models to predict future sales based on historical sales data, allowing businesses to make better-informed decisions.
-- Customer Segmentation: MindsDB can help developers segment customers based on their behavior, preferences, and other factors, allowing businesses to tailor their marketing efforts.
-- Sentiment analysis: MindsDB native integration with pre-trained models like OpenAI GPT or Hugging Face can be used to analyze the sentiment of a text data, such as a customer reviews - in a single command, instead of individual API calls and ETL-ing data.
-- Predictive Maintenance: MindsDB can be used to build models to predict when equipment or machinery is likely to fail, allowing for proactive maintenance and minimizing downtime.
+* Conversational AI: Leverage MindsDB native integrations with data platforms and pre-trained large language models, like OpenAI's GPT, to quickly build conversational AI solutions without the overhead of managing complex data pipelines.
+* Fraud Detection: MindsDB can help developers build models to detect fraudulent activity in financial transactions, eCommerce platforms etc.
+* Sales Forecasting: MindsDB can be used to develop models to predict future sales based on historical sales data, allowing businesses to make better-informed decisions.
+* Customer Segmentation: MindsDB can help developers segment customers based on their behavior, preferences, and other factors, allowing businesses to tailor their marketing efforts.
+* Sentiment analysis: MindsDB native integration with pre-trained models like OpenAI GPT or Hugging Face can be used to analyze the sentiment of a text data, such as a customer reviews - in a single command, instead of individual API calls and ETL-ing data.
+* Predictive Maintenance: MindsDB can be used to build models to predict when equipment or machinery is likely to fail, allowing for proactive maintenance and minimizing downtime.
 
 See more examples and community tutorials [here](https://docs.mindsdb.com/tutorials)
 
@@ -103,15 +103,15 @@ docker pull mindsdb/mindsdb
 
 1. First, CONNECT MindsDB to your data platform. We support 70+ data platforms and this list is constantly growing. If you can’t find the integration you need, please [let us know](https://mindsdb.com/joincommunity).
 2. Run the CREATE MODEL query pointing to your data table or a view, that will automatically create and deploy a machine learning model as an [AI Table](https://www.youtube.com/watch?v=tnB4Y9T1E2k).
-   1. If you have an NLP use case, CREATE MODEL will integrate the [AI Table](https://www.youtube.com/watch?v=tnB4Y9T1E2k) with already pre-trained model you choose (like OpenAI’s GPT-3 or Hugging Face models).
-   2. Please check the [docs](https://docs.mindsdb.com/sql/create/predictor?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) if you want to have manual control over model engineering.
+1. If you have an NLP use case, CREATE MODEL will integrate the [AI Table](https://www.youtube.com/watch?v=tnB4Y9T1E2k) with already pre-trained model you choose (like OpenAI’s GPT-3 or Hugging Face models).
+2. Please check the [docs](https://docs.mindsdb.com/sql/create/predictor?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) if you want to have manual control over model engineering.
 3. JOIN the model with your database tables to make predictions for thousands or even millions of data points at once, or run SELECT statements or API calls to make one time predictions.
 4. Set up a JOB to automate your model re-training cycle and predictions pipelines for the new incoming data.
 
 Follow the [quickstart guide](https://docs.mindsdb.com/quickstart?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) with sample data to get on-boarded as fast as possible.
 
 ## Database Integrations
-
+-
 MindsDB works with most of the SQL and NoSQL databases, data lakes, data Streams and popular applications.
 
 | Connect your Data                                                                                                                                                                                                                                | Connect your Data                                                                                                                                                                                                                                        | Connect your Data                                                                                                                                                                                                                               |
@@ -140,16 +140,16 @@ MindsDB works with most of the SQL and NoSQL databases, data lakes, data Streams
 ## Documentation
 
 You can find the complete documentation of MindsDB at [docs.mindsdb.com](https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
-
+-
 ## Support
 
 If you found a bug, please submit an [issue on GitHub](https://github.com/mindsdb/mindsdb/issues/new/choose).
 
 To get community support, you can:
 
-- Post at MindsDB [Slack community](https://mindsdb.com/joincommunity).
-- Ask for help at our [GitHub Discussions](https://github.com/mindsdb/mindsdb/discussions).
-- Ask a question at [Stackoverflow](https://stackoverflow.com/questions/tagged/mindsdb) with a MindsDB tag.
+* Post at MindsDB [Slack community](https://mindsdb.com/joincommunity).
+* Ask for help at our [GitHub Discussions](https://github.com/mindsdb/mindsdb/discussions).
+* Ask a question at [Stackoverflow](https://stackoverflow.com/questions/tagged/mindsdb) with a MindsDB tag.
 
 If you need commercial support, please [contact](https://mindsdb.com/contact/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) MindsDB team.
 
@@ -157,9 +157,9 @@ If you need commercial support, please [contact](https://mindsdb.com/contact/?ut
 
 A great place to start contributing to MindsDB is to check our GitHub projects :checkered_flag:
 
-- Tutorials & documentation [dashboard tasks](https://github.com/mindsdb/mindsdb/projects/7).
-- Code contributor's [dashboard tasks](https://github.com/mindsdb/mindsdb/projects/8).
-- [First timers only issues](https://github.com/mindsdb/mindsdb/issues?q=is%3Aissue+is%3Aopen+label%3Afirst-timers-only), if this is your first time contributing to an open source project.
+* Tutorials & documentation [dashboard tasks](https://github.com/mindsdb/mindsdb/projects/7).
+* Code contributor's [dashboard tasks](https://github.com/mindsdb/mindsdb/projects/8).
+* [First timers only issues](https://github.com/mindsdb/mindsdb/issues?q=is%3Aissue+is%3Aopen+label%3Afirst-timers-only), if this is your first time contributing to an open source project.
 
 We are always open to suggestions so feel free to open new issues with your ideas and we can guide you!
 
@@ -169,7 +169,7 @@ If you'd like to contribute to the project, refer to the [contributing documenta
 Please note that this project is released with a [Contributor Code of Conduct](https://github.com/mindsdb/mindsdb/blob/stable/CODE_OF_CONDUCT.md). By participating in this project, you agree to abide by its terms.
 
 Also, check out the [rewards and community programs](https://mindsdb.com/community?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
-
+-
 ### Current contributors
 
 <a href="https://github.com/mindsdb/mindsdb/graphs/contributors">
@@ -181,7 +181,7 @@ Made with [contributors-img](https://contributors-img.web.app).
 ## Subscribe to updates
 
 Join our [Slack community](https://mindsdb.com/joincommunity) and subscribe to the monthly [Developer Newsletter](https://mindsdb.com/newsletter/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) to get product updates, information about MindsDB events and contests, and useful content, like tutorials.
-
+-
 ## License
 
 MindsDB is licensed under [GNU General Public License v3.0](https://github.com/mindsdb/mindsdb/blob/master/LICENSE)

@@ -2,61 +2,52 @@
 
 > **Please submit your PR in the following format after the underline below `Results` section. Don't forget to add an underline after adding your changes i.e., at the end of your `Results` section.**
 
-## Testing PlanetScale Handler with [Car Prices Dataset](https://www.kaggle.com/code/dronax/car-prices-dataset/data)
+## Testing PlanetScale Handler with [Raisin Dataset](https://www.kaggle.com/datasets/muratkokludataset/raisin-dataset)
 ### Results
 **1. Testing CREATE DATABASE**
 
-```
-CREATE DATABASE planet_scale_db
-WITH ENGINE = "planet_scale",
+```sql
+CREATE DATABASE planetscale_test            --- display name for database
+WITH ENGINE = 'planet_scale',               --- name of the MindsDB handler 
 PARAMETERS = {
-      "host":"ap-south.connect.psdb.cloud",
-      "port":"3306",
-      "user":"g7k984fz036t8qb62mwy",
-      "password":"<password>",
-      "database":"test"
-    };
+  "host": "cloud.mindsdb.com",              --- host to server IP Address or hostname
+  "port": "3306",                           --- port through which TCP/IP connection is to be made
+  "user": "test_user",                      --- username associated with database
+  "password": "test_pswd",                  --- password to authenticate your access
+  "database": "files"                       --- database name to be connected
+};
 ```
 
-![CREATE_DATABASE](https://i.imgur.com/5Ud3gCR.png)
+![CREATE_DATABASE](create-db.png)
 
-**2. Testing SELECT from DATABASE**
+**2. Testing CREATE PREDICTOR**
 
-```
-SELECT * FROM planet_scale_db.test.cars LIMIT 10;
-```
-
-![SELECT_DATABASE](https://i.imgur.com/R72on6B.png)
-
-**3. Testing CREATE PREDICTOR**
-
-```
-CREATE PREDICTOR 
-  mindsdb.cars_predict
-FROM planet_scale_db
-  (SELECT carlength,carwidth,price FROM test.cars)
-PREDICT price;
+```sql
+CREATE PREDICTOR mindsdb.raisin_predictor
+FROM planetscale_test (
+    SELECT * FROM raisin_data
+) PREDICT Class;
 ```
 
-![CREATE_PREDICTOR](https://i.imgur.com/StjrGOf.png)
+![CREATE_PREDICTOR](create-predictor.png)
 
-**4. Testing PREDICTOR STATUS**
+**3. Testing SELECT FROM PREDICTOR**
 
-```
-SELECT * FROM predictors;
-```
-
-![PREDICTOR_STATUS](https://i.imgur.com/D2RiAye.png)
-
-**5. Testing SELECT FROM PREDICTOR**
-
-```
-SELECT * FROM cars_predict WHERE carlength=190 AND carwidth=60;
+```sql
+SELECT * 
+FROM mindsdb.models
+WHERE name='raisin_predictor';
 ```
 
-![SELECT_FROM](https://i.imgur.com/2fTDI7l.png)
+![SELECT_FROM_PREDICTOR](predict-target.png)
 
+**4. Testing DROP THE DATABASE**
+
+```sql
+DROP DATABASE planetscale_test;
+```
+
+![DROP_DATABASE](drop-db.png)
 
 Drop a remark based on your observation.
 - [x] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
-- [ ] There's a Bug 🪲 [Issue Title](URL To the Issue you created) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)

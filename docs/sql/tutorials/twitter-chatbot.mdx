@@ -154,8 +154,9 @@ Now we are at the part where we want MindsDB to write responses back into Twitte
 You can create a new updated database so it can read and write as follows:
 
 ```sql
-CREATE DATABASE mindsdb.my_twitter_v2
+CREATE DATABASE my_twitter_v2
 WITH
+  ENGINE = 'twitter',
   PARAMETERS = {
    "consumer_key": "your twitter App API key",
    "consumer_secret": "your twitter App API key secret",

@@ -25,11 +25,13 @@ from mindsdb.api.http.namespaces.databases import ns_conf as databases_ns
 from mindsdb.api.http.namespaces.default import ns_conf as default_ns, check_auth
 from mindsdb.api.http.namespaces.file import ns_conf as file_ns
 from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
+from mindsdb.api.http.namespaces.models import ns_conf as models_ns
 from mindsdb.api.http.namespaces.projects import ns_conf as projects_ns
 from mindsdb.api.http.namespaces.sql import ns_conf as sql_ns
 from mindsdb.api.http.namespaces.stream import ns_conf as stream_ns
 from mindsdb.api.http.namespaces.tab import ns_conf as tab_ns
 from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
+from mindsdb.api.http.namespaces.views import ns_conf as views_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
 from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
 from mindsdb.interfaces.database.integrations import integration_controller
@@ -208,7 +210,9 @@ def initialize_app(config, no_studio, with_nlp):
         handlers_ns,
         tree_ns,
         projects_ns,
-        databases_ns
+        databases_ns,
+        views_ns,
+        models_ns
     ]
     if with_nlp:
         protected_namespaces.append(nlp_ns)

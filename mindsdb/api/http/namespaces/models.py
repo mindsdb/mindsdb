@@ -61,7 +61,7 @@ class ModelsList(Resource):
             return http_error(
                 HTTPStatus.BAD_REQUEST,
                 'Invalid CREATE SQL statement',
-                f'SQL statement is not a CREATE model statement')
+                f'SQL statement is not a CREATE model statement: {query}')
 
         model_name = create_statement.name.parts[1].lower()
         try:

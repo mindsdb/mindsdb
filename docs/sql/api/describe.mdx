@@ -82,10 +82,6 @@ The above command returns the following output columns:
           <td><code>inputs</code></td>
           <td>All the feature columns.</td>
         </tr>
-        <tr>
-          <td><code>model</code></td>
-          <td>TODO</td>
-        </tr>
       </tbody>
     </table>
 
@@ -342,15 +338,15 @@ The above command returns the following output columns:
       <tbody>
         <tr>
           <td><code>ds</code></td>
-          <td>TODO</td>
+          <td>It defines intervals between records. For example, here, we've got monthly expenditure records.</td>
         </tr>
         <tr>
           <td><code>y</code></td>
-          <td>TODO</td>
+          <td>It stores the target column.</td>
         </tr>
         <tr>
           <td><code>unique_id</code></td>
-          <td>TODO</td>
+          <td>It stores columns listed in the `GROUP BY` clause. It defines the column(s) in the dataset by which you can split it into multiple time series that track the same process or value for different entities or groups.</td>
         </tr>
       </tbody>
     </table>
@@ -382,7 +378,7 @@ The above command returns the following output columns:
         </tr>
         <tr>
           <td><code>season_length</code></td>
-          <td>TODO</td>
+          <td>It indicates how many measurements until the next *season* occurs. For example, a time series with monthly measurements and a season length of 12 means that, every 12 months, a new *season* occurs. It can have a very strong effect on the final model’s performance.</td>
         </tr>
         <tr>
           <td><code>hierarchy</code></td>

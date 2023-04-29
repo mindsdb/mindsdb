@@ -64,6 +64,36 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
                 args['using']['model'] if 'model' in args['using'] else None
             )
 
+        elif args['using']['task'] == 'question-answering':
+            nlp = NLP(api_key)
+            result_df = nlp.question_answering_in_df(
+                df,
+                args['using']['question_column'],
+                args['using']['context_column'],
+                args['using']['model'] if 'model' in args['using'] else None
+            )
+
+        elif args['using']['task'] == 'sentence-similarity':
+            nlp = NLP(api_key)
+            result_df = nlp.sentence_similarity_in_df(
+                df,
+                args['using']['source_sentence_column'],
+                args['using']['sentence_column'],
+                args['using']['options'] if 'options' in args['using'] else None,
+                args['using']['model'] if 'model' in args['using'] else None
+            )
+
+        elif args['using']['task'] == 'zero-shot-classification':
+            nlp = NLP(api_key)
+            result_df = nlp.zero_shot_classification_in_df(
+                df,
+                args['using']['column'],
+                args['using']['candidate_labels'],
+                args['using']['parameters'] if 'parameters' in args['using'] else None,
+                args['using']['options'] if 'options' in args['using'] else None,
+                args['using']['model'] if 'model' in args['using'] else None
+            )
+
         elif args['using']['task'] == 'image-classification':
             cp = ComputerVision(api_key)
             result_df = cp.image_classification_in_df(

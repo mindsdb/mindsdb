@@ -37,6 +37,7 @@ class GmailHandler(APIHandler):
         gmails = GmailApiTable(self)
         self.emails = gmails
         self._register_table('emails', self.emails)
+        self.connect()
 
     def connect(self):
         if self.is_connected is True:

@@ -72,6 +72,14 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
                 args['using']['model'] if 'model' in args['using'] else None
             )
 
+        elif args['using']['task'] == 'object-detection':
+            cp = ComputerVision(api_key)
+            result_df = cp.object_detection_in_df(
+                df,
+                args['using']['column'],
+                args['using']['model'] if 'model' in args['using'] else None
+            )
+
         elif args['using']['task'] == 'speech-recognition':
             ap = AudioProcessing(api_key)
             result_df = ap.speech_recognition_in_df(

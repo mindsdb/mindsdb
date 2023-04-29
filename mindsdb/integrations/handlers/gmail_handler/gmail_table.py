@@ -1,19 +1,21 @@
 import pandas as pd
 from mindsdb_sql import ASTNode, Star
 from mindsdb_sql.parser import ast
-
-from mindsdb.integrations.handlers.gmail_handler.gmail_handler import GmailHandler
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
 
 class GmailApiTable(APITable):
+    def __init__(self, handler):
+        super().__init__(handler)
 
     def select(self, query: ast.Select) -> pd.DataFrame:
-        print(query.where)
         conditions = extract_comparison_conditions(query.where)
-        print(conditions)
-        return pd.DataFrame()
+        arg1 = conditions[0][1]
+        arg2 = conditions[0][2]
+        query= arg2
+        emails = self.handler.call_application_api(method_name='get_emails', query=query)
+        return emails
 
     def insert(self, query: ASTNode) -> None:
         pass
@@ -25,21 +27,16 @@ class GmailApiTable(APITable):
         pass
 
     def get_columns(self) -> list:
-        pass
-
-
-gmail = GmailHandler(name='gmail', connection_data={'path_to_credentials_file': '/home/marios/PycharmProjects/mindsdb'
-                                                                                '/mindsdb/integrations/handlers'
-                                                                                '/gmail_handler/credentials.json',
-                                                    'scopes': 'https://www.googleapis.com/auth/gmail.readonly'})
-
-gmail.connect()
-print(gmail.check_connection())
-print(gmail.get_last_n_emails(10))
-gmail_table = GmailApiTable(gmail)
-select_all = ast.Select(
-    targets=[Star()],
-    from_table='gmail_data',
-    where='aggregated_trade_data.symbol = "symbol"'
-)
-print(gmail_table.select(select_all))
+        return ['id',
+                'threadId',
+                'labelIds',
+                'snippet',
+                'historyId',
+                'mimeType',
+                'filename',
+                'Subject',
+                'Sender',
+                'To',
+                'Date',
+                'body',
+                'sizeEstimate']

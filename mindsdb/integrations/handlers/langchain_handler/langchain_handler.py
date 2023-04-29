@@ -210,7 +210,7 @@ class LangChainHandler(OpenAIHandler):
         for i in sorted(empty_prompt_ids):
             completion.insert(i, None)
 
-        pred_df = pd.DataFrame(completion, columns=[args['target']])
+        pred_df = pd.DataFrame(completion, columns=[pred_args['target']])
 
         return pred_df
 
@@ -218,7 +218,7 @@ class LangChainHandler(OpenAIHandler):
         def _mdb_exec_call(query: str) -> str:
             """ We define it like this to pass the executor through the closure, as custom classes don't allow custom field assignment. """  # noqa
             try:
-                executor.query_execute(query)
+                executor.query_execute(query.strip('`'))
                 data = executor.data  # list of lists
                 data = '\n'.join([  # rows
                     '\t'.join(      # columns
@@ -231,17 +231,28 @@ class LangChainHandler(OpenAIHandler):
 
         def _mdb_exec_metadata_call(query: str) -> str:
             try:
-                parts = query.split('.')
-                assert len(parts) == 2, 'query must be in the format: <integration>.<command>'
-                integration, table = parts[:-1]
+                parts = query.replace('`', '').split('.')
+                assert 1 <= len(parts) <= 2, 'query must be in the format: `integration` or `integration.table`'
+
+                integration = parts[0]
                 handler = integrations.get_handler(integration)
 
-                fields = handler.get_columns(table).data_frame['Field'].to_list()
-                types = handler.get_columns(table).data_frame['Type'].to_list()
-                table_name, nrows, table_type = handler.get_tables().data_frame.iloc[0].to_list()  # returns
-                data = f'Metadata for table {table_name}:\n\tRow count: {nrows}\n\tTable type: {table_type}\n'
-                data += f'List of columns and types:\n'
-                data += '\n'.join([f'Column: {field}\tType: {typ}' for field, typ in zip(fields, types)])
+                if len(parts) == 1:
+                    df = handler.get_tables().data_frame
+                    data = f'The integration `{integration}` has {df.shape[0]} tables: {", ".join(list(df["TABLE_NAME"].values))}'  # noqa
+
+                if len(parts) == 2:
+                    df = handler.get_tables().data_frame
+                    table_name = parts[-1]
+                    try:
+                        _, nrows, table_type = df[df['TABLE_NAME'] == table_name].iloc[0].to_list()
+                        data = f'Metadata for table {table_name}:\n\tRow count: {nrows}\n\tTable type: {table_type}\n'
+                        fields = handler.get_columns(table_name).data_frame['Field'].to_list()
+                        types = handler.get_columns(table_name).data_frame['Type'].to_list()
+                        data += f'List of columns and types:\n'
+                        data += '\n'.join([f'\tColumn: {field}\tType: {typ}' for field, typ in zip(fields, types)])
+                    except:
+                        data = f'Table {table_name} not found.'
             except Exception as e:
                 data = f"mindsdb tool failed with error:\n{str(e)}"  # let the agent know
             return data
@@ -249,14 +260,14 @@ class LangChainHandler(OpenAIHandler):
         mdb_tool = Tool(
                 name="MindsDB",
                 func=_mdb_exec_call,
-                description="useful to read from databases or tables connected to the mindsdb machine learning package. the action must be a valid simple SQL query. For example, you can do `show databases` to list the available data sources, and `show tables` to list the available tables within each data source."  # noqa
+                description="useful to read from databases or tables connected to the mindsdb machine learning package. the action must be a valid simple SQL query, always ending with a semicolon. For example, you can do `show databases;` to list the available data sources, and `show tables;` to list the available tables within each data source."  # noqa
             )
 
         # TODO: add sample rows to tool!
         mdb_meta_tool = Tool(
             name="MDB-Metadata",
             func=_mdb_exec_metadata_call,
-            description="useful to get metadata from a mindsdb data source. the command should be a string with two substrings separated by a period. The first one is the integration (or data source) name, and the second one is the table name. For example, `files.my_table`. The command will return the table name, table type, column names, data types per column, and amount of rows of the specified table."  # noqa
+            description="useful to get column names from a mindsdb table or metadata from a mindsdb data source. the command should be either 1) a data source name, to list all available tables that it exposes, or 2) a string with the format `data_source_name.table_name` (for example, `files.my_table`), to get the table name, table type, column names, data types per column, and amount of rows of the specified table."  # noqa
         )
         toolkit = pred_args.get('tools', self.default_agent_tools)
         tools = load_tools(toolkit)

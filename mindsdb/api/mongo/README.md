@@ -312,6 +312,32 @@ db.sales_model.stats({'scale':'ensemble'})
 db.predictors.deleteOne({'name': "sales_model"})
 ```
 
+## ML Engines
+
+**Create**
+
+`CREATE ml_engine ...` alternative in mongo:
+
+```
+db.ml_engines.insertOne({'name': "openai_2", "handler": "openai", "params": {"api_key": "qqq"}})
+```
+
+**List**
+
+`SHOW ml_engines` alternative in mongo:
+
+```
+db.ml_engines.find()
+```
+
+**Delete**
+
+`DROP ml_engine ...` alternative in mongo:
+
+```
+db.ml_engines.deleteOne({"name": "openai_2"})
+```
+
 ## Jobs
 
 **Create**

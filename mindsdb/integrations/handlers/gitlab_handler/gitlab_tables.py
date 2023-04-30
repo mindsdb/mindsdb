@@ -83,11 +83,13 @@ class GitlabIssuesTable(APITable):
 
         start = 0
 
+        issues_kwargs["per_page"] = total_results
+        issues_kwargs["get_all"] = False
         while True:
             try:
                 for issue in self.handler.connection.projects.get(
                     self.handler.repository
-                ).issues.list(**issues_kwargs)[start : start + 10]:
+                ).issues.list(**issues_kwargs):
 
                     logger.debug(f"Processing issue {issue.iid}")
 
@@ -131,7 +133,7 @@ class GitlabIssuesTable(APITable):
             if gitlab_issues_df.shape[0] >= total_results:
                 break
             else:
-                start += 10
+                break
 
         selected_columns = []
         for target in query.targets:

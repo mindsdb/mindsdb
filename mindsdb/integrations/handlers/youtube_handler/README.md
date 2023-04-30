@@ -15,7 +15,7 @@ Please follow this (link)[https://blog.hubspot.com/website/how-to-get-youtube-ap
 
 ## Implemented Features
 
-- [x] Yotube video_comments table 
+- [x] Youtube video_comments table 
   - [x] Support LIMIT
   - [x] Support WHERE
   - [x] Support ORDER BY

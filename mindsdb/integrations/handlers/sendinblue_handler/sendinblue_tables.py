@@ -33,16 +33,26 @@ class EmailCampaignsTable(APITable):
             If the query contains an unsupported condition
         """
 
-        conditions = extract_comparison_conditions(query.where)
+        # SELECT
+        selected_columns = []
+        for target in query.targets:
+            if isinstance(target, ast.Star):
+                selected_columns = self.get_columns()
+                break
+            elif isinstance(target, ast.Identifier):
+                selected_columns.append(target.parts[-1])
+            else:
+                raise ValueError(f"Unknown query target {type(target)}")
 
-        if query.limit:
-            total_results = query.limit.value
-        else:
-            total_results = 20
-
+        # WHERE
         email_campaigns_kwargs = {}
-        order_by_conditions = {}
+        conditions = extract_comparison_conditions(query.where)
+        print(conditions)
+        for a_where in conditions:
+            print(a_where)
 
+        # ORDER BY
+        order_by_conditions = {}
         if query.order_by and len(query.order_by) > 0:
             order_by_conditions["columns"] = []
             order_by_conditions["ascending"] = []
@@ -63,17 +73,13 @@ class EmailCampaignsTable(APITable):
                         f"Order by unknown column {an_order.field.parts[1]}"
                     )
 
-        email_campaigns_df = pd.json_normalize(self.get_email_campaigns(limit=total_results))
+        # LIMIT
+        if query.limit:
+            total_results = query.limit.value
+        else:
+            total_results = 20
 
-        selected_columns = []
-        for target in query.targets:
-            if isinstance(target, ast.Star):
-                selected_columns = self.get_columns()
-                break
-            elif isinstance(target, ast.Identifier):
-                selected_columns.append(target.parts[-1])
-            else:
-                raise ValueError(f"Unknown query target {type(target)}")
+        email_campaigns_df = pd.json_normalize(self.get_email_campaigns(limit=total_results))
 
         if len(email_campaigns_df) == 0:
             email_campaigns_df = pd.DataFrame([], columns=selected_columns)

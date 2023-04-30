@@ -7,12 +7,12 @@ from .__about__ import __version__ as version, __description__ as description
 
 try:
     from .youtube_handler import YoutubeHandler as Handler
-    logger.error("No error Importing Youtube API Handler")
+    logger.info("No error Importing Youtube API Handler")
     import_error = None
 except Exception as e:
     Handler = None
     import_error = e
-    logger.error(f"Error Importing Youtube API Handler: {e}!")
+    logger.info(f"Error Importing Youtube API Handler: {e}!")
 
 title = "YouTube"
 name = "youtube"

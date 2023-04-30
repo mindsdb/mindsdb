@@ -48,8 +48,9 @@ class EmailCampaignsTable(APITable):
             order_by_conditions["ascending"] = []
 
             for an_order in query.order_by:
-                if an_order.field.parts[0] != "":
+                if an_order.field.parts[0] != "email_campaigns":
                     next
+
                 if an_order.field.parts[1] in self.get_columns():
                     order_by_conditions["columns"].append(an_order.field.parts[1])
 
@@ -62,10 +63,21 @@ class EmailCampaignsTable(APITable):
                         f"Order by unknown column {an_order.field.parts[1]}"
                     )
 
-        configuration = self.handler.connect()
-        email_campaigns_api_instance = sib_api_v3_sdk.EmailCampaignsApi(sib_api_v3_sdk.ApiClient(configuration))
-        email_campaigns = email_campaigns_api_instance.get_email_campaigns(limit=total_results)
+        email_campaigns_df = pd.json_normalize(self.get_email_campaigns(limit=total_results))
 
-        email_campaigns_df = pd.json_normalize(email_campaigns['campaigns'])
+        if len(order_by_conditions.get("columns", [])) > 0:
+            email_campaigns_df = email_campaigns_df.sort_values(
+                by=order_by_conditions["columns"],
+                ascending=order_by_conditions["ascending"],
+            )
 
         return email_campaigns_df
+
+    def get_columns(self) -> List[str]:
+        return pd.json_normalize(self.get_email_campaigns(limit=1)).columns.tolist()
+
+    def get_email_campaigns(self, **kwargs):
+        connection = self.handler.connect()
+        email_campaigns_api_instance = sib_api_v3_sdk.EmailCampaignsApi(connection)
+        email_campaigns = email_campaigns_api_instance.get_email_campaigns(**kwargs)
+        return email_campaigns.campaigns

@@ -38,18 +38,7 @@ class GitlabIssuesTable(APITable):
             order_by_conditions["ascending"] = []
 
             for an_order in query.order_by:
-                if an_order.field.parts[0] != "issues":
-                    next
-
-                if an_order.field.parts[1] in ["created", "updated"]:
-                    if issues_kwargs != {}:
-                        raise ValueError(
-                            "Duplicate order conditions found for created/updated"
-                        )
-
-                    issues_kwargs["sort"] = an_order.field.parts[1]
-                    issues_kwargs["direction"] = an_order.direction
-                elif an_order.field.parts[1] in self.get_columns():
+                if an_order.field.parts[1] in self.get_columns():
                     order_by_conditions["columns"].append(an_order.field.parts[1])
 
                     if an_order.direction == "ASC":
@@ -65,7 +54,7 @@ class GitlabIssuesTable(APITable):
             if a_where[1] == "state":
                 if a_where[0] != "=":
                     raise ValueError("Unsupported where operation for state")
-                if a_where[2] not in ["open", "closed", "all"]:
+                if a_where[2] not in ["opened", "closed", "all"]:
                     raise ValueError(
                         f"Unsupported where argument for state {a_where[2]}"
                     )
@@ -92,13 +81,13 @@ class GitlabIssuesTable(APITable):
 
         gitlab_issues_df = pd.DataFrame(columns=self.get_columns())
 
-        start = True
-        while start:
+        start = 0
+
+        while True:
             try:
-                issues = self.handler.connection.projects.get(
+                for issue in self.handler.connection.projects.get(
                     self.handler.repository
-                ).issues.list()
-                for issue in issues:
+                ).issues.list(**issues_kwargs)[start : start + 10]:
 
                     logger.debug(f"Processing issue {issue.iid}")
 
@@ -138,11 +127,11 @@ class GitlabIssuesTable(APITable):
                         break
             except IndexError:
                 break
-            
+
             if gitlab_issues_df.shape[0] >= total_results:
                 break
             else:
-                start = False
+                start += 10
 
         selected_columns = []
         for target in query.targets:

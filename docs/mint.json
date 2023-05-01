@@ -17,15 +17,7 @@
   },
   "openapi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
   "api": {
-    "baseUrl": [
-      "https://alpha.mindsdb.com",
-      "https://cloud.mindsdb.com",
-      "https://127.0.0.1"
-    ],
-    "auth": {
-      "method": "key",
-      "name": "X-API-KEY"
-    }
+    "baseUrl": "http://127.0.0.1:47334"
   },
   "topbarLinks": [
     {

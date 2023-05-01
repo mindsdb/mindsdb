@@ -11,18 +11,8 @@ info:
     name: GNU General Public License v3.0
     url: 'https://github.com/mindsdb/mindsdb/blob/staging/LICENSE'
 servers:
-  - url: 'https://cloud.mindsdb.com/v1/api'
-    description: MindsDB Production cloud server
-  - url: 'http://alpha.mindsdb.com/v1/api'
-    description: MindsDB Alpha cloud server
-  - url: 'http://127.0.0.1/v1/api'
+  - url: 'http://127.0.0.1:47334/v1/api'
     description: MindsDB local deployments
-components:
-  securitySchemes:
-    ApiKeyAuth:
-      type: apiKey
-      in: header
-      name: X-API-KEY
 paths:
   /databases:
     get:

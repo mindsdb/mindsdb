@@ -13,13 +13,26 @@ info:
 servers:
   - url: 'http://127.0.0.1:47334/v1/api'
     description: MindsDB local deployments
+components:
+  schemas:
+    Database:
+      type: object
+      properties:
+        name:
+          type: string
+        engine:
+          type: string
+          description: Handler used to create this database (e.g. postgres)
+        type:
+          type: string
+          description: Type of database (data | project | system)
 paths:
-  /databases:
+  '/api/databases':
     get:
       security:
         - ApiKeyAuth: []
       summary: Returns a list of database names.
-      description: This endpoint retrieves all databases created by the user.
+      description: Gets all databases created by the user.
       responses:
         '200':
           description: A JSON array of database names
@@ -28,8 +41,8 @@ paths:
               schema:
                 type: array
                 items:
-                  type: string
-                  example: 'database name'
+                  $ref: '#/components/schemas/Database'
+
         '401':
           description: Invalid API key error message
           content:
@@ -50,6 +63,7 @@ paths:
       security:
         - ApiKeyAuth: []
       summary: Creates a new database connection.
+      description: Creates a new database connection. The example parameters below are for connecting to [MySQL](/data-integrations/mysql). See [here](/data-integrations/all-data-integrations) for which parameters to use for your datasource.
       requestBody:
         required: true
         content:
@@ -57,29 +71,51 @@ paths:
             schema:
               type: object
               properties:
+                name:
+                  type: string
                 engine:
                   type: string
-                user:
-                  type: string
-                password:
-                  type: string
-                host:
-                  type: string
-                port:
-                  type: string
-                database:
-                  type: string
+                parameters:
+                  type: object
+                  description: Parameters used to connect to your data source. These example parameters are for connecting to [MySQL](/data-integrations/mysql). See [here](/data-integrations/all-data-integrations) for which parameters to use for your datasource.
+                  properties:
+                    user:
+                      type: string
+                    password:
+                      type: string
+                    host:
+                      type: string
+                    port:
+                      type: string
+                    database:
+                      type: string
       responses:
-        '201':
-          description: Database was succesfully created
+        # OpenAPI spec defines '200' status as a successful operation, so even though the
+        # response code is '201', we need to use '200' so docs are properly generated.
+        '200':
+          description: The created database
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Database'
+        '401':
+          description: Invalid API key error message
           content:
             application/json:
               schema:
                 type: object
                 items:
                   type: string
-        '401':
-          description: Invalid API key error message
+        '400':
+          description: Bad request format
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '409':
+          description: Database already exists
           content:
             application/json:
               schema:
@@ -94,62 +130,17 @@ paths:
                 type: object
                 items:
                   type: string
-    put:
-      security:
-        - ApiKeyAuth: []
-      summary: Updates an existing database connection.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                user:
-                  type: string
-                password:
-                  type: string
-                host:
-                  type: string
-                port:
-                  type: string
-                database:
-                  type: string
-      responses:
-        '201':
-          description: Database was succesfully updated
-          content:
-            application/json:
-              schema:
-                type: object
-                items:
-                  type: string
-        '401':
-          description: Invalid API key error message
-          content:
-            application/json:
-              schema:
-                type: object
-                items:
-                  type: string
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                type: object
-                items:
-                  type: string
-  '/databases/{databaseName}':
+
+  '/api/databases/{databaseName}':
     get:
       security:
         - ApiKeyAuth: []
       summary: Gets info about existing database.
-      description: This endpoint retrieves a specific database info.
+      description: Gets info about an existing database.
       parameters:
         - name: databaseName
           in: path
-          description: databaseName to select
+          description: Name of existing database
           required: true
           schema:
             type: string
@@ -159,9 +150,8 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                items:
-                  type: string
+                $ref: '#/components/schemas/Database'
+
         '401':
           description: Invalid API key error message
           content:
@@ -186,27 +176,87 @@ paths:
                 type: object
                 items:
                   type: string
+
+    put:
+      security:
+        - ApiKeyAuth: []
+      summary: Updates an existing database connection.
+      description: Updates an existing database connection, or creates a new connection if one doesn't exist. The example parameters below are for updating a [MySQL](/data-integrations/mysql) connection. See [here](/data-integrations/all-data-integrations) for which parameters to use for your datasource.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                engine:
+                  type: string
+                parameters:
+                  type: object
+                  description: Parameters used to connect to your data source. These example parameters are for connecting to [MySQL](/data-integrations/mysql). See [here](/data-integrations/all-data-integrations) for which parameters to use for your datasource.
+                  properties:
+                    user:
+                      type: string
+                    password:
+                      type: string
+                    host:
+                      type: string
+                    port:
+                      type: string
+                    database:
+                      type: string
+      responses:
+        '200':
+          description: Database was successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Database'
+        '400':
+          description: Bad request format
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
     delete:
       security:
         - ApiKeyAuth: []
       summary: Deletes an existing database.
-      description: This endpoint deletes a database connection.
+      description: Deletes an existing database connection by name.
       parameters:
         - name: databaseName
           in: path
-          description: databaseName to delete
+          description: Name of database to delete
           required: true
           schema:
             type: string
       responses:
         '200':
-          description: A JSON array of database names
+          description: An empty response indicates success
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: string
+                type: string
         '401':
           description: Invalid API key error message
           content:

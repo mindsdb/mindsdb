@@ -37,7 +37,6 @@ class TPOTHandler(BaseMLEngine):
         if df is not None:
             # Separate out the categorical and non-categorical columns
             categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
-            non_categorical_cols = df.columns.difference(categorical_cols).tolist()
 
             # Fit a LabelEncoder for each categorical column and store it in a dictionary
             le_dict = {}

@@ -3,17 +3,15 @@ import datetime as datetime
 import ast
 from typing import List
 import pandas as pd
-import json
-from flask import jsonify
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from slack_sdk.web.slack_response import SlackResponse
-import openai
 
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 
 from mindsdb_sql.parser import ast
+from mindsdb_sql.parser.ast import ASTNode, Update, Delete
 from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
@@ -27,21 +25,36 @@ from mindsdb.integrations.libs.response import (
 
 class SlackChannelsTable(APITable):
     def __init__(self, handler):
+        """
+        Checks the connection is active
+        """
         super().__init__(handler)
         self.client = WebClient(token=self.handler.connection_args['token'])
 
     def select(self, query: ast.Select) -> Response:
-        
+        """
+        Retrieves the data from the channel using SlackAPI
+
+        Args:
+            channel_name
+
+        Returns:
+            conversation_history
+        """
+
+        # Get the channels list and ids
         channels = self.client.conversations_list(types="public_channel,private_channel")['channels']
         channel_ids = {c['name']: c['id'] for c in channels}
         print(channel_ids)
         
+        # Extract comparison conditions from the query
         conditions = extract_comparison_conditions(query.where)
         
         filters = []
         params = {}
         order_by_conditions = {}
         
+        # Build the filters and parameters for the query
         for op, arg1, arg2 in conditions:
             if arg1 == 'channel':
                 if arg2 in channel_ids:
@@ -78,6 +91,7 @@ class SlackChannelsTable(APITable):
                         f"Order by unknown column {an_order.field.parts[1]}"
                     )
 
+        # Retrieve the conversation history
         try:
             result = self.client.conversations_history(channel=params['channel'])
             conversation_history = result["messages"]
@@ -86,6 +100,7 @@ class SlackChannelsTable(APITable):
         
         print(conversation_history)
 
+        # Get columns for the query and convert SlackResponse object to pandas DataFrame
         columns = []
         for target in query.targets:
             if isinstance(target, ast.Star):
@@ -115,25 +130,31 @@ class SlackChannelsTable(APITable):
 
         print(f"{len(result['messages'])} Messages found in Channel {params['channel']}")
 
+        # Append the history to the response
         response_history = []
         for message in conversation_history:
             response_history.append(message['text'])
         res_dct = {i: response_history[i] for i in range(0, len(response_history))}
         result['messages'] = response_history
         
+        # Sort the data based on order_by_conditions
         if len(order_by_conditions.get("columns", [])) > 0:
             result = result.sort_values(
                 by=order_by_conditions["columns"],
                 ascending=order_by_conditions["ascending"],
             )
 
+        # Limit the result based on the query limit
         if query.limit:
             result = result.head(query.limit.value)
 
         return result
-
         
     def get_columns(self):
+        """
+        Returns columns from the SlackAPI
+        """
+
         return [
             'ts',
             'text',
@@ -149,15 +170,14 @@ class SlackChannelsTable(APITable):
             'hidden',
         ]
 
-    def call_slack_api(self, api_method, params):
-        try:
-            response = getattr(self.client, api_method)(**params)
-        except SlackApiError as e:
-            raise Exception(f"Error calling Slack API method '{api_method}': {e.response['error']}")
-
-        return response
-
     def insert(self, query):
+        """
+        Inserts the message in the Slack Channel
+
+        Args:
+            channel_name
+            message
+        """
     
         # get column names and values from the query
         columns = [col.name for col in query.columns]
@@ -181,8 +201,16 @@ class SlackChannelsTable(APITable):
             inserted_id = response['ts']
             params['ts'] = inserted_id
 
-    def update(self, query):
-    
+    def update(self, query: ASTNode):
+        """
+        Updates the message in the Slack Channel
+
+        Args:
+            updated message
+            channel_name
+            ts  [TimeStamp -> Can be found by running select command, the entire result will be printed in the terminal]
+        """
+
         # get column names and values from the query
         columns = [col.name for col in query.columns]
         for row in query.values:
@@ -203,18 +231,49 @@ class SlackChannelsTable(APITable):
             raise Exception(f"Error updating message in Slack channel '{params['channel']}' with timestamp '{params['ts']}': {e.response['error']}")
         
         print(response)
-        return response
+    
+    def delete(self, query: ASTNode):
+        """
+        Deletes the message in the Slack Channel
+
+        Args:
+            channel_name
+            ts  [TimeStamp -> Can be found by running select command, the entire result will be printed in the terminal]
+        """
+
+        # get column names and values from the query
+        columns = [col.name for col in query.columns]
+        for row in query.values:
+            params = dict(zip(columns, row))
+
+        # check if required parameters are provided
+        if 'channel' not in params or 'ts' not in params:
+            raise Exception("To delete a message from Slack, you need to provide the 'channel' and 'ts' parameters.")
+
+        # delete message from Slack channel
+        try:
+            response = self.client.chat_delete(
+                channel=params['channel'],
+                ts=params['ts']
+            )
+            
+        except SlackApiError as e:
+            raise Exception(f"Error deleting message from Slack channel '{params['channel']}' with timestamp '{params['ts']}': {e.response['error']}")
+
+        print(response)
+
 
 class SlackHandler(APIHandler):
     """
-    
     A class for handling connections and interactions with Slack API.
-    Attributes:
+    Agrs:
         bot_token(str): The bot token for the Slack app.
-        api(slack_sdk.WebClient): The `slack_sdk.WebClient` object for interacting with the Slack API.
     """
 
     def __init__(self, name=None, **kwargs):
+        """
+        Initializes the connection by checking all the params are provided by the user.
+        """
         super().__init__(name)
 
         args = kwargs.get('connection_data', {})
@@ -234,6 +293,9 @@ class SlackHandler(APIHandler):
         self._register_table('channels', channels)
 
     def create_connection(self):
+        """
+        Creates a WebClient object to connect to the Slack API token stored in the connection_args attribute.
+        """
         client = WebClient(token=self.connection_args['token'])
         return client
     
@@ -241,7 +303,6 @@ class SlackHandler(APIHandler):
         """
         Authenticate with the Slack API using the token stored in the `token` attribute.
         """
-
         if self.is_connected is True:
             return self.api
 
@@ -250,6 +311,9 @@ class SlackHandler(APIHandler):
         return self.api
 
     def check_connection(self):
+        """
+        Checks the connection by calling auth_test()
+        """
         response = StatusResponse(False)
 
         try:
@@ -271,6 +335,9 @@ class SlackHandler(APIHandler):
         return response
 
     def native_query(self, query_string: str = None):
+        """
+        Parses the query with FuncParser and calls call_slack_api and returns the result of the query as a Response object.
+        """
         method_name, params = FuncParser().from_string(query_string)
 
         df = self.call_slack_api(method_name, params)
@@ -281,6 +348,16 @@ class SlackHandler(APIHandler):
         )
 
     def call_slack_api(self, method_name: str = None, params: dict = None):
+        """
+        Calls specific method specified.
+
+        Args:
+            method_name: to call specific method
+            params: parameters to call the method
+
+        Returns:
+            List of dictionaries as a result of the method call
+        """
         api = self.connect()
         method = getattr(api, method_name)
 

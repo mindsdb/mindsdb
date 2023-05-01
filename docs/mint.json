@@ -261,7 +261,8 @@
             {
               "group": "Projects",
               "pages": [
-                "rest/projects/get-projects"
+                "rest/projects/get-projects",
+                "rest/projects/get-project"
               ]
             },
             {

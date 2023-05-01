@@ -26,6 +26,11 @@ components:
         type:
           type: string
           description: Type of database (data | project | system)
+    Project:
+      type: object
+      properties:
+        name:
+          type: string
 paths:
   '/api/databases':
     get:
@@ -281,22 +286,21 @@ paths:
                 type: object
                 items:
                   type: string
-  /projects:
+  '/api/projects':
     get:
       security:
         - ApiKeyAuth: []
-      summary: Returns a list of projects names.
-      description: This endpoint retrieves all projects created by the user.
+      summary: Returns a list of projects.
+      description: Gets all projects created by the user.
       responses:
         '200':
-          description: A JSON array of projects names
+          description: A JSON array of projects
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  type: string
-                  example: 'projects name'
+                  $ref: '#/components/schemas/Project'
         '401':
           description: Invalid API key error message
           content:
@@ -313,6 +317,52 @@ paths:
                 type: object
                 items:
                   type: string
+  '/api/projects/{projectName}':
+    get:
+      security:
+        - ApiKeyAuth: []
+      summary: Get a project by name.
+      description: Gets a project created by the user.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project
+          required: true
+          schema:
+            type: string
+      description: Gets a project by name.
+      responses:
+        '200':
+          description: The returned project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+
   '/projects/{projectName}/models':
     post:
       security:

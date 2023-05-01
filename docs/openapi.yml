@@ -330,7 +330,7 @@ paths:
           required: true
           schema:
             type: string
-      description: Gets a project by name.
+
       responses:
         '200':
           description: The returned project

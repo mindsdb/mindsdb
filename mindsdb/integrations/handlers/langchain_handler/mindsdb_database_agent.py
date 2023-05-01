@@ -50,7 +50,7 @@ class MindsDBSQL(SQLDatabase):
             dbs = [lst[0] for lst in self._engine.data if lst[0] != 'information_schema']
             usable_tables = []
             for db in dbs:
-                if 'e2e' not in db and db != 'mindsdb':  # filter these out # TODO: anything else?
+                if 'e2e' not in db and db != 'mindsdb':  # TODO: anything else?
                     try:
                         self._call_engine([f'use `{db}`;', 'show tables;'])
                         tables = [lst[0] for lst in self._engine.data if lst[0] != 'information_schema']
@@ -100,7 +100,7 @@ class MindsDBSQL(SQLDatabase):
         tbl_name, n_rows, tbl_type = controller.get_handler(integration).get_tables().data_frame.iloc[0].to_list()
         cols_df = controller.get_handler(integration).get_columns(table_name).data_frame
         fields = cols_df['Field'].to_list()
-        dtypes = cols_df['Type'].to_list()  # TODO: unused, drop?
+        dtypes = cols_df['Type'].to_list()
 
         info = f'Table named `{tbl_name}`, type `{tbl_type}`, row count: {n_rows}.\n'
         info += f"\n/* Sample with first {self._sample_rows_in_table_info} rows from table `{table_str}`:\n"
@@ -128,11 +128,13 @@ class MindsDBSQL(SQLDatabase):
         If the statement returns rows, a string of the results is returned.
         If the statement returns no rows, an empty string is returned.
         """
-        result = self._engine.execute_command(command)
+        def _tidy(result: List) -> str:
+            return '\n'.join(['\t'.join([str(value) for value in row]) for row in result])
+        self._call_engine([command])
         if fetch == "all":
-            result = result.fetchall()  # TODO fix
+            result = _tidy(self._engine.data)
         elif fetch == "one":
-            result = result.fetchone()[0]  # TODO fix
+            result = _tidy(self._engine.data[0])
         else:
             raise ValueError("Fetch parameter must be either 'one' or 'all'")
         return str(result)

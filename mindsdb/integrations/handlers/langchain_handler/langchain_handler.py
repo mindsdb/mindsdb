@@ -6,18 +6,18 @@ import numpy as np
 import pandas as pd
 
 from langchain.llms import OpenAI
-# from langchain.chat_models import ChatOpenAI  # TODO: enable chat models (including GPT4)
+from langchain.chat_models import ChatOpenAI  # GPT-4 fails to follow the output langchain requires, avoid using for now
 from langchain.agents import initialize_agent, load_tools, Tool, create_sql_agent
 from langchain.prompts import PromptTemplate
 from langchain.utilities import GoogleSerperAPIWrapper
 from langchain.agents.agent_toolkits import SQLDatabaseToolkit
 from langchain.chains.conversation.memory import ConversationSummaryMemory
 
-from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
+from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler, CHAT_MODELS
 from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
 
 
-_DEFAULT_MODEL = 'text-davinci-003'
+_DEFAULT_MODEL = 'gpt-3.5-turbo'  # TODO: enable other LLM backends (AI21, Anthropic, etc.)
 _DEFAULT_MAX_TOKENS = 2048  # requires more than vanilla OpenAI due to ongoing summarization and 3rd party input
 _DEFAULT_AGENT_MODEL = 'zero-shot-react-description'
 _DEFAULT_AGENT_TOOLS = ['python_repl', 'wikipedia']  # these require no additional arguments
@@ -93,7 +93,6 @@ class LangChainHandler(OpenAIHandler):
         if 'prompt_template' not in args and 'prompt_template' not in pred_args:
             raise Exception(f"This model expects a prompt template, please provide one.")
 
-        # TODO: enable other LLM backends (AI21, Anthropic, etc.)
         if 'stops' in pred_args:
             self.stops = pred_args['stops']
 
@@ -143,7 +142,10 @@ class LangChainHandler(OpenAIHandler):
         tools = self._setup_tools(model_kwargs, pred_args, args['executor'], args['integrations'])
 
         # langchain agent setup
-        llm = OpenAI(**model_kwargs)  # TODO: use ChatOpenAI for chat models
+        if model_kwargs['model_name'] in CHAT_MODELS:
+            llm = ChatOpenAI(**model_kwargs)
+        else:
+            llm = OpenAI(**model_kwargs)
         memory = ConversationSummaryMemory(llm=llm)
         agent = initialize_agent(
             tools,
@@ -307,8 +309,10 @@ class LangChainHandler(OpenAIHandler):
         """This completion will be used to answer based on information passed by any MindsDB DB or API engine."""
         db = MindsDBSQL(engine=args['executor'], metadata=args['integrations'])
         toolkit = SQLDatabaseToolkit(db=db)
+        model_name = args.get('model_name', self.default_model)
+        llm = OpenAI(temperature=0) if model_name not in CHAT_MODELS else ChatOpenAI(temperature=0)
         agent = create_sql_agent(
-            llm=OpenAI(temperature=0),
+            llm=llm,
             toolkit=toolkit,
             verbose=True
         )

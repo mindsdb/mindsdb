@@ -11,6 +11,18 @@ from mindsdb_sql.parser import ast
 from mindsdb.utilities import log
 
 
+def filter_df(df, conditions):
+    for condition in conditions:
+        column = condition[1]
+        operator = '==' if condition[0] == '=' else condition[0]
+        value = f"'{condition[2]}'" if type(condition[2]) == str else condition[2]
+
+        query = f"{column} {operator} {value}"
+        df.query(query, inplace=True)
+
+    return df
+
+
 class EmailCampaignsTable(APITable):
     """The Sendinblue Email Campaigns Table implementation"""
 
@@ -45,11 +57,7 @@ class EmailCampaignsTable(APITable):
                 raise ValueError(f"Unknown query target {type(target)}")
 
         # WHERE
-        email_campaigns_kwargs = {}
         conditions = extract_comparison_conditions(query.where)
-        print(conditions)
-        for a_where in conditions:
-            print(a_where)
 
         # ORDER BY
         order_by_conditions = {}
@@ -80,6 +88,9 @@ class EmailCampaignsTable(APITable):
             total_results = 20
 
         email_campaigns_df = pd.json_normalize(self.get_email_campaigns(limit=total_results))
+
+        if len(conditions) > 0:
+            email_campaigns_df = filter_df(email_campaigns_df, conditions)
 
         if len(email_campaigns_df) == 0:
             email_campaigns_df = pd.DataFrame([], columns=selected_columns)

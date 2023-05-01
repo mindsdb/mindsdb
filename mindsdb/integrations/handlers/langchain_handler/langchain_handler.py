@@ -278,7 +278,7 @@ class LangChainHandler(OpenAIHandler):
                 description="useful for when you need to ask with search"
             ))
 
-        # add connection to mindsdb  # TODO: should limit to read only access
+        # add connection to mindsdb
         tools.append(mdb_tool)
         tools.append(mdb_meta_tool)
 
@@ -305,11 +305,7 @@ class LangChainHandler(OpenAIHandler):
 
     def sql_agent_completion(self, df, args=None, pred_args=None):
         """This completion will be used to answer based on information passed by any MindsDB DB or API engine."""
-        db = MindsDBSQL(
-            engine=args['executor'],
-            metadata=args['integrations'],
-            include_tables=[]  # args['include_tables'],  # TODO get from integrations controller?
-        )
+        db = MindsDBSQL(engine=args['executor'], metadata=args['integrations'])
         toolkit = SQLDatabaseToolkit(db=db)
         agent = create_sql_agent(
             llm=OpenAI(temperature=0),

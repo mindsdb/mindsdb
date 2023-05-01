@@ -50,7 +50,7 @@ class MindsDBSQL(SQLDatabase):
             dbs = [lst[0] for lst in self._engine.data if lst[0] != 'information_schema']
             usable_tables = []
             for db in dbs:
-                if 'e2e' not in db and db != 'mindsdb':  # TODO: anything else?
+                if db != 'mindsdb':
                     try:
                         self._call_engine([f'use `{db}`;', 'show tables;'])
                         tables = [lst[0] for lst in self._engine.data if lst[0] != 'information_schema']
@@ -108,8 +108,6 @@ class MindsDBSQL(SQLDatabase):
         info += self._get_sample_rows(table_str, fields) + "\n*/"
         info += '\nColumn data types: ' + ",\t".join([f'`{field}` : `{dtype}`' for field, dtype in zip(fields, dtypes)]) + '\n'  # noqa
         return info
-
-    # TODO: ensure _get_table_indexes() is not needed, implement otherwise
 
     def _get_sample_rows(self, table: str, fields: List[str]) -> str:
         command = f"select {','.join(fields)} from {table} limit {self._sample_rows_in_table_info};"

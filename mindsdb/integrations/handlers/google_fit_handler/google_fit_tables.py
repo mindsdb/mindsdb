@@ -2,6 +2,9 @@ from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb_sql.parser import ast
+import datetime
+import pytz
+from tzlocal import get_localzone
 
 class GoogleFitTable(APITable):
 
@@ -23,7 +26,7 @@ class GoogleFitTable(APITable):
             if op == 'or':
                 raise NotImplementedError(f'OR is not supported')
             if arg1 == 'date':
-                date = time_parser(arg2)
+                date = self.time_parser(arg2)
                 if op == '>':
                     params['start_time'] = date
                 elif op == '<':

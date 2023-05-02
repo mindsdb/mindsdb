@@ -2,4 +2,4 @@ pytz
 tzlocal
 google
 google-auth-oauthlib
-googleapiclient
+google-api-python-client

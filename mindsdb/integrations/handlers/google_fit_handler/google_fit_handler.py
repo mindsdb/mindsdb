@@ -64,16 +64,24 @@ class GoogleFitHandler(APIHandler):
                 creds = flow.run_local_server(port=0)
             with open('token.json', 'w') as token:
                 token.write(creds.to_json())
-        self.api = fit_service = build('fitness', 'v1', credentials=creds)
+        self.api = build('fitness', 'v1', credentials=creds)
         
         self.is_connected = True
         return self.api
 
     def check_connection(self) -> HandlerStatusResponse:
-    """ Check connection to the handler
-    Returns:
-        HandlerStatusResponse
-    """
+        response = StatusResponse(False)
+
+        try:
+            api = self.connect()
+            response.success = True
+
+        except Exception as e:
+            log.logger.error(f'Error connecting to Google Fit API: {e}!')
+            response.error_message = e
+
+        self.is_connected = response.success
+        return response
 
     def retrieve_data(service, startTimeMillis, endTimeMillis, dataSourceId):
         return service.users().dataset().aggregate(userId="me", body={

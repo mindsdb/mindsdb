@@ -1,4 +1,4 @@
-# Welcome to the MindsDB Manual QA Testing for SAP MaxDB server Handler
+# Welcome to the MindsDB Manual QA Testing for SAP MaxDB Handler
 
 ---
 

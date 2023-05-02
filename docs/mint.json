@@ -320,6 +320,10 @@
         {
           "group": "Application Integrations",
           "pages": [
+            "app-integrations/confluence",
+            "app-integrations/google-calendar",
+            "app-integrations/plaid",
+            "app-integrations/reddit",
             "app-integrations/twitter"
           ]
         },
@@ -354,6 +358,7 @@
             "data-integrations/google-sheets",
             "data-integrations/ibm-db2",
             "data-integrations/ibm-informix",
+            "data-integrations/influxdb",
             "data-integrations/mariadb",
             "data-integrations/matrixone",
             "data-integrations/microsoft-access",

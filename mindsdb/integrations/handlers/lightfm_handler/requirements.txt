@@ -1,0 +1,8 @@
+mindsdb>=23.3.2.0
+mindsdb_sql >= 0.4.9, < 0.5.0
+lightfm==1.17
+scipy >=1.10.1
+pathlib >=1.0.1
+pydantic >=1.10.7
+dataprep-ml >=0.0.8
+pytest

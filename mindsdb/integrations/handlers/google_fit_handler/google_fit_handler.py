@@ -2,8 +2,7 @@ import os.path
 import json
 import pandas as pd
 import pytz
-import time
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -14,15 +13,16 @@ from googleapiclient.errors import HttpError
 from mindsdb_sql import parse_sql
 
 from mindsdb.utilities import log
+from tzlocal import get_localzone
 from mindsdb.integrations.handlers.google_fit_handler.google_fit_tables import GoogleFitTable
 from mindsdb.integrations.libs.api_handler import APIHandler,FuncParser
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
 )
-epoch0 = datetime(1970, 1, 1, tzinfo=pytz.utc)
-SCOPES = ['https://www.googleapis.com/auth/fitness.activity.read']
 
+SCOPES = ['https://www.googleapis.com/auth/fitness.activity.read']
+DATE_FORMAT = '%Y-%m-%d'
 class GoogleFitHandler(APIHandler):
 
     def __init__(self, name: str = None, **kwargs):
@@ -108,7 +108,7 @@ class GoogleFitHandler(APIHandler):
         for daily_step_data in steps_data['bucket']:
             #TODO
             local_date = datetime.fromtimestamp(int(daily_step_data['startTimeMillis']) / 1000,
-                                            tz=pytz.timezone(local_timezone))
+                                            tz=pytz.timezone(str(get_localzone())))
             local_date_str = local_date.strftime(DATE_FORMAT)
 
             data_point = daily_step_data['dataset'][0]['point']

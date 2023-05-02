@@ -32,7 +32,7 @@ class TweetsTable(APITable):
     def select(self, query: ast.Select) -> Response:
 
         conditions = extract_comparison_conditions(query.where)
-
+        
         params = {}
         filters = []
         for op, arg1, arg2 in conditions:

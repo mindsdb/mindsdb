@@ -4,6 +4,7 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 from mindsdb_sql.parser import ast
 import datetime
 import pytz
+import time
 from tzlocal import get_localzone
 
 class GoogleFitTable(APITable):
@@ -22,14 +23,15 @@ class GoogleFitTable(APITable):
         filters = []
         steps = {}
         for op, arg1, arg2 in conditions:
-            #end_time_millis = int(round(time.time() * 1000))
             if op == 'or':
                 raise NotImplementedError(f'OR is not supported')
             if arg1 == 'date':
                 date = self.time_parser(arg2)
                 if op == '>':
                     params['start_time'] = date
+                    params['end_time'] = int(round(time.time() * 1000))
                 elif op == '<':
+                    params['start_time'] = date - 31536000000
                     params['end_time'] = date
                 else:
                     raise NotImplementedError

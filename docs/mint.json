@@ -288,8 +288,9 @@
             {
               "group": "Tables",
               "pages": [
-                "rest/tables/create-table",
+                "rest/tables/list-tables",
                 "rest/tables/list-table",
+                "rest/tables/create-table",
                 "rest/tables/delete-table"
               ]
             }

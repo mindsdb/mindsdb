@@ -32,6 +32,15 @@ components:
         name:
           type: string
 
+    Table:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          description: Type of table (data | view)
+
     View:
       type: object
       properties:
@@ -954,11 +963,19 @@ paths:
                 type: object
                 items:
                   type: string
-  /tables:
+  '/api/databases/{databaseName}/tables':
     post:
       security:
         - ApiKeyAuth: []
       summary: This endpoint creates a new table with the predictions result-set.
+      description: Creates a new table from a select query. See [CREATE table documentation](https://docs.mindsdb.com/sql/create/table).
+      parameters:
+      - name: databaseName
+        in: path
+        description: Name of the database
+        required: true
+        schema:
+          type: string
       requestBody:
         required: true
         content:
@@ -966,26 +983,34 @@ paths:
             schema:
               type: object
               properties:
-                project_name:
-                  type: string
-                  description: Name of the project where the table is created
-                table_name:
-                  type: string
-                  description: Name of the table
-                query:
-                  type: string
-                  description: The SQL query that will save the result-set in a table.
+                table:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    select:
+                      type: string
+                      description: SELECT statement to create the table from
+                    replace:
+                      type: boolean
+                      description: Whether or not to delete a pre-existing table before creating it
       responses:
         '200':
           description: Table created
           content:
             application/json:
               schema:
+                $ref: '#/components/schemas/Table'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
                 type: object
                 items:
                   type: string
-        '401':
-          description: Invalid API key error message
+        '404':
+          description: Database not found
           content:
             application/json:
               schema:
@@ -1000,13 +1025,65 @@ paths:
                 type: object
                 items:
                   type: string
-  '/tables/{tableName}':
+
+    get:
+      security:
+        - ApiKeyAuth: []
+      summary: Returns a list of tables in a database.
+      description: Gets metadata for all tables in a database.
+      parameters:
+        - name: databaseName
+          in: path
+          description: The name of the database
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON array of tables
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Table'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Database not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  '/api/databases/{databaseName}/tables/{tableName}':
     get:
       security:
         - ApiKeyAuth: []
       summary: SELECT from Table
-      description: This endpoint retrieves the Select result-set from the table.
+      description: Gets metadata for a table in a database.
       parameters:
+        - name: databaseName
+          in: path
+          description: The name of the database
+          required: true
+          schema:
+            type: string
         - name: tableName
           in: path
           description: The name of the table
@@ -1019,9 +1096,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                items:
-                  type: string
+                $ref: '#/components/schemas/Table'
         '401':
           description: Invalid API key error message
           content:
@@ -1031,7 +1106,7 @@ paths:
                 items:
                   type: string
         '404':
-          description: Table not found
+          description: Table or database not found
           content:
             application/json:
               schema:
@@ -1050,21 +1125,27 @@ paths:
       security:
         - ApiKeyAuth: []
       summary: Deletes an existing table.
-      description: This endpoint deletes a table.
+      description: Deletes a table in a database.
       parameters:
+        - name: databaseName
+          in: path
+          description: The name of the database
+          required: true
+          schema:
+            type: string
         - name: tableName
           in: path
-          description: table name to delete
+          description: Table name to delete
           required: true
           schema:
             type: string
       responses:
         '200':
-          description: Succesfully deleted
+          description: Successfully deleted
           content:
             application/json:
               schema:
-                type: array
+                type: object
                 items:
                   type: string
         '401':
@@ -1076,7 +1157,7 @@ paths:
                 items:
                   type: string
         '404':
-          description: Table not found
+          description: Table or database not found
           content:
             application/json:
               schema:

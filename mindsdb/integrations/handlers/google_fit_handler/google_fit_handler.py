@@ -47,22 +47,22 @@ class GoogleFitHandler(APIHandler):
             return self.api
         if len(self.connection_args) == 7:
             credentialDict = {"installed":self.connection_args}
-            f = open("credentials.json", "w")
+            f = open("mindsdb/integrations/handlers/google_fit_handler/credentials.json", "w")
             f.write(json.dumps(credentialDict).replace(" ", ""))
             f.close()
         
         creds = None
 
-        if os.path.exists('token.json'):
-            creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+        if os.path.isfile('mindsdb/integrations/handlers/google_fit_handler/token.json'):
+            creds = Credentials.from_authorized_user_file('mindsdb/integrations/handlers/google_fit_handler/token.json', SCOPES)
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    'credentials.json', SCOPES)
+                    'mindsdb/integrations/handlers/google_fit_handler/credentials.json', SCOPES)
                 creds = flow.run_local_server(port=0)
-            with open('token.json', 'w') as token:
+            with open('mindsdb/integrations/handlers/google_fit_handler/token.json', 'w') as token:
                 token.write(creds.to_json())
         self.api = build('fitness', 'v1', credentials=creds)
         

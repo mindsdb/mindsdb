@@ -24,6 +24,7 @@ class GoogleFitTable(APITable):
         steps = {}
         now = int(round(time.time() * 1000))
         one_year = 31536000000
+        one_month = 2629746000
         for op, arg1, arg2 in conditions:
             if op == 'or':
                 raise NotImplementedError(f'OR is not supported')
@@ -40,8 +41,8 @@ class GoogleFitTable(APITable):
             else:
                 raise NotImplementedError(f'This query is not supported')
         if not params:
-            params['start_time'] = now
-            params['end_time'] = now - one_year
+            params['start_time'] = now - one_month
+            params['end_time'] = now
         result = self.handler.call_google_fit_api(
             method_name='get_steps',
             params=params

@@ -84,15 +84,20 @@ class GoogleFitHandler(APIHandler):
         return response
 
     def retrieve_data(self, service, startTimeMillis, endTimeMillis, dataSourceId) -> dict:
-        return service.users().dataset().aggregate(userId="me", body={
-            "aggregateBy": [{
-                "dataTypeName": "com.google.step_count.delta",
-                "dataSourceId": dataSourceId
-            }],
-            "bucketByTime": {"durationMillis": 86400000},
-            "startTimeMillis": startTimeMillis,
-            "endTimeMillis": endTimeMillis
-        }).execute()
+        try:
+            return service.users().dataset().aggregate(userId="me", body={
+                "aggregateBy": [{
+                    "dataTypeName": "com.google.step_count.delta",
+                    "dataSourceId": dataSourceId
+                }],
+                "bucketByTime": {"durationMillis": 86400000},
+                "startTimeMillis": startTimeMillis,
+                "endTimeMillis": endTimeMillis
+            }).execute()
+        except HttpError:
+            print(f'startTimeMillis: {startTimeMillis} endTimeMillis: {endTimeMillis}')
+            raise HttpError
+
 
     def native_query(self, query: str = None) -> Response:
         """Receive raw query and act upon it somehow.
@@ -119,7 +124,12 @@ class GoogleFitHandler(APIHandler):
                 count = data_point[0]['value'][0]['intVal']
                 data_source_id = data_point[0]['originDataSourceId']
                 steps[local_date_str] = {'steps': count, 'originDataSourceId': data_source_id}
-                pd.DataFrame.from_dict(steps)
+                print("\n\n")
+                print(steps)
+                print("\n\n")
+        ret = pd.DataFrame.from_dict(steps)
+        print(steps)
+        return ret
     
     def call_google_fit_api(self, method_name:str = None, params:dict = None) -> pd.DataFrame:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.
@@ -131,5 +141,7 @@ class GoogleFitHandler(APIHandler):
         """
         self.connect()
         if method_name == 'get_steps':
-            return self.get_steps(params['start_time'], params['end_time'])
+            val = self.get_steps(params['start_time'], params['end_time'])
+            print(val)
+            return val
         raise NotImplementedError('Method name {} not supported by Google Fit Handler'.format(method_name))

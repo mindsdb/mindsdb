@@ -34,7 +34,7 @@ class GoogleFitTable(APITable):
                     params['start_time'] = date
                     params['end_time'] = now
                 elif op == '<':
-                    params['start_time'] = date - one_year
+                    params['start_time'] = date - one_month
                     params['end_time'] = date
                 else:
                     raise NotImplementedError

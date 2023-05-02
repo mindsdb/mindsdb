@@ -10,6 +10,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import Resource
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from mindsdb_sql import parse_sql
 
 from mindsdb.utilities import log
 from mindsdb.integrations.handlers.google_fit_handler.google_fit_tables import GoogleFitTable
@@ -88,21 +89,27 @@ class GoogleFitHandler(APIHandler):
             "startTimeMillis": startTimeMillis,
             "endTimeMillis": endTimeMillis
         }).execute()
+    def _get_steps(self, params: Dict = None) -> pd.DataFrame:
 
     def native_query(self, query: str = None) -> Response:
-    """Receive raw query and act upon it somehow.
-    Args:
-        query (Any): query in native format (str for sql databases,
+        """Receive raw query and act upon it somehow.
+        Args:
+            query (Any): query in native format (str for sql databases,
             dict for mongo, api's json etc)
-    Returns:
-        HandlerResponse
-    """
+        Returns:
+            HandlerResponse
+        """
+        ast = parse_sql(query, dialect='mindsdb')
+        return self.query(ast)
 
-    def call_google_fit_api(self, method_name:str = None, params:dict = None) -> DataFrame:
-    """Receive query as AST (abstract syntax tree) and act upon it somehow.
-    Args:
-        query (ASTNode): sql query represented as AST. May be any kind
-            of query: SELECT, INSERT, DELETE, etc
-    Returns:
-        DataFrame
-    """
+    def call_google_fit_api(self, method_name:str = None, params:dict = None) -> pd.DataFrame:
+        """Receive query as AST (abstract syntax tree) and act upon it somehow.
+        Args:
+            query (ASTNode): sql query represented as AST. May be any kind
+                of query: SELECT, INSERT, DELETE, etc
+        Returns:
+            DataFrame
+        """
+        if method_name == 'steps':
+            return self._get_steps(params)
+        raise NotImplementedError('Method name {} not supported by Binance API Handler'.format(method_name))

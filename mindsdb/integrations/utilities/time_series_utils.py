@@ -111,10 +111,13 @@ def get_hierarchy_from_df(df, model_args):
     in tests/unit/ml_handlers/test_time_series_utils.py for an example.
     """
     spec = spec_hierarchy_from_list(model_args["hierarchy"])
+
     nixtla_df = df.rename({model_args["order_by"]: "ds", model_args["target"]: "y"}, axis=1)
+    nixtla_df["ds"] = pd.to_datetime(nixtla_df["ds"])
     for col in model_args["group_by"]:
         nixtla_df[col] = nixtla_df[col].astype(str)  # grouping columns need to be string format
     nixtla_df.insert(0, "Total", "total")
+
     nixtla_df, hier_df, hier_dict = aggregate(nixtla_df, spec)  # returns (nixtla_df, hierarchy_df, hierarchy_dict)
     return nixtla_df, hier_df, hier_dict
 

@@ -1,33 +1,34 @@
 ---
-title: Microsoft Access Handler
-sidebarTitle: Microsoft Access Handler
+title: Microsoft Access
+sidebarTitle: Microsoft Access
 ---
-## Microsoft Access
 
-Microsoft Access is a pseudo-relational database engine from Microsoft. It is part of the Microsoft Office suite of applications that also includes Word, Outlook and Excel, among others. Access is also available for purchase as a stand-alone product. Access uses the Jet Database Engine for data storage.
-https://www.techopedia.com/definition/1218/microsoft-access
+This is the implementation of the Microsoft Access data handler for MindsDB.
+
+[Microsoft Access](https://www.microsoft.com/en-us/microsoft-365/access) is a pseudo-relational database engine from Microsoft. It is part of the Microsoft Office suite of applications that also includes Word, Outlook, and Excel, among others. Access is also available for purchase as a stand-alone product. It uses the Jet Database Engine for data storage.
 
 ## Implementation
 
-This handler was implemented using `pyodbc`, the Python ODBC bridge.
+This handler is implemented using `pyodbc`, the Python ODBC bridge.
 
-The only required argument to establish a connection is `db_file`. This points to the database file that the connection is to be made to.
+The only required argument to establish a connection is `db_file` that points to a database file to be queried.
 
 ## Usage
 
-In order to make use of this handler and connect to an Access database in MindsDB, the following syntax can be used,
+In order to make use of this handler and connect to the Access database in MindsDB, the following syntax can be used:
 
 ```sql
 CREATE DATABASE access_datasource
 WITH
-engine='access',
-parameters={
-    "db_file":"C:\\Users\\minurap\\Documents\\example_db.accdb"
-};
+    engine = 'access',
+    parameters = {
+      "db_file":"C:\\Users\\minurap\\Documents\\example_db.accdb"
+    };
 ```
 
-Now, you can use this established connection to query your database as follows,
+You can use this established connection to query your table as follows:
 
 ```sql
-SELECT * FROM access_datasource.example_tbl
+SELECT *
+FROM access_datasource.example_tbl;
 ```

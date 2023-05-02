@@ -89,7 +89,9 @@ class GoogleFitHandler(APIHandler):
             "startTimeMillis": startTimeMillis,
             "endTimeMillis": endTimeMillis
         }).execute()
-    def _get_steps(self, params: Dict = None) -> pd.DataFrame:
+    
+    def _get_steps(self) -> pd.DataFrame:
+        pass
 
     def native_query(self, query: str = None) -> Response:
         """Receive raw query and act upon it somehow.
@@ -110,6 +112,6 @@ class GoogleFitHandler(APIHandler):
         Returns:
             DataFrame
         """
-        if method_name == 'steps':
+        if method_name == 'get_steps':
             return self._get_steps(params)
-        raise NotImplementedError('Method name {} not supported by Binance API Handler'.format(method_name))
+        raise NotImplementedError('Method name {} not supported by Google Fit Handler'.format(method_name))

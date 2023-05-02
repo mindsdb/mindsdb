@@ -2,6 +2,7 @@ import os.path
 import json
 import pandas as pd
 import pytz
+import time
 from datetime import datetime, timedelta
 
 from google.auth.transport.requests import Request
@@ -79,7 +80,7 @@ class GoogleFitHandler(APIHandler):
         self.is_connected = response.success
         return response
 
-    def retrieve_data(service, startTimeMillis, endTimeMillis, dataSourceId):
+    def retrieve_data(service, startTimeMillis, endTimeMillis, dataSourceId) -> dict:
         return service.users().dataset().aggregate(userId="me", body={
             "aggregateBy": [{
                 "dataTypeName": "com.google.step_count.delta",
@@ -103,7 +104,14 @@ class GoogleFitHandler(APIHandler):
         """
         ast = parse_sql(query, dialect='mindsdb')
         return self.query(ast)
-
+    
+    def get_steps(params):
+        epoch0 = datetime(1970, 1, 1, tzinfo=pytz.utc)
+        start_hour = pytz.timezone(params.timezone).localize(datetime(params.year, params.month, params.day))
+        start_time_millis = int((start_hour - epoch0).total_seconds() * 1000)
+        end_time_millis = int(round(time.time() * 1000))
+        steps_data = get_aggregate(self.api, start_time_millis, end_time_millis, "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps")
+    
     def call_google_fit_api(self, method_name:str = None, params:dict = None) -> pd.DataFrame:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.
         Args:
@@ -113,5 +121,5 @@ class GoogleFitHandler(APIHandler):
             DataFrame
         """
         if method_name == 'get_steps':
-            return self._get_steps(params)
+            return self.get_steps(params)
         raise NotImplementedError('Method name {} not supported by Google Fit Handler'.format(method_name))

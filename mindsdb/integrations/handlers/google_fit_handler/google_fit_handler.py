@@ -2,6 +2,7 @@ import os.path
 import json
 import pandas as pd
 import pytz
+from tzlocal import get_localzone
 from datetime import datetime
 
 from google.auth.transport.requests import Request
@@ -13,7 +14,6 @@ from googleapiclient.errors import HttpError
 from mindsdb_sql import parse_sql
 
 from mindsdb.utilities import log
-from tzlocal import get_localzone
 from mindsdb.integrations.handlers.google_fit_handler.google_fit_tables import GoogleFitTable
 from mindsdb.integrations.libs.api_handler import APIHandler,FuncParser
 from mindsdb.integrations.libs.response import (

@@ -102,12 +102,8 @@ class GoogleFitHandler(APIHandler):
         ast = parse_sql(query, dialect='mindsdb')
         return self.query(ast)
     
-    def get_steps(self, params) -> pd.DataFrame:
+    def get_steps(self, start_time_millis, end_time_millis) -> pd.DataFrame:
         steps = {}
-        epoch0 = datetime(1970, 1, 1, tzinfo=pytz.utc)
-        start_hour = pytz.timezone(params.timezone).localize(datetime(params.year, params.month, params.day))
-        start_time_millis = int((start_hour - epoch0).total_seconds() * 1000)
-        end_time_millis = int(round(time.time() * 1000))
         steps_data = self.retrieve_data(self.api, start_time_millis, end_time_millis, "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps")
         for daily_step_data in steps_data['bucket']:
             #TODO
@@ -131,5 +127,5 @@ class GoogleFitHandler(APIHandler):
             DataFrame
         """
         if method_name == 'get_steps':
-            return self.get_steps(params)
+            return self.get_steps(params.start_time, params.end_time)
         raise NotImplementedError('Method name {} not supported by Google Fit Handler'.format(method_name))

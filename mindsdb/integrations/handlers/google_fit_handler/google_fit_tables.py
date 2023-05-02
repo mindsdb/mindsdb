@@ -4,6 +4,13 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 from mindsdb_sql.parser import ast
 
 class GoogleFitTable(APITable):
+
+    def time_parser(args) -> int:
+        ymd = args.split('-')
+        epoch0 = datetime(1970, 1, 1, tzinfo=pytz.utc)
+        time = pytz.timezone(str(get_localzone())).localize(datetime(int(ymd[0].rstrip()), int(ymd[1].rstrip()), int(ymd[2].rstrip())))
+        return int((time - epoch0).total_seconds() * 1000)
+    
     def select(self, query: ast.Select) -> Response:
 
         conditions = extract_comparison_conditions(query.where)
@@ -12,7 +19,7 @@ class GoogleFitTable(APITable):
         filters = []
         steps = {}
         for op, arg1, arg2 in conditions:
-
+            #end_time_millis = int(round(time.time() * 1000))
             if op == 'or':
                 raise NotImplementedError(f'OR is not supported')
             if arg1 == 'date':

@@ -268,13 +268,12 @@
             {
               "group": "Models",
               "pages": [
-                "rest/models/train-model",
-                "rest/models/list-model",
                 "rest/models/list-models",
-                "rest/models/describe-model",
+                "rest/models/list-model",
+                "rest/models/train-model",
                 "rest/models/query-model",
-                "rest/models/delete-model",
-                "rest/models/retrain-model"
+                "rest/models/describe-model",
+                "rest/models/delete-model"
               ]
             },
             {

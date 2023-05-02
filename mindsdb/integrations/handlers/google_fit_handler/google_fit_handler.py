@@ -90,9 +90,6 @@ class GoogleFitHandler(APIHandler):
             "startTimeMillis": startTimeMillis,
             "endTimeMillis": endTimeMillis
         }).execute()
-    
-    def _get_steps(self) -> pd.DataFrame:
-        pass
 
     def native_query(self, query: str = None) -> Response:
         """Receive raw query and act upon it somehow.
@@ -105,7 +102,7 @@ class GoogleFitHandler(APIHandler):
         ast = parse_sql(query, dialect='mindsdb')
         return self.query(ast)
     
-    def get_steps(params):
+    def get_steps(params) -> pd.DataFrame:
         epoch0 = datetime(1970, 1, 1, tzinfo=pytz.utc)
         start_hour = pytz.timezone(params.timezone).localize(datetime(params.year, params.month, params.day))
         start_time_millis = int((start_hour - epoch0).total_seconds() * 1000)

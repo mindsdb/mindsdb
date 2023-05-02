@@ -45,12 +45,14 @@ class GoogleFitHandler(APIHandler):
     def connect(self) -> Resource:
         if self.is_connected is True and self.api:
             return self.api
-        if len(self.connection_args) == 6:
+        if len(self.connection_args) == 7:
             credentialDict = {"installed":self.connection_args}
-            f = open("credentials.json", "a")
-            f.write(json.dumps(self.connection_args).replace(" ", ""))
+            f = open("credentials.json", "w")
+            f.write(json.dumps(credentialDict).replace(" ", ""))
             f.close()
         
+        creds = None
+
         if os.path.exists('token.json'):
             creds = Credentials.from_authorized_user_file('token.json', SCOPES)
         if not creds or not creds.valid:

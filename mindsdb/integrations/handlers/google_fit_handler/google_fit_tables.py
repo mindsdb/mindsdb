@@ -38,7 +38,7 @@ class GoogleFitTable(APITable):
             else:
                 raise NotImplementedError(f'This query is not supported')
 
-        result = self.handler.call_twitter_api(
+        result = self.handler.call_google_fit_api(
             method_name='get_steps',
             params=params
         )

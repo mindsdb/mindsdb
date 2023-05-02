@@ -261,24 +261,25 @@ paths:
             schema:
               type: object
               properties:
-                name:
-                  type: string
-                engine:
-                  type: string
-                parameters:
+                database:
                   type: object
-                  description: Parameters used to connect to your data source. These example parameters are for connecting to [MySQL](/data-integrations/mysql). See [here](/data-integrations/all-data-integrations) for which parameters to use for your datasource.
                   properties:
-                    user:
+                    engine:
                       type: string
-                    password:
-                      type: string
-                    host:
-                      type: string
-                    port:
-                      type: string
-                    database:
-                      type: string
+                    parameters:
+                      type: object
+                      description: Parameters used to connect to your data source. These example parameters are for connecting to [MySQL](/data-integrations/mysql). See [here](/data-integrations/all-data-integrations) for which parameters to use for your datasource.
+                      properties:
+                        user:
+                          type: string
+                        password:
+                          type: string
+                        host:
+                          type: string
+                        port:
+                          type: string
+                        database:
+                          type: string
       responses:
         '200':
           description: Database was successfully updated
@@ -827,7 +828,7 @@ paths:
       security:
         - ApiKeyAuth: []
       summary: List all views in a project
-      description: This endpoint returns a list of all views
+      description: Gets all views in a project.
       parameters:
         - name: projectName
           in: path

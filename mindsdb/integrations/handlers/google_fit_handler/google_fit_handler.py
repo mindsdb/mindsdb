@@ -22,9 +22,8 @@ SCOPES = ['https://www.googleapis.com/auth/fitness.activity.read']
 
 class GoogleFitHandler(APIHandler):
 
-    def __init__(self, name: str):
+    def __init__(self, name: str = None, **kwargs):
         super().__init__(name)
-
         args = kwargs.get('connection_data', {})
         self.connection_args = {}
         #TODO: make sure the arguments can read a list from user input when the database is created, since "redirect_uris" is a list.
@@ -45,7 +44,7 @@ class GoogleFitHandler(APIHandler):
         if len(self.connection_args) == 6:
             credentialDict = {"installed":self.connection_args}
             f = open("credentials.json", "a")
-            f.write(json.dumps(connection_args).replace(" ", ""))
+            f.write(json.dumps(self.connection_args).replace(" ", ""))
             f.close()
         
         if os.path.exists('token.json'):
@@ -64,7 +63,7 @@ class GoogleFitHandler(APIHandler):
         self.is_connected = True
         return self.api
 
-    def check_connection(self) -> HandlerStatusResponse:
+    def check_connection(self) -> StatusResponse:
         response = StatusResponse(False)
 
         try:

@@ -11,6 +11,7 @@ from googleapiclient.discovery import Resource
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+from mindsdb.utilities import log
 from mindsdb.integrations.handlers.google_fit_handler.google_fit_tables import GoogleFitTable
 from mindsdb.integrations.libs.api_handler import APIHandler,FuncParser
 from mindsdb.integrations.libs.response import (

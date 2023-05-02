@@ -17,6 +17,7 @@ from mindsdb_sql import parse_sql
 
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
 from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
+from mindsdb_sql import parse_sql, Insert
 
 
 _DEFAULT_MODEL = 'text-davinci-003'
@@ -250,17 +251,40 @@ class LangChainHandler(OpenAIHandler):
                     df = handler.get_tables().data_frame
                     table_name = parts[-1]
                     try:
-                        _, nrows, table_type = df[df['TABLE_NAME'] == table_name].iloc[0].to_list()
-                        data = f'Metadata for table {table_name}:\n\tRow count: {nrows}\n\tTable type: {table_type}\n'
+                        table_name_col = 'TABLE_NAME' if 'TABLE_NAME' in df.columns else 'table_name'
+                        mdata = df[df[table_name_col] == table_name].iloc[0].to_list()
+                        if len(mdata) == 3:
+                            _, nrows, table_type = mdata
+                            data = f'Metadata for table {table_name}:\n\tRow count: {nrows}\n\tType: {table_type}\n'
+                        elif len(mdata) == 2:
+                            nrows = mdata
+                            data = f'Metadata for table {table_name}:\n\tRow count: {nrows}\n'
+                        else:
+                            data = f'Metadata for table {table_name}:\n'
                         fields = handler.get_columns(table_name).data_frame['Field'].to_list()
                         types = handler.get_columns(table_name).data_frame['Type'].to_list()
                         data += f'List of columns and types:\n'
-                        data += '\n'.join([f'\tColumn: {field}\tType: {typ}' for field, typ in zip(fields, types)])
+                        data += '\n'.join([f'\tColumn: `{field}`\tType: `{typ}`' for field, typ in zip(fields, types)])
                     except:
                         data = f'Table {table_name} not found.'
             except Exception as e:
                 data = f"mindsdb tool failed with error:\n{str(e)}"  # let the agent know
             return data
+
+        def _mdb_write_call(query: str) -> str:
+            try:
+                # parse values out of query
+                query = query.strip('`')
+                processed_query = parse_sql(query, dialect='mindsdb')  # parse to check it's an insert
+                if isinstance(processed_query, Insert):
+                    # write inserts to the datasource
+                    executor.is_executed = False
+                    executor.query_execute(query)
+                    assert executor.is_executed
+                    return "mindsdb write tool executed successfully"
+            except Exception as e:
+                return f"mindsdb write tool failed with error:\n{str(e)}"
+
 
         mdb_tool = Tool(
                 name="MindsDB",
@@ -273,6 +297,13 @@ class LangChainHandler(OpenAIHandler):
             func=_mdb_exec_metadata_call,
             description="useful to get column names from a mindsdb table or metadata from a mindsdb data source. the command should be either 1) a data source name, to list all available tables that it exposes, or 2) a string with the format `data_source_name.table_name` (for example, `files.my_table`), to get the table name, table type, column names, data types per column, and amount of rows of the specified table."  # noqa
         )
+
+        mdb_write_tool = Tool(
+            name="MDB-Write",
+            func=_mdb_write_call,
+            description="useful to write into data sources connected to mindsdb. command must be a valid SQL query with syntax: `INSERT INTO data_source_name.table_name (column_name_1, column_name_2, [...]) VALUES (column_1_value_row_1, column_2_value_row_1, [...]), (column_1_value_row_2, column_2_value_row_2, [...]), [...];`. note the command always ends with a semicolon. order of column names and values for each row must be a perfect match. If write fails, try casting value with a function, passing the value without quotes, or truncating string as needed.`."  # noqa
+        )
+
         toolkit = pred_args.get('tools', self.default_agent_tools)
         tools = load_tools(toolkit)
         if model_kwargs.get('serper_api_key', False):
@@ -286,6 +317,7 @@ class LangChainHandler(OpenAIHandler):
         # add connection to mindsdb
         tools.append(mdb_tool)
         tools.append(mdb_meta_tool)
+        tools.append(mdb_write_tool)
 
         return tools
 

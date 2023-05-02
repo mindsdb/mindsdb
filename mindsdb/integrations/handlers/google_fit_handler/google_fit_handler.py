@@ -80,7 +80,7 @@ class GoogleFitHandler(APIHandler):
         self.is_connected = response.success
         return response
 
-    def retrieve_data(service, startTimeMillis, endTimeMillis, dataSourceId) -> dict:
+    def retrieve_data(self, service, startTimeMillis, endTimeMillis, dataSourceId) -> dict:
         return service.users().dataset().aggregate(userId="me", body={
             "aggregateBy": [{
                 "dataTypeName": "com.google.step_count.delta",
@@ -102,12 +102,25 @@ class GoogleFitHandler(APIHandler):
         ast = parse_sql(query, dialect='mindsdb')
         return self.query(ast)
     
-    def get_steps(params) -> pd.DataFrame:
+    def get_steps(self, params) -> pd.DataFrame:
+        steps = {}
         epoch0 = datetime(1970, 1, 1, tzinfo=pytz.utc)
         start_hour = pytz.timezone(params.timezone).localize(datetime(params.year, params.month, params.day))
         start_time_millis = int((start_hour - epoch0).total_seconds() * 1000)
         end_time_millis = int(round(time.time() * 1000))
-        steps_data = get_aggregate(self.api, start_time_millis, end_time_millis, "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps")
+        steps_data = self.retrieve_data(self.api, start_time_millis, end_time_millis, "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps")
+        for daily_step_data in steps_data['bucket']:
+            #TODO
+            local_date = datetime.fromtimestamp(int(daily_step_data['startTimeMillis']) / 1000,
+                                            tz=pytz.timezone(local_timezone))
+            local_date_str = local_date.strftime(DATE_FORMAT)
+
+            data_point = daily_step_data['dataset'][0]['point']
+            if data_point:
+                count = data_point[0]['value'][0]['intVal']
+                data_source_id = data_point[0]['originDataSourceId']
+                steps[local_date_str] = {'steps': count, 'originDataSourceId': data_source_id}
+                pd.DataFrame.from_dict(steps)
     
     def call_google_fit_api(self, method_name:str = None, params:dict = None) -> pd.DataFrame:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.

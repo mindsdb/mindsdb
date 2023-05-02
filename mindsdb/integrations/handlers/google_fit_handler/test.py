@@ -2,7 +2,8 @@ from __future__ import print_function
 
 import os.path
 import pytz
-from datetime import datetime
+import time
+from datetime import date as datedate, datetime, timedelta
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -47,10 +48,10 @@ def main():
 
     try:
         epoch0 = datetime(1970, 1, 1, tzinfo=pytz.utc)
-        local_0_hour = pytz.timezone('US/Pacific').localize(datetime(2023, 4, 27))
+        yesterday_local = datetime.now(pytz.timezone('US/Pacific')) - timedelta(days=1)
+        local_0_hour = pytz.timezone('US/Pacific').localize(datetime(2023, 4, 29))
         start_time_millis = int((local_0_hour - epoch0).total_seconds() * 1000)
-        local_1_hour = pytz.timezone('US/Pacific').localize(datetime(2023, 4, 30))
-        end_time_millis = int((local_1_hour - epoch0).total_seconds() * 1000)
+        end_time_millis = int(round(time.time() * 1000))
         fit_service = build('fitness', 'v1', credentials=creds)
         steps = {}
         steps_data = get_aggregate(fit_service, start_time_millis, end_time_millis, "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps")

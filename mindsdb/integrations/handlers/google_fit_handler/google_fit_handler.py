@@ -127,6 +127,7 @@ class GoogleFitHandler(APIHandler):
         Returns:
             DataFrame
         """
+        self.connect()
         if method_name == 'get_steps':
-            return self.get_steps(params.start_time, params.end_time)
+            return self.get_steps(params['start_time'], params['end_time'])
         raise NotImplementedError('Method name {} not supported by Google Fit Handler'.format(method_name))

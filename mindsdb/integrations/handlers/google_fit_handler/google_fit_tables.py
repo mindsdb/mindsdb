@@ -22,6 +22,8 @@ class GoogleFitTable(APITable):
         params = {}
         filters = []
         steps = {}
+        now = int(round(time.time() * 1000))
+        one_year = 31536000000
         for op, arg1, arg2 in conditions:
             if op == 'or':
                 raise NotImplementedError(f'OR is not supported')
@@ -29,15 +31,17 @@ class GoogleFitTable(APITable):
                 date = self.time_parser(arg2)
                 if op == '>':
                     params['start_time'] = date
-                    params['end_time'] = int(round(time.time() * 1000))
+                    params['end_time'] = now
                 elif op == '<':
-                    params['start_time'] = date - 31536000000
+                    params['start_time'] = date - one_year
                     params['end_time'] = date
                 else:
                     raise NotImplementedError
             else:
                 raise NotImplementedError(f'This query is not supported')
-
+        if not params:
+            params['start_time'] = now
+            params['end_time'] = now - one_year
         result = self.handler.call_google_fit_api(
             method_name='get_steps',
             params=params

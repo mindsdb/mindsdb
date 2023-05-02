@@ -31,6 +31,15 @@ components:
       properties:
         name:
           type: string
+
+    View:
+      type: object
+      properties:
+        name:
+          type: string
+        query:
+          type: string
+          description: SELECT query used to create the view
 paths:
   '/api/databases':
     get:
@@ -76,24 +85,27 @@ paths:
             schema:
               type: object
               properties:
-                name:
-                  type: string
-                engine:
-                  type: string
-                parameters:
+                database:
                   type: object
-                  description: Parameters used to connect to your data source. These example parameters are for connecting to [MySQL](/data-integrations/mysql). See [here](/data-integrations/all-data-integrations) for which parameters to use for your datasource.
                   properties:
-                    user:
+                    name:
                       type: string
-                    password:
+                    engine:
                       type: string
-                    host:
-                      type: string
-                    port:
-                      type: string
-                    database:
-                      type: string
+                    parameters:
+                      type: object
+                      description: Parameters used to connect to your data source. These example parameters are for connecting to [MySQL](/data-integrations/mysql). See [here](/data-integrations/all-data-integrations) for which parameters to use for your datasource.
+                      properties:
+                        user:
+                          type: string
+                        password:
+                          type: string
+                        host:
+                          type: string
+                        port:
+                          type: string
+                        database:
+                          type: string
       responses:
         # OpenAPI spec defines '200' status as a successful operation, so even though the
         # response code is '201', we need to use '200' so docs are properly generated.
@@ -734,11 +746,19 @@ paths:
                 type: object
                 items:
                   type: string
-  /views:
+  '/api/projects/{projectName}/views':
     post:
       security:
         - ApiKeyAuth: []
       summary: This endpoint creates a view which is a result-set of the SELECT statement.
+      description: Creates a [view](https://docs.mindsdb.com/sql/create/view) from a SELECT statement.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -746,26 +766,34 @@ paths:
             schema:
               type: object
               properties:
-                project_name:
-                  type: string
-                  description: Name of the project where the view is created
-                view_name:
-                  type: string
-                  description: Name of the view
-                query:
-                  type: string
-                  description: The SQL query that will save the result-set in a view.
+                view:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: Name of the view
+                    query:
+                      type: string
+                      description: The SQL query that will save the result-set in a view.
       responses:
         '200':
           description: View created
           content:
             application/json:
               schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/View'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
                 type: object
                 items:
                   type: string
-        '401':
-          description: Invalid API key error message
+        '404':
+          description: Project not found
           content:
             application/json:
               schema:
@@ -785,17 +813,32 @@ paths:
         - ApiKeyAuth: []
       summary: List all views in a project
       description: This endpoint returns a list of all views
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           description: A JSON object with view names
           content:
             application/json:
               schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/View'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
                 type: object
                 items:
                   type: string
-        '401':
-          description: Invalid API key error message
+        '404':
+          description: Project not found
           content:
             application/json:
               schema:
@@ -810,13 +853,19 @@ paths:
                 type: object
                 items:
                   type: string
-  '/views/{viewName}':
+  '/api/projects/{projectName}/views/{viewName}':
     get:
       security:
         - ApiKeyAuth: []
       summary: SELECT from VIEW
-      description: This endpoint retrieves the result-set from the view.
+      description: Gets a single view.
       parameters:
+        - name: projectName
+          in: path
+          description: The name of the project
+          required: true
+          schema:
+            type: string
         - name: viewName
           in: path
           description: The name of the view
@@ -825,13 +874,11 @@ paths:
             type: string
       responses:
         '200':
-          description: A JSON object with SELECT data
+          description: A JSON object with VIEW data
           content:
             application/json:
               schema:
-                type: object
-                items:
-                  type: string
+                $ref: '#/components/schemas/View'
         '401':
           description: Invalid API key error message
           content:
@@ -841,7 +888,7 @@ paths:
                 items:
                   type: string
         '404':
-          description: View not found
+          description: View or project not found
           content:
             application/json:
               schema:
@@ -860,11 +907,17 @@ paths:
       security:
         - ApiKeyAuth: []
       summary: Deletes an existing view.
-      description: This endpoint deletes a view.
+      description: Deletes an existing view in the project.
       parameters:
+        - name: projectName
+          in: path
+          description: Project name the view is in
+          required: true
+          schema:
+            type: string
         - name: viewName
           in: path
-          description: view name to delete
+          description: View name to delete
           required: true
           schema:
             type: string
@@ -874,7 +927,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
+                type: object
                 items:
                   type: string
         '401':
@@ -886,7 +939,7 @@ paths:
                 items:
                   type: string
         '404':
-          description: View not found
+          description: View or projectnot found
           content:
             application/json:
               schema:

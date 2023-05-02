@@ -279,9 +279,9 @@
             {
               "group": "Views",
               "pages": [
-                "rest/views/create-view",
-                "rest/views/list-view",
                 "rest/views/list-views",
+                "rest/views/list-view",
+                "rest/views/create-view",
                 "rest/views/delete-views"
               ]
             },

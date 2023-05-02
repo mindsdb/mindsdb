@@ -1,7 +1,8 @@
 from __future__ import print_function
 
 import os.path
-
+import pytz
+from datetime import datetime
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -9,11 +10,18 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 # If modifying these scopes, delete the file token.json.
-SCOPES = ['https://www.googleapis.com/auth/documents.readonly']
+SCOPES = ['https://www.googleapis.com/auth/fitness.activity.read']
 
-# The ID of a sample document.
-DOCUMENT_ID = '195j9eDD3ccgjQRttHhJPymLJUCOUjs-jmwTrekvdjFE'
-
+def get_aggregate(fit_service, startTimeMillis, endTimeMillis, dataSourceId):
+    return fit_service.users().dataset().aggregate(userId="me", body={
+        "aggregateBy": [{
+            "dataTypeName": "com.google.step_count.delta",
+            "dataSourceId": dataSourceId
+        }],
+        "bucketByTime": {"durationMillis": 86400000},
+        "startTimeMillis": startTimeMillis,
+        "endTimeMillis": endTimeMillis
+    }).execute()
 
 def main():
     """Shows basic usage of the Docs API.
@@ -38,15 +46,17 @@ def main():
             token.write(creds.to_json())
 
     try:
-        service = build('docs', 'v1', credentials=creds)
-
-        # Retrieve the documents contents from the Docs service.
-        document = service.documents().get(documentId=DOCUMENT_ID).execute()
-
-        print('The title of the document is: {}'.format(document.get('title')))
+        epoch0 = datetime(1970, 1, 1, tzinfo=pytz.utc)
+        local_0_hour = pytz.timezone('US/Pacific').localize(datetime(2023, 4, 27))
+        start_time_millis = int((local_0_hour - epoch0).total_seconds() * 1000)
+        local_1_hour = pytz.timezone('US/Pacific').localize(datetime(2023, 4, 30))
+        end_time_millis = int((local_1_hour - epoch0).total_seconds() * 1000)
+        fit_service = build('fitness', 'v1', credentials=creds)
+        steps = {}
+        steps_data = get_aggregate(fit_service, start_time_millis, end_time_millis, "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps")
+        print(steps_data)
     except HttpError as err:
         print(err)
-
 
 if __name__ == '__main__':
     main()

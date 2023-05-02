@@ -31,9 +31,10 @@ class GoogleFitHandler(APIHandler):
         self.connection_args = {}
         #TODO: make sure the arguments can read a list from user input when the database is created, since "redirect_uris" is a list.
         for k in ['client_id', 'project_id', 'auth_uri',
-                  'token_uri', 'auth_provider_x509_cert_url', 'client_secret','redirect_uris']:
+                  'token_uri', 'auth_provider_x509_cert_url', 'client_secret']:
             if k in args:
                 self.connection_args[k] = args[k]
+            self.connection_args['redirect_uris'] = ["http://localhost"]
         
         self.api = None
         self.is_connected = False

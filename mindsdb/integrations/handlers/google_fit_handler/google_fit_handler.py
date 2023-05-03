@@ -114,7 +114,6 @@ class GoogleFitHandler(APIHandler):
         steps = {}
         steps_data = self.retrieve_data(self.api, start_time_millis, end_time_millis, "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps")
         for daily_step_data in steps_data['bucket']:
-            #TODO
             local_date = datetime.fromtimestamp(int(daily_step_data['startTimeMillis']) / 1000,
                                             tz=pytz.timezone(str(get_localzone())))
             local_date_str = local_date.strftime(DATE_FORMAT)
@@ -124,11 +123,11 @@ class GoogleFitHandler(APIHandler):
                 count = data_point[0]['value'][0]['intVal']
                 data_source_id = data_point[0]['originDataSourceId']
                 steps[local_date_str] = {'steps': count, 'originDataSourceId': data_source_id}
-                print("\n\n")
-                print(steps)
-                print("\n\n")
         ret = pd.DataFrame.from_dict(steps)
-        print(steps)
+        ret = ret.T
+        ret = ret.drop('originDataSourceId', axis=1)
+        ret = ret.reset_index(drop=False)
+        print(ret)
         return ret
     
     def call_google_fit_api(self, method_name:str = None, params:dict = None) -> pd.DataFrame:

@@ -9,10 +9,10 @@ from tzlocal import get_localzone
 
 class GoogleFitTable(APITable):
 
-    def time_parser(args) -> int:
+    def time_parser(self, args) -> int:
         ymd = args.split('-')
-        epoch0 = datetime(1970, 1, 1, tzinfo=pytz.utc)
-        time = pytz.timezone(str(get_localzone())).localize(datetime(int(ymd[0].rstrip()), int(ymd[1].rstrip()), int(ymd[2].rstrip())))
+        epoch0 = datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)
+        time = pytz.timezone(str(get_localzone())).localize(datetime.datetime(int(ymd[0].rstrip()), int(ymd[1].rstrip()), int(ymd[2].rstrip())))
         return int((time - epoch0).total_seconds() * 1000)
     
     def select(self, query: ast.Select) -> Response:
@@ -29,6 +29,9 @@ class GoogleFitTable(APITable):
             if op == 'or':
                 raise NotImplementedError(f'OR is not supported')
             if arg1 == 'date':
+                print(f'args : {arg2} 2222222222222222222')
+                print(f'args : {type(arg2)} ttttttttttttttttttttttt')
+                print(f'op : {op} ppppppppppppppppppp')
                 date = self.time_parser(arg2)
                 if op == '>':
                     params['start_time'] = date

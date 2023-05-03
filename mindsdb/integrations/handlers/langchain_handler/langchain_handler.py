@@ -13,6 +13,8 @@ from langchain.utilities import GoogleSerperAPIWrapper
 from langchain.agents.agent_toolkits import SQLDatabaseToolkit
 from langchain.chains.conversation.memory import ConversationSummaryMemory
 
+from mindsdb_sql import parse_sql
+
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
 from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
 
@@ -140,7 +142,7 @@ class LangChainHandler(OpenAIHandler):
         model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
 
         # langchain tool setup
-        tools = self._setup_tools(model_kwargs, pred_args, args['executor'], args['integrations'])
+        tools = self._setup_tools(model_kwargs, pred_args, args['executor'])
 
         # langchain agent setup
         llm = OpenAI(**model_kwargs)  # TODO: use ChatOpenAI for chat models
@@ -214,12 +216,14 @@ class LangChainHandler(OpenAIHandler):
 
         return pred_df
 
-    def _setup_tools(self, model_kwargs, pred_args, executor, integrations):
+    def _setup_tools(self, model_kwargs, pred_args, executor):
         def _mdb_exec_call(query: str) -> str:
             """ We define it like this to pass the executor through the closure, as custom classes don't allow custom field assignment. """  # noqa
             try:
-                executor.query_execute(query.strip('`'))
-                data = executor.data  # list of lists
+                ast_query = parse_sql(query.strip('`'), dialect='mindsdb')
+                ret = executor.execute_command(ast_query)
+
+                data = ret.data  # list of lists
                 data = '\n'.join([  # rows
                     '\t'.join(      # columns
                         str(row) if isinstance(row, str) else [str(value) for value in row]
@@ -235,6 +239,7 @@ class LangChainHandler(OpenAIHandler):
                 assert 1 <= len(parts) <= 2, 'query must be in the format: `integration` or `integration.table`'
 
                 integration = parts[0]
+                integrations = executor.session.integration_controller
                 handler = integrations.get_handler(integration)
 
                 if len(parts) == 1:

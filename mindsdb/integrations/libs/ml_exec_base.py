@@ -370,8 +370,15 @@ class BaseMLEngineExec:
             args['learn_args'] = predictor_record.learn_args
 
         if self.handler_class.__name__ in ('LangChainHandler',):
-            args['executor'] = params['__mdb_executor']
-            args['integrations_controller'] = params['__mdb_integrations']
+            from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
+            from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+
+            sql_session = SessionController()
+            sql_session.database = 'mindsdb'
+
+            command_executor = ExecuteCommands(sql_session, executor=None)
+
+            args['executor'] = command_executor
 
         try:
             predictions = ml_handler.predict(df, args)

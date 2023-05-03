@@ -1,6 +1,8 @@
 import json
 import pandas as pd
 from collections import OrderedDict
+
+from google_auth_oauthlib.flow import InstalledAppFlow
 from pandas import DataFrame
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
@@ -69,7 +71,7 @@ class GoogleSearchConsoleHandler(APIHandler):
                 if self.credentials and self.credentials.expired and self.credentials.refresh_token:
                     self.credentials.refresh(Request())
                 else:
-                    self.credentials = service_account.Credentials.from_service_account_file(
+                    self.credentials = Credentials.from_authorized_user_file(
                         self.credentials_file, scopes=self.scopes)
             # Save the credentials for the next run
             json_str = self.credentials.to_json()

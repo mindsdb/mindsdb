@@ -39,6 +39,11 @@
       "name": "GitHub",
       "icon": "github",
       "url": "https://github.com/mindsdb/mindsdb"
+    },
+    {
+      "name": "What's New",
+      "icon": "favicon",
+      "url": "https://mindsdb.com/blog-categories/product-updates"
     }
   ],
   "navigation": [

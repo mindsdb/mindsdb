@@ -3,6 +3,7 @@ import datetime
 from functools import wraps
 
 import requests
+from mindsdb_sql import get_lexer_parser
 
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark
 
@@ -95,3 +96,8 @@ def get_versions_where_predictors_become_obsolete():
 
     versions_for_updating_predictors = [x for x in versions_for_updating_predictors if len(x) > 0]
     return True, versions_for_updating_predictors
+
+
+def init_lexer_parsers():
+    get_lexer_parser('mindsdb')
+    get_lexer_parser('mysql')

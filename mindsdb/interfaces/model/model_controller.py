@@ -81,7 +81,24 @@ class ModelController():
         if not hasattr(ml_handler, 'describe'):
             raise Exception("ML handler doesn't support description")
 
-        return ml_handler.describe(attribute)
+        df = ml_handler.describe(attribute)
+
+        if attribute is None:
+            # show model record
+            model_info = self.get_model_info(model_record)
+
+            # expecting list of attributes in first column df
+            attributes = []
+            if len(df) > 0 and len(df.columns) > 0:
+                attributes = list(df[df.columns[0]])
+                if len(attributes) == 1 and isinstance(attributes[0], list):
+                    # first cell already has a list
+                    attributes = attributes[0]
+
+            model_info.insert(0, 'tables', [attributes])
+            return model_info
+        else:
+            return df
 
     def get_models(self, with_versions=False, ml_handler_name=None, integration_id=None,
                    project_name=None):

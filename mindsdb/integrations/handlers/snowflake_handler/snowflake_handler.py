@@ -65,7 +65,7 @@ class SnowflakeHandler(DatabaseHandler):
             with connection.cursor() as cur:
                 cur.execute('select 1;')
             response.success = True
-        except connector.errors.ProgrammingError as e:
+        except connector.errors.Error as e:
             log.logger.error(f'Error connecting to Snowflake {self.connection_data["database"]}, {e}!')
             response.error_message = e
 

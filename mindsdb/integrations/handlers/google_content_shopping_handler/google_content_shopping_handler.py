@@ -398,7 +398,7 @@ class GoogleContentShoppingHandler(APIHandler):
 
 connection_args = OrderedDict(
     credentials={
-        'type': ARG_TYPE.STR,
+        'type': ARG_TYPE.PATH,
         'description': 'The path to the credentials file. If not specified, the default credentials are used.'
     },
     merchant_id={

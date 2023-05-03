@@ -13,95 +13,120 @@ class RecommenderPreprocessorOutput(BaseModel):
 		arbitrary_types_allowed = True
 
 
-def encode_interactions(data: pd.DataFrame, threshold: int = 4) -> pd.DataFrame:
-	"""
-	set whether user interacted positively or negatively with item,
-	negative may not be applicable depending on the use case
+class RecommenderPreprocessor:
 
-	:param data:
-	:param threshold:
-	:return pd.DataFrame:
-	"""
-	# positive interaction
-	data.loc[data.rating >= threshold, "interaction"] = 1
-	# negative interaction
-	data.loc[data.rating <= threshold, "interaction"] = -1
-
-	return data
-
-
-def item_mapping(data, item_id_column_name, item_description_column_name) -> dict:
-	"""
-	takes in item metadata and creates a dict with key being mapped against the index and values being
-	a namedtuple containing item id and product name. Creates an easy way to see what was predicted to a given user
-
-	:param data:
-	:param item_id_column_name:
-	:param item_description_column_name:
-
-	:return dict:
-	"""
-	item_map = {}
-	item_data = namedtuple("ItemData", [item_id_column_name, item_description_column_name])
-
-	for idx, item in enumerate(
-			zip(
-				data[item_id_column_name],
-				data[item_description_column_name]
-			)
+	def __init__(
+			self,
+			interaction_data: pd.DataFrame,
+			user_id_column_name: str,
+			item_id_column_name: str,
+			item_description_column_name: str,
+			threshold: int = 4,
+			recommender_type: str = "cf"
 	):
-		item_map[idx] = item_data._make(item)
+		# todo use enum for recommender_type
+		self.data = interaction_data
+		self.user_id_column_name = user_id_column_name
+		self.item_id_column_name = item_id_column_name
+		self.item_description_column_name = item_description_column_name
+		self.threshold = threshold
+		self.recommender_type = recommender_type
 
-	return item_map
+	def prevent_cold_start(self):
+		"""
+		get unique products and items, map to df ids in order to reduce sparcity and prevent cold start
+		in collaborative filtering
 
+		:return void:
+		"""
 
-def construct_interaction_matrix(data, user_id_column_name,item_id_column_name) -> sp.sparse.coo_matrix:
-	"""
-	construct user x item interaction matrix
+		unique_user_ids = {v:k for k,v in enumerate(self.data[self.user_id_column_name].unique(), 1)}
+		unique_item_ids = {v:k for k,v in enumerate(self.data[self.item_id_column_name].unique(), 1)}
 
-	:return sp.sparse.coo_matrix :
-	"""
-	number_unique_users = data[user_id_column_name].max()
-	number_unique_products = data[item_id_column_name].max()
-	matrix_shape = (number_unique_users, number_unique_products)
+		self.data['dense_user_id'] = self.data[self.user_id_column_name].map(unique_user_ids)
+		self.data['dense_item_id'] = self.data[self.item_id_column_name].map(unique_item_ids)
 
-	lil_matrix = sp.sparse.lil_matrix(matrix_shape)
+	def encode_interactions(self):
+		"""
+		set whether user interacted positively or negatively with item,
+		negative may not be applicable depending on the use case
 
-	for index, series in data[['userId', 'movieId', 'interaction']].iterrows():
-		lil_matrix[int(series['userId'] - 1), int(series['movieId'] - 1)] = series['interaction']
+		:return void:
+		"""
+		# positive interaction
+		self.data.loc[self.data.rating >= self.threshold, "interaction"] = 1
+		# negative interaction
+		self.data.loc[self.data.rating <= self.threshold, "interaction"] = -1
 
-	# convert from lil_matrix to coo_matrix
-	coo_matrix = lil_matrix.tocoo()
+		if self.recommender_type == 'cf':
+			self.prevent_cold_start()
 
-	return coo_matrix
+	def item_mapping(self) -> dict:
+		"""
+		takes in item metadata and creates a dict with key being mapped against the index and values being
+		a namedtuple containing item id and product name. Creates an easy way to see what was predicted to a given user
 
+		:return dict:
+		"""
+		item_map = {}
+		item_data = namedtuple("ItemData", [self.item_id_column_name, self])
 
-def preprocess(
-		data,
-		user_id_column_name,
-		item_id_column_name,
-		item_description_column_name,
-		interaction_threshold=4
-) -> RecommenderPreprocessorOutput:
-	"""
+		for idx, item in enumerate(
+				zip(
+					self.data[self.item_id_column_name],
+					self.data[self]
+				)
+		):
+			item_map[idx] = item_data._make(item)
 
-	runs a series of preprocessing tasks for recommender
+		return item_map
 
-	:param data:
-	:param interaction_threshold:
-	:param user_id_column_name:
-	:param item_id_column_name:
-	:param item_description_column_name:
-	:return RecommenderPreprocessorOutput:
-	"""
-	interactions_encoded_df = encode_interactions(data, interaction_threshold)
-	item_map = item_mapping(data, item_id_column_name, item_description_column_name)
-	interaction_matrix = construct_interaction_matrix(data, user_id_column_name,item_id_column_name)
+	def construct_interaction_matrix(self) -> sp.sparse.coo_matrix:
+		"""
+		construct user x item interaction matrix
 
-	return RecommenderPreprocessorOutput(
-		interaction_df=interactions_encoded_df,
-		interaction_matrix=interaction_matrix,
-		item_mapping=item_map
-	)
+		:return sp.sparse.coo_matrix :
+		"""
 
+		if self.recommender_type == "cf":
+			self.prevent_cold_start()
 
+			# update id cols to be used for sparse matrix value assignment
+			setattr(self, 'user_id_column_name', 'dense_user_id')
+			setattr(self, 'item_id_column_name', 'dense_item_id')
+
+		elif self.recommender_type != "hybrid":
+
+			raise (ValueError("recommender_type must be either 'cf' or 'hybrid'"))
+
+		n_users = self.data[self.user_id_column_name].max()
+		n_items = self.data[self.item_id_column_name].max()
+
+		matrix_shape = (n_users, n_items)
+
+		lil_matrix = sp.sparse.lil_matrix(matrix_shape)
+
+		for index, series in self.data[[self.user_id_column_name, self.item_id_column_name, 'interaction']].iterrows():
+			lil_matrix[int(series[self.user_id_column_name] - 1), int(series[self.item_id_column_name] - 1)] = series[
+				'interaction']
+
+		# convert from lil_matrix to coo_matrix
+
+		return lil_matrix.tocoo()
+
+	def preprocess(self) -> RecommenderPreprocessorOutput:
+		"""
+
+		runs a series of preprocessing tasks for recommender
+
+		:return RecommenderPreprocessorOutput:
+		"""
+		self.encode_interactions()
+		item_map = self.item_mapping()
+		interaction_matrix = self.construct_interaction_matrix()
+
+		return RecommenderPreprocessorOutput(
+			interaction_df=self.data,
+			interaction_matrix=interaction_matrix,
+			item_mapping=item_map
+		)

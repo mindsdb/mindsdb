@@ -25,7 +25,7 @@ CREATE
 DATABASE my_Search
 WITH  ENGINE = 'google_search',
 parameters = {
-    'credentials': 'C:\\Users\\panagiotis\\Desktop\\GitHub\\mindsdb\\mindsdb\\integrations\\handlers\\google_search_handler\\credentials.json'
+    'credentials': '/path/to/credentials.json'
 };    
 ~~~~
 

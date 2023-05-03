@@ -1,4 +1,6 @@
-import os
+import json
+from collections import OrderedDict
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 import pandas as pd
 from pandas import DataFrame
 from google.auth.transport.requests import Request
@@ -32,6 +34,7 @@ class GoogleContentShoppingHandler(APIHandler):
         self.token = None
         self.service = None
         self.connection_data = kwargs.get('connection_data', {})
+        self.fs_storage = kwargs['file_storage']
         self.credentials_file = self.connection_data.get('credentials', None)
         self.merchant_id = self.connection_data.get('merchant_id', None)
         self.credentials = None
@@ -58,8 +61,12 @@ class GoogleContentShoppingHandler(APIHandler):
         if self.is_connected is True:
             return self.service
         if self.credentials_file:
-            if os.path.exists('token_content.json'):
-                self.credentials = Credentials.from_authorized_user_file('token_content.json', self.scopes)
+            try:
+                json_str_bytes = self.fs_storage.file_get('token_content.json')
+                json_str = json_str_bytes.decode()
+                self.credentials = Credentials.from_authorized_user_info(info=json.loads(json_str), scopes=self.scopes)
+            except Exception:
+                self.credentials = None
             if not self.credentials or not self.credentials.valid:
                 if self.credentials and self.credentials.expired and self.credentials.refresh_token:
                     self.credentials.refresh(Request())
@@ -67,8 +74,8 @@ class GoogleContentShoppingHandler(APIHandler):
                     self.credentials = service_account.Credentials.from_service_account_file(
                         self.credentials_file, scopes=self.scopes)
             # Save the credentials for the next run
-            with open('token_content.json', 'w') as token:
-                token.write(self.credentials.to_json())
+            json_str = self.credentials.to_json()
+            self.fs_storage.file_set('token_content.json', json_str.encode())
             self.service = build('content', 'v2.1', credentials=self.credentials)
         return self.service
 
@@ -387,3 +394,20 @@ class GoogleContentShoppingHandler(APIHandler):
             return self.delete_products(params)
         else:
             raise NotImplementedError(f'Unknown method {method_name}')
+
+
+connection_args = OrderedDict(
+    credentials={
+        'type': ARG_TYPE.STR,
+        'description': 'The path to the credentials file. If not specified, the default credentials are used.'
+    },
+    merchant_id={
+        'type': ARG_TYPE.STR,
+        'description': 'The merchant ID for the Google Content API.'
+    },
+)
+
+connection_args_example = OrderedDict(
+    credentials='/path/to/credentials.json',
+    merchant_id='1234567890'
+)

@@ -1,5 +1,6 @@
 import unittest
-from mindsdb.integrations.handlers.google_content_shopping_handler.google_content_shopping_handler import GoogleContentShoppingHandler
+from mindsdb.integrations.handlers.google_content_shopping_handler.google_content_shopping_handler import \
+    GoogleContentShoppingHandler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
@@ -10,9 +11,9 @@ class GoogleSearchConsoleHandlerTest(unittest.TestCase):
         cls.kwargs = {
             "connection_data": {
                 "merchant_id": "1234567890",
-                "credentials": "C:\\Users\\panagiotis\\Desktop\\GitHub\\mindsdb\\mindsdb\\integrations\\handlers"
-                               "\\google_content_shopping_handler\\credentials.json"
-            }
+                "credentials": "/path/to/credentials.json"
+            },
+            "file_storage": "/path/to/file_storage"
         }
         cls.handler = GoogleContentShoppingHandler('test_google_content_shopping_handler', **cls.kwargs)
 

@@ -28,7 +28,8 @@ CREATE
 DATABASE my_content
 WITH  ENGINE = 'google_content_shopping',
 parameters = {
-    'credentials': 'C:\\Users\\panagiotis\\Desktop\\GitHub\\mindsdb\\mindsdb\\integrations\\handlers\\google_content_shopping_handler\\credentials.json'
+    'credentials': 'C:\\Users\\panagiotis\\Desktop\\GitHub\\mindsdb\\mindsdb\\integrations\\handlers\\google_content_shopping_handler\\credentials.json',
+    'merchant_id': '1234567890'
 };    
 ~~~~
 

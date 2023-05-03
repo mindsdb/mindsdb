@@ -9,9 +9,9 @@ class GoogleSearchConsoleHandlerTest(unittest.TestCase):
     def setUpClass(cls):
         cls.kwargs = {
             "connection_data": {
-                "credentials": "C:\\Users\\panagiotis\\Desktop\\GitHub\\mindsdb\\mindsdb\\integrations\\handlers"
-                               "\\google_search_handler\\credentials.json"
-            }
+                "credentials": "/path/to/credentials.json"
+            },
+            "file_storage": "/path/to/file_storage"
         }
         cls.handler = GoogleSearchConsoleHandler('test_google_search_console_handler', **cls.kwargs)
 

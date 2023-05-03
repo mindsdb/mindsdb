@@ -1,9 +1,9 @@
-# Apache Derby Handler
+# DB2 Handler
 
 This is the implementation of the Apache Derby handler for MindsDB.
 
-## Apache Derby
-Apache Derby, an Apache DB subproject, is an open source relational database implemented entirely in Java and available under the Apache License, Version 2.0.
+## IBM DB2
+Apache Derby, an Apache DB subproject, is an open source relational database implemented entirely in Java and available under the Apache License, Version 2.0.  
 
 Some key features include:
 

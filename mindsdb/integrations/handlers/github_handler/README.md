@@ -49,10 +49,15 @@ Read about creating a GitHub API key [here](https://docs.github.com/en/github/au
     - [x] Support column selection
   - [x] Support INSERT
     - [x] Support title, body, assignee, milestone, and labels columns
+- [x] GitHub Pull Requests Table for a given Repository
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
 
 ## TODO
 
-- [ ] GitHub Pull Requests Table for a given Repository
 - [ ] GitHub Commits Table for a given Repository
 - [ ] GitHub Releases Table for a given Repository
 - [ ] GitHub Contributors Table for a given Repository
@@ -85,5 +90,13 @@ SELECT number, state, creator, assignee, title, labels
   FROM mindsdb_github.issues
   WHERE state="all"
   ORDER BY created ASC, creator DESC
+  LIMIT 10
+~~~~
+
+~~~~sql
+SELECT number, state, title, creator, head, commits
+  FROM mindsdb_github.pull_requests
+  WHERE state="all"
+  ORDER BY long_running DESC, commits DESC
   LIMIT 10
 ~~~~

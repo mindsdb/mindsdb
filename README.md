@@ -5,7 +5,6 @@
 
 <div align="center">
 
-
 <a
      href="https://runacap.com/ross-index/annual-2022/"
      target="_blank"

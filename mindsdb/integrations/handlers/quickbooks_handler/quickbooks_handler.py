@@ -81,5 +81,28 @@ class QuickbooksHandler(APIHandler):
         return response
 
     def native_query(self, query_string: str = None):
-        # Add your native query parsing and execution here.
-        pass
+        '''It parses any native statement string and acts upon it (for example, raw syntax commands).
+        Args:
+        query (Any): query in native format (str for sql databases,
+            dict for mongo, api's json etc)
+        Returns:
+            HandlerResponse
+        '''
+
+        method_name, params = self.parse_native_query(query_string)
+
+        if method_name == 'get_customers':
+            df = self.get_customers(params)
+        else:
+            raise ValueError(f"Method '{method_name}' not supported by QuickbooksHandler")
+
+        return Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=df
+        )
+
+    def get_customers(self, params):
+        '''Returns a list of all customers in the Quickbooks account'''
+        customers = self.connect().customers.get()
+        df = pd.DataFrame(customers)
+        return df

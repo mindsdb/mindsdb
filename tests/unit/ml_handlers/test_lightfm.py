@@ -1,5 +1,6 @@
 import pandas as pd
 from mindsdb.integrations.handlers.lightfm_handler.helpers import RecommenderPreprocessor
+from mindsdb.integrations.handlers.lightfm_handler.lightfm_handler import LightFMHandler
 import pytest
 from pathlib import Path
 
@@ -14,6 +15,7 @@ def get_df(file_name: str) -> pd.DataFrame:
 def interaction_data() -> pd.DataFrame:
 	return get_df('ratings.csv')
 
+
 @pytest.fixture
 def item_data() -> pd.DataFrame:
 	return get_df('movies.csv')
@@ -24,26 +26,41 @@ def test_preprocessing_cf(interaction_data, item_data):
 
 	rec_preprocessor = RecommenderPreprocessor(
 		interaction_data=interaction_data,
+		item_data=item_data,
 		user_id_column_name="userId",
 		item_id_column_name="movieId",
 		item_description_column_name="title"
 	)
 
-	interactions_encoded_df = rec_preprocessor.encode_interactions()
+	rec_preprocessor.encode_interactions()
 
 	interaction_matrix = rec_preprocessor.construct_interaction_matrix()
 
 	# check ids are int64
-	assert interactions_encoded_df[[rec_preprocessor.user_id_column_name, rec_preprocessor.item_id_column_name]] \
-		.dtypes[interactions_encoded_df.dtypes == 'int64'].all()
+	assert rec_preprocessor.interaction_data[[rec_preprocessor.user_id_column_name, rec_preprocessor.item_id_column_name]] \
+		.dtypes[rec_preprocessor.interaction_data.dtypes == 'int64'].all()
 
 	# check interaction are equal to 1 or -1 e.g. positive or negative
-	assert interactions_encoded_df['interaction'].apply(lambda x: x == -1 or x == 1).all()
+	assert rec_preprocessor.interaction_data['interaction'].apply(lambda x: x == -1 or x == 1).all()
 
 	# check interaction matrix is the expected shape
+	assert interaction_matrix.shape == (503, 89)
+	assert isinstance(interaction_matrix, sp.sparse.coo_matrix)
 
-	#interaction_matrix.shape =
+
+def test_create_light_fm_handler(interaction_data, item_data):
+	lfm_handler = LightFMHandler(model_storage='dummy', engine_storage='dummy')
+
+	lfm_handler.create(
+		interaction_data,
+		item_data,
+		dict(
+			user_id_column_name="userId",
+			item_id_column_name="movieId",
+			item_description_column_name="title"
+		)
+	)
 
 
-def test_create_light_fm_handler():
-		...
+def test_predict_light_fm_handler():
+	...

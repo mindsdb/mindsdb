@@ -17,7 +17,6 @@ class GmailApiTable(APITable):
         arg2 = conditions[0][2]
         params = {}
         if query.limit is not None:
-            print("limit is not none")
             if query.limit.value < 500:
                 params['maxResults'] = query.limit.value
             else:
@@ -32,7 +31,6 @@ class GmailApiTable(APITable):
         insert_parameters = {}
         for k in zip(columns, values):
             insert_parameters[k[0]] = k[1]
-        print(insert_parameters)
         message = MIMEText(insert_parameters['body'])
         message['to'] = insert_parameters['to']
         message['subject'] = insert_parameters['subject']

@@ -53,7 +53,6 @@ class GmailHandler(APIHandler):
         try:
             if self.credentials_file:
                 if os.path.exists('token.json'):
-                    print('token.json exists' + os.getcwd())
                     self.credentials = Credentials.from_authorized_user_file('token.json', self.scopes)
                 if not self.credentials or not self.credentials.valid:
                     if self.credentials and self.credentials.expired and self.credentials.refresh_token:
@@ -71,7 +70,6 @@ class GmailHandler(APIHandler):
             else:
                 raise Exception("Credentials file not found")
         except Exception as e:
-            print(e)
             raise Exception("Failed to connect to Gmail API")
 
     def check_connection(self) -> StatusResponse:
@@ -119,10 +117,8 @@ class GmailHandler(APIHandler):
         raw_message = params.get('raw', None)
         try:
             message = service.users().messages().send(userId='me', body={'raw': raw_message}).execute()
-            print('Message Id: %s' % message['id'])
             return pd.DataFrame(columns=['id', 'threadId'], data=[[message['id'], message['threadId']]])
         except Exception as e:
-            print('An error occurred: %s' % e)
             raise Exception("Failed to send email")
 
     def get_emails(self, params: dict = None) -> DataFrame:
@@ -192,7 +188,7 @@ class GmailHandler(APIHandler):
                                    ignore_index=True)
             return emails
         except Exception as e:
-            print(e)
+            raise Exception("Failed to get emails")
 
     def extract_html_body(self, encoded_body):
         """Extracts the HTML body from the encoded body.

@@ -46,6 +46,21 @@ SELECT *
 FROM gmail_test.emails
 Where q = "after:2022/05/03"
 ~~~~
+The default limit of the emails is 50. You can change this by using the limit clause. For example, to get a list of 100 emails that are send after a specific day, you can use the following query:
+~~~~sql
+SELECT *
+FROM gmail_test.emails
+Where q = "after:2022/05/03" limit 100
+~~~~
+Keep in mind that the maximum number of emails that you can get from gmail api is 500.
 
 The possibilities of searching and querying are endless. You can find more information on how to do this [here](https://support.google.com/mail/answer/7190?hl=en).
+## Writing emails using SQL
 
+Let's test by sending a few emails.
+~~~~sql
+INSERT INTO gmail_test.emails (to, subject, body)
+VALUES
+    ('exampleemail@gmail.com', 'Email Sended by MindsDB', 'This is a test email sended by MindsDB')
+)
+~~~~

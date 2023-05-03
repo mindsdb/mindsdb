@@ -1,9 +1,11 @@
+import base64
+
 import pandas as pd
 from mindsdb_sql import ASTNode, Star
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-
+from email.mime.text import MIMEText
 
 class GmailApiTable(APITable):
     def __init__(self, handler):
@@ -13,12 +15,31 @@ class GmailApiTable(APITable):
         conditions = extract_comparison_conditions(query.where)
         arg1 = conditions[0][1]
         arg2 = conditions[0][2]
-        query= arg2
-        emails = self.handler.call_application_api(method_name='get_emails', query=query)
+        params = {}
+        if query.limit is not None:
+            print("limit is not none")
+            if query.limit.value < 500:
+                params['maxResults'] = query.limit.value
+            else:
+                params['maxResults'] = 50
+        params['query'] = arg2
+        emails = self.handler.call_application_api(method_name='get_emails', params=params)
         return emails
 
     def insert(self, query: ASTNode) -> None:
-        pass
+        columns = [col.name for col in query.columns]
+        values = query.values[0]
+        insert_parameters = {}
+        for k in zip(columns, values):
+            insert_parameters[k[0]] = k[1]
+        print(insert_parameters)
+        message = MIMEText(insert_parameters['body'])
+        message['to'] = insert_parameters['to']
+        message['subject'] = insert_parameters['subject']
+        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+        params = {'raw': raw_message}
+        self.handler.call_application_api(method_name='send_email', params=params)
+
 
     def update(self, query: ASTNode) -> None:
         pass

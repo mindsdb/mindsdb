@@ -20,15 +20,22 @@ from mindsdb.integrations.libs.response import (
 
 
 class GmailHandler(APIHandler):
+    """Handler for the Gmail API.
+        Attributes:
+        Scopes:Authorization scopes express the permissions you request users to authorize for your app
+        service(googleapiclient.discovery):A client object interacting with Google's discovery based APIs
+        credentials_file:The filename of the credentials file that was generated from Google
+        credentials(google.oauth2.credentials):Google oauth2 object that keeps the credentials of you api connection
+        is_connected(bool): Whether the API client is connected to Gmail.
+    """
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name=name)
         self.token = None
         self.service = None
         self.credentials_file = None
-        self.scopes = ['https://www.googleapis.com/auth/gmail.readonly']
-        # 'https://www.googleapis.com/auth/gmail.send',
-        # 'https://www.googleapis.com/auth/gmail.compose']
+        self.scopes = ['https://www.googleapis.com/auth/gmail.readonly',
+                       'https://www.googleapis.com/auth/gmail.send']
         args = kwargs.get('connection_data', {})
         self.credentials = None
         if 'path_to_credentials_file' in args:
@@ -40,11 +47,13 @@ class GmailHandler(APIHandler):
         self.connect()
 
     def connect(self):
+        """Connects to the Gmail API."""
         if self.is_connected is True:
             return self.service
         try:
             if self.credentials_file:
                 if os.path.exists('token.json'):
+                    print('token.json exists' + os.getcwd())
                     self.credentials = Credentials.from_authorized_user_file('token.json', self.scopes)
                 if not self.credentials or not self.credentials.valid:
                     if self.credentials and self.credentials.expired and self.credentials.refresh_token:
@@ -81,6 +90,7 @@ class GmailHandler(APIHandler):
         return response
 
     def native_query(self, query: str = None) -> Response:
+        """Executes a native query against the Gmail API."""
         method_name, params = FuncParser().from_string(query)
 
         df = self.call_application_api(method_name, params)
@@ -89,17 +99,45 @@ class GmailHandler(APIHandler):
             data_frame=df
         )
 
-    def call_application_api(self, method_name: str, query : str) -> DataFrame:
+    def call_application_api(self, method_name: str, params: dict) -> DataFrame:
+        """Calls the Gmail API using the method name and parameters provided."""
         if method_name == 'get_emails':
-            return self.get_emails(query=query)
+            return self.get_emails(params)
+        elif method_name == 'send_email':
+            return self.send_email(params)
         else:
             raise Exception("Method not supported")
 
-    def get_emails(self, query: str = None) -> DataFrame:
+    def send_email(self, params: dict = None) -> DataFrame:
+        """Sends an email using the Gmail API.
+            Args:
+                params (dict): A dictionary containing the raw parameter.
+            Returns:
+                DataFrame: A DataFrame containing the email id and thread id.
+        """
         service = self.connect()
+        raw_message = params.get('raw', None)
+        try:
+            message = service.users().messages().send(userId='me', body={'raw': raw_message}).execute()
+            print('Message Id: %s' % message['id'])
+            return pd.DataFrame(columns=['id', 'threadId'], data=[[message['id'], message['threadId']]])
+        except Exception as e:
+            print('An error occurred: %s' % e)
+            raise Exception("Failed to send email")
+
+    def get_emails(self, params: dict = None) -> DataFrame:
+        """Gets emails using the Gmail API.
+        Args:
+            params (dict): A dictionary containing the query and maxResults parameters.
+        Returns:
+            DataFrame: A DataFrame containing the emails.
+        """
+        service = self.connect()
+        query = params.get('query', None)
+        max_results = params.get('maxResults', 10)
         emails = pd.DataFrame(columns=self.emails.get_columns())
         try:
-            results = service.users().messages().list(userId='me', q=query, maxResults=40).execute()
+            results = service.users().messages().list(userId='me', q=query, maxResults=max_results).execute()
             messages = results.get('messages', [])
             for message in messages:
                 msg = service.users().messages().get(userId='me', id=message['id']).execute()
@@ -157,6 +195,12 @@ class GmailHandler(APIHandler):
             print(e)
 
     def extract_html_body(self, encoded_body):
+        """Extracts the HTML body from the encoded body.
+            Args:
+                encoded_body (str): The encoded body.
+            Returns:
+                str: The HTML body.
+        """
         html_message = base64.urlsafe_b64decode(encoded_body).decode('utf-8')
         soup = BeautifulSoup(html_message, 'html.parser')
         # Extract the text from the HTML

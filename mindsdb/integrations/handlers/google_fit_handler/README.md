@@ -4,7 +4,7 @@ To start connecting to your Google Fit app, visit [Google Fit Authorization](htt
 
 To create a database connected to Google Fit, you can either specify a path to the credentials file or manually input the credentials fields
 
-To connect using a path to the credentials file, do:
+To connect using a path to the credentials file, run:
 ```
 CREATE DATABASE my_google_fit
 With 
@@ -13,7 +13,7 @@ With
       "service_account_file": <ABSOLUTE_PATH_TO_CREDENTIALS_FILE>
     };
 ```
-To connect using manually typed credentials, do:
+To connect using manually typed credentials, run:
 ```
 CREATE DATABASE my_google_fit
 With 

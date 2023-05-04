@@ -30,19 +30,20 @@ class GoogleFitHandler(APIHandler):
         args = kwargs.get('connection_data', {})
         self.connection_args = {}
         self.credentials_path = None
-         if 'service_account_file' in args:
+        if 'service_account_file' in args:
             if os.path.isfile(args['service_account_file']) is False:
                 raise Exception("service_account_file must be a path to the credentials.json file")
             self.credentials_path = args['service_account_file']
         elif 'service_account_json' in args:
             self.connection_args = args['service_account_json']
-            if not isinstance(self.connection_args, dict) or len(self.connection_args) != 6:
+            if not isinstance(self.connection_args, dict) or (('redirect_uris' not in self.connection_args.keys()) and len(self.connection_args) != 6) or ('redirect_uris' in self.connection_args.keys()) and len(self.connection_args) != 7:
                 raise Exception("service_account_json has to be a dictionary with all 6 required fields")
             self.connection_args['redirect_uris'] = ['http://localhost']
             self.credentials_path = 'mindsdb/integrations/handlers/google_fit_handler/credentials.json'
         else:
             raise Exception('Connection args have to content ether service_account_file or service_account_json')
         
+
         self.api = None
         self.is_connected = False
 

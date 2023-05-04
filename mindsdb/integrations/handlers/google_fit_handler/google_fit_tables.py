@@ -29,7 +29,10 @@ class GoogleFitTable(APITable):
         params = {}
         filters = []
         steps = {}
+        #get the local time
         now = int(round(time.time() * 1000))
+
+        #hard coded for now as user default query time period
         one_year = 31536000000
         one_month = 2629746000
         for op, arg1, arg2 in conditions:
@@ -40,6 +43,8 @@ class GoogleFitTable(APITable):
                 if op == '>':
                     params['start_time'] = date
                     params['end_time'] = now
+                
+                #hard coded as a month
                 elif op == '<':
                     params['start_time'] = date - one_month
                     params['end_time'] = date
@@ -47,6 +52,7 @@ class GoogleFitTable(APITable):
                     raise NotImplementedError
             else:
                 raise NotImplementedError(f'This query is not supported')
+        # if time is not provided in the query, the time range is one month ago to now 
         if not params:
             params['start_time'] = now - one_month
             params['end_time'] = now

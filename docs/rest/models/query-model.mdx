@@ -1,47 +1,8 @@
 ---
 title: Query a Model
-openapi: "POST /projects/{projectName}/models/{modelName}/predict"
+openapi: "POST /api/projects/{projectName}/models/{modelName}/predict"
 sidebarTitle: Query a Model
 ---
-
-
-## Description
-
-This API provides a REST endpoint for making predictions. 
-<Note>
-By default, the open source version doesn't provide Authentication methods as MindsDB Cloud. 
-On MindsDB cloud you need to set the `cookie` field in the header of request e.g  `{session=273trgsehgrui3i2riurwehe}`. 
-</Note>
-
-<RequestExample>
-
-```shell Shell
-curl --request POST \
-     --url https://cloud.mindsdb.com/api/projects/{projectName}/models/{modelName}/predict \
-     --header 'Content-Type: application/json' \
-     --cookie '{session=273trgsehgrui3i2riurwehe}'\
-     --data '
-{
-   'data': [
-       {'sqft': '1000'},
-       {'sqft': '500'},
-    ],
-   'params': {
-
-   }
-}
-```
-
-
-```python Python
-import requests
-url = 'https://cloud.mindsdb.com/projects/{projectName}/models/{modelName}/predict'
-cookies = {'session': '273trgsehgrui3i2riurwehe'}
-data = { 'data': [{'sqft': '1000'}, {'sqft': '500'}],'params': {}}
-resp = requests.post(url, data=data, cookies=cookies)
-```
-
-</RequestExample>
 
 <ResponseExample>
 
@@ -69,3 +30,10 @@ resp = requests.post(url, data=data, cookies=cookies)
 ```
 
 </ResponseExample>
+
+<Note>
+
+The REST API playground can currently only be used with MindsDB running locally at http://127.0.0.1:47334. Support for MindsDB Cloud is in progress. In the meantime,
+check out our [SQL example](/rest/sql) for how to use the REST API with MindsDB Cloud. 
+
+</Note>

@@ -470,7 +470,6 @@ class LightwoodHandler(BaseMLEngine):
             model_info = self.model_storage.get_info()
             model_data = model_info['data']
             to_predict = model_info['to_predict'][0]
-            json_ai = self.model_storage.json_get('json_ai')
 
             if model_data.get('accuracies', None) is not None:
                 if len(model_data['accuracies']) > 0:
@@ -482,7 +481,6 @@ class LightwoodHandler(BaseMLEngine):
             model_description['column_importances'] = model_data['column_importances']
             model_description['outputs'] = [to_predict]
             model_description['inputs'] = [col for col in model_columns if col not in model_description['outputs']]
-            model_description['model'] = ' --> '.join(str(k) for k in json_ai)
 
             return pd.DataFrame([model_description])
 

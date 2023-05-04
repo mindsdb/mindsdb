@@ -10,7 +10,7 @@ CREATE DATABASE my_google_fit
 With 
     ENGINE = 'google_fit',
     PARAMETERS = {
-      "service_account_file": <ABSOLUTE_PATH_TO_CREDENTIALS_FILE>
+      "service_account_file": "Absolute path to the credentials file"
     };
 ```
 To connect using manually typed credentials, run:
@@ -20,12 +20,12 @@ With
     ENGINE = 'google_fit',
     PARAMETERS = {
       "service_account_json": {
-        "client_id": "cient id from credentials.json",
-        "project_id": "project id from credentials.json",
-        "auth_uri": "auth_uri from credentials.jsonh",
-        "token_uri": "token uri from credentials.json",
-        "auth_provider_x509_cert_url": "auth_provider_x509_cert_url from credentials.json",
-        "client_secret": "client secret from credentials.json"
+        "client_id": "cient id from the credentials file",
+        "project_id": "project id from the credentials file",
+        "auth_uri": "auth_uri from the credentials file",
+        "token_uri": "token uri from the credentials file",
+        "auth_provider_x509_cert_url": "auth_provider_x509_cert_url from the credentials file",
+        "client_secret": "client secret from the credentials file"
       }
     };
 ```

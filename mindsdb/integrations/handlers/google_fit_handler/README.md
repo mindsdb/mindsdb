@@ -2,18 +2,31 @@
 
 To start connecting to your Google Fit app, visit [Google Fit Authorization](https://developers.google.com/fit/rest/v1/get-started) to obtain an authorization from Google and use the credentials.json file for the following steps.
 
+To create a database connected to Google Fit, you can either specify a path to the credentials file or manually input the credentials fields
+
+To connect using a path to the credentials file, do:
 ```
-# To create a database connected to Google Fit
 CREATE DATABASE my_google_fit
 With 
     ENGINE = 'google_fit',
     PARAMETERS = {
-      "client_id": "cient id from credentials.json",
-      "project_id": "project id from credentials.json",
-      "auth_uri": "auth_uri from credentials.jsonh",
-      "token_uri": "token uri from credentials.json",
-      "auth_provider_x509_cert_url": "auth_provider_x509_cert_url from credentials.json",
-      "client_secret": "client secret from credentials.json"
+      "service_account_file": <ABSOLUTE_PATH_TO_CREDENTIALS_FILE>
+    };
+```
+To connect using manually typed credentials, do:
+```
+CREATE DATABASE my_google_fit
+With 
+    ENGINE = 'google_fit',
+    PARAMETERS = {
+      "service_account_json": {
+        "client_id": "cient id from credentials.json",
+        "project_id": "project id from credentials.json",
+        "auth_uri": "auth_uri from credentials.jsonh",
+        "token_uri": "token uri from credentials.json",
+        "auth_provider_x509_cert_url": "auth_provider_x509_cert_url from credentials.json",
+        "client_secret": "client secret from credentials.json"
+      }
     };
 ```
 

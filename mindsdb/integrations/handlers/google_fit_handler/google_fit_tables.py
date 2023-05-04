@@ -29,9 +29,6 @@ class GoogleFitTable(APITable):
             if op == 'or':
                 raise NotImplementedError(f'OR is not supported')
             if arg1 == 'date':
-                print(f'args : {arg2} 2222222222222222222')
-                print(f'args : {type(arg2)} ttttttttttttttttttttttt')
-                print(f'op : {op} ppppppppppppppppppp')
                 date = self.time_parser(arg2)
                 if op == '>':
                     params['start_time'] = date

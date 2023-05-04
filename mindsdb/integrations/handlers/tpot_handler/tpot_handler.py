@@ -14,8 +14,8 @@ class TPOTHandler(BaseMLEngine):
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         if args is None:
             args = {}
-        
-        target_dtype=infer_types(df,0).to_dict()["dtypes"][target]
+        type_of_cols=infer_types(df,0).dtypes
+        target_dtype=type_of_cols[target]
 
 
         if target_dtype in ['binary','categorical','tags']:
@@ -36,7 +36,7 @@ class TPOTHandler(BaseMLEngine):
 
         if df is not None:
             # Separate out the categorical and non-categorical columns
-            categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
+            categorical_cols=[col for col,type_col in type_of_cols.items() if type_col=='categorical']
 
             # Fit a LabelEncoder for each categorical column and store it in a dictionary
             le_dict = {}

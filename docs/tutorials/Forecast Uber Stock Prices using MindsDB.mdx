@@ -1,0 +1,106 @@
+# Introduction
+When it comes to AutoML, one of the most remarkable open-source products is MindsDB. MindsDB enhances the existing databases and modifies their tables to function as AI Tables that can train robust Predictor models using the available data, without the need to learn how to code such models in Python, handle their dependencies, or maintain them at a later stage. With MindsDB, you can use simple SQL-like statements and obtain accurate predictions with just a few clicks.
+
+In this tutorial, we will learn how to forecast the stock prices of Uber using MindsDB. The required dataset for this tutorial can be downloaded from [here](https://finance.yahoo.com/quote/UBER/history?period1=1525219200&period2=1682985600&interval=1d&filter=history&frequency=1d&includeAdjustedClose=true).
+
+# Importing Datasets as Tables in our Database
+
+1. After you've downloaded the Dataset, save the CSV file in a folder Make sure you have MySQL installed on your system, and that it is active. Use MySQL Workbench to test the Database connections and make sure everything is working.
+![image](docs/tutorials/images/1.png)
+
+2. If the connection is successful, you can click on OK to save the connection. Then click on the connection and it should open the Localhost dashboard along with the query editor.
+![image](docs/tutorials/images/2.png)
+
+3. Now click on Create a new schema in the connected server, provide a name for the schema and then hit Apply, and then click on Finish.
+![image](docs/tutorials/images/3.png)
+
+4. After creating the database, select Schemas from the bottom left and then right-click on the schema you just created and select Table Data Import Wizard. A dialog box should appear for you to select the CSV file and click Next. Now the table data import is complete and we are ready to manipulate the data in our table.
+![image](docs/tutorials/images/4.avif)
+
+# Connecting the Database to MindsDB Cloud
+
+1. Login to your existing MindsDB Cloud account or signup for a new account.
+
+2. Once you sign up or log in, the MindsDB Cloud Editor will appear. In the top panel, you can write a question, view the results in the bottom panel, and access several training hub resources in the right panel to facilitate the process for new users.
+![image](docs/tutorials/images/5.png)
+
+3. Click on Add Data from the highest right and on consequent screen that seems, select Databases from left panel and so click on Mysql
+![image](docs/tutorials/images/6.png)
+
+4. we need to provide certain parameters to establish a connection to our local database. In order to that, we need to expose localhost:3306 to the internet so that we can establish a tcp/ip connection to interact with it
+![image](docs/tutorials/images/7.png)
+
+5. We have to now use ngrok to tunnel our localhost to the internet. This command should do the job for you.  
+```sql 
+ngrok tcp 3306 
+```
+
+![image](docs/tutorials/images/8.jpeg)
+
+6. We can now fill in the parameters to connect to the database and then hit the test connection button.
+![image](docs/tutorials/images/9.png)
+
+7. Now let's run a simple SELECT query now to make sure that MindsDB can now access the data in the database.   
+```sql 
+select * from MindsDBUber.uber 
+```
+
+![image](docs/tutorials/images/10.png)
+
+# Creating a Predictor Model
+To create a Predictor model with MindsDB, all you need to do is execute a simple SQL query. Let's explore how straightforward it is to create this model.
+
+1. To create and train a new model using our available dataset, we can use MindsDB's CREATE PREDICTOR function. The query is provided below for your convenience.   
+
+```sql
+CREATE PREDICTOR mindsdb.uber_predictors     
+FROM MindsDBUber
+(SELECT * FROM uber)            
+PREDICT Close                    
+ORDER BY Date               
+WINDOW 120                         
+HORIZON 60;     
+```
+
+ ![image](docs/tutorials/images/11.png)
+
+2. The model can take some time to be ready. Meanwhile, we can check its status using the command below.  
+```sql
+SELECT status
+ FROM mindsdb.predictors
+ WHERE name = 'uber_predictor';`
+ ![image](docs/tutorials/images/12.png)
+```
+
+# Forecasting Target Values
+As usual, MindsDB also offers simple SQL statements to predict or forecast values from the model. Let's explore how we can forecast values.
+
+Before we proceed, let's consider the basic scenario here. We have a dataset that lists the closing stock values of Uber over a period of time. Using this predictor model, we will attempt to predict the closing value after the last record available in the dataset. We can achieve this by using the keyword LATEST for the current dates.
+
+The query will be a straightforward SELECT statement, where we will join the predictor model with the data table and retrieve the forecasts.
+
+```sql
+SELECT T.Date as date,
+       T.Close as Forecast,
+       Close_explain
+FROM mindsdb.uber_predictor as T
+JOIN MindsDBUber.uber as P
+WHERE P.Date > LATEST
+LIMIT 60 
+```
+![image](docs/tutorials/images/13.png)
+
+# Conclusion
+We have now reached the end of this tutorial, where we summarized all the tasks we performed above as a list below:
+
+1. Created a MindsDB Cloud Account
+
+2. Imported a dataset into MindsDB Cloud
+
+3. Created and trained a Predictor Model for Timeseries Forecast
+
+4. Gained insights about the model using DESCRIBE
+
+5. Forecasted the Uber Stock Prices for a future date
+
+Now, it's time for you to create your own models and try forecasting some interesting values. If you need some suggestions, then you could try forecasting the Bitcoin Value, Ethereum Value, Gold Price, etc. Be creative, train something unique, and share it with the community.

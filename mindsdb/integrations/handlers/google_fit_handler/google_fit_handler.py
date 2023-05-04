@@ -29,12 +29,19 @@ class GoogleFitHandler(APIHandler):
         super().__init__(name)
         args = kwargs.get('connection_data', {})
         self.connection_args = {}
-        #TODO: make sure the arguments can read a list from user input when the database is created, since "redirect_uris" is a list.
-        for k in ['client_id', 'project_id', 'auth_uri',
-                  'token_uri', 'auth_provider_x509_cert_url', 'client_secret']:
-            if k in args:
-                self.connection_args[k] = args[k]
-            self.connection_args['redirect_uris'] = ["http://localhost"]
+        self.credentials_path = None
+         if 'service_account_file' in args:
+            if os.path.isfile(args['service_account_file']) is False:
+                raise Exception("service_account_file must be a path to the credentials.json file")
+            self.credentials_path = args['service_account_file']
+        elif 'service_account_json' in args:
+            self.connection_args = args['service_account_json']
+            if not isinstance(self.connection_args, dict):
+                raise Exception("service_account_json has to be a dictionary")
+            self.connection_args['redirect_uris'] = ['http://localhost']
+            self.credentials_path = 'mindsdb/integrations/handlers/google_fit_handler/credentials.json'
+        else:
+            raise Exception('Connection args have to content ether service_account_file or service_account_json')
         
         self.api = None
         self.is_connected = False
@@ -45,12 +52,12 @@ class GoogleFitHandler(APIHandler):
     def connect(self) -> Resource:
         if self.is_connected is True and self.api:
             return self.api
-        if len(self.connection_args) == 7:
+        if self.connection_args == 7:
             credentialDict = {"installed":self.connection_args}
-            f = open("mindsdb/integrations/handlers/google_fit_handler/credentials.json", "w")
+            f = open(self.credentials_path, "w")
             f.write(json.dumps(credentialDict).replace(" ", ""))
             f.close()
-        
+            
         creds = None
 
         if os.path.isfile('mindsdb/integrations/handlers/google_fit_handler/token.json'):
@@ -60,7 +67,7 @@ class GoogleFitHandler(APIHandler):
                 creds.refresh(Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    'mindsdb/integrations/handlers/google_fit_handler/credentials.json', SCOPES)
+                    self.credentials_path, SCOPES)
                 creds = flow.run_local_server(port=0)
             with open('mindsdb/integrations/handlers/google_fit_handler/token.json', 'w') as token:
                 token.write(creds.to_json())

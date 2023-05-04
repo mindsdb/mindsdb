@@ -4,6 +4,7 @@
 """
 import warnings
 from typing import Iterable, List, Optional
+from mindsdb_sql import parse_sql
 from langchain.sql_database import SQLDatabase
 
 
@@ -38,28 +39,30 @@ class MindsDBSQL(SQLDatabase):
     def dialect(self) -> str:
         return 'mindsdb'
 
-    def _call_engine(self, queries: List[str]) -> None:
+    def _call_engine(self, queries: List[str]):
         for query in queries:
             self._engine.is_executed = False
-            self._engine.query_execute(query)
+            ast_query = parse_sql(query.strip('`'), dialect='mindsdb')
+            ret = self._engine.execute_command(ast_query)
+        return ret
 
     def get_usable_table_names(self) -> Iterable[str]:
         if self._usable_tables is None:
             original_db = self._engine.session.database
-            self._call_engine(['show databases;'])
-            dbs = [lst[0] for lst in self._engine.data if lst[0] != 'information_schema']
+            ret = self._call_engine(['show databases;'])
+            dbs = [lst[0] for lst in ret.data if lst[0] != 'information_schema']
             usable_tables = []
             for db in dbs:
                 if db != 'mindsdb':
                     try:
-                        self._call_engine([f'use `{db}`;', 'show tables;'])
-                        tables = [lst[0] for lst in self._engine.data if lst[0] != 'information_schema']
+                        ret = self._call_engine([f'use `{db}`;', 'show tables;'])
+                        tables = [lst[0] for lst in ret.data if lst[0] != 'information_schema']
                         if tables:
                             usable_tables.extend([f'{db}.{t}' for t in tables])
                     except Exception:
                         pass
                     finally:
-                        self._call_engine([f'use {original_db};'])
+                        _ = self._call_engine([f'use {original_db};'])
             self._usable_tables = usable_tables
         return self._usable_tables
 
@@ -97,7 +100,8 @@ class MindsDBSQL(SQLDatabase):
         controller = self._metadata
         integration, table_name = table_str.split('.')
 
-        tbl_name, n_rows, tbl_type = controller.get_handler(integration).get_tables().data_frame.iloc[0].to_list()
+        tables = controller.get_handler(integration).get_tables().data_frame
+        tbl_name, n_rows, tbl_type = tables[tables['TABLE_NAME'] == table_name].iloc[0].to_list()
         cols_df = controller.get_handler(integration).get_columns(table_name).data_frame
         fields = cols_df['Field'].to_list()
         dtypes = cols_df['Type'].to_list()
@@ -112,8 +116,8 @@ class MindsDBSQL(SQLDatabase):
     def _get_sample_rows(self, table: str, fields: List[str]) -> str:
         command = f"select {','.join(fields)} from {table} limit {self._sample_rows_in_table_info};"
         try:
-            self._call_engine([command])
-            sample_rows = self._engine.data
+            ret = self._call_engine([command])
+            sample_rows = ret.data
             sample_rows = list(map(lambda ls: [str(i) if len(str(i)) < 100 else str[:100]+'...' for i in ls], sample_rows))
             sample_rows_str = "\n" + "\n".join(["\t".join(row) for row in sample_rows])
         except Exception:
@@ -128,11 +132,11 @@ class MindsDBSQL(SQLDatabase):
         """
         def _tidy(result: List) -> str:
             return '\n'.join(['\t'.join([str(value) for value in row]) for row in result])
-        self._call_engine([command])
+        ret = self._call_engine([command])
         if fetch == "all":
-            result = _tidy(self._engine.data)
+            result = _tidy(ret.data)
         elif fetch == "one":
-            result = _tidy(self._engine.data[0])
+            result = _tidy(ret.data[0])
         else:
             raise ValueError("Fetch parameter must be either 'one' or 'all'")
         return str(result)

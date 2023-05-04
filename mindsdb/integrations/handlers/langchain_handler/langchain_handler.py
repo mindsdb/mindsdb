@@ -13,7 +13,6 @@ from langchain.utilities import GoogleSerperAPIWrapper
 from langchain.agents.agent_toolkits import SQLDatabaseToolkit
 from langchain.chains.conversation.memory import ConversationSummaryMemory
 
-from mindsdb_sql import parse_sql
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler, CHAT_MODELS
 from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
 from mindsdb_sql import parse_sql, Insert
@@ -84,11 +83,9 @@ class LangChainHandler(OpenAIHandler):
         is supported.
         """
         executor = args['executor']  # used as tool in custom tool for the agent to have mindsdb-wide access
-        integrations = args['integrations_controller']
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
         args['executor'] = executor
-        args['integrations'] = integrations
 
         df = df.reset_index(drop=True)
 
@@ -280,7 +277,8 @@ class LangChainHandler(OpenAIHandler):
                 if isinstance(processed_query, Insert):
                     # write inserts to the datasource
                     executor.is_executed = False
-                    executor.query_execute(query)
+                    ast_query = parse_sql(query.strip('`'), dialect='mindsdb')
+                    _ = executor.execute_command(ast_query)
                     assert executor.is_executed
                     return "mindsdb write tool executed successfully"
             except Exception as e:
@@ -343,7 +341,7 @@ class LangChainHandler(OpenAIHandler):
 
     def sql_agent_completion(self, df, args=None, pred_args=None):
         """This completion will be used to answer based on information passed by any MindsDB DB or API engine."""
-        db = MindsDBSQL(engine=args['executor'], metadata=args['integrations'])
+        db = MindsDBSQL(engine=args['executor'], metadata=args['executor'].session.integration_controller)
         toolkit = SQLDatabaseToolkit(db=db)
         model_name = args.get('model_name', self.default_model)
         llm = OpenAI(temperature=0) if model_name not in CHAT_MODELS else ChatOpenAI(temperature=0)

@@ -99,5 +99,5 @@ DROP DATABASE mariadb_datasource;
 ### Results
 
 Drop a remark based on your observation.
-- [X] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
+- [x] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
 - [x] Made changes as per the related issue [#3908](https://github.com/mindsdb/mindsdb/issues/3908)

@@ -58,6 +58,10 @@ class MLHandlerProcess:
 
             except SystemExit:
                 raise
+            except RuntimeError as e:
+                # don't show traceback f
+                self.send_output({'protocol_error': str(e)})
+                continue
             except Exception as e:
                 error = traceback.format_exc()
                 self.send_output({'protocol_error': str(e), 'trace': error})

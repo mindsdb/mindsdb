@@ -34,7 +34,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb import __version__ as mindsdb_version
+from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.model.functions import (

@@ -27,14 +27,15 @@ CREATE MODEL project_name.predictor_name        -- AI TABLE TO STORE THE MODEL
 PREDICT target_column                           -- NAME OF THE COLUMN TO STORE PREDICTED VALUES
 USING
   engine = 'openai',                            -- USING THE OPENAI ENGINE
-  prompt_template = 'promt/task
+  prompt_template = 'prompt/task
                     {{input_column}}',          -- PROMPT TEMPLATE WITH PLACEHOLDERS FOR INPUT COLUMNS
-  model_name = 'model_name',                    -- OPTIONAL, DEFAULT IS THE text-davinci-002 MODEL
+  model_name = 'model_name',                    -- OPTIONAL, DEFAULT IS THE gpt-3.5-turbo MODEL
   api_key = 'YOUR_OPENAI_API_KEY';              -- OPTIONAL, IF NOT PASSED MINDSDB FETCHES THE
                                                 -- `OPENAI_API_KEY` ENVIRONMENT VARIABLE VALUE
 ```
 
 <Info>
+  
 **Default Model**
 
 When you create an OpenAI model in MindsDB, it uses the `gpt-3.5-turbo` model by default. But you can use the `gpt-4` model as well by passing it to the `model-name` parameter in the `USING` clause of the `CREATE MODEL` statement.
@@ -48,6 +49,13 @@ FROM openai
 USING
   api_key = 'YOUR_OPENAI_API_KEY';
 ```
+<Tip>
+
+**MindsDB Pro**
+
+Please note that it is required to provide an OpenAI API key when using MindsDB Pro version.
+
+</Tip>
 
 ## Example
 

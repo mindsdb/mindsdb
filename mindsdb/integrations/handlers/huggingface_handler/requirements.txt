@@ -2,9 +2,9 @@ mindsdb>=22.6.2.1
 mindsdb_sql >= 0.4.0
 pandas <=1.4.3
 transformers==4.27.4
+sentencepiece==0.1.97
 datasets
 evaluate
-
 torch
 tensorflow
 tensorflow-io

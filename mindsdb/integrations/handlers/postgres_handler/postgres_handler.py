@@ -13,6 +13,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+import mindsdb.utilities.profiler as profiler
 
 
 class PostgresHandler(DatabaseHandler):
@@ -21,6 +22,7 @@ class PostgresHandler(DatabaseHandler):
     """
     name = 'postgres'
 
+    @profiler.profile('init_pg_handler')
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
@@ -36,9 +38,10 @@ class PostgresHandler(DatabaseHandler):
         if self.is_connected is True:
             self.disconnect()
 
+    @profiler.profile()
     def connect(self):
         """
-        Handles the connection to a PostgreSQL database insance.
+        Handles the connection to a PostgreSQL database instance.
         """
         if self.is_connected is True:
             return self.connection
@@ -50,6 +53,9 @@ class PostgresHandler(DatabaseHandler):
             'password': self.connection_args.get('password'),
             'dbname': self.connection_args.get('database')
         }
+
+        if self.connection_args.get('sslmode'):
+            config['sslmode'] = self.connection_args.get('sslmode')
 
         if self.connection_args.get('schema'):
             config['options'] = f'-c search_path={self.connection_args.get("schema")},public'
@@ -90,6 +96,7 @@ class PostgresHandler(DatabaseHandler):
 
         return response
 
+    @profiler.profile()
     def native_query(self, query: str) -> Response:
         """
         Receive SQL query and runs it
@@ -128,6 +135,7 @@ class PostgresHandler(DatabaseHandler):
 
         return response
 
+    @profiler.profile()
     def query(self, query: ASTNode) -> Response:
         """
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
@@ -137,7 +145,7 @@ class PostgresHandler(DatabaseHandler):
 
     def get_tables(self) -> Response:
         """
-        List all tabels in PostgreSQL without the system tables information_schema and pg_catalog
+        List all tables in PostgreSQL without the system tables information_schema and pg_catalog
         """
         query = """
             SELECT

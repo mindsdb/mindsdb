@@ -19,7 +19,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import logger
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.database import DatabaseController
-from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.interfaces.database.integrations import integration_controller
 
 
 class SessionController:
@@ -40,7 +40,7 @@ class SessionController:
         self.config = Config()
 
         self.model_controller = ModelController()
-        self.integration_controller = IntegrationController()
+        self.integration_controller = integration_controller
         self.database_controller = DatabaseController()
 
         self.datahub = init_datahub(self)
@@ -48,6 +48,7 @@ class SessionController:
         self.prepared_stmts = {}
         self.packet_sequence_number = 0
         self.profiling = False
+        self.predictor_cache = True
 
     def inc_packet_sequence_number(self):
         self.packet_sequence_number = (self.packet_sequence_number + 1) % 256

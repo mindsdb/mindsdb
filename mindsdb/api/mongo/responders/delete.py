@@ -1,7 +1,7 @@
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
 from mindsdb_sql.parser.ast import Delete, Identifier, BinaryOperation, Constant
-from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropJob
+from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropJob, DropMLEngine
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
 
 from mindsdb.api.mongo.classes.query_sql import run_sql_command
@@ -32,8 +32,9 @@ class Responce(Responder):
 
         project_name = request_env['database']
 
-        if table not in ('models_versions', 'models', 'jobs'):
-            raise Exception("Only REMOVE from 'models' or 'jobs' collection is supported at this time")
+        allowed_tables = ('models_versions', 'models', 'jobs', 'ml_engines')
+        if table not in allowed_tables:
+            raise Exception(f"Only removing from this collections is supported: {', '.join(allowed_tables)}")
 
         if len(query['deletes']) != 1:
             raise Exception("Should be only one argument in REMOVE operation")
@@ -98,6 +99,10 @@ class Responce(Responder):
 
         elif table == 'jobs':
             ast_query = DropJob(Identifier(parts=[project_name, obj_name]))
+            run_sql_command(request_env, ast_query)
+
+        elif table == 'ml_engines':
+            ast_query = DropMLEngine(Identifier(parts=[obj_name]))
             run_sql_command(request_env, ast_query)
 
         return {

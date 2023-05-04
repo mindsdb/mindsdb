@@ -11,6 +11,7 @@ class Context:
 
     def __init__(self, storage) -> None:
         object.__setattr__(self, '_storage', storage)
+        self.set_default()
 
     def set_default(self) -> None:
         self._storage.set({

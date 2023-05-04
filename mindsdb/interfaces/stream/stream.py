@@ -2,7 +2,7 @@ from mindsdb.interfaces.stream.redis.redisdb import Redis
 from mindsdb.interfaces.stream.kafka.kafkadb import Kafka
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.utilities.context import context as ctx
 
 
@@ -15,7 +15,7 @@ class StreamController():
     def __init__(self):
         self.config = Config()
         self.company_id = ctx.company_id
-        self.integration_controller = IntegrationController()
+        self.integration_controller = integration_controller
 
     def setup(self, db_alias):
         try:

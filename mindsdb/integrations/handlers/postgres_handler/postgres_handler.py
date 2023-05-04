@@ -13,6 +13,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+import mindsdb.utilities.profiler as profiler
 
 
 class PostgresHandler(DatabaseHandler):
@@ -21,6 +22,7 @@ class PostgresHandler(DatabaseHandler):
     """
     name = 'postgres'
 
+    @profiler.profile('init_pg_handler')
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
@@ -36,6 +38,7 @@ class PostgresHandler(DatabaseHandler):
         if self.is_connected is True:
             self.disconnect()
 
+    @profiler.profile()
     def connect(self):
         """
         Handles the connection to a PostgreSQL database instance.
@@ -93,6 +96,7 @@ class PostgresHandler(DatabaseHandler):
 
         return response
 
+    @profiler.profile()
     def native_query(self, query: str) -> Response:
         """
         Receive SQL query and runs it
@@ -131,6 +135,7 @@ class PostgresHandler(DatabaseHandler):
 
         return response
 
+    @profiler.profile()
     def query(self, query: ASTNode) -> Response:
         """
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition

@@ -3,42 +3,48 @@ title: Oracle
 sidebarTitle: Oracle
 ---
 
-##Oracle 
+This is the implementation of the Oracle data handler for MindsDB.
 
-This is the implementation of the Oracle data integration for MindsDB.
+[Oracle Database](https://www.oracle.com/database/) is a multi-model database management system produced and marketed by Oracle Corporation.
 
-##Implementation
-This handler is implemented using the oracledb library. Please install it before using this handler:
+## Implementation
+
+This handler is implemented using the `oracledb` library. Please install it with the below command before using this handler.
 
 ```bash
 pip install oracledb
 ```
 
-The required arguments to establish a connection are,
-* `host`: the host name or IP address 
-* `port`: the TCP/IP port number
-* `sid`: the unique identifier of the database instance
-* `user`: the database username 
-* `password`: the password to authenticate the user 
+The required arguments to establish a connection are as follows:
 
-##Usage
-The following syntax can be used, in order to connect to the Oracle DB:
+* `host` is the host name, IP address, or URL.
+* `port` is the port used to make TCP/IP connection.
+* `sid` is the unique identifier of the database instance.
+* `user` is the database user.
+* `password` is the database password.
+
+## Usage
+
+In order to make use of this handler and connect to the Oracle database in MindsDB, the following syntax can be used:
 
 ```sql
-CREATE DATABASE oracle_datasource         --- display name for the database
-WITH ENGINE = 'oracle',                   --- name of the MindsDB handler
-PARAMETERS = {
-  "host": " ",                            --- host name or IP address
-  "port": ,                               --- port used to make TCP/IP connection
-  "sid": " ",                             --- unique identifier of the database instance
-  "user": " ",                            --- database user
-  "password": " "                         --- database password
-};
+CREATE DATABASE oracle_datasource
+WITH
+  ENGINE = 'oracle',
+  PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": 1521,
+    "sid": "ORCL",
+    "user": "sys",
+    "password": "password"
+  };
 ```
-The connection accepts either sid or service_name arguments to target to the right DB instance.
 
-Now, you can use this established connection to query your database as follows:
+The connection accepts either `sid` or `service_name` arguments to target the right database instance.
+
+You can use this established connection to query your table as follows:
 
 ```sql
-SELECT * FROM oracle_db.my_table
+SELECT *
+FROM oracle_db.my_table;
 ```

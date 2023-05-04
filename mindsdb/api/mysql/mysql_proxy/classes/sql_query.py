@@ -943,9 +943,12 @@ class SQLQuery():
                 else:
                     predictor_id = predictor_metadata['id']
                     key = f'{predictor_name}_{predictor_id}_{json_checksum(where_data)}'
-                    predictor_cache = get_cache('predict')
 
-                    data = predictor_cache.get(key)
+                    if self.session.predictor_cache is False:
+                        data = None
+                    else:
+                        predictor_cache = get_cache('predict')
+                        data = predictor_cache.get(key)
 
                     if data is None:
                         version = None

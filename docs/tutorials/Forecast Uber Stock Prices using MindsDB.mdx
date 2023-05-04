@@ -1,7 +1,7 @@
 # Introduction
 When it comes to AutoML, one of the most remarkable open-source products is MindsDB. MindsDB enhances the existing databases and modifies their tables to function as AI Tables that can train robust Predictor models using the available data, without the need to learn how to code such models in Python, handle their dependencies, or maintain them at a later stage. With MindsDB, you can use simple SQL-like statements and obtain accurate predictions with just a few clicks.
 
-In this tutorial, we will learn how to forecast the stock prices of Uber using MindsDB. The required dataset for this tutorial can be downloaded from here.
+In this tutorial, we will learn how to forecast the stock prices of Uber using MindsDB. The required dataset for this tutorial can be downloaded from [here](https://finance.yahoo.com/quote/UBER/history?period1=1525219200&period2=1682985600&interval=1d&filter=history&frequency=1d&includeAdjustedClose=true).
 
 # Importing Datasets as Tables in our Database
 
@@ -31,7 +31,9 @@ In this tutorial, we will learn how to forecast the stock prices of Uber using M
 ![image](https://user-images.githubusercontent.com/26898623/236202883-2121e272-1273-441b-bf6c-c47db02fcf20.png)
 
 5. We have to now use ngrok to tunnel our localhost to the internet. This command should do the job for you.  
-`ngrok tcp 3306`
+```sql 
+ngrok tcp 3306 
+```
 
 ![image](https://user-images.githubusercontent.com/26898623/236204171-05310422-eddc-44ec-8f77-a99097d36095.png)
 
@@ -39,7 +41,10 @@ In this tutorial, we will learn how to forecast the stock prices of Uber using M
 ![image](https://user-images.githubusercontent.com/26898623/236204351-f8026d67-6320-4e8e-a4a7-154468c9ea38.png)
 
 7. Now let's run a simple SELECT query now to make sure that MindsDB can now access the data in the database.   
-` select * from MindsDBUber.uber`
+```sql 
+select * from MindsDBUber.uber 
+```
+
 ![image](https://user-images.githubusercontent.com/26898623/236204572-a7762077-d8b8-43fb-b8aa-2beef92eab5e.png)
 
 # Creating a Predictor Model
@@ -47,13 +52,25 @@ To create a Predictor model with MindsDB, all you need to do is execute a simple
 
 1. To create and train a new model using our available dataset, we can use MindsDB's CREATE PREDICTOR function. The query is provided below for your convenience.   
 
+```sql
+CREATE PREDICTOR mindsdb.uber_predictors     
+FROM MindsDBUber
+(SELECT * FROM uber)            
+PREDICT Close                    
+ORDER BY Date               
+WINDOW 120                         
+HORIZON 60;     
+```
+
  ![image](https://user-images.githubusercontent.com/26898623/236204921-af3a0dd7-f7cd-463e-bc71-892f24403b8a.png)
 
 2. The model can take some time to be ready. Meanwhile, we can check its status using the command below.  
-` SELECT status
+```sql
+SELECT status
  FROM mindsdb.predictors
  WHERE name = 'uber_predictor';`
  ![image](https://user-images.githubusercontent.com/26898623/236205284-3cbe21e1-c140-4cea-90a1-dfa20b409a92.png)
+```
 
 # Forecasting Target Values
 As usual, MindsDB also offers simple SQL statements to predict or forecast values from the model. Let's explore how we can forecast values.
@@ -62,15 +79,15 @@ Before we proceed, let's consider the basic scenario here. We have a dataset tha
 
 The query will be a straightforward SELECT statement, where we will join the predictor model with the data table and retrieve the forecasts.
 
-`
+```sql
 SELECT T.Date as date,
        T.Close as Forecast,
        Close_explain
 FROM mindsdb.uber_predictor as T
 JOIN MindsDBUber.uber as P
 WHERE P.Date > LATEST
-LIMIT 60;`
-
+LIMIT 60 
+```
 ![image](https://user-images.githubusercontent.com/26898623/236205531-27b20d9c-d6c5-4859-a908-ee781a796cd2.png)
 
 # Conclusion

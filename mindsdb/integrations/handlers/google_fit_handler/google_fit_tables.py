@@ -10,6 +10,13 @@ from tzlocal import get_localzone
 class GoogleFitTable(APITable):
 
     def time_parser(self, args) -> int:
+        """
+        Receive raw date string and return the calculated milliseconds based on the time string.
+        Args:
+            args: time string in the format of YYYY-MM-DD
+        Returns:
+            the input time string in the format of milliseconds
+        """
         ymd = args.split('-')
         epoch0 = datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)
         time = pytz.timezone(str(get_localzone())).localize(datetime.datetime(int(ymd[0].rstrip()), int(ymd[1].rstrip()), int(ymd[2].rstrip())))

@@ -95,7 +95,6 @@ class GoogleFitHandler(APIHandler):
                 "endTimeMillis": endTimeMillis
             }).execute()
         except HttpError:
-            print(f'startTimeMillis: {startTimeMillis} endTimeMillis: {endTimeMillis}')
             raise HttpError
 
 
@@ -127,7 +126,6 @@ class GoogleFitHandler(APIHandler):
         ret = ret.T
         ret = ret.drop('originDataSourceId', axis=1)
         ret = ret.reset_index(drop=False)
-        print(ret)
         return ret
     
     def call_google_fit_api(self, method_name:str = None, params:dict = None) -> pd.DataFrame:
@@ -141,6 +139,5 @@ class GoogleFitHandler(APIHandler):
         self.connect()
         if method_name == 'get_steps':
             val = self.get_steps(params['start_time'], params['end_time'])
-            print(val)
             return val
         raise NotImplementedError('Method name {} not supported by Google Fit Handler'.format(method_name))

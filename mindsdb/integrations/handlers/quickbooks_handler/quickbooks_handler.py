@@ -14,7 +14,10 @@ from .quickbooks_table import AccountsTable, PurchasesTable, BillPaymentsTable, 
 
 
 class QuickbooksHandler(APIHandler):
-
+    """
+        A class for handling connections and interactions with Quickbooks API.
+    """
+    
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
 

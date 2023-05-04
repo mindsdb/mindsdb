@@ -6,46 +6,46 @@ In this tutorial, we will learn how to forecast the stock prices of Uber using M
 # Importing Datasets as Tables in our Database
 
 1. After you've downloaded the Dataset, save the CSV file in a folder Make sure you have MySQL installed on your system, and that it is active. Use MySQL Workbench to test the Database connections and make sure everything is working.
-![image](https://user-images.githubusercontent.com/26898623/236202313-a6378aab-9d10-4bb0-815c-ce859267bc1b.png)
+![image](docs/tutorials/images/1.png)
 
 2. If the connection is successful, you can click on OK to save the connection. Then click on the connection and it should open the Localhost dashboard along with the query editor.
-![image](https://user-images.githubusercontent.com/26898623/236201910-252177b5-fd5c-45d9-bbdf-2950e78a2588.png)
+![image](docs/tutorials/images/2.png)
 
 3. Now click on Create a new schema in the connected server, provide a name for the schema and then hit Apply, and then click on Finish.
-![image](https://user-images.githubusercontent.com/26898623/236202062-b596f72a-75d2-452a-ad6a-d52ab8febff0.png)
+![image](docs/tutorials/images/3.png)
 
 4. After creating the database, select Schemas from the bottom left and then right-click on the schema you just created and select Table Data Import Wizard. A dialog box should appear for you to select the CSV file and click Next. Now the table data import is complete and we are ready to manipulate the data in our table.
-![image](https://user-images.githubusercontent.com/26898623/236202206-eaedcbc0-f127-4a67-a317-c24ef8b4151d.png)
+![image](docs/tutorials/images/4.avif)
 
 # Connecting the Database to MindsDB Cloud
 
 1. Login to your existing MindsDB Cloud account or signup for a new account.
 
 2. Once you sign up or log in, the MindsDB Cloud Editor will appear. In the top panel, you can write a question, view the results in the bottom panel, and access several training hub resources in the right panel to facilitate the process for new users.
-![image](https://user-images.githubusercontent.com/26898623/236202668-20f5656d-6c32-4c4a-a00e-2517e36ba386.png)
+![image](docs/tutorials/images/5.png)
 
 3. Click on Add Data from the highest right and on consequent screen that seems, select Databases from left panel and so click on Mysql
-![image](https://user-images.githubusercontent.com/26898623/236202789-e42f6b3f-a54a-46cc-9b07-92bd1a9533bc.png)
+![image](docs/tutorials/images/6.png)
 
 4. we need to provide certain parameters to establish a connection to our local database. In order to that, we need to expose localhost:3306 to the internet so that we can establish a tcp/ip connection to interact with it
-![image](https://user-images.githubusercontent.com/26898623/236202883-2121e272-1273-441b-bf6c-c47db02fcf20.png)
+![image](docs/tutorials/images/7.png)
 
 5. We have to now use ngrok to tunnel our localhost to the internet. This command should do the job for you.  
 ```sql 
 ngrok tcp 3306 
 ```
 
-![image](https://user-images.githubusercontent.com/26898623/236204171-05310422-eddc-44ec-8f77-a99097d36095.png)
+![image](docs/tutorials/images/8.jpeg)
 
 6. We can now fill in the parameters to connect to the database and then hit the test connection button.
-![image](https://user-images.githubusercontent.com/26898623/236204351-f8026d67-6320-4e8e-a4a7-154468c9ea38.png)
+![image](docs/tutorials/images/9.png)
 
 7. Now let's run a simple SELECT query now to make sure that MindsDB can now access the data in the database.   
 ```sql 
 select * from MindsDBUber.uber 
 ```
 
-![image](https://user-images.githubusercontent.com/26898623/236204572-a7762077-d8b8-43fb-b8aa-2beef92eab5e.png)
+![image](docs/tutorials/images/10.png)
 
 # Creating a Predictor Model
 To create a Predictor model with MindsDB, all you need to do is execute a simple SQL query. Let's explore how straightforward it is to create this model.
@@ -62,14 +62,14 @@ WINDOW 120
 HORIZON 60;     
 ```
 
- ![image](https://user-images.githubusercontent.com/26898623/236204921-af3a0dd7-f7cd-463e-bc71-892f24403b8a.png)
+ ![image](docs/tutorials/images/11.png)
 
 2. The model can take some time to be ready. Meanwhile, we can check its status using the command below.  
 ```sql
 SELECT status
  FROM mindsdb.predictors
  WHERE name = 'uber_predictor';`
- ![image](https://user-images.githubusercontent.com/26898623/236205284-3cbe21e1-c140-4cea-90a1-dfa20b409a92.png)
+ ![image](docs/tutorials/images/12.png)
 ```
 
 # Forecasting Target Values
@@ -88,7 +88,7 @@ JOIN MindsDBUber.uber as P
 WHERE P.Date > LATEST
 LIMIT 60 
 ```
-![image](https://user-images.githubusercontent.com/26898623/236205531-27b20d9c-d6c5-4859-a908-ee781a796cd2.png)
+![image](docs/tutorials/images/13.png)
 
 # Conclusion
 We have now reached the end of this tutorial, where we summarized all the tasks we performed above as a list below:

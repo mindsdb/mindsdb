@@ -51,18 +51,6 @@ class GoogleFitTable(APITable):
 
     def get_columns(self):
         return [
-            'id',
-            'created_at',
-            'text',
-            'edit_history_tweet_ids',
-            'author_id',
-            'author_name',
-            'author_username',
-            'conversation_id',
-            'in_reply_to_tweet_id',
-            'in_retweeted_to_tweet_id',
-            'in_quote_to_tweet_id',
-            'in_reply_to_user_id',
-            'in_reply_to_user_name',
-            'in_reply_to_user_username',
+            'dates',
+            'steps'
         ]     

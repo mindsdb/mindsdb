@@ -271,19 +271,13 @@ class LangChainHandler(OpenAIHandler):
 
         def _mdb_write_call(query: str) -> str:
             try:
-                # parse values out of query
                 query = query.strip('`')
-                processed_query = parse_sql(query, dialect='mindsdb')  # parse to check it's an insert
-                if isinstance(processed_query, Insert):
-                    # write inserts to the datasource
-                    executor.is_executed = False
-                    ast_query = parse_sql(query.strip('`'), dialect='mindsdb')
+                ast_query = parse_sql(query.strip('`'), dialect='mindsdb')
+                if isinstance(ast_query, Insert):
                     _ = executor.execute_command(ast_query)
-                    assert executor.is_executed
                     return "mindsdb write tool executed successfully"
             except Exception as e:
                 return f"mindsdb write tool failed with error:\n{str(e)}"
-
 
         mdb_tool = Tool(
                 name="MindsDB",

@@ -23,7 +23,7 @@ mindsdb-sql >= 0.6.1, < 0.7.0
 mindsdb-evaluator >= 0.0.7, < 0.1.0
 checksumdir >= 1.2.0
 mindsdb-streams == 0.1.1
-duckdb == 0.4.0
+duckdb == 0.6.0
 requests >= 2.0.0
 mysql-connector-python
 clickhouse-driver

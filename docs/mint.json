@@ -17,15 +17,7 @@
   },
   "openapi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
   "api": {
-    "baseUrl": [
-      "https://alpha.mindsdb.com",
-      "https://cloud.mindsdb.com",
-      "https://127.0.0.1"
-    ],
-    "auth": {
-      "method": "key",
-      "name": "X-API-KEY"
-    }
+    "baseUrl": "http://127.0.0.1:47334"
   },
   "topbarLinks": [
     {
@@ -47,6 +39,11 @@
       "name": "GitHub",
       "icon": "github",
       "url": "https://github.com/mindsdb/mindsdb"
+    },
+    {
+      "name": "What's New",
+      "icon": "rocket-launch",
+      "url": "https://mindsdb.com/blog-categories/product-updates"
     }
   ],
   "navigation": [
@@ -269,35 +266,36 @@
             {
               "group": "Projects",
               "pages": [
-                "rest/projects/get-projects"
+                "rest/projects/get-projects",
+                "rest/projects/get-project"
               ]
             },
             {
               "group": "Models",
               "pages": [
-                "rest/models/train-model",
-                "rest/models/list-model",
                 "rest/models/list-models",
-                "rest/models/describe-model",
+                "rest/models/list-model",
+                "rest/models/train-model",
                 "rest/models/query-model",
-                "rest/models/delete-model",
-                "rest/models/retrain-model"
+                "rest/models/describe-model",
+                "rest/models/delete-model"
               ]
             },
             {
               "group": "Views",
               "pages": [
-                "rest/views/create-view",
-                "rest/views/list-view",
                 "rest/views/list-views",
+                "rest/views/list-view",
+                "rest/views/create-view",
                 "rest/views/delete-views"
               ]
             },
             {
               "group": "Tables",
               "pages": [
-                "rest/tables/create-table",
+                "rest/tables/list-tables",
                 "rest/tables/list-table",
+                "rest/tables/create-table",
                 "rest/tables/delete-table"
               ]
             }
@@ -320,6 +318,10 @@
         {
           "group": "Application Integrations",
           "pages": [
+            "app-integrations/confluence",
+            "app-integrations/google-calendar",
+            "app-integrations/plaid",
+            "app-integrations/reddit",
             "app-integrations/twitter"
           ]
         },
@@ -354,6 +356,7 @@
             "data-integrations/google-sheets",
             "data-integrations/ibm-db2",
             "data-integrations/ibm-informix",
+            "data-integrations/influxdb",
             "data-integrations/mariadb",
             "data-integrations/matrixone",
             "data-integrations/microsoft-access",

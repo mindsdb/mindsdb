@@ -1,5 +1,7 @@
 from http import HTTPStatus
 
+import json
+
 from flask import request
 from flask_restx import Resource
 from sqlalchemy.exc import NoResultFound
@@ -208,6 +210,9 @@ class ModelPredict(Resource):
                 f'Model with name {model_name} not found')
 
         data = request.json['data']
+        if isinstance(data, str):
+            # Support object or serialized object.
+            data = json.loads(data)
         params = request.json.get('params')
 
         predictions = project_datanode.predict(

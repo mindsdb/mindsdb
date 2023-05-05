@@ -45,7 +45,6 @@ class SlackChannelsTable(APITable):
         # Get the channels list and ids
         channels = self.client.conversations_list(types="public_channel,private_channel")['channels']
         channel_ids = {c['name']: c['id'] for c in channels}
-        print(channel_ids)
         
         # Extract comparison conditions from the query
         conditions = extract_comparison_conditions(query.where)
@@ -96,9 +95,7 @@ class SlackChannelsTable(APITable):
             result = self.client.conversations_history(channel=params['channel'])
             conversation_history = result["messages"]
         except SlackApiError as e:
-            print("Error creating conversation: {}".format(e))
-        
-        print(conversation_history)
+            log.logger.error("Error creating conversation: {}".format(e))
 
         # Get columns for the query and convert SlackResponse object to pandas DataFrame
         columns = []
@@ -128,13 +125,10 @@ class SlackChannelsTable(APITable):
         columns = [target.parts[-1].lower() for target in query.targets if isinstance(target, ast.Identifier)]
         result = result[columns]
 
-        print(f"{len(result['messages'])} Messages found in Channel {params['channel']}")
-
         # Append the history to the response
         response_history = []
         for message in conversation_history:
             response_history.append(message['text'])
-        res_dct = {i: response_history[i] for i in range(0, len(response_history))}
         result['messages'] = response_history
         
         # Sort the data based on order_by_conditions
@@ -202,7 +196,6 @@ class SlackChannelsTable(APITable):
             except SlackApiError as e:
                 raise Exception(f"Error posting message to Slack channel '{params['channel']}': {e.response['error']}")
             
-            print(response)
             inserted_id = response['ts']
             params['ts'] = inserted_id
 
@@ -234,8 +227,6 @@ class SlackChannelsTable(APITable):
             )
         except SlackApiError as e:
             raise Exception(f"Error updating message in Slack channel '{params['channel']}' with timestamp '{params['ts']}': {e.response['error']}")
-        
-        print(response)
     
     def delete(self, query: ASTNode):
         """
@@ -264,9 +255,6 @@ class SlackChannelsTable(APITable):
             
         except SlackApiError as e:
             raise Exception(f"Error deleting message from Slack channel '{params['channel']}' with timestamp '{params['ts']}': {e.response['error']}")
-
-        print(response)
-
 
 class SlackHandler(APIHandler):
     """
@@ -312,7 +300,6 @@ class SlackHandler(APIHandler):
             return self.api
 
         self.api = self.create_connection()
-        print("Connected to Slack API")
         return self.api
 
     def check_connection(self):
@@ -328,10 +315,8 @@ class SlackHandler(APIHandler):
             api.auth_test()
             
             response.success = True
-            print("Connected to Slack API.")
         except SlackApiError as e:
             response.error_message = f'Error connecting to Slack Api: {e.response["error"]}. Check token.'
-            print(f"Error connecting to Slack API: {e}")
             log.logger.error(response.error_message)
 
         if response.success is False and self.is_connected is True:

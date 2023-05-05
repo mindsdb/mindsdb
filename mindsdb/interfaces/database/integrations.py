@@ -32,7 +32,7 @@ class HandlersCache:
     """ Cache for data handlers that keep connections opened during ttl time from handler last use
     """
 
-    def __init__(self, ttl: int = 60):
+    def __init__(self, ttl: int = 160):
         """ init cache
 
             Args:
@@ -70,9 +70,10 @@ class HandlersCache:
             Args:
                 handler (DatabaseHandler)
         """
+        # print(f'!!!! set {handler.name} {ctx.company_id} {threading.get_ident()}')
         with self._lock:
             try:
-                key = (handler.name, ctx.company_id)
+                key = (handler.name, ctx.company_id, threading.get_ident())
                 handler.connect()
                 self.handlers[key] = {
                     'handler': handler,
@@ -92,13 +93,14 @@ class HandlersCache:
                 DatabaseHandler
         """
         with self._lock:
+            key = (name, ctx.company_id, threading.get_ident())
             if (
-                (name, ctx.company_id) not in self.handlers
-                or self.handlers[(name, ctx.company_id)]['expired_at'] < time()
+                key not in self.handlers
+                or self.handlers[key]['expired_at'] < time()
             ):
                 return None
-            self.handlers[(name, ctx.company_id)]['expired_at'] = time() + self.ttl
-            return self.handlers[(name, ctx.company_id)]['handler']
+            self.handlers[key]['expired_at'] = time() + self.ttl
+            return self.handlers[key]['handler']
 
     def delete(self, name: str) -> None:
         """ delete handler from cache
@@ -107,7 +109,7 @@ class HandlersCache:
                 name (str): handler name
         """
         with self._lock:
-            key = (name, ctx.company_id)
+            key = (name, ctx.company_id, threading.get_ident())
             if key in self.handlers:
                 try:
                     self.handlers[key].disconnect()

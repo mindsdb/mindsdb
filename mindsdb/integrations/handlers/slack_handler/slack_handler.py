@@ -147,6 +147,11 @@ class SlackChannelsTable(APITable):
         # Limit the result based on the query limit
         if query.limit:
             result = result.head(query.limit.value)
+            
+        # Alias the target column based on the query
+        for target in query.targets:
+            if target.alias:
+                result.rename(columns={target.parts[-1]: str(target.alias)}, inplace=True)
 
         return result
         
@@ -212,7 +217,7 @@ class SlackChannelsTable(APITable):
         """
 
         # get column names and values from the query
-        columns = [col.name for col in query.columns]
+        columns = [col.name for col in query.update_columns]
         for row in query.values:
             params = dict(zip(columns, row))
 

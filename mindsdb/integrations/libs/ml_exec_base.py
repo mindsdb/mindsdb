@@ -369,6 +369,17 @@ class BaseMLEngineExec:
             args['dtype_dict'] = predictor_record.dtype_dict
             args['learn_args'] = predictor_record.learn_args
 
+        if self.handler_class.__name__ in ('LangChainHandler',):
+            from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
+            from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+
+            sql_session = SessionController()
+            sql_session.database = 'mindsdb'
+
+            command_executor = ExecuteCommands(sql_session, executor=None)
+
+            args['executor'] = command_executor
+
         try:
             predictions = ml_handler.predict(df, args)
         except Exception as e:

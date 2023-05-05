@@ -1,11 +1,14 @@
 import os
+import sys
 import base64
 import shutil
 import tempfile
 import importlib
+import threading
 from time import time
 from pathlib import Path
 from copy import deepcopy
+from typing import Optional
 from collections import OrderedDict
 
 from sqlalchemy import func
@@ -14,6 +17,7 @@ from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore, FileStorage, FileStorageFactory, RESOURCE_GROUP
 from mindsdb.interfaces.file.file_controller import FileController
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
 from mindsdb.integrations.handlers_client.db_client_factory import DBClient
 from mindsdb.interfaces.model.functions import get_model_records
@@ -24,6 +28,114 @@ from mindsdb.utilities.log import get_log
 logger = get_log()
 
 
+class HandlersCache:
+    """ Cache for data handlers that keep connections opened during ttl time from handler last use
+    """
+
+    def __init__(self, ttl: int = 60):
+        """ init cache
+
+            Args:
+                ttl (int): time to live (in seconds) for record in cache
+        """
+        self.ttl = ttl
+        self.handlers = {}
+        self._lock = threading.RLock()
+        self._stop_event = threading.Event()
+        self.cleaner_thread = None
+
+    def __del__(self):
+        self._stop_clean()
+
+    def _start_clean(self) -> None:
+        """ start worker that close connections after ttl expired
+        """
+        if (
+            isinstance(self.cleaner_thread, threading.Thread)
+            and self.cleaner_thread.is_alive()
+        ):
+            return
+        self._stop_event.clear()
+        self.cleaner_thread = threading.Thread(target=self._clean)
+        self.cleaner_thread.start()
+
+    def _stop_clean(self) -> None:
+        """ stop clean worker
+        """
+        self._stop_event.set()
+
+    def set(self, handler: DatabaseHandler):
+        """ add (or replace) handler in cache
+
+            Args:
+                handler (DatabaseHandler)
+        """
+        with self._lock:
+            try:
+                key = (handler.name, ctx.company_id)
+                handler.connect()
+                self.handlers[key] = {
+                    'handler': handler,
+                    'expired_at': time() + self.ttl
+                }
+            except Exception:
+                pass
+            self._start_clean()
+
+    def get(self, name: str) -> Optional[DatabaseHandler]:
+        """ get handler from cache by name
+
+            Args:
+                name (str): handler name
+
+            Returns:
+                DatabaseHandler
+        """
+        with self._lock:
+            if (
+                (name, ctx.company_id) not in self.handlers
+                or self.handlers[(name, ctx.company_id)]['expired_at'] < time()
+            ):
+                return None
+            self.handlers[(name, ctx.company_id)]['expired_at'] = time() + self.ttl
+            return self.handlers[(name, ctx.company_id)]['handler']
+
+    def delete(self, name: str) -> None:
+        """ delete handler from cache
+
+            Args:
+                name (str): handler name
+        """
+        with self._lock:
+            key = (name, ctx.company_id)
+            if key in self.handlers:
+                try:
+                    self.handlers[key].disconnect()
+                except Exception:
+                    pass
+                del self.handlers[key]
+            if len(self.handlers) == 0:
+                self._stop_clean()
+
+    def _clean(self) -> None:
+        """ worker that delete from cache handlers that was not in use for ttl
+        """
+        while self._stop_event.wait(timeout=3) is False:
+            with self._lock:
+                for key in list(self.handlers.keys()):
+                    if (
+                        self.handlers[key]['expired_at'] < time()
+                        and sys.getrefcount(self.handlers[key]) == 2    # returned ref count is always 1 higher
+                    ):
+                        try:
+                            self.handlers[key].disconnect()
+                        except Exception:
+                            pass
+                        del self.handlers[key]
+                if len(self.handlers) == 0:
+                    self._stop_event.set()
+
+
 class IntegrationController:
     @staticmethod
     def _is_not_empty_str(s):
@@ -31,6 +143,7 @@ class IntegrationController:
 
     def __init__(self):
         self._load_handler_modules()
+        self.handlers_cache = HandlersCache()
 
     def _add_integration_record(self, name, engine, connection_args):
         integration_record = db.Integration(
@@ -82,6 +195,7 @@ class IntegrationController:
         return integration_id
 
     def modify(self, name, data):
+        self.handlers_cache.delete(name)
         integration_record = db.session.query(db.Integration).filter_by(
             company_id=ctx.company_id, name=name
         ).first()
@@ -96,6 +210,8 @@ class IntegrationController:
     def delete(self, name):
         if name in ('files', 'lightwood'):
             raise Exception('Unable to drop: is system database')
+
+        self.handlers_cache.delete(name)
 
         # check permanent integration
         if name in self.handler_modules:
@@ -268,6 +384,10 @@ class IntegrationController:
             return DBClient(handler_type, **handler_ars)
 
     def get_handler(self, name, case_sensitive=False):
+        handler = self.handlers_cache.get(name)
+        if handler is not None:
+            return handler
+
         if case_sensitive:
             integration_record = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, name=name).first()
         else:
@@ -335,6 +455,7 @@ class IntegrationController:
             logger.info("%s.get_handler: create a client to db service of %s type, args - %s", self.__class__.__name__, integration_engine, handler_ars)
             if DBClient.is_local:
                 handler = HandlerClass(**handler_ars)
+                self.handlers_cache.set(handler)
             else:
                 handler = DBClient(integration_engine, **handler_ars)
 

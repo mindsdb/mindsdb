@@ -9,6 +9,9 @@ from sklearn.preprocessing import LabelEncoder
 
 
 
+
+
+
 class TPOTHandler(BaseMLEngine):
     name = "TPOT"
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
@@ -36,7 +39,7 @@ class TPOTHandler(BaseMLEngine):
 
         if df is not None:
             # Separate out the categorical and non-categorical columns
-            categorical_cols=[col for col,type_col in type_of_cols.items() if type_col=='categorical']
+            categorical_cols=[col for col, type_col in type_of_cols.items() if type_col in ('categorical', 'binary')]
 
             # Fit a LabelEncoder for each categorical column and store it in a dictionary
             le_dict = {}
@@ -47,6 +50,7 @@ class TPOTHandler(BaseMLEngine):
 
                 # Encode the categorical column using the fitted LabelEncoder
                 df[col] = le.transform(df[col])
+
 
             model.fit(df.drop(columns=[target]), df[target])
             self.model_storage.json_set('args', args)

@@ -32,7 +32,7 @@ class HandlersCache:
     """ Cache for data handlers that keep connections opened during ttl time from handler last use
     """
 
-    def __init__(self, ttl: int = 160):
+    def __init__(self, ttl: int = 60):
         """ init cache
 
             Args:

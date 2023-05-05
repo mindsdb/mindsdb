@@ -70,7 +70,6 @@ class QuickbooksHandler(APIHandler):
             quickbooks = self.connect()
             quickbooks.accounts.get()
             log.logger.info(quickbooks.accounts.get())
-            print('Connected to Quickbooks API')
             response.success = True
 
         except Exception as e:
@@ -78,7 +77,6 @@ class QuickbooksHandler(APIHandler):
             log.logger.error(response.error_message)
 
         if response.success is False and self.is_connected is True:
-            print('Disconnected from Quickbooks API')
             self.is_connected = False
 
         return response

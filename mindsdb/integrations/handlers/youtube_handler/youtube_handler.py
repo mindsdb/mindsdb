@@ -18,10 +18,10 @@ from googleapiclient.errors import HttpError
 logger = get_log("integrations.youtube_handler")
 
 class YoutubeHandler(APIHandler):
-    """Strava handler implementation"""
+    """Youtube handler implementation"""
 
     def __init__(self, name=None, **kwargs):
-        """Initialize the Strava handler.
+        """Initialize the Youtube handler.
         Parameters
         ----------
         name : str

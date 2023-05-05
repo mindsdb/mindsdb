@@ -845,6 +845,7 @@ class SQLQuery():
                 version=version,
                 params=step.params,
             )
+
             columns_dtypes = dict(predictions.dtypes)
             predictions = predictions.to_dict(orient='records')
 

@@ -67,38 +67,9 @@ class ModelController():
                 data['accuracy'] = float(np.mean(list(data['accuracies'].values())))
         return data
 
-    def get_reduced_model_data(self, name: str = None, predictor_record=None, ml_handler_name='lightwood') -> dict:
-        full_model_data = self.get_model_data(name=name, predictor_record=predictor_record, ml_handler_name=ml_handler_name)
-        reduced_model_data = {}
-        for k in ['id', 'name', 'version', 'is_active', 'predict', 'status',
-                  'current_phase', 'accuracy', 'data_source', 'update', 'active',
-                  'mindsdb_version', 'error', 'created_at', 'fetch_data_query']:
-            reduced_model_data[k] = full_model_data.get(k, None)
-
-        reduced_model_data['training_time'] = None
-        if full_model_data.get('training_start_at') is not None:
-            if full_model_data.get('training_stop_at') is not None:
-                reduced_model_data['training_time'] = (
-                    full_model_data.get('training_stop_at')
-                    - full_model_data.get('training_start_at')
-                )
-            elif full_model_data.get('status') == 'training':
-                reduced_model_data['training_time'] = (
-                    dt.datetime.now()
-                    - full_model_data.get('training_start_at')
-                )
-            if reduced_model_data['training_time'] is not None:
-                reduced_model_data['training_time'] = (
-                    reduced_model_data['training_time']
-                    - dt.timedelta(microseconds=reduced_model_data['training_time'].microseconds)
-                )
-
-        return reduced_model_data
-
-    def describe_model(self, session, project_name, model_name, attribute, version=None):
+    def describe_model(self, session,  project_name, model_name, attribute):
         model_record = get_model_record(
             name=model_name,
-            version=version,
             project_name=project_name,
             except_absent=True
         )
@@ -129,27 +100,42 @@ class ModelController():
         else:
             return df
 
-    def get_model(self, name, version=None, ml_handler_name=None, project_name=None):
-        show_active = True if version is None else False
-        model_record = get_model_record(
-            active=show_active,
-            version=version,
-            name=name,
-            ml_handler_name=ml_handler_name,
-            project_name=project_name)
-        return self.get_reduced_model_data(predictor_record=model_record)
-
     def get_models(self, with_versions=False, ml_handler_name=None, integration_id=None,
                    project_name=None):
         models = []
         show_active = True if with_versions is False else None
-        for model_record in get_model_records(active=show_active, ml_handler_name=ml_handler_name,
+        for predictor_record in get_model_records(active=show_active, ml_handler_name=ml_handler_name,
                                                   integration_id=integration_id, project_name=project_name):
-            model_data = self.get_reduced_model_data(predictor_record=model_record)
-            models.append(model_data)
+            model_data = self.get_model_data(predictor_record=predictor_record)
+            reduced_model_data = {}
+
+            for k in ['id', 'name', 'version', 'is_active', 'predict', 'status',
+                      'current_phase', 'accuracy', 'data_source', 'update', 'active',
+                      'mindsdb_version', 'error', 'created_at', 'fetch_data_query']:
+                reduced_model_data[k] = model_data.get(k, None)
+
+            reduced_model_data['training_time'] = None
+            if model_data.get('training_start_at') is not None:
+                if model_data.get('training_stop_at') is not None:
+                    reduced_model_data['training_time'] = (
+                        model_data.get('training_stop_at')
+                        - model_data.get('training_start_at')
+                    )
+                elif model_data.get('status') == 'training':
+                    reduced_model_data['training_time'] = (
+                        dt.datetime.now()
+                        - model_data.get('training_start_at')
+                    )
+                if reduced_model_data['training_time'] is not None:
+                    reduced_model_data['training_time'] = (
+                        reduced_model_data['training_time']
+                        - dt.timedelta(microseconds=reduced_model_data['training_time'].microseconds)
+                    )
+
+            models.append(reduced_model_data)
         return models
 
-    def delete_model(self, model_name: str, project_name: str = 'mindsdb', version=None):
+    def delete_model(self, model_name: str, project_name: str = 'mindsdb'):
         from mindsdb.interfaces.database.database import DatabaseController
 
         project_record = db.Project.query.filter(
@@ -164,19 +150,11 @@ class ModelController():
 
         project = database_controller.get_project(project_name)
 
-        if version is None:
-            # Delete latest version
-            predictors_records = get_model_records(
-                name=model_name,
-                project_id=project.id,
-                active=None,
-            )
-        else:
-            predictors_records = get_model_records(
-                name=model_name,
-                project_id=project.id,
-                version=version,
-            )
+        predictors_records = get_model_records(
+            name=model_name,
+            project_id=project.id,
+            active=None,
+        )
         if len(predictors_records) == 0:
             raise Exception(f"Model '{model_name}' does not exist")
 

@@ -18,7 +18,8 @@ db.databases.insertOne({
 });
 ```
 
-![CREATE_DATABASE](Image URL of the screenshot)
+![create](https://user-images.githubusercontent.com/52546856/236434178-79d67c6f-5a47-49c0-8d2d-45f26a5b8738.png)
+
 
 **2. Testing CREATE PREDICTOR**
 
@@ -30,16 +31,19 @@ db.predictors.insert({
   "select_data_query": "db.cars.find()"
 });
 ```
+![m4](https://user-images.githubusercontent.com/52546856/236434316-acf14c52-892d-48d7-83ac-4a2efaa2c2e7.png)
 
-![CREATE_PREDICTOR](Image URL of the screenshot)
+
+![m3](https://user-images.githubusercontent.com/52546856/236434358-d3282e3b-efea-454d-a2fb-cd3619e13c64.png)
+
 
 **3. Testing SELECT FROM PREDICTOR**
 
 ```
 db.cars_predictor.find({Car_Name: "ritz", Fuel_Type: "Petrol"});
 ```
+![m5](https://user-images.githubusercontent.com/52546856/236434412-8cb18d7c-39f9-42cc-95ff-a92c42ba9eb5.png)
 
-![SELECT_FROM](Image URL of the screenshot)
 
 ### Results
 

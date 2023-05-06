@@ -24,3 +24,31 @@ Uploaded files
    - remove virtual environment if it was created
    - remove ml engine
 
+Using:
+
+1. Add args argument to train and predict methods:
+```
+class CustomPredictor():
+    def train(self, df, target_col, args=None):
+       ...
+       
+    def predict(self, df, args=None):
+       ...
+```
+
+2. Passing args to model training
+``` 
+create predictor pred 
+from files (select * from byom)
+predict Time
+using engine='uploaded_model',
+  param1=1, param2='2'
+```
+
+3. Passing args at predict
+```
+select * from files.byom t 
+join pred3 p
+using param1=1, param2='2'
+```
+

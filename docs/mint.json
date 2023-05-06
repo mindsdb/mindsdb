@@ -423,7 +423,8 @@
                   "pages": [
                     "nixtla/statsforecast"
                   ]
-                }
+                },
+                "custom-model/merlion"
               ]
             }
           ]

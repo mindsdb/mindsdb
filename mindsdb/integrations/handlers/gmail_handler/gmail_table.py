@@ -13,17 +13,38 @@ class GmailApiTable(APITable):
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         conditions = extract_comparison_conditions(query.where)
-        arg1 = conditions[0][1]
-        arg2 = conditions[0][2]
         params = {}
-        if query.limit is not None:
-            if query.limit.value < 500:
-                params['maxResults'] = query.limit.value
-            else:
-                params['maxResults'] = 50
-        params['query'] = arg2
+        if conditions:
+            arg1 = conditions[0][1]
+            arg2 = conditions[0][2]
+            params = {}
+            if query.limit is not None:
+                if query.limit.value < 500:
+                    params['maxResults'] = query.limit.value
+                else:
+                    params['maxResults'] = 50
+            params['query'] = arg2
         emails = self.handler.call_application_api(method_name='get_emails', params=params)
+        selected_columns = []
+        for target in query.targets:
+            if isinstance(target, ast.Star):
+                selected_columns = self.get_columns()
+                break
+            elif isinstance(target, ast.Identifier):
+                selected_columns.append(target.parts[-1])
+            else:
+                raise ValueError(f"Unknown query target {type(target)}")
+        if len(selected_columns) > 0:
+            emails = emails[selected_columns]
+        for target in query.targets:
+            print(emails.columns)
+            print(target.alias)
+            if target.alias:
+                emails.rename(columns={target.parts[-1]: str(target.alias)}, inplace=True)
+        print(selected_columns)
         return emails
+
+
 
     def insert(self, query: ASTNode) -> None:
         columns = [col.name for col in query.columns]

@@ -37,6 +37,7 @@ class GmailApiTable(APITable):
                 raise ValueError(f"Unknown query target {type(target)}")
         if len(selected_columns) > 0:
             emails = emails[selected_columns]
+        # Rename columns
         for target in query.targets:
             print(emails.columns)
             print(target.alias)

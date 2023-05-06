@@ -7,6 +7,7 @@ from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from email.mime.text import MIMEText
 
+
 class GmailApiTable(APITable):
     def __init__(self, handler):
         super().__init__(handler)
@@ -44,8 +45,6 @@ class GmailApiTable(APITable):
         print(selected_columns)
         return emails
 
-
-
     def insert(self, query: ASTNode) -> None:
         columns = [col.name for col in query.columns]
         values = query.values[0]
@@ -58,7 +57,6 @@ class GmailApiTable(APITable):
         raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
         params = {'raw': raw_message}
         self.handler.call_application_api(method_name='send_email', params=params)
-
 
     def update(self, query: ASTNode) -> None:
         pass

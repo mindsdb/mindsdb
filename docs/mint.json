@@ -421,7 +421,8 @@
                 {
                   "group": "Nixtla",
                   "pages": [
-                    "nixtla/statsforecast"
+                    "nixtla/statsforecast",
+                    "nixtla/neuralforecast"
                   ]
                 }
               ]

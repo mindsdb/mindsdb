@@ -26,7 +26,7 @@ CREATE DATABASE mindsdb_gmail
 WITH ENGINE = 'gmail',
 parameters = {
     "credentials_file": "mindsdb/integrations/handlers/gmail_handler/credentials.json",
-    -- "scopes": "['SCOPE_1', 'SCOPE_2', ...]" -- Optional scopes. By default 'https://.../gmail.compose' & 'https://.../gmail.readonly' scopes are used
+    -- "scopes": ['SCOPE_1', 'SCOPE_2', ...] -- Optional scopes. By default 'https://.../gmail.compose' & 'https://.../gmail.readonly' scopes are used
 };    
 ~~~~
 
@@ -35,15 +35,27 @@ emails as well as to write emails.
 
 ## Searching for emails
 
-Let's get a list of emails from our mailbox. The query supports all the search term we can use with gmail. For more details please check [this link](https://support.google.com/mail/answer/7190)
+Let's get a list of emails from our mailbox using the `SELECT` query.
 
 ~~~~sql
 SELECT *
 FROM mindsdb_gmail.emails
-WHERE query = 'from:test@example.com OR search_text OR from:test@example1.com'
-AND label_ids = "INBOX,UNREAD" 
+WHERE query = 'alert from:*@google.com'
+AND label_ids = "INBOX,UNREAD"
 LIMIT 20;
 ~~~~
+This will search your Gmail inbox for any email which contains the text `alert` and is from `google.com` domain (notice the use of the wildcard `*`).
+
+The returned result should have ROWs like this
+
+| id | message_id | thread_id | label_ids | sender | to | date | subject | snippet | body |
+| ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- |
+| 187d3420d1a8690a     | <oXgFXqq1yB7x2OpCf0cBaw@notifications.google.com> | 187d3420d1a8690a | ["UNREAD","CATEGORY_UPDATES","INBOX"] | "Google" <no-reply@accounts.google.com> | test@gmail.com  | Sun, 30 Apr 2023 17:42:12 GMT | Security alert | Application was granted access to your Google Account test@gmail.com If you did not grant access, you should check this activity and secure your account. Check activity You can also see | [image: Google] Application was granted access to your Google Account test@gmail.com If you did not grant access, you should check this activity and secure your account. Check activity... |
+
+where
+* query - The search term. The query parameter supports all the search terms we can use with gmail. For more details please check [this link](https://support.google.com/mail/answer/7190)
+* label_ids - A comma separated string of labels to search for. E.g. "INBOX,UNREAD" will search for unread emails in inbox, "SENT" will search for emails in the sent folder.
+* include_spam_trash - BOOLEAN (TRUE / FALSE). By default it is FALSE. If included, the search will cover the SPAM and TRASH folders.
 
 ## Writing Emails
 
@@ -58,7 +70,7 @@ VALUES ('187cbdd861350934d', '8e54ccfd-abd0-756b-a12e-f7bc95ebc75b@Spark', 'test
 
 ## Creating a model to automate email replies
 
-Now that we know how to pull emails into our database as well as how to write emails, we can make use of OpenAPI or other AI APIs to write replies for us. For example, the below creates a model using the OpenAI's `gpt-3.5-turbo` model. 
+Now that we know how to pull emails into our database as well as how to write emails, we can make use of OpenAPI or other AI APIs to write replies for us. For example, the below creates a model using the OpenAI's `gpt-3.5-turbo` model.
 
 ~~~~sql
 CREATE MODEL mindsdb.gpt_model
@@ -68,8 +80,8 @@ engine = 'openai',
 max_tokens = 500,
 api_key = 'your_api_key', 
 model_name = 'gpt-3.5-turbo',
-prompt_template = 'From input message: {{input_text}}\
-by from_user: {{from_email}}\
-In less than 500 characters, write an email response to {{from_email}} in the following format:\
+prompt_template = 'From input message: {{body}}\
+by from_user: {{sender}}\
+In less than 500 characters, write an email response to {{sender}} in the following format:\
 Start with proper salutation and respond with a short message in a casual tone, and sign the email with my name mindsdb';
 ~~~~

@@ -8,10 +8,11 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
 from mindsdb_sql.parser import ast
 from mindsdb.utilities import log
+from mindsdb_sql import parse_sql
 
 import os
 import time
-
+from typing import List
 import pandas as pd
 
 from google.auth.transport.requests import Request
@@ -22,7 +23,6 @@ from googleapiclient.errors import HttpError
 from email.message import EmailMessage
 
 from base64 import urlsafe_b64encode, urlsafe_b64decode
-from requests import get
 
 DEFAULT_SCOPES = ['https://www.googleapis.com/auth/gmail.compose', 'https://www.googleapis.com/auth/gmail.readonly']
 
@@ -30,7 +30,7 @@ DEFAULT_SCOPES = ['https://www.googleapis.com/auth/gmail.compose', 'https://www.
 class EmailsTable(APITable):
     """Implementation for the emails table for Gmail"""
 
-    def select(self, query: ast.Select) -> Response:
+    def select(self, query: ast.Select) -> pd.DataFrame:
         """Pulls emails from Gmail "users.messages.list" API
 
         Parameters
@@ -83,31 +83,29 @@ class EmailsTable(APITable):
         columns = []
         for target in query.targets:
             if isinstance(target, ast.Star):
-                columns = []
+                columns = self.get_columns()
                 break
             elif isinstance(target, ast.Identifier):
                 columns.append(target.parts[-1])
             else:
                 raise NotImplementedError(f"Unknown query target {type(target)}")
 
-        if len(columns) == 0:
-            columns = self.get_columns()
-
         # columns to lower case
         columns = [name.lower() for name in columns]
 
         if len(result) == 0:
-            result = pd.DataFrame([], columns=columns)
-        else:
-            # add absent columns
-            for col in set(columns) & set(result.columns) ^ set(columns):
-                result[col] = None
+            return pd.DataFrame([], columns=columns)
 
-            # filter by columns
-            result = result[columns]
+        # add absent columns
+        for col in set(columns) & set(result.columns) ^ set(columns):
+            result[col] = None
+
+        # filter by columns
+        result = result[columns]
+
         return result
 
-    def get_columns(self):
+    def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
 
         Returns
@@ -120,7 +118,7 @@ class EmailsTable(APITable):
             'message_id',
             'thread_id',
             'label_ids',
-            'from',
+            'sender',
             'to',
             'date',
             'subject',
@@ -143,7 +141,7 @@ class EmailsTable(APITable):
         """
         columns = [col.name for col in query.columns]
 
-        if self.handler.connection_args.get('credentials_file', None) is None:
+        if not 'credentials_file' in self.handler.connection_args:
             raise ValueError(
                 "Need the Google Auth Credentials file in order to write an email"
             )
@@ -210,9 +208,10 @@ class GmailHandler(APIHandler):
         self.is_connected = False
 
         emails = EmailsTable(self)
+        self.emails = emails
         self._register_table('emails', emails)
 
-    def create_connection(self):
+    def create_connection(self) -> object:
         creds = None
         token_file = os.path.join(os.path.dirname(self.credentials_file), 'token.json')
 
@@ -234,7 +233,7 @@ class GmailHandler(APIHandler):
 
         return build('gmail', 'v1', credentials=creds)
 
-    def connect(self):
+    def connect(self) -> object:
         """Authenticate with the Gmail API using the credentials file.
 
         Returns
@@ -242,7 +241,7 @@ class GmailHandler(APIHandler):
         service: object
             The authenticated Gmail API service object.
         """
-        if self.is_connected is True:
+        if self.is_connected and self.service is not None:
             return self.service
 
         self.service = self.create_connection()
@@ -277,15 +276,10 @@ class GmailHandler(APIHandler):
 
         return response
 
-    def native_query(self, query_string: str = None):
-        method_name, params = FuncParser().from_string(query_string)
+    def native_query(self, query_string: str = None) -> Response:
+        ast = parse_sql(query_string, dialect="mindsdb")
 
-        df = self.call_gmail_api(method_name, params)
-
-        return Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=df
-        )
+        return self.query(ast)
 
     def _parse_parts(self, parts):
         if not parts:
@@ -310,7 +304,7 @@ class GmailHandler(APIHandler):
             return
 
         payload = message['payload']
-        headers = payload.get("headers")
+        headers = payload.get("headers", [])
         parts = payload.get("parts")
 
         row = {
@@ -320,15 +314,16 @@ class GmailHandler(APIHandler):
             'snippet': message.get('snippet', ''),
         }
 
-        if headers:
-            for header in headers:
-                key = header['name'].lower()
-                value = header['value']
+        for header in headers:
+            key = header['name'].lower()
+            value = header['value']
 
-                if key in ['from', 'to', 'subject', 'date']:
-                    row[key] = value
-                elif key == 'message-id':
-                    row['message_id'] = value
+            if key in ['to', 'subject', 'date']:
+                row[key] = value
+            elif key == 'from':
+                row['sender'] = value
+            elif key == 'message-id':
+                row['message_id'] = value
 
         row['body'] = self._parse_parts(parts)
 
@@ -350,7 +345,7 @@ class GmailHandler(APIHandler):
         if len(messages) % self.max_batch_size > 0:
             self._get_messages(data, messages[total_pages * self.max_batch_size:])
 
-    def call_gmail_api(self, method_name: str = None, params: dict = None):
+    def call_gmail_api(self, method_name: str = None, params: dict = None) -> pd.DataFrame:
         """Call Gmail API and map the data to pandas DataFrame
         Args:
             method_name (str): method name

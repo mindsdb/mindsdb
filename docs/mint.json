@@ -528,4 +528,14 @@
       "tagId": "GTM-MNN47J3"
     }
   }
-}
+},
+"group": "Time Series",
+              "pages": [
+                {
+                  "group": "Nixtla",
+                  "pages": [
+                    "nixtla/statsforecast"
+                  ]
+                },
+		"custom-model/merlion"
+              ]

@@ -27,8 +27,22 @@ parameters = {
     "path_to_credentials_file": "/home/marios/PycharmProjects/mindsdb/mindsdb/integrations/handlers/gmail_handler/credentials.json"
 }   
 ~~~~
-
 This creates a database called gmail_test. This database comes with a table called emails that we can use to search for emails as well as to process emails.
+
+
+**You can also provide the credentials file with S3 signed urls:**
+~~~~sql
+CREATE
+DATABASE  gmail_test
+WITH  ENGINE = 'gmail',
+parameters = {
+    "singed_url": "https://your-signed-url",
+    "local_file_path":"/path/to/credentials.json"
+}
+~~~~
+This will need a signed url to the credentials file and a local file path to store the credentials file.
+You can find more information on how to create a signed url [here](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ShareObjectPreSignedURL.html).
+
 
 ## Searching for emails with gmail search operators
 

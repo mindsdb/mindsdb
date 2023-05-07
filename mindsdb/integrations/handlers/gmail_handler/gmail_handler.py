@@ -1,6 +1,8 @@
 import os
 import base64
 import re
+
+import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 from google.auth.transport.requests import Request
@@ -17,6 +19,17 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
 )
+
+
+def get_file_from_s3(signed_url, local_file_path):
+    """Download a file from S3 to a local file.
+    Args:
+        signed_url (str): The signed url of the file to download.
+        local_file_path (str): The local path to save the file to.
+    """
+    response = requests.get(signed_url)
+    with open(local_file_path, 'wb') as f:
+        f.write(response.content)
 
 
 class GmailHandler(APIHandler):
@@ -40,6 +53,13 @@ class GmailHandler(APIHandler):
         self.credentials = None
         if 'path_to_credentials_file' in args:
             self.credentials_file = args['path_to_credentials_file']
+        elif 'singed_url' in args:
+            if 'local_file_path' in args:
+                try:
+                    get_file_from_s3(args['singed_url'], args['local_file_path'])
+                except Exception as e:
+                    raise Exception("Failed to download credentials file from S3")
+                self.credentials_file = args['local_file_path']
         self.is_connected = False
         gmails = GmailApiTable(self)
         self.emails = gmails

@@ -405,7 +405,8 @@
               "group": "NLP",
               "pages": [
                 "custom-model/huggingface",
-                "custom-model/openai"
+                "custom-model/openai",
+                "custom-model/langchain"
               ]
             },
             {

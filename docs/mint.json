@@ -412,6 +412,7 @@
             {
               "group": "Bring Your Own Models",
               "pages": [
+                "custom-model/byom",
                 "custom-model/ray-serve",
                 "custom-model/mlflow"
               ]

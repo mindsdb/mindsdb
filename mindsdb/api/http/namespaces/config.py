@@ -53,21 +53,21 @@ class GetConfig(Resource):
     def put(self):
         data = request.json
 
-        unknown_argumens = list(set(data.keys()) - {'auth'})
-        if len(unknown_argumens) > 0:
+        unknown_arguments = list(set(data.keys()) - {'auth'})
+        if len(unknown_arguments) > 0:
             return http_error(
                 400, 'Wrong arguments',
-                f'Unknown argumens: {unknown_argumens}'
+                f'Unknown argumens: {unknown_arguments}'
             )
 
         for key in data.keys():
-            unknown_argumens = list(
+            unknown_arguments = list(
                 set(data[key].keys()) - set(Config()[key].keys())
             )
-            if len(unknown_argumens) > 0:
+            if len(unknown_arguments) > 0:
                 return http_error(
                     400, 'Wrong arguments',
-                    f'Unknown argumens: {unknown_argumens}'
+                    f'Unknown argumens: {unknown_arguments}'
                 )
 
         Config().update(data)
@@ -188,7 +188,7 @@ class Integration(Resource):
             abort(400, "type of 'params' must be dict")
         integration = ca.integration_controller.get(name)
         if integration is None:
-            abort(400, f"Nothin to modify. '{name}' not exists.")
+            abort(400, f"Nothing to modify. '{name}' not exists.")
         try:
             if 'enabled' in params:
                 params['publish'] = params['enabled']
@@ -200,7 +200,7 @@ class Integration(Resource):
                 stream_controller.setup(name)
         except Exception as e:
             log.logger.error(str(e))
-            abort(500, f'Error during integration modifycation: {str(e)}')
+            abort(500, f'Error during integration modification: {str(e)}')
         return '', 200
 
 

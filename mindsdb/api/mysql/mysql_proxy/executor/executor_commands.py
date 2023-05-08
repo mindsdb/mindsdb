@@ -752,7 +752,7 @@ class ExecuteCommands:
         if ml_handler is None:
             integration_record = get_predictor_integration(model_record)
             if integration_record is None:
-                raise Exception("ML engine model was trained with does not esxists")
+                raise Exception("The ML engine model that was trained with does not exist")
             ml_handler = self.session.integration_controller.get_handler(
                 integration_record.name
             )

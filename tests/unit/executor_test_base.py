@@ -107,6 +107,10 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name='statsforecast', data={}, engine='statsforecast')
         db.session.add(r)
+        r = db.Integration(name='popularity-recommender', data={}, engine='popularity-recommender')
+        db.session.add(r)
+        r = db.Integration(name='lightfm', data={}, engine='lightfm')
+        db.session.add(r)
         r = db.Integration(name='lightwood', data={}, engine='lightwood')
         db.session.add(r)
 

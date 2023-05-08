@@ -14,11 +14,12 @@ class LightFMHandler(BaseMLEngine):
 
     name = 'lightfm'
 
-    def create(self, interaction_data: pd.DataFrame = None, item_data: pd.DataFrame = None, meta_data: Dict = None, args: Optional[Dict] = None) -> None:
+    def create(self, data: pd.DataFrame = None, meta_data: Dict = None, args: Optional[Dict] = None) -> None:
+
+        args = args["using"]
 
         rec_preprocessor = RecommenderPreprocessor(
-            interaction_data=interaction_data,
-            item_data=item_data,
+            interaction_data=data,
             **meta_data
         )
 

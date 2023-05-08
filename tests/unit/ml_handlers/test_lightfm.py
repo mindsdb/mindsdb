@@ -1,35 +1,23 @@
 import pandas as pd
-from mindsdb.integrations.handlers.lightfm_handler.helpers import RecommenderPreprocessor
-from mindsdb.integrations.handlers.lightfm_handler.lightfm_handler import LightFMHandler
+import time
 import pytest
 from pathlib import Path
+import scipy as sp
+from unittest.mock import patch
 
-TEST_DATA_PATH = Path(__file__).parent.resolve() / 'data'
-
-
-def get_df(file_name: str) -> pd.DataFrame:
-	return pd.read_csv(TEST_DATA_PATH / file_name)
-
-
-@pytest.fixture
-def interaction_data() -> pd.DataFrame:
-	return get_df('ratings.csv')
+from mindsdb_sql import parse_sql
+from mindsdb.integrations.handlers.lightfm_handler.helpers import RecommenderPreprocessor, item_mapping
+from mindsdb.integrations.handlers.lightfm_handler.lightfm_handler import LightFMHandler
+from unit.executor_test_base import BaseExecutorTest
 
 
-@pytest.fixture
-def item_data() -> pd.DataFrame:
-	return get_df('movies.csv')
-
-
-def test_preprocessing_cf(interaction_data, item_data):
+def test_preprocessing_cf(interaction_data):
 	"""Tests helper function for preprocessing"""
 
 	rec_preprocessor = RecommenderPreprocessor(
 		interaction_data=interaction_data,
-		item_data=item_data,
 		user_id_column_name="userId",
-		item_id_column_name="movieId",
-		item_description_column_name="title"
+		item_id_column_name="movieId"
 	)
 
 	rec_preprocessor.encode_interactions()
@@ -48,19 +36,50 @@ def test_preprocessing_cf(interaction_data, item_data):
 	assert isinstance(interaction_matrix, sp.sparse.coo_matrix)
 
 
-def test_create_light_fm_handler(interaction_data, item_data):
-	lfm_handler = LightFMHandler(model_storage='dummy', engine_storage='dummy')
+class TestLightFM(BaseExecutorTest):
 
-	lfm_handler.create(
-		interaction_data,
-		item_data,
-		dict(
-			user_id_column_name="userId",
-			item_id_column_name="movieId",
-			item_description_column_name="title"
+	def wait_predictor(self, project, name):
+		# wait
+		done = False
+		for attempt in range(200):
+			ret = self.run_sql(f"select * from {project}.models where name='{name}'")
+			if not ret.empty:
+				if ret["STATUS"][0] == "complete":
+					done = True
+					break
+				elif ret["STATUS"][0] == "error":
+					break
+			time.sleep(0.5)
+		if not done:
+			raise RuntimeError("predictor wasn't created")
+
+	def run_sql(self, sql):
+		ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
+		assert ret.error_code is None
+		if ret.data is not None:
+			columns = [col.alias if col.alias is not None else col.name for col in ret.columns]
+			return pd.DataFrame(ret.data, columns=columns)
+
+	@patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+	def test_create_light_fm_handler(self, mock_handler, interaction_data):
+		lfm_handler = LightFMHandler(model_storage='dummy', engine_storage='dummy')
+
+		self.set_handler(mock_handler, name="pg", tables={"df": interaction_data})
+
+		# create project
+		self.run_sql("create database proj")
+
+
+		# todo define model syntax
+
+		# create predictor
+		self.run_sql(
+			"""
+		   
+		"""
 		)
-	)
+		self.wait_predictor("proj", "modelx")
 
 
-def test_predict_light_fm_handler():
-	...
+	def test_predict_light_fm_handler(self):
+		...

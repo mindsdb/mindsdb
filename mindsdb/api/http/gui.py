@@ -9,11 +9,11 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import get_log
 
 
-def download_gui(destignation, version):
-    if isinstance(destignation, str):
-        destignation = Path(destignation)
+def download_gui(destination, version):
+    if isinstance(destination, str):
+        destination = Path(destination)
     logger = get_log('http')
-    dist_zip_path = str(destignation.joinpath('dist.zip'))
+    dist_zip_path = str(destination.joinpath('dist.zip'))
     bucket = "https://mindsdb-web-builds.s3.amazonaws.com/"
 
     resources = [{
@@ -33,18 +33,18 @@ def download_gui(destignation, version):
         logger.error(f'Error during downloading files from s3: {e}')
         return False
 
-    static_folder = destignation
+    static_folder = destination
     static_folder.mkdir(mode=0o777, exist_ok=True, parents=True)
     ZipFile(dist_zip_path).extractall(static_folder)
 
     if static_folder.joinpath('dist').is_dir():
-        shutil.move(str(destignation.joinpath('dist').joinpath('index.html')), static_folder)
-        shutil.move(str(destignation.joinpath('dist').joinpath('assets')), static_folder)
-        shutil.rmtree(destignation.joinpath('dist'))
+        shutil.move(str(destination.joinpath('dist').joinpath('index.html')), static_folder)
+        shutil.move(str(destination.joinpath('dist').joinpath('assets')), static_folder)
+        shutil.rmtree(destination.joinpath('dist'))
 
     os.remove(dist_zip_path)
 
-    version_txt_path = destignation.joinpath('version.txt')
+    version_txt_path = destination.joinpath('version.txt')
     with open(version_txt_path, 'wt') as f:
         f.write(version)
 

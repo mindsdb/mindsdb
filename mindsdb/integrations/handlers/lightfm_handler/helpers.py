@@ -5,6 +5,37 @@ from collections import namedtuple
 from enum import Enum
 
 
+def item_mapping(
+		item_df: pd.DataFrame,
+		item_id_column_name,
+		item_description_column_name
+) -> dict:
+	"""
+
+	takes in item metadata and creates a dict with key being mapped against the index and values being
+	a namedtuple containing item id and product name. Creates an easy way to see what was predicted to a given user
+
+	:param item_df:
+	:param item_id_column_name:
+	:param item_description_column_name:
+
+
+	:return dict:
+	"""
+	item_map = {}
+	item_data = namedtuple("ItemData", [item_id_column_name, item_description_column_name])
+
+	for idx, item in enumerate(
+			zip(
+				item_df[item_id_column_name],
+				item_df[item_description_column_name]
+			)
+	):
+		item_map[idx] = item_data._make(item)
+
+	return item_map
+
+
 class RecommenderType(Enum):
 	cf = 1
 	hybrid = 2
@@ -13,7 +44,6 @@ class RecommenderType(Enum):
 class RecommenderPreprocessorOutput(BaseModel):
 	interaction_df: pd.DataFrame
 	interaction_matrix: sp.sparse.coo_matrix
-	item_mapping: dict
 
 	class Config:
 		arbitrary_types_allowed = True
@@ -24,18 +54,14 @@ class RecommenderPreprocessor:
 	def __init__(
 			self,
 			interaction_data: pd.DataFrame,
-			item_data: pd.DataFrame,
 			user_id_column_name: str,
 			item_id_column_name: str,
-			item_description_column_name: str,
 			threshold: int = 4,
 			recommender_type=RecommenderType.cf
 	):
 		self.interaction_data = interaction_data
-		self.item_data = item_data
 		self.user_id_column_name = user_id_column_name
 		self.item_id_column_name = item_id_column_name
-		self.item_description_column_name = item_description_column_name
 		self.threshold = threshold
 		self.recommender_type = recommender_type
 
@@ -78,26 +104,6 @@ class RecommenderPreprocessor:
 		if self.recommender_type == 'cf':
 			self.prevent_cold_start()
 
-	def item_mapping(self) -> dict:
-		"""
-		takes in item metadata and creates a dict with key being mapped against the index and values being
-		a namedtuple containing item id and product name. Creates an easy way to see what was predicted to a given user
-
-		:return dict:
-		"""
-		item_map = {}
-		item_data = namedtuple("ItemData", [self.item_id_column_name, self.item_description_column_name])
-
-		for idx, item in enumerate(
-				zip(
-					self.item_data[self.item_id_column_name],
-					self.item_data[self.item_description_column_name]
-				)
-		):
-			item_map[idx] = item_data._make(item)
-
-		return item_map
-
 	def construct_interaction_matrix(self) -> sp.sparse.coo_matrix:
 		"""
 		construct user x item interaction matrix
@@ -129,11 +135,11 @@ class RecommenderPreprocessor:
 		:return RecommenderPreprocessorOutput:
 		"""
 		self.encode_interactions()
-		item_map = self.item_mapping()
 		interaction_matrix = self.construct_interaction_matrix()
 
 		return RecommenderPreprocessorOutput(
 			interaction_df=self.interaction_data,
 			interaction_matrix=interaction_matrix,
-			item_mapping=item_map
 		)
+
+

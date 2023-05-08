@@ -1,15 +1,14 @@
 import pandas as pd
 import time
 
-
 from unittest.mock import patch
 
 from mindsdb_sql import parse_sql
 
-from mindsdb.integrations.handlers.popularity_rec_handler.popularity_rec_handler import PopularityRecommenderHandler
 from unit.executor_test_base import BaseExecutorTest
 
-#wip
+
+# wip
 class TestPopularityRecommender(BaseExecutorTest):
 
 	def wait_predictor(self, project, name):
@@ -37,30 +36,34 @@ class TestPopularityRecommender(BaseExecutorTest):
 	@patch("mindsdb.integrations.handlers.postgres_handler.Handler")
 	def test_create_popularity_handler(self, mock_handler, interaction_data):
 
-		self.set_handler(mock_handler, name="pg", tables={"df": interaction_data})
-
 		# create project
 		self.run_sql("create database proj")
+		self.set_handler(mock_handler, name="pg", tables={"df": interaction_data})
 
 		# create predictor
 		self.run_sql(
 			"""
-		   create model proj.modelx
-		   from pg (select * from df)
-		   predict c
-		   using
-			 engine='popularity-recommender',
-			 item_id='movieId',
-			 user_id='userId',
-			 n_recommendations=10
-		"""
+			create model proj.modelx
+			from pg (select * from df)
+			predict movieId
+			using
+				engine='popularity-recommender',
+				item_id='movieId',
+				user_id='userId',
+				n_recommendations=10
+				"""
 		)
 		self.wait_predictor("proj", "modelx")
 
+		result_df = self.run_sql(
+			"""
+		   SELECT p.*
+		   FROM pg.df as t
+		   JOIN proj.modelx as p
+		"""
+		)
 
-
-
-
+		assert True
 
 	def test_predict_popularity_handler(self):
 		...

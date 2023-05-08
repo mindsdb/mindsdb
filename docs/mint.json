@@ -397,6 +397,7 @@
               "pages": [
                 "ml-engines/automl/lightwood",
                 "ml-engines/automl/ludwig",
+                "ml-engines/automl/autokeras",
                 "ml-engines/automl/autosklearn"
               ]
             },

@@ -425,7 +425,8 @@
                     "nixtla/statsforecast",
                     "nixtla/neuralforecast"
                   ]
-                }
+                },
+                "custom-model/merlion"
               ]
             }
           ]

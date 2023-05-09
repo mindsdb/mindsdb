@@ -56,6 +56,29 @@ class ProductsTable(APITable):
             else:
                 raise ValueError(f"Unknown query target {type(target)}")
 
+        # WHERE
+        conditions = extract_comparison_conditions(query.where)
+
+        # ORDER BY
+        order_by_conditions = {}
+        if query.order_by and len(query.order_by) > 0:
+            order_by_conditions["columns"] = []
+            order_by_conditions["ascending"] = []
+
+            for an_order in query.order_by:
+                if an_order.field.parts[0] == "products":
+                    if an_order.field.parts[1] in self.get_columns():
+                        order_by_conditions["columns"].append(an_order.field.parts[1])
+
+                        if an_order.direction == "ASC":
+                            order_by_conditions["ascending"].append(True)
+                        else:
+                            order_by_conditions["ascending"].append(False)
+                    else:
+                        raise ValueError(
+                            f"Order by unknown column {an_order.field.parts[1]}"
+                        )
+
         # LIMIT
         if query.limit:
             total_results = query.limit.value
@@ -68,6 +91,12 @@ class ProductsTable(APITable):
             products_df = pd.DataFrame([], columns=selected_columns)
         else:
             products_df = products_df[selected_columns]
+
+            if len(order_by_conditions.get("columns", [])) > 0:
+                products_df = products_df.sort_values(
+                    by=order_by_conditions["columns"],
+                    ascending=order_by_conditions["ascending"],
+                )
 
         return products_df
 

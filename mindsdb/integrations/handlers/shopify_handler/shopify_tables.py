@@ -4,7 +4,6 @@ from typing import Text, List, Dict
 
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
 from utils import parse_statement, get_results
 
@@ -92,8 +91,8 @@ class CustomersTable(APITable):
     def get_customers(self, **kwargs) -> List[Dict]:
         api_session = self.handler.connect()
         shopify.ShopifyResource.activate_session(api_session)
-        products = shopify.Customer.find(**kwargs)
-        return [product.to_dict() for product in products]
+        customers = shopify.Customer.find(**kwargs)
+        return [customer.to_dict() for customer in customers]
 
 
 class OrdersTable(APITable):

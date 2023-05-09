@@ -44,7 +44,32 @@ class ProductsTable(APITable):
         ValueError
             If the query contains an unsupported condition
         """
-        pass
+
+        # SELECT
+        selected_columns = []
+        for target in query.targets:
+            if isinstance(target, ast.Star):
+                selected_columns = self.get_columns()
+                break
+            elif isinstance(target, ast.Identifier):
+                selected_columns.append(target.parts[-1])
+            else:
+                raise ValueError(f"Unknown query target {type(target)}")
+
+        # LIMIT
+        if query.limit:
+            total_results = query.limit.value
+        else:
+            total_results = 20
+
+        products_df = pd.json_normalize(self.get_products(limit=total_results))
+
+        if len(products_df) == 0:
+            products_df = pd.DataFrame([], columns=selected_columns)
+        else:
+            products_df = products_df[selected_columns]
+
+        return products_df
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_products(limit=1)).columns.tolist()

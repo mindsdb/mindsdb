@@ -34,7 +34,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb import __version__ as mindsdb_version
+from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.model.functions import (
@@ -368,6 +368,17 @@ class BaseMLEngineExec:
             args['target'] = predictor_record.to_predict[0]
             args['dtype_dict'] = predictor_record.dtype_dict
             args['learn_args'] = predictor_record.learn_args
+
+        if self.handler_class.__name__ in ('LangChainHandler',):
+            from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
+            from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+
+            sql_session = SessionController()
+            sql_session.database = 'mindsdb'
+
+            command_executor = ExecuteCommands(sql_session, executor=None)
+
+            args['executor'] = command_executor
 
         try:
             predictions = ml_handler.predict(df, args)

@@ -1,7 +1,7 @@
 import shopify
 import pandas as pd
 
-from typing import List
+from typing import Text, List, Dict
 
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
@@ -46,7 +46,10 @@ class ProductsTable(APITable):
         """
         pass
 
-    def get_products(self, **kwargs):
+    def get_columns(self) -> List[Text]:
+        return pd.json_normalize(self.get_products(limit=1)).columns.tolist()
+
+    def get_products(self, **kwargs) -> List[Dict]:
         api_session = self.handler.connect()
         shopify.ShopifyResource.activate_session(api_session)
         products = shopify.Product.find(**kwargs)

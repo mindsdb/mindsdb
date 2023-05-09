@@ -1,11 +1,18 @@
 import pandas as pd
-from typing import Text, List
+from typing import Text, List, Dict, Tuple
 
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
 
-def parse_statement(query: ast.Select, table: Text, columns: List[Text]):
+def parse_statement(
+        query: ast.Select,
+        table: Text,
+        columns: List[Text]
+) -> Tuple[List[Text], List[List[Text]], Dict[Text, List[Text]], int]:
+    """
+    Parses a SQL SELECT statement into its components: SELECT, WHERE, ORDER BY, LIMIT.
+    """
     # SELECT
     selected_columns = []
     for target in query.targets:
@@ -49,7 +56,16 @@ def parse_statement(query: ast.Select, table: Text, columns: List[Text]):
     return selected_columns, where_conditions, order_by_conditions, result_limit
 
 
-def get_results(df: pd.DataFrame, selected_columns, where_conditions, order_by_conditions, result_limit=None) -> pd.DataFrame:
+def get_results(
+        df: pd.DataFrame,
+        selected_columns: List[Text],
+        where_conditions: List[List[Text]],
+        order_by_conditions: Dict[Text, List[Text]],
+        result_limit: int = None
+) -> pd.DataFrame:
+    """
+    Get results from a DataFrame based on conditions extracted from a parsed query statement.
+    """
     if result_limit:
         df = df.head(result_limit)
 
@@ -70,7 +86,10 @@ def get_results(df: pd.DataFrame, selected_columns, where_conditions, order_by_c
     return df
 
 
-def filter_df(df: pd.DataFrame, where_conditions) -> pd.DataFrame:
+def filter_df(df: pd.DataFrame, where_conditions: List[List[Text]]) -> pd.DataFrame:
+    """
+    Filter a DataFrame based on a list of WHERE conditions.
+    """
     for condition in where_conditions:
         column = condition[1]
         operator = '==' if condition[0] == '=' else condition[0]

@@ -34,7 +34,7 @@ class TestPopularityRecommender(BaseExecutorTest):
 			return pd.DataFrame(ret.data, columns=columns)
 
 	@patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-	def test_create_popularity_handler(self, mock_handler, interaction_data):
+	def test_popularity_handler(self, mock_handler, interaction_data):
 
 		# create project
 		self.run_sql("create database proj")
@@ -63,7 +63,14 @@ class TestPopularityRecommender(BaseExecutorTest):
 		"""
 		)
 
-		assert True
+		assert not result_df.empty
 
-	def test_predict_popularity_handler(self):
-		...
+		# ensure that we have the right number of recommendations per user id
+		assert result_df.userId.value_counts().isin([10]).all()
+
+		# check we have predictions for all user_ids
+		assert set(interaction_data.userId.unique()) == set(result_df.userId.unique())
+
+
+
+

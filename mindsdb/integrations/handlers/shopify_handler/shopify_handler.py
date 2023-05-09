@@ -65,9 +65,9 @@ class ShopifyHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            connection = self.connect()
-            shopify.ShopifyResource.activate_session(connection)
-            # TODO: check if connection is valid
+            api_session = self.connect()
+            shopify.ShopifyResource.activate_session(api_session)
+            shopify.Shop.current()
             response.success = True
         except Exception as e:
             log.logger.error(f'Error connecting to Shopify!')

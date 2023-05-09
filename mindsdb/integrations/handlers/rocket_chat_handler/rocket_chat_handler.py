@@ -107,9 +107,11 @@ class RocketChatHandler(APIHandler):
         user = None
         bot_id = None
         if 'u' in message:
-            username = message['u']['username']
-            user = message['u']['name']
-        if 'bot' in message:
+            if 'username' in message['u']:
+                username = message['u']['username']
+            if 'name' in message['u']:
+                user = message['u']['name']
+        if 'bot' in message and 'i' in message['bot']:
             bot_id = message['bot']['i']
         return [id, room_id, bot_id, message_text, username, user, sent_at]
 

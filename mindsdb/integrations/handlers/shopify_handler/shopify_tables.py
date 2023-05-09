@@ -130,3 +130,46 @@ class ProductsTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         products = shopify.Product.find(**kwargs)
         return [product.to_dict() for product in products]
+
+
+class CustomersTable(APITable):
+    """The Shopify Customers Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Pulls data from the Shopify "GET /customers" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+            Shopify Customers matching the query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        selected_columns, where_conditions, order_by_conditions, total_results = parse_statement(
+            query,
+            'customers',
+            self.get_columns()
+        )
+
+        customers_df = pd.json_normalize(self.get_customers(limit=total_results))
+
+        customers_df = get_results(customers_df, selected_columns, where_conditions, order_by_conditions)
+
+        return customers_df
+
+    def get_columns(self) -> List[Text]:
+        return pd.json_normalize(self.get_customers(limit=1)).columns.tolist()
+
+    def get_customers(self, **kwargs) -> List[Dict]:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+        products = shopify.Customer.find(**kwargs)
+        return [product.to_dict() for product in products]

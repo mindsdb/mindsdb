@@ -45,3 +45,9 @@ class ProductsTable(APITable):
             If the query contains an unsupported condition
         """
         pass
+
+    def get_products(self, **kwargs):
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+        products = shopify.Product.find(**kwargs)
+        return [product.to_dict() for product in products]

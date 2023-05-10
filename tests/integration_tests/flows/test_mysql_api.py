@@ -83,7 +83,8 @@ class BaseStuff:
                 command=cmd,
                 remove=True,
                 volumes={str(tmpdirname): {'bind': '/temp', 'mode': 'ro'}},
-                environment={"MYSQL_PWD": self.config["auth"]["password"]})
+                environment={"MYSQL_PWD": self.config["auth"]["password"]}
+            )
         return self.to_dicts(res.decode(encoding))
 
     def create_database(self, db_data):
@@ -178,15 +179,15 @@ class TestMySqlApi(BaseStuff):
         self.create_database(self.postgres_db)
         self.validate_database_creation(self.postgres_db)
 
-    def test_create_mariadb_datasources(self, maria_db):
-        self.create_database(maria_db)
-        self.validate_database_creation(maria_db)
+    def test_create_mariadb_datasources(self):
+        self.create_database(self.maria_db)
+        self.validate_database_creation(self.maria_db)
 
-    def test_create_mysql_datasources(self, mysql_db):
-        self.create_database(mysql_db)
-        self.validate_database_creation(mysql_db)
+    def test_create_mysql_datasources(self):
+        self.create_database(self.mysql_db)
+        self.validate_database_creation(self.mysql_db)
 
-    def test_create_predictor(self, mysql_db):
+    def test_create_predictor(self):
         _query = f"CREATE MODEL {self.predictor_name} from MYSQL (select * from test.rentals) PREDICT rental_price;"
         self.query(_query)
         self.check_predictor_readiness(self.predictor_name)

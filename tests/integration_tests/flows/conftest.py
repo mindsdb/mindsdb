@@ -224,21 +224,20 @@ def postgres_db(request):
                 container.kill()
             raise e
 
-    response = {
+    request.cls.postgres_db = {
         "type": "postgres",
         "connection_data": connection_args
     }
 
-    request.cls.postgres_db = response
-    yield response
+    yield
 
     if not os.environ.get("MICROSERVICE_MODE", False):
         container.kill()
         docker_client.close()
 
 
-@pytest.fixture(scope="function")
-def mysql_db():
+@pytest.fixture(scope="class")
+def mysql_db(request):
     if os.environ.get("MICROSERVICE_MODE", False):
         connection_args = {
             "host": "mysql_db",
@@ -268,7 +267,7 @@ def mysql_db():
                 command="--secure-file-priv=/",
                 detach=True,
                 environment={"MYSQL_ROOT_PASSWORD": "supersecret"},
-                ports={"3306/tcp": 13306},
+                ports={"3306/tcp": 13306}
             )
             waitReadiness(container, "/usr/sbin/mysqld: ready for connections. Version: '8.0.27'")
         except Exception as e:
@@ -276,16 +275,20 @@ def mysql_db():
                 container.kill()
             raise e
 
-    yield {"type": "mysql",
-           "connection_data": connection_args}
+    request.cls.mysql_db = {
+        "type": "mysql",
+        "connection_data": connection_args
+    }
+
+    yield
 
     if not os.environ.get("MICROSERVICE_MODE", False):
         container.kill()
         docker_client.close()
 
 
-@pytest.fixture(scope="function")
-def maria_db():
+@pytest.fixture(scope="class")
+def maria_db(request):
     if os.environ.get("MICROSERVICE_MODE", False):
         connection_args = {
             "host": "maria_db",
@@ -323,8 +326,12 @@ def maria_db():
                 container.kill()
             raise e
 
-    yield {"type": "mariadb",
-           "connection_data": connection_args}
+    request.cls.maria_db = {
+        "type": "mariadb",
+        "connection_data": connection_args
+    }
+
+    yield
 
     if not os.environ.get("MICROSERVICE_MODE", False):
         container.kill()

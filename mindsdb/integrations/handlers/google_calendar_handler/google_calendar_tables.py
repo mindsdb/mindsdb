@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pandas as pd
 from mindsdb_sql.parser import ast
 from pandas import DataFrame
@@ -6,7 +8,7 @@ from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
 )
-from mindsdb.integrations.utilities.date_utils import utc_date_str_to_timestamp_ms, parse_utc_date
+from mindsdb.integrations.utilities.date_utils import utc_date_str_to_timestamp_ms, parse_utc_date, parse_local_date
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
 
@@ -28,10 +30,20 @@ class GoogleCalendarEventsTable(APITable):
         # Get the start and end times from the conditions.
         params = {}
         for op, arg1, arg2 in conditions:
-            if arg1 == 'timeMax' or arg1 == 'timeMin':
-                date = parse_utc_date(arg2)
+            if arg1 == 'start_time' or arg1 == 'end_time':
+                arg_1 = 'timeMax' if arg1 == 'end_time' else 'timeMin'
+                date = parse_local_date(arg2)
+                # Make date of format like this 2023-02-15T22%3A00%3A00Z
+                dt = datetime.strptime(arg2, "%Y-%m-%d")
+                dt = dt.replace(hour=0, minute=0, second=0)
+
+                # Format the datetime object in ISO 8601 format
+                iso_format = dt.isoformat()
+
+                # Add the 'Z' at the end to indicate UTC timezone
+                iso_format += 'Z'
                 if op == '=':
-                    params[arg1] = date
+                    params[arg_1] = iso_format
                 else:
                     raise NotImplementedError
             elif arg1 == 'timeZone':
@@ -74,6 +86,13 @@ class GoogleCalendarEventsTable(APITable):
             events.columns = self.get_columns()
             for col in set(events.columns).difference(set(selected_columns)):
                 events = events.drop(col, axis=1)
+
+        if query.limit:
+            # Invert the order if the query is descending.
+            events = events[::-1]
+            # Get the first n rows.
+            events = events.head(query.limit.value)
+
         return events
 
     def insert(self, query: ast.Insert):
@@ -111,11 +130,14 @@ class GoogleCalendarEventsTable(APITable):
             'timeZone': event_data['timeZone']
         }
 
-        event_data['attendees'] = event_data['attendees'].split(',')
-        event_data['attendees'] = [{'email': attendee} for attendee in event_data['attendees']]
+        try:
+            event_data['attendees'] = event_data['attendees'].split(',')
+            event_data['attendees'] = [{'email': attendee} for attendee in event_data['attendees']]
+        except Exception as e:
+            event_data['attendees'] = event_data['attendees']
 
         # Insert the event into the Google Calendar API.
-        self.handler.call_application_api(method_name='insert_event', params=event_data)
+        self.handler.call_application_api(method_name='create_event', params=event_data)
 
     def update(self, query: ast.Update):
         """
@@ -204,7 +226,6 @@ class GoogleCalendarEventsTable(APITable):
     def get_columns(self) -> list:
         """Gets all columns to be returned in pandas DataFrame responses"""
         return [
-            'kind',
             'etag',
             'id',
             'status',

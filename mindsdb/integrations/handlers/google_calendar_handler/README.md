@@ -42,8 +42,8 @@ SELECT id,
        author_username,
        text
 FROM my_calendar.calendar
-WHERE start_time > '2023-02-16'
-  AND end_time < '2023-04-09' LIMIT 20;
+WHERE start_time = '2023-02-16'
+  AND end_time = '2023-04-09' LIMIT 20;
 ~~~~
 
 ## Creating Events using SQL
@@ -119,6 +119,6 @@ CREATE
 PREDICTOR predict_future_events
 FROM my_calendar.calendar
 PREDICT start_time, end_time, summary, description, location, attendees, reminders
-WHERE timeMin = '2023-02-16'
-  AND timeMax = '2023-04-09'
+WHERE start_time = '2023-02-16'
+  AND end_time = '2023-04-09'
 ~~~~

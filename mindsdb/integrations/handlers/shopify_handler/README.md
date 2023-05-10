@@ -60,6 +60,11 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
 ## TODO
 
 - [ ] Support INSERT, UPDATE and DELETE for Products, Customers and Orders tables
+- [ ] Shopify Payments table
+- [ ] Shopify Inventory table
+- [ ] Shopify Discounts table
+- [ ] Shopify Sales Channels table
+- [ ] Many more
 
 ## Example Usage
 
@@ -83,9 +88,9 @@ SELECT * FROM shopify_datasource.products
 Run more advanced queries:
 
 ~~~~sql
-SELECT  id, name
+SELECT  id, title
 FROM shopify_datasource.products
-WHERE status = 'sent'
+WHERE status = 'active'
 ORDER BY id
 LIMIT 5
 ~~~~

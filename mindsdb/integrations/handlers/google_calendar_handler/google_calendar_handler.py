@@ -5,6 +5,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from mindsdb.integrations.handlers.google_fit_handler.google_fit_handler import SCOPES
 from mindsdb_sql import parse_sql
 from pandas import DataFrame
 
@@ -39,10 +40,11 @@ class GoogleCalendarHandler(APIHandler):
         self.service = None
         self.connection_data = kwargs.get('connection_data', {})
         self.credentials_file = self.connection_data.get('credentials', None)
+        self.scopes = ['https://www.googleapis.com/auth/calendar', 
+              'https://www.googleapis.com/auth/calendar.events',
+              'https://www.googleapis.com/auth/calendar.readonly'
+            ]
         self.credentials = None
-        self.scopes = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/calendar.events',
-                       'https://www.googleapis.com/auth/calendar.readonly',
-                       'https://www.googleapis.com/auth/calendar.readonly']
         self.is_connected = False
         events = GoogleCalendarEventsTable(self)
         self.events = events
@@ -142,7 +144,10 @@ class GoogleCalendarHandler(APIHandler):
             DataFrame
         """
         service = self.connect()
-        params['attendees'] = params['attendees'].split(',')
+        # Check if 'attendees' is a string and split it into a list
+        if isinstance(params['attendees'], str):
+            params['attendees'] = params['attendees'].split(',')
+
         event = {
             'summary': params['summary'],
             'location': params['location'],
@@ -158,9 +163,8 @@ class GoogleCalendarHandler(APIHandler):
             'recurrence': [
                 'RRULE:FREQ=DAILY;COUNT=2'
             ],
-            'attendees': {
-                [{'email': attendee} for attendee in params['attendees']]
-            },
+            'attendees': [{'email': attendee['email']} for attendee in (params['attendees'] 
+                            if isinstance(params['attendees'], list) else [params['attendees']])],
             'reminders': {
                 'useDefault': False,
                 'overrides': [
@@ -169,6 +173,7 @@ class GoogleCalendarHandler(APIHandler):
                 ],
             },
         }
+
         event = service.events().insert(calendarId='primary', body=event).execute()
         return pd.DataFrame([event], columns=self.events.get_columns())
 

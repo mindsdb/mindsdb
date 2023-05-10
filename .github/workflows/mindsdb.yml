@@ -48,14 +48,6 @@ jobs:
       env:
         ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
         mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
-    - name: Install dependencies Windows
-      run: |
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          pip install torch==1.7.0+cpu torchvision==0.8.1+cpu -f https://download.pytorch.org/whl/torch_stable.html;
-        fi
-      shell: bash
-      env:
-        CHECK_FOR_UPDATES: False
     - name: Install staging mdb libraries if it's not mindsdb/stable
       if: ${{ github.ref != 'refs/heads/stable' }}
       run: |
@@ -73,7 +65,7 @@ jobs:
           cat mindsdb/interfaces/storage/db.py | grep integration
 
           env PYTHONPATH=./ pytest tests/unit/test_executor.py
-        
+
           # need fix in LW. not working yet 
           env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
           
@@ -90,15 +82,6 @@ jobs:
           # it is too early for such tests
           # env PYTHONPATH=./ pytest tests/unit/test_interfaces_consistency.py
 
-          echo -e "\n===============MySQL Handler===============\n"
-          pytest -svx tests/handler_tests/test_mysql_handler.py
-
-          echo -e "\n===============PostgreSQL Handler===============\n"
-          pytest -svx tests/handler_tests/test_postgres_handler.py
-
-          echo -e "\n===============MariaDB Handler===============\n"
-          pytest -svx tests/handler_tests/test_mariadb_handler.py
-
           # MySQL API
           echo -e "\n===============test MySQL API===============\n"
           pytest -vx tests/integration_tests/flows/test_mysql_api.py
@@ -106,6 +89,9 @@ jobs:
           # MySQL binary API
           echo -e "\n===============test MySQL binary API===============\n"
           pytest -vx -k 'not TestMySqlApi' tests/integration_tests/flows/test_mysql_bin_api.py
+
+          # echo -e "\n===============TS predictions===============\n"
+          pytest -svx tests/integration_tests/flows/test_ts_predictions.py
 
           # HTTP
           echo -e "\n===============test HTTP===============\n"

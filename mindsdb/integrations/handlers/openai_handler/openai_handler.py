@@ -20,6 +20,8 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff, \
     truncate_msgs_for_token_limit
 
+CHAT_MODELS = ('gpt-3.5-turbo', 'gpt-3.5-turbo-0301', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-4-32k-0314')
+
 
 class OpenAIHandler(BaseMLEngine):
     name = 'openai'
@@ -32,10 +34,7 @@ class OpenAIHandler(BaseMLEngine):
         self.rate_limit = 60  # requests per minute
         self.max_batch_size = 20
         self.default_max_tokens = 100
-        self.chat_completion_models = (
-            'gpt-3.5-turbo', 'gpt-3.5-turbo-0301',
-            'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-4-32k-0314'
-        )
+        self.chat_completion_models = CHAT_MODELS
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -65,8 +64,12 @@ class OpenAIHandler(BaseMLEngine):
         args = args['using']
 
         args['target'] = target
+        available_models = [m.openai_id for m in openai.Model.list().data]
         if not args.get('model_name'):
             args['model_name'] = self.default_model
+        elif args['model_name'] not in available_models:
+            raise Exception(f"Invalid model name. Please use one of {available_models}")
+
         if not args.get('mode'):
             args['mode'] = self.default_mode
         elif args['mode'] not in self.supported_modes:
@@ -417,16 +420,21 @@ class OpenAIHandler(BaseMLEngine):
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         # TODO: Update to use update() artifacts
+
         args = self.model_storage.json_get('args')
-        api_key = self._get_openai_api_key(args)
 
-        model_name = args.get('model_name', self.default_model)
-        meta = openai.Model.retrieve(model_name, api_key=api_key)
+        if attribute == 'args':
+            return pd.DataFrame(args.items(), columns=['key', 'value'])
+        elif attribute == 'metadata':
+            api_key = self._get_openai_api_key(args)
+            model_name = args.get('model_name', self.default_model)
+            meta = openai.Model.retrieve(model_name, api_key=api_key)
+            return pd.DataFrame(meta.items(), columns=['key', 'value'])
+        else:
+            tables = ['args', 'metadata']
+            return pd.DataFrame(tables, columns=['tables'])
 
-        return pd.DataFrame([[meta['id'], meta['object'], meta['owned_by'], meta['permission'], args]],
-                            columns=['id', 'object', 'owned_by', 'permission', 'model_args'])
-
-    def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """
         Fine-tune OpenAI GPT models. Steps are roughly:
           - Analyze input data and modify it according to suggestions made by the OpenAI utility tool

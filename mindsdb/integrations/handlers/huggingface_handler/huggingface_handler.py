@@ -30,6 +30,7 @@ class HuggingFaceHandler(BaseMLEngine):
                            'zero-shot-classification',
                            'translation',
                            'summarization',
+                           'text2text-generation',
                            'fill-mask']
 
         if metadata.pipeline_tag not in supported_tasks:
@@ -142,115 +143,131 @@ class HuggingFaceHandler(BaseMLEngine):
         ###### persist changes to handler folder
         self.engine_storage.folder_sync(model_name)
 
+    def predict_text_classification(self, pipeline, item, args):
+        top_k = args.get('top_k', 1000)
+
+        result = pipeline([item], top_k=top_k, truncation=True, max_length=args['max_length'])[0]
+
+        final = {}
+        explain = {}
+        if type(result) == dict:
+            result = [result]
+        final[args['target']] = args['labels_map'][result[0]['label']]
+        for elem in result:
+            if args['labels_map']:
+                explain[args['labels_map'][elem['label']]] = elem['score']
+            else:
+                explain[elem['label']] = elem['score']
+        final[f"{args['target']}_explain"] = explain
+        return final
+
+    def predict_zero_shot(self, pipeline, item, args):
+        top_k = args.get('top_k', 1000)
+
+        result = pipeline([item], candidate_labels=args['candidate_labels'],
+                                     truncation=True, top_k=top_k, max_length=args['max_length'])[0]
+
+        final = {}
+        final[args['target']] = result['labels'][0]
+
+        explain = dict(zip(result['labels'], result['scores']))
+        final[f"{args['target']}_explain"] = explain
+
+        return final
+
+    def predict_translation(self, pipeline, item, args):
+        result = pipeline([item], max_length=args['max_length'])[0]
+
+        final = {}
+        final[args['target']] = result['translation_text']
+
+        return final
+
+    def predict_summarization(self, pipeline, item, args):
+        result = pipeline([item], min_length=args['min_output_length'], max_length=args['max_output_length'])[0]
+
+        final = {}
+        final[args['target']] = result['summary_text']
+
+        return final
+
+    def predict_text2text(self, pipeline, item, args):
+        result = pipeline([item], max_length=args['max_length'])[0]
+
+        final = {}
+        final[args['target']] = result['generated_text']
+
+        return final
+
+    def predict_fill_mask(self, pipeline, item, args):
+        result = pipeline([item])[0]
+
+        final = {}
+        final[args['target']] = result[0]['sequence']
+        explain = {elem['sequence']: elem['score'] for elem in result}
+        final[f"{args['target']}_explain"] = explain
+
+        return final
+
     def predict(self, df, args=None):
 
-        def tidy_output_classification(args, result):
-            final = {}
-            explain = {}
-            if type(result) == dict:
-                result = [result]
-            final[args['target']] = args['labels_map'][result[0]['label']]
-            for elem in result:
-                if args['labels_map']:
-                    explain[args['labels_map'][elem['label']]] = elem['score']
-                else:
-                    explain[elem['label']] = elem['score']
-            final[f"{args['target']}_explain"] = explain
-
-            return final
-
-        def tidy_output_zero_shot(args, result):
-            final = {}
-            final[args['target']] = result['labels'][0]
-
-            explain = dict(zip(result['labels'], result['scores']))
-            final[f"{args['target']}_explain"] = explain
-
-            return final
-
-        def tidy_output_translation(args, result):
-            final = {}
-            final[args['target']] = result['translation_text']
-
-            return final
-
-        def tidy_output_summarization(args, result):
-            final = {}
-            final[args['target']] = result['summary_text']
-
-            return final
-
-        def tidy_output_fill_mask(args, result):
-            final = {}
-            final[args['target']] = result[0]['sequence']
-            explain = {elem['sequence']: elem['score'] for elem in result}
-            final[f"{args['target']}_explain"] = explain
-
-            return final
+        fnc_list = {
+            'text-classification': self.predict_text_classification,
+            'zero-shot-classification': self.predict_zero_shot,
+            'translation': self.predict_translation,
+            'summarization': self.predict_summarization,
+            'fill-mask': self.predict_fill_mask
+        }
 
         ###### get stuff from model folder
         args = self.model_storage.json_get('args')
+
+        task = args['task']
+
+        if task not in fnc_list:
+            raise RuntimeError(f'Unknown task: {task}')
+
+        fnc = fnc_list[task]
 
         hf_model_storage_path = self.engine_storage.folder_get(args['model_name'], update=False)
 
         pipeline = transformers.pipeline(task=args['task_proper'], model=hf_model_storage_path,
                                          tokenizer=hf_model_storage_path)
 
-        input_list = df[args['input_column']]
+        input_column = args['input_column']
+        if input_column not in df.columns:
+            raise RuntimeError(f'Column "{input_column}" not found in input data')
+        input_list = df[input_column]
 
         max_tokens = pipeline.tokenizer.model_max_length
-        input_list_str = []
-        errors = []
-        for i, line in enumerate(input_list):
+
+        results = []
+        for item in input_list:
             if max_tokens is not None:
-                tokens = pipeline.tokenizer.encode(line)
+                tokens = pipeline.tokenizer.encode(item)
                 if len(tokens) > max_tokens:
                     truncation_policy = args.get('truncation_policy', 'strict')
                     if truncation_policy == 'strict':
-                        errors.append([i, f'Tokens count exceed model limit: {len(tokens)} > {max_tokens}'])
+                        results.append({'error': f'Tokens count exceed model limit: {len(tokens)} > {max_tokens}'})
                         continue
                     elif truncation_policy == 'left':
                         tokens = tokens[-max_tokens + 1: -1]  # cut 2 empty tokens from left and right
                     else:
                         tokens = tokens[1: max_tokens - 1]  # cut 2 empty tokens from left and right
 
-                    line = pipeline.tokenizer.decode(tokens)
+                    item = pipeline.tokenizer.decode(tokens)
 
-            input_list_str.append(str(line))
+            item = str(item)
+            try:
+                result = fnc(pipeline, item, args)
+            except Exception as e:
+                msg = str(e).strip()
+                if msg == '':
+                    msg = e.__class__.__name__
+                result = {'error': msg}
+            results.append(result)
 
-        top_k = args.get('top_k', 1000)
-
-        task = args['task']
-        if task == 'text-classification':
-            output_list_messy = pipeline(input_list_str, top_k=top_k, truncation=True, max_length=args['max_length'])
-            output_list_tidy = [tidy_output_classification(args, x) for x in output_list_messy]
-
-        elif task == 'zero-shot-classification':
-            output_list_messy = pipeline(input_list_str, candidate_labels=args['candidate_labels'],
-                                         truncation=True, top_k=top_k, max_length=args['max_length'])
-            output_list_tidy = [tidy_output_zero_shot(args, x) for x in output_list_messy]
-
-        elif task == 'translation':
-            output_list_messy = pipeline(input_list_str, max_length=args['max_length'])
-            output_list_tidy = [tidy_output_translation(args, x) for x in output_list_messy]
-
-        elif task == 'summarization':
-            output_list_messy = pipeline(input_list_str,
-                                         min_length=args['min_output_length'],
-                                         max_length=args['max_output_length'])
-            output_list_tidy = [tidy_output_summarization(args, x) for x in output_list_messy]
-
-        elif task == 'fill-mask':
-            output_list_messy = pipeline(input_list_str)
-            output_list_tidy = [tidy_output_fill_mask(args, x) for x in output_list_messy]
-        else:
-            raise RuntimeError(f'Unknown task: {task}')
-
-        # inject errors info
-        for i, msg in errors:
-            output_list_tidy.insert(i, {'error': msg})
-
-        pred_df = pd.DataFrame(output_list_tidy)
+        pred_df = pd.DataFrame(results)
 
         return pred_df
 
@@ -258,7 +275,13 @@ class HuggingFaceHandler(BaseMLEngine):
 
         args = self.model_storage.json_get('args')
 
-        hf_api = HfApi()
-        metadata = hf_api.model_info(args['model_name'])
-
-        return pd.DataFrame([[args, metadata.__dict__]], columns=['model_args', 'metadata'])
+        if attribute == 'args':
+            return pd.DataFrame(args.items(), columns=['key', 'value'])
+        elif attribute == 'metadata':
+            hf_api = HfApi()
+            metadata = hf_api.model_info(args['model_name'])
+            data = metadata.__dict__
+            return pd.DataFrame(list(data.items()), columns=['key', 'value'])
+        else:
+            tables = ['args', 'metadata']
+            return pd.DataFrame(tables, columns=['tables'])

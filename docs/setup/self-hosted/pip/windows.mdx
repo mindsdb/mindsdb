@@ -99,6 +99,12 @@ install them manually by following the instructions on their
    python -m mindsdb
    ```
 
+By default, MindsDB will always start the `http` and `mysql` APIs. If you want to use Mongo API, you will need to provide that as a parameter to `--api`. You can do it as following:
+
+   ```bash
+   python -m mindsdb --api=http,mongodb,mysql
+   ```
+
 ## Using Anaconda
 
 Here, you need either [Anaconda](https://www.anaconda.com/products/individual)

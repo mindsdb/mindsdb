@@ -146,7 +146,7 @@ class BaseStuff:
         assert "name" in res and res.get_record("name", ds_type.upper()), f"Expected datasource is not found after creation - {ds_type.upper()}: {res}"
 
 
-@pytest.mark.usefixtures("mindsdb_app")
+@pytest.mark.usefixtures('mindsdb_app', 'postgres_db')
 class TestMySqlApi(BaseStuff):
     """Test mindsdb mysql api.
     All sql commands are being executed through a docker container with mysql client within.
@@ -174,9 +174,9 @@ class TestMySqlApi(BaseStuff):
     def tear_down(cls):
         cls.docker_client.close()
 
-    def test_create_postgres_datasources(self, postgres_db):
-        self.create_database(postgres_db)
-        self.validate_database_creation(postgres_db)
+    def test_create_postgres_datasources(self):
+        self.create_database(self.postgres_db)
+        self.validate_database_creation(self.postgres_db)
 
     def test_create_mariadb_datasources(self, maria_db):
         self.create_database(maria_db)

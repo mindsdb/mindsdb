@@ -33,6 +33,18 @@ parameters = {
 This creates a database called mindsdb_gmail. This database ships with a table called emails that we can use to search for
 emails as well as to write emails.
 
+You can also create a database by giving the credentials file from a s3 signed url.To do this you need to pass in the credentials_file parameter as a signed url.For example:
+~~~~sql
+CREATE DATABASE mindsdb_gmail
+WITH ENGINE = 'gmail',
+parameters = {
+    "credentials_file": "https://s3.amazonaws.com/your_bucket/credentials.json?AWSAccessKeyId=your_access_key&Expires=your_expiry&Signature=your_signature",
+    -- "scopes": ['SCOPE_1', 'SCOPE_2', ...] -- Optional scopes. By default 'https://.../gmail.compose' & 'https://.../gmail.readonly' scopes are used
+};
+~~~~
+
+
+
 ## Searching for emails
 
 Let's get a list of emails from our mailbox using the `SELECT` query.

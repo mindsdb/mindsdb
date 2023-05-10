@@ -9,12 +9,12 @@ from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncPars
 from mindsdb_sql.parser import ast
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
-
+import boto3
 import os
 import time
 from typing import List
 import pandas as pd
-
+import requests
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -26,6 +26,15 @@ from base64 import urlsafe_b64encode, urlsafe_b64decode
 
 DEFAULT_SCOPES = ['https://www.googleapis.com/auth/gmail.compose', 'https://www.googleapis.com/auth/gmail.readonly']
 
+def get_file_from_s3(signed_url):
+    """Download a file from S3 to a local file.
+    Args:
+        signed_url (str): The signed url of the file to download.
+    """
+    response = requests.get(signed_url)
+    if response.status_code != 200:
+        raise Exception("Failed to download file from S3")
+    return response.content
 
 class EmailsTable(APITable):
     """Implementation for the emails table for Gmail"""
@@ -214,6 +223,15 @@ class GmailHandler(APIHandler):
     def create_connection(self) -> object:
         creds = None
         token_file = os.path.join(os.path.dirname(self.credentials_file), 'token.json')
+        if self.credentials_file.startswith('s3://'):
+            token_file = os.path.join('/tmp', 'token.json')
+            s3 = boto3.client('s3')
+            s3.download_file(
+                Bucket=self.credentials_file.split('/')[2],
+                Key='/'.join(self.credentials_file.split('/')[3:]),
+                Filename=token_file
+            )
+            self.credentials_file = os.path.join('/tmp', 'credentials.json')
 
         if os.path.isfile(token_file):
             creds = Credentials.from_authorized_user_file(token_file, self.scopes)

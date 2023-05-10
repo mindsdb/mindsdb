@@ -33,7 +33,7 @@ parameters = {
 This creates a database called mindsdb_gmail. This database ships with a table called emails that we can use to search for
 emails as well as to write emails.
 
-You can also create a database by giving the credentials file from a s3 signed url.To do this you need to pass in the credentials_file parameter as a signed url.For example:
+You can also create a database by giving the credentials file from a s3 pre signed url.To do this you need to pass in the credentials_file parameter as a signed url.For example:
 ~~~~sql
 CREATE DATABASE mindsdb_gmail
 WITH ENGINE = 'gmail',

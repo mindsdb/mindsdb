@@ -1,4 +1,7 @@
+import json
 import re
+
+import requests
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -11,7 +14,6 @@ from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb_sql.parser import ast
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
-import boto3
 import os
 import time
 from typing import List
@@ -129,6 +131,7 @@ class EmailsTable(APITable):
             'subject',
             'snippet',
             'body',
+            'attachments',
         ]
 
     def insert(self, query: ast.Insert):
@@ -202,9 +205,15 @@ class GmailHandler(APIHandler):
 
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
-
         self.connection_args = kwargs.get('connection_data', {})
-        self.credentials_file = self.connection_args['credentials_file']
+        if 'credentials_file' in self.connection_args:
+            self.credentials_file = self.connection_args['credentials_file']
+        if 's3_credentials_file' in self.connection_args:
+            self.s3_credentials_file = self.connection_args['s3_credentials_file']
+        if not 'credentials_file' in self.connection_args and not 's3_credentials_file' in self.connection_args:
+            raise ValueError(
+                "Need the Google Auth Credentials file in order to connect to Gmail"
+            )
         self.scopes = self.connection_args.get('scopes', DEFAULT_SCOPES)
         self.token_file = None
         self.max_page_size = 500
@@ -218,32 +227,36 @@ class GmailHandler(APIHandler):
 
     def create_connection(self) -> object:
         creds = None
-        token_file = os.path.join(os.path.dirname(self.credentials_file), 'token.json')
-        if self.credentials_file.startswith('s3://'):
-            token_file = os.path.join('/tmp', 'token.json')
-            s3 = boto3.client('s3')
-            s3.download_file(
-                Bucket=self.credentials_file.split('/')[2],
-                Key='/'.join(self.credentials_file.split('/')[3:]),
-                Filename=token_file
-            )
-            self.credentials_file = os.path.join('/tmp', 'credentials.json')
-
-        if os.path.isfile(token_file):
-            creds = Credentials.from_authorized_user_file(token_file, self.scopes)
-
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            elif not os.path.isfile(self.credentials_file):
-                raise Exception('Credentials must be a file path')
-            else:
-                flow = InstalledAppFlow.from_client_secrets_file(self.credentials_file, self.scopes)
+        if self.s3_credentials_file:
+            response = requests.get(self.s3_credentials_file)
+            if response.status_code == 200:
+                # data successfully retrieved
+                data = response.content
+                data = json.loads(data)
+                flow = InstalledAppFlow.from_client_config(data, self.scopes)
                 creds = flow.run_local_server(port=0, timeout_seconds=120)
+            else:
+                # handle errors
+                print("Failed to retrieve data: ", response.status_code)
 
-        # Save the credentials for the next run
-        with open(token_file, 'w') as token:
-            token.write(creds.to_json())
+        else:
+            token_file = os.path.join(os.path.dirname(self.credentials_file), 'token.json')
+
+            if os.path.isfile(token_file):
+                creds = Credentials.from_authorized_user_file(token_file, self.scopes)
+
+            if not creds or not creds.valid:
+                if creds and creds.expired and creds.refresh_token:
+                    creds.refresh(Request())
+                elif not os.path.isfile(self.credentials_file):
+                    raise Exception('Credentials must be a file path')
+                else:
+                    flow = InstalledAppFlow.from_client_secrets_file(self.credentials_file, self.scopes)
+                    creds = flow.run_local_server(port=0, timeout_seconds=120)
+
+            # Save the credentials for the next run
+            with open(token_file, 'w') as token:
+                token.write(creds.to_json())
 
         return build('gmail', 'v1', credentials=creds)
 
@@ -257,9 +270,10 @@ class GmailHandler(APIHandler):
         """
         if self.is_connected and self.service is not None:
             return self.service
-
-        self.service = self.create_connection()
-
+        try:
+            self.service = self.create_connection()
+        except Exception as e:
+            raise Exception(f'Error connecting to Gmail API: {e}')
         self.is_connected = True
         return self.service
 
@@ -294,6 +308,25 @@ class GmailHandler(APIHandler):
         ast = parse_sql(query_string, dialect="mindsdb")
 
         return self.query(ast)
+
+    def _get_attachments(self, parts, message_id):
+        if not parts:
+            return []
+        attachments = []
+        for part in parts:
+            if part['filename']:
+                attachment = {
+                    'message_id': message_id,
+                    'filename': part['filename'],
+                    'mimeType': part['mimeType'],
+                    'size': part['body']['size'],
+                    'attachment_id': part['body']['attachmentId']
+                }
+                attachment_json = json.dumps(attachment)
+                attachments.append(attachment_json)
+            elif 'parts' in part:
+                attachments += self._get_attachments(part['parts'], message_id)
+        return attachments
 
     def _parse_parts(self, parts):
         if not parts:
@@ -330,6 +363,7 @@ class GmailHandler(APIHandler):
         # Extract the visible text from the HTML and remove whitespace characters
         text = soup.get_text().strip()
         return text
+
     def _parse_message(self, data, message, exception):
         if exception:
             log.logger.error(f'Exception in getting full email: {exception}')
@@ -358,7 +392,7 @@ class GmailHandler(APIHandler):
                 row['message_id'] = value
 
         row['body'] = self._parse_parts(parts)
-
+        row['attachments'] = self._get_attachments(parts, message['id'])
         data.append(row)
 
     def _get_messages(self, data, messages):

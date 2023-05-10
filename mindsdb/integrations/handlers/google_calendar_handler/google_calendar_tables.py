@@ -40,8 +40,7 @@ class GoogleCalendarEventsTable(APITable):
                 params[arg1] = arg2
             elif arg1 == 'q':
                 params[arg1] = arg2
-            else:
-                raise NotImplementedError
+           
 
         # Get the order by from the query.
         if query.order_by is not None:
@@ -91,23 +90,30 @@ class GoogleCalendarEventsTable(APITable):
         values = query.values[0]
         # Get the event data from the values.
         event_data = {}
+        timestamp_columns = {'start_time', 'end_time', 'created', 'updated'}
+        regular_columns = {'summary', 'description', 'location', 'status', 'html_link',
+                            'creator', 'organizer', 'reminders', 'timeZone', 'calendar_id', 'attendees'}
+
+        # TODO: check why query.columns is None
         for col, val in zip(query.columns, values):
-            if col == 'start_time' or col == 'end_time' or col == 'created' or col == 'updated':
-                event_data[col] = utc_date_str_to_timestamp_ms(val)
-            elif col == 'summary' or col == 'description' or col == 'location' or col == 'status' or col == 'html_link' \
-                    or col == 'creator' or col == 'organizer' or col == 'reminders' \
-                    or col == 'timeZone' or col == 'calendar_id' or col == 'attendees':
-                event_data[col] = val
+            if col.name in timestamp_columns:
+                event_data[col.name] = utc_date_str_to_timestamp_ms(val)
+            elif col.name in regular_columns:
+                event_data[col.name] = val
             else:
                 raise NotImplementedError
+            
+        import datetime
+        st = datetime.datetime.utcfromtimestamp(event_data['start_time'] / 1000).isoformat() + 'Z'
+        et = datetime.datetime.utcfromtimestamp(event_data['end_time'] / 1000).isoformat() + 'Z'
 
         event_data['start'] = {
-            'dateTime': event_data['start_time'],
+            'dateTime': st,
             'timeZone': event_data['timeZone']
         }
 
         event_data['end'] = {
-            'dateTime': event_data['end_time'],
+            'dateTime': et,
             'timeZone': event_data['timeZone']
         }
 
@@ -115,7 +121,7 @@ class GoogleCalendarEventsTable(APITable):
         event_data['attendees'] = [{'email': attendee} for attendee in event_data['attendees']]
 
         # Insert the event into the Google Calendar API.
-        self.handler.call_application_api(method_name='insert_event', params=event_data)
+        self.handler.call_application_api(method_name='create_event', params=event_data)
 
     def update(self, query: ast.Update):
         """
@@ -204,7 +210,6 @@ class GoogleCalendarEventsTable(APITable):
     def get_columns(self) -> list:
         """Gets all columns to be returned in pandas DataFrame responses"""
         return [
-            'kind',
             'etag',
             'id',
             'status',

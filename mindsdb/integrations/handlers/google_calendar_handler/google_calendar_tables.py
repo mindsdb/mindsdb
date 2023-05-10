@@ -134,8 +134,7 @@ class GoogleCalendarEventsTable(APITable):
             event_data['attendees'] = event_data['attendees'].split(',')
             event_data['attendees'] = [{'email': attendee} for attendee in event_data['attendees']]
         except Exception as e:
-            event_data['attendees'] = event_data['attendees']
-
+            event_data['attendees'] = {'email': event_data['attendees']}
         # Insert the event into the Google Calendar API.
         self.handler.call_application_api(method_name='create_event', params=event_data)
 

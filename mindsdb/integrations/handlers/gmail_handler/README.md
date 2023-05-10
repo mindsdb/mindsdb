@@ -97,3 +97,30 @@ by from_user: {{sender}}\
 In less than 500 characters, write an email response to {{sender}} in the following format:\
 Start with proper salutation and respond with a short message in a casual tone, and sign the email with my name mindsdb';
 ~~~~
+
+## Find spam emails
+You can check if an email is spam or not by using the pretrained model of hugging face. To do this, you can use the following query:
+* First you have to create a model:
+~~~~sql
+CREATE MODEL mindsdb.spam_classifier                           
+PREDICT PRED                           
+USING
+  engine = 'huggingface',              
+  task = 'text-classification',        
+  model_name = 'mrm8488/bert-tiny-finetuned-sms-spam-detection', 
+  input_column = 'text_spammy',        
+  labels = ['ham', 'spam'];
+~~~~
+* Then you can have to create a view of the email table that contains the snippet or the body of the email.For example by using the snippet:
+~~~~sql
+CREATE VIEW mindsdb.emails_text AS(
+    SELECT snippet AS text_spammy
+    FROM mindsdb_gmail.emails
+)
+~~~~
+* Finally, you can use the model to predict if an email is spam or not:
+~~~~sql
+SELECT h.PRED, h.PRED_explain, t.text_spammy AS input_text
+FROM test_db AS t
+JOIN mindsdb.spam_classifier AS h;
+~~~~

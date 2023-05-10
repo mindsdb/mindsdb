@@ -51,9 +51,9 @@ WHERE start_time = '2023-02-16'
 Let's test by creating an event in our calendar.
 
 ~~~~sql
-INSERT INTO my_calendar.events (start_time, end_time, summary, description, location, attendees, reminders)
-VALUES ('2023-02-16 10:00:00', '2023-02-16 11:00:00', 'MindsDB Meeting', 'Discussing the future of MindsDB',
-        'MindsDB HQ', '')
+INSERT INTO my_calendar.events (start_time, end_time, summary, description, location, attendees, timeZone)
+VALUES ('2023-02-16', '2023-02-16', 'MindsDB Meeting', 'Discussing the future of MindsDB',
+        'MindsDB HQ', 'spanakis01@gmail.com,theo@mallo.gr' , 'Europe/Athens')
 
 ~~~~
 

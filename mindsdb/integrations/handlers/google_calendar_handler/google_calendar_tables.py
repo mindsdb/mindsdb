@@ -32,7 +32,6 @@ class GoogleCalendarEventsTable(APITable):
         for op, arg1, arg2 in conditions:
             if arg1 == 'start_time' or arg1 == 'end_time':
                 arg_1 = 'timeMax' if arg1 == 'end_time' else 'timeMin'
-                date = parse_local_date(arg2)
                 # Make date of format like this 2023-02-15T22%3A00%3A00Z
                 dt = datetime.strptime(arg2, "%Y-%m-%d")
                 dt = dt.replace(hour=0, minute=0, second=0)
@@ -108,11 +107,20 @@ class GoogleCalendarEventsTable(APITable):
 
         # Get the values from the query.
         values = query.values[0]
+        columns = [col.name for col in query.columns]
         # Get the event data from the values.
         event_data = {}
-        for col, val in zip(query.columns, values):
+        for col, val in zip(columns, values):
             if col == 'start_time' or col == 'end_time' or col == 'created' or col == 'updated':
-                event_data[col] = utc_date_str_to_timestamp_ms(val)
+                dt = datetime.strptime(val, "%Y-%m-%d")
+                dt = dt.replace(hour=0, minute=0, second=0)
+
+                # Format the datetime object in ISO 8601 format
+                iso_format = dt.isoformat()
+
+                # Add the 'Z' at the end to indicate UTC timezone
+                iso_format += 'Z'
+                event_data[col] = iso_format
             elif col == 'summary' or col == 'description' or col == 'location' or col == 'status' or col == 'html_link' \
                     or col == 'creator' or col == 'organizer' or col == 'reminders' \
                     or col == 'timeZone' or col == 'calendar_id' or col == 'attendees':
@@ -133,7 +141,7 @@ class GoogleCalendarEventsTable(APITable):
         try:
             event_data['attendees'] = event_data['attendees'].split(',')
             event_data['attendees'] = [{'email': attendee} for attendee in event_data['attendees']]
-        except Exception as e:
+        except AttributeError as e:
             event_data['attendees'] = {'email': event_data['attendees']}
         # Insert the event into the Google Calendar API.
         self.handler.call_application_api(method_name='create_event', params=event_data)

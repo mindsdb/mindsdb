@@ -142,7 +142,6 @@ class GoogleCalendarHandler(APIHandler):
             DataFrame
         """
         service = self.connect()
-        params['attendees'] = params['attendees'].split(',')
         event = {
             'summary': params['summary'],
             'location': params['location'],
@@ -158,9 +157,9 @@ class GoogleCalendarHandler(APIHandler):
             'recurrence': [
                 'RRULE:FREQ=DAILY;COUNT=2'
             ],
-            'attendees': {
-                [{'email': attendee} for attendee in params['attendees']]
-            },
+            'attendees':
+                params['attendees']
+            ,
             'reminders': {
                 'useDefault': False,
                 'overrides': [

@@ -1,11 +1,13 @@
+import re
+
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-
+from bs4 import BeautifulSoup
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
+from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb_sql.parser import ast
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
@@ -14,7 +16,6 @@ import os
 import time
 from typing import List
 import pandas as pd
-import requests
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -24,17 +25,9 @@ from email.message import EmailMessage
 
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 
-DEFAULT_SCOPES = ['https://www.googleapis.com/auth/gmail.compose', 'https://www.googleapis.com/auth/gmail.readonly']
+DEFAULT_SCOPES = ['https://www.googleapis.com/auth/gmail.compose',
+                  'https://www.googleapis.com/auth/gmail.readonly']
 
-def get_file_from_s3(signed_url):
-    """Download a file from S3 to a local file.
-    Args:
-        signed_url (str): The signed url of the file to download.
-    """
-    response = requests.get(signed_url)
-    if response.status_code != 200:
-        raise Exception("Failed to download file from S3")
-    return response.content
 
 class EmailsTable(APITable):
     """Implementation for the emails table for Gmail"""
@@ -311,11 +304,29 @@ class GmailHandler(APIHandler):
             elif part['mimeType'] == 'multipart/alternative' or 'parts' in part:
                 # Recursively iterate over nested parts to find the plain text body
                 body += self._parse_parts(part['parts'])
+            elif part['mimeType'] == 'text/html':
+                body += self.extract_html_body(part['body']['data'])
             else:
                 log.logger.debug(f"Unhandled mimeType: {part['mimeType']}")
-
+        body = re.sub(r'(?<!>)\s+(?!<)', ' ', body).strip()
         return body
 
+    def extract_html_body(self, encoded_body):
+        """Extracts the HTML body from the encoded body.
+            Args:
+                encoded_body (str): The encoded body.
+            Returns:
+                str: The HTML body.
+        """
+        html_message = urlsafe_b64decode(encoded_body).decode('utf-8')
+        soup = BeautifulSoup(html_message, 'html.parser')
+        # Extract the text from the HTML
+        for element in soup(['style', 'script']):
+            element.extract()
+
+        # Extract the visible text from the HTML and remove whitespace characters
+        text = soup.get_text().strip()
+        return text
     def _parse_message(self, data, message, exception):
         if exception:
             log.logger.error(f'Exception in getting full email: {exception}')
@@ -348,7 +359,8 @@ class GmailHandler(APIHandler):
         data.append(row)
 
     def _get_messages(self, data, messages):
-        batch_req = self.service.new_batch_http_request(lambda id, response, exception: self._parse_message(data, response, exception))
+        batch_req = self.service.new_batch_http_request(
+            lambda id, response, exception: self._parse_message(data, response, exception))
         for message in messages:
             batch_req.add(self.service.users().messages().get(userId='me', id=message['id']))
 

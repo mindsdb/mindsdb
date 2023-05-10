@@ -45,6 +45,12 @@ class EmailsTableTest(unittest.TestCase):
 
         self.assertListEqual(columns, expected_columns)
 
+    def test_4_extract_html_body(self):
+        encoded_body = "SGVsbG8gV29ybGQh"
+        expected_output = "Hello World!"
+        output = self.handler.extract_html_body(encoded_body)
+        self.assertEqual(output, expected_output)
+
 
 if __name__ == '__main__':
     unittest.main()

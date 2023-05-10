@@ -104,7 +104,10 @@ class EmailsTable(APITable):
 
         # filter by columns
         result = result[columns]
-
+        # Rename columns
+        for target in query.targets:
+            if target.alias:
+                result.rename(columns={target.parts[-1]: str(target.alias)}, inplace=True)
         return result
 
     def get_columns(self) -> List[str]:

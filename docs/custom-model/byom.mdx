@@ -3,6 +3,78 @@ title: Bring Your Own Model
 sidebarTitle: BYOM
 ---
 
+The Bring Your Own Model (BYOM) feature lets you upload your own models in the form of a Python code and use them within MindsDB.
+
 <Note>
-This page is a work in progress.
+Please note that this feature is available for MindsDB Pro users. If you have a free demo account, you'll be asked to upgrade to a dedicated AWS instance.
 </Note>
+
+## How It Works
+
+You can upload your custom model via the MindsDB editor by clicking `Add` and `Upload custom model`, like this:
+
+<p align="center">
+  <img src="/assets/byom_upload_custom_model.png" />
+</p>
+
+Here is the form that needs to be filled out in order to bring your model to MindsDB:
+
+<p align="center">
+  <img src="/assets/byom_empty_form.png" />
+</p>
+
+Let's briefly go over the files that need to be uploaded:
+
+* The Python file stores an implementation of your model. It should include the `args` argument in the `train` and `predict` methods, as below:
+
+    ```py
+    class CustomPredictor():
+        def train(self, df, target_col, args=None):
+        ...
+        
+        def predict(self, df, args=None):
+        ...
+    ```
+
+* The requirements file stores all dependencies along with their versions.
+
+Once you upload the above files, please provide an engine name.
+
+Please note that your custom model is uploaded to MindsDB as an engine. Then you can use this engine to create a model.
+
+<p align="center">
+  <img src="/assets/byom_diagram.png" />
+</p>
+
+Let's look at an example.
+
+## Example
+
+We upload the custom model, as below:
+
+<p align="center">
+  <img src="/assets/byom_pro_account.png" />
+</p>
+
+Once the model is uploaded, it becomes an ML engine within MindsDB. Now we use this ML engine to create a model as follows:
+
+```sql
+CREATE MODEL custom_model
+FROM my_integrations
+    (SELECT * FROM my_table)
+PREDICT target
+USING
+    ENGINE = 'custom_ML_engine';
+```
+
+Let's query for predictions by joining the custom model with the data table.
+
+```sql
+SELECT *
+FROM my_integration.my_table as d
+JOIN custom_model as m;
+```
+
+<Info>
+Check out the [BYOM handler folder](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/byom_handler) to see the implementation details.
+</Info>

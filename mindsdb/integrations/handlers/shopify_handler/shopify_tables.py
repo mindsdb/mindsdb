@@ -5,7 +5,7 @@ from typing import Text, List, Dict
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 
-from utils import parse_statement, get_results
+from .utils import parse_statement, get_results
 
 
 class ProductsTable(APITable):

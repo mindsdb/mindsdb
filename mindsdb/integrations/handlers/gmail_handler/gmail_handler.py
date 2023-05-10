@@ -392,7 +392,6 @@ class GmailHandler(APIHandler):
                 row['message_id'] = value
 
         row['body'] = self._parse_parts(parts)
-        row['attachments'] = self._get_attachments(parts, message['id'])
         data.append(row)
 
     def _get_messages(self, data, messages):

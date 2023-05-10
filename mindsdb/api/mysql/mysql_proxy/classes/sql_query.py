@@ -34,7 +34,7 @@ from mindsdb_sql.parser.ast import (
     Latest,
     BetweenOperation,
     Parameter,
-    Tuple
+    Tuple,
 )
 from mindsdb_sql.planner.steps import (
     ApplyTimeseriesPredictorStep,
@@ -1138,6 +1138,9 @@ class SQLQuery():
                 if isinstance(node, Identifier):
                     # only column name
                     col_name = node.parts[-1]
+                    if isinstance(col_name, Star):
+                        # skip Star
+                        return
 
                     if len(node.parts) == 1:
                         key = col_name

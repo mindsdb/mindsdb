@@ -1,6 +1,8 @@
+import io
 import json
 import re
 
+import PyPDF2
 import requests
 
 from mindsdb.integrations.libs.response import (
@@ -8,7 +10,6 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from bs4 import BeautifulSoup
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb_sql.parser import ast
@@ -130,6 +131,8 @@ class EmailsTable(APITable):
             'date',
             'subject',
             'snippet',
+            'history_Id',
+            'size_estimate',
             'body',
             'attachments',
         ]
@@ -316,19 +319,43 @@ class GmailHandler(APIHandler):
             return []
         attachments = []
         for part in parts:
-            if part['filename']:
+            if part.get('filename', None) is not None and part.get('body', {}).get('attachmentId', None) is not None:
                 attachment = {
                     'message_id': message_id,
                     'filename': part['filename'],
                     'mimeType': part['mimeType'],
-                    'size': part['body']['size'],
-                    'attachment_id': part['body']['attachmentId']
                 }
-                attachment_json = json.dumps(attachment)
-                attachments.append(attachment_json)
-            elif 'parts' in part:
-                attachments += self._get_attachments(part['parts'], message_id)
+                attachment_body = self.service.users().messages().attachments().get(
+                    userId='me', messageId=message_id, id=part['body']['attachmentId']).execute()
+                attachment['body'] = self._get_attachment_text(attachment, attachment_body)
+                attachment = json.dumps(attachment)
+                attachments.append(attachment)
         return attachments
+
+    def _get_attachment_text(self, attachment, attachment_body):
+        if not (attachment['mimeType'].startswith('video/') or attachment['mimeType'].startswith('image/')):
+            if attachment['mimeType'] == 'application/pdf':
+                attachment_body = attachment_body['data']
+                attachment_file = io.BytesIO(urlsafe_b64decode(attachment_body))
+                # Use PyPDF2 to extract text from the PDF file
+                pdf_reader = PyPDF2.PdfReader(attachment_file)
+                text = ''
+                for page_num in range(len(pdf_reader.pages)):
+                    page = pdf_reader.pages[page_num]
+                    text += page.extract_text()
+                text = re.sub(r'(?<!>)\s+(?!<)', ' ', text).strip()
+                return text.strip()
+            elif attachment['mimeType'] == 'text/plain':
+                attachment_body = attachment_body['data']
+                return urlsafe_b64decode(attachment_body).decode('utf-8')
+            elif attachment['mimeType'] == 'text/html':
+                attachment_body = attachment_body['data']
+                return urlsafe_b64decode(attachment_body).decode('utf-8')
+            elif attachment['mimeType'] == 'application/json':
+                attachment_body = attachment_body['data']
+                return urlsafe_b64decode(attachment_body).decode('utf-8')
+            else:
+                log.logger.debug(f"Unhandled mimeType: {attachment['mimeType']}")
 
     def _parse_parts(self, parts):
         if not parts:
@@ -344,9 +371,7 @@ class GmailHandler(APIHandler):
                 body += self._parse_parts(part['parts'])
             else:
                 log.logger.debug(f"Unhandled mimeType: {part['mimeType']}")
-        body = re.sub(r'(?<!>)\s+(?!<)', ' ', body).strip()
         return body
-
 
     def _parse_message(self, data, message, exception):
         if exception:
@@ -362,8 +387,8 @@ class GmailHandler(APIHandler):
             'thread_id': message['threadId'],
             'label_ids': message.get('labelIds', []),
             'snippet': message.get('snippet', ''),
+            'size_estimate': message.get('sizeEstimate', 0),
         }
-
         for header in headers:
             key = header['name'].lower()
             value = header['value']
@@ -374,7 +399,10 @@ class GmailHandler(APIHandler):
                 row['sender'] = value
             elif key == 'message-id':
                 row['message_id'] = value
-
+        if self._get_attachments(parts, message['id']):
+            row['attachments'] = self._get_attachments(parts, message['id'])
+        else:
+            row['attachments'] = None
         row['body'] = self._parse_parts(parts)
         data.append(row)
 

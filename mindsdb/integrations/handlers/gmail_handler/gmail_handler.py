@@ -1,24 +1,26 @@
 import io
 import json
 import re
+from shutil import copyfile
 
 import PyPDF2
 import requests
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-    RESPONSE_TYPE
+    HandlerResponse as Response
 )
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb_sql.parser import ast
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
+
 import os
 import time
 from typing import List
 import pandas as pd
+
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -107,10 +109,12 @@ class EmailsTable(APITable):
 
         # filter by columns
         result = result[columns]
+
         # Rename columns
         for target in query.targets:
             if target.alias:
                 result.rename(columns={target.parts[-1]: str(target.alias)}, inplace=True)
+
         return result
 
     def get_columns(self) -> List[str]:
@@ -209,16 +213,9 @@ class GmailHandler(APIHandler):
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
         self.connection_args = kwargs.get('connection_data', {})
-        self.s3_credentials_file = None
-        self.credentials_file = None
-        if 'credentials_file' in self.connection_args:
-            self.credentials_file = self.connection_args['credentials_file']
-        if 's3_credentials_file' in self.connection_args:
-            self.s3_credentials_file = self.connection_args['s3_credentials_file']
-        if not 'credentials_file' in self.connection_args and not 's3_credentials_file' in self.connection_args:
-            raise ValueError(
-                "Need the Google Auth Credentials file in order to connect to Gmail"
-            )
+
+        self.s3_credentials_file = self.connection_args.get('s3_credentials_file', None)
+        self.credentials_file = self.connection_args.get('credentials_file', None)
         self.scopes = self.connection_args.get('scopes', DEFAULT_SCOPES)
         self.token_file = None
         self.max_page_size = 500
@@ -230,38 +227,46 @@ class GmailHandler(APIHandler):
         self.emails = emails
         self._register_table('emails', emails)
 
-    def create_connection(self) -> object:
-        creds = None
+    def _has_creds_file(self, creds_file):
+        # Giving more priority to the S3 file
         if self.s3_credentials_file:
             response = requests.get(self.s3_credentials_file)
             if response.status_code == 200:
-                # data successfully retrieved
-                data = response.content
-                data = json.loads(data)
-                flow = InstalledAppFlow.from_client_config(data, self.scopes)
-                creds = flow.run_local_server(port=0, timeout_seconds=120)
+                with open(creds_file, 'w') as creds:
+                    creds.write(response.text)
+
+                return True
             else:
-                # handle errors
-                print("Failed to retrieve data: ", response.status_code)
+                log.logger.error("Failed to get credentials from S3", response.status_code)
 
-        else:
-            token_file = os.path.join(os.path.dirname(self.credentials_file), 'token.json')
+        if self.credentials_file and os.path.isfile(self.credentials_file):
+            copyfile(self.credentials_file, creds_file)
+            return True
 
-            if os.path.isfile(token_file):
-                creds = Credentials.from_authorized_user_file(token_file, self.scopes)
+    def create_connection(self) -> object:
+        creds = None
 
-            if not creds or not creds.valid:
-                if creds and creds.expired and creds.refresh_token:
-                    creds.refresh(Request())
-                elif not os.path.isfile(self.credentials_file):
-                    raise Exception('Credentials must be a file path')
-                else:
-                    flow = InstalledAppFlow.from_client_secrets_file(self.credentials_file, self.scopes)
-                    creds = flow.run_local_server(port=0, timeout_seconds=120)
+        # Get the current dir, we'll check for Token & Creds files in this dir
+        curr_dir = os.path.dirname(__file__)
 
-            # Save the credentials for the next run
-            with open(token_file, 'w') as token:
-                token.write(creds.to_json())
+        token_file = os.path.join(curr_dir, 'token.json')
+        creds_file = os.path.join(curr_dir, 'creds.json')
+
+        if os.path.isfile(token_file):
+            creds = Credentials.from_authorized_user_file(token_file, self.scopes)
+
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            elif not os.path.isfile(creds_file) and not self._has_creds_file(creds_file):
+                raise ValueError('No valid Gmail Credentials filepath or S3 url found.')
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file(creds_file, self.scopes)
+                creds = flow.run_local_server(port=0, timeout_seconds=120)
+
+        # Save the credentials for the next run
+        with open(token_file, 'w') as token:
+            token.write(creds.to_json())
 
         return build('gmail', 'v1', credentials=creds)
 
@@ -275,10 +280,12 @@ class GmailHandler(APIHandler):
         """
         if self.is_connected and self.service is not None:
             return self.service
+
         try:
             self.service = self.create_connection()
         except Exception as e:
             raise Exception(f'Error connecting to Gmail API: {e}')
+
         self.is_connected = True
         return self.service
 

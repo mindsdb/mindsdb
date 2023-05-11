@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
 import pandas as pd
-import clickhouse_driver
 from sqlalchemy import create_engine
 from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -30,7 +29,17 @@ class ClickHouseHandler(DatabaseHandler):
         self.connection_data = connection_data
         self.renderer = SqlalchemyRender(ClickHouseDialect)
         self.is_connected = False
-        self.protocol = connection_data.get('protocol', 'native')
+        self.protocol = connection_data.get('protocol', 'clickhouse')
+
+        # region added for back-compatibility with connections creatad before 11.05.2023
+        protocols_map = {
+            'native': 'clickhouse+native',
+            'http': 'clickhouse+http',
+            'https': 'clickhouse+https',
+        }
+        if self.protocol in protocols_map:
+            self.protocol = protocols_map[self.protocol]
+        # endregion
 
     def __del__(self):
         if self.is_connected is True:
@@ -43,14 +52,14 @@ class ClickHouseHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        protocol = "clickhouse+native" if self.protocol == 'native' else "clickhouse+http"
+        protocol = self.protocol
         host = self.connection_data['host']
         port = self.connection_data['port']
         user = self.connection_data['user']
         password = self.connection_data['password']
         database = self.connection_data['database']
         url = f'{protocol}://{user}:{password}@{host}:{port}/{database}'
-        if self.protocol == 'https':
+        if self.protocol == 'clickhouse+https':
             url = url + "?protocol=https"
 
         engine = create_engine(url)
@@ -154,7 +163,7 @@ class ClickHouseHandler(DatabaseHandler):
 connection_args = OrderedDict(
     protocol={
         'type': ARG_TYPE.STR,
-        'protocol': 'The protocol to query clickhouse. Supported: native, http, https. Default: native'
+        'protocol': 'The protocol to query clickhouse. Supported: clickhouse, clickhouse+native, clickhouse+http, clickhouse+https. Default: clickhouse'
     },
     user={
         'type': ARG_TYPE.STR,
@@ -179,7 +188,7 @@ connection_args = OrderedDict(
 )
 
 connection_args_example = OrderedDict(
-    protocol='native',
+    protocol='clickhouse',
     host='127.0.0.1',
     port=9000,
     user='root',

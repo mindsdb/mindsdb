@@ -3,7 +3,7 @@ title: Bring Your Own Model
 sidebarTitle: BYOM
 ---
 
-The Bring Your Own Model (BYOM) feature lets you upload your own models in the form of a Python code and use them within MindsDB.
+The Bring Your Own Model (BYOM) feature lets you upload your own models in the form of Python code and use them within MindsDB.
 
 <Note>
 Please note that this feature is available for MindsDB Pro users. If you have a free demo account, you'll be asked to upgrade to a dedicated AWS instance.
@@ -144,7 +144,9 @@ We upload the custom model, as below:
   <img src="/assets/byom_pro_account.png" />
 </p>
 
-Once the model is uploaded, it becomes an ML engine within MindsDB. Now we use this ML engine to create a model as follows:
+Here we upload the `custom_model.py` file that stores an impletation of the model and the `requirements.txt` file that stores all the dependencies.
+
+Once the model is uploaded, it becomes an ML engine within MindsDB. Now we use this `custom_ML_engine` to create a model as follows:
 
 ```sql
 CREATE MODEL custom_model
@@ -158,9 +160,9 @@ USING
 Let's query for predictions by joining the custom model with the data table.
 
 ```sql
-SELECT *
-FROM my_integration.my_table as d
-JOIN custom_model as m;
+SELECT input.feature_column, model_target_column
+FROM my_integration.my_table as input
+JOIN custom_model as model;
 ```
 
 <Info>

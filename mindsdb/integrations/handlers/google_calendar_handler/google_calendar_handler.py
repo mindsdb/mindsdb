@@ -130,6 +130,7 @@ class GoogleCalendarHandler(APIHandler):
             page_token = events_result.get('nextPageToken')
             if not page_token:
                 break
+        events = events.astype('str')
         return events
 
     def create_event(self, params: dict = None) -> DataFrame:
@@ -168,7 +169,7 @@ class GoogleCalendarHandler(APIHandler):
             },
         }
         event = service.events().insert(calendarId='primary', body=event).execute()
-        return pd.DataFrame([event], columns=self.events.get_columns())
+        return pd.DataFrame([event], columns=self.events.get_columns()).astype('str')
 
     def update_event(self, params: dict = None) -> DataFrame:
         """
@@ -210,7 +211,6 @@ class GoogleCalendarHandler(APIHandler):
             updated_event = service.events().update(calendarId='primary', eventId=event['id'], body=event).execute()
             df = pd.concat([df, pd.DataFrame([{'eventId': updated_event['id'], 'status': 'updated'}])],
                            ignore_index=True)
-
         return df
 
     def delete_event(self, params):

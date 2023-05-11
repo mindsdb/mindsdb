@@ -206,6 +206,8 @@ class GmailHandler(APIHandler):
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
         self.connection_args = kwargs.get('connection_data', {})
+        self.s3_credentials_file = None
+        self.credentials_file = None
         if 'credentials_file' in self.connection_args:
             self.credentials_file = self.connection_args['credentials_file']
         if 's3_credentials_file' in self.connection_args:
@@ -340,29 +342,11 @@ class GmailHandler(APIHandler):
             elif part['mimeType'] == 'multipart/alternative' or 'parts' in part:
                 # Recursively iterate over nested parts to find the plain text body
                 body += self._parse_parts(part['parts'])
-            elif part['mimeType'] == 'text/html':
-                body += self.extract_html_body(part['body']['data'])
             else:
                 log.logger.debug(f"Unhandled mimeType: {part['mimeType']}")
         body = re.sub(r'(?<!>)\s+(?!<)', ' ', body).strip()
         return body
 
-    def extract_html_body(self, encoded_body):
-        """Extracts the HTML body from the encoded body.
-            Args:
-                encoded_body (str): The encoded body.
-            Returns:
-                str: The HTML body.
-        """
-        html_message = urlsafe_b64decode(encoded_body).decode('utf-8')
-        soup = BeautifulSoup(html_message, 'html.parser')
-        # Extract the text from the HTML
-        for element in soup(['style', 'script']):
-            element.extract()
-
-        # Extract the visible text from the HTML and remove whitespace characters
-        text = soup.get_text().strip()
-        return text
 
     def _parse_message(self, data, message, exception):
         if exception:

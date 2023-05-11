@@ -1,4 +1,5 @@
 import pandas as pd
+import datetime
 from mindsdb_sql.parser import ast
 from pandas import DataFrame
 
@@ -103,7 +104,6 @@ class GoogleCalendarEventsTable(APITable):
             else:
                 raise NotImplementedError
             
-        import datetime
         st = datetime.datetime.utcfromtimestamp(event_data['start_time'] / 1000).isoformat() + 'Z'
         et = datetime.datetime.utcfromtimestamp(event_data['end_time'] / 1000).isoformat() + 'Z'
 

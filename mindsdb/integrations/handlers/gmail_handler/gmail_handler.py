@@ -135,7 +135,7 @@ class EmailsTable(APITable):
             'date',
             'subject',
             'snippet',
-            'history_Id',
+            'history_id',
             'size_estimate',
             'body',
             'attachments',
@@ -394,8 +394,10 @@ class GmailHandler(APIHandler):
             'thread_id': message['threadId'],
             'label_ids': message.get('labelIds', []),
             'snippet': message.get('snippet', ''),
+            'history_id': message['historyId'],
             'size_estimate': message.get('sizeEstimate', 0),
         }
+
         for header in headers:
             key = header['name'].lower()
             value = header['value']

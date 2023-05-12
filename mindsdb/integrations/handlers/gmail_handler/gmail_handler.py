@@ -1,9 +1,6 @@
-import io
 import json
-import re
 from shutil import copyfile
 
-import PyPDF2
 import requests
 
 from mindsdb.integrations.libs.response import (
@@ -321,50 +318,7 @@ class GmailHandler(APIHandler):
 
         return self.query(ast)
 
-    def _get_attachments(self, parts, message_id):
-        if not parts:
-            return []
-        attachments = []
-        for part in parts:
-            if part.get('filename', None) is not None and part.get('body', {}).get('attachmentId', None) is not None:
-                attachment = {
-                    'message_id': message_id,
-                    'filename': part['filename'],
-                    'mimeType': part['mimeType'],
-                }
-                attachment_body = self.service.users().messages().attachments().get(
-                    userId='me', messageId=message_id, id=part['body']['attachmentId']).execute()
-                attachment['body'] = self._get_attachment_text(attachment, attachment_body)
-                attachment = json.dumps(attachment)
-                attachments.append(attachment)
-        return attachments
-
-    def _get_attachment_text(self, attachment, attachment_body):
-        if not (attachment['mimeType'].startswith('video/') or attachment['mimeType'].startswith('image/')):
-            if attachment['mimeType'] == 'application/pdf':
-                attachment_body = attachment_body['data']
-                attachment_file = io.BytesIO(urlsafe_b64decode(attachment_body))
-                # Use PyPDF2 to extract text from the PDF file
-                pdf_reader = PyPDF2.PdfReader(attachment_file)
-                text = ''
-                for page_num in range(len(pdf_reader.pages)):
-                    page = pdf_reader.pages[page_num]
-                    text += page.extract_text()
-                text = re.sub(r'(?<!>)\s+(?!<)', ' ', text).strip()
-                return text.strip()
-            elif attachment['mimeType'] == 'text/plain':
-                attachment_body = attachment_body['data']
-                return urlsafe_b64decode(attachment_body).decode('utf-8')
-            elif attachment['mimeType'] == 'text/html':
-                attachment_body = attachment_body['data']
-                return urlsafe_b64decode(attachment_body).decode('utf-8')
-            elif attachment['mimeType'] == 'application/json':
-                attachment_body = attachment_body['data']
-                return urlsafe_b64decode(attachment_body).decode('utf-8')
-            else:
-                log.logger.debug(f"Unhandled mimeType: {attachment['mimeType']}")
-
-    def _parse_parts(self, parts):
+    def _parse_parts(self, parts, attachments):
         if not parts:
             return
 
@@ -375,9 +329,17 @@ class GmailHandler(APIHandler):
                 body += urlsafe_b64decode(part_body).decode('utf-8')
             elif part['mimeType'] == 'multipart/alternative' or 'parts' in part:
                 # Recursively iterate over nested parts to find the plain text body
-                body += self._parse_parts(part['parts'])
+                body += self._parse_parts(part['parts'], attachments)
+            elif part.get('filename') and part.get('body') and part.get('body').get('attachmentId'):
+                # For now just store the attachment details
+                attachments.append({
+                    'filename': part['filename'],
+                    'mimeType': part['mimeType'],
+                    'attachmentId': part['body']['attachmentId']
+                })
             else:
                 log.logger.debug(f"Unhandled mimeType: {part['mimeType']}")
+
         return body
 
     def _parse_message(self, data, message, exception):
@@ -408,11 +370,10 @@ class GmailHandler(APIHandler):
                 row['sender'] = value
             elif key == 'message-id':
                 row['message_id'] = value
-        if self._get_attachments(parts, message['id']):
-            row['attachments'] = self._get_attachments(parts, message['id'])
-        else:
-            row['attachments'] = None
-        row['body'] = self._parse_parts(parts)
+
+        attachments = []
+        row['body'] = self._parse_parts(parts, attachments)
+        row['attachments'] = json.dumps(attachments)
         data.append(row)
 
     def _get_messages(self, data, messages):

@@ -121,6 +121,6 @@ CREATE VIEW mindsdb.emails_text AS(
 * Finally, you can use the model to predict if an email is spam or not:
 ~~~~sql
 SELECT h.PRED, h.PRED_explain, t.text_spammy AS input_text
-FROM test_db AS t
+FROM mindsdb.emails_text AS t
 JOIN mindsdb.spam_classifier AS h;
 ~~~~

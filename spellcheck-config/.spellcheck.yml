@@ -22,4 +22,4 @@ matrix:
       - 'pre'
       - 'blockquote'
   sources:
-  - 'docs/*.mdx'
+  - 'docs/**.mdx'

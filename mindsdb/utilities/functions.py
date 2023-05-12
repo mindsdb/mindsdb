@@ -108,23 +108,27 @@ def split_model_name(name: list) -> tuple:
 
         Examples:
             >>> split_model_name(['a', 'b'])
-            ('a', 'b', None)
+            ('a', 'b', None, None)
 
             >>> split_model_name(['a', '1'])
-            (None, 'a', 1)
+            (None, 'a', 1, None)
 
             >>> split_model_name(['a'])
-            (None, 'a', None)
+            (None, 'a', None, None)
+
+            >>> split_model_name(['a', 'b', 'c'])
+            ('a', 'b', None, 'c')
 
         Args:
             name (list): Identifier parts
 
         Returns:
-            tuple: (database_name, model_name, model_version)
+            tuple: (database_name, model_name, model_version, describe)
     """
     database_name = None
     model_name = None
     model_version = None
+    describe = None
     parts_count = len(name)
     if parts_count == 1:
         database_name = None
@@ -142,5 +146,8 @@ def split_model_name(name: list) -> tuple:
     elif parts_count == 3:
         database_name = name[0]
         model_name = name[1]
-        model_version = int(name[2])
-    return (database_name, model_name, model_version)
+        if name[2].isdigit():
+            model_version = int(name[2])
+        else:
+            describe = name[2]
+    return (database_name, model_name, model_version, describe)

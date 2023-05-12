@@ -686,7 +686,7 @@ class ExecuteCommands:
         if len(identifier.parts) == 1:
             identifier.parts = [self.session.database, identifier.parts[0]]
 
-        database_name, model_name, model_version = split_model_name(identifier.parts)
+        database_name, model_name, model_version, _describe = split_model_name(identifier.parts)
 
         model_record = get_model_record(
             name=model_name,

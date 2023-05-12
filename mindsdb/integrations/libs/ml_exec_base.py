@@ -141,6 +141,7 @@ def learn_process(class_path, engine, context_dump, integration_id,
             ml_handler.finetune(df=training_data_df, args=problem_definition)
 
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
+        predictor_record.active = set_active
         db.session.commit()
         # if retrain and set_active after success creation
         if set_active is True:

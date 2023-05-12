@@ -101,3 +101,46 @@ def get_versions_where_predictors_become_obsolete():
 def init_lexer_parsers():
     get_lexer_parser('mindsdb')
     get_lexer_parser('mysql')
+
+
+def split_model_name(name: list) -> tuple:
+    """ split model name to parts
+
+        Examples:
+            >>> split_model_name(['a', 'b'])
+            ('a', 'b', None)
+
+            >>> split_model_name(['a', '1'])
+            (None, 'a', 1)
+
+            >>> split_model_name(['a'])
+            (None, 'a', None)
+
+        Args:
+            name (list): Identifier parts
+
+        Returns:
+            tuple: (database_name, model_name, model_version)
+    """
+    database_name = None
+    model_name = None
+    model_version = None
+    parts_count = len(name)
+    if parts_count == 1:
+        database_name = None
+        model_name = name[0]
+        model_version = None
+    elif parts_count == 2:
+        if name[-1].isdigit():
+            database_name = None
+            model_name = name[0]
+            model_version = int(name[-1])
+        else:
+            database_name = name[0]
+            model_name = name[1]
+            model_version = None
+    elif parts_count == 3:
+        database_name = name[0]
+        model_name = name[1]
+        model_version = int(name[2])
+    return (database_name, model_name, model_version)

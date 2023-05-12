@@ -214,9 +214,6 @@ def run_finetune(df: DataFrame, args: dict, model_storage):
             if x.training_stop_at is not None
         ]
         predictor_records.sort(key=lambda x: x.training_stop_at)
-        for record in predictor_records:
-            record.active = False
-        predictor_records[-1].active = True
         db.session.commit()
 
     except Exception as e:

@@ -1,0 +1,23 @@
+## Testing: Hugging Face - Emotions Tutorial
+
+  1.Testing CREATE MODEL
+```sql
+CREATE MODEL mindsdb.hf_emotions_6
+PREDICT PRED
+USING
+engine = 'huggingface',
+task = 'text-classification',
+model_name = 'j-hartmann/emotion-english-distilroberta-base',
+input_column = 'text';
+```
+
+![create model](https://i.imgur.com/OKI7L1rh.jpg)
+
+  2.Testing SELECT (making predictions)
+```sql
+SELECT *
+FROM mindsdb.hf_emotions_6
+WHERE text = 'Oh Happy Day';
+```
+
+![making predictions](https://cdn.discordapp.com/attachments/1106611437851385868/1106612151713546250/Screenshot_47.png)

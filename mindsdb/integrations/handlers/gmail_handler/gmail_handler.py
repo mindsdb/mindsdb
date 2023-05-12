@@ -153,11 +153,6 @@ class EmailsTable(APITable):
         """
         columns = [col.name for col in query.columns]
 
-        if not 'credentials_file' in self.handler.connection_args:
-            raise ValueError(
-                "Need the Google Auth Credentials file in order to write an email"
-            )
-
         supported_columns = {"message_id", "thread_id", "to_email", "subject", "body"}
         if not set(columns).issubset(supported_columns):
             unsupported_columns = set(columns).difference(supported_columns)

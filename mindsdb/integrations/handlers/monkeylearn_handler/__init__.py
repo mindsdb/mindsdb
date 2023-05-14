@@ -2,7 +2,7 @@ from mindsdb.integrations.libs.const import HANDLER_TYPE
 
 from .__about__ import __version__ as version, __description__ as description
 try:
-    from monkeylearn_handler import monkeylearnHandler as Handler
+    from .monkeylearn_handler import monkeylearnHandler as Handler
     import_error = None
 except Exception as e:
     Handler = None

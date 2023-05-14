@@ -45,17 +45,23 @@ class monkeylearnHandler(BaseMLEngine):
 
     def predict(self, df, args=None):
         args = self.model_storage.json_get('args')
-        input_list = df[args['input_column']]
+        input_column = args['input_column']
+        if input_column not in df.columns:
+            raise RuntimeError(f"input columns {input_column} not found ")
+        input_list = df[input_column]
+        if len(input_list) > 500:
+            raise Exception("Classifier only supports 500 data elements in list")
         ml = MonkeyLearn(args['api_key'])
-        classifier_response = ml.classifiers.classify(args['model_id'], input_list)
         df_dict = []
-        for res_dict in classifier_response.body:
-            if res_dict.get("error") is True:
-                raise Exception(res_dict["error_detail"])
-            text = res_dict['text']
-            pred_dict = res_dict['classifications'][0]  # Only add the one which model is more confident about
-            pred_dict['text'] = text
-            df_dict.append(pred_dict)
+        pred_dict = {}
+        for text in input_list:
+            classifier_response = ml.classifiers.classify(args['model_id'], [text])
+            for res_dict in classifier_response.body:
+                if res_dict.get("error") is True:
+                    raise Exception(res_dict["error_detail"])
+                text = res_dict['text']
+                pred_dict['classification'] = res_dict['classifications']
+                df_dict.append(pred_dict)
         pred_df = pd.DataFrame(df_dict)
         return pred_df
 

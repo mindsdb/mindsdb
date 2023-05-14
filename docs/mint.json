@@ -275,8 +275,8 @@
     {
       "group": "SDKs",
       "pages": [
-        "sdk/javascript_sdk",
-        "sdk/python_sdk"
+        "sdk/javascript-sdk",
+        "sdk/python-sdk"
       ]
     },
     {

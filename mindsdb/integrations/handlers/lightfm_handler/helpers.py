@@ -41,7 +41,6 @@ def item_mapping(
 '''
 
 
-
 def get_user_item_recommendations(n_users: int, n_items: int, args: dict, model: lightfm.LightFM):
 	"""
 	gets N user-item recommendations for a given model
@@ -73,7 +72,7 @@ def get_user_item_recommendations(n_users: int, n_items: int, args: dict, model:
 	return user_item_recommendations_df[['user_id', 'item_id', 'score']].astype({'user_id': 'str', 'item_id': 'str'})
 
 
-def get_similar_items(model: lightfm.LightFM, args: dict, item_features=None, N:int=10) -> pd.DataFrame:
+def get_item_item_recommendations(model: lightfm.LightFM, args: dict, item_features=None, N:int=10) -> pd.DataFrame:
 	"""
 	gets similar items to a given item index inside user-item interaction matrix
 	NB by default it won't use item features,however if item features are provided
@@ -86,38 +85,40 @@ def get_similar_items(model: lightfm.LightFM, args: dict, item_features=None, N:
 
 	:return:
 	"""
+	#todo make dsu
 
-	# get item index
-	item_idx_map = {str(v): k for k, v in args['idx_to_item_id_map'].items()}
-	item_idx = int(item_idx_map[args['similar_to_item']])
+	similar_items_dfs = []
 
-	item_biases, item_representations = model.get_item_representations(features=item_features)
+	for item_idx, item_id in args['idx_to_item_id_map'].items():
+		# ensure item_idx is int
+		item_idx = int(item_idx)
 
-	# Cosine similarity
-	# get scores for all items
+		item_biases, item_representations = model.get_item_representations(features=item_features)
 
-	scores = item_representations.dot(item_representations[item_idx, :])
+		# Cosine similarity
 
-	# normalize
+		scores = item_representations.dot(item_representations[item_idx, :])
 
-	item_norms = np.sqrt(( item_representations * item_representations).sum(axis=1))
+		# normalize
+		item_norms = np.sqrt(( item_representations * item_representations).sum(axis=1))
+		scores /= item_norms
 
-	scores /= item_norms
+		# get the top N items
+		best = np.argpartition(scores, -N)
+		# sort the scores
 
-	# get the top N items
-	best = np.argpartition(scores, -N)
-	# sort the scores
+		rec = sorted(zip(best, scores[best] / item_norms[item_idx]), key=lambda x: -x[1])
 
-	rec = sorted(zip(best, scores[best] / item_norms[item_idx]), key=lambda x: -x[1])
+		intermediate_df = (
+			pd.DataFrame(rec, columns=['item_idx', 'score'])
+			.tail(-1) # remove the item itself
+			.head(N)
+		)
+		intermediate_df['item_id_one'] = item_id
+		similar_items_dfs.append(intermediate_df)
 
-	similar_items_df = (
-		pd.DataFrame(rec, columns=['item_idx', 'score'])
-		.tail(-1) # remove the item itself
-		.head(N)
-	)
-
-	similar_items_df['item_id_one'] = similar_items_df['item_idx'].astype('str').map(args['idx_to_item_id_map'])
-	similar_items_df['item_id_two'] = args['similar_to_item']
+	similar_items_df = pd.concat(similar_items_dfs, ignore_index=True)
+	similar_items_df['item_id_two'] = similar_items_df['item_idx'].astype('str').map(args['idx_to_item_id_map'])
 
 	return similar_items_df[['item_id_one', 'item_id_two', 'score']].astype({'item_id_one': 'str', 'item_id_two': 'str'})
 

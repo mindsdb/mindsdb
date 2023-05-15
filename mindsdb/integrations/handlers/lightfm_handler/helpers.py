@@ -85,7 +85,8 @@ def get_item_item_recommendations(model: lightfm.LightFM, args: dict, item_featu
 
 	:return:
 	"""
-	#todo make dsu
+	#todo make sure its not slow across larger data
+	#todo break into smaller functions
 
 	similar_items_dfs = []
 
@@ -268,4 +269,3 @@ class RecommenderPreprocessor:
 			idx_item_map=self._idx_item_map,
 			idx_user_map=self._idx_user_map
 		)
-

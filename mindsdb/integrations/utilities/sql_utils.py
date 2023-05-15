@@ -1,3 +1,5 @@
+import pandas as pd
+
 from mindsdb_sql.parser import ast
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.planner.utils import query_traversal
@@ -9,6 +11,17 @@ def make_sql_session():
     sql_session = SessionController()
     sql_session.database = 'mindsdb'
     return sql_session
+
+
+def conditions_to_filter(binary_op: ASTNode):
+    conditions = extract_comparison_conditions(binary_op)
+
+    filters = {}
+    for op, arg1, arg2 in conditions:
+        if op != '=':
+            raise NotImplementedError
+        filters[arg1] = arg2
+    return filters
 
 
 def extract_comparison_conditions(binary_op: ASTNode):
@@ -38,3 +51,26 @@ def extract_comparison_conditions(binary_op: ASTNode):
 
     query_traversal(binary_op, _extract_comparison_conditions)
     return conditions
+
+
+def project_dataframe(df, targets, table_columns):
+    columns = []
+    for target in targets:
+        if isinstance(target, ast.Star):
+            columns = table_columns
+            break
+        elif isinstance(target, ast.Identifier):
+            columns.append(target.parts[-1])
+        else:
+            raise NotImplementedError
+
+    if len(df) == 0:
+        df = pd.DataFrame([], columns=columns)
+    else:
+        # add absent columns
+        for col in set(columns) & set(df.columns) ^ set(columns):
+            df[col] = None
+
+        # filter by columns
+        df = df[columns]
+    return df

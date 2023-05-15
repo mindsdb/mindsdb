@@ -1,5 +1,5 @@
 # Dockerfile
-FROM python:3.7
+FROM python:3.8
 
 RUN apt-get update && apt-get upgrade -y
 RUN pip3 install --upgrade pip && pip3 install psycopg2-binary

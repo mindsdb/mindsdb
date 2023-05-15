@@ -53,34 +53,43 @@ def get_user_item_recommendations(n_users: int, n_items: int, args: dict, model:
 	"""
 	# recommend items for each user
 
-	user_ids = np.concatenate([np.full((n_items,), i) for i in range(0, n_users)])
-	item_ids = np.concatenate([np.arange(n_items) for i in range(n_users)])
+	user_idxs = np.concatenate([np.full((n_items,), i) for i in range(0, n_users)])
+	item_idxs = np.concatenate([np.arange(n_items) for i in range(n_users)])
 
-	scores = model.predict(user_ids, item_ids)
+	scores = model.predict(user_idxs, item_idxs)
 
 	# map scores to user-item pairs, sort by score and return top N recommendations per user
 	user_item_recommendations_df = (
-		pd.DataFrame({'user_id': user_ids, 'item_id': item_ids, 'score': scores})
-		.groupby('user_id')
+		pd.DataFrame({'user_idx': user_idxs, 'item_idx': item_idxs, 'score': scores})
+		.groupby('user_idx')
 		.apply(lambda x: x.sort_values('score', ascending=False).head(args["n_recommendations"]))
 	)
 
-	return user_item_recommendations_df
+	# map idxs to item ids and user ids
+
+	user_item_recommendations_df['item_id'] = user_item_recommendations_df['item_idx'].astype('str').map(args['idx_to_item_id_map'])
+	user_item_recommendations_df['user_id'] = user_item_recommendations_df['user_idx'].astype('str').map(args['idx_to_user_id_map'])
+
+	return user_item_recommendations_df[['user_id', 'item_id', 'score']].astype({'user_id': 'str', 'item_id': 'str'})
 
 
-def get_similar_items(item_idx: Union[int, str], model: lightfm.LightFM, item_features=None, N:int=10) -> pd.DataFrame:
+def get_similar_items(model: lightfm.LightFM, args: dict, item_features=None, N:int=10) -> pd.DataFrame:
 	"""
 	gets similar items to a given item index inside user-item interaction matrix
 	NB by default it won't use item features,however if item features are provided
 	it will use them to get similar items
 
-	:param item_idx:
+	:param args:
 	:param model:
 	:param item_features:
 	:param N:
 
 	:return:
 	"""
+
+	# get item index
+	item_idx_map = {str(v): k for k, v in args['idx_to_item_id_map'].items()}
+	item_idx = int(item_idx_map[args['similar_to_item']])
 
 	item_biases, item_representations = model.get_item_representations(features=item_features)
 
@@ -101,11 +110,16 @@ def get_similar_items(item_idx: Union[int, str], model: lightfm.LightFM, item_fe
 
 	rec = sorted(zip(best, scores[best] / item_norms[item_idx]), key=lambda x: -x[1])
 
-	return (
+	similar_items_df = (
 		pd.DataFrame(rec, columns=['item_idx', 'score'])
 		.tail(-1) # remove the item itself
 		.head(N)
 	)
+
+	similar_items_df['item_id_one'] = similar_items_df['item_idx'].astype('str').map(args['idx_to_item_id_map'])
+	similar_items_df['item_id_two'] = args['similar_to_item']
+
+	return similar_items_df[['item_id_one', 'item_id_two', 'score']].astype({'item_id_one': 'str', 'item_id_two': 'str'})
 
 
 class ModelParameters(BaseModel):
@@ -232,6 +246,7 @@ class RecommenderPreprocessor:
 
 		return lil_matrix.tocoo()
 
+	# todo allow user to specify whether ratings data is implicit or explicit
 	def preprocess(self) -> RecommenderPreprocessorOutput:
 		"""
 		runs a series of preprocessing tasks for recommender

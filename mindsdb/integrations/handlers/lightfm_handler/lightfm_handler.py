@@ -2,7 +2,6 @@ from typing import Optional, Dict
 
 import dill
 import pandas as pd
-import numpy as np
 from lightfm import LightFM
 from mindsdb.integrations.handlers.lightfm_handler.helpers import RecommenderPreprocessor, get_similar_items, \
     get_user_item_recommendations, ModelParameters
@@ -66,16 +65,11 @@ class LightFMHandler(BaseMLEngine):
 
         if args['recommendation_type'] == 'item_item':
 
-            item_idx = args['idx_to_item_id_map'][args['similar_to_item']]
-
-            similar_items_df = get_similar_items(item_idx=item_idx, model=model, item_features=None, N=args['n_recommendations'])
-            similar_items_df['item_id'] = similar_items_df['item_idx'].astype('str').map(args['idx_to_item_id_map'])
-
-            return similar_items_df[['item_id', 'score']]
+            return get_similar_items(model=model, args=args, item_features=None, N=args['n_recommendations'])
 
         elif args['recommendation_type'] == 'user_item':
 
-            return get_user_item_recommendations(n_users, n_items, args, model)
+            return get_user_item_recommendations(n_users=n_users, n_items=n_items, args=args, model=model)
 
         else:
             raise ValueError("recommendation_type must be either 'user_item' or 'item_item'")

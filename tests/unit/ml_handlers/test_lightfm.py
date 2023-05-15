@@ -60,9 +60,9 @@ class TestLightFM(BaseExecutorTest):
 			return pd.DataFrame(ret.data, columns=columns)
 
 	@patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-	def test_collaborative_filter_user_item_recommendation_light_fm_handler(self, mock_handler, interaction_df):
+	def test_collaborative_filter_user_item_recommendation_light_fm_handler(self, mock_handler, interaction_data):
 
-		self.set_handler(mock_handler, name="pg", tables={"df": interaction_df})
+		self.set_handler(mock_handler, name="pg", tables={"df": interaction_data})
 
 		# create project
 		self.run_sql("create database proj")
@@ -97,9 +97,9 @@ class TestLightFM(BaseExecutorTest):
 
 
 	@patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-	def test_collaborative_filter_item_item_recommendation_light_fm_handler(self, mock_handler, interaction_df):
+	def test_collaborative_filter_item_item_recommendation_light_fm_handler(self, mock_handler, interaction_data):
 
-		self.set_handler(mock_handler, name="pg", tables={"df": interaction_df})
+		self.set_handler(mock_handler, name="pg", tables={"df": interaction_data})
 
 		# create project
 		self.run_sql("create database proj")
@@ -132,7 +132,7 @@ class TestLightFM(BaseExecutorTest):
 		)
 
 		# check that the result is the expected shape e.g. 10 recommendations per user  * 503 users
-		assert result_df.shape == (10, 2)
+		assert result_df.shape == (10, 3)
 
 
 

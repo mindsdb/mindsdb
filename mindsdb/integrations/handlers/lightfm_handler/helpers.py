@@ -112,11 +112,13 @@ class ModelParameters(BaseModel):
     loss: str = 'warp'
     epochs: int = 10
 
+
 class RecommenderType(Enum):
 	cf = 1
 	hybrid = 2
 
 
+# todo fix this to support hybrid recommender
 class RecommenderPreprocessorOutput(BaseModel):
 	interaction_df: pd.DataFrame
 	interaction_matrix: sp.sparse.coo_matrix

@@ -7,6 +7,8 @@ Python SDK enables you to connect to the MindsDB server from Python using HTTP A
 
 ## How to Install
 
+### Simple Installation
+
 To install the MindsDB Python SDK, run the below command:
 
 ```bash
@@ -19,8 +21,7 @@ Here is the expected output:
   <img src="/assets/pythonsdk_install_output.png" />
 </p>
 
-<Note>
-**Alternative way of installation**
+### Advanced Installation
 
 Instead of using the `pip install mindsdb_sdk` command, you can install it by cloning the [Python SDK repository](https://github.com/mindsdb/mindsdb_python_sdk). Then you should create a virtual environment, install all dependencies from the `requirements.txt` file, and run tests as instructed below.
 
@@ -39,7 +40,6 @@ make html
 ```
 
 The documentation is generated in the `docs/build/html` folder.
-</Note>
 
 ## How to Use
 
@@ -87,9 +87,15 @@ server = mindsdb_sdk.connect('http://<YOUR_INSTANCE_IP>', login='a@b.com', passw
 
 ### Working with Databases
 
-Use the `create_database()` method to connect data to MindsDB:
+Use the `get_database()` method to get an existing database:
 
+```bash
+mysql_demo_db = server.get_database('mysql_demo_db')
 ```
+
+Or use the `create_database()` method to connect data to MindsDB:
+
+```bash
 mysql_demo_db = server.create_database(
     engine = "mysql",
     name = "mysql_demo_db",
@@ -103,32 +109,49 @@ mysql_demo_db = server.create_database(
 )
 ```
 
-Use the `get_database()` method to get a single database:
+Use the `list_databases()` method to list all databases:
 
-```
-mysql_demo_db = server.get_database('mysql_demo_db')
+```bash
+server.list_databases()
 ```
 
-Use the `list_databases` method to list all databases:
+Use the `query()` method to submit a query to a database:
 
+```bash
+query = mysql_demo_db.query('SELECT * FROM my_table;')
+query.fetch()
 ```
-all_dbs = server.list_databases()
+
+Use the `drop_database()` method to remove a database:
+
+```bash
+server.drop_database('mysql_demo_db')
 ```
 
 ### Working with Tables
 
 Each table is stored in a database. Hence, we use the `mysql_demo_db` variable to run some of the commands below.
 
-Use the `list_tables()` method to list all database tables:
-
-```bash
-mysql_demo_db.list_tables()
-```
-
 Use the `get_table()` method to fetch a table from the `mysql_demo_db` database:
 
 ```bash
 my_table = mysql_demo_db.get_table('my_table')
+```
+
+Or use the `create_table()` method to create a new table:
+
+```bash
+# option 1
+my_table = mysql_demo_db.create_table('my_table', 'SELECT * FROM some_table WHERE key=value')
+
+# option 2
+my_table = mysql_demo_db.create_table('my_table', base_table)
+```
+
+Use the `list_tables()` method to list all database tables:
+
+```bash
+mysql_demo_db.list_tables()
 ```
 
 Use the `fetch()` method to query for table's data:
@@ -160,7 +183,20 @@ project = server.get_project('project_name')
 Use the `create_project()` method to create a new project:
 
 ```bash
-server.create_project('project_name')
+project = server.create_project('project_name')
+```
+
+Use the `list_projects()` method to lists all available projects:
+
+```bash
+server.list_projects()
+```
+
+Use the `query()` method to submit a query to a project:
+
+```bash
+query = project.query('SELECT * FROM my_table;')
+query.fetch()
 ```
 
 Use the `drop_project()` method to remove a project:
@@ -169,21 +205,9 @@ Use the `drop_project()` method to remove a project:
 server.drop_project('project_name')
 ```
 
-Use the `list_projects()` method to lists all available projects:
-
-```bash
-all_projects = server.list_projects()
-```
-
 ### Working with Models
 
 Each model is stored in a project. Hence, we use the `project` variable to run some of the commands below.
-
-Use the `list_models()` method to list all models contained in the project:
-
-```bash
-project.list_models()
-```
 
 Use the `get_model()` method to get an existing model:
 
@@ -201,6 +225,12 @@ my_model = project.create_model (
 )
 ```
 
+Use the `list_models()` method to list all models contained in the project:
+
+```bash
+project.list_models()
+```
+
 Use the `get_status()` method to check the training status of the model:
 
 ```bash
@@ -210,16 +240,10 @@ my_model.get_status()
 Use the `predict()` method to make predictions:
 
 ```bash
-pred = my_model.predict(my_table.limit(10))
+my_model.predict(my_table.limit(10))
 ```
 
 Above command returns predictions for the first 10 rows of the `my_table` table.
-
-Use the `drop_model()` method to remove a model:
-
-```bash
-project.drop_model('my_model')
-```
 
 Use the `describe()` method to get information about a model:
 
@@ -231,6 +255,12 @@ Use the `refresh()` method to refresh model's data from the MindsDB server:
 
 ```bash
 model_name.refresh()
+```
+
+Use the `drop_model()` method to remove a model:
+
+```bash
+project.drop_model('my_model')
 ```
 
 ### Working with Model Versions
@@ -265,11 +295,25 @@ Use the `set_active()` method to set a specific version of a model as active:
 model_name.set_active(9)
 ```
 
+Use the `drop_model_version()` method to remove a specific version of a model:
+
+```bash
+project.drop_model_version('my_model', 3)
+```
+
+Please note that the model version should be deactivated before it is removed.
+
 ### Working with Views
 
 Each view is stored in a project. Hence, we use the `project` variable to run the commands below.
 
-Use the `create_view()` method to create a view:
+Use the `get_view()` method to get an existing view:
+
+```bash
+my_view = project.get_view('my_view')
+```
+
+Or use the `create_view()` method to create a view:
 
 ```bash
 my_view = project.create_view(
@@ -294,7 +338,13 @@ project.drop_view('view_name')
 
 Each job is stored in a project. Hence, we use the `project` variable to run the commands below.
 
-Use the `create_job()` method to create a job:
+Use the `get_job()` method to get an existing job:
+
+```bash
+my_job = project.get_job('my_job')
+```
+
+Or use the `create_job()` method to create a job:
 
 ```bash
 my_job = project.create_job(
@@ -308,6 +358,18 @@ Use the `list_jobs()` method to list all jobs in a project:
 
 ```bash
 project.list_jobs()
+```
+
+Use the `refresh()` method to retrieve job data from the MindsDB server:
+
+```bash
+my_job.refresh()
+```
+
+Use the `get_history()` method to get history of job execution:
+
+```bash
+my_job.get_history()
 ```
 
 Use the `drop_job()` method to remove a job:

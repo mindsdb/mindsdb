@@ -71,5 +71,8 @@ class LightFMHandler(BaseMLEngine):
 
             return get_user_item_recommendations(n_users=n_users, n_items=n_items, args=args, model=model)
 
+        elif args['recommendation_type'] == 'user_user':
+            raise NotImplementedError("user_user recommendation type is not implemented yet")
+
         else:
-            raise ValueError("recommendation_type must be either 'user_item' or 'item_item'")
+            raise ValueError("recommendation_type must be either 'user_item', 'item_item' or 'user_user'")

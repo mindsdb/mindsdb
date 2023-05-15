@@ -59,8 +59,8 @@ class monkeylearnHandler(BaseMLEngine):
             for res_dict in classifier_response.body:
                 if res_dict.get("error") is True:
                     raise Exception(res_dict["error_detail"])
-                text = res_dict['text']
                 pred_dict['classification'] = res_dict['classifications']
+                pred_dict['tag'] = res_dict['classifications'][0]['tag_name']
                 df_dict.append(pred_dict)
         pred_df = pd.DataFrame(df_dict)
         return pred_df
@@ -75,10 +75,5 @@ class monkeylearnHandler(BaseMLEngine):
         description['date_created'] = response.body['created']
         # pre-trained monkeylearn models guide about what industries they can be used
         description['industries'] = response.body['industries']
-        # Extract dict inside a dict
-        models_dict = response.body['model']
-        tag = models_dict['tags']
-        tag_names = [name['name'] for name in tag]
-        description['tags'] = tag_names
         des_df = pd.DataFrame([description])
         return des_df

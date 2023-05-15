@@ -59,13 +59,13 @@ class LightFMHandler(BaseMLEngine):
         n_users = df[args['user_id']].nunique()
         n_items = df[args['item_id']].nunique()
 
-        # todo move to function in helpers.py
-
         if args['recommendation_type'] == 'item_item':
 
             interaction_data = pd.read_json(args['preprocessed_df'], orient='split')
 
-            item_idx = interaction_data.loc[interaction_data[args['item_id']] == args['similar_to']]['item_idx'][0]
+            # change for hybrid
+
+            item_idx = interaction_data.loc[interaction_data[args['item_id']] == args['similar_to']]['item_idx'][0]-1
 
             return get_similar_items(item_idx=item_idx, model=model, item_features=None, N=args['n_recommendations'])
 

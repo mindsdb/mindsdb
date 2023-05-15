@@ -16,17 +16,18 @@ class LightFMHandler(BaseMLEngine):
 
     name = 'lightfm'
 
+    # todo change for hybrid recommender
     def create(self, target: str, df: pd.DataFrame = None, args: Optional[Dict] = None):
 
         args = args["using"]
 
-        #get model parameters if defined by user - else use default values
+        # get model parameters if defined by user - else use default values
 
         user_defined_model_params = list(filter(lambda x: x in args, ["learning_rate", "loss", "epochs"]))
         args['model_params'] = {model_param: args[model_param] for model_param in user_defined_model_params}
         model_parameters = ModelParameters(**args['model_params'])
 
-        #preprocess data
+        #
         rec_preprocessor = RecommenderPreprocessor(
             interaction_data=df,
             user_id_column_name=args['user_id'],
@@ -34,23 +35,27 @@ class LightFMHandler(BaseMLEngine):
             threshold=args['threshold'],
         )
 
+        # preprocess data
         preprocessed_data = rec_preprocessor.preprocess()
 
-        args['preprocessed_df'] = preprocessed_data.interaction_df.to_json(orient='split')
+        # get idx to item_id and user_id maps
+        args['idx_to_item_id_map'] = preprocessed_data.idx_item_map
+        args['idx_to_user_id_map'] = preprocessed_data.idx_user_map
 
-        #todo train/test split
+        # todo train/test split
 
         # train model
 
         model = LightFM(learning_rate=model_parameters.learning_rate, loss=model_parameters.loss, random_state=42)
         model.fit(preprocessed_data.interaction_matrix, epochs=model_parameters.epochs)
 
-        #todo evaluate model
-        #todo check and return precision@k
+        # todo evaluate model
+        # todo check and return precision@k
 
         self.model_storage.file_set('model', dill.dumps(model))
         self.model_storage.json_set('args', args)
 
+    # todo change for hybrid recommender
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None):
 
         args = self.model_storage.json_get('args')
@@ -61,13 +66,12 @@ class LightFMHandler(BaseMLEngine):
 
         if args['recommendation_type'] == 'item_item':
 
-            interaction_data = pd.read_json(args['preprocessed_df'], orient='split')
+            item_idx = args['idx_to_item_id_map'][args['similar_to_item']]
 
-            # change for hybrid
+            similar_items_df = get_similar_items(item_idx=item_idx, model=model, item_features=None, N=args['n_recommendations'])
+            similar_items_df['item_id'] = similar_items_df['item_idx'].astype('str').map(args['idx_to_item_id_map'])
 
-            item_idx = interaction_data.loc[interaction_data[args['item_id']] == args['similar_to']]['item_idx'][0]-1
-
-            return get_similar_items(item_idx=item_idx, model=model, item_features=None, N=args['n_recommendations'])
+            return similar_items_df[['item_id', 'score']]
 
         elif args['recommendation_type'] == 'user_item':
 
@@ -75,5 +79,3 @@ class LightFMHandler(BaseMLEngine):
 
         else:
             raise ValueError("recommendation_type must be either 'user_item' or 'item_item'")
-
-

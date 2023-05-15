@@ -6,7 +6,7 @@ import scipy as sp
 from unittest.mock import patch
 
 from mindsdb_sql import parse_sql
-from mindsdb.integrations.handlers.lightfm_handler.helpers import RecommenderPreprocessor, item_mapping
+from mindsdb.integrations.handlers.lightfm_handler.helpers import RecommenderPreprocessor
 from mindsdb.integrations.handlers.lightfm_handler.lightfm_handler import LightFMHandler
 from unit.executor_test_base import BaseExecutorTest
 
@@ -20,20 +20,19 @@ def test_preprocessing_cf(interaction_data):
 		item_id_column_name="movieId"
 	)
 
-	rec_preprocessor.encode_interactions()
-
-	interaction_matrix = rec_preprocessor.construct_interaction_matrix()
+	preprocessed_data = rec_preprocessor.preprocess()
 
 	# check ids are int64
-	assert rec_preprocessor.interaction_data[[rec_preprocessor.user_id_column_name, rec_preprocessor.item_id_column_name]] \
-		.dtypes[rec_preprocessor.interaction_data.dtypes == 'int64'].all()
+	assert preprocessed_data.interaction_df[[rec_preprocessor.user_id_column_name, rec_preprocessor.item_id_column_name]] \
+		.dtypes[preprocessed_data.interaction_df.dtypes == 'int64'].all()
 
 	# check interaction are equal to 1 or -1 e.g. positive or negative
-	assert rec_preprocessor.interaction_data['interaction'].apply(lambda x: x == -1 or x == 1).all()
+	assert preprocessed_data.interaction_df['interaction'].apply(lambda x: x == -1 or x == 1).all()
 
+	print("d")
 	# check interaction matrix is the expected shape
-	assert interaction_matrix.shape == (503, 89)
-	assert isinstance(interaction_matrix, sp.sparse.coo_matrix)
+	assert preprocessed_data.interaction_matrix.shape == (503, 89)
+	assert isinstance(preprocessed_data.interaction_matrix, sp.sparse.coo_matrix)
 
 
 class TestLightFM(BaseExecutorTest):
@@ -61,9 +60,9 @@ class TestLightFM(BaseExecutorTest):
 			return pd.DataFrame(ret.data, columns=columns)
 
 	@patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-	def test_collaborative_filter_user_item_recommendation_light_fm_handler(self, mock_handler, interaction_data):
+	def test_collaborative_filter_user_item_recommendation_light_fm_handler(self, mock_handler, interaction_df):
 
-		self.set_handler(mock_handler, name="pg", tables={"df": interaction_data})
+		self.set_handler(mock_handler, name="pg", tables={"df": interaction_df})
 
 		# create project
 		self.run_sql("create database proj")
@@ -98,9 +97,9 @@ class TestLightFM(BaseExecutorTest):
 
 
 	@patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-	def test_collaborative_filter_item_item_recommendation_light_fm_handler(self, mock_handler, interaction_data):
+	def test_collaborative_filter_item_item_recommendation_light_fm_handler(self, mock_handler, interaction_df):
 
-		self.set_handler(mock_handler, name="pg", tables={"df": interaction_data})
+		self.set_handler(mock_handler, name="pg", tables={"df": interaction_df})
 
 		# create project
 		self.run_sql("create database proj")
@@ -117,7 +116,7 @@ class TestLightFM(BaseExecutorTest):
 				user_id='userId',
 				threshold=4,
 				recommendation_type='item_item',
-				similar_to=1,
+				similar_to_item='1',
 				n_recommendations=10
 				
 				"""

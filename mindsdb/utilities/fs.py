@@ -51,7 +51,7 @@ def _get_process_mark_id(unified: bool = False) -> str:
         Returns:
             mark of process+thread
     '''
-    mark = f'{os.getpid()}-{threading.get_ident()}'
+    mark = f'{os.getpid()}-{threading.get_native_id()}'
     if unified is True:
         return mark
     return f"{mark}-{str(time.time()).replace('.', '')}"

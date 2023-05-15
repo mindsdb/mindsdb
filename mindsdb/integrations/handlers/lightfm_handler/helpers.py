@@ -1,8 +1,11 @@
+import lightfm
 import pandas as pd
+import numpy as np
 import scipy as sp
 from pydantic import BaseModel
 from collections import namedtuple
 from enum import Enum
+from typing import Optional, Dict, List, Union, Tuple
 
 
 def item_mapping(
@@ -35,6 +38,79 @@ def item_mapping(
 
 	return item_map
 
+
+def get_user_item_recommendations(n_users: int, n_items: int, args: dict, model: lightfm.LightFM):
+	"""
+	gets N user-item recommendations for a given model
+	:param n_users:
+	:param n_items:
+	:param args:
+	:param model:
+	:return:
+	"""
+	# recommend items for each user
+
+	user_ids = np.concatenate([np.full((n_items,), i) for i in range(0, n_users)])
+	item_ids = np.concatenate([np.arange(n_items) for i in range(n_users)])
+
+	scores = model.predict(user_ids, item_ids)
+
+	# map scores to user-item pairs, sort by score and return top N recommendations per user
+	user_item_recommendations_df = (
+		pd.DataFrame({'user_id': user_ids, 'item_id': item_ids, 'score': scores})
+		.groupby('user_id')
+		.apply(lambda x: x.sort_values('score', ascending=False).head(args["n_recommendations"]))
+	)
+
+	return user_item_recommendations_df
+
+
+def get_similar_items(item_idx: Union[int, str], model: lightfm.LightFM, item_features=None, N:int=10):
+	"""
+	gets similar items to a given item index inside user-item interaction matrix
+	NB by default it won't use item features,however if item features are provided
+	it will use them to get similar items
+
+	:param item_idx:
+	:param model:
+	:param item_features:
+	:param N:
+
+	:return:
+	"""
+
+	item_biases, item_representations = model.get_item_representations(features=item_features)
+
+	# Cosine similarity
+	# get scores for all items
+
+	scores = item_representations.dot(item_representations[item_idx, :])
+
+	# normalize
+
+	item_norms = np.sqrt(( item_representations * item_representations).sum(axis=1))
+
+	scores /= item_norms
+
+	# get the top N items
+	best = np.argpartition(scores, -N)
+	# sort the scores
+
+	rec = sorted(zip(best, scores[best] / item_norms[item_idx]), key=lambda x: -x[1])
+
+	similar_items_df = (
+		pd.DataFrame(rec, columns=['item_id', 'score'])
+		.tail(-1) # remove the item itself
+		.head(N)
+	)
+
+	return similar_items_df
+
+
+class ModelParameters(BaseModel):
+    learning_rate: float = 0.05
+    loss: str = 'warp'
+    epochs: int = 10
 
 class RecommenderType(Enum):
 	cf = 1
@@ -73,7 +149,9 @@ class RecommenderPreprocessor:
 		:return tuple:
 		"""
 
-		return (self.interaction_data[self.user_id_column_name].max(), self.interaction_data[self.item_id_column_name].max())
+		return (
+			self.interaction_data[self.user_id_column_name].max(),
+			self.interaction_data[self.item_id_column_name].max())
 
 	def prevent_cold_start(self):
 		"""
@@ -83,11 +161,11 @@ class RecommenderPreprocessor:
 		:return void:
 		"""
 
-		unique_user_ids = {v:k for k,v in enumerate(self.interaction_data[self.user_id_column_name].unique(), 1)}
-		unique_item_ids = {v:k for k,v in enumerate(self.interaction_data[self.item_id_column_name].unique(), 1)}
+		unique_user_ids = {v: k for k, v in enumerate(self.interaction_data[self.user_id_column_name].unique(), 1)}
+		unique_item_ids = {v: k for k, v in enumerate(self.interaction_data[self.item_id_column_name].unique(), 1)}
 
-		self.interaction_data['dense_user_id'] = self.interaction_data[self.user_id_column_name].map(unique_user_ids)
-		self.interaction_data['dense_item_id'] = self.interaction_data[self.item_id_column_name].map(unique_item_ids)
+		self.interaction_data['user_idx'] = self.interaction_data[self.user_id_column_name].map(unique_user_ids)
+		self.interaction_data['item_idx'] = self.interaction_data[self.item_id_column_name].map(unique_item_ids)
 
 	def encode_interactions(self):
 		"""
@@ -115,12 +193,13 @@ class RecommenderPreprocessor:
 			self.prevent_cold_start()
 
 			# update id cols to be used for sparse matrix value assignment
-			setattr(self, 'user_id_column_name', 'dense_user_id')
-			setattr(self, 'item_id_column_name', 'dense_item_id')
+			setattr(self, 'user_id_column_name', 'user_idx')
+			setattr(self, 'item_id_column_name', 'item_idx')
 
 		lil_matrix = sp.sparse.lil_matrix(self.n_users_items)
 
-		for index, series in self.interaction_data[[self.user_id_column_name, self.item_id_column_name, 'interaction']].iterrows():
+		for index, series in self.interaction_data[
+			[self.user_id_column_name, self.item_id_column_name, 'interaction']].iterrows():
 			lil_matrix[int(series[self.user_id_column_name] - 1), int(series[self.item_id_column_name] - 1)] = series[
 				'interaction']
 
@@ -141,5 +220,4 @@ class RecommenderPreprocessor:
 			interaction_df=self.interaction_data,
 			interaction_matrix=interaction_matrix,
 		)
-
 

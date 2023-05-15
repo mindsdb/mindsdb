@@ -43,7 +43,6 @@ class PopularityRecommenderHandler(BaseMLEngine):
         self.model_storage.json_set('popularity', popularity)
         self.model_storage.json_set('args', args)
 
-
     def predict(self, data=None, args: Optional[dict] = None):
 
         args = self.model_storage.json_get('args')

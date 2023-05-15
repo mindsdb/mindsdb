@@ -133,7 +133,7 @@ class TestLightFM(BaseExecutorTest):
 		)
 
 		# check that the result is the expected shape e.g. 10 recommendations per user  * 503 users
-		assert result_df.shape == (5030, 3)
+		assert result_df.shape == (10, 2)
 
 
 

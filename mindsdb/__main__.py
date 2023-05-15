@@ -15,6 +15,7 @@ from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
 from mindsdb.api.postgres.start import start as start_postgres
+from mindsdb.interfaces.chatbot import chatbot_controller
 from mindsdb.interfaces.jobs.scheduler import start as start_scheduler
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
@@ -285,6 +286,9 @@ if __name__ == '__main__':
         'postgres': start_postgres,
         'jobs': start_scheduler,
     }
+
+    # start chatbots interface
+    chatbot_controller.init()
 
     if config.get('jobs', {}).get('disable') is not True:
         apis['jobs'] = {

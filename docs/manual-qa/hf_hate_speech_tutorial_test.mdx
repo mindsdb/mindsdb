@@ -1,0 +1,23 @@
+## Testing: Hugging Face - Hate Speech Tutorial
+
+1.Testing CREATE MODEL
+```sql
+CREATE MODEL mindsdb.hf_hate
+PREDICT PRED
+USING
+engine = 'huggingface',
+task = 'text-classification',
+model_name = 'Hate-speech-CNERG/bert-base-uncased-hatexplain',
+input_column = 'text';
+```
+
+![creating model](https://cdn.discordapp.com/attachments/1073262776463675396/1106979531086110801/Screenshot_1.png)
+
+2.Testing SELECT (making predictions)
+```sql
+SELECT *
+FROM mindsdb.hf_hate
+WHERE text = 'I like you. I love you.';
+```
+
+![making predictions](https://cdn.discordapp.com/attachments/1073262776463675396/1106979566649626644/Screenshot_2.png)

@@ -130,7 +130,7 @@ class MonetDBHandler(DatabaseHandler):
         try:
             cur.execute(query)
                    
-            if cur._rows>0 :
+            if len(cur._rows)>0 :
                 result = cur.fetchall() 
                 response = Response(
                     RESPONSE_TYPE.TABLE,

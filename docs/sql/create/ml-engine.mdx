@@ -1,6 +1,6 @@
 ---
 title: CREATE ML_ENGINE Statement
-sidebarTitle: ML_ENGINE
+sidebarTitle: CREATE ML_ENGINE
 ---
 
 You can create machine learning (ML) engines based on the ML handlers available in MindsDB. If you can't find the ML handler of your interest, you can always contribute by [building a new ML handler](/contribute/ml-handlers/).
@@ -20,10 +20,11 @@ FROM information_schema.handlers;
 SHOW HANDLERS;
 ```
 
-<Note>
-    **Can't Find an ML Handler?**
-    If you can't find the ML handler of your interest, you can contribute by [building a new ML handler](/contribute/ml_handlers/).
-</Note>
+<Info>
+If you can’t find the ML handler of your interest, you can contribute by [building a new ML handler](https://docs.mindsdb.com/contribute/ml_handlers).
+
+Please note that in the process of contributing new ML engines, ML engines and/or their tests will only run correctly if all dependencies listed in the `requirements.txt` file are installed beforehand.
+</Info>
 
 If you find the ML handler of your interest, then you can create an ML engine using this command:
 

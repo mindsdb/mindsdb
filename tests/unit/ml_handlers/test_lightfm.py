@@ -134,5 +134,20 @@ class TestLightFM(BaseExecutorTest):
 		# check that the result is the expected shape e.g. 10 recommendations per user  * 503 users
 		assert result_df.shape == (10, 3)
 
+	@patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+	def test_collaborative_filter_user_user_recommendation_light_fm_handler_with_item_data(self, mock_handler, interaction_data):
+		...
 
+
+	@patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+	def test_hybrid_user_item_recommendation_light_fm_handler(self, mock_handler, interaction_data):
+		...
+
+	@patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+	def test_hybrid_item_item_recommendation_light_fm_handler(self, mock_handler, interaction_data):
+		...
+
+	@patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+	def test_hybrid_user_user_recommendation_light_fm_handler(self, mock_handler, interaction_data):
+		...
 

@@ -7,7 +7,8 @@ from collections import namedtuple
 from enum import Enum
 from typing import Optional, Dict, List, Union, Tuple
 
-
+# possibly redundant
+'''
 def item_mapping(
 		item_df: pd.DataFrame,
 		item_id_column_name,
@@ -37,6 +38,8 @@ def item_mapping(
 		item_map[idx] = item_data._make(item)
 
 	return item_map
+'''
+
 
 
 def get_user_item_recommendations(n_users: int, n_items: int, args: dict, model: lightfm.LightFM):
@@ -65,7 +68,7 @@ def get_user_item_recommendations(n_users: int, n_items: int, args: dict, model:
 	return user_item_recommendations_df
 
 
-def get_similar_items(item_idx: Union[int, str], model: lightfm.LightFM, item_features=None, N:int=10):
+def get_similar_items(item_idx: Union[int, str], model: lightfm.LightFM, item_features=None, N:int=10) -> pd.DataFrame:
 	"""
 	gets similar items to a given item index inside user-item interaction matrix
 	NB by default it won't use item features,however if item features are provided
@@ -98,13 +101,11 @@ def get_similar_items(item_idx: Union[int, str], model: lightfm.LightFM, item_fe
 
 	rec = sorted(zip(best, scores[best] / item_norms[item_idx]), key=lambda x: -x[1])
 
-	similar_items_df = (
-		pd.DataFrame(rec, columns=['item_id', 'score'])
+	return (
+		pd.DataFrame(rec, columns=['item_idx', 'score'])
 		.tail(-1) # remove the item itself
 		.head(N)
 	)
-
-	return similar_items_df
 
 
 class ModelParameters(BaseModel):
@@ -118,10 +119,13 @@ class RecommenderType(Enum):
 	hybrid = 2
 
 
-# todo fix this to support hybrid recommender
+# todo add support for hybrid recommender
 class RecommenderPreprocessorOutput(BaseModel):
 	interaction_df: pd.DataFrame
 	interaction_matrix: sp.sparse.coo_matrix
+	idx_item_map: dict
+	idx_user_map: dict
+
 
 	class Config:
 		arbitrary_types_allowed = True
@@ -147,24 +151,55 @@ class RecommenderPreprocessor:
 	def n_users_items(self):
 		"""
 		get tuple with number of users and items e.g. user-item matrix shape
-
 		:return tuple:
 		"""
 
 		return (
-			self.interaction_data[self.user_id_column_name].max(),
-			self.interaction_data[self.item_id_column_name].max())
+			self.interaction_data[self.user_id_column_name].nunique(),
+			self.interaction_data[self.item_id_column_name].nunique()
+		)
 
-	def prevent_cold_start(self):
+	@property
+	def _idx_item_map(
+			self
+	) -> dict:
 		"""
-		get unique products and items, map to df ids in order to reduce sparcity and prevent cold start
-		in collaborative filtering
-
+		maps item idx in matrix to item id
 		:return void:
 		"""
 
-		unique_user_ids = {v: k for k, v in enumerate(self.interaction_data[self.user_id_column_name].unique(), 1)}
-		unique_item_ids = {v: k for k, v in enumerate(self.interaction_data[self.item_id_column_name].unique(), 1)}
+		return (
+			self.interaction_data[[self.item_id_column_name, 'item_idx']]
+			.drop_duplicates()
+			.set_index('item_idx')
+			.to_dict()[self.item_id_column_name]
+		)
+
+	@property
+	def _idx_user_map(
+			self
+	) -> dict:
+		"""
+		maps user idx in matrix to user id
+		:return void:
+		"""
+
+		return (
+			self.interaction_data[[self.user_id_column_name, 'user_idx']]
+			.drop_duplicates()
+			.set_index('user_idx')
+			.to_dict()[self.user_id_column_name]
+		)
+
+	def map_id_to_idx(self):
+		"""
+		map user and item ids to a range of 0 to n_users and 0 to n_items respectively
+		reduces density of user-item matrix
+		:return void:
+		"""
+
+		unique_user_ids = {v: k for k, v in enumerate(self.interaction_data[self.user_id_column_name].unique(), 0)}
+		unique_item_ids = {v: k for k, v in enumerate(self.interaction_data[self.item_id_column_name].unique(), 0)}
 
 		self.interaction_data['user_idx'] = self.interaction_data[self.user_id_column_name].map(unique_user_ids)
 		self.interaction_data['item_idx'] = self.interaction_data[self.item_id_column_name].map(unique_item_ids)
@@ -173,36 +208,24 @@ class RecommenderPreprocessor:
 		"""
 		set whether user interacted positively or negatively with item,
 		negative may not be applicable depending on the use case
-
 		:return void:
 		"""
-		# positive interaction
-		self.interaction_data.loc[self.interaction_data.rating >= self.threshold, "interaction"] = 1
-		# negative interaction
-		self.interaction_data.loc[self.interaction_data.rating <= self.threshold, "interaction"] = -1
-
-		if self.recommender_type == 'cf':
-			self.prevent_cold_start()
+		# encode interactions as 1 or -1 for positive and negative respectively
+		self.interaction_data['interaction'] = np.where(self.interaction_data.rating >= self.threshold, 1, -1).astype('int64')
 
 	def construct_interaction_matrix(self) -> sp.sparse.coo_matrix:
+
 		"""
 		construct user x item interaction matrix
-
 		:return sp.sparse.coo_matrix :
 		"""
 
-		if self.recommender_type.name == "cf":
-			self.prevent_cold_start()
-
-			# update id cols to be used for sparse matrix value assignment
-			setattr(self, 'user_id_column_name', 'user_idx')
-			setattr(self, 'item_id_column_name', 'item_idx')
-
 		lil_matrix = sp.sparse.lil_matrix(self.n_users_items)
 
+		# populate the matrix
 		for index, series in self.interaction_data[
-			[self.user_id_column_name, self.item_id_column_name, 'interaction']].iterrows():
-			lil_matrix[int(series[self.user_id_column_name] - 1), int(series[self.item_id_column_name] - 1)] = series[
+			['user_idx', 'item_idx', 'interaction']].iterrows():
+			lil_matrix[series['user_idx'], series['item_idx']] = series[
 				'interaction']
 
 		# convert from lil_matrix to coo_matrix
@@ -212,14 +235,21 @@ class RecommenderPreprocessor:
 	def preprocess(self) -> RecommenderPreprocessorOutput:
 		"""
 		runs a series of preprocessing tasks for recommender
-
 		:return RecommenderPreprocessorOutput:
 		"""
+		# encode interactions
 		self.encode_interactions()
+
+		# get the idx of the user and item
+		self.map_id_to_idx()
+
+		# construct interaction matrix
 		interaction_matrix = self.construct_interaction_matrix()
 
 		return RecommenderPreprocessorOutput(
 			interaction_df=self.interaction_data,
 			interaction_matrix=interaction_matrix,
+			idx_item_map=self._idx_item_map,
+			idx_user_map=self._idx_user_map
 		)
 

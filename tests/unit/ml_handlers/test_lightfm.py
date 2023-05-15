@@ -116,7 +116,6 @@ class TestLightFM(BaseExecutorTest):
 				user_id='userId',
 				threshold=4,
 				recommendation_type='item_item',
-				similar_to_item='1',
 				n_recommendations=10
 				
 				"""
@@ -131,8 +130,8 @@ class TestLightFM(BaseExecutorTest):
 		"""
 		)
 
-		# check that the result is the expected shape e.g. 10 recommendations per user  * 503 users
-		assert result_df.shape == (10, 3)
+		# check that the result is the expected shape e.g. 10 recommendations per user  * 89 users
+		assert result_df.shape == (890, 3)
 
 	@patch("mindsdb.integrations.handlers.postgres_handler.Handler")
 	def test_collaborative_filter_user_user_recommendation_light_fm_handler_with_item_data(self, mock_handler, interaction_data):

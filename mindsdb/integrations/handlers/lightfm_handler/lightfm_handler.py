@@ -3,7 +3,7 @@ from typing import Optional, Dict
 import dill
 import pandas as pd
 from lightfm import LightFM
-from mindsdb.integrations.handlers.lightfm_handler.helpers import RecommenderPreprocessor, get_similar_items, \
+from mindsdb.integrations.handlers.lightfm_handler.helpers import RecommenderPreprocessor, get_item_item_recommendations, \
     get_user_item_recommendations, ModelParameters
 from mindsdb.integrations.libs.base import BaseMLEngine
 
@@ -64,11 +64,9 @@ class LightFMHandler(BaseMLEngine):
         n_items = df[args['item_id']].nunique()
 
         if args['recommendation_type'] == 'item_item':
-
-            return get_similar_items(model=model, args=args, item_features=None, N=args['n_recommendations'])
+            return get_item_item_recommendations(model=model, args=args, item_features=None, N=args['n_recommendations'])
 
         elif args['recommendation_type'] == 'user_item':
-
             return get_user_item_recommendations(n_users=n_users, n_items=n_items, args=args, model=model)
 
         elif args['recommendation_type'] == 'user_user':

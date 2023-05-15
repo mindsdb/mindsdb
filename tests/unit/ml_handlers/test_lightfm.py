@@ -61,25 +61,79 @@ class TestLightFM(BaseExecutorTest):
 			return pd.DataFrame(ret.data, columns=columns)
 
 	@patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-	def test_create_light_fm_handler(self, mock_handler, interaction_data):
-		lfm_handler = LightFMHandler(model_storage='dummy', engine_storage='dummy')
+	def test_collaborative_filter_user_item_recommendation_light_fm_handler(self, mock_handler, interaction_data):
 
 		self.set_handler(mock_handler, name="pg", tables={"df": interaction_data})
 
 		# create project
 		self.run_sql("create database proj")
 
+		# create predictor
+		self.run_sql(
+			"""
+			create model proj.useritemtest
+			from pg (select * from df)
+			predict movieId
+			using
+				engine='lightfm',
+				item_id='movieId',
+				user_id='userId',
+				recommendation_type='user_item',
+				threshold=4,
+				n_recommendations=10
+				"""
+		)
+		self.wait_predictor("proj", "useritemtest")
 
-		# todo define model syntax
+		result_df = self.run_sql(
+			"""
+		   SELECT p.*
+		   FROM pg.df as t
+		   JOIN proj.useritemtest as p
+		"""
+		)
+
+		# check that the result is the expected shape e.g. 10 recommendations per user  * 503 users
+		assert result_df.shape == (5030, 3)
+
+
+	@patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+	def test_collaborative_filter_item_item_recommendation_light_fm_handler(self, mock_handler, interaction_data):
+
+		self.set_handler(mock_handler, name="pg", tables={"df": interaction_data})
+
+		# create project
+		self.run_sql("create database proj")
 
 		# create predictor
 		self.run_sql(
 			"""
-		   
+			create model proj.itemitemtest
+			from pg (select * from df)
+			predict movieId
+			using
+				engine='lightfm',
+				item_id='movieId',
+				user_id='userId',
+				threshold=4,
+				recommendation_type='item_item',
+				similar_to=1,
+				n_recommendations=10
+				
+				"""
+		)
+		self.wait_predictor("proj", "itemitemtest")
+
+		result_df = self.run_sql(
+			"""
+		   SELECT p.*
+		   FROM pg.df as t
+		   JOIN proj.itemitemtest as p
 		"""
 		)
-		self.wait_predictor("proj", "modelx")
+
+		# check that the result is the expected shape e.g. 10 recommendations per user  * 503 users
+		assert result_df.shape == (5030, 3)
 
 
-	def test_predict_light_fm_handler(self):
-		...
+

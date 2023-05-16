@@ -36,5 +36,5 @@ Now, you can use this established connection to query your database as follows,
 SELECT * FROM yugabyte_datasource.demo;
 ~~~~
 
-NOTE : If you are using YugabyteDB Cloud with mindsdb cloud websit you need to add **`0.0.0.0\0`** to `allow IP list` for accessing it publicly.
+NOTE : If you are using YugabyteDB Cloud with mindsdb cloud website you need to add **`0.0.0.0/0`** to `allow IP list` for accessing it publicly.
 ![public](https://user-images.githubusercontent.com/75653580/185357710-932da3a0-dd6b-4f7c-afe3-8022cff220eb.png)

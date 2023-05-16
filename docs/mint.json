@@ -60,7 +60,6 @@
             "model-types",
             "sql/native-queries",
             "sql/data-insights",
-            "sql/create/file",
             "sql/feature-importance",
             "sql/feature-eng",
             "mindsdb-handlers"
@@ -121,6 +120,123 @@
       ]
     },
     {
+      "group": "Data Sources",
+      "pages": [
+        {
+          "group": "Applications",
+          "pages": [
+            "app-integrations/confluence",
+            "app-integrations/google-calendar",
+            "app-integrations/plaid",
+            "app-integrations/reddit",
+            "app-integrations/twitter"
+          ]
+        },
+        {
+          "group": "Databases",
+          "pages": [
+            "data-integrations/all-data-integrations",
+            "data-integrations/airtable",
+            "data-integrations/amazon-dynamodb",
+            "data-integrations/amazon-redshift",
+            "data-integrations/amazon-s3",
+            "data-integrations/apache-cassandra",
+            "data-integrations/apache-druid",
+            "data-integrations/apache-hive",
+            "data-integrations/apache-impala",
+            "data-integrations/apache-pinot",
+            "data-integrations/apache-solr",
+            "data-integrations/ckan",
+            "data-integrations/clickhouse",
+            "data-integrations/cloud-spanner",
+            "data-integrations/cockroachdb",
+            "data-integrations/couchbase",
+            "data-integrations/cratedb",
+            "data-integrations/d0lt",
+            "data-integrations/databend",
+            "data-integrations/databricks",
+            "data-integrations/datastax",
+            "data-integrations/duckdb",
+            "data-integrations/elasticsearch",
+            "data-integrations/firebird",
+            "data-integrations/google-bigquery",
+            "data-integrations/google-sheets",
+            "data-integrations/ibm-db2",
+            "data-integrations/ibm-informix",
+            "data-integrations/influxdb",
+            "data-integrations/mariadb",
+            "data-integrations/matrixone",
+            "data-integrations/microsoft-access",
+            "data-integrations/microsoft-sql-server",
+            "data-integrations/monetdb",
+            "data-integrations/mongodb",
+            "data-integrations/mysql",
+            "data-integrations/oceanbase",
+            "data-integrations/opengauss",
+            "data-integrations/oracle",
+            "data-integrations/orioledb",
+            "data-integrations/planetscale",
+            "data-integrations/postgresql",
+            "data-integrations/questdb",
+            "data-integrations/sap-hana",
+            "data-integrations/sap-sql-anywhere",
+            "data-integrations/scylladb",
+            "data-integrations/singlestore",
+            "data-integrations/snowflake",
+            "data-integrations/sqlite",
+            "data-integrations/starrocks",
+            "data-integrations/supabase",
+            "data-integrations/tdengine",
+            "data-integrations/teradata",
+            "data-integrations/tidb",
+            "data-integrations/timescaledb",
+            "data-integrations/trino",
+            "data-integrations/vertica",
+            "data-integrations/vitess",
+            "data-integrations/yugabytedb"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "ML Engines",
+      "pages": [
+        {
+          "group": "Large Language Models",
+          "pages": [
+            "custom-model/openai",
+            "custom-model/huggingface",
+            "custom-model/langchain"
+          ]
+        },
+        {
+          "group": "Bring Your Own Models",
+          "pages": [
+            "custom-model/byom",
+            "custom-model/ray-serve",
+            "custom-model/mlflow"
+          ]
+        },
+        {
+          "group": "AutoML",
+          "pages": [
+            "ml-engines/automl/lightwood",
+            "ml-engines/automl/ludwig",
+            "ml-engines/automl/autokeras",
+            "ml-engines/automl/autosklearn"
+          ]
+        },
+        {
+          "group": "Time Series Models",
+          "pages": [
+            "nixtla/statsforecast",
+            "nixtla/neuralforecast",
+            "custom-model/merlion"
+          ]
+        }
+      ]
+    },
+    {
       "group": "MindsDB SQL",
       "pages": [
         {
@@ -141,22 +257,18 @@
           "group": "SQL Commands",
           "pages": [
             {
-              "group": "Data",
+              "group": "Databases",
               "pages": [
                 "sql/create/database",
                 "sql/drop/database",
+                "sql/api/use"
+              ]
+            },
+            {
+              "group": "Projects",
+              "pages": [
                 "sql/create/project",
-                "sql/drop/project",
-                "sql/create/table",
-                "sql/drop/table",
-                "sql/create/view",
-                "sql/drop/view",
-                "sql/api/select",
-                "sql/api/select-files",
-                "sql/api/update",
-                "sql/api/insert",
-                "sql/api/use",
-                "sql/api/join-on"
+                "sql/drop/project"
               ]
             },
             {
@@ -176,6 +288,32 @@
                 "sql/api/retrain",
                 "sql/api/finetune",
                 "sql/api/manage-models-versions"
+              ]
+            },
+            {
+              "group": "Views",
+              "pages": [
+                "sql/create/view",
+                "sql/drop/view"
+              ]
+            },
+            {
+              "group": "Tables",
+              "pages": [
+                "sql/create/table",
+                "sql/drop/table",
+                "sql/api/select",
+                "sql/api/update",
+                "sql/api/insert",
+                "sql/api/join-on"
+              ]
+            },
+            {
+              "group": "Files",
+              "pages": [
+                "sql/create/file",
+                "sql/drop/file",
+                "sql/api/select-files"
               ]
             },
             {
@@ -277,123 +415,6 @@
       "pages": [
         "sdk/javascript_sdk",
         "sdk/python_sdk"
-      ]
-    },
-    {
-      "group": "Data Sources",
-      "pages": [
-        {
-          "group": "Applications",
-          "pages": [
-            "app-integrations/confluence",
-            "app-integrations/google-calendar",
-            "app-integrations/plaid",
-            "app-integrations/reddit",
-            "app-integrations/twitter"
-          ]
-        },
-        {
-          "group": "Databases",
-          "pages": [
-            "data-integrations/all-data-integrations",
-            "data-integrations/airtable",
-            "data-integrations/amazon-dynamodb",
-            "data-integrations/amazon-redshift",
-            "data-integrations/amazon-s3",
-            "data-integrations/apache-cassandra",
-            "data-integrations/apache-druid",
-            "data-integrations/apache-hive",
-            "data-integrations/apache-impala",
-            "data-integrations/apache-pinot",
-            "data-integrations/apache-solr",
-            "data-integrations/ckan",
-            "data-integrations/clickhouse",
-            "data-integrations/cloud-spanner",
-            "data-integrations/cockroachdb",
-            "data-integrations/couchbase",
-            "data-integrations/cratedb",
-            "data-integrations/d0lt",
-            "data-integrations/databend",
-            "data-integrations/databricks",
-            "data-integrations/datastax",
-            "data-integrations/duckdb",
-            "data-integrations/elasticsearch",
-            "data-integrations/firebird",
-            "data-integrations/google-bigquery",
-            "data-integrations/google-sheets",
-            "data-integrations/ibm-db2",
-            "data-integrations/ibm-informix",
-            "data-integrations/influxdb",
-            "data-integrations/mariadb",
-            "data-integrations/matrixone",
-            "data-integrations/microsoft-access",
-            "data-integrations/microsoft-sql-server",
-            "data-integrations/monetdb",
-            "data-integrations/mongodb",
-            "data-integrations/mysql",
-            "data-integrations/oceanbase",
-            "data-integrations/opengauss",
-            "data-integrations/oracle",
-            "data-integrations/orioledb",
-            "data-integrations/planetscale",
-            "data-integrations/postgresql",
-            "data-integrations/questdb",
-            "data-integrations/sap-hana",
-            "data-integrations/sap-sql-anywhere",
-            "data-integrations/scylladb",
-            "data-integrations/singlestore",
-            "data-integrations/snowflake",
-            "data-integrations/sqlite",
-            "data-integrations/starrocks",
-            "data-integrations/supabase",
-            "data-integrations/tdengine",
-            "data-integrations/teradata",
-            "data-integrations/tidb",
-            "data-integrations/timescaledb",
-            "data-integrations/trino",
-            "data-integrations/vertica",
-            "data-integrations/vitess",
-            "data-integrations/yugabytedb"
-          ]
-        }
-      ]
-    },
-    {
-      "group": "ML Engines",
-      "pages": [
-        {
-          "group": "Large Language Models",
-          "pages": [
-            "custom-model/huggingface",
-            "custom-model/openai",
-            "custom-model/langchain"
-          ]
-        },
-        {
-          "group": "Bring Your Own Models",
-          "pages": [
-            "custom-model/byom",
-            "custom-model/ray-serve",
-            "custom-model/mlflow"
-          ]
-        },
-        {
-          "group": "AutoML",
-          "pages": [
-            "ml-engines/automl/lightwood",
-            "ml-engines/automl/ludwig",
-            "ml-engines/automl/autokeras",
-            "ml-engines/automl/autosklearn"
-          ]
-        },
-        {
-          "group": "Time Series Models",
-          "pages": [
-            "nixtla/statsforecast",
-            "nixtla/neuralforecast",
-            "custom-model/merlion"
-          ]
-        }
       ]
     },
     {

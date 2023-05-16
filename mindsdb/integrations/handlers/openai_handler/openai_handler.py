@@ -64,7 +64,8 @@ class OpenAIHandler(BaseMLEngine):
         args = args['using']
 
         args['target'] = target
-        available_models = [m.openai_id for m in openai.Model.list().data]
+        api_key = self._get_openai_api_key(args)
+        available_models = [m.openai_id for m in openai.Model.list(api_key=api_key).data]
         if not args.get('model_name'):
             args['model_name'] = self.default_model
         elif args['model_name'] not in available_models:

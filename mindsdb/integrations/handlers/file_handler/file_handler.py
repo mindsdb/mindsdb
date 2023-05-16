@@ -308,7 +308,7 @@ class FileHandler(DatabaseHandler):
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame([
                 {
-                    'Field': x.strip(),
+                    'Field': x['name'].strip() if isinstance(x, dict) else x.strip(),
                     'Type': 'str'
                 } for x in file_meta['columns']
             ])

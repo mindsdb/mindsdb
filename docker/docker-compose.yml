@@ -62,7 +62,6 @@ services:
       HOST: "lightwood"
       MINDSDB_SERVICE_TYPE: "lightwood"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
-      REGISTRY_URL: "http://handler_discovery:5000"
       MINDSDB_DB_SERVICE_HOST: "db_service"
       MINDSDB_DB_SERVICE_PORT: "50050"
 
@@ -83,7 +82,6 @@ services:
       MINDSDB_SERVICE_TYPE: "huggingface"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       REGISTRY_URL: "http://handler_discovery:5000"
-      MINDSDB_STORAGE_DIR: "/mindsdb/var"
       MINDSDB_DB_SERVICE_HOST: "db_service"
       MINDSDB_DB_SERVICE_PORT: "50050"
 

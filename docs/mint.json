@@ -60,7 +60,6 @@
             "model-types",
             "sql/native-queries",
             "sql/data-insights",
-            "sql/create/file",
             "sql/feature-importance",
             "sql/feature-eng",
             "mindsdb-handlers"
@@ -258,22 +257,18 @@
           "group": "SQL Commands",
           "pages": [
             {
-              "group": "Data",
+              "group": "Databases",
               "pages": [
                 "sql/create/database",
                 "sql/drop/database",
+                "sql/api/use"
+              ]
+            },
+            {
+              "group": "Projects",
+              "pages": [
                 "sql/create/project",
-                "sql/drop/project",
-                "sql/create/table",
-                "sql/drop/table",
-                "sql/create/view",
-                "sql/drop/view",
-                "sql/api/select",
-                "sql/api/select-files",
-                "sql/api/update",
-                "sql/api/insert",
-                "sql/api/use",
-                "sql/api/join-on"
+                "sql/drop/project"
               ]
             },
             {
@@ -293,6 +288,32 @@
                 "sql/api/retrain",
                 "sql/api/finetune",
                 "sql/api/manage-models-versions"
+              ]
+            },
+            {
+              "group": "Views",
+              "pages": [
+                "sql/create/view",
+                "sql/drop/view"
+              ]
+            },
+            {
+              "group": "Tables",
+              "pages": [
+                "sql/create/table",
+                "sql/drop/table",
+                "sql/api/select",
+                "sql/api/update",
+                "sql/api/insert",
+                "sql/api/join-on"
+              ]
+            },
+            {
+              "group": "Files",
+              "pages": [
+                "sql/create/file",
+                "sql/drop/file",
+                "sql/api/select-files"
               ]
             },
             {

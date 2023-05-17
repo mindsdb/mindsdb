@@ -1,6 +1,6 @@
 ### Briefly describe what ML framework does this handler integrate to Mindsdb, and how ? 
 
-This handler integrates Mindsdb to Monkeylearn. Monkeylearn is a tool to which comes with prebuilt & custom Machine learning models code free. It simplifies text analytics with templates, like Keyword + Classification template and Business templates. MonkeyLearn integrates with Mindsdb with the help of **REST API** .It can be used to classify text according to user needs and field of interest like business, reviews, comments and customer-feedback.
+This handler integrates Mindsdb to Monkeylearn. Monkeylearn is a tool which comes with prebuilt & custom Machine learning models code free. It simplifies text analytics with templates, like Keyword + Classification template and Business templates. MonkeyLearn integrates with Mindsdb with the help of monkeylearn's **REST API** .It can be used to classify text according to user needs and field of interest like business, reviews, comments and customer-feedback.
 
 
 ### Why is this integration useful? What does the ideal predictive use case for this integration look like? When would you definitely not use this integration?
@@ -23,3 +23,4 @@ This integrations currently works with only classifier models on monkeylearn. Ot
 
 
 ### Please provide a minimal SQL example that uses this ML engine (pointers to integration tests in the PR also valid)
+[Loom Video](https://www.loom.com/share/0b9c477a9c2845aa94c72d56b621203d) this loom video demonstrates SQL example to use the integration

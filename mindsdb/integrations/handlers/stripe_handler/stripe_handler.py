@@ -1,6 +1,6 @@
 import stripe
 
-from mindsdb.integrations.handlers.stripe_handler.stripe_tables import *
+from mindsdb.integrations.handlers.stripe_handler.stripe_tables import CustomersTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -33,6 +33,9 @@ class StripeHandler(APIHandler):
         self.connection = None
         self.is_connected = False
 
+        customers_data = CustomersTable(self)
+        self._register_table("customers", customers_data)
+
     def connect(self):
         """
         Set up the connection required by the handler.
@@ -61,8 +64,8 @@ class StripeHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            connection = self.connect()
-            connection.Account.retrieve()
+            stripe = self.connect()
+            stripe.Account.retrieve()
             response.success = True
         except Exception as e:
             log.logger.error(f'Error connecting to Stripe!')

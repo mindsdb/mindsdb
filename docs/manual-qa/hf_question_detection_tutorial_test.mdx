@@ -1,0 +1,30 @@
+## Test the Hugging Face - Question Detection tutorial
+
+1. Testing CREATE MODEL
+
+```sql
+CREATE MODEL mindsdb.hf_question
+PREDICT PRED
+USING
+engine = 'huggingface',
+task = 'text-classification',
+model_name = 'shahrukhx01/bert-mini-finetune-question-detection',
+input_column = 'text',
+labels = ['question', 'query'];
+```
+
+| NAME | ENGINE | PROJECT | ACTIVE | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | TAG |
+| ---- | ------ | ------- | ------ | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | --- |
+| hf_question | huggingface | mindsdb | true | 1 | generating | [NULL] | PRED | up_to_date | 23.4.4.2 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'task': 'text-classification', 'model_name': 'shahrukhx01/bert-mini-finetune-question-detection', 'input_column': 'text', 'labels': ['question', 'query']}} | [NULL] |
+
+2. Testing SELECT (making predictions)
+
+```sql
+SELECT *
+FROM mindsdb.hf_question
+WHERE text = 'Where can I buy electronics in London';
+```
+
+| PRED | PRED_explain | text |
+| ---- | ------------ | ---- |
+| query | {"query":0.9997773766517639,"question":0.00022261829872149974} | Where can I buy electronics in London |

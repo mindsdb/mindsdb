@@ -24,12 +24,22 @@ class RocketChatMessagesTable(APITable):
                 if op != '=':
                     raise NotImplementedError
                 params['room_id'] = arg2
+            if arg1 == 'username':
+                if op != '=':
+                    raise NotImplementedError
+                params['username'] = arg2
         if query.limit:
             params['limit'] = query.limit
 
+        # See IM Messages endpoint:
+        # https://developer.rocket.chat/reference/api/rest-api/endpoints/core-endpoints/im-endpoints/messages
+        if 'username' in params:
+            message_data = self.handler.call_rocket_chat_api(method_name='im.messages', params=params)
+
         # See Channel Messages endpoint:
         # https://developer.rocket.chat/reference/api/rest-api/endpoints/core-endpoints/channels-endpoints/messages
-        message_data = self.handler.call_rocket_chat_api(method_name='channels.messages', params=params)
+        else:
+            message_data = self.handler.call_rocket_chat_api(method_name='channels.messages', params=params)
 
         # Only return the columns we need to.
         columns = []

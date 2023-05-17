@@ -63,6 +63,27 @@ class RocketChatClient(object):
             messages_response.raise_for_status()
         return messages_response.json()['messages']
 
+    def get_direct_messages(self, username: str) -> List[Dict]:
+        """Gets all messages sent directly to a user
+
+        Returns a list of message objects.
+        See https://developer.rocket.chat/reference/api/rest-api/endpoints/core-endpoints/im-endpoints/messages
+
+        Args:
+            username (str): The username to get direct messages for.
+        """
+
+        params = {
+            'username': username
+        }
+        messages_response = requests.get(
+            f'{self.base_url}/im.messages',
+            params=params,
+            headers=self.headers)
+        if not messages_response.ok:
+            messages_response.raise_for_status()
+        return messages_response.json()['messages']
+
     def post_message(
             self,
             room_id: str,

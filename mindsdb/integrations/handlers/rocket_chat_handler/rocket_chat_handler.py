@@ -56,7 +56,7 @@ class RocketChatHandler(APIHandler):
         self.is_connected = False
 
         messages_table = RocketChatMessagesTable(self)
-        self._register_table('channel_messages', messages_table)
+        self._register_table('messages', messages_table)
 
     def connect(self):
         """Creates a new Rocket Chat API client if needed and sets it as the client to use for requests.
@@ -115,6 +115,16 @@ class RocketChatHandler(APIHandler):
             bot_id = message['bot']['i']
         return [id, room_id, bot_id, message_text, username, user, sent_at]
 
+    def _get_all_direct_messages(self, params):
+        if 'username' not in params:
+            raise ValueError('Missing "username" param to fetch messages for')
+        username = params['username']
+
+        client = self.connect()
+        all_messages = client.get_direct_messages(username)
+        message_rows = [self._message_to_dataframe_row(m) for m in all_messages]
+        return pd.DataFrame(message_rows)
+
     def _get_all_channel_messages(self, params):
         if 'room_id' not in params:
             raise ValueError('Missing "room_id" param to fetch messages for')
@@ -156,6 +166,8 @@ class RocketChatHandler(APIHandler):
         """
         if method_name == 'channels.messages':
             return self._get_all_channel_messages(params)
-        elif method_name == 'chat.postMessage':
+        if method_name == 'chat.postMessage':
             return self._post_message(params)
+        if method_name == 'im.messages':
+            return self._get_all_direct_messages(params)
         raise NotImplementedError(f'Method name {method_name} not supported by Rocket Chat API Handler')

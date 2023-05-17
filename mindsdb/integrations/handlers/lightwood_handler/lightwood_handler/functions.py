@@ -223,8 +223,10 @@ def run_finetune(df: DataFrame, args: dict, model_storage):
         print(traceback.format_exc())
         error_message = format_exception_error(e)
         predictor_record.data = {"error": error_message}
+        predictor_record.status = PREDICTOR_STATUS.ERROR
         db.session.commit()
-
-    if predictor_record.training_stop_at is None:
-        predictor_record.training_stop_at = datetime.now()
-        db.session.commit()
+        raise
+    finally:
+        if predictor_record.training_stop_at is None:
+            predictor_record.training_stop_at = datetime.now()
+            db.session.commit()

@@ -8,6 +8,7 @@ import psutil
 import asyncio
 import secrets
 import traceback
+import threading
 from packaging import version
 
 from mindsdb.__about__ import __version__ as mindsdb_version
@@ -25,7 +26,7 @@ from mindsdb.interfaces.stream.utilities import STOP_THREADS_EVENT
 from mindsdb.interfaces.database.integrations import integration_controller
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
-from mindsdb.utilities.fs import create_dirs_recursive
+from mindsdb.utilities.fs import create_dirs_recursive, clean_process_marks, clean_unlinked_process_marks
 from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
@@ -46,8 +47,11 @@ except RuntimeError:
 #
 # if not is_ray_worker:
 
+_stop_event = threading.Event()
+
 
 def close_api_gracefully(apis):
+    _stop_event.set()
     try:
         for api in apis.values():
             process = api['process']
@@ -67,8 +71,14 @@ def close_api_gracefully(apis):
         pass
 
 
+def do_clean_process_marks():
+    while _stop_event.wait(timeout=5) is False:
+        clean_process_marks()
+
+
 if __name__ == '__main__':
     # ----------------  __init__.py section ------------------
+    clean_process_marks()
     ctx.set_default()
     args = args_parse()
 
@@ -196,6 +206,9 @@ if __name__ == '__main__':
         if import_meta.get('success', False) is not True:
             print(f"Dependencies for the handler '{handler_name}' are not installed by default.\n",
                   f'If you want to use "{handler_name}" please install "{dependencies}"')
+
+    # from mindsdb.utilities.fs import get_marked_processes_and_threads
+    # marks = get_marked_processes_and_threads()
 
     if not is_cloud:
         # region creating permanent integrations
@@ -332,9 +345,11 @@ if __name__ == '__main__':
             else:
                 log.logger.error(f"ERROR: {api_name} API cant start on {port}")
 
-    ioloop = asyncio.get_event_loop()
+    ioloop = asyncio.new_event_loop()
     ioloop.run_until_complete(wait_apis_start())
     ioloop.close()
+
+    threading.Thread(target=do_clean_process_marks).start()
 
     try:
         for api_data in apis.values():

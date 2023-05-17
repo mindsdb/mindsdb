@@ -104,7 +104,7 @@ dtype_dict={"number_of_rooms": "categorical", "initial_price": "integer", "renta
 format='ray_server';
 ```
 
-And you can query predictions as usual, either by conditioning on a subset of input colums:
+And you can query predictions as usual, either by conditioning on a subset of input columns:
 
 ```sql
 SELECT * FROM byom_ray_serve WHERE initial_price=3000 AND rental_price=3000;

@@ -1,0 +1,141 @@
+## Testing: Quickstart Tutorial
+
+1. Testing Connect a Database Using CREATE DATABASE
+
+```sql
+CREATE DATABASE example_data
+WITH ENGINE = "postgres",
+PARAMETERS = {
+  "user": "demo_user",
+  "password": "demo_password",
+  "host": "3.220.66.106",
+  "port": "5432",
+  "database": "demo"
+};
+```
+
+Output:
+| status |
+| ------ |
+| Query successfully completed |
+
+
+2. Testing Preview the Available Data Using SELECT
+
+```sql
+SELECT *
+FROM example_data.demo_data.home_rentals
+LIMIT 10;
+```
+
+Output:
+| number_of_rooms | number_of_bathrooms | sqft | location | days_on_market | neighborhood | rental_price |
+| --------------- | ------------------- | ---- | -------- | -------------- | ------------ | ------------ |
+| 2 | 1 | 917 | great | 13 | berkeley_hills | 3901 |
+| 0 | 1 | 194 | great | 10 | berkeley_hills | 2042 |
+| 1 | 1 | 543 | poor | 18 | westbrae | 1871 |
+| 2 | 1 | 503 | good | 10 | downtown | 3026 |
+| 3 | 2 | 1066 | good | 13 | thowsand_oaks | 4774 |
+| 3 | 2 | 816 | poor | 25 | westbrae | 4382 |
+| 0 | 1 | 461 | great | 6 | berkeley_hills | 2269 |
+| 1 | 1 | 333 | great | 6 | south_side | 2284 |
+| 3 | 2 | 1124 | great | 9 | south_side | 5420 |
+| 3 | 2 | 1204 | good | 7 | downtown | 5016 |
+
+
+3. Testing Preview the Available Data Using SHOW
+
+```sql
+SHOW databases;
+```
+
+Output:
+| Database |
+| -------- |
+| information_schema |
+| mindsdb |
+| files |
+| example_data |
+
+4. Testing Create a Model Using CREATE MODEL
+
+```sql
+CREATE MODEL mindsdb.home_rentals_model
+FROM example_data
+  (SELECT * FROM demo_data.home_rentals)
+PREDICT rental_price;
+```
+
+Output:
+| NAME | ENGINE | PROJECT | ACTIVE | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | TAG |
+| ---- | ------ | ------- | ------ | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | --- |
+| home_rentals_model | lightwood | mindsdb | true | 1 | generating | [NULL] | rental_price | up_to_date | 23.4.4.4 | [NULL] | SELECT * FROM demo_data.home_rentals | {'target': 'rental_price'} | [NULL] |
+
+
+5. Testing Check the Status of a Model Using SELECT
+
+```sql
+SELECT status
+FROM mindsdb.models
+WHERE name = 'home_rentals_model';
+```
+
+Output:
+| status |
+| ------ |
+| complete |
+
+6. Testing Check the Status of a Model a
+
+```sql
+SHOW MODELS
+FROM mindsdb
+LIKE 'home_rentals_model'
+WHERE status = 'complete';
+```
+
+Output:
+| NAME | ENGINE | PROJECT | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | CURRENT_TRAINING_PHASE | TOTAL_TRAINING_PHASES | TRAINING_PHASE_NAME | TAG | CREATED_AT |
+| ---- | ------ | ------- | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | ---------------------- | --------------------- | ------------------- | --- | ---------- |
+| home_rentals_model | lightwood | mindsdb | 1 | complete | 0.999 | rental_price | up_to_date | 23.4.4.4 | [NULL] | SELECT * FROM demo_data.home_rentals | {'target': 'rental_price'} | 5 | 5 | Complete | [NULL] | 2023-05-15 16:13:48.286744 |
+
+7. Testing Make Predictions Using SELECT
+
+```sql
+SELECT rental_price
+FROM mindsdb.home_rentals_model
+WHERE number_of_bathrooms = 2
+AND sqft = 1000;
+```
+
+Output:
+| rental_price |
+| ------------ |
+| 4766 |
+
+8. Testing Make batch Predictions Using SELECT
+
+```sql
+SELECT m.rental_price, m.rental_price_explain
+FROM mindsdb.home_rentals_model AS m
+JOIN example_data.demo_data.home_rentals AS d;
+```
+
+Output:
+| rental_price | rental_price_explain |
+| ------------ | -------------------- |
+| 3897 | {"predicted_value": 3897, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 3820, "confidence_upper_bound": 3975} |
+| 2046 | {"predicted_value": 2046, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 1968, "confidence_upper_bound": 2124} |
+| 1870 | {"predicted_value": 1870, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 1793, "confidence_upper_bound": 1948} |
+| 3037 | {"predicted_value": 3037, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 2960, "confidence_upper_bound": 3115} |
+| 4764 | {"predicted_value": 4764, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 4687, "confidence_upper_bound": 4842} |
+| 4392 | {"predicted_value": 4392, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 4315, "confidence_upper_bound": 4470} |
+| 2267 | {"predicted_value": 2267, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 2190, "confidence_upper_bound": 2345} |
+| 2272 | {"predicted_value": 2272, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 2194, "confidence_upper_bound": 2350} |
+| 5411 | {"predicted_value": 5411, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 5333, "confidence_upper_bound": 5489} |
+| 5025 | {"predicted_value": 5025, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 4947, "confidence_upper_bound": 5102} |
+| 1421 | {"predicted_value": 1421, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 1343, "confidence_upper_bound": 1499} |
+| 3453 | {"predicted_value": 3453, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 3376, "confidence_upper_bound": 3531} |
+| 5274 | {"predicted_value": 5274, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 5197, "confidence_upper_bound": 5352} |
+| 3023 | {"predicted_value": 3023, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 2945, "confidence_upper_bound": 3101} |
+| ... | ... |

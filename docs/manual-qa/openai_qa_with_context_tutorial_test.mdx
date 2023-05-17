@@ -1,0 +1,38 @@
+## Testing: OpenAI - Answering Questions with Context Tutorial
+
+1. Testing CREATE MODEL
+```sql
+CREATE MODEL project_a.openai_test_b
+PREDICT answer
+USING
+    engine = 'openai',
+    question_column = 'question',
+    context_column = 'context';
+```
+
+Output:
+```sql
+Query successfully completed
+```
+
+| NAME | ENGINE | PROJECT | ACTIVE | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | TAG |
+| ---- | ------ | ------- | ------ | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | --- |
+| openai_test_b | openai | project_a | true | 1 | generating | [NULL] | answer | up_to_date | 23.4.4.2 | [NULL] | [NULL] | {'target': 'answer', 'using': {'question_column': 'question', 'context_column': 'context'}} | [NULL] |
+
+
+Testing SELECT (making predictions)
+
+```sql
+SELECT context, question, answer
+FROM project_a.openai_test_b
+WHERE context = 'Answer with a joke'
+AND question = 'How to cook soup?';
+
+
+```
+
+Output:
+
+| context | question | answer |
+| ------- | -------- | ------ |
+| Answer with a joke | How to cook soup? | Well, first you need to find a pot that's big enough to hold all the ingredients. Then you add some water, some vegetables, and some meat. Finally, you turn up the heat and wait until the vegetables are tender. And voila! You have a pot of hot water with some soggy vegetables and meat floating in it. Just kidding, that's not soup. But seriously, follow a recipe. |

@@ -1,0 +1,28 @@
+## Testing: OpenAI - Answering Questions without Context Tutorial
+
+1.Testing CREATE MODEL
+```sql
+CREATE MODEL mindsdb.openai_test_a
+PREDICT answer
+USING
+    engine = 'openai',
+    question_column = 'question';
+```
+
+![creating model](https://cdn.discordapp.com/attachments/1073262776463675396/1106969066939367454/Screenshot_48.png)
+
+2.Testing SELECT (making predictions)
+```sql
+SELECT question, answer
+FROM mindsdb.openai_test_a
+WHERE question = 'Where is Stockholm located?';
+```
+
+![making predictions](https://cdn.discordapp.com/attachments/1073262776463675396/1106969305364570122/Screenshot_49.png)
+
+Note: I have used 'mindsdb' instead of 'project_a'.
+![error 1](https://cdn.discordapp.com/attachments/1073262776463675396/1106970666038743091/Screenshot_50.png)
+![error 2](https://cdn.discordapp.com/attachments/1073262776463675396/1106970666294587453/Screenshot_51.png)
+
+Errors:
+When I used the given code in Documentation, I got the error that the 'project_a does not exist', But When I used 'mindsdb', I got the Correct output as given Doc file.

@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import importlib
 import threading
+import multiprocessing
 from time import time
 from pathlib import Path
 from copy import deepcopy
@@ -70,7 +71,9 @@ class HandlersCache:
             Args:
                 handler (DatabaseHandler)
         """
-        # print(f'!!!! set {handler.name} {ctx.company_id} {threading.get_ident()}')
+        # do not cache connections in handlers processes
+        if multiprocessing.current_process().name.startswith('HandlerProcess'):
+            return
         with self._lock:
             try:
                 key = (handler.name, ctx.company_id, threading.get_ident())

@@ -10,7 +10,8 @@ class CustomersTable(APITable):
     """The Stripe Customers Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
-        """Pulls data from the Stripe "GET /customers" API endpoint.
+        """
+        Pulls data from the Stripe Customers.
 
         Parameters
         ----------

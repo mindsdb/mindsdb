@@ -279,12 +279,7 @@
                 "sql/create/model",
                 "sql/drop/model",
                 "sql/api/join",
-                "sql/api/describe"
-              ]
-            },
-            {
-              "group": "Model Versions",
-              "pages": [
+                "sql/api/describe",
                 "sql/api/retrain",
                 "sql/api/finetune",
                 "sql/api/manage-models-versions"

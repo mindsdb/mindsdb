@@ -237,6 +237,7 @@ lakehouse
 lang
 LangChain
 lar
+latencies
 le
 learn’s
 libre
@@ -474,6 +475,7 @@ Talha
 tblard
 tcp
 TDengine
+TDEngine
 Telcom
 telecom
 telecoms

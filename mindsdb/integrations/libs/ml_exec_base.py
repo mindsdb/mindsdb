@@ -64,9 +64,8 @@ class MLEngineException(Exception):
 
 @mark_process(name='learn')
 def learn_process(class_path, engine, context_dump, integration_id,
-                  predictor_id, data_integration_ref, fetch_data_query,
-                  project_name, problem_definition, set_active,
-                  base_predictor_id=None):
+                  predictor_id, problem_definition, set_active,
+                  base_predictor_id=None, training_data_df=None):
     ctx.load(context_dump)
     db.init()
 
@@ -74,30 +73,6 @@ def learn_process(class_path, engine, context_dump, integration_id,
 
     try:
         target = problem_definition['target']
-        training_data_df = None
-
-        database_controller = DatabaseController()
-
-        sql_session = make_sql_session()
-        if data_integration_ref is not None:
-            if data_integration_ref['type'] == 'integration':
-                integration_name = database_controller.get_integration(data_integration_ref['id'])['name']
-                query = Select(
-                    targets=[Star()],
-                    from_table=NativeQuery(
-                        integration=Identifier(integration_name),
-                        query=fetch_data_query
-                    )
-                )
-                sqlquery = SQLQuery(query, session=sql_session)
-            elif data_integration_ref['type'] == 'view':
-                project = database_controller.get_project(project_name)
-                query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
-                view_query_ast = project.query_view(query_ast)
-                sqlquery = SQLQuery(view_query_ast, session=sql_session)
-
-            result = sqlquery.fetch(view='dataframe')
-            training_data_df = result['result']
 
         training_data_columns_count, training_data_rows_count = 0, 0
         if training_data_df is not None:
@@ -270,6 +245,30 @@ class BaseMLEngineExec:
     def query_(self, query: ASTNode) -> Response:
         raise Exception('Should not be used')
 
+    def _fetch_training_data(self, data_integration_ref, fetch_data_query, project_name):
+        training_data_df = None
+        sql_session = make_sql_session()
+        if data_integration_ref is not None:
+            if data_integration_ref['type'] == 'integration':
+                integration_name = self.database_controller.get_integration(data_integration_ref['id'])['name']
+                query = Select(
+                    targets=[Star()],
+                    from_table=NativeQuery(
+                        integration=Identifier(integration_name),
+                        query=fetch_data_query
+                    )
+                )
+                sqlquery = SQLQuery(query, session=sql_session)
+            elif data_integration_ref['type'] == 'view':
+                project = self.database_controller.get_project(project_name)
+                query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
+                view_query_ast = project.query_view(query_ast)
+                sqlquery = SQLQuery(view_query_ast, session=sql_session)
+
+            result = sqlquery.fetch(view='dataframe')
+            training_data_df = result['result']
+        return training_data_df
+
     def learn(
         self, model_name, project_name,
         data_integration_ref=None,
@@ -320,6 +319,8 @@ class BaseMLEngineExec:
 
         class_path = [self.handler_class.__module__, self.handler_class.__name__]
 
+        training_data_df = self._fetch_training_data(data_integration_ref, fetch_data_query, project_name)
+
         p = HandlerProcess(
             learn_process,
             class_path,
@@ -327,11 +328,9 @@ class BaseMLEngineExec:
             ctx.dump(),
             self.integration_id,
             predictor_record.id,
-            data_integration_ref,
-            fetch_data_query,
-            project_name,
             problem_definition,
-            set_active
+            set_active,
+            training_data_df=training_data_df
         )
         p.start()
         if join_learn_process is True:
@@ -455,6 +454,8 @@ class BaseMLEngineExec:
 
         class_path = [self.handler_class.__module__, self.handler_class.__name__]
 
+        training_data_df = self._fetch_training_data(data_integration_ref, fetch_data_query, project_name)
+
         p = HandlerProcess(
             learn_process,
             class_path,
@@ -462,12 +463,10 @@ class BaseMLEngineExec:
             ctx.dump(),
             self.integration_id,
             predictor_record.id,
-            data_integration_ref,
-            fetch_data_query,
-            project_name,
             predictor_record.learn_args,
             set_active,
             base_predictor_record.id,
+            training_data_df=training_data_df
         )
         p.start()
         if join_learn_process is True:

@@ -44,7 +44,7 @@ Let's review the purpose of each method.
 | [`connect()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L23)       | It performs the necessary steps to connect/authenticate to the underlying system.                                                                                                                                   |
 | [`check_connection()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L39)   | It evaluates if the connection is alive and healthy.                                                                                                                 |
 | [`native_query()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L47)    | It parses any *native* statement string and acts upon it (for example, raw syntax commands).                                                                                                              |
-| `call_application_api()` | It calls the application API and maps the data to pandas DataFrame. This method handles the paggination and data mapping. |
+| `call_application_api()` | It calls the application API and maps the data to pandas DataFrame. This method handles the pagination and data mapping. |
 
 Authors can opt for adding private methods, new files and folders, or any combination of these to structure all the necessary work that will enable the core methods to work as intended.
 

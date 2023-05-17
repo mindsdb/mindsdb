@@ -18,6 +18,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     DropJob,
     Evaluate,
     CreateChatBot,
+    DropChatBot,
 )
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.dialects.mysql import Variable
@@ -603,6 +604,8 @@ class ExecuteCommands:
         # -- chatbots --
         elif type(statement) == CreateChatBot:
             return self.answer_create_chatbot(statement)
+        elif type(statement) == DropChatBot:
+            return self.answer_drop_chatbot(statement)
         elif type(statement) == Evaluate:
             statement.data = parse_sql(statement.query_str, dialect='mindsdb')
             return self.answer_evaluate_metric(statement)
@@ -635,14 +638,36 @@ class ExecuteCommands:
     def answer_create_chatbot(self, statement):
 
         name = statement.name
-        model = statement.model
-        database = statement.database
-        params = statement.params
+        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
 
-        chatbot_controller.add(job_name, project_name, statement.query_str,
-                            statement.start_str, statement.end_str, statement.repeat_str)
+        database = self.session.integration_controller.get(statement.database)
+        if database is None:
+            raise SqlApiException(f'Database not found: {statement.database}')
 
+        chatbot_controller.add_chatbot(
+            name.parts[-1],
+            project_name=project_name,
+            model_name=statement.model.parts[-1],
+            database_id=database.id,
+            params=statement.params
+        )
         return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_drop_chatbot(self, statement):
+
+        name = statement.name
+        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+
+        database = self.session.integration_controller.get(statement.database)
+        if database is None:
+            raise SqlApiException(f'Database not found: {statement.database}')
+
+        chatbot_controller.delete_chatbot(
+            name.parts[-1],
+            project_name=project_name
+        )
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
 
     def answer_evaluate_metric(self, statement):
         try:

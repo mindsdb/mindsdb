@@ -268,6 +268,7 @@ class JobsHistory(Base):
         UniqueConstraint('job_id', 'start_at', name='uniq_job_history_job_id_start'),
     )
 
+
 class ChatBots(Base):
     __tablename__ = 'chat_bots'
     id = Column(Integer, primary_key=True)
@@ -276,8 +277,9 @@ class ChatBots(Base):
 
     name = Column(String, nullable=False)
     project_id = Column(Integer, nullable=False)
-    model_id = Column(Integer, nullable=False)
-    handler_id = Column(Integer, nullable=False)
+
+    model_name = Column(String, nullable=False)
+    database_id = Column(Integer, nullable=False)
     params = Column(JSON)
 
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)

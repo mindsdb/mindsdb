@@ -66,20 +66,30 @@ class ChatBotController:
         for bot in db.ChatBots.query.all():
             self.start_bot(bot)
 
-    def add(self, name, chat_handler, model):
+    def add_chatbot(self, name, project_name, model_name, database_id, params):
+        is_cloud = Config().get('cloud', False)
+        if is_cloud is True:
+            raise Exception('Chatbots are disabled on cloud')
 
-        # TODO   !!!!
+        if project_name is None:
+            project_name = 'mindsdb'
+        project_controller = ProjectController()
+        project = project_controller.get(name=project_name)
+
         bot = db.ChatBots(
+            company_id=ctx.company_id,
             name=name,
-            project_id=..
-            ...
+            project_id=project.id,
+            model_name=model_name,
+            database_id=database_id,
+            params=params,
         )
         db.session.add(bot)
         db.session.commit()
 
         self.start_bot(bot)
 
-    def delete(self, name, project_name):
+    def delete_chatbot(self, name, project_name):
         project_controller = ProjectController()
         project = project_controller.get(name=project_name)
 
@@ -90,19 +100,17 @@ class ChatBotController:
         ).first()
 
         if bot is None:
-            raise Exception()
+            raise Exception(f'Chat bot not found: {name}')
 
         db.session.delete(bot)
         db.session.commit()
 
         self.stop_bot(bot)
 
-
     def start_bot(self, bot):
         thread = Task(bot)
         thread.start()
-        self._active_bots[bot.id] = self._active_bots
-
+        self._active_bots[bot.id] = thread
 
     def stop_bot(self, bot):
         bot_id = bot.id
@@ -112,10 +120,13 @@ class ChatBotController:
 
 chatbot_controller = None
 
+
 def init():
+    global chatbot_controller
+
     is_cloud = Config().get('cloud', False)
     if is_cloud is True:
-        # Chatbots are disabled on clou
+        # Chatbots are disabled on cloud
         pass
     else:
         chatbot_controller = ChatBotController()

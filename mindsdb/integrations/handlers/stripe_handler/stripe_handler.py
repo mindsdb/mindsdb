@@ -44,10 +44,44 @@ class StripeHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        stripe.api_key = self.connection_data['access_token']
+        stripe.api_key = self.connection_data['api_key']
 
         self.connection = stripe
-
         self.is_connected = True
 
         return self.connection
+
+    def check_connection(self) -> StatusResponse:
+        """
+        Check connection to the handler.
+        Returns:
+            HandlerStatusResponse
+        """
+
+        response = StatusResponse(False)
+
+        try:
+            connection = self.connect()
+            connection.Account.retrieve()
+            response.success = True
+        except Exception as e:
+            log.logger.error(f'Error connecting to Stripe!')
+            response.error_message = str(e)
+
+        self.is_connected = response.success
+
+        return response
+
+    def native_query(self, query: str) -> StatusResponse:
+        """Receive and process a raw query.
+        Parameters
+        ----------
+        query : str
+            query in a native format
+        Returns
+        -------
+        StatusResponse
+            Request status
+        """
+        ast = parse_sql(query, dialect="mindsdb")
+        return self.query(ast)

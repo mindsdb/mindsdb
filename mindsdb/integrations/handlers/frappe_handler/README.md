@@ -28,9 +28,9 @@ WHERE doctype = 'Expense Claim';
 
 Each row should look like this:
 
-| name |
-|------|
-| Claim 1|
+| doctype      | data                  |
+|--------------| ----------------------|
+| Expense Claim| { "name": "Claim 1" } |
 
 To get a full document, provide the name along with the type:
 

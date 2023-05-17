@@ -82,35 +82,35 @@ class FrappeHandler(APIHandler):
         ast = parse_sql(query, dialect='mindsdb')
         return self.query(ast)
 
-    def _document_to_dataframe_row(self, document: Dict) -> Dict:
-        document_row = {}
-        for field, value in document.items():
-            if isinstance(value, dict) or isinstance(value, list):
-                document_row[field] = json.dumps(value)
-            else:
-                document_row[field] = value
-        return document_row
+    def _document_to_dataframe_row(self, doctype, document: Dict) -> Dict:
+        return {
+            'doctype': doctype,
+            'data': json.dumps(document)
+        }
 
     def _get_document(self, params: Dict = None) -> pd.DataFrame:
         client = self.connect()
-        document = client.get_document(params['doctype'], params['name'])
-        return pd.DataFrame.from_records([self._document_to_dataframe_row(document)])
+        doctype = params['doctype']
+        document = client.get_document(doctype, params['name'])
+        return pd.DataFrame.from_records([self._document_to_dataframe_row(doctype, document)])
 
     def _get_documents(self, params: Dict = None) -> pd.DataFrame:
         client = self.connect()
         limit = None
         filters = None
+        doctype = params['doctype']
         if 'limit' in params:
             limit = params['limit']
         if 'filters' in params:
             filters = params['filters']
-        documents = client.get_documents(params['doctype'], limit=limit, filters=filters)
-        return pd.DataFrame.from_records([self._document_to_dataframe_row(d) for d in documents])
+        documents = client.get_documents(doctype, limit=limit, filters=filters)
+        return pd.DataFrame.from_records([self._document_to_dataframe_row(doctype, d) for d in documents])
 
     def _create_document(self, params: Dict = None) -> pd.DataFrame:
         client = self.connect()
-        new_document = client.post_document(params['doctype'], json.loads(params['data']))
-        return pd.DataFrame.from_records([self._document_to_dataframe_row(new_document)])
+        doctype = params['doctype']
+        new_document = client.post_document(doctype, json.loads(params['data']))
+        return pd.DataFrame.from_records([self._document_to_dataframe_row(doctype, new_document)])
 
     def call_frappe_api(self, method_name: str = None, params: Dict = None) -> pd.DataFrame:
         """Calls the Frappe API method with the given params.

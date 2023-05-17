@@ -77,5 +77,4 @@ class FrappeDocumentsTable(APITable):
 
     def get_columns(self) -> List:
         """Gets all columns to be returned in pandas DataFrame responses"""
-        # Different document types have different columns.
-        return []
+        return ['doctype', 'data']

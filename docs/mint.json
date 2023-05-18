@@ -337,6 +337,7 @@
           "group": "No-SQL Commands",
           "pages": [
             "mongo/collection-structure",
+            "mongo/ml_engine",
             "mongo/database",
             "mongo/insert",
             "mongo/stats",

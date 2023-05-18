@@ -240,6 +240,7 @@ lar
 latencies
 le
 learn’s
+learn's
 libre
 libs
 libsasl

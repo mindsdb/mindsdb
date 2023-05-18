@@ -2,7 +2,10 @@ matrix:
 - name: Markdown
   expect_match: false
   apsell:
-    mode: en
+    lang:
+      - en
+      - de
+      - es
   dictionary:
     wordlists:
     - spellcheck-config/.wordlist.txt

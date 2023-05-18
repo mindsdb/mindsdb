@@ -1,0 +1,51 @@
+## Testing: Text Summarization Tutorial
+
+1. Testing CREATE DATABASE
+
+```sql
+CREATE DATABASE mysql_demo_db
+WITH ENGINE = 'mysql',
+PARAMETERS = {
+    "user": "user",
+    "password": "MindsDBUser123!",
+    "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
+    "port": "3306",
+    "database": "public"
+};
+
+```
+Output:
+
+```sql
+Query successfully completed
+```
+
+
+2. Testing CREATE MODEL
+
+```sql
+CREATE MODEL text_summarization_model
+PREDICT highlights
+USING
+    engine = 'openai',              
+    prompt_template = 'provide an informative summary of the text text:{{article}} using full sentences';
+
+```
+
+3. Testing SELECT (making predictions)
+```sql
+SELECT article, highlights
+FROM text_summarization_model
+WHERE article = "Apple's Watch hits stores this Friday when customers and employees
+                alike will be able to pre-order the timepiece. And boss Tim Cook is
+                rewarding his staff by offering them a 50 per cent discount on the device.";
+
+```
+
+Output:
+
+| article | highlights |
+| ------- | ---------- |
+| Apple's Watch hits stores this Friday when customers and employees alike will be able to pre-order the timepiece. And boss Tim Cook is rewarding his staff by offering them a 50 per cent discount on the device. | The text reports that Apple's Watch will be available for pre-order this Friday in stores. Customers and employees will have the opportunity to purchase the timepiece. Additionally, Apple's CEO, Tim Cook, is offering a 50% discount on the device to his staff as a reward. |
+
+

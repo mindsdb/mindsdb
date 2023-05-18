@@ -111,7 +111,7 @@ Please follow the instructions below to connect into your MindsDB via Jupysql an
         *Make sure* to update the user and password in the connection string.
         user - your Mindsdb Cloud email address is your username
         ```python
-        %sql mysql+pymysql://<mindsdb_user>:<mindsdb_pass>@<dedicated instace ip>:<port>/mindsdb
+        %sql mysql+pymysql://<mindsdb_user>:<mindsdb_pass>@<dedicated instace ip>:3306/mindsdb
         ```
 
         Testing connection by listing the existing tables (pure SQL):
@@ -125,7 +125,7 @@ Please follow the instructions below to connect into your MindsDB via Jupysql an
         - Username is your MindsDB Cloud email address
         - Password is your MindsDB Cloud password
         - Host is the IP address of your dedicated instace
-        - Port is your custom port
+        - Port is `3306`
         - Database name is `mindsdb`
 
         </Tab>

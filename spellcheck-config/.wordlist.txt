@@ -168,7 +168,6 @@ GPT
 gssapi
 gui
 Gunicorn
-Guten
 Hacktoberfest
 hain
 Hallo

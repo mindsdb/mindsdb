@@ -329,7 +329,9 @@ class OpenAIHandler(BaseMLEngine):
                 if mode != 'conversational':
                     kwargs['messages'].append({'role': 'user', 'content': prompts[pidx]})
                 else:
-                    kwargs['messages'].append({'role': 'user', 'content': prompts[pidx]})
+                    question = prompts[pidx]
+                    if question:
+                        kwargs['messages'].append({'role': 'user', 'content': question})
                     answer = df.iloc[pidx][args.get('assistant_column')]
                     if answer:
                         kwargs['messages'].append({'role': 'assistant', 'content': answer})

@@ -5,7 +5,7 @@ from rocketchat_API.rocketchat import RocketChat
 
 from mindsdb.integrations.handlers.rocket_chat_handler.rocket_chat_tables import (
     ChannelMessagesTable, ChannelsTable, DirectsTable, DirectMessagesTable)
-from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.api_handler import APIChatHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -14,7 +14,7 @@ from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
 
-class RocketChatHandler(APIHandler):
+class RocketChatHandler(APIChatHandler):
     """A class for handling connections and interactions with the Rocket Chat API.
 
     Attributes:
@@ -65,6 +65,26 @@ class RocketChatHandler(APIHandler):
 
         self._register_table('direct_messages', DirectMessagesTable(self))
 
+    def get_chat_config(self):
+        params = {
+            'polling': {
+                'type': 'message_count',
+                'table': 'directs',
+                'chat_id_col': '_id',
+                'count_col': 'msgs'
+            },
+            'chat_table': {
+                'name': 'direct_messages',
+                'chat_id_col': 'room_id',
+                'username_col': 'username',
+                'text_col': 'text',
+            }
+        }
+        return params
+
+    def get_my_user_name(self):
+        info = self.call_api('me')
+        return info['username']
 
     def connect(self):
         """Creates a new Rocket Chat API client if needed and sets it as the client to use for requests.

@@ -227,3 +227,22 @@ class APIHandler(BaseHandler):
         df['table_type'] = 'BASE TABLE'
 
         return Response(RESPONSE_TYPE.TABLE, df)
+
+
+class APIChatHandler(APIHandler):
+
+    def get_chat_config(self):
+        """Return configuration to connect to chatbot
+
+        Returns:
+            Dict
+        """
+        raise NotImplementedError()
+
+    def get_my_user_name(self) -> list:
+        """Return configuration to connect to chatbot
+
+        Returns:
+            Dict
+        """
+        raise NotImplementedError()

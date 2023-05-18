@@ -83,7 +83,7 @@ from mindsdb.interfaces.model.functions import (
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
-from mindsdb.interfaces.chatbot.chatbot_controller import chatbot_controller
+from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities.context import context as ctx
 import mindsdb.utilities.profiler as profiler
@@ -636,11 +636,12 @@ class ExecuteCommands:
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_create_chatbot(self, statement):
+        chatbot_controller =  ChatBotController()
 
         name = statement.name
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
 
-        database = self.session.integration_controller.get(statement.database)
+        database = self.session.integration_controller.get(statement.database.parts[-1])
         if database is None:
             raise SqlApiException(f'Database not found: {statement.database}')
 
@@ -648,19 +649,16 @@ class ExecuteCommands:
             name.parts[-1],
             project_name=project_name,
             model_name=statement.model.parts[-1],
-            database_id=database.id,
+            database_id=database['id'],
             params=statement.params
         )
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_chatbot(self, statement):
+        chatbot_controller =  ChatBotController()
 
         name = statement.name
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
-
-        database = self.session.integration_controller.get(statement.database)
-        if database is None:
-            raise SqlApiException(f'Database not found: {statement.database}')
 
         chatbot_controller.delete_chatbot(
             name.parts[-1],

@@ -1,6 +1,10 @@
 import pandas as pd
 
 from mindsdb_sql.parser.ast import *
+from mindsdb.interfaces.storage import db
+
+from mindsdb.integrations.libs.api_handler import APIChatHandler
+
 
 class ChatBotTask:
     def __init__(self, session, database, project_name, model_name, params):
@@ -11,29 +15,28 @@ class ChatBotTask:
         self.db_handler = self.session.integration_controller.get_handler(database)
         self.project_datanode = self.session.datahub.get(project_name)
 
-        self.params = {
-            'polling': {
-                'type': 'message_count',
-                'table': 'directs',
-                'chat_id_col': '_id',
-                'count_col': 'msgs'
-            },
-            'chat_table': {
-                'name': 'direct_messages',
-                'chat_id_col': 'room_id',
-                'username_col': 'username',
-                'text_col': 'text',
-            },
-            'bot_name': 'Andrey',
-        }
+        # get chat handler info
+        self.params = {}
+        if isinstance(self.db_handler, APIChatHandler):
+            self.params = self.db_handler.get_chat_config()
+
+            # get bot username
+            self.params['bot_username'] = self.db_handler.get_my_user_name()
+
         if params is not None:
             self.params.update(params)
 
         self.chats_prev = None
 
+        # get model info
+        model = self.session.model_controller.get_model(model_name, project_name=project_name)
+        model_record = db.Predictor.query.get(model['id'])
 
-        # todo get params from handler
-
+        self.params['model'] = {
+            'user_column': model_record.learn_args['using']['user_column'],
+            'bot_column': model_record.learn_args['using']['assistant_column'],
+            'output': model_record.to_predict[0]
+        }
 
         # self.db_handler = self.session.datahub.get(self.database)
 
@@ -54,19 +57,25 @@ class ChatBotTask:
 
         chat_ids = []
 
+        id_col = p_params['chat_id_col']
+        msgs_col = p_params['count_col']
         # get chats status info
         ast_query = Select(
-            targets=[Identifier(p_params['chat_id_col']), Identifier(p_params['count_col'])],
+            targets=[
+                Identifier(id_col),
+                Identifier(msgs_col)],
             from_table=Identifier(p_params['table'])
         )
 
-        data, _ = self.db_handler.query(
-            query=ast_query,
-            session=self.session
-        )
+        resp = self.db_handler.query(query=ast_query)
+        if resp.data_frame is None:
+            raise Exception()
 
         chats = {}
-        for chat_id, msgs in data:
+        for row in resp.data_frame.to_dict('records'):
+            chat_id = row[id_col]
+            msgs = row[msgs_col]
+
             chats[chat_id] = msgs
 
         if self.chats_prev is None:
@@ -83,13 +92,16 @@ class ChatBotTask:
         return chat_ids
 
     def answer_to_user(self, chat_id):
-        bot_username = self.params['bot_name']
+        bot_username = self.params['bot_username']
 
         t_params = self.params['chat_table']
 
+        text_col = t_params['text_col']
+        username_col = t_params['username_col']
+
         ast_query = Select(
-            targets=[Identifier(t_params['text_col'], alias=Identifier('text')),
-                     Identifier(t_params['username_col'], alias=Identifier('username'))],
+            targets=[Identifier(text_col),
+                     Identifier(username_col)],
             from_table=Identifier(t_params['name']),
             where=BinaryOperation(
                 op='=',
@@ -109,36 +121,50 @@ class ChatBotTask:
         # check first message:
         if len(df) == 0:
             return
-        if df[0]['username'] == bot_username:
+        if df[username_col][0] == bot_username:
             # the last message is from bot
             return
 
-        messages = []
-        for _, row in df.iterrows():
-            if row['username'] == bot_username:
-                prefix = 'assistant'
-            else:
-                prefix = 'user'
-            messages.append(f"{prefix} :{row['text']}")
+        question_col = self.params['model']['user_column']
+        answer_col = self.params['model']['bot_column']
 
-        data = [{
-            'user_input': '\n'.join(messages)
-        }]
+        messages = []
+        msgs = df.to_dict('records')
+        # sort by time
+        msgs.reverse()
+        for row in msgs:
+            text = row[text_col]
+
+            if text is None or text.strip() == '':
+                # skip empty rows
+                continue
+
+            if row[username_col] != bot_username:
+                # create new message row
+                messages.append({question_col: text, answer_col: None})
+            else:
+                if len(messages) == 0:
+                    # add empty row
+                    messages.append({question_col: None, answer_col: None})
+
+                # update answer in previous column
+                messages[-1][answer_col] = text
 
         # call model
         predictions = self.project_datanode.predict(
             model_name=self.model_name,
-            data=data,
+            data=messages,
         )
 
-        model_response = predictions[0][answer_column]
+        output_col = self.params['model']['output']
+        model_output = predictions.iloc[-1][output_col]
 
         # send answer to user
         ast_query = Insert(
             table=Identifier(t_params['name']),
             columns=[t_params['chat_id_col'], t_params['text_col']],
             values=[
-                chat_id, model_response
+                [chat_id, model_output],
             ]
         )
 

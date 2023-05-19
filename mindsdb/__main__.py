@@ -38,20 +38,13 @@ try:
 except RuntimeError:
     log.logger.info('Torch multiprocessing context already set, ignoring...')
 
-# is_ray_worker = False
-# if sys.argv[0].endswith('ray/workers/default_worker.py'):
-#     is_ray_worker = True
-#
-# is_alembic = os.path.basename(sys.argv[0]).split('.')[0] == 'alembic'
-# is_pytest = os.path.basename(sys.argv[0]).split('.')[0] == 'pytest'
-#
-# if not is_ray_worker:
 
 _stop_event = threading.Event()
 
 
 def close_api_gracefully(apis):
     _stop_event.set()
+    STOP_THREADS_EVENT.set()
     try:
         for api in apis.values():
             process = api['process']
@@ -333,7 +326,7 @@ if __name__ == '__main__':
             started = is_pid_listen_port(pid, port)
         return api_name, port, started
 
-    async def wait_apis_start():
+    async def wait_apis_start(api_data: dict):
         futures = [
             wait_api_start(api_name, api_data['process'].pid, api_data['port'])
             for api_name, api_data in apis.items() if 'port' in api_data
@@ -345,16 +338,25 @@ if __name__ == '__main__':
             else:
                 log.logger.error(f"ERROR: {api_name} API cant start on {port}")
 
+    async def join_process(process, name):
+        try:
+            process.join()
+        except KeyboardInterrupt:
+            print('Got keyboard interrupt, stopping APIs')
+            close_api_gracefully(apis)
+        finally:
+            print(f'{name} API: stopped')
+
+    async def gather_apis():
+        await asyncio.gather(
+            *[join_process(api_data['process'], api_name) for api_name, api_data in apis.items()],
+            return_exceptions=False
+        )
+
     ioloop = asyncio.new_event_loop()
     ioloop.run_until_complete(wait_apis_start())
-    ioloop.close()
 
     threading.Thread(target=do_clean_process_marks).start()
 
-    try:
-        for api_data in apis.values():
-            api_data['process'].join()
-    except KeyboardInterrupt:
-        print('Stopping stream integrations...')
-        STOP_THREADS_EVENT.set()
-        print('Closing app...')
+    ioloop.run_until_complete(gather_apis())
+    ioloop.close()

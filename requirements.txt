@@ -36,5 +36,4 @@ pyarrow >= 10.0.1, < 10.1.0
 dataprep_ml
 grpcio-tools
 python-magic >= 0.4.27
-slack_sdk
 openpyxl >= 3.1.1

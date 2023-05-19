@@ -337,6 +337,7 @@ class BaseMLEngineExec:
         p.start()
         if join_learn_process is True:
             p.join()
+            db.session.refresh(predictor_record)
 
         return predictor_record
 
@@ -473,5 +474,6 @@ class BaseMLEngineExec:
         p.start()
         if join_learn_process is True:
             p.join()
+            db.session.refresh(predictor_record)
 
         return predictor_record

@@ -73,7 +73,7 @@ def close_api_gracefully(apis):
 
 def do_clean_process_marks():
     while _stop_event.wait(timeout=5) is False:
-        clean_process_marks()
+        clean_unlinked_process_marks()
 
 
 if __name__ == '__main__':

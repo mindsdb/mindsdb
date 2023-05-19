@@ -1,6 +1,6 @@
 import stripe
 
-from mindsdb.integrations.handlers.stripe_handler.stripe_tables import CustomersTable
+from mindsdb.integrations.handlers.stripe_handler.stripe_tables import CustomersTable, ProductsTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -35,6 +35,9 @@ class StripeHandler(APIHandler):
 
         customers_data = CustomersTable(self)
         self._register_table("customers", customers_data)
+
+        products_data = ProductsTable(self)
+        self._register_table("products", products_data)
 
     def connect(self):
         """

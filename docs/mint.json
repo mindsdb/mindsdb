@@ -279,12 +279,7 @@
                 "sql/create/model",
                 "sql/drop/model",
                 "sql/api/join",
-                "sql/api/describe"
-              ]
-            },
-            {
-              "group": "Model Versions",
-              "pages": [
+                "sql/api/describe",
                 "sql/api/retrain",
                 "sql/api/finetune",
                 "sql/api/manage-models-versions"
@@ -342,6 +337,7 @@
           "group": "No-SQL Commands",
           "pages": [
             "mongo/collection-structure",
+            "mongo/ml_engine",
             "mongo/database",
             "mongo/insert",
             "mongo/stats",
@@ -413,8 +409,8 @@
     {
       "group": "SDKs",
       "pages": [
-        "sdk/javascript_sdk",
-        "sdk/python_sdk"
+        "sdk/javascript-sdk",
+        "sdk/python-sdk"
       ]
     },
     {

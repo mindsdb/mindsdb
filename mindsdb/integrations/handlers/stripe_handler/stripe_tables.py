@@ -1,11 +1,10 @@
-import stripe
 import pandas as pd
 from typing import Text, List, Dict
 
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 
-from .utils import parse_statement, get_results
+from mindsdb.integrations.handlers.stripe_handler.query_handlers.select_query_handlers import SELECTQueryParser, SELECTQueryExecutor
 
 
 class CustomersTable(APITable):
@@ -31,15 +30,21 @@ class CustomersTable(APITable):
             If the query contains an unsupported condition
         """
 
-        selected_columns, where_conditions, order_by_conditions, result_limit = parse_statement(
+        select_statement_parser = SELECTQueryParser(
             query,
             'customers',
             self.get_columns()
         )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         customers_df = pd.json_normalize(self.get_customers(limit=result_limit))
-
-        customers_df = get_results(customers_df, selected_columns, where_conditions, order_by_conditions)
+        select_statement_executor = SELECTQueryExecutor(
+            customers_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+        customers_df = select_statement_executor.execute_query()
 
         return customers_df
 
@@ -75,15 +80,21 @@ class ProductsTable(APITable):
             If the query contains an unsupported condition
         """
 
-        selected_columns, where_conditions, order_by_conditions, result_limit = parse_statement(
+        select_statement_parser = SELECTQueryParser(
             query,
             'products',
             self.get_columns()
         )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         products_df = pd.json_normalize(self.get_products(limit=result_limit))
-
-        products_df = get_results(products_df, selected_columns, where_conditions, order_by_conditions)
+        select_statement_executor = SELECTQueryExecutor(
+            products_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+        products_df = select_statement_executor.execute_query()
 
         return products_df
 

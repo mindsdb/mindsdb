@@ -44,7 +44,7 @@ class CustomersTable(APITable):
         return customers_df
 
     def get_columns(self) -> List[Text]:
-        pass
+        return pd.json_normalize(self.get_customers(limit=1)).columns.tolist()
 
     def get_customers(self, **kwargs) -> List[Dict]:
         stripe = self.handler.connect()

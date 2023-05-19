@@ -123,6 +123,7 @@ After creating your ML engine, you can create a model like this:
 
 ```sql
 CREATE MODEL my_model
+PREDICT answer
 USING 
     engine = 'my_openai_engine',
     prompt_template = 'ask a question to a model'

@@ -105,3 +105,53 @@ class ProductsTable(APITable):
         stripe = self.handler.connect()
         products = stripe.Product.list(**kwargs)
         return [product.to_dict() for product in products]
+
+
+class PaymentIntentsTable(APITable):
+    """The Stripe Payment Intents Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """
+        Pulls data from the Stripe Payment Intents.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+            Stripe Payment Intents matching the query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'payment_intents',
+            self.get_columns()
+        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        payment_intents_df = pd.json_normalize(self.get_payment_intents(limit=result_limit))
+        select_statement_executor = SELECTQueryExecutor(
+            payment_intents_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+        payment_intents_df = select_statement_executor.execute_query()
+
+        return payment_intents_df
+
+    def get_columns(self) -> List[Text]:
+        return pd.json_normalize(self.get_payment_intents(limit=1)).columns.tolist()
+
+    def get_payment_intents(self, **kwargs) -> List[Dict]:
+        stripe = self.handler.connect()
+        payment_intents = stripe.PaymentIntent.list(**kwargs)
+        return [payment_intent.to_dict() for payment_intent in payment_intents]

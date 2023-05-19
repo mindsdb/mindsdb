@@ -116,9 +116,12 @@ def clean_unlinked_process_marks():
 
             try:
                 process = psutil.Process(process_id)
+                if process.status() in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD):
+                    raise psutil.NoSuchProcess(process_id)
+
                 threads = process.threads()
                 try:
-                    next(t for t in threads() if t.id == thread_id)
+                    next(t for t in threads if t.id == thread_id)
                 except StopIteration:
                     from mindsdb.utilities.log import get_log
                     get_log('main').warning(

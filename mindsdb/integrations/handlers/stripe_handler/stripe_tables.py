@@ -33,7 +33,7 @@ class CustomersTable(APITable):
 
         selected_columns, where_conditions, order_by_conditions, result_limit = parse_statement(
             query,
-            'products',
+            'customers',
             self.get_columns()
         )
 

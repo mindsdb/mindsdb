@@ -15,7 +15,7 @@ from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
 from mindsdb.api.postgres.start import start as start_postgres
-from mindsdb.interfaces.chatbot import chatbot_monitor
+from mindsdb.interfaces.chatbot.chatbot_monitor import start as start_chatbot
 from mindsdb.interfaces.jobs.scheduler import start as start_scheduler
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
@@ -285,13 +285,17 @@ if __name__ == '__main__':
         'mongodb': start_mongo,
         'postgres': start_postgres,
         'jobs': start_scheduler,
+        'chatbot': start_chatbot
     }
-
-    # start chatbots interface
-    chatbot_monitor.start()
 
     if config.get('jobs', {}).get('disable') is not True:
         apis['jobs'] = {
+            'process': None,
+            'started': False
+        }
+
+    if config.get('chatbot', {}).get('disable') is not True:
+        apis['chatbot'] = {
             'process': None,
             'started': False
         }
@@ -346,5 +350,4 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print('Stopping stream integrations...')
         STOP_THREADS_EVENT.set()
-        chatbot_monitor.stop()
         print('Closing app...')

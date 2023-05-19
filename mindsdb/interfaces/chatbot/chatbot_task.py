@@ -1,5 +1,3 @@
-import pandas as pd
-
 from mindsdb_sql.parser.ast import *
 from mindsdb.interfaces.storage import db
 
@@ -37,8 +35,6 @@ class ChatBotTask:
             'bot_column': model_record.learn_args['using']['assistant_column'],
             'output': model_record.to_predict[0]
         }
-
-        # self.db_handler = self.session.datahub.get(self.database)
 
     def run(self):
 
@@ -168,4 +164,4 @@ class ChatBotTask:
             ]
         )
 
-        resp = self.db_handler.query(ast_query)
+        self.db_handler.query(ast_query)

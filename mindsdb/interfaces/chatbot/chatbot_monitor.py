@@ -3,11 +3,13 @@ import threading
 import time
 from mindsdb.utilities import log
 
+from mindsdb.utilities.log import initialize_log
 
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage import db
 from .chatbot_task import ChatBotTask
 from mindsdb.utilities.context import context as ctx
+
 
 class Task(threading.Thread):
     def __init__(self, bot_record):
@@ -48,93 +50,75 @@ class Task(threading.Thread):
             if self._to_stop:
                 return
             print('running ' + self.name)
-            time.sleep(3)
-
-    def stop(self):
-        self._to_stop = True
-
-
-
-class MonitorTask(threading.Thread):
-    def __init__(self):
-        threading.Thread.__init__(self)
-        self._to_stop = False
-        self._active_bots = {}
-
-    def run(self):
-        # create context and session
-
-        while True:
-            try:
-                allowed_bots = []
-
-                # check new bots to start
-                for bot in db.ChatBots.query.all():
-                    bot_id = bot.id
-                    allowed_bots.append(bot_id)
-
-                    if bot_id not in self._active_bots:
-                        # start new bot
-                        thread = Task(bot)
-                        thread.start()
-
-                        self._active_bots[bot.id] = thread
-
-                # check old bots to stop
-                active_bots = list(self._active_bots.keys())
-                for bot_id in active_bots:
-                    if bot_id not in allowed_bots:
-                        self.stop_bot(bot_id)
-
-            except Exception as e:
-                log.logger.error(e)
-
-            if self._to_stop:
-                # stop all bots
-                active_bots = list(self._active_bots.keys())
-                for bot_id in active_bots:
-                    self.stop_bot(bot_id)
-
-                return
-
-            db.session.rollback()  # disable cache
-            time.sleep(1)
-
-    def stop_bot(self, bot_id):
-        self._active_bots[bot_id].stop()
-        del self._active_bots[bot_id]
+            time.sleep(7)
 
     def stop(self):
         self._to_stop = True
 
 
 class ChatBotMonitor:
-
     def __init__(self):
-        self.thread = MonitorTask()
-        self.thread.start()
+        self._active_bots = {}
 
-    def __del__(self):
-        self.thread.stop()
+    def start(self):
+        config = Config()
+        db.init()
+        initialize_log(config, 'jobs', wrap_print=True)
+        self.config = config
 
-    def stop(self):
-        self.thread.stop()
+        while True:
+            try:
+                self.check_bots()
+
+            except (SystemExit, KeyboardInterrupt):
+                self.stop_all_bots()
+                raise
+            except Exception as e:
+                log.logger.error(e)
+
+            db.session.rollback()  # disable cache
+            time.sleep(1)
+
+    def stop_all_bots(self):
+        active_bots = list(self._active_bots.keys())
+        for bot_id in active_bots:
+            self.stop_bot(bot_id)
+
+    def check_bots(self):
+        allowed_bots = []
+
+        # check new bots to start
+        for bot in db.ChatBots.query.all():
+            bot_id = bot.id
+            allowed_bots.append(bot_id)
+
+            if bot_id not in self._active_bots:
+                # start new bot
+                thread = Task(bot)
+                thread.start()
+
+                self._active_bots[bot.id] = thread
+
+        # check old bots to stop
+        active_bots = list(self._active_bots.keys())
+        for bot_id in active_bots:
+            if bot_id not in allowed_bots:
+                self.stop_bot(bot_id)
+
+    def stop_bot(self, bot_id):
+        self._active_bots[bot_id].stop()
+        del self._active_bots[bot_id]
 
 
-monitor = None
-
-
-def start():
-
+def start(verbose=False):
     is_cloud = Config().get('cloud', False)
     if is_cloud is True:
         # Chatbots are disabled on cloud
         return
 
-    # run monitoring thread
-    global monitor
     monitor = ChatBotMonitor()
+    monitor.start()
 
 
-def stop():
-    monitor.stop()
+if __name__ == '__main__':
+    start()

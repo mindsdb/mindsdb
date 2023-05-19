@@ -636,7 +636,7 @@ class ExecuteCommands:
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_create_chatbot(self, statement):
-        chatbot_controller =  ChatBotController()
+        chatbot_controller = ChatBotController()
 
         name = statement.name
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
@@ -655,7 +655,7 @@ class ExecuteCommands:
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_chatbot(self, statement):
-        chatbot_controller =  ChatBotController()
+        chatbot_controller = ChatBotController()
 
         name = statement.name
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
@@ -665,7 +665,6 @@ class ExecuteCommands:
             project_name=project_name
         )
         return ExecuteAnswer(ANSWER_TYPE.OK)
-
 
     def answer_evaluate_metric(self, statement):
         try:

@@ -1,4 +1,4 @@
-from mindsdb_sql.parser.ast import *
+from mindsdb_sql.parser.ast import Identifier, Select, Insert, BinaryOperation, Constant
 from mindsdb.interfaces.storage import db
 
 from mindsdb.integrations.libs.api_handler import APIChatHandler

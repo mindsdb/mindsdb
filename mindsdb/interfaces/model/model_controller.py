@@ -23,7 +23,7 @@ from mindsdb.interfaces.model.functions import (
 from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.interfaces.storage.model_fs import ModelStorage
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.functions import split_model_name
+from mindsdb.utilities.functions import resolve_model_identifier
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -414,7 +414,7 @@ class ModelController():
         return last_version + 1
 
     def prepare_finetune_statement(self, statement, database_controller):
-        project_name, model_name, model_version, _describe = split_model_name(statement.name.parts)
+        project_name, model_name, model_version, _describe = resolve_model_identifier(statement.name)
         data_integration_ref, fetch_data_query = self._get_data_integration_ref(statement, database_controller)
 
         label = None

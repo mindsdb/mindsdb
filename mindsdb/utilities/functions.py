@@ -4,6 +4,7 @@ from functools import wraps
 
 import requests
 from mindsdb_sql import get_lexer_parser
+from mindsdb_sql.parser.ast import Identifier
 
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark
 
@@ -103,20 +104,20 @@ def init_lexer_parsers():
     get_lexer_parser('mysql')
 
 
-def split_model_name(name: list) -> tuple:
+def resolve_model_identifier(name: Identifier) -> tuple:
     """ split model name to parts
 
         Examples:
-            >>> split_model_name(['a', 'b'])
+            >>> resolve_model_identifier(['a', 'b'])
             ('a', 'b', None, None)
 
-            >>> split_model_name(['a', '1'])
+            >>> resolve_model_identifier(['a', '1'])
             (None, 'a', 1, None)
 
-            >>> split_model_name(['a'])
+            >>> resolve_model_identifier(['a'])
             (None, 'a', None, None)
 
-            >>> split_model_name(['a', 'b', 'c'])
+            >>> resolve_model_identifier(['a', 'b', 'c'])
             ('a', 'b', None, 'c')
 
         Args:

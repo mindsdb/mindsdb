@@ -22,9 +22,9 @@ def message_to_dataframe_row(message: dict):
         message['bot_id'] = message['bot']['i']
     return message
 
+
 class ChannelsTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
-
         message_data = self.handler.call_api('channels_list')
         df = pd.DataFrame(message_data['channels'])
         df = project_dataframe(df, query.targets, self.get_columns())
@@ -46,7 +46,7 @@ class ChannelMessagesTable(APITable):
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Selects message data from the Rocket Chat API and returns it as a pandas DataFrame.
-        
+
         Returns dataframe representing the Rocket Chat API results.
 
         Args:
@@ -74,13 +74,13 @@ class ChannelMessagesTable(APITable):
 
         df = project_dataframe(df, query.targets, self.get_columns())
 
-         #     return pd.DataFrame(message_rows)
+        #     return pd.DataFrame(message_rows)
 
         return df
 
     def insert(self, query: ast.Insert):
         """Posts a message using the Rocket Chat API.
-        
+
         Args:
             query (ast.Insert): Given SQL INSERT query
         """
@@ -113,15 +113,12 @@ class DirectsTable(APITable):
 
         return df
 
-
     def insert(self, query: ast.Insert):
-
         column_names = [col.name for col in query.columns]
         for insert_row in query.values:
             insert_params = dict(zip(column_names, insert_row))
 
             self.handler.call_api('im_create', **insert_params)
-
 
     def get_columns(self):
         """Gets all columns to be returned in pandas DataFrame responses"""
@@ -131,8 +128,6 @@ class DirectsTable(APITable):
             'usersCount',
             'msgs',
         ]
-
-
 
 
 class DirectMessagesTable(APITable):

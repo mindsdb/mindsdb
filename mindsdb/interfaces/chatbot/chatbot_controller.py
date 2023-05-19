@@ -1,5 +1,3 @@
-
-
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
@@ -30,7 +28,6 @@ class ChatBotController:
         db.session.add(bot)
         db.session.commit()
 
-
     def delete_chatbot(self, name, project_name):
         project_controller = ProjectController()
         project = project_controller.get(name=project_name)
@@ -46,4 +43,3 @@ class ChatBotController:
 
         db.session.delete(bot)
         db.session.commit()
-

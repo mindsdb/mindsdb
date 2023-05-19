@@ -129,36 +129,6 @@ class RocketChatHandler(APIChatHandler):
         return self.query(ast)
 
 
-    # def _get_all_channel_messages(self, params):
-    #     if 'room_id' not in params:
-    #         raise ValueError('Missing "room_id" param to fetch messages for')
-    #     room_id = params['room_id']
-    #     limit = params.get('limit', None)
-    #
-    #     client = self.connect()
-    #     all_messages = client.get_all_channel_messages(room_id, limit=limit)
-    #     message_rows = [self._message_to_dataframe_row(m) for m in all_messages]
-    #     return pd.DataFrame(message_rows)
-    #
-    # def _post_message(self, params):
-    #     if 'room_id' not in params:
-    #         raise ValueError('Missing "room_id" param to post message')
-    #     room_id = params['room_id']
-    #     text = params.get('text', None)
-    #     alias = params.get('alias', None)
-    #     emoji = params.get('emoji', None)
-    #     avatar = params.get('avatar', None)
-    #
-    #     client = self.connect()
-    #     posted_message = client.post_message(
-    #         room_id,
-    #         text=text,
-    #         alias=alias,
-    #         emoji=emoji,
-    #         avatar=avatar)
-    #
-    #     return pd.DataFrame([self._message_to_dataframe_row(posted_message)])
-
     def call_api(self, method_name: str = None, *args, **kwargs) -> pd.DataFrame:
         """Calls the Rocket Chat API method with the given params.
 

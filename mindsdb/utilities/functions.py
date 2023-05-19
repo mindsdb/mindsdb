@@ -126,6 +126,7 @@ def resolve_model_identifier(name: Identifier) -> tuple:
         Returns:
             tuple: (database_name, model_name, model_version, describe)
     """
+    name = name.parts
     database_name = None
     model_name = None
     model_version = None

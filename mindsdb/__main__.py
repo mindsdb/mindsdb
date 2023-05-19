@@ -326,7 +326,7 @@ if __name__ == '__main__':
             started = is_pid_listen_port(pid, port)
         return api_name, port, started
 
-    async def wait_apis_start(api_data: dict):
+    async def wait_apis_start():
         futures = [
             wait_api_start(api_name, api_data['process'].pid, api_data['port'])
             for api_name, api_data in apis.items() if 'port' in api_data

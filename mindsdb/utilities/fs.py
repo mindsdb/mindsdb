@@ -88,6 +88,8 @@ def clean_process_marks():
         return
 
     p = Path(tempfile.gettempdir()).joinpath('mindsdb/processes/')
+    if p.exists() is False:
+        return
     for path in p.iterdir():
         if path.is_dir() is False:
             return
@@ -102,6 +104,8 @@ def clean_unlinked_process_marks():
         return
 
     p = Path(tempfile.gettempdir()).joinpath('mindsdb/processes/')
+    if p.exists() is False:
+        return
     for path in p.iterdir():
         if path.is_dir() is False:
             return

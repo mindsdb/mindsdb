@@ -19,7 +19,13 @@ LIMIT 3;
 ```
 Output:
 ```sql
-https://github.com/simonkowalski1/mindsdb/assets/114826808/562ef858-c010-49bd-9fa0-4342bd66a9bc
++------------------+--------------------------------------------------------+-------------+
+| article_title    | question                                               | true_answer |
++------------------+--------------------------------------------------------+-------------+
+| Alessandro_Volta | Was Volta an Italian physicist?                        | yes         |
+| Alessandro_Volta | Is Volta buried in the city of Pittsburgh?             | no          |
+| Alessandro_Volta | Did Volta have a passion for the study of electricity? | yes         |
++------------------+--------------------------------------------------------+-------------+
 ```
 
 Testing CREATE MODEL
@@ -41,8 +47,16 @@ AND article_title = 'Abraham_Lincoln';
 ```
 Output:
 ```sql
-https://github.com/simonkowalski1/mindsdb/assets/114826808/64ebc337-0349-4ab5-a403-399785602c8e
-https://github.com/simonkowalski1/mindsdb/assets/114826808/6bb283f4-bb43-4adc-9aac-5cfa3b42ff94
++------------------+-------------------------------------------------------------------+------------------------------------------------------------------------+
+| article_title    | question                                                          | answer                                                                 |
++------------------+-------------------------------------------------------------------+------------------------------------------------------------------------+
+| Abraham_Lincoln  | Was Abraham Lincoln the sixteenth President of the United States? | Yes, Abraham Lincoln was the sixteenth President of the United States. |
+|                  |                                                                   |       He served as President from 1861 until his assassination in 1865.| 
+|                  |                                                                   |    During his presidency, he led the country through the Civil War and |
+|                  |                                                                   |    issued the Emancipation Proclamation, which declared that all slaves| 
+|                  |                                                                   |    in Confederate-held territory were to be set free. He is widely     |
+|                  |                                                                   |    regarded as one of the greatest Presidents in American history.     |
++------------------+-------------------------------------------------------------------+------------------------------------------------------------------------+
 ```
 
 Testing SELECT (making predictions)
@@ -54,6 +68,24 @@ LIMIT 3;
 ```
 Output:
 ```sql
-https://github.com/simonkowalski1/mindsdb/assets/114826808/e2c27fbd-0cc7-4a61-9e19-895d18976ca5
-https://github.com/simonkowalski1/mindsdb/assets/114826808/e8b749be-2daf-45f8-a1c2-59595970281b
++------------------+--------------------------------------------------------+--------------------------------------------------------+
+| article_title    | question                                               | answer                                                 |
++------------------+--------------------------------------------------------+--------------------------------------------------------+
+| Alessandro_Volta | Was Volta an Italian physicist?                        | Yes, Alessandro Volta was an Italian physicist. He is  |
+|                  |                                                        | best known for his invention of the electric battery,  | 
+|                  |                                                        | which he called the "voltaic pile." This invention     |
+|                  |                                                        | paved the way for the development of modern electrical |
+|                  |                                                        | technology.                                            |
+| Alessandro_Volta | Is Volta buried in the city of Pittsburgh?             | No, Alessandro Volta is not buried in the city of      |
+|                  |                                                        | Pittsburgh. He is buried in the city of Como, Italy,   |
+|                  |                                                        | where he was born and spent most of his life.          |
+| Alessandro_Volta | Did Volta have a passion for the study of electricity? | Yes, Alessandro Volta had a passion for the study of   |
+|                  |                                                        | electricity. He was a pioneer in the field of          |
+|                  |                                                        | electricity and made significant contributions to the  |
+|                  |                                                        | understanding of electric potential and the development| 
+|                  |                                                        | of the first electric battery, known as the Voltaic    |
+|                  |                                                        | pile. His passion for electricity led him to conduct   |
+|                  |                                                        | numerous experiments and make important discoveries    |
+|                  |                                                        | that paved the way for modern electrical technology.   |
++------------------+--------------------------------------------------------+--------------------------------------------------------+
 ```

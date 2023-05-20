@@ -17,7 +17,7 @@ FROM mysql_demo_db.questions
 LIMIT 3;
 
 ```
-
+Output:
 ```sql
 ![f48d06340704cfb8bcdd86f2a6b7e872](https://github.com/simonkowalski1/mindsdb/assets/114826808/562ef858-c010-49bd-9fa0-4342bd66a9bc)
 ```
@@ -39,7 +39,7 @@ WHERE question = 'Was Abraham Lincoln the sixteenth President of the United Stat
 AND article_title = 'Abraham_Lincoln';
 
 ```
-
+Output:
 ```sql
 ![1b4c45c280bec494952d06fac218a31c](https://github.com/simonkowalski1/mindsdb/assets/114826808/64ebc337-0349-4ab5-a403-399785602c8e)
 ![f4bb72cf0b61c4bc6e81b39670c51246](https://github.com/simonkowalski1/mindsdb/assets/114826808/6bb283f4-bb43-4adc-9aac-5cfa3b42ff94)
@@ -52,7 +52,7 @@ FROM mysql_demo_db.questions AS input
 JOIN question_answering_model AS output
 LIMIT 3;
 ```
-
+Output:
 ```sql
 ![7d80a4893dd152b8db38f6e904475d63](https://github.com/simonkowalski1/mindsdb/assets/114826808/e2c27fbd-0cc7-4a61-9e19-895d18976ca5)
 ![f86b75566d33ee83c2dfefa7a21b30a7](https://github.com/simonkowalski1/mindsdb/assets/114826808/e8b749be-2daf-45f8-a1c2-59595970281b)

@@ -28,6 +28,7 @@ class YugabyteHandler(DatabaseHandler):
         self.connection_data = connection_data
         self.dialect = 'postgresql'
         self.database = connection_data['database']
+        self.schema = connection_data.get('schema','public')
         self.renderer = SqlalchemyRender('postgres')
 
         self.connection = None
@@ -93,6 +94,8 @@ class YugabyteHandler(DatabaseHandler):
         conn = self.connect()
         with conn.cursor() as cur:
             try:
+                set_schema_query = f"SET search_path TO {self.schema}"
+                cur.execute(set_schema_query)
                 cur.execute(query)
                    
                 if cur.rowcount >0 and query.upper().startswith('SELECT') :

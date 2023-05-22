@@ -1,0 +1,91 @@
+## Testing: Question Answering Tutorial
+
+Testing CREATE DATABASE
+```sql
+CREATE DATABASE mysql_demo_db
+WITH ENGINE = 'mysql',
+PARAMETERS = {
+    "user": "user",
+    "password": "MindsDBUser123!",
+    "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
+    "port": "3306",
+    "database": "public"
+};
+
+SELECT *
+FROM mysql_demo_db.questions
+LIMIT 3;
+
+```
+Output:
+```sql
++------------------+--------------------------------------------------------+-------------+
+| article_title    | question                                               | true_answer |
++------------------+--------------------------------------------------------+-------------+
+| Alessandro_Volta | Was Volta an Italian physicist?                        | yes         |
+| Alessandro_Volta | Is Volta buried in the city of Pittsburgh?             | no          |
+| Alessandro_Volta | Did Volta have a passion for the study of electricity? | yes         |
++------------------+--------------------------------------------------------+-------------+
+```
+
+Testing CREATE MODEL
+```sql
+CREATE MODEL question_answering_model
+PREDICT answer
+USING
+    engine = 'openai',
+    prompt_template = 'answer the question of text:{{question}} about text:{{article_title}}';
+
+SELECT * FROM models
+WHERE name = 'question_answering_model';
+
+SELECT article_title, question, answer
+FROM question_answering_model
+WHERE question = 'Was Abraham Lincoln the sixteenth President of the United States?'
+AND article_title = 'Abraham_Lincoln';
+
+```
+Output:
+```sql
++------------------+-------------------------------------------------------------------+------------------------------------------------------------------------+
+| article_title    | question                                                          | answer                                                                 |
++------------------+-------------------------------------------------------------------+------------------------------------------------------------------------+
+| Abraham_Lincoln  | Was Abraham Lincoln the sixteenth President of the United States? | Yes, Abraham Lincoln was the sixteenth President of the United States. |
+|                  |                                                                   | He served as President from 1861 until his assassination in 1865.      | 
+|                  |                                                                   | During his presidency, he led the country through the Civil War and    |
+|                  |                                                                   | issued the Emancipation Proclamation, which declared that all slaves   | 
+|                  |                                                                   | in Confederate-held territory were to be set free. He is widely        |
+|                  |                                                                   | regarded as one of the greatest Presidents in American history.        |
++------------------+-------------------------------------------------------------------+------------------------------------------------------------------------+
+```
+
+Testing SELECT (making predictions)
+```sql
+SELECT input.article_title, input.question, output.answer
+FROM mysql_demo_db.questions AS input
+JOIN question_answering_model AS output
+LIMIT 3;
+```
+Output:
+```sql
++------------------+--------------------------------------------------------+--------------------------------------------------------+
+| article_title    | question                                               | answer                                                 |
++------------------+--------------------------------------------------------+--------------------------------------------------------+
+| Alessandro_Volta | Was Volta an Italian physicist?                        | Yes, Alessandro Volta was an Italian physicist. He is  |
+|                  |                                                        | best known for his invention of the electric battery,  | 
+|                  |                                                        | which he called the "voltaic pile." This invention     |
+|                  |                                                        | paved the way for the development of modern electrical |
+|                  |                                                        | technology.                                            |
+| Alessandro_Volta | Is Volta buried in the city of Pittsburgh?             | No, Alessandro Volta is not buried in the city of      |
+|                  |                                                        | Pittsburgh. He is buried in the city of Como, Italy,   |
+|                  |                                                        | where he was born and spent most of his life.          |
+| Alessandro_Volta | Did Volta have a passion for the study of electricity? | Yes, Alessandro Volta had a passion for the study of   |
+|                  |                                                        | electricity. He was a pioneer in the field of          |
+|                  |                                                        | electricity and made significant contributions to the  |
+|                  |                                                        | understanding of electric potential and the development| 
+|                  |                                                        | of the first electric battery, known as the Voltaic    |
+|                  |                                                        | pile. His passion for electricity led him to conduct   |
+|                  |                                                        | numerous experiments and make important discoveries    |
+|                  |                                                        | that paved the way for modern electrical technology.   |
++------------------+--------------------------------------------------------+--------------------------------------------------------+
+```

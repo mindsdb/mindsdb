@@ -161,6 +161,15 @@ class DirectMessagesTable(APITable):
         for insert_row in query.values:
             insert_params = dict(zip(column_names, insert_row))
 
+            if 'username' in insert_params:
+                # resolve username
+                resp = self.handler.call_api('users_info', insert_params['username'])
+                if 'user' in resp:
+                    insert_params['room_id'] = resp['user']['_id']
+                    del insert_params['username']
+                else:
+                    raise ValueError(f'User not found: {insert_params["username"]}')
+
             self.handler.call_api('chat_post_message', **insert_params)
 
     def get_columns(self):
@@ -175,4 +184,23 @@ class DirectMessagesTable(APITable):
             'sent_at'
         ]
 
+
+class UsersTable(APITable):
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        message_data = self.handler.call_api('users_list')
+        df = pd.DataFrame(message_data['users'])
+        df = project_dataframe(df, query.targets, self.get_columns())
+
+        return df
+
+    def get_columns(self):
+        """Gets all columns to be returned in pandas DataFrame responses"""
+        return [
+            '_id',
+            'username',
+            'name',
+            'status',
+            'active',
+            'type',
+        ]
 

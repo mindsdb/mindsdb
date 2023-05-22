@@ -4,7 +4,7 @@ from typing import Dict, List
 from rocketchat_API.rocketchat import RocketChat
 
 from mindsdb.integrations.handlers.rocket_chat_handler.rocket_chat_tables import (
-    ChannelMessagesTable, ChannelsTable, DirectsTable, DirectMessagesTable)
+    ChannelMessagesTable, ChannelsTable, DirectsTable, DirectMessagesTable, UsersTable)
 from mindsdb.integrations.libs.api_handler import APIChatHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -64,6 +64,8 @@ class RocketChatHandler(APIChatHandler):
         self._register_table('directs', DirectsTable(self))
 
         self._register_table('direct_messages', DirectMessagesTable(self))
+
+        self._register_table('users', UsersTable(self))
 
     def get_chat_config(self):
         params = {

@@ -70,10 +70,9 @@ class HandlersCache:
             Args:
                 handler (DatabaseHandler)
         """
-        # print(f'!!!! set {handler.name} {ctx.company_id} {threading.get_ident()}')
         with self._lock:
             try:
-                key = (handler.name, ctx.company_id, threading.get_ident())
+                key = (handler.name, ctx.company_id, threading.get_native_id())
                 handler.connect()
                 self.handlers[key] = {
                     'handler': handler,
@@ -93,7 +92,7 @@ class HandlersCache:
                 DatabaseHandler
         """
         with self._lock:
-            key = (name, ctx.company_id, threading.get_ident())
+            key = (name, ctx.company_id, threading.get_native_id())
             if (
                 key not in self.handlers
                 or self.handlers[key]['expired_at'] < time()
@@ -109,7 +108,7 @@ class HandlersCache:
                 name (str): handler name
         """
         with self._lock:
-            key = (name, ctx.company_id, threading.get_ident())
+            key = (name, ctx.company_id, threading.get_native_id())
             if key in self.handlers:
                 try:
                     self.handlers[key].disconnect()

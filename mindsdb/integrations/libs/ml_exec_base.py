@@ -348,10 +348,17 @@ class BaseMLEngineExec:
         if isinstance(data, dict):
             data = [data]
         df = pd.DataFrame(data)
-        predictor_record = get_model_record(
-            name=model_name, ml_handler_name=self.name, project_name=project_name,
-            version=version
-        )
+        kwargs = {
+            'name': model_name,
+            'ml_handler_name': self.name,
+            'project_name': project_name
+        }
+        if version is None:
+            kwargs['active'] = True
+        else:
+            kwargs['active'] = None
+            kwargs['version'] = version
+        predictor_record = get_model_record(**kwargs)
         if predictor_record is None:
             if version is not None:
                 model_name = f'{model_name}.{version}'

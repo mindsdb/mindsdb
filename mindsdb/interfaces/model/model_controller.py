@@ -401,7 +401,8 @@ class ModelController():
 
         models = get_model_records(
             name=base_predictor_record.name,
-            project_name=project_name
+            project_name=project_name,
+            active=None
         )
         last_version = max([x.version or 1 for x in models])
 

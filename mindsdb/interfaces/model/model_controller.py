@@ -526,7 +526,8 @@ class ModelController():
             model_record = get_model_record(
                 name=model['NAME'],
                 project_name=model['PROJECT'],
-                version=model['VERSION']
+                version=model['VERSION'],
+                active=None
             )
             if model_record.active:
                 raise Exception(f"Can't remove active version: f{model['PROJECT']}.{model['NAME']}.{model['VERSION']}")

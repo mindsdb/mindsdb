@@ -1,3 +1,4 @@
+import paypalrestsdk
 import pandas as pd
 from typing import Text, List, Dict
 
@@ -32,4 +33,6 @@ class PaymentsTable(APITable):
         pass
 
     def get_payments(self, **kwargs) -> List[Dict]:
-        pass
+        connection = self.handler.connect()
+        payments = paypalrestsdk.Payment.all(**kwargs, api=connection)
+        return payments['payments']

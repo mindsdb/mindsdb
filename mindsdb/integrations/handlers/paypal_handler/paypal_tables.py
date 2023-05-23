@@ -30,9 +30,9 @@ class PaymentsTable(APITable):
         pass
 
     def get_columns(self) -> List[Text]:
-        pass
+        return pd.json_normalize(self.get_payments(count=1)).columns.tolist()
 
     def get_payments(self, **kwargs) -> List[Dict]:
         connection = self.handler.connect()
-        payments = paypalrestsdk.Payment.all(**kwargs, api=connection)
+        payments = paypalrestsdk.Payment.all(kwargs, api=connection)
         return payments['payments']

@@ -1,6 +1,8 @@
+import time
 from pathlib import Path
 import json
 import pytest
+
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from .conftest import CONFIG_PATH
@@ -111,6 +113,7 @@ class TestHomeRentalPrices(HTTPHelperMixin):
 
     def test_finetune_model(self):
         sql = QueryStorage.finetune_model
+        time.sleep(60)
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
         assert len(resp['data']) == 1
         print(f"CREATE_MODEL_REPONSE - {resp}")

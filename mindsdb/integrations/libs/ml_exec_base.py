@@ -410,6 +410,7 @@ class BaseMLEngineExec:
 
     def update(
             self, model_name, project_name, version,
+            base_model_version: int,
             data_integration_ref=None,
             fetch_data_query=None,
             join_learn_process=False,
@@ -419,17 +420,19 @@ class BaseMLEngineExec:
     ):
         # generate new record from latest version as starting point
         project = self.database_controller.get_project(name=project_name)
-        predictor_records = get_model_records(
-            active=None,
-            name=model_name,
-        )
-        predictor_records = [
-            x for x in predictor_records
-            if x.training_stop_at is not None and x.status == 'complete'
-        ]
-        predictor_records.sort(key=lambda x: x.training_stop_at, reverse=True)
 
+        search_args = {
+            'active': None,
+            'name': model_name,
+            'status': PREDICTOR_STATUS.COMPLETE
+        }
+        if base_model_version is not None:
+            search_args['version'] = base_model_version
+        predictor_records = get_model_records(**search_args)
+        predictor_records.sort(key=lambda x: x.training_stop_at, reverse=True)
+        predictor_records = [x for x in predictor_records if x.training_stop_at is not None]
         base_predictor_record = predictor_records[0]
+
         learn_args = base_predictor_record.learn_args
         learn_args['using'] = args if not learn_args.get('using', False) else {**learn_args['using'], **args}
 

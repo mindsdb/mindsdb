@@ -377,7 +377,7 @@ class ModelController():
         if base_predictor_record is None:
             raise Exception(f"Error: model '{model_name}' does not exist")
 
-        params['version'] = self._get_retrain_finetune_version(model_name, params['project_name'], base_predictor_record)
+        params['version'] = self._get_retrain_finetune_version(params['project_name'], base_predictor_record)
 
         if params['data_integration_ref'] is None:
             params['data_integration_ref'] = base_predictor_record.data_integration_ref
@@ -395,27 +395,27 @@ class ModelController():
         return self.get_model_info(predictor_record)
 
     @staticmethod
-    def _get_retrain_finetune_version(model_name, project_name, base_predictor_record):
+    def _get_retrain_finetune_version(project_name, base_predictor_record):
         if base_predictor_record is None:
-            raise Exception(f"Error: model '{model_name}' does not exist")
+            raise Exception(f"Error: model '{base_predictor_record.name}' does not exist")
 
-        # get max current version
         models = get_model_records(
-            name=model_name,
-            project_name=project_name,
-            deleted_at=None,
-            active=None,
+            name=base_predictor_record.name,
+            project_name=project_name
         )
-        last_version = 1
-        for m in models:
-            if m.version is not None:
-                last_version = max(last_version, m.version)
+        last_version = max([x.version or 1 for x in models])
 
         return last_version + 1
 
     def prepare_finetune_statement(self, statement, database_controller):
         project_name, model_name, model_version, _describe = resolve_model_identifier(statement.name)
         data_integration_ref, fetch_data_query = self._get_data_integration_ref(statement, database_controller)
+
+        set_active = True
+        if statement.using is not None:
+            set_active = statement.using.pop('active', True)
+            if set_active in ('0', 0, None):
+                set_active = False
 
         label = None
         args = {}
@@ -428,9 +428,10 @@ class ModelController():
         base_predictor_record = get_model_record(
             name=model_name,
             project_name=project_name,
-            version=model_version
+            version=model_version,
+            active=None
         )
-        version = self._get_retrain_finetune_version(model_name, project_name, base_predictor_record)
+        version = self._get_retrain_finetune_version(project_name, base_predictor_record)
 
         if data_integration_ref is None:
             data_integration_ref = base_predictor_record.data_integration_ref
@@ -442,28 +443,20 @@ class ModelController():
             project_name=project_name,
             data_integration_ref=data_integration_ref,
             fetch_data_query=fetch_data_query,
+            base_model_version=model_version,
             version=version,
             args=args,
             join_learn_process=join_learn_process,
-            label=label
+            label=label,
+            set_active=set_active
         )
 
     def finetune_model(self, statement, ml_handler):
-        # active setting
-        set_active = True
-        if statement.using is not None:
-            set_active = statement.using.pop('active', True)
-            if set_active in ('0', 0, None):
-                set_active = False
-
         params = self.prepare_finetune_statement(statement, ml_handler.database_controller)
-
-        params['set_active'] = set_active
         predictor_record = ml_handler.update(**params)
         return self.get_model_info(predictor_record)
 
     def get_model_info(self, predictor_record):
-
         from mindsdb.interfaces.database.projects import ProjectController
         projects_controller = ProjectController()
         project = projects_controller.get(id=predictor_record.project_id)

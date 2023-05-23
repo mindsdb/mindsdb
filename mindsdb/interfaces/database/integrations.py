@@ -384,10 +384,7 @@ class IntegrationController:
         )
 
         logger.debug("%s.create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
-        if DBClient.is_local:
-            return self.handler_modules[handler_type].Handler(**handler_ars)
-        else:
-            return DBClient(handler_type, **handler_ars)
+        return DBClient(handler_type, self.handler_modules[handler_type].Handler, **handler_ars)
 
     def get_handler(self, name, case_sensitive=False):
         handler = self.handlers_cache.get(name)
@@ -459,11 +456,7 @@ class IntegrationController:
         else:
 
             logger.info("%s.get_handler: create a client to db service of %s type, args - %s", self.__class__.__name__, integration_engine, handler_ars)
-            if DBClient.is_local:
-                handler = HandlerClass(**handler_ars)
-                self.handlers_cache.set(handler)
-            else:
-                handler = DBClient(integration_engine, **handler_ars)
+            handler = DBClient(integration_engine, HandlerClass, **handler_ars)
 
         return handler
 

@@ -41,3 +41,43 @@ SELECT *
 FROM psql_datasource.demo_table
 LIMIT 10;
 ```
+
+## Postgres API
+
+The Postgres API enables users to connect to MindsDB using the PostgreSQL protocol.
+
+To run MindsDB with the Postgres API alongside it, use the below command:
+
+```bash
+python -m mindsdb --api http,mysql,postgres
+```
+
+And here is how to run the Postgres API alone:
+
+```bash
+python -m mindsdb --api postgres
+```
+
+To connect MindsDB in PostgreSQL, use the `psql` client program:
+
+```bash
+psql -h localhost -p 55432 -d mindsdb -U mindsdb
+```
+
+We use the local MindsDB installation with the following parameters:
+* host: `localhost`
+* port: `55432`
+* database: `mindsdb`
+* user: `mindsdb`
+
+<Note>
+**Current Support**
+
+There are many things that aren't supported yet.
+
+Right now you can use psql to connect to a local mindsdb instance. You can also use psycopg and other clients, although DBeaver is finicky.
+
+You can run simple one off queries using this psql client, and BEGIN COMMIT blocks should work. Dialect support for Postgres is ongoing, we currently back up into our generic SQL / MySQL parser.
+
+Please see [this page](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/api/postgres) for implementation details.
+</Note>

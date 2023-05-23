@@ -131,7 +131,7 @@ class ModelController():
             return df
 
     def get_model(self, name, version=None, ml_handler_name=None, project_name=None):
-        show_active = True if version is None else False
+        show_active = True if version is None else None
         model_record = get_model_record(
             active=show_active,
             version=version,

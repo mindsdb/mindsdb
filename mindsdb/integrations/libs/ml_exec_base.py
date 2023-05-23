@@ -16,12 +16,14 @@ In particular, three big components are included:
 
 """  # noqa
 
-import datetime as dt
 import traceback
 import importlib
+import datetime as dt
 from typing import Optional
 
 import pandas as pd
+from sqlalchemy import func, null
+from sqlalchemy.sql.functions import coalesce
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -296,7 +298,6 @@ class BaseMLEngineExec:
         problem_definition=None,
         join_learn_process=False,
         label=None,
-        version=1,
         is_retrain=False,
         set_active=True,
     ):
@@ -330,7 +331,8 @@ class BaseMLEngineExec:
             training_start_at=dt.datetime.now(),
             status=PREDICTOR_STATUS.GENERATING,
             label=label,
-            version=version,
+            version=(db.session.query(coalesce(func.max(db.Predictor.version), 1) + (1 if is_retrain else 0))
+                     .filter_by(name=model_name, project_id=project.id, deleted_at=null())),
             active=(not is_retrain),  # if create then active
         )
 
@@ -434,7 +436,7 @@ class BaseMLEngineExec:
         return predictions
 
     def update(
-            self, model_name, project_name, version,
+            self, model_name, project_name,
             base_model_version: int,
             data_integration_ref=None,
             fetch_data_query=None,
@@ -477,7 +479,8 @@ class BaseMLEngineExec:
             training_start_at=dt.datetime.now(),
             status=PREDICTOR_STATUS.GENERATING,
             label=label,
-            version=version,
+            version=(db.session.query(coalesce(func.max(db.Predictor.version), 1) + 1)
+                     .filter_by(name=model_name, project_id=project.id, deleted_at=null())),
             active=False
         )
 

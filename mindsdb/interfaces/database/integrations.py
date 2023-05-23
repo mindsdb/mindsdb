@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import importlib
 import threading
+import multiprocessing
 from time import time
 from pathlib import Path
 from copy import deepcopy
@@ -70,10 +71,12 @@ class HandlersCache:
             Args:
                 handler (DatabaseHandler)
         """
-        # print(f'!!!! set {handler.name} {ctx.company_id} {threading.get_ident()}')
+        # do not cache connections in handlers processes
+        if multiprocessing.current_process().name.startswith('HandlerProcess'):
+            return
         with self._lock:
             try:
-                key = (handler.name, ctx.company_id, threading.get_ident())
+                key = (handler.name, ctx.company_id, threading.get_native_id())
                 handler.connect()
                 self.handlers[key] = {
                     'handler': handler,
@@ -93,7 +96,7 @@ class HandlersCache:
                 DatabaseHandler
         """
         with self._lock:
-            key = (name, ctx.company_id, threading.get_ident())
+            key = (name, ctx.company_id, threading.get_native_id())
             if (
                 key not in self.handlers
                 or self.handlers[key]['expired_at'] < time()
@@ -109,7 +112,7 @@ class HandlersCache:
                 name (str): handler name
         """
         with self._lock:
-            key = (name, ctx.company_id, threading.get_ident())
+            key = (name, ctx.company_id, threading.get_native_id())
             if key in self.handlers:
                 try:
                     self.handlers[key].disconnect()

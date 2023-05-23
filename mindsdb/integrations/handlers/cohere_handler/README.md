@@ -1,6 +1,6 @@
 # Cohere Handler
 
-Cohere ML handler for MindsDB provides interfaces to connect with Cohere ML ia APIs and pull Cohere ML Capabilites into MindsDB.
+Cohere ML handler for MindsDB provides interfaces to connect with Cohere ML via APIs and pull Cohere ML Capabilites into MindsDB.
 
 ## Cohere
 
@@ -34,7 +34,7 @@ PREDICT language
 USING
   task = 'language-detection',
   column = 'text',
-  engine = 'Cohere_ML_Engine',
+  engine = 'cohere',
   api_key = 'your_api_key'
 
 SELECT text, language
@@ -51,7 +51,7 @@ PREDICT summary
 USING
   task = 'text-summarization',
   column = 'text',
-  engine = 'Cohere_ML_Engine',
+  engine = 'cohere',
   api_key = 'your_api_key'
 
 SELECT text, summary
@@ -67,7 +67,7 @@ PREDICT next_text
 USING
   task = 'text-generation',
   column = 'text',
-  engine = 'Cohere_ML_Engine',
+  engine = 'cohere',
   api_key = 'your_api_key'
 
 SELECT text, next_text

@@ -6,12 +6,12 @@ from mindsdb_sql import ASTNode
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 
-from .utils import parse_statement, get_results
+from mindsdb.integrations.handlers.stripe_handler.query_handlers.select_query_handlers import SELECTQueryParser, SELECTQueryExecutor
 
 
 class PaymentsTable(APITable):
 
-    def select(self, query: ASTNode) -> pd.DataFrame:
+    def select(self, query: ast.Select) -> pd.DataFrame:
         """
         Pulls PayPal Payments data.
         Parameters
@@ -27,7 +27,24 @@ class PaymentsTable(APITable):
         ValueError
             If the query contains an unsupported condition
         """
-        pass
+
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'payments',
+            self.get_columns()
+        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        payments_df = pd.json_normalize(self.get_payments(count=result_limit))
+        select_statement_executor = SELECTQueryExecutor(
+            payments_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+        payments_df = select_statement_executor.execute_query()
+
+        return payments_df
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_payments(count=1)).columns.tolist()

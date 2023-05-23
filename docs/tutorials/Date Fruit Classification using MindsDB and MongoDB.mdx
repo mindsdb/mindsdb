@@ -3,7 +3,7 @@ In this tutorial, we’ll create and train a machine learning model, or as **Min
 
 ### Pre-requisites
 1. Make sure you have access to a working MindsDB installation, either locally or at **[MindsDB Cloud](https://cloud.mindsdb.com/)**. If you want to learn how to set up your account at MindsDB Cloud, follow **[this guide](https://docs.mindsdb.com/setup/cloud)**. It takes few minutes only.
-2. We need to download **MongoDB Compass** in order to connect with **MindsDB Cloud.** You can download it from **[here](https://www.mongodb.com/try/download/compass)**.
+2. We need to download **MongoDB Compass** in order to connect with **MindsDB Cloud.** You can download it from **https://www.mongodb.com/try/download/compass)**
 
 ![mongodb-compass](images/date-fruit-classification/data-setup.png)
 
@@ -11,16 +11,18 @@ In this tutorial, we’ll create and train a machine learning model, or as **Min
 
 Let’s get started.
 
+
 ## Data Setup
 
 ### Upload the dataset to MindsDB Cloud
-Follow the steps below to upload a file:
+Follow the steps along:
 1. Log in to your **[MindsDB Cloud](https://cloud.mindsdb.com/login)** account to open the MindsDB Editor.
 2. Navigate to `Add` button in the editor and click on the dropdown arrow as highlighted below. Choose the `Upload File` option.
 
 ![add-data](images/date-fruit-classification/add-data-1.png)
 
-3. Import a file (here it is `Date_fruit.csv`), name the datasource table that is used to store the file (here it is `date_fruit_data`), and click on the `Save and Continue` button.
+3. Import the `.csv` file (here it is `Date_fruit.csv`), name the datasource table that is used to store the file (here it is `date_fruit_data`), and click on the `Save and Continue` button.
+
 ![file-upload](images/date-fruit-classification/add-data-2.png)
 
 Now you can run queries directly on the file as if it were a table. Let’s preview the data that we’ll use to train our predictor.
@@ -31,20 +33,70 @@ SELECT * FROM files.date_fruit_data LIMIT 10;
 ![run-queries](images/date-fruit-classification/check-data.png)
 
 ### Connecting the Data
-Let others follow your tutorial by providing information on where to get the data from and how to connect it to MindsDB.
+After successful installation, it's now time to connect **MongoDB Compass** with **MindsDB Cloud** and create *Mongo database*. Follow the steps 👇
+1. Create a new connection in **MongoDB Compass** by changing the host value *from* `localhost:27017` *to* `cloud.mindsdb.com` in the **URI** section as highlighted below.
 
+![mongo-connect-1](images/date-fruit-classification/mongo-connect-1.png)
+
+2. Click on `Advanced Connection Options`, then go to `Authentication` tab and click on `Username/Password` button. Now, input the *Username* and *Password* details that is associated to your **MindsDB Cloud account**. After that, click on `Save & Connect` button which will further ask you to save your new connection with a name. (here it is `mindsdb`)
+
+![mongo-connect-2](images/date-fruit-classification/mongo-connect-2.png)
+
+3. Next, you will be directed to a page that will show all databases present in your **MindsDB Cloud** at the left panel along with the `MONGOSH` shell at the bottom. Further you can navigate towards `Databases` tab in the top middle section for more info.
+
+![mongo-connect-3](images/date-fruit-classification/mongo-connect-3.png)
+
+4. In order to use *MongoDB* database, we need to give permission to MindsDB through **MongoDB Compass**. For that, navigate to `MONGOSH` shell and switch to the *mindsdb* project.
+```nosql
+> use mindsdb
+< 'switched to db mindsdb'
+```
+![use-mindsdb](images/date-fruit-classification/use-mindsb.png)
+
+5. As MindsDB enables adding databases to the Mongo instance using the `db.databases.insertOne()` method, let's create a new *Mongo database* by adding a new connection along with the database credentials. This will  insert this new database in **MindsDB Cloud**.
+On a successful connection, you can see the newly created database on the left panel as highlighted below.
+```mongodb
+db.databases.insertOne({
+    name: "mongodb-test", // name of the database
+    engine: "mongodb", // database engine to use
+    connection_args: {
+            "port": 27017, // connection port
+            "host": "mongodb://cloud.mindsdb.com:27017", // connection host
+            "database": "files"  // connecting database
+    }
+});
+```
+![create-database](images/date-fruit-classification/create-database.png)
 
 ### Understanding the Data
-You can briefly introduce the dataset you use.
+We use the Date Fruit dataset, where each row are the factors that determine the type of date fruit along with features (columns) such as area, length, diameter, shape, etc. *The external appearance of the fruits is a major determinant of the fruit type.* The dataset contains **34 features as external factors and 35th is our target feature to predict, i.e.,** `Class`
 
 
 ## Training a Predictor
-Here you use the CREATE MODEL command to create a predictor.
+Head over to **MindsDB cloud** to create `predictor`. Copy the below code and paste it in the editor:
+```sql
+CREATE PREDICTOR mindsdb.date_fruit_predictor
+FROM files (
+     SELECT * FROM date_fruit_data
+) PREDICT Class;
+```
+![create-predictor](images/date-fruit-classification/create-predictor.png)
+
+On successful query run, you can see the `predictor` model under `mindsdb` database. Also, you have to wait for a few minutes for the model to get trained after which you will be able to run queries and get predictions, so keep an eye on the **`STATUS`** of your model.
 
 
 ## Status of a Predictor
-The next step is to check the status of a predictor. If its value is complete, you can proceed to the next chapter.
+Switch to **MongoDB Compass** in order to check the status of our predictor. Once the status changes to `COMPLETE`, it means our model is now ready and we can start getting predictions on it.
+```mongodb
+db.predictors.find({name: "date_fruit_predictor"}); // Checking Predictor Status
+```
+![predictor-status](images/date-fruit-classification/check-predictor-status.png)
+
+We can see that the model has an accuracy of 83.6%, which is pretty good!
 
 
 ## Making Predictions
-Use the SELECT statement to query for prediction results. It is good to present the output to the readers.
+To start getting prediction, enter the query below in the terminal:
+
+![model-predict-1](images/date-fruit-classification/model-prediction-1.png)
+![model-predict-2](images/date-fruit-classification/model-prediction-2.png)

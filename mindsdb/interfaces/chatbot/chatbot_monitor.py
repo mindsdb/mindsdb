@@ -1,4 +1,3 @@
-
 import threading
 import time
 from mindsdb.utilities import log
@@ -49,7 +48,7 @@ class Task(threading.Thread):
 
             if self._to_stop:
                 return
-            print('running ' + self.name)
+            log.logger.debug('running ' + self.name)
             time.sleep(7)
 
     def stop(self):

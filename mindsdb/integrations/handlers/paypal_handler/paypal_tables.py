@@ -51,4 +51,4 @@ class PaymentsTable(APITable):
     def get_payments(self, **kwargs) -> List[Dict]:
         connection = self.handler.connect()
         payments = paypalrestsdk.Payment.all(kwargs, api=connection)
-        return payments['payments']
+        return [payment.to_dict() for payment in payments['payments']]

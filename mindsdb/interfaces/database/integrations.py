@@ -58,6 +58,7 @@ class HandlersCache:
             return
         self._stop_event.clear()
         self.cleaner_thread = threading.Thread(target=self._clean)
+        self.cleaner_thread.daemon = True
         self.cleaner_thread.start()
 
     def _stop_clean(self) -> None:

@@ -26,10 +26,14 @@ def start(verbose, no_studio, with_nlp):
     host = config['api']['http']['host']
 
     if server.lower() == 'waitress':
-        if host in ('', '0.0.0.0'):
-            serve(app, port=port, host='*', max_request_body_size=1073741824 * 10, inbuf_overflow=1073741824 * 10)
-        else:
-            serve(app, port=port, host=host, max_request_body_size=1073741824 * 10, inbuf_overflow=1073741824 * 10)
+        serve(
+            app,
+            host='*' if host in ('', '0.0.0.0') else host,
+            port=port,
+            threads=16,
+            max_request_body_size=1073741824 * 10,
+            inbuf_overflow=1073741824 * 10
+        )
     elif server.lower() == 'flask':
         # that will 'disable access' log in console
         logger = logging.getLogger('werkzeug')

@@ -83,6 +83,7 @@ from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.functions import resolve_model_identifier
 import mindsdb.utilities.profiler as profiler
 
 
@@ -685,13 +686,13 @@ class ExecuteCommands:
         if len(identifier.parts) == 1:
             identifier.parts = [self.session.database, identifier.parts[0]]
 
-        if len(identifier.parts) == 2:
-            database_name, model_name = identifier.parts[-2:]
-        else:
-            return None
+        database_name, model_name, model_version, _describe = resolve_model_identifier(identifier)
 
         model_record = get_model_record(
-            name=model_name, project_name=database_name, except_absent=except_absent
+            name=model_name,
+            project_name=database_name,
+            except_absent=except_absent,
+            version=model_version
         )
         if not model_record:
             return None

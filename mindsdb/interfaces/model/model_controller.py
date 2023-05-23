@@ -499,7 +499,8 @@ class ModelController():
         model_record = get_model_record(
             name=model['NAME'],
             project_name=model['PROJECT'],
-            version=model['VERSION']
+            version=model['VERSION'],
+            active=None
         )
 
         model_record.active = True

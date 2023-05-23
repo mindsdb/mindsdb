@@ -46,4 +46,4 @@ WHERE name='fire_origin_model_3';
 ```
 ![DROP_MODEL](model_drop.png)
 
-- [x] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
+- [x] Works Great 💚 (This means that all the steps were executed successfully and the expected outputs were returned.)

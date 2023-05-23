@@ -64,9 +64,9 @@ class MLEngineException(Exception):
 
 @mark_process(name='learn')
 def learn_process(class_path, engine, context_dump, integration_id,
-                  predictor_id, data_integration_ref, fetch_data_query,
-                  project_name, problem_definition, set_active,
-                  base_predictor_id=None):
+                  predictor_id, problem_definition, set_active,
+                  base_predictor_id=None, training_data_df=None,
+                  data_integration_ref=None, fetch_data_query=None, project_name=None):
     ctx.load(context_dump)
     db.init()
 
@@ -74,6 +74,7 @@ def learn_process(class_path, engine, context_dump, integration_id,
 
     try:
         target = problem_definition['target']
+
         training_data_df = None
 
         database_controller = DatabaseController()
@@ -141,6 +142,7 @@ def learn_process(class_path, engine, context_dump, integration_id,
             ml_handler.finetune(df=training_data_df, args=problem_definition)
 
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
+        predictor_record.active = set_active
         db.session.commit()
         # if retrain and set_active after success creation
         if set_active is True:
@@ -326,15 +328,17 @@ class BaseMLEngineExec:
             ctx.dump(),
             self.integration_id,
             predictor_record.id,
-            data_integration_ref,
-            fetch_data_query,
-            project_name,
             problem_definition,
-            set_active
+            set_active,
+            data_integration_ref=data_integration_ref,
+            fetch_data_query=fetch_data_query,
+            project_name=project_name
         )
         p.start()
         if join_learn_process is True:
             p.join()
+            predictor_record = db.Predictor.query.get(predictor_record.id)
+            db.session.refresh(predictor_record)
 
         return predictor_record
 
@@ -461,15 +465,17 @@ class BaseMLEngineExec:
             ctx.dump(),
             self.integration_id,
             predictor_record.id,
-            data_integration_ref,
-            fetch_data_query,
-            project_name,
             predictor_record.learn_args,
             set_active,
             base_predictor_record.id,
+            data_integration_ref=data_integration_ref,
+            fetch_data_query=fetch_data_query,
+            project_name=project_name
         )
         p.start()
         if join_learn_process is True:
             p.join()
+            predictor_record = db.Predictor.query.get(predictor_record.id)
+            db.session.refresh(predictor_record)
 
-        return base_predictor_record
+        return predictor_record

@@ -36,50 +36,7 @@ Jupysql facilitates working with databases and Jupyter. You can download it
 Please follow the instructions below to connect into your MindsDB via Jupysql and Jupyter.
 
 <Tabs>
-        <Tab title="Jupysql Connection to MindsDB Cloud">
-        You can use the Python code below to connect your Jupyter notebook (or lab) to Cloud MindsDB database (via Jupysql).
-
-        Load the extension:
-
-        ```python
-        %load_ext sql
-        ```
-
-        Connect to your DB:
-        *Make sure* to update the user and password in the connection string.
-        user - your Mindsdb Cloud email address is your username
-        ```python
-        %sql mysql+pymysql://<mindsdb_user>:<mindsdb_pass>@cloud.mindsdb.com:3306/mindsdb
-        ```
-
-        Testing connection by listing the existing tables (pure SQL):
-
-        ```python
-        %sql show tables
-        ```
-
-        Please note that we use the following connection details:
-
-        - Username is your MindsDB Cloud email address
-        - Password is your MindsDB Cloud password
-        - Host is `cloud.mindsdb.com`
-        - Port is `3306`
-        - Database name is `mindsdb`
-
-        Create a database connection and execute the code above. On success,
-        only the last command which lists the tables will output.
-        The expected output is:
-
-        ```bash
-        *  mysql+pymysql://mindsdb:***@127.0.0.1:47335/mindsdb
-        2 rows affected.
-        Tables_in_mindsdb
-        models
-        models_versions
-        ```
-
-        </Tab>
-        <Tab title="Jupysql Connection to Local MindsDB">
+        <Tab title="Local MindsDB">
         You can use the Python code below to connect your Jupyter notebook (or lab) to Local MindsDB database (via Jupysql).
         Load the extension:
 
@@ -109,21 +66,80 @@ Please follow the instructions below to connect into your MindsDB via Jupysql an
 
         *Docker* - connecting to docker might have a different port.
 
-        Create a database connection and execute the code above. On success,
-        only the last command which lists the tables will output.
-        The expected output is:
+        </Tab>
+        <Tab title="MindsDB Cloud">
+        You can use the Python code below to connect your Jupyter notebook (or lab) to Cloud MindsDB database (via Jupysql).
 
-        ```bash
-        *  mysql+pymysql://mindsdb:***@127.0.0.1:47335/mindsdb
-        2 rows affected.
-        Tables_in_mindsdb
-        models
-        models_versions
+        Load the extension:
+
+        ```python
+        %load_ext sql
         ```
+
+        Connect to your DB:
+        *Make sure* to update the user and password in the connection string.
+        user - your Mindsdb Cloud email address is your username
+        ```python
+        %sql mysql+pymysql://<mindsdb_user>:<mindsdb_pass>@cloud.mindsdb.com:3306/mindsdb
+        ```
+
+        Testing connection by listing the existing tables (pure SQL):
+
+        ```python
+        %sql show tables
+        ```
+
+        Please note that we use the following connection details:
+
+        - Username is your MindsDB Cloud email address
+        - Password is your MindsDB Cloud password
+        - Host is `cloud.mindsdb.com`
+        - Port is `3306`
+        - Database name is `mindsdb`
+
+        </Tab>
+        <Tab title="MindsDB Pro">
+        You can use the Python code below to connect your Jupyter notebook (or lab) to MindsDB Pro account (via Jupysql).
+
+        Load the extension:
+
+        ```python
+        %load_ext sql
+        ```
+
+        Connect to your DB:
+        *Make sure* to update the user and password in the connection string.
+        user - your Mindsdb Cloud email address is your username
+        ```python
+        %sql mysql+pymysql://<mindsdb_user>:<mindsdb_pass>@<dedicated instace ip>:3306/mindsdb
+        ```
+
+        Testing connection by listing the existing tables (pure SQL):
+
+        ```python
+        %sql show tables
+        ```
+
+        Please note that we use the following connection details:
+
+        - Username is your MindsDB Cloud email address
+        - Password is your MindsDB Cloud password
+        - Host is the IP address of your dedicated instace
+        - Port is your custom port
+        - Database name is `mindsdb`
+
         </Tab>
 </Tabs>
 
-<br />
+Create a database connection and execute the code above. On success, only the last command which lists the tables will output. The expected output is:
+
+```bash
+*  mysql+pymysql://mindsdb:***@127.0.0.1:47335/mindsdb
+2 rows affected.
+Tables_in_mindsdb
+models
+models_versions
+```
 
 ## What's Next?
 

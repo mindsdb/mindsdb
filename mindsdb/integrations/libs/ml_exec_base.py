@@ -62,6 +62,24 @@ class MLEngineException(Exception):
     pass
 
 
+import psutil
+class ProcessPool:
+    def __init__(self):
+        self.cache = {}
+
+    def get(self, name):
+        if name not in self.cache:
+            self.cache[name] = [mp.Pool(1)]
+            return self.cache[name][-1]
+        else:
+            for pool in self.cache[name]:
+                if psutil.Process(pool._pool[0].pid).status() == psutil.STATUS_SLEEPING:
+                    return pool
+            self.cache[name].append(mp.Pool(1))
+            return self.cache[name][-1]
+process_pool = ProcessPool()
+
+
 @mark_process(name='learn')
 def learn_process(class_path, engine, context_dump, integration_id,
                   predictor_id, problem_definition, set_active,
@@ -458,24 +476,47 @@ class BaseMLEngineExec:
 
         class_path = [self.handler_class.__module__, self.handler_class.__name__]
 
-        p = HandlerProcess(
+        pool = process_pool.get(self.handler_class.__name__)
+        process = pool.apply_async(
             learn_process,
-            class_path,
-            self.engine,
-            ctx.dump(),
-            self.integration_id,
-            predictor_record.id,
-            predictor_record.learn_args,
-            set_active,
-            base_predictor_record.id,
-            data_integration_ref=data_integration_ref,
-            fetch_data_query=fetch_data_query,
-            project_name=project_name
+            (class_path,
+                self.engine,
+                ctx.dump(),
+                self.integration_id,
+                predictor_record.id,
+                predictor_record.learn_args,
+                set_active,
+                base_predictor_record.id
+            ),
+            {
+                'data_integration_ref': data_integration_ref,
+                'fetch_data_query': fetch_data_query,
+                'project_name': project_name
+            }
         )
-        p.start()
         if join_learn_process is True:
-            p.join()
+            process.get()
             predictor_record = db.Predictor.query.get(predictor_record.id)
             db.session.refresh(predictor_record)
+
+        # p = HandlerProcess(
+        #     learn_process,
+        #     class_path,
+        #     self.engine,
+        #     ctx.dump(),
+        #     self.integration_id,
+        #     predictor_record.id,
+        #     predictor_record.learn_args,
+        #     set_active,
+        #     base_predictor_record.id,
+        #     data_integration_ref=data_integration_ref,
+        #     fetch_data_query=fetch_data_query,
+        #     project_name=project_name
+        # )
+        # p.start()
+        # if join_learn_process is True:
+        #     p.join()
+        #     predictor_record = db.Predictor.query.get(predictor_record.id)
+        #     db.session.refresh(predictor_record)
 
         return predictor_record

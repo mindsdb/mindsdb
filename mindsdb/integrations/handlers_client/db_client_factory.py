@@ -18,7 +18,6 @@ class DBClientFactory:
                 self.host = None
                 self.port = None
 
-
     def __call__(self, handler_type: str, handler: type, **kwargs: dict):
         if self.host is None or self.port is None:
             logger.info(

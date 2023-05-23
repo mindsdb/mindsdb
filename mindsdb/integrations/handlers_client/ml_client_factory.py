@@ -33,8 +33,6 @@ class MLClientFactory:
                 host = None
                 port = None
 
-
-
         if host is None or port is None:
             logger.info(
                 "%s.__call__: no post/port to MLService have provided. Handle all ML request locally",

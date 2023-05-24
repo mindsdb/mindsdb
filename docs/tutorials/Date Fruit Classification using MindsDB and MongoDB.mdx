@@ -1,13 +1,13 @@
 ## Introduction
-In this tutorial, we’ll create and train a machine learning model, or as **MindsDB** call it, an `AI Table` or a `predictor`. By querying the model, we’ll predict the class of date fruit from these *seven types*: Berhi, Iraqi, Sogay, Deglet, Rotana, Safavi, Dokol. We're going to use **MongoDB** as the datasource here.
+In this tutorial, we’ll create and train a machine learning model, or as **MindsDB** call it, an `AI Table` or a `predictor`. By querying the model, we’ll predict the class of Date Fruit from these *seven types*: Berhi, Iraqi, Sogay, Deglet, Rotana, Safavi, Dokol. We're going to use **MongoDB** as the datasource here.
 
 ### Pre-requisites
 1. Make sure you have access to a working MindsDB installation, either locally or at **[MindsDB Cloud](https://cloud.mindsdb.com/)**. If you want to learn how to set up your account at MindsDB Cloud, follow **[this guide](https://docs.mindsdb.com/setup/cloud)**. It takes few minutes only.
-2. We need to download **MongoDB Compass** in order to connect with **MindsDB Cloud.** You can download it from **https://www.mongodb.com/try/download/compass)**
+2. We need to download **MongoDB Compass** in order to connect with **MindsDB Cloud.** You can download it from **[here](https://www.mongodb.com/try/download/compass)**
 
 ![mongodb-compass](images/date-fruit-classification/data-setup.png)
 
-3. We'll be using **[Date Fruit Datasets](https://www.kaggle.com/datasets/muratkokludataset/date-fruit-datasets)**. You need to download a copy of the dataset locally and extract the `.csv` file from it.
+3. We'll be using **[Date Fruit Datasets](https://www.kaggle.com/datasets/muratkokludataset/date-fruit-datasets)** from **Kaggle**. You need to download a copy of the dataset locally and extract the `.csv` file from it.
 
 Let’s get started.
 
@@ -69,7 +69,46 @@ db.databases.insertOne({
 ![create-database](images/date-fruit-classification/create-database.png)
 
 ### Understanding the Data
-We use the Date Fruit dataset, where each row are the factors that determine the type of date fruit along with features (columns) such as area, length, diameter, shape, etc. *The external appearance of the fruits is a major determinant of the fruit type.* The dataset contains **34 features as external factors and 35th is our target feature to predict, i.e.,** `Class`
+We use the **Date Fruit dataset**, where each row are the factors that determine the type of date fruit along with features (columns) such as area, length, diameter, shape, etc. *The external appearance of the fruits is a major determinant of the fruit type.* 
+
+The dataset contains **34 features as external factors and 35th is our target feature to predict, i.e.,** `Class`
+
+**Columns with dtype:**
+- AREA               int64
+- PERIMETER        float64
+- MAJOR_AXIS       float64
+- MINOR_AXIS       float64
+- ECCENTRICITY     float64
+- EQDIASQ          float64
+- SOLIDITY         float64
+- CONVEX_AREA        int64
+- EXTENT           float64
+- ASPECT_RATIO     float64
+- ROUNDNESS        float64
+- COMPACTNESS      float64
+- SHAPEFACTOR_1    float64
+- SHAPEFACTOR_2    float64
+- SHAPEFACTOR_3    float64
+- SHAPEFACTOR_4    float64
+- MeanRR           float64
+- MeanRG           float64
+- MeanRB           float64
+- StdDevRR         float64
+- StdDevRG         float64
+- StdDevRB         float64
+- SkewRR           float64
+- SkewRG           float64
+- SkewRB           float64
+- KurtosisRR       float64
+- KurtosisRG       float64
+- KurtosisRB       float64
+- EntropyRR          int64
+- EntropyRG          int64
+- EntropyRB          int64
+- ALLdaub4RR       float64
+- ALLdaub4RG       float64
+- ALLdaub4RB       float64
+- Class             object
 
 
 ## Training a Predictor
@@ -82,21 +121,40 @@ FROM files (
 ```
 ![create-predictor](images/date-fruit-classification/create-predictor.png)
 
-On successful query run, you can see the `predictor` model under `mindsdb` database. Also, you have to wait for a few minutes for the model to get trained after which you will be able to run queries and get predictions, so keep an eye on the **`STATUS`** of your model.
+On successful query run, you can see the `predictor` model under `mindsdb` database. Also, you have to wait for a few minutes for the model to get trained, so keep an eye on the **`STATUS`** of your model.
 
 
 ## Status of a Predictor
-Switch to **MongoDB Compass** in order to check the status of our predictor. Once the status changes to `COMPLETE`, it means our model is now ready and we can start getting predictions on it.
+Switch to **MongoDB Compass** in order to check the status of our predictor. Once the status changes to **`COMPLETE`**, it means our model is now ready and we can start getting predictions on it.
 ```mongodb
 db.predictors.find({name: "date_fruit_predictor"}); // Checking Predictor Status
 ```
 ![predictor-status](images/date-fruit-classification/check-predictor-status.png)
 
-We can see that the model has an accuracy of 83.6%, which is pretty good!
+We can see that **the model has an accuracy of 83.6%**, which is pretty good!
 
 
 ## Making Predictions
-To start getting prediction, enter the query below in the terminal:
-
+To start getting predictions, let's query the `predictor` for the label based on the chosen features. Enter the query below in the `MONGOSH` shell:
+```mongodb
+db.date_fruit_predictor.find({AREA:447729, PERIMETER:2454.4851, MAJOR_AXIS:825.5548, MINOR_AXIS:695.3279, ECCENTRICITY:0.5391, ROUNDNESS:0.9339});
+```
 ![model-predict-1](images/date-fruit-classification/model-prediction-1.png)
+
+**MindsDB predicted the Class of this Date Fruit type as "IRAQI" with confidence of around 2.24%.** You can feed more data (features) into the `predictor` as that could improve the confidence level of predictions.
+
 ![model-predict-2](images/date-fruit-classification/model-prediction-2.png)
+
+
+## Conclusion
+We have now reached the end of this tutorial, where we summarized all the tasks we performed above as a list below:
+
+- [x] Created a **MindsDB Cloud** account, downloaded **MongoDB Compass** and the *Date Fruit* dataset from **Kaggle**.
+
+- [x] Imported the dataset into **MindsDB Cloud**, connected the **MindsDB Cloud with MongoDB Compass** and created the *Mongo* database as well.
+
+- [x] Created and trained a Predictor Model for *Date Fruit Classification* in **MindsDB Cloud**.
+
+- [x] Gained predictions on the model using `db.date_fruit_predictor.find({column:value});` method.
+
+*Hope you've had fun while trying this tutorial out by yourself!*

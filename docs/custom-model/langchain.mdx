@@ -3,11 +3,11 @@ title: LangChain
 sidebarTitle: LangChain
 ---
 
-LangChain is a machine-learning framework for developing applications powered by large language models (LLMs).
+LangChain is a machine learning framework for developing applications powered by large language models (LLMs).
 
-## How to Bring the LangChain Model to MindsDB
+## How to Bring LangChain Models to MindsDB
 
-We use the [`CREATE MODEL`](/sql/create/model) statement to bring the LangChain models to MindsDB.
+We use the [`CREATE MODEL`](/sql/create/model) statement to bring LangChain models to MindsDB.
 
 ```sql
 CREATE MODEL tool_based_agent
@@ -17,15 +17,15 @@ USING
     prompt_template = 'Answer the users input in a helpful way: {{input}}';
 ```
 
-Here, we create the `tool_based_agent` model using the LangChain engine, as defined in the `engine` parameter. This model answers users' questions in a helpful way, as defined in the `prompt_template` parameter.
+Here, we create the `tool_based_agent` model using the LangChain engine, as defined in the `engine` parameter. This model answers users' questions in a helpful way, as defined in the `prompt_template` parameter, which specifies `input` as the input column when calling the model. `Agents` and `Tools` are some of the main abstractions that LangChain offers. You can read more about them in the LangChain documentation ([[1]](https://python.langchain.com/en/latest/modules/agents/getting_started.html), [[2]](https://python.langchain.com/en/latest/modules/agents/tools.html)).
 
-There are three different tools utilized by this model:
+There are three different tools utilized by this agent:
 
-* **MindsDB** is an internal MindsDB executor.
+* **MindsDB** is the internal MindsDB executor.
 * **Metadata** fetches the metadata information for the available tables.
-* **Write** creates a response in a string format.
+* **Write** is able to write agent responses into a MindsDB data source.
 
-Each tool exposes the internal MindsDB executor in a different way to perform its tasks.
+Each tool exposes the internal MindsDB executor in a different way to perform its tasks, effectively enabling the agent model to read from (and potentially write to) data sources or models available in the active MindsDB project.
 
 ### Example 1: Describing Connected Data Sources
 
@@ -34,7 +34,7 @@ We can ask questions about data sources connected to MindsDB.
 ```sql
 SELECT input, completion
 FROM tool_based_agent
-WHERE input = 'Could you describe the `files.house_sales` table please?'
+WHERE input = 'Could you describe the `mysql_demo_db.house_sales` table please?'
 USING
     verbose = True,
     tools = [],
@@ -44,14 +44,18 @@ USING
 On execution, we get:
 
 ```sql
-+----------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
-| input                                                    | completion                                                                                                                                    |
-+----------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
-| Could you describe the `files.house_sales` table please? | The `files.house_sales` table has 347 rows and contains columns for `saledate`, `MA`, `type`, and `bedrooms`, all of which are of type `str`. |
-+----------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
++------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| input                                                            | completion                                                                                                                                                  |
++------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Could you describe the `mysql_demo_db.house_sales` table please? | The `mysql_demo_db.house_sales` table has four columns: `saledate` (text), `house_price_moving_average` (integer), `type` (text), and `bedrooms` (integer). |
++------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
-To get information about the `files.house_sales` table, the agent uses the Metadata tool. Then the Write tool prepares the response.
+To get information about the `mysql_demo_db.house_sales` table, the agent uses the Metadata tool. Then the agent prepares the response.
+
+<Note>
+The Write tool only comes into play when writing to other data sources. By default, the agent is able to write an answer back to the user (through standard output), like in this case.
+</Note>
 
 ### Example 2: Analyzing Data
 
@@ -85,7 +89,7 @@ FROM mysql_demo_db.home_rentals
 WHERE neighborhood = 'downtown';
 ```
 
-This query returns the value of 1.6, which is then used by the Write tool to create an answer.
+This query returns the value of 1.6, which is then used to write an answer.
 
 ### Example 3: Retrieving Data
 
@@ -156,4 +160,4 @@ On execution, we get:
 +----------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
-The model created the `INSERT INTO` statement and executed it on the `local_database` database.
+The agent uses the Write tool to `INSERT INTO` the `local_database` database.

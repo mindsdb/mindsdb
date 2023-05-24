@@ -58,6 +58,7 @@ from abc import ABC
 from pathlib import Path
 import hashlib
 import typing as t
+from threading import Lock
 
 import pandas as pd
 import walrus
@@ -123,22 +124,22 @@ class FileCache(BaseCache):
             os.makedirs(cache_path)
 
         self.path = cache_path
+        self._lock = Lock()
 
     def clear_old_cache(self):
-        # buffer to delete, to not run delete on every adding
-        buffer_size = 5
+        with self._lock:
+            # buffer to delete, to not run delete on every adding
+            buffer_size = 5
 
-        if self.max_size is None:
-            return
+            if self.max_size is None:
+                return
 
-        cur_count = len(os.listdir(self.path))
+            cur_count = len(os.listdir(self.path))
 
-        # remove oldest
-        if cur_count > self.max_size + buffer_size:
-
-            files = sorted(Path(self.path).iterdir(), key=os.path.getmtime)
-            for file in files[:cur_count - self.max_size]:
-                self.delete_file(file)
+            if cur_count > self.max_size + buffer_size:
+                files = sorted(Path(self.path).iterdir(), key=os.path.getmtime)
+                for file in files[:cur_count - self.max_size]:
+                    self.delete_file(file)
 
     def file_path(self, name):
         return self.path / name
@@ -158,18 +159,20 @@ class FileCache(BaseCache):
 
     def get_df(self, name):
         path = self.file_path(name)
-
-        if not os.path.exists(path):
-            return None
-        return pd.read_pickle(path)
+        with self._lock:
+            if not os.path.exists(path):
+                return None
+            value = pd.read_pickle(path)
+        return value
 
     def get(self, name):
         path = self.file_path(name)
 
-        if not os.path.exists(path):
-            return None
-        with open(path, 'rb') as fd:
-            value = fd.read()
+        with self._lock:
+            if not os.path.exists(path):
+                return None
+            with open(path, 'rb') as fd:
+                value = fd.read()
         value = self.deserialize(value)
         return value
 

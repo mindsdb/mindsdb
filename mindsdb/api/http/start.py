@@ -9,6 +9,7 @@ from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import init_lexer_parsers
+from mindsdb.integrations.libs.ml_exec_base import process_cache
 
 
 def start(verbose, no_studio, with_nlp):
@@ -24,6 +25,8 @@ def start(verbose, no_studio, with_nlp):
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']
+
+    process_cache.init({'LightwoodHandler': 4})
 
     if server.lower() == 'waitress':
         serve(

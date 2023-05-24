@@ -24,7 +24,10 @@ from mindsdb.integrations.handlers_client.db_client_factory import DBClient
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.log import get_log
-
+# dirty hack to force init process_cache
+# from mindsdb.integrations.utilities.processes_cache import process_cache    # noqa
+from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 
 logger = get_log()
 
@@ -444,8 +447,6 @@ class IntegrationController:
                 resource_group=RESOURCE_GROUP.PREDICTOR,
                 sync=True
             )
-        from mindsdb.integrations.libs.base import BaseMLEngine
-        from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 
         HandlerClass = self.handler_modules[integration_engine].Handler
 

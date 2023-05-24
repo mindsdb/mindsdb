@@ -231,10 +231,9 @@ if USE_EXTERNAL_DB_SERVER:
         credentials = json.loads(f.read())
     override = {}
     for key, value in credentials.items():
-        if key not in ("redis", "kafka"):
-            value['publish'] = False
-            value['type'] = key
-            config_json['integrations'][f'default_{key}'] = value
+        value['publish'] = False
+        value['type'] = key
+        config_json['integrations'][f'default_{key}'] = value
 
     AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', None)
     AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', None)

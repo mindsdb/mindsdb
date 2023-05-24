@@ -226,7 +226,6 @@ class GmailHandler(APIHandler):
             if response.status_code == 200:
                 with open(creds_file, 'w') as creds:
                     creds.write(response.text)
-
                 return True
             else:
                 log.logger.error("Failed to get credentials from S3", response.status_code)
@@ -256,9 +255,9 @@ class GmailHandler(APIHandler):
                 flow = InstalledAppFlow.from_client_secrets_file(creds_file, self.scopes)
                 creds = flow.run_local_server(port=0, timeout_seconds=120)
 
-        # Save the credentials for the next run
-        with open(token_file, 'w') as token:
-            token.write(creds.to_json())
+            # Save the credentials for the next run
+            with open(token_file, 'w') as token:
+                token.write(creds.to_json())
 
         return build('gmail', 'v1', credentials=creds)
 

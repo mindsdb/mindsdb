@@ -148,7 +148,7 @@ class Integration(Resource):
             engine = params['type']
             if engine is not None:
                 del params['type']
-            publish = params.pop('publish', False)
+            params.pop('publish', False)
             ca.integration_controller.add(name, engine, params)
 
         except Exception as e:

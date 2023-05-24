@@ -244,7 +244,7 @@ Let's look at an example of how to create and train a simple regression model.
 Here is how to check model status:
 
 ```
-todo
+  homeRentalPriceModel = await MindsDB.Models.getModel('home_rentals_model', 'mindsdb');
 
   while (homeRentalPriceModel.status === 'training') {
     homeRentalPriceModel = await MindsDB.Models.getModel('home_rentals_model', 'mindsdb');
@@ -265,7 +265,7 @@ Here is how to make predictions:
   }
 
   // Querying the model for predictions
-  const rentalPricePrediction = homeRentalPriceModel.query(queryOptions);
+  const rentalPricePrediction = await homeRentalPriceModel.query(queryOptions);
   console.log(rentalPricePrediction.value);
   console.log(rentalPricePrediction.explain);
   console.log(rentalPricePrediction.data);
@@ -283,7 +283,7 @@ As time series models require more parameters, let's go over an example of how t
     window: 8,
     horizon: 4,
     using: {
-      'key': 'value',
+      //'key': 'value',
       'labels': ['house-label', 'test-label'],
       'model.args': {
         'submodels': [{
@@ -300,7 +300,7 @@ As time series models require more parameters, let's go over an example of how t
   // Creating and training a model
   const houseSalesForecastModel = await MindsDB.Models.trainModel(
     'house_sales_model',
-    'rental_price',
+    'ma',
     'mindsdb',
     timeSeriesTrainingOptions);
 ```
@@ -308,7 +308,7 @@ As time series models require more parameters, let's go over an example of how t
 Here is how to check model status:
 
 ```
-todo
+  houseSalesForecastModel = await MindsDB.Models.getModel('house_sales_model', 'mindsdb');
 
   const modelDescription = await houseSalesForecastModel.describe();
   console.log(modelDescription);
@@ -323,7 +323,7 @@ Here is how to make predictions:
     join: 'example_db.demo_data.house_sales',
     // When using batch queries, the 't' alias is used for the joined data source ('t' is short for training/test).
     // The 'm' alias is used for the trained model to be queried.
-    where: ['t.saledate > LATEST', 't.type = "house"'],
+    where: ['t.saledate > LATEST', 't.bedrooms = 2'],
     limit: 4
   }
 

@@ -15,6 +15,7 @@ from mindsdb.utilities.telemetry import (
     inject_telemetry_to_static
 )
 from mindsdb.api.http.gui import update_static
+from mindsdb.utilities.fs import clean_unlinked_process_marks
 
 
 @ns_conf.route('/ping')
@@ -45,15 +46,10 @@ class PingNative(Resource):
             processes_dir = Path(tempfile.gettempdir()).joinpath(f'mindsdb/processes/{process_type}/')
             if not processes_dir.is_dir():
                 continue
+            clean_unlinked_process_marks()
             process_marks = [x.name for x in processes_dir.iterdir()]
-            for p_mark in process_marks:
-                pid = int(p_mark.split('-')[0])
-                try:
-                    psutil.Process(pid)
-                except Exception:
-                    processes_dir.joinpath(p_mark).unlink()
-                else:
-                    response[process_type] = True
+            if len(process_marks) > 0:
+                response[process_type] = True
 
         return response
 

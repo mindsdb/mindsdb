@@ -83,6 +83,17 @@ class BaseFSStore(ABC):
         pass
 
 
+def get_dir_size(path: str):
+    total = 0
+    with os.scandir(path) as it:
+        for entry in it:
+            if entry.is_file():
+                total += entry.stat().st_size
+            elif entry.is_dir():
+                total += get_dir_size(entry.path)
+    return total
+
+
 class LocalFSStore(BaseFSStore):
     """Storage that stores files locally
     """
@@ -94,7 +105,7 @@ class LocalFSStore(BaseFSStore):
         remote_name = local_name
         src = os.path.join(self.storage, remote_name)
         dest = os.path.join(base_dir, local_name)
-        if not os.path.exists(dest) or os.path.getsize(src) != os.path.getsize(dest):
+        if not os.path.exists(dest) or get_dir_size(src) != get_dir_size(dest):
             copy(src, dest)
 
     def put(self, local_name, base_dir):

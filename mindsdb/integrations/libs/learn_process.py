@@ -80,6 +80,7 @@ def learn_process(class_path, engine, context_dump, integration_id,
         kwargs = {}
         if base_predictor_id is not None:
             kwargs['base_model_storage'] = ModelStorage(base_predictor_id)
+            kwargs['base_model_storage'].fileStorage.pull()
 
         ml_handler = HandlerClass(
             engine_storage=handlerStorage,

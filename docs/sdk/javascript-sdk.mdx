@@ -23,5 +23,368 @@ Here is the expected output:
 
 ### Connecting to MindsDB
 
+Before performing any operations, you must connect to MindsDB. By default, all operations will go through [MindsDB Cloud REST APIs](/rest/sql), but you can use a self-hosted version of MindsDB as well.
+
+<Tabs>
+<Tab title="Local MindsDB">
+Here is how to connect to your local MindsDB server:
+
+```
+import MindsDB from 'mindsdb-js-sdk';
+//alternative: const MindsDB = require("mindsdb-js-sdk").default;
+
+try {
+  // No authentication needed for self-hosting
+  await MindsDB.connect({
+    host: 'http://127.0.0.1:47334'
+  });
+} catch(error) {
+  // Failed to connect to local instance.
+}
+```
+</Tab>
+<Tab title="MindsDB Cloud">
+Here is how to connect to the MindsDB Cloud server:
+
+```
+import MindsDB from 'mindsdb-js-sdk';
+//alternative: const MindsDB = require("mindsdb-js-sdk").default;
+
+try {
+  await MindsDB.connect({
+    user: 'mindsdbuser@gmail.com',
+    password: 'mypassword'
+  });
+} catch(error) {
+  // Failed to authenticate.
+}
+```
+</Tab>
+<Tab title="MindsDB Pro">
+Here is how to connect to the MindsDB Pro server:
+
+```
+import MindsDB from 'mindsdb-js-sdk';
+//alternative: const MindsDB = require("mindsdb-js-sdk").default;
+
+try {
+  await MindsDB.connect({
+    host: 'http://<YOUR_INSTANCE_IP>',
+    user: 'mindsdbuser@gmail.com',
+    password: 'mypassword',
+    managed: true
+  });
+} catch(error) {
+  // Failed to authenticate.
+}
+```
+</Tab>
+<Tab title="Own Axios Instance">
+Here is how to connect using your own Axios instance (see [details on the default instance](https://github.com/mindsdb/mindsdb-js-sdk/blob/main/src/util/http.ts)):
+
+```
+import MindsDB from 'mindsdb-js-sdk';
+//alternative: const MindsDB = require("mindsdb-js-sdk").default;
+import axios from 'axios';
+
+// Use 'host' option in MindsDB.connect to specify base URL override.
+const customAxios = axios.create({
+  timeout: 1000,
+});
+
+try {
+  await MindsDB.connect({
+    user: mindsdbuser@gmail.com,
+    password: mypassword,
+    httpClient: customAxios
+  });
+} catch(error) {
+  // Failed to authenticate.
+}
+```
+</Tab>
+</Tabs>
+
+<Tip>
+Please note that all methods that use `await` must be wrapped in an `async` function, like this:
+
+```
+(async() => {
+
+  try {
+    // No authentication needed for self-hosting
+    await MindsDB.connect({
+      host: 'http://127.0.0.1:47334'
+    });
+  } catch(error) {
+    // Failed to connect to local instance.
+  }
+
+})();
+```
+</Tip>
+
+### Connecting a Database to MindsDB
+
+Once you connected to MindsDB, you can connect to various data sources through MindsDB.
+
+Here is how to connect our sample MySQL database:
+
+```
+  const connectionParams = {
+    'user': 'user',
+    'port': 3306,
+    'password': 'MindsDBUser123!',
+    'host': 'db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com',
+    'database': 'public'
+  }
+
+  try {
+    const mysqlDatabase = await MindsDB.Databases.createDatabase(
+      'mysql_datasource',
+      'mysql',
+      connectionParams);
+    console.log('connected db!')
+  } catch (error) {
+    // Couldn't connect to database.
+  }
+```
+
+First, we define the connection paramaters and then use the `createDatabase` function to connect a database.
+
+### Getting a Database
+
+Here is how to get an existing database and save it in the variable:
+
+```
+const db = await MindsDB.Databases.getDatabase('mysql_datasource');
+```
+
+### Deleting a Database
+
+Here is how to remove a database connection from your MindsDB:
+
+```
+  if (db) {
+    try {
+      await db.delete();
+      console.log('deleted db!');
+    } catch (error) {
+      // Couldn't delete a database.
+    }
+  }
+```
+
+### Running SQL Queries
+
+We prepare a variable that stores a query and use it as an argument to the `runQuery` function:
+
+```
+  const query = `SELECT * FROM mysql_demo_db.amazon_reviews`;
+  try {
+    const queryResult = await MindsDB.SQL.runQuery(query);
+    if (queryResult.rows.length > 0) {
+      console.log(queryResult.rows[0]);
+      console.log(queryResult.rows[1]);
+    }
+  } catch (error) {
+    // Something went wrong sending the API request or executing the query.
+  }
+```
+
+<Tip>
+If you want to use a variable within the SQL query, we recommend the below approach:
+
+```
+const user = 'raw_unsafe_username'
+const query = `SELECT * FROM my_db.customer_data WHERE user=${mysql.escape(user)}`;
+```
+</Tip>
+
+### Getting Projects
+
+Here is how to list all available projects:
+
+```
+  const allProjects = await MindsDB.Projects.getAllProjects();
+  console.log('all projects:')
+  allProjects.forEach(p => {
+    console.log(p.name);
+  });
+```
+
+### Training & Querying Models
+
+Training a model requires various parameters, depending on the model type. Here we present examples of regression and time series models.
+
+<Tip>
+Here are some useful links:
+- [training options](https://mindsdb.github.io/mindsdb-js-sdk/interfaces/models_trainingOptions.TrainingOptions.html),
+- [query options](https://mindsdb.github.io/mindsdb-js-sdk/interfaces/models_queryOptions.QueryOptions.html),
+- [batch query options](https://mindsdb.github.io/mindsdb-js-sdk/interfaces/models_queryOptions.BatchQueryOptions.html).
+</Tip>
+
+Let's look at an example of how to create and train a simple regression model.
+
+```
+  // Defining the training options
+  const regressionTrainingOptions = {
+    select: 'SELECT * FROM demo_data.home_rentals',
+    integration: 'example_db'
+  };
+
+  // Creating and training a model
+  let homeRentalPriceModel = await MindsDB.Models.trainModel(
+    'home_rentals_model',
+    'rental_price',
+    'mindsdb',
+    regressionTrainingOptions);
+```
+
+Here is how to check model status:
+
+```
 todo
 
+  while (homeRentalPriceModel.status === 'training') {
+    homeRentalPriceModel = await MindsDB.Models.getModel('home_rentals_model', 'mindsdb');
+  }
+```
+
+Here is how to make predictions:
+
+```
+  // Defining the query options
+  const queryOptions = {
+    where: [
+      'sqft = 823',
+      'location = "good"',
+      'neighborhood = "downtown"',
+      'days_on_market = 10'
+    ]
+  }
+
+  // Querying the model for predictions
+  const rentalPricePrediction = homeRentalPriceModel.query(queryOptions);
+  console.log(rentalPricePrediction.value);
+  console.log(rentalPricePrediction.explain);
+  console.log(rentalPricePrediction.data);
+```
+
+As time series models require more parameters, let's go over an example of how to create and train a time series model.
+
+```
+  // Defining the training options
+  const timeSeriesTrainingOptions = {
+    integration: 'example_db',
+    select: 'SELECT * FROM demo_data.house_sales',
+    orderBy: 'saledate',
+    groupBy: 'bedrooms',
+    window: 8,
+    horizon: 4,
+    using: {
+      'key': 'value',
+      'labels': ['house-label', 'test-label'],
+      'model.args': {
+        'submodels': [{
+          'module': 'LightGBM',
+          'args': {
+            'stop_after': 12,
+            'fit_on_dev': true
+          }
+        }]
+      }
+    }
+  }
+
+  // Creating and training a model
+  const houseSalesForecastModel = await MindsDB.Models.trainModel(
+    'house_sales_model',
+    'rental_price',
+    'mindsdb',
+    timeSeriesTrainingOptions);
+```
+
+Here is how to check model status:
+
+```
+todo
+
+  const modelDescription = await houseSalesForecastModel.describe();
+  console.log(modelDescription);
+```
+
+Here is how to make predictions:
+
+```
+  // Defining the query options
+  const queryOptions = {
+    // Join model to this data source.
+    join: 'example_db.demo_data.house_sales',
+    // When using batch queries, the 't' alias is used for the joined data source ('t' is short for training/test).
+    // The 'm' alias is used for the trained model to be queried.
+    where: ['t.saledate > LATEST', 't.type = "house"'],
+    limit: 4
+  }
+
+  // Querying the model for predictions
+  const rentalPriceForecasts = await houseSalesForecastModel.batchQuery(queryOptions);
+  rentalPriceForecasts.forEach(f => {
+    console.log(f.value);
+    console.log(f.explain);
+    console.log(f.data);
+  })
+```
+
+### Retraining a Model
+
+Models require to be retrained regularly. You can learn more about it [here](/sql/api/retrain#when-to-retrain-the-model).
+
+In the following example, we get an existing model and retrain it if its update status is `available`.
+
+```
+  // Getting an existing model
+  const homeRentalPriceModel = await MindsDB.Models.getModel('home_rentals_model', 'mindsdb');
+
+  // Checking the status and retraining a model if required
+  if (homeRentalPriceModel.updateStatus === 'available') {
+    try {
+      // For custom retraining: homerentalPriceModel.retrain('example_db', trainingOptions);
+      // Does NOT block on training. The promise resolves after training starts.
+      await homeRentalPriceModel.retrain();
+    } catch (error) {
+      // Something went wrong with retraining.
+    }
+  }
+```
+
+### Finetuning a Model
+
+You may want to finetune your model with a specific dataset. You can learn more about it [here](/sql/api/finetune).
+
+Here is how you can finetune, or adjust, a model:
+
+```
+todo
+```
+
+### Creating Views
+
+Here is how to create views:
+
+```
+  const viewSelect = `SELECT t.sqft, t.location, m.rental_price
+    FROM mysql_demo_db.home_rentals as t
+    JOIN mindsdb.home_rentals_model as m`;
+    
+  try {
+    const predictionsView = await MindsDB.Views.createView(
+      'predictions_view',
+      'mindsdb',
+      viewSelect);
+  } catch (error) {
+    // Something went wrong creating the view.
+  }
+```
+
+First, we define a query based on which the view is created. Then we use the `createView()` function with arguments including the view name, the project name where the view is to be created, and the query.

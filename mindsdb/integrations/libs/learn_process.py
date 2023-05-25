@@ -20,8 +20,8 @@ from mindsdb.integrations.utilities.utils import format_exception_error
 @mark_process(name='learn')
 def learn_process(class_path, engine, context_dump, integration_id,
                   predictor_id, problem_definition, set_active,
-                  base_predictor_id=None, training_data_df=None,
-                  data_integration_ref=None, fetch_data_query=None, project_name=None):
+                  base_predictor_id=None, training_data_df=None):
+                #   data_integration_ref=None, fetch_data_query=None, project_name=None):
     from mindsdb.interfaces.database.database import DatabaseController
     ctx.load(context_dump)
     db.init()
@@ -31,30 +31,30 @@ def learn_process(class_path, engine, context_dump, integration_id,
     try:
         target = problem_definition['target']
 
-        training_data_df = None
+        # training_data_df = None
 
-        database_controller = DatabaseController()
+        # database_controller = DatabaseController()
 
-        sql_session = make_sql_session()
-        if data_integration_ref is not None:
-            if data_integration_ref['type'] == 'integration':
-                integration_name = database_controller.get_integration(data_integration_ref['id'])['name']
-                query = Select(
-                    targets=[Star()],
-                    from_table=NativeQuery(
-                        integration=Identifier(integration_name),
-                        query=fetch_data_query
-                    )
-                )
-                sqlquery = SQLQuery(query, session=sql_session)
-            elif data_integration_ref['type'] == 'view':
-                project = database_controller.get_project(project_name)
-                query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
-                view_query_ast = project.query_view(query_ast)
-                sqlquery = SQLQuery(view_query_ast, session=sql_session)
+        # sql_session = make_sql_session()
+        # if data_integration_ref is not None:
+        #     if data_integration_ref['type'] == 'integration':
+        #         integration_name = database_controller.get_integration(data_integration_ref['id'])['name']
+        #         query = Select(
+        #             targets=[Star()],
+        #             from_table=NativeQuery(
+        #                 integration=Identifier(integration_name),
+        #                 query=fetch_data_query
+        #             )
+        #         )
+        #         sqlquery = SQLQuery(query, session=sql_session)
+        #     elif data_integration_ref['type'] == 'view':
+        #         project = database_controller.get_project(project_name)
+        #         query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
+        #         view_query_ast = project.query_view(query_ast)
+        #         sqlquery = SQLQuery(view_query_ast, session=sql_session)
 
-            result = sqlquery.fetch(view='dataframe')
-            training_data_df = result['result']
+        #     result = sqlquery.fetch(view='dataframe')
+        #     training_data_df = result['result']
 
         training_data_columns_count, training_data_rows_count = 0, 0
         if training_data_df is not None:

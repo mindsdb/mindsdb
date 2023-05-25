@@ -55,7 +55,6 @@ import torch.multiprocessing as mp
 mp_ctx = mp.get_context('spawn')
 
 
-
 class MLEngineException(Exception):
     pass
 
@@ -190,6 +189,41 @@ class ProcessCache:
 
 
 process_cache = ProcessCache()
+
+db_pool = ProcessPoolExecutor(4)
+
+
+def get_df(context_dump, data_integration_ref, fetch_data_query, project_name):
+    from mindsdb.integrations.utilities.sql_utils import make_sql_session
+    from mindsdb_sql.parser.ast import Identifier, Select, Star, NativeQuery
+    from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
+    ctx.load(context_dump)
+
+    training_data_df = None
+
+    database_controller = DatabaseController()
+
+    sql_session = make_sql_session()
+    if data_integration_ref is not None:
+        if data_integration_ref['type'] == 'integration':
+            integration_name = database_controller.get_integration(data_integration_ref['id'])['name']
+            query = Select(
+                targets=[Star()],
+                from_table=NativeQuery(
+                    integration=Identifier(integration_name),
+                    query=fetch_data_query
+                )
+            )
+            sqlquery = SQLQuery(query, session=sql_session)
+        elif data_integration_ref['type'] == 'view':
+            project = database_controller.get_project(project_name)
+            query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
+            view_query_ast = project.query_view(query_ast)
+            sqlquery = SQLQuery(view_query_ast, session=sql_session)
+
+        result = sqlquery.fetch(view='dataframe')
+        training_data_df = result['result']
+        return training_data_df
 
 
 class BaseMLEngineExec:
@@ -497,6 +531,81 @@ class BaseMLEngineExec:
 
         class_path = [self.handler_class.__module__, self.handler_class.__name__]
 
+        thread = threading.Thread(target=self._update, kwargs={
+            'context_dump': ctx.dump(),
+            'class_path': class_path,
+            'predictor_record_id': predictor_record.id,
+            'predictor_record_learn_args': predictor_record.learn_args,
+            'set_active': set_active,
+            'base_predictor_record_id': base_predictor_record.id,
+            'join_learn_process': join_learn_process,
+            'data_integration_ref': data_integration_ref,
+            'fetch_data_query': fetch_data_query,
+            'project_name': project_name
+        })
+        thread.start()
+        if join_learn_process is True:
+            thread.join()
+            predictor_record = db.Predictor.query.get(predictor_record.id)
+            db.session.refresh(predictor_record)
+
+        # task = process_cache.apply_async(
+        #     self.handler_class,
+        #     learn_process,
+        #     class_path,
+        #     self.engine,
+        #     ctx.dump(),
+        #     self.integration_id,
+        #     predictor_record.id,
+        #     predictor_record.learn_args,
+        #     set_active,
+        #     base_predictor_record.id,
+        #     data_integration_ref=data_integration_ref,
+        #     fetch_data_query=fetch_data_query,
+        #     project_name=project_name
+        # )
+
+        # if join_learn_process is True:
+        #     task.result()
+        #     predictor_record = db.Predictor.query.get(predictor_record.id)
+        #     db.session.refresh(predictor_record)
+
+        return predictor_record
+
+    def _update(self, *, context_dump, class_path, predictor_record_id, predictor_record_learn_args, set_active, base_predictor_record_id, join_learn_process,
+                data_integration_ref, fetch_data_query, project_name):
+        # from mindsdb.integrations.utilities.sql_utils import make_sql_session
+        # from mindsdb_sql.parser.ast import Identifier, Select, Star, NativeQuery
+        # from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
+
+        ctx.load(context_dump)
+
+        training_data_df = None
+
+        if data_integration_ref is not None:
+            task = db_pool.submit(get_df, context_dump, data_integration_ref, fetch_data_query, project_name)
+            training_data_df = task.result()
+            # database_controller = DatabaseController()
+            # sql_session = make_sql_session()
+            # if data_integration_ref['type'] == 'integration':
+            #     integration_name = database_controller.get_integration(data_integration_ref['id'])['name']
+            #     query = Select(
+            #         targets=[Star()],
+            #         from_table=NativeQuery(
+            #             integration=Identifier(integration_name),
+            #             query=fetch_data_query
+            #         )
+            #     )
+            #     sqlquery = SQLQuery(query, session=sql_session)
+            # elif data_integration_ref['type'] == 'view':
+            #     project = database_controller.get_project(project_name)
+            #     query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
+            #     view_query_ast = project.query_view(query_ast)
+            #     sqlquery = SQLQuery(view_query_ast, session=sql_session)
+
+            # result = sqlquery.fetch(view='dataframe')
+            # training_data_df = result['result']
+
         task = process_cache.apply_async(
             self.handler_class,
             learn_process,
@@ -504,18 +613,17 @@ class BaseMLEngineExec:
             self.engine,
             ctx.dump(),
             self.integration_id,
-            predictor_record.id,
-            predictor_record.learn_args,
+            predictor_record_id,
+            predictor_record_learn_args,
             set_active,
-            base_predictor_record.id,
-            data_integration_ref=data_integration_ref,
-            fetch_data_query=fetch_data_query,
-            project_name=project_name
+            base_predictor_record_id,
+            training_data_df
+            # data_integration_ref=data_integration_ref,
+            # fetch_data_query=fetch_data_query,
+            # project_name=project_name
         )
 
         if join_learn_process is True:
             task.result()
-            predictor_record = db.Predictor.query.get(predictor_record.id)
-            db.session.refresh(predictor_record)
-
-        return predictor_record
+            # predictor_record = db.Predictor.query.get(predictor_record.id)
+            # db.session.refresh(predictor_record)

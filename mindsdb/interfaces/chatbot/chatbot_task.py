@@ -1,3 +1,5 @@
+import datetime as dt
+
 from mindsdb_sql.parser.ast import Identifier, Select, Insert, BinaryOperation, Constant
 from mindsdb.interfaces.storage import db
 
@@ -29,12 +31,34 @@ class ChatBotTask:
         # get model info
         model = self.session.model_controller.get_model(model_name, project_name=project_name)
         model_record = db.Predictor.query.get(model['id'])
+        integration_record = db.Integration.query.get(model_record.integration_id)
 
         self.params['model'] = {
             'user_column': model_record.learn_args['using']['user_column'],
             'bot_column': model_record.learn_args['using']['assistant_column'],
-            'output': model_record.to_predict[0]
+            'output': model_record.to_predict[0],
+            'engine': integration_record.engine,
         }
+
+        self.params['back_db'] = {}
+        back_db = self.params.get('backoffice_db')
+        if back_db is not None:
+            self.back_db = self.session.integration_controller.get_handler(back_db)
+
+            if hasattr(self.back_db, 'back_office_config'):
+                self.params['back_db']['config'] = self.back_db.back_office_config()
+
+            if 'tools' in self.params['back_db']['config']:
+                if self.params['model']['engine'] == 'langchain':
+                    tools = [
+                        {
+                            'name': name,
+                            'func': getattr(self.back_db, name),
+                            'description': description
+                        }
+                        for name, description in self.params['back_db']['config']['tools'].items()
+                    ]
+                    self.params['back_db']['tools'] = tools
 
     def run(self):
 
@@ -146,14 +170,7 @@ class ChatBotTask:
                 # update answer in previous column
                 messages[-1][answer_col] = text
 
-        # call model
-        predictions = self.project_datanode.predict(
-            model_name=self.model_name,
-            data=messages,
-        )
-
-        output_col = self.params['model']['output']
-        model_output = predictions.iloc[-1][output_col]
+        model_output = self.apply_model(messages, chat_id)
 
         # send answer to user
         ast_query = Insert(
@@ -165,3 +182,25 @@ class ChatBotTask:
         )
 
         self.db_handler.query(ast_query)
+
+    def apply_model(self, messages, chat_id):
+
+        tools = None
+        if 'tools' in self.params['back_db']:
+            tools = self.params['back_db']['tools']
+
+        context_list = [
+            f"- Today's date is {dt.datetime.now().strftime('%Y-%m-%d')}"
+        ]
+        context = '\n'.join(context_list)
+
+        # call model
+        predictions = self.project_datanode.predict(
+            model_name=self.model_name,
+            data=messages,
+            params={'tools': tools, 'context': context, 'max_iterations': 10}
+        )
+
+        output_col = self.params['model']['output']
+        model_output = predictions.iloc[-1][output_col]
+        return model_output

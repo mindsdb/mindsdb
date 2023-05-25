@@ -44,6 +44,34 @@ class FrappeHandler(APIHandler):
         document_data = FrappeDocumentsTable(self)
         self._register_table('documents', document_data)
 
+    def back_office_config(self):
+        tools = {
+            # 'check_employee_exists': 'useful validate the employee is valid. Input is employee',
+            'check_company_exists': 'useful validate the company is valid. Input is company',
+            'check_expense_type': 'useful validate the expense_type is valid. Input is expense_type',
+        }
+        return {
+            'tools': tools,
+        }
+
+    # def check_employee_exists(self, name):
+    #     result = self.client.get_documents('Employee', filters=[['name', '=', name]])
+    #     if len(result) == 1:
+    #         return True
+    #     return False
+
+    def check_company_exists(self, name):
+        result = self.client.get_documents('Company', filters=[['name', '=', name]])
+        if len(result) == 1:
+            return True
+        return False
+
+    def check_expense_type(self, name):
+        result = self.client.get_documents('Expense Claim Type', filters=[['name', '=', name]])
+        if len(result) == 1:
+            return True
+        return False
+
     def connect(self) -> FrappeClient:
         """Creates a new  API client if needed and sets it as the client to use for requests.
 

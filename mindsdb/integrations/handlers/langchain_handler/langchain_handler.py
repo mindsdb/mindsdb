@@ -149,6 +149,8 @@ class LangChainHandler(OpenAIHandler):
 
         # system prompt
         prompt = args['prompt']
+        if 'context' in pred_args:
+            prompt += '\n\n' + 'Useful information:\n' + pred_args['context'] + '\n'
         memory.chat_memory.messages.insert(0, SystemMessage(content=prompt))
 
         # user - assistant conversation. get all except the last message
@@ -387,7 +389,17 @@ class LangChainHandler(OpenAIHandler):
         )
 
         toolkit = pred_args.get('tools', self.default_agent_tools)
-        tools = load_tools(toolkit)
+
+        standard_tools = []
+        custom_tools = []
+        # possible to pass standart tool name or custom function
+        for tool in toolkit:
+            if isinstance(tool, str):
+                standard_tools.append(tool)
+            else:
+                custom_tools.append(tool)
+
+        tools = load_tools(standard_tools)
         if model_kwargs.get('serper_api_key', False):
             search = GoogleSerperAPIWrapper(serper_api_key=model_kwargs.pop('serper_api_key'))
             tools.append(Tool(
@@ -400,6 +412,13 @@ class LangChainHandler(OpenAIHandler):
         tools.append(mdb_tool)
         tools.append(mdb_meta_tool)
         tools.append(mdb_write_tool)
+
+        for tool in custom_tools:
+            tools.append(Tool(
+                name=tool['name'],
+                func=tool['func'],
+                description=tool['description'],
+            ))
 
         return tools
 

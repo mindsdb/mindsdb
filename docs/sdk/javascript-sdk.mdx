@@ -334,7 +334,7 @@ try {
 
   // Creating and training a model
   let houseSalesForecastModel = await MindsDB.Models.trainModel(
-    'house_sales_model_jssdk_test6',
+    'house_sales_model',
     'ma',
     'mindsdb',
     timeSeriesTrainingOptions);
@@ -343,7 +343,7 @@ try {
 
   // Waiting for the training to be complete
   while (houseSalesForecastModel.status !== 'complete' && houseSalesForecastModel.status !== 'error') {
-    houseSalesForecastModel = await MindsDB.Models.getModel('house_sales_model_jssdk_test6', 'mindsdb');
+    houseSalesForecastModel = await MindsDB.Models.getModel('house_sales_model', 'mindsdb');
   }
 
   // Checking model's status

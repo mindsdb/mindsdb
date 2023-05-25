@@ -71,6 +71,129 @@ class GmailHandlerTest(unittest.TestCase):
                     result = self.handler.create_connection()
                     self.assertIsNotNone(result)
 
+    def test_parse_parts_with_multipart_mime_type(self):
+        email_parts = [
+            {
+                'mimeType': 'multipart/mixed',
+                'parts': [
+                    {
+                        'mimeType': 'multipart/alternative',
+                        'parts': [
+                            {
+                                'mimeType': 'text/plain',
+                                'body': {
+                                    'data': 'VGhpcyBpcyB0aGUgcGxhaW4gdGV4dCBib2R5IG9mIHRoZSBlbWFpbC4='
+                                }
+                            },
+                            {
+                                'mimeType': 'text/html',
+                                'body': {
+                                    'data': 'PGh0bWw+CiAgICA8Ym9keT4KICAgICAgPHA+VGhpcyBpcyB0aGUgSFRNTCBib2R5IG9mIHRoZSBlbWFpbC4gPC9wPgogICAgPC9ib2R5PjwvaHRtbD4='
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        'mimeType': 'application/pdf',
+                        'filename': 'example.pdf',
+                        'body': {
+                            'attachmentId': '<<attachment_id>>'
+                        }
+                    }
+                ]
+            }
+
+
+        ]
+        attachments = []
+        email_body = self.handler._parse_parts(email_parts, attachments)
+        expected_body = "This is the plain text body of the email."
+        expected_attachments = [
+            {
+                'filename': 'example.pdf',
+                'mimeType': 'application/pdf',
+                'attachmentId': '<<attachment_id>>'
+            }
+        ]
+        self.assertEqual(email_body, expected_body)
+        self.assertEqual(attachments, expected_attachments)
+
+    def test_parse_parts_with_multipart_mime_type_and_no_parts(self):
+        email_parts = [
+            {
+                'mimeType': 'multipart/mixed',
+                'parts': []
+            }
+        ]
+        attachments = []
+        email_body = self.handler._parse_parts(email_parts, attachments)
+        expected_body = ""
+        expected_attachments = []
+        self.assertEqual(email_body, expected_body)
+        self.assertEqual(attachments, expected_attachments)
+
+    def test_parse_parts_with_multiple_attachments(self):
+        email_parts = [
+            {
+                'mimeType': 'multipart/mixed',
+                'parts': [
+                    {
+                        'mimeType': 'multipart/alternative',
+                        'parts': [
+                            {
+                                'mimeType': 'text/plain',
+                                'body': {
+                                    'data': 'VGhpcyBpcyB0aGUgcGxhaW4gdGV4dCBib2R5IG9mIHRoZSBlbWFpbC4='
+                                }
+                            },
+                            {
+                                'mimeType': 'text/html',
+                                'body': {
+                                    'data': 'PGh0bWw+CiAgICA8Ym9keT4KICAgICAgPHA+VGhpcyBpcyB0aGUgSFRNTCBib2R5IG9mIHRoZSBlbWFpbC4gPC9wPgogICAgPC9ib2R5PjwvaHRtbD4='
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        'mimeType': 'application/pdf',
+                        'filename': 'example.pdf',
+                        'body': {
+                            'attachmentId': '<<attachment_id>>'
+                        }
+                    },
+                    {
+                        'mimeType': 'application/pdf',
+                        'filename': 'example2.pdf',
+                        'body': {
+                            'attachmentId': '<<attachment_id2>>'
+                        }
+                    }
+                ]
+            }
+        ]
+        attachments = []
+        email_body = self.handler._parse_parts(email_parts, attachments)
+        expected_body = "This is the plain text body of the email."
+        expected_attachments = [
+            {
+                'filename': 'example.pdf',
+                'mimeType': 'application/pdf',
+                'attachmentId': '<<attachment_id>>'
+            },
+            {
+                'filename': 'example2.pdf',
+                'mimeType': 'application/pdf',
+                'attachmentId': '<<attachment_id2>>'
+            }
+        ]
+        self.assertEqual(email_body, expected_body)
+        self.assertEqual(attachments, expected_attachments)
+
+
+
+
+
+
 
 class EmailsTableTest(unittest.TestCase):
 
@@ -78,6 +201,7 @@ class EmailsTableTest(unittest.TestCase):
         handler = Mock(GmailHandler)
         tables = handler.get_tables()
         assert tables.type is not RESPONSE_TYPE.ERROR
+
 
     def test_get_columns_returns_all_columns(self):
         gmail_handler = Mock(GmailHandler)

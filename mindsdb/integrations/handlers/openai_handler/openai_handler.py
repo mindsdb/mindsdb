@@ -222,6 +222,10 @@ class OpenAIHandler(BaseMLEngine):
             elif 'prompt' in args:
                 empty_prompt_ids = []
                 prompts = list(df[args['user_column']])
+
+                if 'prompt' in pred_args:
+                    # override
+                    args['prompt'] = pred_args['prompt']
             else:
                 empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
                 prompts = list(df[args['question_column']].apply(lambda x: str(x)))
@@ -330,11 +334,15 @@ class OpenAIHandler(BaseMLEngine):
                     kwargs['messages'].append({'role': 'user', 'content': prompts[pidx]})
                 else:
                     question = prompts[pidx]
-                    if question:
+                    if question and isinstance(question, str):
                         kwargs['messages'].append({'role': 'user', 'content': question})
                     answer = df.iloc[pidx][args.get('assistant_column')]
-                    if answer:
+                    if answer and isinstance(answer, str):
                         kwargs['messages'].append({'role': 'assistant', 'content': answer})
+                    if 'system' in df.columns:
+                        system = df.iloc[pidx]['system']
+                        if system and isinstance(system, str):
+                            kwargs['messages'].append({'role': 'system', 'content': system})
 
                 if mode == 'conversational-full' or (mode == 'conversational' and pidx == len(prompts) - 1):
                     kwargs['messages'] = truncate_msgs_for_token_limit(kwargs['messages'],

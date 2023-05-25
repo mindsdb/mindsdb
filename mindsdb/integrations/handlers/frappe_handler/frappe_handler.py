@@ -58,6 +58,65 @@ class FrappeHandler(APIHandler):
         self.is_connected = True
         return self.client
 
+    def back_office_config(self):
+        tools = {
+            'claim_expense': '''
+             is used to expense claim. Input is:
+                - There are two columns: doctype, data
+                - The doctype column will be "Expense Claim"
+                - The data column will be a JSON object serialized as a string
+                
+                This is the list of fields in the data JSON object:
+                    a. [required] posting_date
+                    b. [required] company
+                    c. [required] employee
+                    d. [required] expenses
+                    
+                The expenses field is a list of expense JSON objects. Here is a list of fields in an expense JSON object:
+                    a. [required] expense_date
+                    b. [required] expense_type
+                    c. [required] amount
+                    d. [required] sanctioned_amount
+            ''',
+            'company_exists': '''
+                is used to check company is exist. Input is company name
+            ''',
+            'employee_code_exists': '''
+                is used to check employee is exist. Input is employee code
+            '''
+        }
+
+        options = {
+            'Create new expense claim': '''
+                - ask user has to provide all fields to fill input json.
+                - company name has to be checked with company_exists tool
+                - employee name has to be checked with employee_code_exists tool
+                - after all validations claim_expense tool has to be used to create expense claim.
+            '''
+        }
+
+        context = {
+            # 'allowed expenses types': ['Travel', 'Food']
+        }
+        return {
+            'tools': tools,
+            'options': options,
+            'context': context
+        }
+
+    def company_exists(self, name):
+        if name not in ['CloudE8']:
+            return False
+        return True
+
+    def employee_code_exists(self, name):
+        if name not in ['HR-EMP-00001']:
+            return False
+        return True
+
+    def claim_expense(self, data):
+        self.call_frappe_api('create_document', **data)
+
     def check_connection(self) -> StatusResponse:
         """Checks connection to Frappe API by sending a ping request.
 

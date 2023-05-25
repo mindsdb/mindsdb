@@ -1,3 +1,7 @@
+import datetime as dt
+import json
+import re
+from collections import defaultdict
 from mindsdb_sql.parser.ast import Identifier, Select, Insert, BinaryOperation, Constant
 from mindsdb.interfaces.storage import db
 
@@ -33,8 +37,19 @@ class ChatBotTask:
         self.params['model'] = {
             'user_column': model_record.learn_args['using']['user_column'],
             'bot_column': model_record.learn_args['using']['assistant_column'],
+            'prompt': model_record.learn_args['using']['prompt'],
             'output': model_record.to_predict[0]
         }
+
+        self.back_db_config = {}
+        back_db = self.params.get('backoffice_db')
+        if back_db is not None:
+            self.back_db = self.session.integration_controller.get_handler(back_db)
+
+            if hasattr(self.back_db, 'back_office_config'):
+                self.back_db_config = self.back_db.back_office_config()
+
+        self.user_memory = defaultdict(list)
 
     def run(self):
 
@@ -146,14 +161,7 @@ class ChatBotTask:
                 # update answer in previous column
                 messages[-1][answer_col] = text
 
-        # call model
-        predictions = self.project_datanode.predict(
-            model_name=self.model_name,
-            data=messages,
-        )
-
-        output_col = self.params['model']['output']
-        model_output = predictions.iloc[-1][output_col]
+        model_output = self.apply_tool_model(messages, chat_id)
 
         # send answer to user
         ast_query = Insert(
@@ -165,3 +173,150 @@ class ChatBotTask:
         )
 
         self.db_handler.query(ast_query)
+
+    def apply_model(self, messages, chat_id):
+        # call model
+        predictions = self.project_datanode.predict(
+            model_name=self.model_name,
+            data=messages,
+        )
+
+        output_col = self.params['model']['output']
+        model_output = predictions.iloc[-1][output_col]
+        return model_output
+
+    def make_prompt(self, chat_id):
+        chatbot_prompt_template = '''
+You are assistant. You ether can speak to user directly or use a tool.
+
+{model_prompt}
+
+Possible user requests:
+{options_list}
+
+TOOLS:
+
+Assistant is authorized to use the following tools to get addition information.
+If you is using tool you must not not communicate with user. Don't ask the user to use it. Don't use more than one tool at once
+List of tools:
+{tools_list}
+
+To use a tool, please use the following format:
+```
+<tool>tool name</tool>
+<input>tool input</input>
+```
+
+Useful information:
+{context_list}
+
+History of using tools:
+{tools_history}
+        '''
+
+        model_prompt = self.params['model']['prompt']
+
+        options_list = []
+        num = 0
+        for tool, rules in self.back_db_config['options'].items():
+            num += 1
+            options_list.append(f'{num}. {tool}\n{rules}')
+
+        options = '\n\n'.join(options_list)
+
+        tools_list = []
+        num = 0
+        for tool, rules in self.back_db_config['tools'].items():
+            num += 1
+            tools_list.append(f'{num}. {tool}\n{rules}')
+
+        tools = '\n\n'.join(tools_list)
+
+        context_list = [
+            f"- Today's date is {dt.datetime.now().strftime('%Y-%m-%d')}"
+        ]
+        context = '\n'.join(context_list)
+
+        tools_history_list = []
+        for item in self.user_memory[chat_id]:
+            tools_history_list.append(f'<tool>{item["tool"]}</tool>\n'
+                                      f'<input>{item["input"]}</input>\n'
+                                      f'<result>{item["result"]}</result>')
+        tools_history = '\n\n'.join(tools_history_list)
+
+        prompt = chatbot_prompt_template.format(model_prompt=model_prompt, options_list=options,
+                                                tools_list=tools, context_list=context, tools_history=tools_history)
+
+
+
+        return prompt
+
+    def apply_tool_model(self, messages, chat_id):
+
+
+        output_col = self.params['model']['output']
+        # question_col = self.params['model']['user_column']
+        # answer_col = self.params['model']['bot_column']
+
+        # append previous model responses
+        # system_responses = []
+        # for i, message in enumerate(messages):
+        #     question = str(message)
+        #     if question and question in self.user_memory[chat_id]:
+        #         system_responses.append([i, self.user_memory[chat_id][question]])
+        # # inject
+        # system_responses.sort(key=lambda x: x[0], reverse=True)
+        # for idx, message in system_responses:
+        #     messages.insert(idx + 1, message)
+
+        iteration = 0
+        while iteration < 5:
+            iteration += 1
+
+            prompt = self.make_prompt(chat_id)
+
+            # call model
+            predictions = self.project_datanode.predict(
+                model_name=self.model_name,
+                data=messages,
+                params={'prompt': prompt}
+            )
+
+            model_output = predictions.iloc[-1][output_col]
+
+            system_messages = []
+            if '<tool>' in model_output:
+                tools = re.findall(r'<tool>([_\da-zA-Z]+)</tool>', model_output)
+                inputs = re.findall('<input>([^<]+)</input>', model_output)
+                if len(tools) > 0 and len(inputs) > 0:
+                    tool = tools[0]
+                    tool_input = inputs[0]
+                    # does it json?
+                    try:
+                        tool_input = json.loads(tool_input)
+                    except Exception:
+                        pass
+
+                    method = getattr(self.back_db, tool)
+                    try:
+                        resp = method(tool_input)
+                    except:
+                        print('ERROR')
+                        resp = 'error'
+                    system_response = str(resp)
+
+                    # add to conversation and repeat model call
+                    self.user_memory[chat_id].append(
+                        {
+                            'tool': tool,
+                            'input': tool_input,
+                            'result': system_response,
+                        }
+                    )
+
+                    continue
+
+            # no actions, exit
+            break
+
+        return model_output

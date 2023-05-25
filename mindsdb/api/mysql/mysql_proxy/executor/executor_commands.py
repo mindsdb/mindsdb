@@ -692,7 +692,8 @@ class ExecuteCommands:
             name=model_name,
             project_name=database_name,
             except_absent=except_absent,
-            version=model_version
+            version=model_version,
+            active=True if model_version is None else None
         )
         if not model_record:
             return None

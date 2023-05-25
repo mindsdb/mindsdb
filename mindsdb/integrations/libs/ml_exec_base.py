@@ -371,6 +371,9 @@ class BaseMLEngineExec:
         if base_model_version is not None:
             search_args['version'] = base_model_version
         predictor_records = get_model_records(**search_args)
+        if len(predictor_records) == 0:
+            raise Exception("Can't find suitable base model")
+
         predictor_records.sort(key=lambda x: x.training_stop_at, reverse=True)
         predictor_records = [x for x in predictor_records if x.training_stop_at is not None]
         base_predictor_record = predictor_records[0]

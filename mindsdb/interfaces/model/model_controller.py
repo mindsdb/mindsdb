@@ -414,7 +414,7 @@ class ModelController():
             name=model_name,
             project_name=project_name,
             version=model_version,
-            active=None
+            active=True if model_version is None else None
         )
 
         if data_integration_ref is None:

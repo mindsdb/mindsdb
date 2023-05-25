@@ -52,26 +52,27 @@
 
 ----------------------------------------
 
-[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) is an emerging low-code machine learning platform to help developers easily build #AI-powered solutions [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Build%20AI-Powered%20Applications%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,nlp,machine_learning,neural_networks,databases,gpt3)
+[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) is a Server for Artificial Intelligence Logic, enabling developers to ship AI powered projects from prototyping & experimentation to production in a fast & scalable way. [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Build%20AI-Centered%20Applications%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,nlp,machine_learning,neural_networks,databases,gpt3)
 
+We do this by abstracting Generative AI, Large Language and other Models as a virtual tables ([AI Tables](https://www.youtube.com/watch?v=tnB4Y9T1E2k)) on top of enterprise databases. This increases accessibility with organizations and enables development teams to use their existing skills to build applications powered by AI.
 
-**NEW!** Check-out the [rewards and community programs.](https://mindsdb.com/community?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)
+By taking a data-centric approach to AI MindsDB brings the process closer to the source of the data minimizing the need to build and maintain data pipelines and ETL’ing, speeding up the time to deployment and reducing complexity.
+
+<h2 align="center">
+   <br/>
+   <br/>
+  <img width="100%" src="https://github.com/mindsdb/mindsdb/assets/12409467/8418fec3-8c8b-4414-b1dc-7943041047b4" alt="MindsDB">
+
+</h2>
+
+----------------------------------------
+MindsDB has an active and helpful community. Feel free to join our [Slack](https://mindsdb.com/joincommunity) and check-out the [rewards and community programs](https://mindsdb.com/community?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 
 ----------------------------------------
 
 [Installation](https://github.com/mindsdb/mindsdb#installation) - [Overview](https://github.com/mindsdb/mindsdb#overview) - [Features](https://github.com/mindsdb/mindsdb#features) - [Database Integrations](https://github.com/mindsdb/mindsdb#database-integrations) - [Quickstart](https://github.com/mindsdb/mindsdb#quickstart) - [Documentation](https://github.com/mindsdb/mindsdb#documentation) - [Support](https://github.com/mindsdb/mindsdb#support) - [Contributing](https://github.com/mindsdb/mindsdb#contributing) - [Mailing lists](https://github.com/mindsdb/mindsdb#mailing-lists) - [License](https://github.com/mindsdb/mindsdb#license)
 
-----------------------------
-
-MindsDB automates and integrates top machine learning frameworks (including GPT-4) into the data stack as "AI Tables" to streamline the integration of AI into applications, making it accessible to developers of all skill levels.
-"[AI tables](https://www.youtube.com/watch?v=tnB4Y9T1E2k)" allow you to get predictions via SQL queries and continuously learn from your data.
-
-<h2 align="center">
-   <br/>
-   <br/>
-  <img width="450" src="https://docs.google.com/drawings/d/e/2PACX-1vQ1KImK0cqvZ_KpPm3SKDZF6peuM-d1lZwOkrZNpT1_PO5UVyveEIyeJGbDZFBF124LmWbHSB2HFQ97/pub?w=691&h=728" alt="MindsDB">
-
-</h2>
+----------------------------------------
 
 ## Use cases
 
@@ -102,12 +103,13 @@ docker pull mindsdb/mindsdb
 
 ## How it works
 
-1. First, CONNECT MindsDB to your data platform. We support 70+ data platforms and this list is constantly growing. If you can’t find the integration you need, please [let us know](https://mindsdb.com/joincommunity).
-2. Run the CREATE MODEL query pointing to your data table or a view, that will automatically create and deploy a machine learning model as an [AI Table](https://www.youtube.com/watch?v=tnB4Y9T1E2k).
-    1. If you have an NLP use case, CREATE MODEL will integrate the [AI Table](https://www.youtube.com/watch?v=tnB4Y9T1E2k) with already pre-trained model you choose (like OpenAI’s GPT-3 or Hugging Face models).
+1. CONNECT MindsDB to your data platform. We support 100+ data platforms and this list is constantly growing. If you can’t find the integration you need, please [let us know](https://mindsdb.com/joincommunity).
+2. CREATE MODEL to connect the AI Engine you pick that will learn from your data and serve it as [AI Table](https://www.youtube.com/watch?v=tnB4Y9T1E2k).
+    1. If you have an NLP use case, CREATE MODEL will integrate the [AI Table](https://www.youtube.com/watch?v=tnB4Y9T1E2k) with already pre-trained model you choose (like OpenAI’s GPT or Hugging Face models).
     2. Please check the [docs](https://docs.mindsdb.com/sql/create/predictor?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) if you want to have manual control over model engineering.
-3. JOIN the model with your database tables to make predictions for thousands or even millions of data points at once, or run SELECT statements or API calls to make one time predictions.
-4. Set up a JOB to automate your model re-training cycle and predictions pipelines for the new incoming data.
+3. JOIN such model with your database tables to make predictions for thousands or even millions of data points at once, or run SELECT statements or API calls to make one time predictions.
+4. Set up a JOB to automate your re-training cycle and predictions pipelines for the new incoming data.
+5. Alternatively, use REST API to query the models
 
 Follow the [quickstart guide](https://docs.mindsdb.com/quickstart?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) with sample data to get on-boarded as fast as possible.
 

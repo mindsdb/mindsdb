@@ -56,17 +56,20 @@ class EmailsTable(APITable):
         conditions = extract_comparison_conditions(query.where)
 
         params = {}
+        include_attachments = False
         for op, arg1, arg2 in conditions:
 
             if op == 'or':
                 raise NotImplementedError(f'OR is not supported')
 
-            if arg1 in ['query', 'label_ids', 'include_spam_trash']:
+            if arg1 in ['query', 'label_ids', 'include_spam_trash', 'include_attachments']:
                 if op == '=':
                     if arg1 == 'query':
                         params['q'] = arg2
                     elif arg1 == 'label_ids':
                         params['labelIds'] = arg2.split(',')
+                    elif arg1 == 'include_attachments':
+                        include_attachments = arg2 == 'true'
                     else:
                         params['includeSpamTrash'] = arg2
                 else:
@@ -82,7 +85,9 @@ class EmailsTable(APITable):
             method_name='list_messages',
             params=params
         )
-
+        attachments = []
+        if include_attachments:
+            attachments = self.handler.get_attachments(result)
         # filter targets
         columns = []
         for target in query.targets:
@@ -314,7 +319,7 @@ class GmailHandler(APIHandler):
 
     def _parse_parts(self, parts, attachments):
         if not parts:
-            return
+            return ''
 
         body = ''
         for part in parts:
@@ -378,6 +383,23 @@ class GmailHandler(APIHandler):
 
         batch_req.execute()
 
+    def get_attachments(self, result):
+        for index, email in result.iterrows():
+            attachments = json.loads(email['attachments'])
+            for attachment in attachments:
+                attachment_id = attachment['attachmentId']
+                filename = attachment['filename']
+                mimeType = attachment['mimeType']
+                attachment_data = self.service.users().messages().attachments().get(
+                    userId='me', messageId=email['id'], id=attachment_id).execute()
+                file_data = attachment_data['data']
+                file_data = file_data.replace('-', '+').replace('_', '/')
+                file_data = urlsafe_b64decode(file_data)
+                with open(filename, 'wb') as f:
+                    f.write(file_data)
+
+
+
     def _handle_list_messages_response(self, data, messages):
         total_pages = len(messages) // self.max_batch_size
         for page in range(total_pages):
@@ -400,6 +422,8 @@ class GmailHandler(APIHandler):
             method = service.users().messages().list
         elif method_name == 'send_message':
             method = service.users().messages().send
+        elif method_name == 'get_attachments':
+            method = service.users().messages().attachments().get
         else:
             raise NotImplementedError(f'Unknown method_name: {method_name}')
 

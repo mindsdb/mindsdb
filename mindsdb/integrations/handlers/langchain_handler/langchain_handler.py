@@ -153,7 +153,7 @@ class LangChainHandler(OpenAIHandler):
 
         # user - assistant conversation. get all except the last message
         for row in df[:-1].to_dict('records'):
-            question = row[args['assistant_column']]
+            question = row[args['user_column']]
             answer = row[args['assistant_column']]
 
             if question:

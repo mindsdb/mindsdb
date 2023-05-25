@@ -16,21 +16,19 @@ In particular, three big components are included:
 
 """  # noqa
 
-import traceback
-import importlib
+import time
+import threading
 import datetime as dt
-from typing import Optional
+from typing import Optional, Callable
+from concurrent.futures import ProcessPoolExecutor, Future
 
-import psutil
 import pandas as pd
 from sqlalchemy import func, null
 from sqlalchemy.sql.functions import coalesce
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Identifier, Select, Star, NativeQuery
 
-from mindsdb.integrations.utilities.sql_utils import make_sql_session
 from mindsdb.utilities.config import Config
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.response import (
@@ -43,61 +41,152 @@ from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.model.functions import (
     get_model_record
 )
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
-from mindsdb.integrations.utilities.processes import HandlerProcess
-from mindsdb.utilities.functions import mark_process
-from mindsdb.integrations.utilities.utils import format_exception_error
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 from mindsdb.utilities.context import context as ctx
 from mindsdb.interfaces.model.functions import get_model_records
-# from mindsdb.integrations.utilities.processes_cache import process_cache
-
 from mindsdb.integrations.handlers_client.ml_client_factory import MLClientFactory
+from mindsdb.integrations.libs.learn_process import learn_process
 
 from .ml_handler_proc import MLHandlerWrapper, MLHandlerPersistWrapper
 
 import torch.multiprocessing as mp
-mp.get_context('spawn')
+mp_ctx = mp.get_context('spawn')
 
-from mindsdb.integrations.libs.learn_process import learn_process
 
 
 class MLEngineException(Exception):
     pass
 
 
-def lw():
-    import lightwood
-    from mindsdb.integrations.libs.learn_process import learn_process
+def init_lightwood(module_path):
+    import importlib  # noqa
+
+    from mindsdb.integrations.libs.learn_process import learn_process  # noqa
+
+    importlib.import_module(module_path)
+
+
+def dummy_task():
+    return None
+
+
+class WarmProcess:
+    """ Class-wrapper for a process that persist for a long time. The process
+        may be initialized with any handler requirements. Current implimentation
+        is based on ProcessPoolExecutor just because of multiprocessing.pool
+        produce daemon processes, which can not be used for learning. That
+        bahaviour may be changed only using inheritance.
+    """
+    def __init__(self, initializer: Optional[Callable] = None, initargs: tuple = ()):
+        """ create and init new process
+
+            Args:
+                initializer (Callable): the same as ProcessPoolExecutor initializer
+                initargs (tuple): the same as ProcessPoolExecutor initargs
+        """
+        self.pool = ProcessPoolExecutor(1, initializer=initializer, initargs=initargs)
+        # region bacause of ProcessPoolExecutor does not start new process
+        # untill it get a task, we need manually run dummy task to force init.
+        self.task = self.pool.submit(dummy_task)
+        self._init_done = False
+        self.task.add_done_callback(self._init_done_callback)
+        # endregion
+
+    def _init_done_callback(self, _task):
+        """ callback for initial task
+        """
+        self._init_done = True
+
+    def ready(self) -> bool:
+        """ check is process ready to get a task or not
+
+            Returns:
+                bool
+        """
+        if self._init_done is False:
+            self.task.result()
+            self._init_done = True
+        if self.task is None or self.task.done():
+            return True
+        return False
+
+    def apply_async(self, func: Callable, *args: tuple, **kwargs: dict) -> Future:
+        """ Run new task
+
+            Args:
+                func (Callable): function to run
+                args (tuple): args to be passed to function
+                kwargs (dict): kwargs to be passed to function
+
+            Returns:
+                Future
+        """
+        if not self.ready():
+            raise Exception('Process task is not ready')
+        self.task = self.pool.submit(
+            func, *args, **kwargs
+        )
+        return self.task
 
 
 class ProcessCache:
+    """ simple cache for WarmProcess-es
+    """
     def __init__(self):
         self.cache = {}
         self._init = False
+        self._lock = threading.Lock()
 
     def init(self, preload_handlers: dict):
-        if self._init is False:
-            self._init = True
-            for handler_name in preload_handlers:
-                self.cache[handler_name] = [
-                    mp.Pool(1, initializer=lw)
-                    for _x in range(preload_handlers[handler_name])
-                ]
+        """ run processes for specified handlers
 
-    def get(self, name):
-        if name not in self.cache:
-            self.cache[name] = [mp.Pool(1)]
-            return self.cache[name][-1]
-        else:
-            print(f'there are {len(self.cache[name])} in pool')
-            for pool in self.cache[name]:
-                if psutil.Process(pool._pool[0].pid).status() == psutil.STATUS_SLEEPING:
-                    return pool
-            self.cache[name].append(mp.Pool(1))
-            return self.cache[name][-1]
+            Args:
+                preload_handlers (dict): {handler_class: count_of_processes}
+        """
+        with self._lock:
+            if self._init is False:
+                self._init = True
+                for handler in preload_handlers:
+                    self.cache[handler.__name__] = {
+                        'last_usade_at': time.time(),
+                        'processes': [
+                            WarmProcess(init_lightwood, (handler.__module__,))
+                            for _x in range(preload_handlers[handler])
+                        ]
+                    }
+
+    def apply_async(self, handler: object, func: Callable, *args, **kwargs) -> Future:
+        """ run new task. If possible - do it in existing process, if not - start new one.
+
+            Args:
+                handler (object): handler class
+                func (Callable): function to run
+                args (tuple): args to be passed to function
+                kwargs (dict): kwargs to be passed to function
+
+            Returns:
+                Future
+        """
+        with self._lock:
+            handler_name = handler.__name__
+            if handler_name not in self.cache:
+                warm_process = WarmProcess(init_lightwood, (handler.__module__,))
+                self.cache[handler_name] = {
+                    'last_usade_at': None,
+                    'processes': [warm_process]
+                }
+            else:
+                for warm_process in self.cache[handler_name]['processes']:
+                    if warm_process.ready():
+                        break
+                else:
+                    warm_process = WarmProcess(init_lightwood, (handler.__module__,))
+                    self.cache[handler_name]['processes'].append(warm_process)
+            task = warm_process.apply_async(func, *args, **kwargs)
+            self.cache[handler_name]['last_usade_at'] = time.time()
+        return task
 
 
 process_cache = ProcessCache()
@@ -256,7 +345,8 @@ class BaseMLEngineExec:
 
         class_path = [self.handler_class.__module__, self.handler_class.__name__]
 
-        p = HandlerProcess(
+        task = process_cache.apply_async(
+            self.handler_class,
             learn_process,
             class_path,
             self.engine,
@@ -269,9 +359,9 @@ class BaseMLEngineExec:
             fetch_data_query=fetch_data_query,
             project_name=project_name
         )
-        p.start()
+
         if join_learn_process is True:
-            p.join()
+            task.result()
             predictor_record = db.Predictor.query.get(predictor_record.id)
             db.session.refresh(predictor_record)
 
@@ -407,47 +497,25 @@ class BaseMLEngineExec:
 
         class_path = [self.handler_class.__module__, self.handler_class.__name__]
 
-        pool = process_cache.get(self.handler_class.__name__)
-        process = pool.apply_async(
+        task = process_cache.apply_async(
+            self.handler_class,
             learn_process,
-            (class_path,
-                self.engine,
-                ctx.dump(),
-                self.integration_id,
-                predictor_record.id,
-                predictor_record.learn_args,
-                set_active,
-                base_predictor_record.id
-            ),
-            {
-                'data_integration_ref': data_integration_ref,
-                'fetch_data_query': fetch_data_query,
-                'project_name': project_name
-            }
+            class_path,
+            self.engine,
+            ctx.dump(),
+            self.integration_id,
+            predictor_record.id,
+            predictor_record.learn_args,
+            set_active,
+            base_predictor_record.id,
+            data_integration_ref=data_integration_ref,
+            fetch_data_query=fetch_data_query,
+            project_name=project_name
         )
+
         if join_learn_process is True:
-            process.get()
+            task.result()
             predictor_record = db.Predictor.query.get(predictor_record.id)
             db.session.refresh(predictor_record)
-
-        # p = HandlerProcess(
-        #     learn_process,
-        #     class_path,
-        #     self.engine,
-        #     ctx.dump(),
-        #     self.integration_id,
-        #     predictor_record.id,
-        #     predictor_record.learn_args,
-        #     set_active,
-        #     base_predictor_record.id,
-        #     data_integration_ref=data_integration_ref,
-        #     fetch_data_query=fetch_data_query,
-        #     project_name=project_name
-        # )
-        # p.start()
-        # if join_learn_process is True:
-        #     p.join()
-        #     predictor_record = db.Predictor.query.get(predictor_record.id)
-        #     db.session.refresh(predictor_record)
 
         return predictor_record

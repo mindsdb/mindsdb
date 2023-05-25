@@ -43,6 +43,14 @@ If the installation fails when installing **torch** or **torchvision**, try to
 install them manually by following the instructions on their
 [official website](https://pytorch.org/get-started/locally/).
 
+### How to Overcome `ImportError: failed to find libmagic`
+
+If you get the `ImportError: failed to find libmagic` error, you should install the `libmagic` manually by running the command below:
+
+```bash
+pip install python-magic-bin
+```
+
 ## Using the Python [`venv`](https://docs.python.org/3/library/venv.html) Module
 
 1. Create a new virtual environment called `mindsdb`:

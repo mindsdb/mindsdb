@@ -48,6 +48,15 @@ the `starting` phase. But if the server has started and you still get this
 error, please report it on our
 [GitHub repository](https://github.com/mindsdb/mindsdb/issues).
 
+### How to Overcome `ImportError: failed to find libmagic`
+
+If you get the `ImportError: failed to find libmagic` error, you should install the `libmagic` manually by running one of the commands below:
+
+```bash
+pip install python-magic-bin
+brew install libmagic
+```
+
 ## Installation
 
 1. Clone the MindsDB repository:

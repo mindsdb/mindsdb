@@ -26,17 +26,12 @@ def learn_process(class_path, engine, context_dump, integration_id,
     ctx.load(context_dump)
     db.init()
 
-    predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
-
     try:
         target = problem_definition['target']
 
-        training_data_df = None
-
-        database_controller = DatabaseController()
-
-        sql_session = make_sql_session()
         if data_integration_ref is not None:
+            database_controller = DatabaseController()
+            sql_session = make_sql_session()
             if data_integration_ref['type'] == 'integration':
                 integration_name = database_controller.get_integration(data_integration_ref['id'])['name']
                 query = Select(
@@ -65,6 +60,7 @@ def learn_process(class_path, engine, context_dump, integration_id,
                 raise Exception(
                     f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
 
+        predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
         predictor_record.training_data_columns_count = training_data_columns_count
         predictor_record.training_data_rows_count = training_data_rows_count
         db.session.commit()

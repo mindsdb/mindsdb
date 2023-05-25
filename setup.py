@@ -38,7 +38,7 @@ def define_deps():
     Returns:
          list of packages, extras and dependency links.
     """
-    with open('requirements.txt') as req_file:
+    with open('requirements/requirements.txt') as req_file:
         defaults = [req.strip() for req in req_file.read().splitlines()]
 
     links = []
@@ -52,16 +52,30 @@ def define_deps():
             requirements.append(r)
 
     extra_requirements = {}
-    for fn in os.listdir('.'):
+    for fn in os.listdir('./requirements'):
         if fn.startswith('requirements-') and fn.endswith('.txt'):
             extra_name = fn.replace('requirements-', '').replace('.txt', '')
-            with open(fn) as fp:
+            with open(f"./requirements/{fn}") as fp:
                 extra = [req.strip() for req in fp.read().splitlines()]
             extra_requirements[extra_name] = extra
     full_requirements = []
     for v in extra_requirements.values():
         full_requirements += v
     extra_requirements['all_extras'] = list(set(full_requirements))
+
+    full_handlers_requirements = []
+    handlers_dir_path = os.path.normpath('./mindsdb/integrations/handlers')
+    for fn in os.listdir(handlers_dir_path):
+        if os.path.isdir(os.path.join(handlers_dir_path, fn)) and fn.endswith("_handler"):
+            req_file_path = os.path.join(handlers_dir_path, fn, 'requirements.txt')
+            if os.path.exists(req_file_path):
+                with open(req_file_path) as fp:
+                    extra = [req.strip() for req in fp.read().splitlines()]
+                extra_name = fn.replace("_handler", "")
+                extra_requirements[extra_name] = extra
+                full_handlers_requirements += extra
+
+    extra_requirements['all_handlers_extras'] = list(set(full_handlers_requirements))
 
     Deps.pkgs = requirements
     Deps.extras = extra_requirements

@@ -366,6 +366,9 @@ class IntegrationController:
             Returns:
                 Handler object
         """
+        handler_meta = self.handlers_import_status[handler_type]
+        if not handler_meta["import"]["success"]:
+            logger.info(f"to use {handler_type} please install 'pip install mindsdb[{handler_type}]'")
 
         logger.debug("%s.create_tmp_handler: connection args - %s", self.__class__.__name__, connection_data)
         resource_id = int(time() * 10000)
@@ -411,6 +414,8 @@ class IntegrationController:
             raise Exception(f"Can't find handler for '{integration_name}' ({integration_engine})")
 
         integration_meta = self.handlers_import_status[integration_engine]
+        if not integration_meta["import"]["success"]:
+            logger.info(f"to use {integration_engine} please install 'pip install mindsdb[{integration_engine}]'")
         connection_args = integration_meta.get('connection_args')
         logger.debug("%s.get_handler: connection args - %s", self.__class__.__name__, connection_args)
 

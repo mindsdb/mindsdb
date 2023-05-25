@@ -35,5 +35,5 @@ pydateinfer==0.3.0
 pyarrow >= 10.0.1, < 10.1.0
 dataprep_ml
 grpcio-tools
-python-magic >= 0.4.27
+python-magic-bin
 openpyxl >= 3.1.1

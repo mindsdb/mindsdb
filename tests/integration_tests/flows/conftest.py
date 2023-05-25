@@ -10,6 +10,7 @@ import docker
 import pytest
 import netifaces
 import pandas as pd
+import psutil
 
 from mindsdb.utilities.ps import get_child_pids
 
@@ -160,7 +161,10 @@ def mindsdb_app(request, config):
             # shutil.rmtree("./var")
         else:
             for ch in get_child_pids(app.pid):
-                ch.kill()
+                try:
+                    ch.kill()
+                except psutil.NoSuchProcess:
+                    pass
             app.kill()
     request.addfinalizer(cleanup)
     return

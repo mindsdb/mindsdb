@@ -1,3 +1,4 @@
+import json
 import requests
 from typing import Dict, List
 
@@ -37,7 +38,7 @@ class FrappeClient(object):
             document_response.raise_for_status()
         return document_response.json()['data']
 
-    def get_documents(self, doctype: str, limit: int = None, filters: List[List] = None) -> List[Dict]:
+    def get_documents(self, doctype: str, limit: int = None, fields: List[str] = None, filters: List[List] = None) -> List[Dict]:
         """Gets all documents matching the given doctype from Frappe.
         
         See https://frappeframework.com/docs/v14/user/en/api/rest#listing-documents
@@ -46,15 +47,32 @@ class FrappeClient(object):
             limit (int): At most, how many messages to return.
             filters (List[List]): List of filters in the form [field, operator, value] e.g. ["amount", ">", 50]
         """
-        params = {}
+        params = {
+            'fields': json.dumps(["*"])
+        }
         if limit is not None:
-            params['limit'] = limit
+            params['limit_page_length'] = limit
         if filters is not None:
-            params['filters'] = filters
+            params['filters'] = json.dumps(filters)
+        if fields is not None:
+            params['fields'] = json.dumps(fields)
         documents_response = requests.get(
-            f'{self.base_url}/resource/{doctype}',
+            f'{self.base_url}/resource/{doctype}/',
             params=params,
-            headers=self.headers)
+            headers=self.headers,
+            allow_redirects=False)
+        if documents_response.is_redirect:
+            # We have to manually redirect to preserve the 'Authorization' header.
+            # See https://github.com/request/request/pull/1184/commits/210b326fd8625f358e06c59dc11e74468b1de515.
+            redirect_url = documents_response.headers.get('location', None)
+            if redirect_url is None:
+                raise requests.HTTPError('Could not find redirect URL')
+            documents_response = requests.get(
+                redirect_url,
+                params=params,
+                headers=self.headers,
+                allow_redirects=False)
+
         if not documents_response.ok:
             documents_response.raise_for_status()
         return documents_response.json()['data']

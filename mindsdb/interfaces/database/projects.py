@@ -132,6 +132,18 @@ class Project:
 
         for predictor_record, integraion_record in query.all():
             predictor_data = predictor_record.data or {}
+            training_time = None
+            if (
+                predictor_record.training_start_at is not None
+                and predictor_record.training_stop_at is None
+                and predictor_record.status != 'error'
+            ):
+                training_time = int((datetime.datetime.now() - predictor_record.training_start_at).total_seconds())
+            elif (
+                predictor_record.training_start_at is not None
+                and predictor_record.training_stop_at is not None
+            ):
+                training_time = int((predictor_record.training_stop_at - predictor_record.training_start_at).total_seconds())
             predictor_meta = {
                 'type': 'model',
                 'id': predictor_record.id,
@@ -152,6 +164,7 @@ class Project:
                 'current_training_phase': predictor_record.training_phase_current,
                 'total_training_phases': predictor_record.training_phase_total,
                 'training_phase_name': predictor_record.training_phase_name,
+                'training_time': training_time
             }
             if predictor_data.get('accuracies', None) is not None:
                 if len(predictor_data['accuracies']) > 0:

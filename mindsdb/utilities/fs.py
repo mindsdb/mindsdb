@@ -5,6 +5,7 @@ import threading
 from pathlib import Path
 from typing import Optional
 
+import psutil
 from appdirs import user_data_dir
 
 
@@ -51,7 +52,7 @@ def _get_process_mark_id(unified: bool = False) -> str:
         Returns:
             mark of process+thread
     '''
-    mark = f'{os.getpid()}-{threading.get_ident()}'
+    mark = f'{os.getpid()}-{threading.get_native_id()}'
     if unified is True:
         return mark
     return f"{mark}-{str(time.time()).replace('.', '')}"
@@ -78,3 +79,59 @@ def delete_process_mark(folder: str = 'learn', mark: Optional[str] = None):
         )
         if p.exists():
             p.unlink()
+
+
+def clean_process_marks():
+    """ delete all existing processes marks
+    """
+    if os.name != 'posix':
+        return
+
+    p = Path(tempfile.gettempdir()).joinpath('mindsdb/processes/')
+    if p.exists() is False:
+        return
+    for path in p.iterdir():
+        if path.is_dir() is False:
+            return
+        for file in path.iterdir():
+            file.unlink()
+
+
+def clean_unlinked_process_marks():
+    """ delete marks that does not have corresponded processes/threads
+    """
+    if os.name != 'posix':
+        return
+
+    p = Path(tempfile.gettempdir()).joinpath('mindsdb/processes/')
+    if p.exists() is False:
+        return
+    for path in p.iterdir():
+        if path.is_dir() is False:
+            return
+        for file in path.iterdir():
+            parts = file.name.split('-')
+            process_id = int(parts[0])
+            thread_id = int(parts[1])
+
+            try:
+                process = psutil.Process(process_id)
+                if process.status() in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD):
+                    raise psutil.NoSuchProcess(process_id)
+
+                threads = process.threads()
+                try:
+                    next(t for t in threads if t.id == thread_id)
+                except StopIteration:
+                    from mindsdb.utilities.log import get_log
+                    get_log('main').warning(
+                        f'We have mark for process/thread {process_id}/{thread_id} but it does not exists'
+                    )
+                    file.unlink()
+
+            except psutil.NoSuchProcess:
+                from mindsdb.utilities.log import get_log
+                get_log('main').warning(
+                    f'We have mark for process/thread {process_id}/{thread_id} but it does not exists'
+                )
+                file.unlink()

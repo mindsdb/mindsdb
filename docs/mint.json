@@ -124,10 +124,6 @@
         {
           "group": "Applications",
           "pages": [
-            "app-integrations/confluence",
-            "app-integrations/google-calendar",
-            "app-integrations/plaid",
-            "app-integrations/reddit",
             "app-integrations/twitter"
           ]
         },

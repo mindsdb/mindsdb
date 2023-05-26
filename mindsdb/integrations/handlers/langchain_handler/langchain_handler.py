@@ -9,7 +9,6 @@ from langchain.llms import OpenAI
 from langchain.chat_models import ChatOpenAI  # GPT-4 fails to follow the output langchain requires, avoid using for now
 from langchain.agents import initialize_agent, load_tools, Tool, create_sql_agent
 from langchain.prompts import PromptTemplate
-from langchain.output_parsers import RetryWithErrorOutputParser
 from langchain.utilities import GoogleSerperAPIWrapper
 from langchain.agents.agent_toolkits import SQLDatabaseToolkit
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
@@ -196,14 +195,7 @@ class LangChainHandler(OpenAIHandler):
 
         for i, row in df.iterrows():
             if i not in empty_prompt_ids:
-                prompt = PromptTemplate(
-                    input_variables=input_variables,
-                    template=base_template,
-                    output_parser=RetryWithErrorOutputParser.from_llm(
-                        agent.agent.llm_chain.llm,
-                        agent.agent.output_parser
-                    )
-                )
+                prompt = PromptTemplate(input_variables=input_variables, template=base_template)
                 kwargs = {}
                 for col in input_variables:
                     kwargs[col] = row[col] if row[col] is not None else ''  # add empty quote if data is missing

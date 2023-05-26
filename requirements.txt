@@ -29,7 +29,7 @@ mysql-connector-python
 clickhouse-driver
 clickhouse-sqlalchemy
 charset-normalizer
-dill >= 0.3.4
+dill >= 0.3.6
 pyOpenSSL >= 22.0.0
 pydateinfer==0.3.0
 pyarrow >= 10.0.1, < 10.1.0

@@ -479,6 +479,12 @@
         "docs-rules",
         "community"
       ]
+    },
+    {
+      "group": "FAQs",
+      "pages": [
+        "faqs/whitelist-ips"
+      ]
     }
   ],
   "footerSocials": {

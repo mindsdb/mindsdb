@@ -101,5 +101,5 @@ db.vaccinated_predict_model.find({Location: "OR"});
 
 Drop a remark based on your observation.
 - [ ] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
-- [x] There's a Bug 🪲 [Issue Title](URL To the Issue you created) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
+- [x] There's a Bug 🪲 [Error during Mongodb manual handling - Predict Target value step](https://github.com/mindsdb/mindsdb/issues/6313) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
 ---

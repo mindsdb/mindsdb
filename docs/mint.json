@@ -103,7 +103,6 @@
             {
               "group": "Other",
               "pages": [
-                "connect/kafka",
                 "connect/dbt"
               ]
             }

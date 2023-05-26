@@ -103,7 +103,6 @@
             {
               "group": "Other",
               "pages": [
-                "connect/kafka",
                 "connect/dbt"
               ]
             }
@@ -125,10 +124,6 @@
         {
           "group": "Applications",
           "pages": [
-            "app-integrations/confluence",
-            "app-integrations/google-calendar",
-            "app-integrations/plaid",
-            "app-integrations/reddit",
             "app-integrations/twitter"
           ]
         },
@@ -483,6 +478,12 @@
         "contribute/docs",
         "docs-rules",
         "community"
+      ]
+    },
+    {
+      "group": "FAQs",
+      "pages": [
+        "faqs/whitelist-ips"
       ]
     }
   ],

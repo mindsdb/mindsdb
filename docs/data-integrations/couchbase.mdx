@@ -19,6 +19,12 @@ The required arguments to establish a connection are as follows:
 * `password` is the password to authenticate the user with the Couchbase server.
 * `scope` is the scope to use for making queries based on a scoped context (equivalent to schema in MySQL). Defaults to `_default`.
 
+<Tip>
+
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/couchbase_handler) and run this command: `pip install -r requirements.txt`.
+
+</Tip>
+
 ## Usage
 
 In order to make use of this handler and connect to the Couchbase server in MindsDB, the following syntax can be used:

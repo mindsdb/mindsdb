@@ -39,15 +39,15 @@ Now you can use your Google Calendar data, like this:
     ```sql
     SELECT id, created_at, author_username, text
     FROM my_calendar.calendar
-    WHERE start_time > '2023-02-16'
-    AND end_time < '2023-04-09' LIMIT 20;
+    WHERE start_time = '2023-02-16'
+    AND end_time = '2023-04-09' LIMIT 20;
     ```
 
 * creating events:
 
     ```sql
-    INSERT INTO my_calendar.calendar (start_time, end_time, summary, description, location, attendees, reminders)
-    VALUES ('2023-02-16 10:00:00', '2023-02-16 11:00:00', 'MindsDB Meeting', 'Discussing the future of MindsDB', 'MindsDB HQ', '');
+    INSERT INTO my_calendar.events(start_time, end_time, summary, description, location, attendees, reminders, timeZone)
+    VALUES ('2023-02-16 10:00:00', '2023-02-16 11:00:00', 'MindsDB Meeting', 'Discussing the future of MindsDB', 'MindsDB HQ', '', 'Europe/Athens');
     ```
 
 * updating one or more events:

@@ -1,0 +1,52 @@
+## Testing: OpenAI - Sentiment Analysis
+
+1. Connect to a demo schema
+```sql
+CREATE DATABASE example_db
+WITH ENGINE = "postgres",
+PARAMETERS = {
+  "user": "demo_user",
+  "password": "demo_password",
+  "host": "3.220.66.106",
+  "port": "5432",
+  "database": "demo"
+};
+```
+
+Output:
+```sql
+Query successfully completed
+```
+
+2. Let’s create a model.
+```sql
+CREATE MODEL mindsdb.sentiment_classifier                           
+PREDICT sentiment
+USING
+  engine = 'openai',              
+  prompt_template = 'predict the sentiment of the text:{{review}} exactly as either positive or negative or neutral';
+```
+
+Output:
+```sql
+Query successfully completed
+```
+
+| NAME | ENGINE | PROJECT | ACTIVE | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | TAG |
+| ---- | ------ | ------- | ------ | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | --- |
+| sentiment_classifier | openai | mindsdb | true | 1 | generating | [NULL] | sentiment | up_to_date | 23.4.4.2 | [NULL] | [NULL] | {'target': 'sentiment', 'using': {'prompt_template': 'predict the sentiment of the text:{{review}} exactly as either positive or negative or neutral'}} | [NULL] |
+
+3. Now we can query for predictions.
+```sql
+SELECT output.sentiment, input.review
+FROM example_db.demo_data.amazon_reviews AS input
+JOIN mindsdb.sentiment_classifier AS output
+LIMIT 3;
+```
+
+On execution, we get:
+
+| sentiment | review |
+| ------- | -------- | 
+| The sentiment of the text is positive | Late gift for my grandson. He is very happy with it. Easy for him (9yo ). | 
+| The sentiment of the text is neutral | I'm not super thrilled with the proprietary OS on this unit, but it does work okay and does what I need it to do. Appearance is very nice, price is very good and I can't complain too much - just wish it were easier (or at least more obvious) to port new apps onto it. For now, it helps me see things that are too small on my phone while I'm traveling. I'm a happy buyer. |

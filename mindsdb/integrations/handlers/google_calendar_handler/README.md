@@ -38,10 +38,10 @@ Let's get a list of events in our calendar.
 
 ~~~~sql
 SELECT id,
-       created_at,
-       author_username,
-       text
-FROM my_calendar.calendar
+       created,
+       creator,
+       summary
+FROM my_calendar.events
 WHERE start_time > '2023-02-16'
   AND end_time < '2023-04-09' LIMIT 20;
 ~~~~
@@ -62,7 +62,7 @@ VALUES ('2023-02-16 10:00:00', '2023-02-16 11:00:00', 'MindsDB Meeting', 'Discus
 Let's update the event we just created.
 
 ~~~~sql
-UPDATE my_calendar.calendar
+UPDATE my_calendar.events
 SET summary     = 'MindsDB Meeting',
     description = 'Discussing the future of MindsDB',
     location    = 'MindsDB HQ',
@@ -73,7 +73,7 @@ SET summary     = 'MindsDB Meeting',
 Or you can update all events in a given id range.
 
 ~~~~sql
-UPDATE my_calendar.calendar
+UPDATE my_calendar.events
 SET summary     = 'MindsDB Meeting',
     description = 'Discussing the future of MindsDB',
     location    = 'MindsDB HQ',
@@ -93,7 +93,7 @@ Let's delete the event we just created.
 
 ~~~~sql
 DELETE
-FROM my_calendar.calendar
+FROM my_calendar.events
 WHERE id = '1'
 ~~~~
 
@@ -101,7 +101,7 @@ Or you can delete all events in a given id range.
 
 ~~~~sql
 DELETE
-FROM my_calendar.calendar
+FROM my_calendar.events
 WHERE event_id > 1
   AND event_id < 10
 ~~~~
@@ -117,7 +117,7 @@ Now that we have some data in our calendar, we can do smarter scheduling, event 
 ~~~~sql
 CREATE
 PREDICTOR predict_future_events
-FROM my_calendar.calendar
+FROM my_calendar.events
 PREDICT start_time, end_time, summary, description, location, attendees, reminders
 WHERE timeMin = '2023-02-16'
   AND timeMax = '2023-04-09'

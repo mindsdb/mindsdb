@@ -1,0 +1,152 @@
+---
+title: ML Engines in Mongo
+sidebarTitle: db.ml_engines
+---
+
+To create a model, you need an underlying ML engine, such as Lightwood or OpenAI. MindsDB uses the Lightwood engine by default if none other is provided. You can check the available ML engines in the **ML Engines** section.
+
+## The `db.ml_engines.insertOne` Method
+
+### Description
+
+This method creates an ML engine based on one of the available ML handlers.
+
+### Syntax
+
+Here is the syntax:
+
+```sql
+db.ml_engines.insertOne(
+    {
+        "name": "ml_engine_name",
+        "handler": "handler_name",
+        "params": {
+            "key": "value"
+            }
+    }
+)
+```
+
+On execution, we get:
+
+```sql
+{
+  acknowledged: true,
+  insertedId: ObjectId("6465e96766d152ae1e247802")
+}
+```
+
+### Example
+
+Let's create an OpenAI engine that uses the OpenAI handler.
+
+```sql
+db.ml_engines.insertOne(
+    {
+        "name": "openai_engine",
+        "handler": "openai",
+        "params": {
+            "api_key": "qqq"
+            }
+    }
+)
+```
+
+On execution, we get:
+
+```sql
+{
+  acknowledged: true,
+  insertedId: ObjectId("6465e9d566d152ae1e247803")
+}
+```
+
+## The `db.ml_engines.find` Method
+
+### Description
+
+This method lists all the available ML engines.
+
+### Syntax
+
+Here is the syntax:
+
+```sql
+db.ml_engines.find()
+```
+
+On execution, we get:
+
+```sql
+{
+  NAME: 'lightwood',
+  HANDLER: 'lightwood',
+  CONNECTION_DATA: {
+    key: [
+      'password'
+    ],
+    value: [
+      ''
+    ]
+  }
+}
+{
+  NAME: 'openai',
+  HANDLER: 'openai',
+  CONNECTION_DATA: {
+    key: [
+      'password'
+    ],
+    value: [
+      ''
+    ]
+  }
+}
+...
+```
+
+## The `db.ml_engines.deleteOne` Method
+
+### Description
+
+This method deletes an ML engine.
+
+### Syntax
+
+Here is the syntax:
+
+```sql
+db.ml_engines.deleteOne({"name": "ml_engine_name"})
+```
+
+On execution, we get:
+
+```sql
+{
+  acknowledged: true,
+  deletedCount: 1
+}
+```
+
+### Example
+
+Let's delete an OpenAI engine created earlier.
+
+```sql
+db.ml_engines.deleteOne({"name": "openai_engine"})
+```
+
+On execution, we get:
+
+```sql
+{
+  acknowledged: true,
+  deletedCount: 1
+}
+```
+
+<Tip>
+Check out [how to build an ML handler](/contribute/ml-handlers).
+
+To learn more about ML engines, visit the **ML Engines** section.
+</Tip>

@@ -33,6 +33,7 @@ AutoKeras
 AutoML
 autoregressive
 AutoSklearn
+axios
 Axios
 Ayush
 backend
@@ -512,6 +513,7 @@ tf
 thal
 thalach
 throughputs
+thowsand
 TiDB
 TimescaleDB
 Timeseries

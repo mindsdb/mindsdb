@@ -4,6 +4,7 @@ accuracies
 Adithya
 airbyte
 Airtable
+airtable
 Akbulut
 akhilcoder
 Allez
@@ -28,18 +29,23 @@ Atharva
 Atlassian
 auth
 autocorrect
+AutoKeras
 AutoML
 autoregressive
 AutoSklearn
+Axios
 Ayush
 backend
 BaseHandler
 BaseMixer
 BaseMLEngine
 behaviour
+berkeley
 bert
 BestOf
+bgtest
 Bhavesh
+bigquery
 biosciences
 blague
 blockchain
@@ -47,10 +53,12 @@ BMI
 bmi
 BodyFat
 bodyfat
+bqdataset
 BSON
 BYOM
 CamemBERT
 cardinality
+cassandra
 Catalogue
 Centrum
 Cerda
@@ -62,6 +70,7 @@ chol
 choosingdb
 Civo
 Ckan
+ckan
 ckanapi
 CLA
 CLI
@@ -71,17 +80,21 @@ CockroachDB
 codebase
 Coetzee
 Coinbase
+Colab
 Conda
 conda
 config
+const
 Contip
 Couchbase
+couchbase
 cp
 CrateDB
 Crypto
 CSV
 csv
 CTA
+customAxios
 CWE
 Dangi
 dans
@@ -148,6 +161,7 @@ failover
 fait
 fbs
 FINETUNE
+finetune
 finetuned
 fintech
 Firebird
@@ -239,8 +253,8 @@ LangChain
 lar
 latencies
 le
-learn’s
 learn's
+learn’s
 libre
 libs
 libsasl
@@ -250,6 +264,7 @@ LightGBM
 LightGBMArray
 Lightwood
 lightwood
+LLMs
 localhost
 localpath
 lockdowns
@@ -265,9 +280,12 @@ MatrixOne
 mdb
 MeanEnsemble
 mein
+Merlion
 Metabase
 Metabase's
+metres
 MichaelLantz
+Millau
 MindsDB
 mindsdb
 Mindsdb
@@ -295,6 +313,7 @@ MQN
 mrm
 Mulan
 Munyoudoum
+mydataset
 mysql
 MySql
 namaste
@@ -328,6 +347,7 @@ oldpeak
 OLTP
 OpenAI
 OpenAi
+openai
 OpenAI's
 OpenAI’s
 openapi
@@ -339,6 +359,7 @@ params
 PartiQL
 Patricio
 Pav
+pegasus
 pem
 Percona
 performant
@@ -397,6 +418,7 @@ rockstar
 RPC
 runtime
 Rutam
+saledate
 Salim
 Sapkota
 Sarvesh
@@ -411,6 +433,7 @@ scikit
 scrollbar
 ScyllaDB
 SDK
+sdk
 sehen
 selectdate
 selectfromsource
@@ -455,6 +478,7 @@ StastForecast
 statemet
 StatsForecast
 statuscheck
+storey
 str
 stringified
 subfield
@@ -495,6 +519,7 @@ timeseries
 timesteps
 Timie
 TLS
+tmp
 tokenizer
 torchvision
 TPC
@@ -528,7 +553,9 @@ VirtualBox
 Vitess
 Vivek
 Vultr
+webpage
 WeightedMeanEnsemble
+westbrae
 Westhuizen
 wif
 WIP
@@ -538,6 +565,7 @@ wth
 www
 XGBoost
 XGBoostMixer
+xsum
 yagueto
 Yay
 yml

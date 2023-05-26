@@ -173,7 +173,7 @@ try {
 }
 ```
 
-First, we define the connection paramaters and then use the `createDatabase` function to connect a database.
+First, we define the connection parameters and then use the `createDatabase` function to connect a database.
 
 ### Getting & Deleting a Database
 
@@ -406,7 +406,7 @@ if (homeRentalPriceModel.updateStatus === 'available') {
 
 You can find full training options [here](https://mindsdb.github.io/mindsdb-js-sdk/interfaces/models_trainingOptions.TrainingOptions.html).
 
-### Finetuning a Model
+### Fine tuning a Model
 
 You may want to finetune your model with a specific dataset. You can learn more about it [here](/sql/api/finetune).
 
@@ -423,7 +423,7 @@ const adjustSelect = 'SELECT * FROM demo_data.home_rentals WHERE days_on_market 
 
 try {
 
-  // Finetuning/adjusting a model with the specified dataset
+  // Fine tuning/adjusting a model with the specified dataset
   await homeRentalPriceModel.adjust({
     integration: 'example_db',
     select: adjustSelect

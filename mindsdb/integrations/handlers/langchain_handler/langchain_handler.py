@@ -9,9 +9,10 @@ from langchain.llms import OpenAI
 from langchain.chat_models import ChatOpenAI  # GPT-4 fails to follow the output langchain requires, avoid using for now
 from langchain.agents import initialize_agent, load_tools, Tool, create_sql_agent
 from langchain.prompts import PromptTemplate
+from langchain.output_parsers import RetryWithErrorOutputParser
 from langchain.utilities import GoogleSerperAPIWrapper
 from langchain.agents.agent_toolkits import SQLDatabaseToolkit
-from langchain.chains.conversation.memory import ConversationSummaryMemory
+from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
 
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler, CHAT_MODELS
 from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
@@ -50,6 +51,7 @@ class LangChainHandler(OpenAIHandler):
         self.default_max_tokens = _DEFAULT_MAX_TOKENS
         self.default_agent_model = _DEFAULT_AGENT_MODEL
         self.default_agent_tools = _DEFAULT_AGENT_TOOLS
+        self.write_privileges = False  # if True, this agent is able to write into other active mindsdb integrations
 
     def _get_serper_api_key(self, args, strict=True):
         if 'serper_api_key' in args:
@@ -66,6 +68,11 @@ class LangChainHandler(OpenAIHandler):
         if strict:
             raise Exception(f'Missing API key serper_api_key. Either re-create this ML_ENGINE specifying the `serper_api_key` parameter,\
                  or re-create this model and pass the API key with `USING` syntax.')  # noqa
+
+    def create(self, target, args=None, **kwargs):
+        self.write_privileges = args.get('using', {}).get('writer', self.write_privileges)
+        self.default_agent_tools = args.get('tools', self.default_agent_tools)
+        super().create(target, args, **kwargs)
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -118,12 +125,12 @@ class LangChainHandler(OpenAIHandler):
         pred_args = pred_args if pred_args else {}
 
         # api argument validation
-        model_name = args.get('model_name', self.default_model)
-        agent_name = args.get('agent_name', self.default_agent_model)
+        model_name = pred_args.get('model_name', args.get('model_name', self.default_model))
+        agent_name = pred_args.get('agent_name', args.get('agent_name', self.default_agent_model))
 
         model_kwargs = {
             'model_name': model_name,
-            'temperature': min(1.0, max(0.0, args.get('temperature', 0.0))),
+            'temperature': min(1.0, max(0.0, pred_args.get('temperature', args.get('temperature', 0.0)))),
             'max_tokens': pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens)),
             'top_p': pred_args.get('top_p', None),
             'frequency_penalty': pred_args.get('frequency_penalty', None),
@@ -138,6 +145,7 @@ class LangChainHandler(OpenAIHandler):
         model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
 
         # langchain tool setup
+        pred_args['tools'] = args['tools'] if 'tools' not in pred_args else pred_args['tools']
         tools = self._setup_tools(model_kwargs, pred_args, args['executor'])
 
         # langchain agent setup
@@ -145,7 +153,7 @@ class LangChainHandler(OpenAIHandler):
             llm = ChatOpenAI(**model_kwargs)
         else:
             llm = OpenAI(**model_kwargs)
-        memory = ConversationSummaryMemory(llm=llm)
+        memory = ConversationSummaryBufferMemory(llm=llm, max_token_limit=model_kwargs.get('max_tokens', None))
         agent = initialize_agent(
             tools,
             llm,
@@ -168,7 +176,7 @@ class LangChainHandler(OpenAIHandler):
 
         return agent
 
-    def run_agent(self, df, agent, pred_args, args):
+    def run_agent(self, df, agent, args, pred_args):
         # TODO abstract prompt templating into a common utility method, this is also used in vanilla OpenAI
         if pred_args.get('prompt_template', False):
             base_template = pred_args['prompt_template']  # override with predict-time template if available
@@ -188,7 +196,14 @@ class LangChainHandler(OpenAIHandler):
 
         for i, row in df.iterrows():
             if i not in empty_prompt_ids:
-                prompt = PromptTemplate(input_variables=input_variables, template=base_template)
+                prompt = PromptTemplate(
+                    input_variables=input_variables,
+                    template=base_template,
+                    output_parser=RetryWithErrorOutputParser.from_llm(
+                        agent.agent.llm_chain.llm,
+                        agent.agent.output_parser
+                    )
+                )
                 kwargs = {}
                 for col in input_variables:
                     kwargs[col] = row[col] if row[col] is not None else ''  # add empty quote if data is missing
@@ -211,7 +226,7 @@ class LangChainHandler(OpenAIHandler):
         for i in sorted(empty_prompt_ids):
             completion.insert(i, None)
 
-        pred_df = pd.DataFrame(completion, columns=[pred_args['target']])
+        pred_df = pd.DataFrame(completion, columns=[args['target']])
 
         return pred_df
 
@@ -310,7 +325,9 @@ class LangChainHandler(OpenAIHandler):
         # add connection to mindsdb
         tools.append(mdb_tool)
         tools.append(mdb_meta_tool)
-        tools.append(mdb_write_tool)
+
+        if self.write_privileges:
+            tools.append(mdb_write_tool)
 
         return tools
 

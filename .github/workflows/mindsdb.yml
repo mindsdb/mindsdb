@@ -110,16 +110,6 @@ jobs:
           # sudo chmod 644 ~/.mindsdb_credentials.json
 
           # export USE_EXTERNAL_DB_SERVER="1"
-
-
-          # # Kafka Stream
-          # echo -e "\n===============\ntest Kafka Stream\n===============\n"
-          # python tests/integration_tests/flows/test_kafka.py
-
-          # # Redis Stream
-          # echo -e "\n===============\ntest Redis Stream\n===============\n"
-          # python tests/integration_tests/flows/test_redis.py
-        
         fi
       shell: bash
       env:

@@ -14,7 +14,6 @@ from dateutil.tz import tzlocal
 from mindsdb.utilities import log
 from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.utilities.log_controller import get_logs
-from mindsdb.interfaces.stream.stream import StreamController
 from mindsdb.utilities.config import Config
 from mindsdb.api.http.utils import http_error
 
@@ -149,13 +148,9 @@ class Integration(Resource):
             engine = params['type']
             if engine is not None:
                 del params['type']
-            publish = params.pop('publish', False)
+            params.pop('publish', False)
             ca.integration_controller.add(name, engine, params)
 
-            if is_test is False and publish is True:
-                stream_controller = StreamController()
-                if engine in stream_controller.known_dbs and publish is True:
-                    stream_controller.setup(name)
         except Exception as e:
             log.logger.error(str(e))
             if temp_dir is not None:
@@ -195,9 +190,6 @@ class Integration(Resource):
                 del params['enabled']
             ca.integration_controller.modify(name, params)
 
-            stream_controller = StreamController()
-            if params.get('type') in stream_controller.known_dbs and params.get('publish', False) is True:
-                stream_controller.setup(name)
         except Exception as e:
             log.logger.error(str(e))
             abort(500, f'Error during integration modifycation: {str(e)}')

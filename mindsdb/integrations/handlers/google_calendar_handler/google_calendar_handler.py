@@ -1,13 +1,9 @@
 import os
-
 import pandas as pd
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from mindsdb_sql import parse_sql
-from pandas import DataFrame
-
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from .google_calendar_tables import GoogleCalendarEventsTable
 from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
@@ -16,7 +12,6 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
 )
 from mindsdb.utilities import log
-
 
 class GoogleCalendarHandler(APIHandler):
     """
@@ -39,10 +34,11 @@ class GoogleCalendarHandler(APIHandler):
         self.service = None
         self.connection_data = kwargs.get('connection_data', {})
         self.credentials_file = self.connection_data.get('credentials', None)
+        self.scopes = ['https://www.googleapis.com/auth/calendar', 
+              'https://www.googleapis.com/auth/calendar.events',
+              'https://www.googleapis.com/auth/calendar.readonly'
+            ]
         self.credentials = None
-        self.scopes = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/calendar.events',
-                       'https://www.googleapis.com/auth/calendar.readonly',
-                       'https://www.googleapis.com/auth/calendar.readonly']
         self.is_connected = False
         events = GoogleCalendarEventsTable(self)
         self.events = events
@@ -111,7 +107,7 @@ class GoogleCalendarHandler(APIHandler):
             data_frame=df
         )
 
-    def get_events(self, params: dict = None) -> DataFrame:
+    def get_events(self, params: dict = None) -> pd.DataFrame:
         """
         Get events from Google Calendar API
         Args:
@@ -133,7 +129,7 @@ class GoogleCalendarHandler(APIHandler):
                 break
         return events
 
-    def create_event(self, params: dict = None) -> DataFrame:
+    def create_event(self, params: dict = None) -> pd.DataFrame:
         """
         Create an event in the calendar.
         Args:
@@ -142,7 +138,10 @@ class GoogleCalendarHandler(APIHandler):
             DataFrame
         """
         service = self.connect()
-        params['attendees'] = params['attendees'].split(',')
+        # Check if 'attendees' is a string and split it into a list
+        if isinstance(params['attendees'], str):
+            params['attendees'] = params['attendees'].split(',')
+
         event = {
             'summary': params['summary'],
             'location': params['location'],
@@ -158,9 +157,8 @@ class GoogleCalendarHandler(APIHandler):
             'recurrence': [
                 'RRULE:FREQ=DAILY;COUNT=2'
             ],
-            'attendees': {
-                [{'email': attendee} for attendee in params['attendees']]
-            },
+            'attendees': [{'email': attendee['email']} for attendee in (params['attendees'] 
+                            if isinstance(params['attendees'], list) else [params['attendees']])],
             'reminders': {
                 'useDefault': False,
                 'overrides': [
@@ -169,10 +167,12 @@ class GoogleCalendarHandler(APIHandler):
                 ],
             },
         }
-        event = service.events().insert(calendarId='primary', body=event).execute()
+
+        event = service.events().insert(calendarId='primary', 
+                                        body=event).execute()
         return pd.DataFrame([event], columns=self.events.get_columns())
 
-    def update_event(self, params: dict = None) -> DataFrame:
+    def update_event(self, params: dict = None) -> pd.DataFrame:
         """
         Update event or events in the calendar.
         Args:

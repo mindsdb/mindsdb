@@ -16,19 +16,30 @@ The required arguments to establish a connection are as follows:
 * `project_id` is a globally unique identifier for your project.
 * `dataset` defines the default dataset. Tables from this dataset are shown in the object tree.
 * `service_account_keys` is a full path to the service account key file. This parameter is required but can be replaced by `service_account_json`.
+* `service_account_json` stores the content of a JSON file defined by the `service_account_keys` parameter. This parameter is required when `service_account_keys` is not provided.
 
 <Tip>
 For more info about creating and managing the service account key visit [this page](https://cloud.google.com/iam/docs/creating-managing-service-account-keys).
 </Tip>
 
-There is an optional parameter that can be used instead of the `service_account_keys` parameter:
+## Usage
 
-* `service_account_json` stores the content of a JSON file defined by the `service_account_keys` parameter.
+In order to make use of this handler and connect to the BigQuery database in MindsDB, the following syntax can be used:
 
-<Tip>
-Here is how you can use the `service_account_json` parameter:
+<CodeGroup>
 
-```sql
+```sql service_account_keys
+CREATE DATABASE bqdataset
+WITH
+   engine = "bigquery",
+   parameters = {
+      "project_id": "bgtest-1111",
+      "dataset": "mydataset",
+      "service_account_keys": "/tmp/keys.json"
+   };
+```
+
+```sql service_account_json
 CREATE DATABASE bq
 WITH
    ENGINE = 'bigquery',
@@ -49,26 +60,10 @@ WITH
        }
     };
 ```
-</Tip>
 
-## Usage
+</CodeGroup>
 
-In order to make use of this handler and connect to the BigQuery database in MindsDB, the following syntax can be used:
-
-```sql
-CREATE DATABASE bqdataset
-WITH
-   engine = "bigquery",
-   parameters = {
-      "project_id": "bgtest-1111",
-      "dataset": "mydataset",
-      "service_account_keys": "/tmp/keys.json"
-   };
-```
-
-<Tip>
-Alternatively, you can use the `service_account_json` parameter (as shown above) instead of the `service_account_keys` parameter.
-</Tip>
+<br/>
 
 <Tip>
 The `mydataset` dataset is the default one. The below queries are equivalent:

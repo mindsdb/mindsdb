@@ -20,7 +20,7 @@ API_LIST = ["http"]
 HTTP_API_ROOT = 'http://127.0.0.1:47334/api'
 
 
-@pytest.mark.usefixtures("mindsdb_app")
+@pytest.mark.usefixtures('mindsdb_app', 'postgres_db', 'mysql_db', 'maria_db')
 class TestHTTP:
     @staticmethod
     def get_files_list():
@@ -389,13 +389,13 @@ class TestHTTP:
         assert resp_1['data'].sort() == resp_3['data'].sort()
 
     @pytest.mark.parametrize("db", ['postgres_db', 'mysql_db', 'maria_db'])
-    def test_sql_create_database(self, db, subtests, request):
+    def test_sql_create_database(self, db, subtests):
         ''' sql-via-http:
             'create database' for each db
             'drop database' for each db
             'create database' for each db
         '''
-        db_data = request.getfixturevalue(db)
+        db_data = getattr(self, db)
         db_type = db_data['type']
         db_creds = db_data['connection_data']
         queries = [

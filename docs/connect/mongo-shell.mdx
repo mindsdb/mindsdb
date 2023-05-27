@@ -37,7 +37,7 @@ Let's look at the connection strings for both MindsDB Cloud and local installati
 
 <Tabs>
 
-  <Tab title= "Connecting to Local MindsDB Installation">
+  <Tab title= "Local MindsDB">
   
     Provide your local MindsDB connection string to connect to a local MindsDB installation. You can copy the connection string from the MongoDB Compass if you have already created a connection there.
 
@@ -49,7 +49,7 @@ Let's look at the connection strings for both MindsDB Cloud and local installati
 
   </Tab>
 
-  <Tab title="Connecting to MindsDB Cloud">
+  <Tab title="MindsDB Cloud">
 
     Here is a connection string to connect to the MindsDB Cloud account. You can copy the connection string from the MongoDB Compass if you have already created a connection there.
 
@@ -64,6 +64,17 @@ Let's look at the connection strings for both MindsDB Cloud and local installati
     <p align="center">
       <img src="/assets/connect_mongo_shell_2.png" />
     </p>
+
+  </Tab>
+  <Tab title="MindsDB Pro">
+
+    Here is a connection string to connect to the MindsDB Pro account. You can copy the connection string from the MongoDB Compass if you have already created a connection there.
+
+    ```bash
+    mongodb://mindsdb_cloud_username:mindsdb_cloud_password@<dedicated instance ip>:3306/?authMechanism=DEFAULT
+    ```
+
+    It is similar to connecting MindsDB Cloud. Please replace the `mindsdb_cloud_username` placeholder with your MindsDB Cloud account email. Also, replace the `mindsdb_cloud_password` placeholder with your MindsDB Cloud password. The host value is the IP address of your dedicated instance and the port value is 3306. We use the default authentication mechanism.
 
   </Tab>
 </Tabs>

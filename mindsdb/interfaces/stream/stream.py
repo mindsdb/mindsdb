@@ -1,5 +1,3 @@
-from mindsdb.interfaces.stream.redis.redisdb import Redis
-from mindsdb.interfaces.stream.kafka.kafkadb import Kafka
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.database.integrations import integration_controller
@@ -7,10 +5,7 @@ from mindsdb.utilities.context import context as ctx
 
 
 class StreamController():
-    known_dbs = {
-        'redis': Redis,
-        'kafka': Kafka
-    }
+    known_dbs = {}
 
     def __init__(self):
         self.config = Config()

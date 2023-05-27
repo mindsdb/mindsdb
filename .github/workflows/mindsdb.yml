@@ -48,14 +48,6 @@ jobs:
       env:
         ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
         mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
-    - name: Install dependencies Windows
-      run: |
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          pip install torch==1.7.0+cpu torchvision==0.8.1+cpu -f https://download.pytorch.org/whl/torch_stable.html;
-        fi
-      shell: bash
-      env:
-        CHECK_FOR_UPDATES: False
     - name: Install staging mdb libraries if it's not mindsdb/stable
       if: ${{ github.ref != 'refs/heads/stable' }}
       run: |
@@ -118,16 +110,6 @@ jobs:
           # sudo chmod 644 ~/.mindsdb_credentials.json
 
           # export USE_EXTERNAL_DB_SERVER="1"
-
-
-          # # Kafka Stream
-          # echo -e "\n===============\ntest Kafka Stream\n===============\n"
-          # python tests/integration_tests/flows/test_kafka.py
-
-          # # Redis Stream
-          # echo -e "\n===============\ntest Redis Stream\n===============\n"
-          # python tests/integration_tests/flows/test_redis.py
-        
         fi
       shell: bash
       env:

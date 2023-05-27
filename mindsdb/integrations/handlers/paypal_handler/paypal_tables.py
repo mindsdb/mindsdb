@@ -5,7 +5,7 @@ from typing import Text, List, Dict
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 
-from mindsdb.integrations.handlers.stripe_handler.query_handlers.select_query_handlers import SELECTQueryParser, SELECTQueryExecutor
+from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 
 
 class PaymentsTable(APITable):

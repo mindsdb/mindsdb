@@ -101,7 +101,7 @@ Drop a remark based on your observation.
 - [ ] There's a Bug 🪲 [Issue Title](URL To the Issue you created) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
 
 ---
-## Testing MongoDB Handler with [Algerian Forest Fires Dataset Data Set](https://archive.ics.uci.edu/ml/datasets/Algerian+Forest+Fires+Dataset++)
+## Testing MongoDB Handler with [Algerian Forest Fires Data Set](https://archive.ics.uci.edu/ml/datasets/Algerian+Forest+Fires+Dataset++)
 
 **1. Testing CREATE DATABASE**
 

@@ -112,20 +112,22 @@ The dataset contains **34 features as external factors and 35th is our target fe
 
 
 ## Training a Predictor
-Head over to **MindsDB cloud** to create `predictor`. Copy the below code and paste it in the editor:
-```sql
-CREATE PREDICTOR mindsdb.date_fruit_predictor
-FROM files (
-     SELECT * FROM date_fruit_data
-) PREDICT Class;
+MindsDB has its own `db.predictors.insertOne()` method, to create and train `predictor` in Mongo. Open up `MONGOSH` shell, copy and paste code from below:
+```mongodb
+db.predictors.insertOne({
+     name: "date_fruit_predictor", // name of the model
+     predict: "Class",      // name of the target column to be predicted
+     connection: "mongodb-test", // name of the database integration created 
+     select_data_query: "db.date_fruit_data.find({})" // object that stores the data collection name
+});
 ```
 ![create-predictor](images/date-fruit-classification/create-predictor.png)
 
-On successful query run, you can see the `predictor` model under `mindsdb` database. Also, you have to wait for a few minutes for the model to get trained, so keep an eye on the **`STATUS`** of your model.
+On successful query run, you can see the `predictor` model under `mindsdb` database. Also, you have to wait for a few minutes for the model to get trained.
 
 
 ## Status of a Predictor
-Switch to **MongoDB Compass** in order to check the status of our predictor. Once the status changes to **`COMPLETE`**, it means our model is now ready and we can start getting predictions on it.
+Let's check the status of our predictor inside `MONGOSH` shell. Once the status changes to **`COMPLETE`**, it means our model is now ready and we can start getting predictions on it.
 ```mongodb
 db.predictors.find({name: "date_fruit_predictor"}); // Checking Predictor Status
 ```
@@ -153,7 +155,7 @@ We have now reached the end of this tutorial, where we summarized all the tasks 
 
 - [x] Imported the dataset into **MindsDB Cloud**, connected the **MindsDB Cloud with MongoDB Compass** and created the *Mongo* database as well.
 
-- [x] Created and trained a Predictor Model for *Date Fruit Classification* in **MindsDB Cloud**.
+- [x] Created and trained a Predictor Model for *Date Fruit Classification* with **MongoDB Compass**.
 
 - [x] Gained predictions on the model using `db.date_fruit_predictor.find({column:value});` method.
 

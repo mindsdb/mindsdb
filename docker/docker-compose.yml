@@ -17,6 +17,7 @@ services:
         MINDSDB_STORAGE_DIR: "/mindsdb/var"
 
   mindsdb:
+    platform: linux/amd64
     # Copy global settings from migration above
     <<: *globalSettings
     restart: always

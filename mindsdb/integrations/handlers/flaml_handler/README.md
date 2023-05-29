@@ -20,7 +20,6 @@ While there are many parameters available for users to control the underlying fr
 * eval_method: determines the type of resampling strategy to be used, with options for 'auto', 'cv', and 'holdout'.
 * split_ratio: sets the percentage of data to be used as the validation data in holdout resampling strategy.
 
-However, some other parameters may not be useful currently, but they can be added in the future as per the users' requirements.
 
 ### Does this integration offer model explainability or insights via the DESCRIBE syntax?
 Not Supported Now.

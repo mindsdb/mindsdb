@@ -106,7 +106,7 @@ docker pull mindsdb/mindsdb
 1. CONNECT MindsDB to your data platform. We support 100+ data platforms and this list is constantly growing. If you can’t find the integration you need, please [let us know](https://mindsdb.com/joincommunity).
 2. CREATE MODEL to connect the AI Engine you pick that will learn from your data and serve it as [AI Table](https://www.youtube.com/watch?v=tnB4Y9T1E2k).
     1. If you have an NLP use case, CREATE MODEL will integrate the [AI Table](https://www.youtube.com/watch?v=tnB4Y9T1E2k) with already pre-trained model you choose (like OpenAI’s GPT or Hugging Face models).
-    2. Please check the [docs](https://docs.mindsdb.com/sql/create/predictor?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) if you want to have manual control over model engineering.
+    2. Please check the [docs](https://docs.mindsdb.com/sql/create/model?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) if you want to have manual control over model engineering.
 3. JOIN such model with your database tables to make predictions for thousands or even millions of data points at once, or run SELECT statements or API calls to make one time predictions.
 4. Set up a JOB to automate your re-training cycle and predictions pipelines for the new incoming data.
 5. Alternatively, use REST API to query the models

@@ -16,6 +16,7 @@ USING
   engine = 'llama_index', 
   index_class = 'GPTVectorStoreIndex',
   query_engine = 'as_query_engine', 
+  questions_column_name = 'question',
   openai_api_key = '{your_openai_api_key}',
   source_url_link = '{your_source_url_link}';
 ~~~~

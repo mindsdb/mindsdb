@@ -414,7 +414,8 @@
         {
           "group": "Large Language Models",
           "pages": [
-            "sql/tutorials/twitter-chatbot"
+            "sql/tutorials/twitter-chatbot",
+            "sql/tutorials/image-generator"
           ]
         },
         {

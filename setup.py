@@ -41,9 +41,6 @@ def install_deps():
         else:
             new_pkgs.append(resource.strip())
 
-
-
-
     return new_pkgs, links
 
 

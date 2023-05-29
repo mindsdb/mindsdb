@@ -97,8 +97,8 @@ db.vaccinated_predict_model.find({Location: "OR", Administered_Daily: 5506});
 ### Results
 
 Drop a remark based on your observation.
-- [x] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
-- [ ] There's a Bug 🪲 [Issue Title](URL To the Issue you created) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
+- [x] Works Great in MindsDB cloud💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
+- [x] There's a Bug in MindsDB local🪲 [#6313 Error During MongoDB manual handling - Predict Target value step](https://github.com/mindsdb/mindsdb/issues/6313) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
 
 ---
 ## Testing MongoDB Handler with [Algerian Forest Fires Data Set](https://archive.ics.uci.edu/ml/datasets/Algerian+Forest+Fires+Dataset++)
@@ -144,8 +144,8 @@ db.fire_predict_model.find({Rain: 0, month: 6});
 ### Results
 
 Drop a remark based on your observation.
-- [x] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
-- [ ] There's a Bug 🪲 [Issue Title](URL To the Issue you created) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
+- [x] Works Great in MindsDB cloud💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
+- [x] There's a Bug in MindsDB local🪲 [#6313 Error During MongoDB manual handling - Predict Target value step](https://github.com/mindsdb/mindsdb/issues/6313) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
 
 ---
 ## Testing MongoDB Handler with [Wine Quality Data Set](https://archive.ics.uci.edu/ml/datasets/Wine+Quality)
@@ -194,7 +194,7 @@ db.wine_quality_predict_model.find({"residual sugar": 1.9, "pH": 3.51});
 ### Results
 
 Drop a remark based on your observation.
-- [x] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
-- [ ] There's a Bug 🪲 [Issue Title](URL To the Issue you created) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
+- [x] Works Great in MindsDB cloud💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
+- [x] There's a Bug in MindsDB local🪲 [#6313 Error During MongoDB manual handling - Predict Target value step](https://github.com/mindsdb/mindsdb/issues/6313) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
 
 ---

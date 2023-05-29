@@ -52,15 +52,15 @@ def define_deps():
             requirements.append(r)
 
     extra_requirements = {}
+    full_requirements = []
     for fn in os.listdir('./requirements'):
         if fn.startswith('requirements-') and fn.endswith('.txt'):
             extra_name = fn.replace('requirements-', '').replace('.txt', '')
             with open(f"./requirements/{fn}") as fp:
                 extra = [req.strip() for req in fp.read().splitlines()]
             extra_requirements[extra_name] = extra
-    full_requirements = []
-    for v in extra_requirements.values():
-        full_requirements += v
+            full_requirements += extra
+
     extra_requirements['all_extras'] = list(set(full_requirements))
 
     full_handlers_requirements = []
@@ -80,6 +80,7 @@ def define_deps():
     Deps.pkgs = requirements
     Deps.extras = extra_requirements
     Deps.new_links = links
+
 
     return Deps
 

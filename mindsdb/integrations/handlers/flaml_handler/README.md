@@ -3,6 +3,8 @@ This handler integrates with MindsDB using FLAML, an open-source machine learnin
 
 ### Why is this integration useful? What does the ideal predictive use case for this integration look like? When would you definitely not use this integration? 
 This integration is useful for automating machine learning tasks and improving predictive accuracy. An ideal use case is when there is a large dataset with many variables to consider. However, it may not be suitable for situations where there is limited data or when the model needs to be highly customized.
+_NOTE: As of now, FLAML has a requirement that all input columns must be specified. If data is missing for any of the columns, an error will be triggered._
+   
 
 ### Are models created with this integration fast and scalable, in general?
 Yes, models created with the MindsDB-FLAML integration are generally fast and scalable. FLAML is designed to efficiently automate the machine learning process, including the selection of models and hyperparameters, resulting in faster training times and better performance. 
@@ -11,7 +13,7 @@ Yes, models created with the MindsDB-FLAML integration are generally fast and sc
 N/A
 
 ### To what degree can users control the underlying framework by passing parameters via the USING syntax?
-While there are many parameters available for users to control the underlying framework through the USING syntax, not all of them may be immediately useful. The parameters you have listed are some of the most commonly used and relevant for users to consider
+The following FLAML parameters can be controlled by the user via USING syntax:
 * metric: allows users to specify the metric used to measure the performance of the model.
 * time_budget: sets the maximum amount of time allowed for training the model.
 * n_jobs: controls the number of threads used for training, with higher numbers resulting in faster training.
@@ -28,8 +30,7 @@ Not Supported Now.
 No
 
 ### Are there any other noteworthy aspects to this handler?
-The FLAML ML handler offers support for multiple machine learning models, including but not limited to XGBoost, LightGBM, and CatBoost. The handler provides features such as automatic hyperparameter tuning, model selection, and feature selection.
-
+The FLAML ML handler offers support for multiple machine learning models, including but not limited to XGBoost, LightGBM, and CatBoost. Libraries for these models are installed as a requirement by FLAML. The handler provides features such as automatic hyperparameter tuning, model selection, and feature selection.
 Additionally, users can customize various training parameters, such as evaluation metrics, time budget, number of threads, and more.
 
 ### Any directions for future work in subsequent versions of the handler?
@@ -37,7 +38,7 @@ There are several directions for future work in subsequent versions of the handl
 
 Adding support for more ML tasks: The current version of the handler only supports FLAML for automated machine learning. Future versions could potentially add support for **Time Series**, **NLP**, **AutoGen** and [more](https://microsoft.github.io/FLAML/docs/Examples/).
 
-Enhancing support for fine-tuning pre-existing models: While the handler does support the update() method for fine-tuning pre-existing models, there may be some caveats or limitations that could be addressed in future versions.
+
 
 
 ### Please provide a minimal SQL example that uses this ML engine (pointers to integration tests in the PR also valid)

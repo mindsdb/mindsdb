@@ -55,8 +55,7 @@ SELECT * FROM mindsdb.models where name='heart_disease_flaml_model';
 ```
 
 3. Let me make a prediction for you. 
-_NOTE: As of now, FLAML has a requirement that all input columns must be specified. If data is missing for any of the columns, an error will be triggered._
-   
+
 ```sql 
 SELECT *
 FROM mindsdb.heart_disease_flaml_model

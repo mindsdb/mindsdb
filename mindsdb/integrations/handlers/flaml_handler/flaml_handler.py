@@ -12,6 +12,7 @@ class FLAMLHandler(BaseMLEngine):
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         if args is None:
             args = {}
+            
         if df is not None:
             target_dtype = infer_types(df, 0).to_dict()["dtypes"][target]
             model = AutoML(verbose=0)

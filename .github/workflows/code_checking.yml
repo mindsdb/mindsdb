@@ -24,4 +24,10 @@ jobs:
       shell: bash
     - name: Static code checking
       if: failure()
-      uses: andymckay/cancel-action@0.2
+      run: |-
+        curl \
+          -X POST \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          -H "Accept: application/vnd.github.v3+json" \
+          -H "Authorization: Bearer ${{ secrets.GH_ACCESS_KEY }}" \
+          "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/${{ github.run_id }}/cancel"

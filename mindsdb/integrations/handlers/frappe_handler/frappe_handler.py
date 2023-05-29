@@ -1,5 +1,6 @@
 import json
 import pandas as pd
+import datetime as dt
 from typing import Dict
 
 from mindsdb.integrations.handlers.frappe_handler.frappe_tables import FrappeDocumentsTable
@@ -43,16 +44,59 @@ class FrappeHandler(APIHandler):
 
         document_data = FrappeDocumentsTable(self)
         self._register_table('documents', document_data)
+        self.connection_data = args
 
     def back_office_config(self):
         tools = {
             # 'check_employee_exists': 'useful validate the employee is valid. Input is employee',
-            'check_company_exists': 'useful validate the company is valid. Input is company',
-            'check_expense_type': 'useful validate the expense_type is valid. Input is expense_type',
+            'check_company_exists': 'have to be used by assistant to validate the company is valid. Input is company',
+            'check_expense_type': 'have to be used by assistant to validate the expense_type is valid. Input is expense_type',
+            'check_customer': 'have to be used by assistant to validate the customer is valid. Input is customer',
+            'register_sales_invoice': 'have to be used by assistant to register a sales invoice. Input is JSON object serialized as a string',
         }
         return {
             'tools': tools,
         }
+
+    def register_sales_invoice(self, data):
+        """
+          input is:
+            {
+              "due_date": "2023-05-31",
+              "customer": "ksim",
+              "items": [
+                {
+                  "name": "T-shirt--",
+                  "description": "T-shirt",
+                  "quantity": 1
+                }
+              ]
+            }
+        """
+        invoice = json.loads(data)
+        date = dt.datetime.strptime(invoice['due_date'], '%Y-%m-%d')
+        if date <= dt.datetime.today():
+            return 'Error: due_date have to be in the future'
+
+        for item in invoice['items']:
+            # rename column
+            item['item_name'] = item['name']
+            item['qty'] = item['quantity']
+            del item['name']
+            del item['quantity']
+
+            # add required fields
+            item['uom'] = "Nos"
+            item['conversion_factor'] = 1
+
+            income_account = self.connection_data.get('income_account', "Sales Income - C8")
+            item['income_account'] = income_account
+
+        try:
+            self.client.post_document('Sales Invoice', invoice)
+        except Exception as e:
+            return f"Error: {e}"
+        return f"Success"
 
     # def check_employee_exists(self, name):
     #     result = self.client.get_documents('Employee', filters=[['name', '=', name]])
@@ -61,16 +105,22 @@ class FrappeHandler(APIHandler):
     #     return False
 
     def check_company_exists(self, name):
-        result = self.client.get_documents('Company', filters=[['name', '=', name]])
+        result = self.client.get_documents('', filters=[['name', '=', name]])
         if len(result) == 1:
             return True
-        return False
+        return "Company doesn't exist: please use different name"
 
     def check_expense_type(self, name):
         result = self.client.get_documents('Expense Claim Type', filters=[['name', '=', name]])
         if len(result) == 1:
             return True
-        return False
+        return "Expense Claim Type doesn't exist: please use different name"
+
+    def check_customer(self, name):
+        result = self.client.get_documents('Customer', filters=[['name', '=', name]])
+        if len(result) == 1:
+            return True
+        return "Customer doesn't exist: please use different name"
 
     def connect(self) -> FrappeClient:
         """Creates a new  API client if needed and sets it as the client to use for requests.

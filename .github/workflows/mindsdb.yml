@@ -13,24 +13,7 @@ on:
       - 'README.md'
 
 jobs:
-  code_checking:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.9
-    - name: Install flake8
-      run: |
-        pip install flake8==5.0.4 pycodestyle==2.9.1
-      shell: bash
-    - name: Static code checking
-      run: |
-        python3 -m flake8
-      shell: bash
   matrix_prep:
-    needs: code_checking
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}

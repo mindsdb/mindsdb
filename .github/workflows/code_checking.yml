@@ -19,7 +19,9 @@ jobs:
       run: |
         pip install flake8==5.0.4 pycodestyle==2.9.1
       shell: bash
-    - name: Static code checking
-      run: |
+    - run: |
         python3 -m flake8
       shell: bash
+    - name: Static code checking
+      if: failure()
+      uses: andymckay/cancel-action@0.2

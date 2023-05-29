@@ -48,6 +48,7 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.integrations.handlers_client.ml_client_factory import MLClientFactory
 from mindsdb.integrations.libs.learn_process import learn_process
+from mindsdb.utilities.functions import mark_process
 
 from .ml_handler_proc import MLHandlerWrapper, MLHandlerPersistWrapper
 
@@ -367,6 +368,7 @@ class BaseMLEngineExec:
 
         return predictor_record
 
+    @mark_process(name='predict')
     def predict(self, model_name: str, data: list, pred_format: str = 'dict',
                 project_name: str = None, version=None, params: dict = None):
         """ Generates predictions with some model and input data. """

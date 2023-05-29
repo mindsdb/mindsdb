@@ -30,7 +30,7 @@ jobs:
         python3 -m flake8
       shell: bash
   matrix_prep:
-    needs: code_cheking
+    needs: code_checking
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}

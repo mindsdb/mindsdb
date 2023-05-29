@@ -1,0 +1,51 @@
+---
+title: Gmail
+sidebarTitle: Gmail
+---
+
+This is the implementation of the Gmail app handler for MindsDB. todo
+
+Gmail is todo
+
+## Connection
+
+The required arguments to establish a connection are as follows:
+
+* `credentials_file` is todo
+
+In order to make use of this handler and connect the Google Calendar app to MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE mindsdb_gmail
+WITH ENGINE = 'gmail',
+parameters = {
+    "credentials_file": "mindsdb/integrations/handlers/gmail_handler/credentials.json",
+    -- "scopes": ['SCOPE_1', 'SCOPE_2', ...] -- Optional scopes. By default 'https://.../gmail.compose' & 'https://.../gmail.readonly' scopes are used
+};
+```
+
+## Usage
+
+This creates a database called mindsdb_gmail. This database ships with a table called emails that we can use to search for emails as well as to write emails.
+
+Now you can use your Gmail data, like this:
+
+* searching for email:
+
+    ```sql
+    todo
+    ```
+
+* writing emails:
+
+    ```sql
+    todo
+    ```
+
+## Example 1: Automating Email Replies
+
+todo
+
+## Example 2: Detecting Spam Emails
+
+todo

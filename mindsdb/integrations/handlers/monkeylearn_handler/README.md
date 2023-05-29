@@ -9,6 +9,8 @@ This integration can really be useful for custom models which are trained by use
 
 This integration shouldn't be considered when using the free **Monkeylearn** API key which has limited number of queries per account. This problem can be tackled by having a premium plan of MonkeyLearn which has custom queries according to user needs. 
 
+The monkeylearn classifier API only accepts list of upto 500 data elements of string with text to classify in the data attribute. [Classifier doc](https://monkeylearn.com/api/v3/#classify)
+
 ### To what degree can users control the underlying framework by passing parameters via the USING syntax?
 
 Users can change the model_id parameter according to the model of their need or custom model built by them.

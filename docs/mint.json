@@ -243,9 +243,10 @@
           "group": "Connect to MindsDB",
           "pages": [
             "connect/mindsdb_editor",
+            "connect/postgres-client",
+            "connect/mysql-client",
             "connect/dbeaver",
             "connect/connect-mariadb-skysql",
-            "connect/mysql-client",
             "connect/sql-alchemy",
             "connect/deepnote",
             "connect/metabase",

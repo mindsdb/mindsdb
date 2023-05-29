@@ -26,6 +26,7 @@ jobs:
       if: failure()
       run: |-
         curl \
+          -v \
           -X POST \
           -H "X-GitHub-Api-Version: 2022-11-28" \
           -H "Accept: application/vnd.github.v3+json" \

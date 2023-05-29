@@ -19,12 +19,13 @@ class LlamaIndexHandler(BaseMLEngine):
     Integration with the LlamaIndex Python Library
     """
     name = 'llama_index'
+    flag_webpage_reader = False
+    query_engine = "webpage_reader"
 
     def __init__(self, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
         self.default_index_class  = 'GPTVectorStoreIndex'
-        self.default_query_engine = 'as_query_engine' 
         self.supported_index_class = ['GPTVectorStoreIndex']
         self.supported_query_engine = ['as_query_engine'] 
 
@@ -44,36 +45,39 @@ class LlamaIndexHandler(BaseMLEngine):
             args['using']['index_class'] = self.default_index_class
         elif args['using']['index_class'] not in self.supported_index_class:
             raise Exception(f"Invalid index class argument. Please use one of {self.supported_index_class}")
-
+        
         if 'query_engine' not in args['using']:
             args['using']['query_engine'] = self.default_query_engine
         elif args['using']['query_engine'] not in self.supported_query_engine:
             raise Exception(f"Invalid operation mode. Please use one of {self.supported_query_engine}")
 
-        self.model_storage.json_set('args', args)
-
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        
+
         args = self.model_storage.json_get('args')
 
-        input_keys = list(args.keys())
+        input_column = args['using']['column']
 
-        os.environ['OPENAI_API_KEY'] = args['using']['openai_api_key']
+        if input_column not in df.columns:
+            raise RuntimeError(f'Column "{input_column}" not found in input data')
 
-        SimpleWebPageReader = download_loader("SimpleWebPageReader")
-        documents = SimpleWebPageReader(html_to_text=True).load_data([args['using']['source_url_link']])
+        if not LlamaIndexHandler.flag_webpage_reader:
+            globals()['webpage_query_engine'] = self.predict_qa_webpage_reader()
+            LlamaIndexHandler.flag_webpage_reader = True
 
-        index = GPTVectorStoreIndex.from_documents(documents)
-    
-        query_engine = index.as_query_engine()
-        response = query_engine.query(df['question'].iat[0])
+        questions = df[input_column]
+        results = []
 
-        df['predictions'] = response
+        for question in questions:
+            query_results = webpage_query_engine.query(question)
+            results.append(query_results)
+        
+        result_df = pd.DataFrame({'question': questions, 'predictions': results})
 
-        df = df.rename(columns={'predictions': args['target']})
+        logger.error(f"output df : {result_df}!")
+        result_df = result_df.rename(columns={'predictions': args['target']})
 
-        return df
+        return result_df
 
 
     def _get_llama_index_api_key(self, args, strict=True):
@@ -105,4 +109,26 @@ class LlamaIndexHandler(BaseMLEngine):
             raise Exception(f'Missing API key "OPENAI_API_KEY". Either re-create this ML_ENGINE specifying the `OPENAI_API_KEY` parameter,\
                  or re-create this model and pass the API key with `USING` syntax.')  
 
-    
+    def predict_qa_webpage_reader(self):
+        """ 
+        connects with llama_index python client to predict the 
+
+        """ 
+        args = self.model_storage.json_get('args')
+
+        os.environ['OPENAI_API_KEY'] = args['using']['openai_api_key']
+
+        SimpleWebPageReader = download_loader("SimpleWebPageReader")
+        documents = SimpleWebPageReader(html_to_text=True).load_data([args['using']['source_url_link']])
+        
+        if args['using']['index_class'] == 'GPTVectorStoreIndex':
+            index = GPTVectorStoreIndex.from_documents(documents)
+        else:
+            raise Exception(f"Invalid operation mode. Please use one of {self.supported_index_class}.")  
+        
+        if args['using']['query_engine'] == 'as_query_engine':
+            query_engine = index.as_query_engine()
+        else:
+            raise Exception(f"Invalid operation mode. Please use one of {self.supported_query_engine}.")  
+
+        return query_engine

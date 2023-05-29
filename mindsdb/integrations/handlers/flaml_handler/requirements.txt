@@ -1,2 +1,2 @@
-flaml<=1.2.0
+flaml<=1.2.3
 dill

@@ -7,6 +7,7 @@ LlamaIndex is a data framework for your LLM application.In this handler,python c
 ## Implemented Features
 - [x] LlamaIndex ML Handler
   - [x] [Support Web Page Reader](https://gpt-index.readthedocs.io/en/latest/examples/data_connectors/WebPageDemo.html)
+  - [x] [Support Database Reader](https://gpt-index.readthedocs.io/en/latest/examples/data_connectors/DatabaseReaderDemo.html)
 
 
 

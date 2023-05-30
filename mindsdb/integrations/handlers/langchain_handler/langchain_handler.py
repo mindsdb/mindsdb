@@ -149,6 +149,8 @@ class LangChainHandler(OpenAIHandler):
 
         # system prompt
         prompt = args['prompt']
+        if 'prompt' in pred_args:
+            prompt = pred_args['prompt']
         if 'context' in pred_args:
             prompt += '\n\n' + 'Useful information:\n' + pred_args['context'] + '\n'
         memory.chat_memory.messages.insert(0, SystemMessage(content=prompt))

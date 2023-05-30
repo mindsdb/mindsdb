@@ -48,11 +48,11 @@ class FrappeHandler(APIHandler):
 
     def back_office_config(self):
         tools = {
-            # 'check_employee_exists': 'useful validate the employee is valid. Input is employee',
-            'check_company_exists': 'have to be used by assistant to validate the company is valid. Input is company',
-            'check_expense_type': 'have to be used by assistant to validate the expense_type is valid. Input is expense_type',
-            'check_customer': 'have to be used by assistant to validate the customer is valid. Input is customer',
             'register_sales_invoice': 'have to be used by assistant to register a sales invoice. Input is JSON object serialized as a string',
+            'check_company_exists': 'useful to check the company is exist. Input is company',
+            'check_expense_type': 'useful to check the expense_type is exist. Input is expense_type',
+            'check_customer':  'useful to check the customer is exist. Input is customer',
+
         }
         return {
             'tools': tools,
@@ -120,7 +120,7 @@ class FrappeHandler(APIHandler):
         result = self.client.get_documents('Customer', filters=[['name', '=', name]])
         if len(result) == 1:
             return True
-        return "Customer doesn't exist: please use different name"
+        return "Customer doesn't exist"
 
     def connect(self) -> FrappeClient:
         """Creates a new  API client if needed and sets it as the client to use for requests.

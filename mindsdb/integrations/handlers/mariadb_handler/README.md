@@ -1,15 +1,6 @@
----
-title: MariaDB
-sidebarTitle: MariaDB
----
-
-This is the implementation of the MariaDB data handler for MindsDB.
-
-[MariaDB](https://mariadb.org/documentation/) is a community-developed, commercially supported fork of the MySQL relational database management system (RDBMS), intended to remain free and open-source software under the GNU General Public License. MariaDB is intended to maintain high compatibility with MySQL, library binary parity and exact matching with MySQL APIs and commands, allowing it in many cases to function as a replacement for MySQL.
-
 ## Implementation
 
-This handler is implemented using `mysql-connector`, a self-contained Python driver for communicating with MariaDB servers.
+This handler is implemented by extending the MySQLHandler.
 
 The required arguments to establish a connection are as follows:
 

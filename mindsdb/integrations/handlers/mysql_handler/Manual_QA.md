@@ -12,7 +12,7 @@ WITH ENGINE = 'mysql',                      --- database engine
 PARAMETERS = {
     "host": "cloud.mindsdb.com",            --- host name can be an IP address, or URL
     "port": 3306,                           --- port used to make TCP/IP connection
-    "database": "files",                    --- database name
+    "database": "dry_bean_db",              --- database name
     "user": "demo-user",                    --- database user
     "password": "demo-password"             --- database password
 };
@@ -25,7 +25,7 @@ PARAMETERS = {
 ```sql
 CREATE MODEL mindsdb.dry_bean_predictor
 FROM mysql_test
-  (SELECT * FROM dry_bean_data)
+  (SELECT * FROM dry_bean_db.dry_bean_data)
 PREDICT Class
 USING engine = 'lightwood',
       tag = 'my dry bean model';

@@ -23,6 +23,7 @@ from typing import Optional, Callable
 from concurrent.futures import ProcessPoolExecutor, Future
 
 import pandas as pd
+import sqlalchemy
 from sqlalchemy import func, null
 from sqlalchemy.sql.functions import coalesce
 
@@ -473,29 +474,49 @@ class BaseMLEngineExec:
         learn_args = base_predictor_record.learn_args
         learn_args['using'] = args if not learn_args.get('using', False) else {**learn_args['using'], **args}
 
-        predictor_record = db.Predictor(
-            company_id=ctx.company_id,
-            name=model_name,
-            integration_id=self.integration_id,
-            data_integration_ref=data_integration_ref,
-            fetch_data_query=fetch_data_query,
-            mindsdb_version=mindsdb_version,
-            to_predict=base_predictor_record.to_predict,
-            learn_args=learn_args,
-            data={'name': model_name},
-            project_id=project.id,
-            training_data_columns_count=None,
-            training_data_rows_count=None,
-            training_start_at=dt.datetime.now(),
-            status=PREDICTOR_STATUS.GENERATING,
-            label=label,
-            version=(db.session.query(coalesce(func.max(db.Predictor.version), 1) + 1)
-                     .filter_by(name=model_name, project_id=project.id, deleted_at=null())),
-            active=False
-        )
-
-        db.session.add(predictor_record)
-        db.session.commit()
+        commited = False
+        try_count = 0
+        while not commited:
+            db.session.connection(execution_options={"isolation_level": "SERIALIZABLE"})
+            predictor_record = db.Predictor(
+                company_id=ctx.company_id,
+                name=model_name,
+                integration_id=self.integration_id,
+                data_integration_ref=data_integration_ref,
+                fetch_data_query=fetch_data_query,
+                mindsdb_version=mindsdb_version,
+                to_predict=base_predictor_record.to_predict,
+                learn_args=learn_args,
+                data={'name': model_name},
+                project_id=project.id,
+                training_data_columns_count=None,
+                training_data_rows_count=None,
+                training_start_at=dt.datetime.now(),
+                status=PREDICTOR_STATUS.GENERATING,
+                label=label,
+                version=(
+                    db.session.query(
+                        coalesce(func.max(db.Predictor.version), 1) + 1
+                    ).filter_by(
+                        company_id=ctx.company_id,
+                        name=model_name,
+                        project_id=project.id,
+                        deleted_at=null()
+                    )
+                ),
+                active=False
+            )
+            db.session.add(predictor_record)
+            try:
+                db.session.commit()
+            except sqlalchemy.exc.OperationalError:
+                # catch 'SerializationFailure' (it should be in str(e), but it may depend on engine)
+                db.session.rollback()
+                try_count += 1
+                if try_count == 100:
+                    raise
+            else:
+                commited = True
 
         class_path = [self.handler_class.__module__, self.handler_class.__name__]
 

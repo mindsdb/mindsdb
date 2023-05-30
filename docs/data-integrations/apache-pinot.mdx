@@ -18,6 +18,10 @@ The required arguments to establish a connection are as follows:
 * `controller_port` is the port that the Controller of the Apache Pinot cluster is running on.
 * `path` is the query path.
 
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/pinot_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
 ## Usage
 
 In order to make use of this handler and connect to the Pinot cluster in MindsDB, the following syntax can be used:
@@ -41,6 +45,3 @@ You can use this established connection to query your table as follows:
 SELECT *
 FROM pinot_datasource.example_tbl;
 ```
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/pinot_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>

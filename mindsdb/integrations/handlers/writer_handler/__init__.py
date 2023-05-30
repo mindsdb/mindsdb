@@ -1,9 +1,10 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
-
 from .__about__ import __version__ as version, __description__ as description
+
 try:
     from .writer_handler import WriterHandler as Handler
+
     import_error = None
 except Exception as e:
     Handler = None
@@ -23,4 +24,3 @@ __all__ = [
     'description',
     'import_error',
 ]
-

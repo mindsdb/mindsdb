@@ -1,23 +1,23 @@
+import time
+
+import pandas as pd
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
-import time
-import pandas as pd
 
-from .settings import df_to_documents, load_embeddings_model, PERSIST_DIRECTORY, CHROMA_SETTINGS
 from mindsdb.utilities.log import get_log
+from .settings import df_to_documents, load_embeddings_model, PERSIST_DIRECTORY, CHROMA_SETTINGS, DEFAULT_EMBEDDINGS_MODEL
 
 logger = get_log(__name__)
 
 
-
 class Ingestor:
 
-    def __init__(self,args: dict,df: pd.DataFrame):
+    def __init__(self, args: dict, df: pd.DataFrame):
         self.args = args
         self.df = df
+        self.embeddings_model_name = args.get('embeddings_model_name', DEFAULT_EMBEDDINGS_MODEL)
 
     def split_documents(self):
-
         # Load documents and split in chunks
         logger.info(f"Loading documents from input data")
 
@@ -30,7 +30,6 @@ class Ingestor:
         return texts
 
     def embeddings_to_vectordb(self):
-
         start_time = time.time()
 
         # Load documents and split in chunks
@@ -42,7 +41,8 @@ class Ingestor:
         logger.info(f"Creating vectorstore from documents")
 
         # Create and store locally vectorstore
-        db = Chroma.from_documents(texts, embedding=embedding_model, persist_directory=PERSIST_DIRECTORY, client_settings=CHROMA_SETTINGS)
+        db = Chroma.from_documents(texts, embedding=embedding_model, persist_directory=PERSIST_DIRECTORY,
+                                   client_settings=CHROMA_SETTINGS)
         db.persist()
         db = None
         end_time = time.time()
@@ -51,7 +51,7 @@ class Ingestor:
         logger.info("Fished creating vectorstore from documents. It took: {elapsed_time/60} minutes")
 
         logger.info("Fished creating vectorstore from documents.")
-        logger.info(f"Elapsed time: {round(elapsed_time/60)} minutes")
+        logger.info(f"Elapsed time: {round(elapsed_time / 60)} minutes")
 
 
 if __name__ == "__main__":

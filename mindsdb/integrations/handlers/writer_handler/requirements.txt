@@ -1,0 +1,13 @@
+langchain
+pygpt4all==1.1.0
+chromadb
+urllib3==1.26.6
+numpy
+pandas
+torch>=1.13.0,<1.14.0
+pydantic
+transformers
+sentence_transformers
+requests>=2.28
+duckdb==0.7.1
+pandas

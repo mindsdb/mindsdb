@@ -5,7 +5,7 @@ from typing import Text, List, Dict
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 
-from .utils import parse_statement, get_results
+from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 
 
 class ProductsTable(APITable):
@@ -30,15 +30,22 @@ class ProductsTable(APITable):
             If the query contains an unsupported condition
         """
 
-        selected_columns, where_conditions, order_by_conditions, result_limit = parse_statement(
+        select_statement_parser = SELECTQueryParser(
             query,
             'products',
             self.get_columns()
         )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         products_df = pd.json_normalize(self.get_products(limit=result_limit))
 
-        products_df = get_results(products_df, selected_columns, where_conditions, order_by_conditions)
+        select_statement_executor = SELECTQueryExecutor(
+            products_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+        products_df = select_statement_executor.execute_query()
 
         return products_df
 
@@ -73,15 +80,22 @@ class CustomersTable(APITable):
         ValueError
             If the query contains an unsupported condition
         """
-        selected_columns, where_conditions, order_by_conditions, total_results = parse_statement(
+        select_statement_parser = SELECTQueryParser(
             query,
             'customers',
             self.get_columns()
         )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        customers_df = pd.json_normalize(self.get_customers(limit=total_results))
+        customers_df = pd.json_normalize(self.get_customers(limit=result_limit))
 
-        customers_df = get_results(customers_df, selected_columns, where_conditions, order_by_conditions)
+        select_statement_executor = SELECTQueryExecutor(
+            customers_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+        customers_df = select_statement_executor.execute_query()
 
         return customers_df
 
@@ -116,15 +130,22 @@ class OrdersTable(APITable):
         ValueError
             If the query contains an unsupported condition
         """
-        selected_columns, where_conditions, order_by_conditions, total_results = parse_statement(
+        select_statement_parser = SELECTQueryParser(
             query,
             'orders',
             self.get_columns()
         )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        orders_df = pd.json_normalize(self.get_orders(limit=total_results))
+        orders_df = pd.json_normalize(self.get_orders(limit=result_limit))
 
-        orders_df = get_results(orders_df, selected_columns, where_conditions, order_by_conditions)
+        select_statement_executor = SELECTQueryExecutor(
+            orders_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+        orders_df = select_statement_executor.execute_query()
 
         return orders_df
 

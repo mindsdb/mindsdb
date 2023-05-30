@@ -1,7 +1,7 @@
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Union, List
+from typing import List, Union
 
 import pandas as pd
 import torch
@@ -17,24 +17,34 @@ check_path_exists = lambda path: os.makedirs(path, exist_ok=True)
 
 HANDLER_PATH = Path(__file__).parent.resolve()
 DEFAULT_EMBEDDINGS_MODEL = "sentence-transformers/all-mpnet-base-v2"
-PERSIST_DIRECTORY = (HANDLER_PATH / 'db').as_posix()
+PERSIST_DIRECTORY = (HANDLER_PATH / "db").as_posix()
 USER_DEFINED_MODEL_PARAMS = (
-'model_name', 'max_tokens', 'temperature', 'top_p', 'stop', 'best_of', 'verbose', 'writer_org_id', 'writer_api_key')
+    "model_name",
+    "max_tokens",
+    "temperature",
+    "top_p",
+    "stop",
+    "best_of",
+    "verbose",
+    "writer_org_id",
+    "writer_api_key",
+)
 
 check_path_exists(PERSIST_DIRECTORY)
 
 CHROMA_SETTINGS = Settings(
-    chroma_db_impl='duckdb+parquet',
+    chroma_db_impl="duckdb+parquet",
     persist_directory=PERSIST_DIRECTORY,
-    anonymized_telemetry=False
+    anonymized_telemetry=False,
 )
 
 
 class ModelParameters(BaseModel):
     """Model parameters for the Writer LLM API interface"""
+
     writer_api_key: str = None
     writer_org_id: str = None
-    model_id: str = 'palmyra-x'
+    model_id: str = "palmyra-x"
     callbacks: List[StreamingStdOutCallbackHandler] = [StreamingStdOutCallbackHandler()]
     max_tokens: int = 1024
     temperature: float = 0.0
@@ -63,18 +73,20 @@ class DfLoader(DataFrameLoader):
         documents = []
         for n_row, frame in self._data_frame[self._page_content_column].iteritems():
             if pd.notnull(frame):
-                #ignore rows with None values
+                # ignore rows with None values
 
                 documents.append(
                     Document(
                         page_content=frame,
-                        metadata={"source":"dataframe",'row': n_row}
-                             )
+                        metadata={"source": "dataframe", "row": n_row},
+                    )
                 )
         return documents
 
 
-def df_to_documents(df: pd.DataFrame, page_content_columns: Union[List[str], str]) -> List[Document]:
+def df_to_documents(
+    df: pd.DataFrame, page_content_columns: Union[List[str], str]
+) -> List[Document]:
     """Converts a given dataframe to a list of documents"""
     documents = []
 
@@ -83,7 +95,9 @@ def df_to_documents(df: pd.DataFrame, page_content_columns: Union[List[str], str
 
     for _, page_content_column in enumerate(page_content_columns):
         if page_content_column not in df.columns.tolist():
-            raise ValueError(f"page_content_column {page_content_column} not in dataframe columns")
+            raise ValueError(
+                f"page_content_column {page_content_column} not in dataframe columns"
+            )
 
         loader = DfLoader(data_frame=df, page_content_column=page_content_column)
         documents.extend(loader.load())
@@ -94,11 +108,14 @@ def df_to_documents(df: pd.DataFrame, page_content_columns: Union[List[str], str
 @lru_cache()
 def load_embeddings_model(embeddings_model_name):
     try:
-        model_kwargs = {'device': "gpu" if torch.cuda.is_available() else "cpu"}
-        embedding_model = HuggingFaceEmbeddings(model_name=embeddings_model_name, model_kwargs=model_kwargs)
+        model_kwargs = {"device": "gpu" if torch.cuda.is_available() else "cpu"}
+        embedding_model = HuggingFaceEmbeddings(
+            model_name=embeddings_model_name, model_kwargs=model_kwargs
+        )
     except ValueError:
         raise ValueError(
-            f"The {embeddings_model_name}  is not supported, please select a valid option from Hugging Face Hub!")
+            f"The {embeddings_model_name}  is not supported, please select a valid option from Hugging Face Hub!"
+        )
     return embedding_model
 
 
@@ -107,7 +124,8 @@ def load_chroma(embeddings_model_name):
     return Chroma(
         persist_directory=PERSIST_DIRECTORY,
         embedding_function=load_embeddings_model(embeddings_model_name),
-        client_settings=CHROMA_SETTINGS)
+        client_settings=CHROMA_SETTINGS,
+    )
 
 
 def get_retriever(embeddings_model_name):

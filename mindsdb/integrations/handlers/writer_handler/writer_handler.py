@@ -44,8 +44,8 @@ class WriterHandler(BaseMLEngine):
         """
         args = args['using']
 
-        if not df.empty or not df:
-            if 'context_column' in args:
+        if df and not df.empty:
+            if 'context_columns' in args:
                 if 'embeddings_model_name' not in args:
                     logger.info(
                         f"No embeddings model provided in query, using default model: {DEFAULT_EMBEDDINGS_MODEL}"

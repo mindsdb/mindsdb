@@ -116,7 +116,11 @@ class LocalFSStore(BaseFSStore):
         )
 
     def delete(self, remote_name):
-        pass
+        path = Path(self.storage).joinpath(remote_name)
+        if path.is_file():
+            path.unlink()
+        else:
+            path.rmdir()
 
 
 class S3FSStore(BaseFSStore):

@@ -114,10 +114,3 @@ def get_retriever(embeddings_model_name):
     db = load_chroma(embeddings_model_name)
     retriever = db.as_retriever()
     return retriever
-
-if __name__ == '__main__':
-
-    df = pd.read_csv('/Users/d/PycharmProjects/mindsdb_demos/data/qa/drug_context_cleaned.csv')
-    context_columns = df.columns.tolist()
-    df_to_documents(df, context_columns)
-    print(5)

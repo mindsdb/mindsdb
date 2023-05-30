@@ -72,9 +72,13 @@ def query_df(df, query, session=None):
         query_str = render.get_string(query_ast, with_failback=True)
 
     # workaround to prevent duckdb.TypeMismatchException: serialize and deserialize with feather
-    fd = io.BytesIO()
-    df.to_feather(fd)
-    df = pd.read_feather(fd)
+    if len(df) > 0:
+        fd = io.BytesIO()
+        try:
+            df.to_feather(fd)
+        except:
+            pass
+        df = pd.read_feather(fd)
 
     con = duckdb.connect(database=':memory:')
     con.register('df_table', df)

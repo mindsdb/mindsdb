@@ -483,7 +483,8 @@
     {
       "group": "FAQs",
       "pages": [
-        "faqs/whitelist-ips"
+        "faqs/whitelist-ips",
+        "faqs/persist-predictions"
       ]
     }
   ],

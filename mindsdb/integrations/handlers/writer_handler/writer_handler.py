@@ -46,6 +46,11 @@ class WriterHandler(BaseMLEngine):
 
         if not df.empty or not df:
             if 'context_column' in args:
+                if 'embeddings_model_name' not in args:
+                    logger.info(
+                        f"No embeddings model provided in query, using default model: {DEFAULT_EMBEDDINGS_MODEL}"
+                    )
+
                 # run embeddings and ingest into Chroma VectorDB only if context column(s) provided
                 # NB you can update PERSIST_DIRECTORY in settings.py, this is where chroma vector db is stored
                 ingestor = Ingestor(df=df, args=args)

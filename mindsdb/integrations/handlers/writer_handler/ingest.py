@@ -36,12 +36,12 @@ class Ingestor:
         texts = self.split_documents()
 
         # Load embeddings model
-        embedding_model = load_embeddings_model()
+        embeddings_model = load_embeddings_model(self.embeddings_model_name)
 
         logger.info(f"Creating vectorstore from documents")
 
         # Create and store locally vectorstore
-        db = Chroma.from_documents(texts, embedding=self.embeddings_model_name, persist_directory=PERSIST_DIRECTORY,
+        db = Chroma.from_documents(texts, embedding=embeddings_model, persist_directory=PERSIST_DIRECTORY,
                                    client_settings=CHROMA_SETTINGS)
         db.persist()
         db = None

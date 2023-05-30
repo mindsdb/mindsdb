@@ -9,6 +9,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
 from sqlalchemy.sql.schema import ForeignKey
 from sqlalchemy import JSON
+from sqlalchemy.exc import OperationalError
 
 Base = declarative_base()
 session, engine = None, None
@@ -24,6 +25,31 @@ def init(connection_str: str = None):
         engine = create_engine(connection_str, convert_unicode=True, pool_size=30, max_overflow=200, echo=False)
     session = scoped_session(sessionmaker(bind=engine, autoflush=True))
     Base.query = session.query_property()
+
+
+def serializable_insert(record: Base, try_count: int = 100):
+    """ Do serializeble insert. If fail - repeat it {try_count} times.
+
+        Args:
+            record (Base): sqlalchey record to insert
+            try_count (int): count of tryes to insert record
+    """
+    commited = False
+    while not commited:
+        session.connection(
+            execution_options={'isolation_level': 'SERIALIZABLE'}
+        )
+        session.add(record)
+        try:
+            session.commit()
+        except OperationalError:
+            # catch 'SerializationFailure' (it should be in str(e), but it may depend on engine)
+            session.rollback()
+            try_count += 1
+            if try_count == 100:
+                raise
+        else:
+            commited = True
 
 
 # Source: https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable

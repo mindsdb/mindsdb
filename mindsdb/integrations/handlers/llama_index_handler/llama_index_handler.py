@@ -1,7 +1,8 @@
 import os
 from typing import Optional, Dict
-
+import dill
 from llama_index import GPTVectorStoreIndex,download_loader
+from llama_index.readers.schema.base import Document
 import pandas as pd
 
 from mindsdb.utilities.config import Config
@@ -19,8 +20,6 @@ class LlamaIndexHandler(BaseMLEngine):
     Integration with the LlamaIndex Python Library
     """
     name = 'llama_index'
-    flag_webpage_reader = False
-    query_engine = "webpage_reader"
 
     def __init__(self, *args, **kwargs):
 
@@ -28,15 +27,18 @@ class LlamaIndexHandler(BaseMLEngine):
         self.default_index_class  = 'GPTVectorStoreIndex'
         self.supported_index_class = ['GPTVectorStoreIndex']
         self.supported_query_engine = ['as_query_engine'] 
-
-
+        self.default_reader = 'DFReader'
+        self.supported_reader = ['DFReader','SimpleWebPageReader']
+  
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-
+        
+        
         if 'using' not in args:
             raise Exception("LlamaIndex engine requires a USING clause! Refer to its documentation for more details.")
 
-        if 'source_url_link' not in args['using']:
-            raise Exception("LlamaIndex engine requires a source_url_link parameter.Refer to its documentation for more details.")
+        if args['using']['reader'] == 'SimpleWebPageReader':
+            if 'source_url_link' not in args['using']:
+                raise Exception("LlamaIndex engine requires a source_url_link parameter.Refer to its documentation for more details.")
 
         if 'openai_api_key' not in args['using']:
             raise Exception("LlamaIndex engine requires a openai_api_key parameter.Refer to its documentation for more details.")
@@ -51,30 +53,59 @@ class LlamaIndexHandler(BaseMLEngine):
         elif args['using']['query_engine'] not in self.supported_query_engine:
             raise Exception(f"Invalid operation mode. Please use one of {self.supported_query_engine}")
 
+        if 'reader' not in args['using']:
+            args['using']['reader'] = self.default_reader
+        elif args['using']['reader'] not in self.supported_reader:
+            raise Exception(f"Invalid operation mode. Please use one of {self.supported_query_engine}")
+
+       
+        documents_df_reader = []
+        documents_url_reader = []
+        pred = None
+        if args['using']['reader'] == 'DFReader':
+            for row in df.itertuples():
+                doc_str = ", ".join([str(entry) for entry in row])
+                documents_df_reader.append(Document(doc_str))  
+            pred = documents_df_reader   
+      
+        elif args['using']['reader'] == 'SimpleWebPageReader':
+            SimpleWebPageReader = download_loader("SimpleWebPageReader")
+            documents_url_reader = SimpleWebPageReader(html_to_text=True).load_data([args['using']['source_url_link']])
+            pred = documents_url_reader 
+    
+        
+        self.model_storage.file_set('pred', dill.dumps(pred))
+        self.model_storage.json_set('args', args)
+
+        
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
 
         args = self.model_storage.json_get('args')
+        data_docs = dill.loads(self.model_storage.file_get('pred'))
+        input_keys = list(args.keys())
 
-        input_column = args['using']['column']
+        input_column = args['using']['input_column']
 
         if input_column not in df.columns:
             raise RuntimeError(f'Column "{input_column}" not found in input data')
 
-        if not LlamaIndexHandler.flag_webpage_reader:
-            globals()['webpage_query_engine'] = self.predict_qa_webpage_reader()
-            LlamaIndexHandler.flag_webpage_reader = True
-
-        questions = df[input_column]
+        if args['using']['reader'] == 'DFReader':  
+            query_engine  = self.predict_qa_reader(data_docs)
+                
+        elif args['using']['reader'] == 'SimpleWebPageReader':
+            query_engine = self.predict_qa_reader(data_docs)
+            
+        questions = df[input_column]   
         results = []
-
+        
+        
         for question in questions:
-            query_results = webpage_query_engine.query(question)
+            query_results = query_engine.query(question)
             results.append(query_results)
         
         result_df = pd.DataFrame({'question': questions, 'predictions': results})
 
-        logger.error(f"output df : {result_df}!")
         result_df = result_df.rename(columns={'predictions': args['target']})
 
         return result_df
@@ -109,17 +140,17 @@ class LlamaIndexHandler(BaseMLEngine):
             raise Exception(f'Missing API key "OPENAI_API_KEY". Either re-create this ML_ENGINE specifying the `OPENAI_API_KEY` parameter,\
                  or re-create this model and pass the API key with `USING` syntax.')  
 
-    def predict_qa_webpage_reader(self):
+    def predict_qa_reader(self,doc):
         """ 
         connects with llama_index python client to predict the 
 
         """ 
+        
         args = self.model_storage.json_get('args')
 
         os.environ['OPENAI_API_KEY'] = args['using']['openai_api_key']
 
-        SimpleWebPageReader = download_loader("SimpleWebPageReader")
-        documents = SimpleWebPageReader(html_to_text=True).load_data([args['using']['source_url_link']])
+        documents = doc
         
         if args['using']['index_class'] == 'GPTVectorStoreIndex':
             index = GPTVectorStoreIndex.from_documents(documents)

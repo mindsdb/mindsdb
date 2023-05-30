@@ -44,7 +44,7 @@ class WriterHandler(BaseMLEngine):
         """
         args = args['using']
 
-        if not df.empty:
+        if not df.empty or not df:
             if 'context_column' in args:
                 # run embeddings and ingest into Chroma VectorDB only if context column(s) provided
                 # NB you can update PERSIST_DIRECTORY in settings.py, this is where chroma vector db is stored
@@ -60,7 +60,7 @@ class WriterHandler(BaseMLEngine):
 
         self.model_storage.json_set('args', args)
 
-    def predict(self, df: pd.DataFrame = None, args = None):
+    def predict(self, df: pd.DataFrame = None, args:dict = None):
         """
         Dispatch is performed depending on the underlying model type. Currently, only question answering
         is supported.
@@ -76,8 +76,10 @@ class WriterHandler(BaseMLEngine):
 
         # get question answering results
 
-        question_answerer = QuestionAnswerer(embeddings_model_name=DEFAULT_EMBEDDINGS_MODEL,
-                                             model_parameters=model_parameters)
+        question_answerer = QuestionAnswerer(
+            args=args,
+            model_parameters=model_parameters
+        )
 
         # get question from sql query e.g. where question = 'What is the capital of France?'
         question_answerer.query(df['question'].tolist()[0])

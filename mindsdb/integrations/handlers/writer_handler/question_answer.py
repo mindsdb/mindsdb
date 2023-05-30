@@ -1,13 +1,14 @@
 from collections import defaultdict
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 from langchain.chains import RetrievalQA
 from langchain.llms import Writer
 
 from mindsdb.utilities.log import get_log
-from .settings import ModelParameters
-from .settings import get_retriever
+from .settings import ModelParameters, get_retriever, DEFAULT_EMBEDDINGS_MODEL
+
 
 logger = get_log(logger_name=__name__)
 
@@ -20,9 +21,14 @@ class QuestionAnswerer:
         llm = Writer(
             **model_parameters.dict()
         )
-        retriever = get_retriever(embeddings_model_name)
-        self.qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever,
-                                              return_source_documents=True, callbacks=model_parameters.callbacks)
+        retriever = get_retriever(embeddings_model_name=args.get('embeddings_model_name', DEFAULT_EMBEDDINGS_MODEL))
+        self.qa = RetrievalQA.from_chain_type(
+            llm=llm,
+            chain_type="stuff",
+            retriever=retriever,
+            return_source_documents=True,
+            callbacks=model_parameters.callbacks
+        )
 
     @property
     def results_df(self):
@@ -45,7 +51,7 @@ class QuestionAnswerer:
 
         self.output_data["source_documents"].append(dict(sources))
 
-    def output(self, output_path: str):
+    def output(self, output_path: Path):
         # output results
         date_time_now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 

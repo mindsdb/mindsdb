@@ -41,7 +41,7 @@ class Ingestor:
         logger.info(f"Creating vectorstore from documents")
 
         # Create and store locally vectorstore
-        db = Chroma.from_documents(texts, embedding=embedding_model, persist_directory=PERSIST_DIRECTORY,
+        db = Chroma.from_documents(texts, embedding=self.embeddings_model_name, persist_directory=PERSIST_DIRECTORY,
                                    client_settings=CHROMA_SETTINGS)
         db.persist()
         db = None

@@ -23,7 +23,6 @@ from typing import Optional, Callable
 from concurrent.futures import ProcessPoolExecutor, Future
 
 import pandas as pd
-import sqlalchemy
 from sqlalchemy import func, null
 from sqlalchemy.sql.functions import coalesce
 
@@ -468,6 +467,8 @@ class BaseMLEngineExec:
         }
         if base_model_version is not None:
             search_args['version'] = base_model_version
+        else:
+            search_args['active'] = True
         predictor_records = get_model_records(**search_args)
         if len(predictor_records) == 0:
             raise Exception("Can't find suitable base model")

@@ -38,6 +38,7 @@ def query_df(df, query, session=None):
             "Only 'SELECT from TABLE' statements supported for internal query"
         )
 
+    table_name = query_ast.from_table.parts[0]
     query_ast.from_table.parts = ['df_table']
 
     def adapt_query(node, is_table, **kwargs):
@@ -72,7 +73,7 @@ def query_df(df, query, session=None):
         query_str = render.get_string(query_ast, with_failback=True)
 
     # workaround to prevent duckdb.TypeMismatchException: serialize and deserialize with feather
-    if len(df) > 0:
+    if len(df) > 0 and table_name.lower() in ('models', 'predictors'):
         fd = io.BytesIO()
         df.to_feather(fd)
         df = pd.read_feather(fd)

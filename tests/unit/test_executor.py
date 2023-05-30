@@ -1071,6 +1071,6 @@ class TestExecutionTools:
                     'x': 'A'}}}
         ]
         df = pd.DataFrame(d)
-        query_df(df, 'select * from tbl')
+        query_df(df, 'select * from models')
 
 

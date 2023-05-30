@@ -336,8 +336,15 @@ class BaseMLEngineExec:
             training_start_at=dt.datetime.now(),
             status=PREDICTOR_STATUS.GENERATING,
             label=label,
-            version=(db.session.query(coalesce(func.max(db.Predictor.version), 1) + (1 if is_retrain else 0))
-                     .filter_by(name=model_name, project_id=project.id, deleted_at=null())),
+            version=(
+                db.session.query(
+                    coalesce(func.max(db.Predictor.version), 1) + (1 if is_retrain else 0)
+                ).filter_by(
+                    company_id=ctx.company_id,
+                    name=model_name,
+                    project_id=project.id,
+                    deleted_at=null()
+                ).scalar_subquery()),
             active=(not is_retrain),  # if create then active
         )
 
@@ -496,7 +503,7 @@ class BaseMLEngineExec:
                     name=model_name,
                     project_id=project.id,
                     deleted_at=null()
-                )
+                ).scalar_subquery()
             ),
             active=False
         )

@@ -6,7 +6,7 @@ import numpy as np
 from sqlalchemy import create_engine, types, UniqueConstraint
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index, text
 from sqlalchemy.sql.schema import ForeignKey
 from sqlalchemy import JSON
 from sqlalchemy.exc import OperationalError
@@ -39,6 +39,8 @@ def serializable_insert(record: Base, try_count: int = 100):
         session.connection(
             execution_options={'isolation_level': 'SERIALIZABLE'}
         )
+        if engine.name == 'postgresql':
+            session.execute(text('LOCK TABLE PREDICTOR IN EXCLUSIVE MODE'))
         session.add(record)
         try:
             session.commit()

@@ -5,7 +5,8 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 
 from mindsdb.utilities.log import get_log
-from .settings import df_to_documents, load_embeddings_model, PERSIST_DIRECTORY, CHROMA_SETTINGS, DEFAULT_EMBEDDINGS_MODEL
+from .settings import df_to_documents, load_embeddings_model, PERSIST_DIRECTORY, CHROMA_SETTINGS, \
+    DEFAULT_EMBEDDINGS_MODEL
 
 logger = get_log(__name__)
 
@@ -52,8 +53,3 @@ class Ingestor:
 
         logger.info("Fished creating vectorstore from documents.")
         logger.info(f"Elapsed time: {round(elapsed_time / 60)} minutes")
-
-
-if __name__ == "__main__":
-    ingestor = Ingestor()
-    ingestor.embeddings_to_vectordb()

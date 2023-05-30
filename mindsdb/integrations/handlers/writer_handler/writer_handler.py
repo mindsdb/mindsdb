@@ -30,22 +30,23 @@ class WriterHandler(BaseMLEngine):
     @staticmethod
     def create_validation(target, args = None, **kwargs):
         if 'using' not in args:
-            raise Exception("LangChain engine requires a USING clause! Refer to its documentation for more details.")
+            raise Exception("Writer engine requires a USING clause! Refer to its documentation for more details.")
         else:
             args = args['using']
 
-        if len(set(args.keys()) & {'prompt_template'}) == 0:
+        if 'prompt_template' not in args:
             raise Exception('Please provide a `prompt_template` for this engine.')
 
-    def create(self, target: str, df: pd.DataFrame = None, args: Optional[Dict] = None):
+    def create(self, target: str, df: pd.DataFrame = pd.DataFrame(), args: Optional[Dict] = None):
         """
         Dispatch is running embeddings and storing in Chroma VectorDB, unless user already has embeddings persisted
         see PERSIST_DIRECTORY in settings.py for default location of Chroma VectorDB indexes
         """
         args = args['using']
 
-        if df and not df.empty:
+        if not df.empty:
             if 'context_columns' in args:
+
                 if 'embeddings_model_name' not in args:
                     logger.info(
                         f"No embeddings model provided in query, using default model: {DEFAULT_EMBEDDINGS_MODEL}"
@@ -62,6 +63,9 @@ class WriterHandler(BaseMLEngine):
                     'please provide a list of columns that are providing context.'
                 )
                 logger.info('skipping embeddings and ingestion into Chroma VectorDB')
+
+        else:
+            logger.info('No context data provided, skipping embeddings and ingestion into Chroma VectorDB')
 
         self.model_storage.json_set('args', args)
 

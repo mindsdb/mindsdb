@@ -47,7 +47,33 @@ class ModelParameters(BaseModel):
         arbitrary_types_allowed = True
 
 
-@lru_cache()
+class DfLoader(DataFrameLoader):
+
+    """
+    override the load method of langchain.document_loaders.DataFrameLoaders to ignore rows with 'None' values
+    """
+
+    def __init__(self, data_frame: pd.DataFrame, page_content_column: str):
+        super().__init__(data_frame=data_frame, page_content_column=page_content_column)
+        self._data_frame = data_frame
+        self._page_content_column = page_content_column
+
+    def load(self) -> List[Document]:
+        """Loads the dataframe as a list of documents"""
+        documents = []
+        for n_row, frame in self._data_frame[self._page_content_column].iteritems():
+            if pd.notnull(frame):
+                #ignore rows with None values
+
+                documents.append(
+                    Document(
+                        page_content=frame,
+                        metadata={"source":"dataframe",'row': n_row}
+                             )
+                )
+        return documents
+
+
 def df_to_documents(df: pd.DataFrame, page_content_columns: Union[List[str], str]) -> List[Document]:
     """Converts a given dataframe to a list of documents"""
     documents = []
@@ -55,11 +81,11 @@ def df_to_documents(df: pd.DataFrame, page_content_columns: Union[List[str], str
     if isinstance(page_content_columns, str):
         page_content_columns = [page_content_columns]
 
-    for page_content_column in enumerate(page_content_columns):
-        if page_content_column not in df.columns:
+    for _, page_content_column in enumerate(page_content_columns):
+        if page_content_column not in df.columns.tolist():
             raise ValueError(f"page_content_column {page_content_column} not in dataframe columns")
 
-        loader = DataFrameLoader(data_frame=df, page_content_column=page_content_column)
+        loader = DfLoader(data_frame=df, page_content_column=page_content_column)
         documents.extend(loader.load())
 
     return documents
@@ -88,3 +114,10 @@ def get_retriever(embeddings_model_name):
     db = load_chroma(embeddings_model_name)
     retriever = db.as_retriever()
     return retriever
+
+if __name__ == '__main__':
+
+    df = pd.read_csv('/Users/d/PycharmProjects/mindsdb_demos/data/qa/drug_context_cleaned.csv')
+    context_columns = df.columns.tolist()
+    df_to_documents(df, context_columns)
+    print(5)

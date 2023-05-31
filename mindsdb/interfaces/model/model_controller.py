@@ -435,7 +435,7 @@ class ModelController():
             set_active=set_active
         )
 
-    @profiler.profile
+    @profiler.profile()
     def finetune_model(self, statement, ml_handler):
         params = self.prepare_finetune_statement(statement, ml_handler.database_controller)
         predictor_record = ml_handler.update(**params)

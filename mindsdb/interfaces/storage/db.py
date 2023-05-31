@@ -10,7 +10,6 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index, text
 from sqlalchemy.sql.schema import ForeignKey
 from sqlalchemy import JSON
 from sqlalchemy.exc import OperationalError
-import mindsdb.utilities.profiler as profiler
 
 Base = declarative_base()
 session, engine = None, None
@@ -28,7 +27,6 @@ def init(connection_str: str = None):
     Base.query = session.query_property()
 
 
-@profiler.profile
 def serializable_insert(record: Base, try_count: int = 100):
     """ Do serializeble insert. If fail - repeat it {try_count} times.
 

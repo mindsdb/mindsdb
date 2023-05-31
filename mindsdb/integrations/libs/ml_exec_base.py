@@ -512,7 +512,8 @@ class BaseMLEngineExec:
             ),
             active=False
         )
-        db.serializable_insert(predictor_record)
+        with profiler.Context('finetune-update-record-insert'):
+            db.serializable_insert(predictor_record)
 
         class_path = [self.handler_class.__module__, self.handler_class.__name__]
 

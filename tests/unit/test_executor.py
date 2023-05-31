@@ -1062,11 +1062,11 @@ class TestExecutionTools:
 
     def test_query_df(self):
         d = [
-            {'a':
+            {'TRAINING_OPTIONS':
                 {'b': {
                     'x': 'A',
                     'y': 'B'}}},
-            {'a':
+            {'TRAINING_OPTIONS':
                 {'b': {
                     'x': 'A'}}}
         ]

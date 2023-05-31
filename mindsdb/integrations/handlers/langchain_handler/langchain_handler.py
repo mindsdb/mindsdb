@@ -141,7 +141,7 @@ class LangChainHandler(OpenAIHandler):
             'openai_api_key': self._get_openai_api_key(args, strict=True),
             'serper_api_key': self._get_serper_api_key(args, strict=False),
         }
-        model_kwargs = {k   : v for k, v in model_kwargs.items() if v is not None}  # filter out None values
+        model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
 
         # langchain tool setup
         pred_args['tools'] = args['tools'] if 'tools' not in pred_args else pred_args['tools']

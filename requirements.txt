@@ -1,5 +1,4 @@
 lightwood>=23.5.1.0
-torch==2.0.1
 markupsafe == 2.0.1
 flask-restx >= 1.0.1, < 2.0.0
 flask >= 1.0, < 2.0

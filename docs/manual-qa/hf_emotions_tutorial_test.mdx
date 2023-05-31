@@ -1,0 +1,45 @@
+## Testing: Hugging Face - Emotions Tutorial
+
+1. Testing CREATE MODEL
+```sql
+CREATE MODEL mindsdb.hf_emotions_6
+PREDICT PRED
+USING
+engine = 'huggingface',
+task = 'text-classification',
+model_name = 'j-hartmann/emotion-english-distilroberta-base',
+input_column = 'text';
+```
+
+## Table
+
+| NAME | ENGINE | PROJECT | ACTIVE | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | TAG |
+| ---- | ------ | ------- | ------ | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | --- |
+| hf_emotions_6 | huggingface | mindsdb | true | 1 | generating | [NULL] | PRED | up_to_date | 23.5.3.2 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'task': 'text-classification', 'model_name': 'j-hartmann/emotion-english-distilroberta-base', 'input_column': 'text'}} | [NULL] |
+
+2. Testing SELECT (making predictions)
+```sql
+SELECT *
+FROM mindsdb.models 
+WHERE name = 'hf_emotions_6';
+```
+
+## Table
+
+| NAME | ENGINE | PROJECT | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | CURRENT_TRAINING_PHASE | TOTAL_TRAINING_PHASES | TRAINING_PHASE_NAME | TAG | CREATED_AT |
+| ---- | ------ | ------- | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | ---------------------- | --------------------- | ------------------- | --- | ---------- |
+| hf_emotions_6 | huggingface | mindsdb | 1 | complete | [NULL] | PRED | up_to_date | 23.5.3.2 | [NULL] | [NULL] | {"target":"PRED","using":{"input_column":"text","model_name":"j-hartmann/emotion-english-distilroberta-base","task":"text-classification"}} | [NULL] | [NULL] | [NULL] | [NULL] | 2023-05-24 20:28:26.112517 |
+
+3. Testing Query For Predictions
+
+```sql
+SELECT *
+FROM mindsdb.hf_emotions_6
+WHERE text = 'Oh Happy Day';
+```
+
+## Table
+
+| PRED | PRED_explain | text |
+| ---- | ------------ | ---- |
+| joy | {"anger":0.002844693139195442,"disgust":0.0009613592410460114,"fear":0.000711270549800247,"joy":0.7692910432815552,"neutral":0.0377536304295063,"sadness":0.015293847769498825,"surprise":0.17314423620700836} | Oh Happy Day |

@@ -1,0 +1,58 @@
+## Testing: Hugging Face - Translation English to French Tutorial
+
+1. Testing CREATE MODEL
+```sql
+
+CREATE MODEL mindsdb.hf_t5_en_fr
+PREDICT PRED
+USING
+engine = 'huggingface',
+task = 'translation',
+model_name = 't5-base',
+input_column = 'text',
+lang_input = 'en',
+lang_output = 'fr';
+
+```
+
+```sql
+
+Output:
+Query successfully completed. In the output a table with ("Name","engine","Project","Active","Version","Status","Accuracy","Predict","Update_status","MindsDB_version","Error","Training_options") the following can be seen.
+
+```
+
+2. Checking its status.
+
+```sql
+
+SELECT *
+FROM mindsdb.models 
+WHERE name = 'hf_t5_en_fr';
+
+
+```
+
+```sql
+
+Output:
+Query successfully completed. In the output table, the status "Generating" changes to "Complete"
+
+```
+
+3. Testing SELECT (making predictions)
+```sql
+
+SELECT *
+FROM mindsdb.hf_t5_en_fr
+WHERE text = 'The monkey is on the branch';
+
+```
+```sql
+
+Output:
+| PRED | test |
+| ------- | ---------- |
+| "Le singe est sur la branche" | "The monkey is on the branch" |
+
+```

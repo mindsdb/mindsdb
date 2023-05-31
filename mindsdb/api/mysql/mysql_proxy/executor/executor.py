@@ -13,7 +13,7 @@ from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteComm
 
 
 class Executor:
-    """This class stores initial and intermediatea params
+    """This class stores initial and intermediate params
     between different steps of query execution. And it is also
     creates a separate instance of ExecuteCommands to execute the current
     query step.

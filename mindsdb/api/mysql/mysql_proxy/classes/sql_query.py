@@ -845,6 +845,7 @@ class SQLQuery():
                 version=version,
                 params=step.params,
             )
+
             columns_dtypes = dict(predictions.dtypes)
             predictions = predictions.to_dict(orient='records')
 
@@ -963,7 +964,7 @@ class SQLQuery():
                         data = predictions.to_dict(orient='records')
                         columns_dtypes = dict(predictions.dtypes)
 
-                        if data is not None and isinstance(data, list):
+                        if data is not None and isinstance(data, list) and self.session.predictor_cache is not False:
                             predictor_cache.set(key, data)
                     else:
                         columns_dtypes = {}

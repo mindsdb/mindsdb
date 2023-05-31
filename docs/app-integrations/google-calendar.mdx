@@ -1,0 +1,71 @@
+---
+title: Google Calendar
+sidebarTitle: Google Calendar
+---
+
+This is the implementation of the Google Calendar app handler for MindsDB. It makes event data available to use for model training and predictions.
+
+Google Calendar is a time-management and scheduling calendar service developed by Google.
+
+## Implementation
+
+The required arguments to establish a connection are as follows:
+
+* `credentials` is a path to the JSON file that stores credentials to the Google account.
+
+<Tip>
+Please note that a Google account with enabled Google Calendar is required. You can find more information [here](https://developers.google.com/calendar/api/quickstart/python).
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect the Google Calendar app to MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE my_calendar
+WITH
+    ENGINE = 'google_calendar',
+    PARAMETERS = {
+        'credentials': '\path-to-your-file\credentials.json'
+    }; 
+```
+
+It creates a database that comes with the `calendar` table.
+
+Now you can use your Google Calendar data, like this:
+
+* searching for events:
+
+    ```sql
+    SELECT id, created_at, author_username, text
+    FROM my_calendar.calendar
+    WHERE start_time = '2023-02-16'
+    AND end_time = '2023-04-09' LIMIT 20;
+    ```
+
+* creating events:
+
+    ```sql
+    INSERT INTO my_calendar.events(start_time, end_time, summary, description, location, attendees, reminders, timeZone)
+    VALUES ('2023-02-16 10:00:00', '2023-02-16 11:00:00', 'MindsDB Meeting', 'Discussing the future of MindsDB', 'MindsDB HQ', '', 'Europe/Athens');
+    ```
+
+* updating one or more events:
+
+    ```sql
+    UPDATE my_calendar.calendar
+    SET summary     = 'MindsDB Meeting',
+        description = 'Discussing the future of MindsDB',
+        location    = 'MindsDB HQ',
+        attendees   = '',
+        reminders   = ''
+    WHERE event_id > 1 AND event_id < 10;                   -- used to update events in a given range
+    ```
+
+* deleting one or more events:
+
+    ```sql
+    DELETE
+    FROM my_calendar.calendar
+    WHERE id = '1';
+    ```

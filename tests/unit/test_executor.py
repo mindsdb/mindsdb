@@ -10,6 +10,7 @@ import numpy as np
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 
 # How to run:
@@ -1055,3 +1056,21 @@ class TestSteps(BaseExecutorMockPredictor):
                         limit 1
                     ''', dialect='mindsdb'))
         assert ret.error_code is None
+
+
+class TestExecutionTools:
+
+    def test_query_df(self):
+        d = [
+            {'a':
+                {'b': {
+                    'x': 'A',
+                    'y': 'B'}}},
+            {'a':
+                {'b': {
+                    'x': 'A'}}}
+        ]
+        df = pd.DataFrame(d)
+        query_df(df, 'select * from models')
+
+

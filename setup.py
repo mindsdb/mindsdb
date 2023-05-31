@@ -38,7 +38,7 @@ def define_deps():
     Returns:
          list of packages, extras and dependency links.
     """
-    with open('requirements/requirements.txt') as req_file:
+    with open(os.path.normpath('requirements/requirements.txt')) as req_file:
         defaults = [req.strip() for req in req_file.read().splitlines()]
 
     links = []
@@ -53,10 +53,10 @@ def define_deps():
 
     extra_requirements = {}
     full_requirements = []
-    for fn in os.listdir('./requirements'):
+    for fn in os.listdir(os.path.normpath('./requirements')):
         if fn.startswith('requirements-') and fn.endswith('.txt'):
             extra_name = fn.replace('requirements-', '').replace('.txt', '')
-            with open(f"./requirements/{fn}") as fp:
+            with open(os.path.normpath(f"./requirements/{fn}")) as fp:
                 extra = [req.strip() for req in fp.read().splitlines()]
             extra_requirements[extra_name] = extra
             full_requirements += extra

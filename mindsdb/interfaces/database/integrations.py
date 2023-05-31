@@ -413,7 +413,10 @@ class IntegrationController:
 
         integration_meta = self.handlers_import_status[integration_engine]
         if not integration_meta["import"]["success"]:
-            logger.info(f"to use {integration_engine} please install 'pip install mindsdb[{integration_engine}]'")
+            msg = f"to use {integration_engine} please install 'pip install mindsdb[{integration_engine}]'"
+            logger.debug(msg)
+            raise Exception(msg)
+
         connection_args = integration_meta.get('connection_args')
         logger.debug("%s.get_handler: connection args - %s", self.__class__.__name__, connection_args)
 
@@ -494,9 +497,7 @@ class IntegrationController:
         dependencies = self._read_dependencies(handler_dir)
 
         self.handler_modules[module.name] = module
-        import_error = None
-        if hasattr(module, 'import_error'):
-            import_error = module.import_error
+        import_error = getattr(module, 'import_error', None)
         handler_meta = {
             'import': {
                 'success': import_error is None,

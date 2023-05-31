@@ -160,6 +160,7 @@ class LangChainHandler(OpenAIHandler):
             agent=agent_name,
             max_iterations=pred_args.get('max_iterations', 3),
             verbose=pred_args.get('verbose', args.get('verbose', False)),
+            handle_parsing_errors=True,
         )
 
         # setup model description
@@ -311,7 +312,7 @@ class LangChainHandler(OpenAIHandler):
             tools.append(Tool(
                 name="Intermediate Answer (serper.dev)",
                 func=search.run,
-                description="useful for when you need to ask with search"
+                description="useful for when you need to search the internet (note: in general, use this as a last resort)"  # noqa
             ))
 
         # add connection to mindsdb

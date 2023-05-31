@@ -141,7 +141,7 @@ class LangChainHandler(OpenAIHandler):
             'openai_api_key': self._get_openai_api_key(args, strict=True),
             'serper_api_key': self._get_serper_api_key(args, strict=False),
         }
-        model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
+        model_kwargs = {k   : v for k, v in model_kwargs.items() if v is not None}  # filter out None values
 
         # langchain tool setup
         pred_args['tools'] = args['tools'] if 'tools' not in pred_args else pred_args['tools']
@@ -160,6 +160,7 @@ class LangChainHandler(OpenAIHandler):
             agent=agent_name,
             max_iterations=pred_args.get('max_iterations', 3),
             verbose=pred_args.get('verbose', args.get('verbose', False)),
+            handle_parsing_errors=True,
         )
 
         # setup model description
@@ -311,7 +312,7 @@ class LangChainHandler(OpenAIHandler):
             tools.append(Tool(
                 name="Intermediate Answer (serper.dev)",
                 func=search.run,
-                description="useful for when you need to ask with search"
+                description="useful for when you need to search the internet (note: in general, use this as a last resort)"  # noqa
             ))
 
         # add connection to mindsdb

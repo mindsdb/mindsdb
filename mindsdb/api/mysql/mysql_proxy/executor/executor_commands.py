@@ -83,6 +83,7 @@ from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.functions import resolve_model_identifier
 import mindsdb.utilities.profiler as profiler
 
 
@@ -685,13 +686,13 @@ class ExecuteCommands:
         if len(identifier.parts) == 1:
             identifier.parts = [self.session.database, identifier.parts[0]]
 
-        if len(identifier.parts) == 2:
-            database_name, model_name = identifier.parts[-2:]
-        else:
-            return None
+        database_name, model_name, model_version, _describe = resolve_model_identifier(identifier)
 
         model_record = get_model_record(
-            name=model_name, project_name=database_name, except_absent=except_absent
+            name=model_name,
+            project_name=database_name,
+            except_absent=except_absent,
+            version=model_version
         )
         if not model_record:
             return None
@@ -726,16 +727,15 @@ class ExecuteCommands:
         model_record = self._get_model_info(statement.name)['model_record']
 
         if statement.integration_name is None:
-            if model_record.data_integration_ref is None:
-                raise Exception("The model does not have an associated dataset")
-            if model_record.data_integration_ref["type"] == "integration":
-                integration = self.session.integration_controller.get_by_id(
-                    model_record.data_integration_ref["id"]
-                )
-                if integration is None:
-                    raise Exception(
-                        "The database from which the model was trained no longer exists"
+            if model_record.data_integration_ref is not None:
+                if model_record.data_integration_ref["type"] == "integration":
+                    integration = self.session.integration_controller.get_by_id(
+                        model_record.data_integration_ref["id"]
                     )
+                    if integration is None:
+                        raise Exception(
+                            "The database from which the model was trained no longer exists"
+                        )
 
         ml_handler = None
         if statement.using is not None:

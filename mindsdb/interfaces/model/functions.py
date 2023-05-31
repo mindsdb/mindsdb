@@ -114,11 +114,9 @@ def get_model_record(except_absent=False, ml_handler_name: Optional[str] = None,
 
     kwargs['deleted_at'] = deleted_at
     if active is not None:
-        # not use active if version was chosen
-        if version is not None:
-            kwargs['version'] = version
-        else:
-            kwargs['active'] = active
+        kwargs['active'] = active
+    if version is not None:
+        kwargs['version'] = version
 
     if project_name is not None:
         project_record = get_project_record(name=project_name)

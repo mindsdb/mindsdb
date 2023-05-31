@@ -31,10 +31,21 @@ Now it's time to fill in the connection details.
   <img src="/assets/sql/dbeaver_3.png" />
 </p>
 
-There are two options, as below.
+There are three options, as below.
 
 <Tabs>
-  <Tab title="Connecting to MindsDB Cloud account">
+  <Tab title="Local MindsDB">
+    You can connect to your local MindsDB. To do that, please use the connection details below:
+    
+    ```
+    Hostname: `127.0.0.1`
+    Port: `47334`
+    Username: `mindsdb`
+    Password: <leave it empty>
+    Database: <leave it empty>
+    ```
+  </Tab>
+  <Tab title="MindsDB Cloud">
     You can connect to your MindsDB Cloud account. To do that, please use the connection details below:
 
     ```
@@ -46,18 +57,18 @@ There are two options, as below.
     ```
 
   </Tab>
-  <Tab title="Connecting to local MindsDB">
-    You can connect to your local MindsDB. To do that, please use the connection details below:
-    
+  <Tab title="MindsDB Pro">
+    You can connect to your MindsDB Pro account. To do that, please use the connection details below:
+
     ```
-    Hostname: `127.0.0.1`
-    Port: `47334`
-    Username: `mindsdb`
-    Password: <leave it empty>
+    Hostname: <dedicated instace ip>
+    Port: 3306
+    Username: <your MindsDB Cloud username>
+    Password: <your MindsDB Cloud password>
     Database: <leave it empty>
     ```
-  </Tab>
 
+  </Tab>
 </Tabs>
 
 Now we are ready to test the connection.

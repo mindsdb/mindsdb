@@ -1,6 +1,6 @@
 import gitlab
 
-from mindsdb.integrations.handlers.gitlab_handler.gitlab_tables import GitlabIssuesTable
+from mindsdb.integrations.handlers.gitlab_handler.gitlab_tables import GitlabIssuesTable, GitlabMergeRequestsTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -31,7 +31,9 @@ class GitlabHandler(APIHandler):
         self.is_connected = False
 
         gitlab_issues_data = GitlabIssuesTable(self)
+        gitlab_merge_requests_data = GitlabMergeRequestsTable(self)
         self._register_table("issues", gitlab_issues_data)
+        self._register_table("merge_requests", gitlab_merge_requests_data)
 
     def connect(self) -> StatusResponse:
         """ Set up the connections required by the handler

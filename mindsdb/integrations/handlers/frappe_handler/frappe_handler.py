@@ -96,14 +96,11 @@ class FrappeHandler(APIHandler):
 
     def _get_documents(self, params: Dict = None) -> pd.DataFrame:
         client = self.connect()
-        limit = None
-        filters = None
         doctype = params['doctype']
-        if 'limit' in params:
-            limit = params['limit']
-        if 'filters' in params:
-            filters = params['filters']
-        documents = client.get_documents(doctype, limit=limit, filters=filters)
+        limit = params.get('limit', None)
+        filters = params.get('filters', None)
+        fields = params.get('fields', None)
+        documents = client.get_documents(doctype, limit=limit, fields=fields, filters=filters)
         return pd.DataFrame.from_records([self._document_to_dataframe_row(doctype, d) for d in documents])
 
     def _create_document(self, params: Dict = None) -> pd.DataFrame:

@@ -256,6 +256,11 @@ class ResultSet:
         return self
 
     def from_df_cols(self, df, col_names, strict=True):
+        # find column by alias
+        alias_idx = {}
+        for col in col_names.values():
+            if col.alias is not None:
+                alias_idx[col.alias] = col
 
         resp_dict = df.to_dict(orient='split')
 
@@ -264,6 +269,8 @@ class ResultSet:
         for col in resp_dict['columns']:
             if col in col_names or strict:
                 column = col_names[col]
+            elif col in alias_idx:
+                column = alias_idx[col]
             else:
                 column = Column(col)
             self._columns.append(column)

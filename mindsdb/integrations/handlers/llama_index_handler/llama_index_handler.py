@@ -26,19 +26,20 @@ class LlamaIndexHandler(BaseMLEngine):
         super().__init__(*args, **kwargs)
         self.default_index_class  = 'GPTVectorStoreIndex'
         self.supported_index_class = ['GPTVectorStoreIndex']
-        self.supported_query_engine = ['as_query_engine'] 
         self.default_reader = 'DFReader'
         self.supported_reader = ['DFReader','SimpleWebPageReader']
   
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        
+        """
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
         
         if 'using' not in args:
             raise Exception("LlamaIndex engine requires a USING clause! Refer to its documentation for more details.")
 
-        if args['using']['reader'] == 'SimpleWebPageReader':
-            if 'source_url_link' not in args['using']:
-                raise Exception("LlamaIndex engine requires a source_url_link parameter.Refer to its documentation for more details.")
 
         if 'openai_api_key' not in args['using']:
             raise Exception("LlamaIndex engine requires a openai_api_key parameter.Refer to its documentation for more details.")
@@ -47,11 +48,6 @@ class LlamaIndexHandler(BaseMLEngine):
             args['using']['index_class'] = self.default_index_class
         elif args['using']['index_class'] not in self.supported_index_class:
             raise Exception(f"Invalid index class argument. Please use one of {self.supported_index_class}")
-        
-        if 'query_engine' not in args['using']:
-            args['using']['query_engine'] = self.default_query_engine
-        elif args['using']['query_engine'] not in self.supported_query_engine:
-            raise Exception(f"Invalid operation mode. Please use one of {self.supported_query_engine}")
 
         if 'reader' not in args['using']:
             args['using']['reader'] = self.default_reader
@@ -69,6 +65,10 @@ class LlamaIndexHandler(BaseMLEngine):
             pred = documents_df_reader   
       
         elif args['using']['reader'] == 'SimpleWebPageReader':
+
+            if 'source_url_link' not in args['using']:
+                raise Exception("LlamaIndex engine requires a source_url_link parameter.Refer to its documentation for more details.")
+
             SimpleWebPageReader = download_loader("SimpleWebPageReader")
             documents_url_reader = SimpleWebPageReader(html_to_text=True).load_data([args['using']['source_url_link']])
             pred = documents_url_reader 
@@ -82,6 +82,17 @@ class LlamaIndexHandler(BaseMLEngine):
         
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        """
+        Returns
+        -------
+        pd.DataFrame
+            youtube "commentThreads()" matching the query
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+
 
         args = self.model_storage.json_get('args')
         data_docs = dill.loads(self.model_storage.file_get('pred'))
@@ -154,10 +165,7 @@ class LlamaIndexHandler(BaseMLEngine):
             index = GPTVectorStoreIndex.from_documents(documents)
         else:
             raise Exception(f"Invalid operation mode. Please use one of {self.supported_index_class}.")  
-        
-        if args['using']['query_engine'] == 'as_query_engine':
-            query_engine = index.as_query_engine()
-        else:
-            raise Exception(f"Invalid operation mode. Please use one of {self.supported_query_engine}.")  
+    
+        query_engine = index.as_query_engine()
 
         return query_engine

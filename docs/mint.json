@@ -103,7 +103,6 @@
             {
               "group": "Other",
               "pages": [
-                "connect/kafka",
                 "connect/dbt"
               ]
             }
@@ -125,10 +124,6 @@
         {
           "group": "Applications",
           "pages": [
-            "app-integrations/confluence",
-            "app-integrations/google-calendar",
-            "app-integrations/plaid",
-            "app-integrations/reddit",
             "app-integrations/twitter"
           ]
         },
@@ -243,9 +238,10 @@
           "group": "Connect to MindsDB",
           "pages": [
             "connect/mindsdb_editor",
+            "connect/postgres-client",
+            "connect/mysql-client",
             "connect/dbeaver",
             "connect/connect-mariadb-skysql",
-            "connect/mysql-client",
             "connect/sql-alchemy",
             "connect/deepnote",
             "connect/metabase",
@@ -419,7 +415,8 @@
         {
           "group": "Large Language Models",
           "pages": [
-            "sql/tutorials/twitter-chatbot"
+            "sql/tutorials/twitter-chatbot",
+            "sql/tutorials/image-generator"
           ]
         },
         {
@@ -483,6 +480,13 @@
         "contribute/docs",
         "docs-rules",
         "community"
+      ]
+    },
+    {
+      "group": "FAQs",
+      "pages": [
+        "faqs/whitelist-ips",
+        "faqs/persist-predictions"
       ]
     }
   ],

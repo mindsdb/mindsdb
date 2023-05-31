@@ -27,7 +27,7 @@
 	<img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/Mindsdb">  <a href="https://hub.docker.com/u/mindsdb" target="_blank"><img src="https://img.shields.io/docker/pulls/mindsdb/mindsdb" alt="Docker pulls"></a>
 	<a href="https://ossrank.com/p/630"><img src="https://shields.io/endpoint?url=https://ossrank.com/shield/630"></a>
 	<a href="https://www.mindsdb.com/"><img src="https://img.shields.io/website?url=https%3A%2F%2Fwww.mindsdb.com%2F" alt="MindsDB Website"></a>
-	<a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ" target="_blank"><img src="https://img.shields.io/badge/slack-@mindsdbcommunity-brightgreen.svg?logo=slack " alt="MindsDB Community"></a>
+	<a href="https://mindsdb.com/joincommunity" target="_blank"><img src="https://img.shields.io/badge/slack-@mindsdbcommunity-brightgreen.svg?logo=slack " alt="MindsDB Community"></a>
 	<br />
 	<a href="https://deepnote.com/project/Machine-Learning-With-SQL-8GDF7bc7SzKlhBLorqoIcw/%2Fmindsdb_demo.ipynb" target="_blank"><img src="https://deepnote.com/buttons/launch-in-deepnote-white.svg" alt="Launch in Deepnote"></a>
 	<br />
@@ -106,7 +106,7 @@ docker pull mindsdb/mindsdb
 1. CONNECT MindsDB to your data platform. We support 100+ data platforms and this list is constantly growing. If you can’t find the integration you need, please [let us know](https://mindsdb.com/joincommunity).
 2. CREATE MODEL to connect the AI Engine you pick that will learn from your data and serve it as [AI Table](https://www.youtube.com/watch?v=tnB4Y9T1E2k).
     1. If you have an NLP use case, CREATE MODEL will integrate the [AI Table](https://www.youtube.com/watch?v=tnB4Y9T1E2k) with already pre-trained model you choose (like OpenAI’s GPT or Hugging Face models).
-    2. Please check the [docs](https://docs.mindsdb.com/sql/create/predictor?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) if you want to have manual control over model engineering.
+    2. Please check the [docs](https://docs.mindsdb.com/sql/create/model?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) if you want to have manual control over model engineering.
 3. JOIN such model with your database tables to make predictions for thousands or even millions of data points at once, or run SELECT statements or API calls to make one time predictions.
 4. Set up a JOB to automate your re-training cycle and predictions pipelines for the new incoming data.
 5. Alternatively, use REST API to query the models
@@ -116,11 +116,10 @@ Follow the [quickstart guide](https://docs.mindsdb.com/quickstart?utm_medium=com
 
 ## Database Integrations
 
-MindsDB works with most of the SQL and NoSQL databases, data lakes, data Streams and popular applications.
+MindsDB works with most of the SQL and NoSQL databases, data lakes and popular applications.
 
 | Connect your Data | Connect your Data | Connect your Data
 |-|-|-|
-| <a href="https://docs.mindsdb.com/connect/kafka"><img src="https://img.shields.io/badge/Apache Kafka-808080?style=for-the-badge&logo=apache-kafka&logoColor=white" alt="Connect Apache Kafka"></a> | <a href="https://docs.mindsdb.com/data-integrations/microsoft-access"><img src="https://img.shields.io/badge/Microsoft%20Access-A4373A?logo=microsoftaccess&logoColor=fff&style=for-the-badge" alt="Connect Microsoft Access"></a> | <a href="https://docs.mindsdb.com/data-integrations/oracle"><img src="https://img.shields.io/badge/Oracle-F80000?logo=oracle&logoColor=fff&style=for-the-badge" alt="Oracle Badge"></a> |
 | <a href="https://docs.mindsdb.com/data-integrations/amazon-redshift"><img src="https://img.shields.io/badge/Amazon%20Redshift-0466C8?style=for-the-badge&logo=amazon-aws&logoColor=white" alt="Connect Amazon Redshift"></a> | <a href="https://docs.mindsdb.com/data-integrations/airtable"><img src="https://img.shields.io/badge/Airtable-18BFFF?logo=airtable&logoColor=fff&style=for-the-badge" alt="Airtable Badge"></a> | <a href="https://docs.mindsdb.com/data-integrations/apache-pinot"><img src="https://img.shields.io/badge/Pinot-000?logo=pinot&logoColor=fff&style=for-the-badge" alt="Pinot Badge"></a> |
 | <a href="https://docs.mindsdb.com/data-integrations/apache-cassandra"><img src="https://img.shields.io/badge/Cassandra-1287B1?style=for-the-badge&logo=apache%20cassandra&logoColor=white" alt="Connect Cassandra"></a> | <a href="https://docs.mindsdb.com/data-integrations/datastax"><img src="https://img.shields.io/badge/DataStax-3A3A42?logo=datastax&logoColor=fff&style=for-the-badge" alt="DataStax Badge"></a> | <a href="https://docs.mindsdb.com/data-integrations/amazon-s3"><img src="https://img.shields.io/badge/Amazon%20S3-569A31?logo=amazons3&logoColor=fff&style=for-the-badge" alt="Amazon S3 Badge"></a> |
 | <a href="https://docs.mindsdb.com/data-integrations/cockroachdb"><img src="https://img.shields.io/badge/CockroachDB-426EDF?style=for-the-badge&logo=cockroach-labs&logoColor=white" alt="Connect CockroachDB"></a> | <a href="https://docs.mindsdb.com/data-integrations/ckan"><img src="https://img.shields.io/badge/ckan-7D929E?logo=ckan&logoColor=fff&style=for-the-badge" alt="ckan Badge"></a> | <a href="https://docs.mindsdb.com/data-integrations/supabase"><img src="https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=fff&style=for-the-badge" alt="Supabase Badge"></a> |

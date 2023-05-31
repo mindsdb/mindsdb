@@ -22,8 +22,6 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
 from mindsdb.utilities import log
-from mindsdb.interfaces.stream.stream import StreamController
-from mindsdb.interfaces.stream.utilities import STOP_THREADS_EVENT
 from mindsdb.interfaces.database.integrations import integration_controller
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
@@ -31,7 +29,6 @@ from mindsdb.utilities.fs import create_dirs_recursive, clean_process_marks, cle
 from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
-
 
 import torch.multiprocessing as mp
 try:
@@ -45,7 +42,6 @@ _stop_event = threading.Event()
 
 def close_api_gracefully(apis):
     _stop_event.set()
-    STOP_THREADS_EVENT.set()
     try:
         for api in apis.values():
             process = api['process']
@@ -256,15 +252,6 @@ if __name__ == '__main__':
             except Exception as e:
                 log.logger.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
 
-        stream_controller = StreamController()
-        for integration_name, integration_meta in integration_controller.get_all(sensitive_info=True).items():
-            if (
-                integration_meta.get('type') in stream_controller.known_dbs
-                and integration_meta.get('publish', False) is True
-            ):
-                print(f"Setting up stream: {integration_name}")
-                stream_controller.setup(integration_name)
-        del stream_controller
     # @TODO Backwards compatibility for tests, remove later
 
     if args.api is None:

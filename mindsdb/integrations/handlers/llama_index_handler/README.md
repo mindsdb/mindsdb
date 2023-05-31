@@ -1,8 +1,8 @@
 ## LlamaIndex Handler
-LlamaIndex ML handler for MindsDB, create indexes over data plugged in mindsdb and use it to create a Question & Answer (Q&A) systems
+LlamaIndex ML handler for MindsDB, create indexes over data plugged in mindsdb and use it to create a Question & Answer (Q&A) system
 
 ## LlamaIndex
-LlamaIndex is a data framework for your LLM application.In this handler,python client of LlamaIndex api is used and more information about this python client can be found (here)[https://gpt-index.readthedocs.io/en/latest/]
+LlamaIndex is a data framework for your LLM application. In this handler, we use the LlamaIndex package, which is available in Python. More information about this Python client can be found (here)[https://gpt-index.readthedocs.io/en/latest/].
 
 ## Implemented Features
 - [x] LlamaIndex ML Handler
@@ -21,7 +21,6 @@ PREDICT answer
 USING 
   engine = 'llama_index', 
   index_class = 'GPTVectorStoreIndex',
-  query_engine = 'as_query_engine', 
   reader = 'DFReader',
   input_column = 'question',
   openai_api_key = '{your_open_api_key}';
@@ -38,7 +37,6 @@ PREDICT answer
 USING 
   engine = 'llama_index', 
   index_class = 'GPTVectorStoreIndex',
-  query_engine = 'as_query_engine', 
   reader = 'SimpleWebPageReader',
   source_url_link = 'https://mindsdb.com/about',
   input_column = 'question',

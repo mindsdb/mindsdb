@@ -190,7 +190,7 @@ class ChatBotTask:
             tools = self.params['back_db']['tools']
 
         context_list = [
-            f"- Today's date is {dt.datetime.now().strftime('%Y-%m-%d')}. It has to be used to understand tomorrow/today/yesterday as date"
+            f"- Today's date is {dt.datetime.now().strftime('%Y-%m-%d')}. It must be used to understand the input date from string like 'tomorrow', 'today', 'yesterday'"
         ]
         context = '\n'.join(context_list)
 

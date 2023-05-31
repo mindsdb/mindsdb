@@ -149,7 +149,10 @@ class LangChainHandler(OpenAIHandler):
 
         llm = ChatOpenAI(**model_kwargs)
 
-        memory = ConversationBufferMemory(memory_key="chat_history")
+        # memory = ConversationBufferMemory(memory_key="chat_history")
+        memory = ConversationSummaryBufferMemory(llm=llm,
+                                                 max_token_limit=model_kwargs.get('max_tokens', None),
+                                                 memory_key="chat_history")
 
         # fill memory
 
@@ -182,6 +185,7 @@ class LangChainHandler(OpenAIHandler):
             agent=agent_name,
             max_iterations=pred_args.get('max_iterations', 3),
             verbose=pred_args.get('verbose', args.get('verbose', False)),
+            handle_parsing_errors=True,
         )
 
         # setup model description

@@ -48,7 +48,7 @@ class FrappeHandler(APIHandler):
 
     def back_office_config(self):
         tools = {
-            'register_sales_invoice': 'have to be used by assistant to register a sales invoice. Input is JSON object serialized as a string',
+            'register_sales_invoice': 'have to be used by assistant to register a sales invoice. Input is JSON object serialized as a string. Due date have to be passed in format: "yyyy-mm-dd".',
             'check_company_exists': 'useful to check the company is exist. Input is company',
             'check_expense_type': 'useful to check the expense_type is exist. Input is expense_type',
             'check_customer':  'useful to check the customer is exist. Input is customer',

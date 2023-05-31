@@ -23,12 +23,10 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
         self.model_storage.json_set('args', args)
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        print('making prediction!')
         args = self.model_storage.json_get('args')
         api_key = self._get_huggingface_api_key(args)
 
         if args['using']['task'] == 'text-classification':
-            print('doing text classification')
             nlp = NLP(api_key)
             result_df = nlp.text_classification_in_df(
                 df,
@@ -38,7 +36,6 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['using']['task'] == 'fill-mask':
-            print('doing fill mask')
             nlp = NLP(api_key)
             result_df = nlp.fill_mask_in_df(
                 df,
@@ -48,7 +45,6 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['using']['task'] == 'summarization':
-            print('doing summarization')
             nlp = NLP(api_key)
             result_df = nlp.summarization_in_df(
                 df,
@@ -59,7 +55,6 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['using']['task'] == 'text-generation':
-            print('doing task generation')
             nlp = NLP(api_key)
             result_df = nlp.text_generation_in_df(
                 df,
@@ -70,7 +65,6 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['using']['task'] == 'question-answering':
-            print('doing question answering')
             nlp = NLP(api_key)
             result_df = nlp.question_answering_in_df(
                 df,
@@ -80,7 +74,6 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['using']['task'] == 'sentence-similarity':
-            print('doing sentence similarity')
             nlp = NLP(api_key)
             result_df = nlp.sentence_similarity_in_df(
                 df,
@@ -91,7 +84,6 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['using']['task'] == 'zero-shot-classification':
-            print('doing zero shot classification')
             nlp = NLP(api_key)
             result_df = nlp.zero_shot_classification_in_df(
                 df,
@@ -103,7 +95,6 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['using']['task'] == 'image-classification':
-            print('doing image classification')
             cp = ComputerVision(api_key)
             result_df = cp.image_classification_in_df(
                 df,
@@ -112,7 +103,6 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['using']['task'] == 'object-detection':
-            print('doing object detection')
             cp = ComputerVision(api_key)
             result_df = cp.object_detection_in_df(
                 df,
@@ -121,7 +111,6 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['using']['task'] == 'speech-recognition':
-            print('doing speech recognition')
             ap = AudioProcessing(api_key)
             result_df = ap.speech_recognition_in_df(
                 df,
@@ -130,7 +119,6 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['using']['task'] == 'audio-classification':
-            print('doing audio classification')
             ap = AudioProcessing(api_key)
             result_df = ap.audio_classification_in_df(
                 df,

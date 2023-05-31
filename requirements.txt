@@ -23,8 +23,6 @@ appdirs >= 1.0.0
 mindsdb-sql >= 0.6.1, < 0.7.0
 mindsdb-evaluator >= 0.0.7, < 0.1.0
 checksumdir >= 1.2.0
-#TODO: remove this once we have a new release of mindsdb-streams
-#mindsdb-streams == 0.1.1 I forked and installed locally after bumping the requests v requirement
 duckdb == 0.7.1
 requests >= 2.28.0
 mysql-connector-python

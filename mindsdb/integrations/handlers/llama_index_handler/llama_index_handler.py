@@ -56,7 +56,7 @@ class LlamaIndexHandler(BaseMLEngine):
         if 'reader' not in args['using']:
             args['using']['reader'] = self.default_reader
         elif args['using']['reader'] not in self.supported_reader:
-            raise Exception(f"Invalid operation mode. Please use one of {self.supported_query_engine}")
+            raise Exception(f"Invalid operation mode. Please use one of {self.supported_reader}")
 
        
         documents_df_reader = []
@@ -72,7 +72,9 @@ class LlamaIndexHandler(BaseMLEngine):
             SimpleWebPageReader = download_loader("SimpleWebPageReader")
             documents_url_reader = SimpleWebPageReader(html_to_text=True).load_data([args['using']['source_url_link']])
             pred = documents_url_reader 
-    
+
+        else:
+            raise Exception(f"Invalid operation mode. Please use one of {self.supported_reader}.")  
         
         self.model_storage.file_set('pred', dill.dumps(pred))
         self.model_storage.json_set('args', args)
@@ -90,11 +92,9 @@ class LlamaIndexHandler(BaseMLEngine):
         if input_column not in df.columns:
             raise RuntimeError(f'Column "{input_column}" not found in input data')
 
-        if args['using']['reader'] == 'DFReader':  
-            query_engine  = self.predict_qa_reader(data_docs)
+        
+        query_engine  = self.predict_qa_reader(data_docs)
                 
-        elif args['using']['reader'] == 'SimpleWebPageReader':
-            query_engine = self.predict_qa_reader(data_docs)
             
         questions = df[input_column]   
         results = []
@@ -140,17 +140,15 @@ class LlamaIndexHandler(BaseMLEngine):
             raise Exception(f'Missing API key "OPENAI_API_KEY". Either re-create this ML_ENGINE specifying the `OPENAI_API_KEY` parameter,\
                  or re-create this model and pass the API key with `USING` syntax.')  
 
-    def predict_qa_reader(self,doc):
+    def predict_qa_reader(self,documents):
         """ 
-        connects with llama_index python client to predict the 
+        connects with llama_index python client to predict the q&a
 
         """ 
         
         args = self.model_storage.json_get('args')
 
         os.environ['OPENAI_API_KEY'] = args['using']['openai_api_key']
-
-        documents = doc
         
         if args['using']['index_class'] == 'GPTVectorStoreIndex':
             index = GPTVectorStoreIndex.from_documents(documents)

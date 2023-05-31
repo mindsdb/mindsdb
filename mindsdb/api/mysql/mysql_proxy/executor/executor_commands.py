@@ -85,6 +85,7 @@ from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import resolve_model_identifier
 import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.functions import mark_process
 
 
 def _get_show_where(
@@ -772,6 +773,7 @@ class ExecuteCommands:
         return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
 
     @profiler.profile()
+    @mark_process('learn')
     def answer_finetune_predictor(self, statement):
         model_record = self._get_model_info(statement.name)['model_record']
 
@@ -1058,6 +1060,7 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
+    @mark_process('learn')
     def answer_create_predictor(self, statement):
         integration_name = self.session.database
         if len(statement.name.parts) > 1:

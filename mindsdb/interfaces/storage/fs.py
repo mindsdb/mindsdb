@@ -120,7 +120,7 @@ class LocalFSStore(BaseFSStore):
         if path.is_file():
             path.unlink()
         else:
-            path.rmdir()
+            shutil.rmtree(path)
 
 
 class S3FSStore(BaseFSStore):

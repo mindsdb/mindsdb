@@ -12,6 +12,7 @@ import copy
 import re
 import hashlib
 import datetime as dt
+from collections import defaultdict
 
 import dateinfer
 import duckdb
@@ -1134,9 +1135,14 @@ class SQLQuery():
 
             df, col_names = result_set.to_df_cols()
             col_idx = {}
+            tbl_idx = defaultdict(list)
             for name, col in col_names.items():
                 col_idx[col.alias] = name
                 col_idx[(col.table_alias, col.alias)] = name
+                # add to tables
+                tbl_idx[col.table_name].append(name)
+                if col.table_name != col.table_alias:
+                    tbl_idx[col.table_alias].append(name)
 
             # analyze condition and change name of columns
             def check_fields(node, is_table=None, **kwargs):
@@ -1146,8 +1152,16 @@ class SQLQuery():
                     # only column name
                     col_name = node.parts[-1]
                     if isinstance(col_name, Star):
-                        # skip Star
-                        return
+                        if len(node.parts) == 1:
+                            # left as is
+                            return
+                        else:
+                            # replace with all columns from table
+                            table_name = node.parts[-2]
+                            return [
+                                Identifier(parts=[col])
+                                for col in tbl_idx.get(table_name, [])
+                            ]
 
                     if len(node.parts) == 1:
                         key = col_name
@@ -1159,14 +1173,21 @@ class SQLQuery():
                         raise ErKeyColumnDoesNotExist(f'Table not found for column: {key}')
 
                     new_name = col_idx[key]
-                    return Identifier(parts=[new_name])
+                    return Identifier(parts=[new_name], alias=node.alias)
 
             query = Select(
                 targets=step.columns,
                 from_table=Identifier('df_table')
             )
 
-            query.targets = query_traversal(query.targets, check_fields)
+            targets0 = query_traversal(query.targets, check_fields)
+            targets = []
+            for target in targets0:
+                if isinstance(target, list):
+                    targets.extend(target)
+                else:
+                    targets.append(target)
+            query.targets = targets
 
             res = query_df(df, query)
 

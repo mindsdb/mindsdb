@@ -24,6 +24,7 @@ from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.interfaces.storage.model_fs import ModelStorage
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import resolve_model_identifier
+import mindsdb.utilities.profiler as profiler
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -434,6 +435,7 @@ class ModelController():
             set_active=set_active
         )
 
+    @profiler.profile
     def finetune_model(self, statement, ml_handler):
         params = self.prepare_finetune_statement(statement, ml_handler.database_controller)
         predictor_record = ml_handler.update(**params)

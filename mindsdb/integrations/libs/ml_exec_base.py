@@ -49,6 +49,7 @@ from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.integrations.handlers_client.ml_client_factory import MLClientFactory
 from mindsdb.integrations.libs.learn_process import learn_process
 from mindsdb.utilities.functions import mark_process
+import mindsdb.utilities.profiler as profiler
 
 from .ml_handler_proc import MLHandlerWrapper, MLHandlerPersistWrapper
 
@@ -295,6 +296,7 @@ class BaseMLEngineExec:
     def query_(self, query: ASTNode) -> Response:
         raise Exception('Should not be used')
 
+    @profiler.profile()
     def learn(
         self, model_name, project_name,
         data_integration_ref=None,
@@ -373,6 +375,7 @@ class BaseMLEngineExec:
 
         return predictor_record
 
+    @profiler.profile()
     @mark_process(name='predict')
     def predict(self, model_name: str, data: list, pred_format: str = 'dict',
                 project_name: str = None, version=None, params: dict = None):
@@ -447,6 +450,7 @@ class BaseMLEngineExec:
         )
         return predictions
 
+    @profiler.profile()
     def update(
             self, model_name, project_name,
             base_model_version: int,
@@ -512,25 +516,26 @@ class BaseMLEngineExec:
 
         class_path = [self.handler_class.__module__, self.handler_class.__name__]
 
-        task = process_cache.apply_async(
-            self.handler_class,
-            learn_process,
-            class_path,
-            self.engine,
-            ctx.dump(),
-            self.integration_id,
-            predictor_record.id,
-            predictor_record.learn_args,
-            set_active,
-            base_predictor_record.id,
-            data_integration_ref=data_integration_ref,
-            fetch_data_query=fetch_data_query,
-            project_name=project_name
-        )
+        with profiler.Context('finetune-update'):
+            task = process_cache.apply_async(
+                self.handler_class,
+                learn_process,
+                class_path,
+                self.engine,
+                ctx.dump(),
+                self.integration_id,
+                predictor_record.id,
+                predictor_record.learn_args,
+                set_active,
+                base_predictor_record.id,
+                data_integration_ref=data_integration_ref,
+                fetch_data_query=fetch_data_query,
+                project_name=project_name
+            )
 
-        if join_learn_process is True:
-            task.result()
-            predictor_record = db.Predictor.query.get(predictor_record.id)
-            db.session.refresh(predictor_record)
+            if join_learn_process is True:
+                task.result()
+                predictor_record = db.Predictor.query.get(predictor_record.id)
+                db.session.refresh(predictor_record)
 
         return predictor_record

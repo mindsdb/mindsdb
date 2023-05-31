@@ -771,6 +771,7 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
 
+    @profiler.profile
     def answer_finetune_predictor(self, statement):
         model_record = self._get_model_info(statement.name)['model_record']
 

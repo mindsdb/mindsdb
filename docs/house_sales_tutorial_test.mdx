@@ -1,0 +1,114 @@
+## Testing: House Sales Tutorial
+
+1. Testing CREATE DATABASE
+
+```
+CREATE DATABASE example_db
+    WITH ENGINE = "postgres",
+    PARAMETERS = {
+        "user": "demo_user",
+        "password": "demo_password",
+        "host": "3.220.66.106",
+        "port": "5432",
+        "database": "demo"
+};
+```
+Output:
+| status |
+| ------ |
+| Query successfully completed |
+
+
+2. Testing Preview the Available Data Using SELECT
+
+```
+SELECT *
+FROM example_db.demo_data.house_sales
+LIMIT 10;
+
+```
+output
+| saledate | ma  | type | bedrooms |
+| -------- | --- | ---- | -------- |
+| 2007-09-30 | 441854 | house | 2 |
+| 2007-12-31 | 441854 | house | 2 |
+| 2008-03-31 | 441854 | house | 2 |
+| 2008-06-30 | 441854 | house | 2 |
+| 2008-09-30 | 451583 | house | 2 |
+| 2008-12-31 | 440256 | house | 2 |
+| 2009-03-31 | 442566 | house | 2 |
+| 2009-06-30 | 446113 | house | 2 |
+| 2009-09-30 | 440123 | house | 2 |
+| 2009-12-31 | 442131 | house | 2 |
+
+
+3. Create a Model Using CREATE MODEL
+```
+CREATE MODEL mindsdb.house_sales_predictor
+FROM files
+  (SELECT * FROM house_sales)
+PREDICT MA
+ORDER BY saledate
+GROUP BY bedrooms, type
+-- the target column to be predicted stores one row per quarter
+WINDOW 8     
+HORIZON 4;
+
+```
+output 
+
+| NAME | ENGINE | PROJECT | ACTIVE | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | TAG |
+| ---- | ------ | ------- | ------ | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | --- |
+| house_sales_predictor | lightwood | mindsdb | true | 1 | generating | [NULL] | MA | up_to_date | 23.5.3.2 | [NULL] | SELECT * FROM house_sales | {'target': 'MA', 'timeseries_settings': {'is_timeseries': True, 'order_by': 'saledate', 'horizon': 4, 'window': 8, 'group_by': ['bedrooms', 'type']}} | [NULL] |
+
+4. Testing Check the Status of a Model Using SELECT
+
+```
+SELECT status
+FROM mindsdb.models
+WHERE name='house_sales_predictor';
+```
+
+output
+
+| status |
+| ------ |
+| complete |
+
+
+5. Testing Make Predictions Using SELECT
+
+```
+SELECT m.saledate AS date, m.MA AS forecast, MA_explain
+FROM mindsdb.house_sales_predictor AS m
+JOIN files.house_sales AS t
+WHERE t.saledate > LATEST
+AND t.type = 'house'
+AND t.bedrooms = 2
+LIMIT 4;
+
+```
+
+
+output 
+| date | forecast | MA_explain |
+| ---- | -------- | ---------- |
+| 2019-12-31 00:00:00.000000 | 455704.5416666667 | {"predicted_value": 455704.5416666667, "confidence": 0.9991, "anomaly": false, "truth": null, "confidence_lower_bound": 451048.64631782944, "confidence_upper_bound": 460360.43701550394} |
+| 2020-04-01 00:00:00.000000 | 457982.5416666666 | {"predicted_value": 457982.5416666666, "confidence": 0.9991, "anomaly": null, "truth": null, "confidence_lower_bound": 453043.843992248, "confidence_upper_bound": 462921.23934108525} |
+| 2020-07-02 00:00:00.000000 | 471354.5416666667 | {"predicted_value": 471354.5416666667, "confidence": 0.9991, "anomaly": null, "truth": null, "confidence_lower_bound": 453450.75096899224, "confidence_upper_bound": 489258.3323643411} |
+| 2020-10-02 00:00:00.000000 | 474160.5416666667 | {"predicted_value": 474160.5416666667, "confidence": 0.9991, "anomaly": null, "truth": null, "confidence_lower_bound": 452460.9486434109, "confidence_upper_bound": 495860.13468992244} |
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

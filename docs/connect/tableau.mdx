@@ -37,6 +37,38 @@ password. Then, click _Sign In_.
   <img src="/assets/connect_tableau_2.png" />
 </p>
 
+Here are the connection parameters specific for your MindsDB installation type:
+
+<Tabs>
+    <Tab title="Local MindsDB">
+      ```text
+      Host: `localhost`
+      Port: `47335`
+      Database name: `mindsdb`
+      Username: `mindsdb`
+      Password: *leave it empty*
+      ```
+    </Tab>
+    <Tab title="MindsDB Cloud">
+      ```text
+      Host: `cloud.mindsdb.com`
+      Port: `3306`
+      Database name: `mindsdb`
+      Username: `<your MindsDB Cloud username>`
+      Password: `<your MindsDB Cloud password>`
+      ```
+    </Tab>
+    <Tab title="MindsDB Pro">
+      ```text
+      Host: `<dedicated instace ip>`
+      Port: 3306
+      Database name: `mindsdb`
+      Username: `<your MindsDB Cloud username>`
+      Password: `<your MindsDB Cloud password>`
+      ```
+    </Tab>
+</Tabs>
+
 Now you're connected!
 
 ## Overview of MindsDB in Tableau

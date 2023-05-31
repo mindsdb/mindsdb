@@ -12,10 +12,10 @@ installation. Please have a look at them below.
 
 ### Pip and Python Versions
 
-We suggest using **Python 3.7.x, 3.8.x, or 3.9.x versions** for now.
+We suggest using **Python 3.8.x, or 3.9.x versions** for now.
 
 To successfully install MindsDB, use **Python 64-bit version**. Also, make sure
-that **Python >= 3.7** and **pip >= 20.3**. You can check the pip and python
+that **Python >= 3.8** and **pip >= 20.3**. You can check the pip and python
 versions by running the `pip --version` and
 `python --version` commands.
 
@@ -47,6 +47,15 @@ error, please check the MindsDB server console to see if the server is still in
 the `starting` phase. But if the server has started and you still get this
 error, please report it on our
 [GitHub repository](https://github.com/mindsdb/mindsdb/issues).
+
+### How to Overcome `ImportError: failed to find libmagic`
+
+If you get the `ImportError: failed to find libmagic` error, you should install the `libmagic` manually by running one of the commands below:
+
+```bash
+pip install python-magic-bin
+brew install libmagic
+```
 
 ## Installation
 

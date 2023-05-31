@@ -1,7 +1,9 @@
 import copy
+import io
 
 import duckdb
 import numpy as np
+import pandas as pd
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -36,6 +38,7 @@ def query_df(df, query, session=None):
             "Only 'SELECT from TABLE' statements supported for internal query"
         )
 
+    table_name = query_ast.from_table.parts[0]
     query_ast.from_table.parts = ['df_table']
 
     def adapt_query(node, is_table, **kwargs):
@@ -68,6 +71,12 @@ def query_df(df, query, session=None):
             f"Exception during query casting to 'postgres' dialect. Query: {str(query)}. Error: {e}"
         )
         query_str = render.get_string(query_ast, with_failback=True)
+
+    # workaround to prevent duckdb.TypeMismatchException: serialize and deserialize with feather
+    if len(df) > 0 and table_name.lower() in ('models', 'predictors'):
+        fd = io.BytesIO()
+        df.to_feather(fd)
+        df = pd.read_feather(fd)
 
     con = duckdb.connect(database=':memory:')
     con.register('df_table', df)

@@ -6,14 +6,52 @@ sidebarTitle: HuggingFace
 Hugging Face facilitates building, training, and deploying ML models. Now you can create Hugging Face models within MindsDB.
 
 <Note>
-    **Using Local Installation of MindsDB**
-
-    Please note that if you use local installation of MindsDB, instead of MindsDB Cloud, you should install `transformers==4.21.0` to be able to use the Hugging Face models.
+Please note that if you use local installation of MindsDB, instead of MindsDB Cloud, you should install `transformers==4.21.0` to be able to use the Hugging Face models.
 </Note>
 
 ## How to Bring the Hugging Face Model to MindsDB
 
 We use the [`CREATE MODEL`](/sql/create/predictor) statement to bring the Hugging Face models to MindsDB.
+
+<Tabs>
+<Tab title="Downloading Models from Hugging Face Repository">
+One way is to download Hugging Face models from their repository. To do so, you need to specify the `model_name` parameter.
+
+```sql
+CREATE MODEL mindsdb.spam_classifier
+PREDICT PRED
+USING
+  engine = 'huggingface',
+  task = 'text-classification',
+  model_name = 'mrm8488/bert-tiny-finetuned-sms-spam-detection',
+  input_column = 'text_spammy',
+  labels = ['ham', 'spam'];
+```
+</Tab>
+
+<Tab title="Using Hugging Face Inference API">
+Another way is to specify a task to be performed by the model and the Hugging Face Inference API does the rest.
+
+```sql
+CREATE MODEL mindsdb.sentiment_classifier
+PREDICT sentiment
+USING
+  engine = 'hf_inference_api',
+  task = 'text-classification',
+  column = 'text';
+```
+
+Please note that in order to use the Hugging Face Inference API, you need to create the `hf_inference_api` ML engine using your Hugging Face token:
+
+```sql
+CREATE ML_ENGINE hf_inference_api
+FROM huggingface_api
+USING api_key = 'hf_xxx';
+```
+
+You can generate Hugging Face tokens in the `Setings -> Access Tokens` tab of your Hugging Face account.
+</Tab>
+</Tabs>
 
 Let's go through some sample models.
 

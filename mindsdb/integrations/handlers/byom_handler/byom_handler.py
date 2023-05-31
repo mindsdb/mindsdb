@@ -40,7 +40,7 @@ class BYOMHandler(BaseMLEngine):
 
         model_proxy = self._get_model_proxy()
 
-        model_state = model_proxy.train(df, target)
+        model_state = model_proxy.train(df, target, args)
 
         self.model_storage.file_set('model', model_state)
 
@@ -63,12 +63,13 @@ class BYOMHandler(BaseMLEngine):
         self.model_storage.columns_set(columns)
 
     def predict(self, df, args=None):
+        pred_args = args.get('predict_params', {})
 
         model_proxy = self._get_model_proxy()
 
         model_state = self.model_storage.file_get('model')
 
-        pred_df = model_proxy.predict(df, model_state)
+        pred_df = model_proxy.predict(df, model_state, pred_args)
 
         return pred_df
 
@@ -195,24 +196,26 @@ class ModelWrapper:
         }
         return self._run_command(params)
 
-    def train(self, df, target):
+    def train(self, df, target, args):
         params = {
             'method': 'train',
             'df': pd_encode(df),
             'code': self.code,
-            'to_predict': target
+            'to_predict': target,
+            'args': args,
         }
 
         model_state = self._run_command(params)
         return model_state
 
-    def predict(self, df, model_state):
+    def predict(self, df, model_state, args):
 
         params = {
             'method': 'predict',
             'code': self.code,
             'df': pd_encode(df),
             'model_state': model_state,
+            'args': args,
         }
         pred_df = self._run_command(params)
         return pd_decode(pred_df)

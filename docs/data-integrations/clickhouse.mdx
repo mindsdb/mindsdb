@@ -17,8 +17,12 @@ The required arguments to establish a connection are as follows:
 * `port` is the TCP/IP port of the ClickHouse server.
 * `user` is the username used to authenticate with the ClickHouse server.
 * `password` is the password to authenticate the user with the ClickHouse server.
-* `database` is the database name to use when connecting with the ClickHouse server.
+* `database` defaults to `default`. It is the database name to use when connecting with the ClickHouse server.
 * `protocol` defaults to `native`. It is an optional parameters. Its supported values are `http` and `https`.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/clickhouse_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
 
 ## Usage
 
@@ -41,5 +45,13 @@ You can use this established connection to query your table as follows:
 
 ```sql
 SELECT *
-FROM clickhouse_datasource.example_tbl;
+FROM clickhouse_datasource.example_table;
 ```
+
+<Tip>
+If you want to swithc to different database instead the one you have connected, you can include it in the query as:
+```sql
+SELECT *
+FROM clickhouse_datasource.new_database.example_table;
+```
+</Tip>

@@ -40,6 +40,7 @@ def install_deps():
             new_pkgs.append(pkg.replace('egg=', '').rstrip())
         else:
             new_pkgs.append(resource.strip())
+
     return new_pkgs, links
 
 
@@ -64,5 +65,5 @@ setup(
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.7"
+    python_requires=">=3.8"
 )

@@ -287,7 +287,8 @@ if __name__ == '__main__':
             'started': False
         }
 
-    if config.get('chatbot', {}).get('disable') is not True:
+    # disabled on cloud
+    if config.get('chatbot', {}).get('disable') is not True and not is_cloud:
         apis['chatbot'] = {
             'process': None,
             'started': False

@@ -16,9 +16,9 @@ FROM mysql_demo_db.amazon_reviews AS input
 JOIN sentiment_classifier AS output;
 ```
 
-But there are ways to save predictions, so you don't need to run this query every time.
+However, querying the model returns the result set that is not persistent by default. For future use, it is recommended to persist the result set instead of querying the model again with the same data.
 
-MindsDB enables you to save predictions into a view or a table, or download as a CSV file.
+MindsDB enables you to save predictions into a view or a table or download as a CSV file.
 </Note>
 
 ## Creating a View

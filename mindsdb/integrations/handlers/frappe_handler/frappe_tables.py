@@ -35,6 +35,8 @@ class FrappeDocumentsTable(APITable):
 
         if query.limit:
             params['limit'] = query.limit.value
+        if filters:
+            params['filters'] = filters
 
         if 'name' in params:
             document_data = self.handler.call_frappe_api(

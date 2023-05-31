@@ -727,16 +727,15 @@ class ExecuteCommands:
         model_record = self._get_model_info(statement.name)['model_record']
 
         if statement.integration_name is None:
-            if model_record.data_integration_ref is None:
-                raise Exception("The model does not have an associated dataset")
-            if model_record.data_integration_ref["type"] == "integration":
-                integration = self.session.integration_controller.get_by_id(
-                    model_record.data_integration_ref["id"]
-                )
-                if integration is None:
-                    raise Exception(
-                        "The database from which the model was trained no longer exists"
+            if model_record.data_integration_ref is not None:
+                if model_record.data_integration_ref["type"] == "integration":
+                    integration = self.session.integration_controller.get_by_id(
+                        model_record.data_integration_ref["id"]
                     )
+                    if integration is None:
+                        raise Exception(
+                            "The database from which the model was trained no longer exists"
+                        )
 
         ml_handler = None
         if statement.using is not None:

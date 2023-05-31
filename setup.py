@@ -49,7 +49,7 @@ def define_deps():
             links.append(r + '-9876543210')
             requirements.append(pkg.replace('egg=', ''))
         else:
-            requirements.append(r)
+            requirements.append(r.strip())
 
     extra_requirements = {}
     full_requirements = []

@@ -163,8 +163,6 @@ class IntegrationController:
         return integration_record.id
 
     def add(self, name, engine, connection_args):
-        if engine in ['redis', 'kafka']:
-            return self._add_integration_record(name, engine, connection_args)
 
         logger.debug(
             "%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",

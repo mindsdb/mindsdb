@@ -50,7 +50,6 @@ itsdangerous==1.1.0
 Jinja2==2.11.3
 joblib==1.2.0
 jsonschema==4.17.3
-kafka-python==2.0.2
 kiwisolver==1.4.4
 langid==1.1.6
 leb128==1.0.5
@@ -64,7 +63,6 @@ marshmallow-enum==1.5.1
 matplotlib==3.7.1
 mindsdb-evaluator >= 0.0.7, < 0.1.0
 mindsdb-sql >= 0.6.1, < 0.7.0
-mindsdb-streams==0.1.1
 mpmath==1.3.0
 mypy-extensions==1.0.0
 mysql-connector-python==8.0.33

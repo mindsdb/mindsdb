@@ -17,6 +17,10 @@ The required arguments to establish a connection are as follows:
 * `aws_secret_access_key` is the AWS secret access key.
 * `region_name` is the AWS region.
 
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/dynamodb_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
 ## Usage
 
 In order to make use of this handler and connect to the DynamoDB database in MindsDB, the following syntax can be used:

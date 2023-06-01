@@ -13,6 +13,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.context import context as ctx
+import mindsdb.utilities.profiler as profiler
 
 
 class Project:
@@ -216,6 +217,7 @@ class Project:
             }
         }
 
+    @profiler.profile()
     def get_tables(self):
         data = OrderedDict()
         data['models'] = {'type': 'table', 'deletable': False}

@@ -28,6 +28,7 @@ from mindsdb.utilities.log import get_log
 # from mindsdb.integrations.utilities.processes_cache import process_cache    # noqa
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
+import mindsdb.utilities.profiler as profiler
 
 logger = get_log()
 
@@ -392,6 +393,7 @@ class IntegrationController:
         else:
             return DBClient(handler_type, **handler_ars)
 
+    @profiler.profile()
     def get_handler(self, name, case_sensitive=False):
         handler = self.handlers_cache.get(name)
         if handler is not None:

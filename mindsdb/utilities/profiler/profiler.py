@@ -30,7 +30,7 @@ def start_node(tag: str):
     """
     profiling = ctx.profiling
     new_node = {
-        'start_at': time.perf_counter(),
+        'start_at': time.process_time(),
         'stop_at': None,
         'name': tag,
         'children': []
@@ -56,7 +56,7 @@ def stop_current_node():
         # profiling was activated not in the root of nodes tree
         return
     current_node = _get_current_node(profiling)
-    current_node['stop_at'] = time.perf_counter()
+    current_node['stop_at'] = time.process_time()
     if len(profiling['pointer']) > 0:
         profiling['pointer'] = profiling['pointer'][:-1]
     else:

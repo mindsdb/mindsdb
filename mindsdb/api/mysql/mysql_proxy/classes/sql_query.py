@@ -78,6 +78,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
 )
 from mindsdb.utilities.cache import get_cache, json_checksum
 import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.fs import create_process_mark, delete_process_mark
 
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
@@ -650,8 +651,14 @@ class SQLQuery():
             return
 
         steps_data = []
+        process_mark = None
         try:
-            for step in self.planner.execute_steps(params):
+            steps = list(self.planner.execute_steps(params))
+            steps_classes = (x.__class__ for x in steps)
+            predict_steps = (ApplyPredictorRowStep, ApplyPredictorStep, ApplyTimeseriesPredictorStep)
+            if any(s in predict_steps for s in steps_classes):
+                process_mark = create_process_mark('predict')
+            for step in steps:
                 with profiler.Context(f'step: {step.__class__.__name__}'):
                     data = self.execute_step(step, steps_data)
                 step.set_result(data)
@@ -660,6 +667,9 @@ class SQLQuery():
             raise ErLogicError(e)
         except Exception as e:
             raise e
+        finally:
+            if process_mark is not None:
+                delete_process_mark('predict', process_mark)
 
         # save updated query
         self.query = self.planner.query

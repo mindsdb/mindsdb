@@ -15,6 +15,7 @@ except Exception:
 
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
+import mindsdb.utilities.profiler as profiler
 
 
 @dataclass(frozen=True)
@@ -206,18 +207,22 @@ class FileStorage:
         if self.folder_path.exists() is False:
             self.folder_path.mkdir(parents=True, exist_ok=True)
 
+    @profiler.profile()
     def push(self):
         self.fs_store.put(str(self.folder_name), str(self.resource_group_path))
 
+    @profiler.profile()
     def push_path(self, path):
         self.fs_store.put(os.path.join(self.folder_name, path), str(self.resource_group_path))
 
+    @profiler.profile()
     def pull(self):
         try:
             self.fs_store.get(str(self.folder_name), str(self.resource_group_path))
         except Exception:
             pass
 
+    @profiler.profile()
     def pull_path(self, path, update=True):
         if update is False:
             # not pull from source if object is exists
@@ -229,6 +234,7 @@ class FileStorage:
         except Exception:
             pass
 
+    @profiler.profile()
     def file_set(self, name, content):
         if self.sync is True:
             self.pull()
@@ -241,6 +247,7 @@ class FileStorage:
         if self.sync is True:
             self.push()
 
+    @profiler.profile()
     def file_get(self, name):
 
         if self.sync is True:
@@ -251,6 +258,7 @@ class FileStorage:
         with open(dest_abs_path, 'rb') as fd:
             return fd.read()
 
+    @profiler.profile()
     def add(self, path: Union[str, Path], dest_rel_path: Optional[Union[str, Path]] = None):
         """Copy file/folder to persist storage
 
@@ -291,6 +299,7 @@ class FileStorage:
         if self.sync is True:
             self.push()
 
+    @profiler.profile()
     def get_path(self, relative_path: Union[str, Path]) -> Path:
         """ Return path to file or folder
 

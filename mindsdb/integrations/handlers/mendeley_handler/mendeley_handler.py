@@ -50,3 +50,33 @@ class MendeleyHandler(APIHandler):
 
         self.is_connected = True
         return self.session
+    
+    def check_connection(self) -> StatusResponse:
+
+        """ The check_connection method checks the connection to the handler
+        Returns:
+            HandlerStatusResponse
+        """
+        response = StatusResponse(False)
+
+        try:
+            self.connect()
+            response.success = True
+
+        except Exception as e:
+            log.logger.error(f'Error connecting to Mendeley: {e}!')
+            response.error_message = str(e)
+
+        self.is_connected = response.success
+        return response
+
+    def native_query(self, query_string: str):
+        
+        """The native_query method receives raw query and acts upon it.
+            Args:
+                query_string (str): query in native format
+            Returns:
+                HandlerResponse
+        """
+        ast = parse_sql(query_string, dialect="mindsdb")
+        return self.query(ast)

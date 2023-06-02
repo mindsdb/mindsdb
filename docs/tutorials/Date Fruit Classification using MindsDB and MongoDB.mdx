@@ -62,11 +62,13 @@ db.databases.insertOne({
     connection_args: {
             "port": 27017, // connection port
             "host": "mongodb://cloud.mindsdb.com:27017", // connection host
-            "database": "files"  // connecting database
+            "database": "date_fruit_db"  // connecting database
     }
 });
 ```
 ![create-database](images/date-fruit-classification/create-database.png)
+
+*P.S.: You need to first create a *Mongo database* (here `date_fruit_db`) and add the `date_fruit_data` csv file. Then later you connect the above database with this one.*
 
 ### Understanding the Data
 We use the **Date Fruit dataset**, where each row are the factors that determine the type of date fruit along with features (columns) such as area, length, diameter, shape, etc. *The external appearance of the fruits is a major determinant of the fruit type.* 

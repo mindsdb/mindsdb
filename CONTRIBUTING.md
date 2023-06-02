@@ -35,7 +35,7 @@ The Pull Request reviews are done on a regular basis. Please, make sure you resp
 
 ## Community
 
-If you have additional questions or you want to chat with the MindsDB core team, please join our [Slack community](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ) or post at [Github Discussions](https://github.com/mindsdb/mindsdb/discussions).
+If you have additional questions or you want to chat with the MindsDB core team, please join our [Slack community](https://mindsdb.com/joincommunity) or post at [Github Discussions](https://github.com/mindsdb/mindsdb/discussions).
  
 To get updates on MindsDB’s latest announcements, releases, and events, sign up for our [Monthly Community Newsletter](https://mindsdb.com/newsletter/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 

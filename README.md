@@ -27,7 +27,7 @@
 	<img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/Mindsdb">  <a href="https://hub.docker.com/u/mindsdb" target="_blank"><img src="https://img.shields.io/docker/pulls/mindsdb/mindsdb" alt="Docker pulls"></a>
 	<a href="https://ossrank.com/p/630"><img src="https://shields.io/endpoint?url=https://ossrank.com/shield/630"></a>
 	<a href="https://www.mindsdb.com/"><img src="https://img.shields.io/website?url=https%3A%2F%2Fwww.mindsdb.com%2F" alt="MindsDB Website"></a>
-	<a href="https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ" target="_blank"><img src="https://img.shields.io/badge/slack-@mindsdbcommunity-brightgreen.svg?logo=slack " alt="MindsDB Community"></a>
+	<a href="https://mindsdb.com/joincommunity" target="_blank"><img src="https://img.shields.io/badge/slack-@mindsdbcommunity-brightgreen.svg?logo=slack " alt="MindsDB Community"></a>
 	<br />
 	<a href="https://deepnote.com/project/Machine-Learning-With-SQL-8GDF7bc7SzKlhBLorqoIcw/%2Fmindsdb_demo.ipynb" target="_blank"><img src="https://deepnote.com/buttons/launch-in-deepnote-white.svg" alt="Launch in Deepnote"></a>
 	<br />
@@ -106,7 +106,7 @@ docker pull mindsdb/mindsdb
 1. CONNECT MindsDB to your data platform. We support 100+ data platforms and this list is constantly growing. If you can’t find the integration you need, please [let us know](https://mindsdb.com/joincommunity).
 2. CREATE MODEL to connect the AI Engine you pick that will learn from your data and serve it as [AI Table](https://www.youtube.com/watch?v=tnB4Y9T1E2k).
     1. If you have an NLP use case, CREATE MODEL will integrate the [AI Table](https://www.youtube.com/watch?v=tnB4Y9T1E2k) with already pre-trained model you choose (like OpenAI’s GPT or Hugging Face models).
-    2. Please check the [docs](https://docs.mindsdb.com/sql/create/predictor?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) if you want to have manual control over model engineering.
+    2. Please check the [docs](https://docs.mindsdb.com/sql/create/model?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) if you want to have manual control over model engineering.
 3. JOIN such model with your database tables to make predictions for thousands or even millions of data points at once, or run SELECT statements or API calls to make one time predictions.
 4. Set up a JOB to automate your re-training cycle and predictions pipelines for the new incoming data.
 5. Alternatively, use REST API to query the models

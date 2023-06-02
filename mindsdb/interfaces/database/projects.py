@@ -242,8 +242,14 @@ class Project:
             name=table_name
         ).first()
         columns = []
-        if predictor_record is not None and isinstance(predictor_record.dtype_dict, dict):
-            columns = list(predictor_record.dtype_dict.keys())
+        if predictor_record is not None:
+            if isinstance(predictor_record.dtype_dict, dict):
+                columns = list(predictor_record.dtype_dict.keys())
+            elif predictor_record.to_predict is not None:
+                # no dtype_dict, use target
+                columns = predictor_record.to_predict
+                if not isinstance(columns, list):
+                    columns = [columns]
 
         return columns
 

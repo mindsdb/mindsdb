@@ -176,4 +176,25 @@ class CatalogSearchTable(APITable):
         
 
         return result[columns]
+    
+    def get_columns(self):
+        """ get_columns method returns the columns returned by the API"""
+        return [
+
+            'title',
+            'type',
+            'source',
+            'year',
+            'pmid',
+            'sgr',
+            'issn',
+            'scopus',
+            'doi',
+            'pui',
+            'authors',
+            'keywords',
+            'link',
+            'id'
+        ]
+
         

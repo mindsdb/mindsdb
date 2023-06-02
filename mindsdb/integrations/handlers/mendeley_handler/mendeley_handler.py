@@ -182,7 +182,7 @@ class MendeleyHandler(APIHandler):
                         df = df.append(self.create_dict(x),ignore_index = True)
                         sum += 1
             if df.empty:
-                raise NotImplementedError(('Insufficient input given'))
+                raise NotImplementedError(('Insufficient or wrong input given'))
             else:
                 return df
 

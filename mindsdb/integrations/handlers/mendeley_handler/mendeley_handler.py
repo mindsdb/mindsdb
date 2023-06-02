@@ -80,3 +80,43 @@ class MendeleyHandler(APIHandler):
         """
         ast = parse_sql(query_string, dialect="mindsdb")
         return self.query(ast)
+    
+    def get_authors(self,data):
+        """The get_authors method receives the data - a specific document returned by the API, gets the names of the authors 
+            and combines them in a string, so as to allow the use of DataFrame.
+            Args:
+                data (CatalogDocument): document returned by API
+            Returns:
+                authors string
+        """
+        authors = ""
+        sum = 0
+        if data.authors!=None:
+            for x in data.authors:
+                if sum + 1 == len(data.authors) and x.first_name!=None and x.last_name!=None  :
+                    authors = authors + x.first_name + " " + x.last_name
+                else:
+                    if x.first_name!=None and x.last_name!=None:
+                        authors = authors + x.first_name + " " + x.last_name + ", "
+                        sum = sum + 1
+        return authors
+
+    def get_keywords(self,data):
+        """The get_keywords method receives the data-a specific document returned by the API, gets the specified keywords 
+            and combines them in a string, so as to allow the use of DataFrame.
+            Args:
+                data (CatalogDocument) : document returned by the API
+            Returns:
+                keywords string
+        """
+        keywords = ""
+        sum = 0
+        if data.keywords!=None:
+            for x in data.keywords:
+                if sum + 1 == len(data.keywords):
+                    keywords = keywords  + x + " "
+                else:
+                    if x!=None :
+                        keywords = keywords + x + ", "
+                        sum = sum + 1
+        return keywords

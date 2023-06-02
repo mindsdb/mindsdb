@@ -152,4 +152,50 @@ class MendeleyHandler(APIHandler):
         dict["id"] = data.id
         return dict
     
-    
+    def call_mendeley_api(self, method_name: str, params: Dict) -> pd.DataFrame:
+        
+        """The method call_mendeley_api is used to communicate with Mendeley. Depending on the method used there are three different types
+        of search conducted.
+        The advanced_search results in a CatalogSearch resource, which, depending on the parameters used, could either be a number of different documents (CatalogDocument),
+        a single one or none.
+        The by_identifier search is more specific in nature and can result either in one or no CatalogDocuments.
+        The get search has the same results as the by_identifier.
+        If the method specified does not exist, an NotImplementedError is raised.
+        Args:
+            method_name (str) : name of method
+            params (Dict): Dictionary containing the parameters used in the search
+        Returns:
+            DataFrame
+        """
+
+        self.session= self.connect()
+
+        if method_name == 'advanced_search':
+            data = self.session.catalog.advanced_search(title=params.get("title"),author=params.get("author"),source=params.get("source"),abstract=params.get("abstract"),min_year=params.get('min_year'),max_year=params.get('max_year'),open_access=params.get("open_access"))
+            sum = 0
+            df = pd.DataFrame()
+            for x in data.list(page_size=params["limit"]).items:
+                    if sum == 0:
+                        df = pd.DataFrame(self.create_dict(x),index=[0])
+                        sum += 1
+                    else : 
+                        df = df.append(self.create_dict(x),ignore_index = True)
+                        sum += 1
+            if df.empty:
+                raise NotImplementedError(('Insufficient input given'))
+            else:
+                return df
+
+        elif method_name == 'identifier_search':
+            data = self.session.catalog.by_identifier(arxiv=params.get("arxiv"),doi=params.get("doi"),isbn=params.get("isbn"),issn=params.get("issn"),pmid=params.get("pmid"),scopus=params.get('scopus'),filehash=params.get('filehash'))
+            df = pd.DataFrame(self.create_dict(data),index=[0])
+            return df
+
+        elif method_name == 'get':
+            data = self.session.catalog.get(params.get("id"))
+            df = pd.DataFrame(self.create_dict(data),index=[0])
+            return df
+
+        raise NotImplementedError('Method name {} not supported by Mendeley API Handler'.format(method_name))
+
+

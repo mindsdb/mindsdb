@@ -30,8 +30,9 @@ Not Supported Now.
 No
 
 ### Are there any other noteworthy aspects to this handler?
-The FLAML ML handler offers support for multiple machine learning models, including but not limited to XGBoost, LightGBM, and CatBoost. Libraries for these models are installed as a requirement by FLAML. The handler provides features such as automatic hyperparameter tuning, model selection, and feature selection.
-Additionally, users can customize various training parameters, such as evaluation metrics, time budget, number of threads, and more.
+The FLAML ML handler offers support for multiple machine learning models, including but not limited to XGBoost, LightGBM, and CatBoost. Note that while some libraries are installed by default alongside FLAML, the user has to verify that their model of choosing has been correctly installed before using this engine. For more details and installation options, check out FLAML documentation and their setup.py script.
+
+The handler provides features such as automatic hyperparameter tuning, model selection, and feature selection.
 
 ### Any directions for future work in subsequent versions of the handler?
 There are several directions for future work in subsequent versions of the handler, such as:

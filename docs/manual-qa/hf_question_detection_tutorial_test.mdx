@@ -1,0 +1,48 @@
+## Testing: Hugging Face - Question Detection Tutorial
+
+#### 1.Testing CREATE MODEL
+```sql
+CREATE MODEL mindsdb.hf_question
+PREDICT PRED
+USING
+engine = 'huggingface',
+task = 'text-classification',
+model_name = 'shahrukhx01/bert-mini-finetune-question-detection',
+input_column = 'text',
+labels = ['question', 'query'];
+```
+
+##### Output
+
+| NAME | ENGINE | PROJECT | ACTIVE | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | TAG |
+| ---- | ------ | ------- | ------ | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | --- |
+| hf_question | huggingface | mindsdb | true | 1 | generating | [NULL] | PRED | up_to_date | 23.5.3.2 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'task': 'text-classification', 'model_name': 'shahrukhx01/bert-mini-finetune-question-detection', 'input_column': 'text', 'labels': ['question', 'query']}} | [NULL] |
+
+
+#### 2.Testing SELECT (making predictions)
+```sql
+SELECT *
+FROM mindsdb.models 
+WHERE name = 'hf_question';
+```
+
+##### Output
+
+| NAME | ENGINE | PROJECT | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | CURRENT_TRAINING_PHASE | TOTAL_TRAINING_PHASES | TRAINING_PHASE_NAME | TAG | CREATED_AT |
+| ---- | ------ | ------- | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | ---------------------- | --------------------- | ------------------- | --- | ---------- |
+| hf_question | huggingface | mindsdb | 1 | complete | [NULL] | PRED | up_to_date | 23.5.3.2 | [NULL] | [NULL] | {"target":"PRED","using":{"input_column":"text","labels":["question","query"],"model_name":"shahrukhx01/bert-mini-finetune-question-detection","task":"text-classification"}} | [NULL] | [NULL] | [NULL] | [NULL] | 2023-05-29 15:57:48.383543 |
+
+
+#### 3. Testing Query For Predictions
+
+```sql
+SELECT *
+FROM mindsdb.hf_question
+WHERE text = 'Where can I buy electronics in London';
+```
+
+##### Output
+
+| PRED | PRED_explain | text |
+| ---- | ------------ | ---- |
+| query | {"query":0.9997773766517639,"question":0.00022261829872149974} | Where can I buy electronics in London |

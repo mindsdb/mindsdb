@@ -1,16 +1,28 @@
 # Welcome to the MindsDB Manual QA Testing for Yugabyte Handler
 
-> **Please submit your PR in the following format after the underline below `Results` section. Don't forget to add an underline after adding your changes i.e., at the end of your `Results` section.**
+### Results
 
-## Testing Yugabyte Handler with [Dataset Name](URL to the Dataset)
+---
+
+## Testing Yugabyte Handler with [PG exercises](https://docs.yugabyte.com/preview/sample-data/pgexercises/)
 
 **1. Testing CREATE DATABASE**
 
 ```
-COMMAND THAT YOU RAN TO CREATE DATABASE.
+CREATE DATABASE yugabyte_datasource
+WITH
+engine='yugabyte',
+parameters={
+    "user":"admin",
+    "password":"G9piikKvGIwcgIRaA7r3Hwlj0i9",
+    "host":"us-west-2.c3a09b1a-da71-4b26-960b-f3bfdea8e2a8.aws.ybdb.io",
+    "port":5433,
+    "database":"yugabyte"
+};
 ```
+Note: I have changed the password
 
-![CREATE_DATABASE](Image URL of the screenshot)
+![CREATE_DATABASE](create_db.PNG)
 
 **2. Testing CREATE PREDICTOR**
 
@@ -28,10 +40,15 @@ COMMAND THAT YOU RAN TO DO A SELECT FROM.
 
 ![SELECT_FROM](Image URL of the screenshot)
 
-### Results
+**4. Testing DROP THE DATABASE**
 
-Drop a remark based on your observation.
-- [ ] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
-- [ ] There's a Bug 🪲 [Issue Title](URL To the Issue you created) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
+```
+DROP DATABASE yugabyte_datasource;
+```
+
+![DROP_DB](drop_db.PNG)
+
+
+- [x] There's a Bug 🪲 [[Bug]: Failed to fetch table from yugabytedb #6070](https://github.com/mindsdb/mindsdb/issues/6070) 
 
 ---

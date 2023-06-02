@@ -20,6 +20,10 @@ The required arguments to establish a connection are as follows:
 * `keyspace` is the keyspace to connect, the top level container for tables.
 * `protocol_version` is not required and defaults to 4.
 
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/cassandra_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
 ## Usage
 
 In order to make use of this handler and connect to the Cassandra server in MindsDB, the following syntax can be used:

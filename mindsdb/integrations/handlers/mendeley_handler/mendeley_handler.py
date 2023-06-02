@@ -120,3 +120,36 @@ class MendeleyHandler(APIHandler):
                         keywords = keywords + x + ", "
                         sum = sum + 1
         return keywords
+    
+    def create_dict(self,data):
+
+        """The create_dict method receives the data-a specific document returned by the API, gets the resources-fields of the document,
+          as specified in Mendley documentation, and puts them in a dictionary.
+
+            Args:
+                data (CatalogDocument) : document returned by API
+            Returns:
+                dict dictionary
+        """
+        dict = {}
+        dict["title"] = data.title
+        dict["type"] = data.type
+        dict["source"] = data.source
+        dict["year"] = data.year
+        if data.identifiers!=None:
+            dict["pmid"] = data.identifiers.get("pmid")
+            dict["sgr"] = data.identifiers.get("sgr")
+            dict["issn"] = data.identifiers.get("issn")
+            dict["scopus"] = data.identifiers.get("scopus")
+            dict["doi"] = data.identifiers.get("doi")
+            dict["pui"] = data.identifiers.get("pui")
+        dict["authors"] = self.get_authors(data)
+        if data.keywords!=None:
+            dict["keywords"] = self.get_keywords(data)
+        else:
+            dict["keywords"] = None
+        dict["link"] = data.link
+        dict["id"] = data.id
+        return dict
+    
+    

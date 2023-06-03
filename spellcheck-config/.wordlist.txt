@@ -76,6 +76,7 @@ ckanapi
 CLA
 CLI
 ClickHouse
+clickhouse
 CMD
 CockroachDB
 codebase
@@ -97,12 +98,15 @@ csv
 CTA
 customAxios
 CWE
+DALL
 Dangi
 dans
 DatabaseHandler
 databaseName
 Databend
+databend
 Databricks
+databricks
 dataframe
 DataFrame
 DataFrames
@@ -131,6 +135,7 @@ dev
 Devs
 DhaneshRagu
 dir
+distilroberta
 dl
 Docker's
 Dogg
@@ -140,8 +145,11 @@ ds
 DSE
 DSN
 DuckDB
+duckdb
+dynamodb
 Eintrit
 Ekmanm's
+elasticsearch
 electrocardiographic
 Eliel
 english
@@ -166,6 +174,7 @@ finetune
 finetuned
 fintech
 Firebird
+firebird
 fluoroscopy
 fo
 Forcasting
@@ -190,6 +199,7 @@ Hallo
 HANA
 HandlerResponse
 HandlerStatusResponse
+hartmann
 HellFire
 Heng
 heure
@@ -366,6 +376,7 @@ Percona
 performant
 philschmid
 Pinot
+pinot
 pixpack
 PlanetScale
 Posterizedsoul
@@ -407,6 +418,7 @@ RayServe
 RDBMS
 Reddit
 reddit
+redshift
 reframe
 regressor
 reimplementing
@@ -439,6 +451,7 @@ sehen
 selectdate
 selectfromsource
 serverless
+shahrukhx
 Sharma
 Shetty
 Shetye
@@ -512,8 +525,8 @@ Teslim
 tf
 thal
 thalach
-throughputs
 thowsand
+throughputs
 TiDB
 TimescaleDB
 Timeseries

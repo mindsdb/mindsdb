@@ -103,7 +103,7 @@ python-tds==1.12.0
 pytorch-ranger==0.1.1
 pytz==2023.3
 PyYAML==6.0
-redis==3.5.3
+redis==4.4.4
 regex==2023.5.5
 requests==2.26.0
 schema==0.7.5

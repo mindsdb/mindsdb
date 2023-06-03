@@ -1,6 +1,7 @@
 ## Testing: Home Rentals Tutorial
 
 1. Testing CREATE DATABASE
+
 ```sql
 CREATE DATABASE example_db
 WITH ENGINE = "postgres",
@@ -16,9 +17,8 @@ PARAMETERS = {
 
 ![image](https://github.com/nitin-pandita/mindsdb/assets/91310284/ad26b1a7-3a72-49cc-ac52-38797366b104)
 
-
-
 2. Testing CREATE MODEL
+
 ```sql
 CREATE MODEL mindsdb.home_rentals_model
 FROM example_db
@@ -31,8 +31,8 @@ PREDICT rental_price;
 
 ![image](https://github.com/nitin-pandita/mindsdb/assets/91310284/9bb8de4f-9655-4f12-91c2-d9a541bf83aa)
 
+3. Testing SELECT (making predictions)
 
-Testing SELECT (making predictions)
 ```sql
 SELECT rental_price, rental_price_explain
 FROM mindsdb.home_rentals_model

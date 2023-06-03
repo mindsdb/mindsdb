@@ -238,9 +238,10 @@
           "group": "Connect to MindsDB",
           "pages": [
             "connect/mindsdb_editor",
+            "connect/postgres-client",
+            "connect/mysql-client",
             "connect/dbeaver",
             "connect/connect-mariadb-skysql",
-            "connect/mysql-client",
             "connect/sql-alchemy",
             "connect/deepnote",
             "connect/metabase",
@@ -414,7 +415,8 @@
         {
           "group": "Large Language Models",
           "pages": [
-            "sql/tutorials/twitter-chatbot"
+            "sql/tutorials/twitter-chatbot",
+            "sql/tutorials/image-generator"
           ]
         },
         {
@@ -483,7 +485,8 @@
     {
       "group": "FAQs",
       "pages": [
-        "faqs/whitelist-ips"
+        "faqs/whitelist-ips",
+        "faqs/persist-predictions"
       ]
     }
   ],

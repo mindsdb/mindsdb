@@ -727,16 +727,15 @@ class ExecuteCommands:
         model_record = self._get_model_info(statement.name)['model_record']
 
         if statement.integration_name is None:
-            if model_record.data_integration_ref is None:
-                raise Exception("The model does not have an associated dataset")
-            if model_record.data_integration_ref["type"] == "integration":
-                integration = self.session.integration_controller.get_by_id(
-                    model_record.data_integration_ref["id"]
-                )
-                if integration is None:
-                    raise Exception(
-                        "The database from which the model was trained no longer exists"
+            if model_record.data_integration_ref is not None:
+                if model_record.data_integration_ref["type"] == "integration":
+                    integration = self.session.integration_controller.get_by_id(
+                        model_record.data_integration_ref["id"]
                     )
+                    if integration is None:
+                        raise Exception(
+                            "The database from which the model was trained no longer exists"
+                        )
 
         ml_handler = None
         if statement.using is not None:
@@ -876,7 +875,8 @@ class ExecuteCommands:
         if handler_module_meta is None:
             raise SqlApiException(f"There is no engine '{statement.handler}'")
         if handler_module_meta.get("import", {}).get("success") is not True:
-            raise SqlApiException(f"Can't import engine '{statement.handler}'")
+            log.logger.info(f"to use {statement.handler} please install it 'pip install mindsdb[{statement.handler}]'")
+            raise SqlApiException(f"Can't import engine '{statement.handler}'. to use it please install it 'pip install mindsdb[{statement.handler}]'")
 
         integration_id = self.session.integration_controller.add(
             name=name,

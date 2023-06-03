@@ -36,6 +36,7 @@ def query_df(df, query, session=None):
             "Only 'SELECT from TABLE' statements supported for internal query"
         )
 
+    table_name = query_ast.from_table.parts[0]
     query_ast.from_table.parts = ['df_table']
 
     def adapt_query(node, is_table, **kwargs):
@@ -68,6 +69,11 @@ def query_df(df, query, session=None):
             f"Exception during query casting to 'postgres' dialect. Query: {str(query)}. Error: {e}"
         )
         query_str = render.get_string(query_ast, with_failback=True)
+
+    # workaround to prevent duckdb.TypeMismatchException
+    if len(df) > 0 and table_name.lower() in ('models', 'predictors'):
+        if 'TRAINING_OPTIONS' in df.columns:
+            df = df.astype({'TRAINING_OPTIONS': 'string'})
 
     con = duckdb.connect(database=':memory:')
     con.register('df_table', df)

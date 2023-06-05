@@ -29,9 +29,13 @@ from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
 
-import torch.multiprocessing as mp
 try:
+    import torch.multiprocessing as mp
     mp.set_start_method('spawn')
+    os.environ["MINDSDB_USE_TORCH"] = "1"
+except (ImportError, ModuleNotFoundError):
+    log.logger.info("torch is not installed. torch.multiprocessing won't be used")
+    import multiprocessing as mp
 except RuntimeError:
     log.logger.info('Torch multiprocessing context already set, ignoring...')
 
@@ -286,6 +290,7 @@ if __name__ == '__main__':
         }
 
     ctx = mp.get_context('spawn')
+
     for api_name, api_data in apis.items():
         if api_data['started']:
             continue

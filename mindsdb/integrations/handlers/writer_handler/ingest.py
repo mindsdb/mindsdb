@@ -66,5 +66,5 @@ class Ingestor:
             "Fished creating vectorstore from documents. It took: {elapsed_time/60} minutes"
         )
 
-        logger.info("Fished creating vectorstore from documents.")
+        logger.info("Finished creating vectorstore from documents.")
         logger.info(f"Elapsed time: {round(elapsed_time / 60)} minutes")

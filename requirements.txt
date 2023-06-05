@@ -33,7 +33,7 @@ pydateinfer==0.3.0
 pyarrow >= 10.0.1, < 10.1.0
 dataprep_ml
 grpcio-tools
-python-magic >= 0.4.27
-#python-magic-bin >= 0.4.14 for M1 mac users, comment out the above line and uncomment this one
+#python-magic >= 0.4.27
+python-magic-bin >= 0.4.14 #for M1 mac users, comment out the above line and uncomment this one
 openpyxl >= 3.1.1
 chromadb==0.3.25

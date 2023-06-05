@@ -11,6 +11,7 @@ from .settings import (
     DEFAULT_EMBEDDINGS_MODEL,
     USER_DEFINED_MODEL_PARAMS,
     ModelParameters,
+    check_path_exists,
 )
 
 # these require no additional arguments
@@ -69,7 +70,8 @@ class WriterHandler(BaseMLEngine):
             args["chromadb_storage_path"] = self.engine_storage.folder_get(
                 chromadb_folder_name
             )
-
+            # check path exists and make
+            check_path_exists(args["chromadb_storage_path"])
             ingestor = Ingestor(df=df, args=args)
             ingestor.embeddings_to_vectordb()
 

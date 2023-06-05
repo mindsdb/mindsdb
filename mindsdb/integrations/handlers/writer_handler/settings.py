@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 from typing import List, Union
 
@@ -10,6 +11,8 @@ from langchain.document_loaders import DataFrameLoader
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import Chroma
 from pydantic import BaseModel
+
+check_path_exists = lambda path: os.makedirs(path, exist_ok=True)
 
 DEFAULT_EMBEDDINGS_MODEL = "sentence-transformers/all-mpnet-base-v2"
 USER_DEFINED_MODEL_PARAMS = (

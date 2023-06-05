@@ -59,8 +59,8 @@ def stop_current_node():
         return
     current_node = _get_current_node(profiling)
     current_node['stop_at'] = time.perf_counter()
-    current_node['start_at_thread'] = time.thread_time()
-    current_node['start_at_process'] = time.process_time()
+    current_node['stop_at_thread'] = time.thread_time()
+    current_node['stop_at_process'] = time.process_time()
     if len(profiling['pointer']) > 0:
         profiling['pointer'] = profiling['pointer'][:-1]
     else:

@@ -14,6 +14,8 @@ def set_level(node, level, internal_id):
     internal_id["id"] += 1
     node["level"] = level
     node["value"] = node["stop_at"] - node["start_at"]
+    node["value_thread"] = node["start_at_thread"] - node["start_at_thread"]
+    node["value_process"] = node["start_at_process"] - node["start_at_process"]
     node["internal_id"] = internal_id["id"]
 
     accum = 0

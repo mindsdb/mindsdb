@@ -5,7 +5,7 @@ from typing import List, Union
 
 import pandas as pd
 import torch
-from chromadb.config import Settings
+from chromadb import Settings
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.docstore.document import Document
 from langchain.document_loaders import DataFrameLoader
@@ -13,11 +13,7 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import Chroma
 from pydantic import BaseModel
 
-check_path_exists = lambda path: os.makedirs(path, exist_ok=True)
-
-HANDLER_PATH = Path(__file__).parent.resolve()
 DEFAULT_EMBEDDINGS_MODEL = "sentence-transformers/all-mpnet-base-v2"
-PERSIST_DIRECTORY = (HANDLER_PATH / "db").as_posix()
 USER_DEFINED_MODEL_PARAMS = (
     "model_name",
     "max_tokens",
@@ -28,14 +24,6 @@ USER_DEFINED_MODEL_PARAMS = (
     "verbose",
     "writer_org_id",
     "writer_api_key",
-)
-
-check_path_exists(PERSIST_DIRECTORY)
-
-CHROMA_SETTINGS = Settings(
-    chroma_db_impl="duckdb+parquet",
-    persist_directory=PERSIST_DIRECTORY,
-    anonymized_telemetry=False,
 )
 
 
@@ -120,15 +108,25 @@ def load_embeddings_model(embeddings_model_name):
 
 
 @lru_cache()
-def load_chroma(embeddings_model_name):
+def load_chroma(embeddings_model_name, persist_directory, chroma_settings):
     return Chroma(
-        persist_directory=PERSIST_DIRECTORY,
+        persist_directory=persist_directory,
         embedding_function=load_embeddings_model(embeddings_model_name),
-        client_settings=CHROMA_SETTINGS,
+        client_settings=chroma_settings,
     )
 
 
-def get_retriever(embeddings_model_name):
-    db = load_chroma(embeddings_model_name)
+def get_chroma_settings(persist_directory):
+    return Settings(
+        chroma_db_impl="duckdb+parquet",
+        persist_directory=persist_directory,
+        anonymized_telemetry=False,
+    )
+
+
+@lru_cache()
+def get_retriever(embeddings_model_name, persist_directory):
+    chroma_settings = get_chroma_settings(persist_directory)
+    db = load_chroma(embeddings_model_name, persist_directory, chroma_settings)
     retriever = db.as_retriever()
     return retriever

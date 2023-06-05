@@ -17,12 +17,17 @@ class QuestionAnswerer:
     def __init__(self, args: dict, model_parameters: ModelParameters):
         self.output_data = defaultdict(list)
 
+        self.embeddings_model_name = args.get(
+            "embeddings_model_name", DEFAULT_EMBEDDINGS_MODEL
+        )
+        self.persist_directory = args["chromadb_storage_path"]
+
         llm = Writer(**model_parameters.dict())
         retriever = get_retriever(
-            embeddings_model_name=args.get(
-                "embeddings_model_name", DEFAULT_EMBEDDINGS_MODEL
-            )
+            embeddings_model_name=self.embeddings_model_name,
+            persist_directory=self.persist_directory,
         )
+
         self.qa = RetrievalQA.from_chain_type(
             llm=llm,
             chain_type="stuff",

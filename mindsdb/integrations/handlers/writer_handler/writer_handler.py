@@ -66,8 +66,11 @@ class WriterHandler(BaseMLEngine):
                     f"No embeddings model provided in query, using default model: {DEFAULT_EMBEDDINGS_MODEL}"
                 )
 
-            # run embeddings and ingest into Chroma VectorDB only if context column(s) provided
-            # NB you can update PERSIST_DIRECTORY in settings.py, this is where chroma vector db is stored
+            chromadb_folder_name = args["chromadb_folder_name"]
+            args["chromadb_storage_path"] = self.engine_storage.folder_get(
+                chromadb_folder_name
+            )
+
             ingestor = Ingestor(df=df, args=args)
             ingestor.embeddings_to_vectordb()
 
@@ -78,6 +81,9 @@ class WriterHandler(BaseMLEngine):
 
         self.model_storage.json_set("args", args)
 
+        ###### persist changes to handler folder
+        self.engine_storage.folder_sync(args["chromadb_storage_path"])
+
     def predict(self, df: pd.DataFrame = None, args: dict = None):
         """
         Dispatch is performed depending on the underlying model type. Currently, only question answering
@@ -87,6 +93,9 @@ class WriterHandler(BaseMLEngine):
         # get model parameters if defined by user - else use default values
 
         args = self.model_storage.json_get("args")
+        args["chromadb_storage_path"] = self.engine_storage.folder_get(
+            args["chromadb_folder_name"], update=False
+        )
 
         user_defined_model_params = list(
             filter(lambda x: x in args, USER_DEFINED_MODEL_PARAMS)

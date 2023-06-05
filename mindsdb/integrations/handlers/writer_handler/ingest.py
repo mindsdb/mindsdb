@@ -7,10 +7,10 @@ from langchain.vectorstores import Chroma
 from mindsdb.utilities.log import get_log
 
 from .settings import (
-    CHROMA_SETTINGS,
     DEFAULT_EMBEDDINGS_MODEL,
     PERSIST_DIRECTORY,
     df_to_documents,
+    get_chroma_settings,
     load_embeddings_model,
 )
 
@@ -24,6 +24,9 @@ class Ingestor:
         self.embeddings_model_name = args.get(
             "embeddings_model_name", DEFAULT_EMBEDDINGS_MODEL
         )
+        self.persist_directory = args["chromadb_storage_path"]
+
+        self.chroma_settings = get_chroma_settings(self.persist_directory)
 
     def split_documents(self):
         # Load documents and split in chunks
@@ -54,8 +57,8 @@ class Ingestor:
         db = Chroma.from_documents(
             texts,
             embedding=embeddings_model,
-            persist_directory=PERSIST_DIRECTORY,
-            client_settings=CHROMA_SETTINGS,
+            persist_directory=self.persist_directory,
+            client_settings=self.chroma_settings,
         )
         db.persist()
         db = None

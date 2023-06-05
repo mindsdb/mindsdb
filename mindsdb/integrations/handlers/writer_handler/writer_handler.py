@@ -52,7 +52,6 @@ class WriterHandler(BaseMLEngine):
     ):
         """
         Dispatch is running embeddings and storing in Chroma VectorDB, unless user already has embeddings persisted
-        see PERSIST_DIRECTORY in settings.py for default location of Chroma VectorDB indexes
         """
         args = args["using"]
 
@@ -74,15 +73,13 @@ class WriterHandler(BaseMLEngine):
             ingestor = Ingestor(df=df, args=args)
             ingestor.embeddings_to_vectordb()
 
+            # Persist changes to chromadb do disk
+            self.engine_storage.folder_sync(args["chromadb_storage_path"])
+
         else:
-            logger.info(
-                "No context data provided, skipping embeddings and ingestion into Chroma VectorDB"
-            )
+            logger.info("Skipping embeddings and ingestion into Chroma VectorDB")
 
         self.model_storage.json_set("args", args)
-
-        ###### persist changes to handler folder
-        self.engine_storage.folder_sync(args["chromadb_storage_path"])
 
     def predict(self, df: pd.DataFrame = None, args: dict = None):
         """

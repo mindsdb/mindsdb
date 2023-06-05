@@ -8,7 +8,6 @@ from mindsdb.utilities.log import get_log
 
 from .settings import (
     DEFAULT_EMBEDDINGS_MODEL,
-    PERSIST_DIRECTORY,
     df_to_documents,
     get_chroma_settings,
     load_embeddings_model,

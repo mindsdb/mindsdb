@@ -1,6 +1,4 @@
-import os
 from functools import lru_cache
-from pathlib import Path
 from typing import List, Union
 
 import pandas as pd
@@ -107,7 +105,6 @@ def load_embeddings_model(embeddings_model_name):
     return embedding_model
 
 
-@lru_cache()
 def load_chroma(embeddings_model_name, persist_directory, chroma_settings):
     return Chroma(
         persist_directory=persist_directory,
@@ -124,7 +121,6 @@ def get_chroma_settings(persist_directory):
     )
 
 
-@lru_cache()
 def get_retriever(embeddings_model_name, persist_directory):
     chroma_settings = get_chroma_settings(persist_directory)
     db = load_chroma(embeddings_model_name, persist_directory, chroma_settings)

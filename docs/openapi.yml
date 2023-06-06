@@ -26,6 +26,45 @@ components:
         type:
           type: string
           description: Type of database (data | project | system)
+    Model:
+      type: object
+      properties:
+        name:
+          type: string
+        accuracy:
+          type: number
+          description: Accuracy of trained model between 0 and 1
+        active:
+          type: boolean
+          description: Whether or not this model is currenty the active version
+        version:
+          type: number
+          description: Version of this model
+        status:
+          type: string
+          description: Current status of this model (generating | creating | complete | error)
+        predict:
+          type: string
+          description: Column name that this model predicts
+        mindsdb_version:
+          type: string
+          description: MindsDB version associated with this model
+        error:
+          type: string
+          description: Error encountered during training, if applicable
+        fetch_data_query:
+          type: string
+          description: SQL query used to fetch training data for this model
+        created_at:
+          type: string
+          description: Time model was created at in YYYY-MM-DD HH:MM:SS format (trained models only)
+        training_time:
+          type: string
+          description: How long training this model took in HH:MM:SS format (trained models only)
+        update:
+          type: string
+          description: Set to "available" when a new version of MindsDB is available that makes the model obsolete, or when new data is available in the data that was used to train the model (trained models only).
+
     Project:
       type: object
       properties:
@@ -208,6 +247,13 @@ paths:
         - ApiKeyAuth: []
       summary: Updates an existing database connection.
       description: Updates an existing database connection, or creates a new connection if one doesn't exist. The example parameters below are for updating a [MySQL](/data-integrations/mysql) connection. See [here](/data-integrations/all-data-integrations) for which parameters to use for your datasource.
+      parameters:
+        - name: databaseName
+          in: path
+          description: The name of the project
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -273,7 +319,7 @@ paths:
       parameters:
         - name: databaseName
           in: path
-          description: Name of database to delete
+          description: Name of existing database to delete
           required: true
           schema:
             type: string
@@ -352,7 +398,6 @@ paths:
           required: true
           schema:
             type: string
-      description: Gets a project by name.
       responses:
         '200':
           description: The returned project
@@ -385,11 +430,12 @@ paths:
                 items:
                   type: string
 
-  '/projects/{projectName}/models':
+  '/api/projects/{projectName}/models':
     post:
       security:
         - ApiKeyAuth: []
       summary: This endpoint trains a new ML Model.
+      description: Starts training a new Machine Learning model.
       parameters:
         - name: projectName
           in: path
@@ -404,21 +450,18 @@ paths:
             schema:
               type: object
               properties:
-                predictor_name:
-                  type: string
-                  description: Name of the model to be created.
-                integration_name:
-                  type: string
-                  description: Name of the database integration created
-                target_column:
-                  type: string
-                  description: Column to be predicted.
                 query:
                   type: string
-                  description: The SQL query to get the data
+                  description: The SQL CREATE MODEL statement used to train this model. See the [CREATE MODEL](https://docs.mindsdb.com/sql/create/model) statement
       responses:
         '200':
           description: Model training started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Model'
+        '400':
+          description: Bad request
           content:
             application/json:
               schema:
@@ -427,6 +470,14 @@ paths:
                   type: string
         '401':
           description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Project not found
           content:
             application/json:
               schema:
@@ -445,7 +496,7 @@ paths:
       security:
         - ApiKeyAuth: []
       summary: Returns a list of models.
-      description: This endpoint returnes info about all models in the project.
+      description: Gets info about all models in the project.
       parameters:
         - name: projectName
           in: path
@@ -461,9 +512,17 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
+                  $ref: '#/components/schemas/Model'
         '401':
           description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Project not found
           content:
             application/json:
               schema:
@@ -478,12 +537,12 @@ paths:
                 type: object
                 items:
                   type: string
-  '/projects/{projectName}/models/{modelName}':
+  '/api/projects/{projectName}/models/{modelName}':
     get:
       security:
         - ApiKeyAuth: []
       summary: Gets info about specific model.
-      description: This endpoint retrieves the status of a specific model.
+      description: Gets info for a specific model in the project.
       parameters:
         - name: projectName
           in: path
@@ -499,13 +558,11 @@ paths:
             type: string
       responses:
         '200':
-          description: A JSON object with database informations
+          description: Model information
           content:
             application/json:
               schema:
-                type: object
-                items:
-                  type: string
+                $ref: '#/components/schemas/Model'
         '401':
           description: Invalid API key error message
           content:
@@ -534,7 +591,7 @@ paths:
       security:
         - ApiKeyAuth: []
       summary: Deletes an existing model.
-      description: This endpoint deletes a model.
+      description: Deletes a model in the project.
       parameters:
         - name: projectName
           in: path
@@ -550,13 +607,11 @@ paths:
             type: string
       responses:
         '200':
-          description: A JSON array of database names
+          description: Empty response if delete is successful
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: string
+                type: string
         '401':
           description: Invalid API key error message
           content:
@@ -566,7 +621,7 @@ paths:
                 items:
                   type: string
         '404':
-          description: Database not found
+          description: Project or model not found
           content:
             application/json:
               schema:
@@ -581,11 +636,12 @@ paths:
                 type: object
                 items:
                   type: string
-  '/projects/{projectName}/models/{modelName}/predict':
+  '/api/projects/{projectName}/models/{modelName}/predict':
     post:
       security:
         - ApiKeyAuth: []
       summary: This endpoint fetches predictions from the model.
+      description: Uses this model to make a prediction for values of new data.
       parameters:
         - name: projectName
           in: path
@@ -608,69 +664,17 @@ paths:
               properties:
                 data:
                   type: object
-                  description: The data for querying the model as key/value e.g column name/value.
+                  description: The data for querying the model as key/value e.g column name/value. Example with [home rental prices](https://docs.mindsdb.com/sql/tutorials/home-rentals) - [{"sqft":823}]
       responses:
         '200':
           description: Model queried succesfully
           content:
             application/json:
               schema:
-                type: array
-                properties:
-                  prediction:
-                    type: object
-                    description: Prediction object that contains data columns and the target value, confidence, lower and upper bound.
-        '401':
-          description: Invalid API key error message
-          content:
-            application/json:
-              schema:
                 type: object
                 items:
                   type: string
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                type: object
-                items:
-                  type: string
-  '/projects/{projectName}/models/{modelName}/describe':
-    get:
-      security:
-        - ApiKeyAuth: []
-      summary: Describe a model
-      description: This endpoint returns the attributes of a specific model.
-      parameters:
-        - name: projectName
-          in: path
-          description: The name of the project
-          required: true
-          schema:
-            type: string
-        - name: modelName
-          in: path
-          description: The name of the model
-          required: true
-          schema:
-            type: string
-        - name: features
-          in: query
-          description: Include how the model encoded data info
-          required: false
-          schema:
-            type: boolean
-            default: false
-      responses:
-        '200':
-          description: A JSON object with model informations
-          content:
-            application/json:
-              schema:
-                type: object
-                items:
-                  type: string
+                  description: Prediction object that contains data columns and the target value, confidence, lower and upper bound.
         '401':
           description: Invalid API key error message
           content:
@@ -680,7 +684,7 @@ paths:
                 items:
                   type: string
         '404':
-          description: Model not found
+          description: Project or model not found
           content:
             application/json:
               schema:
@@ -695,11 +699,12 @@ paths:
                 type: object
                 items:
                   type: string
-  '/projects/{projectName}/models/{modelName}/retrain':
-    post:
+  '/api/projects/{projectName}/models/{modelName}/describe':
+    get:
       security:
         - ApiKeyAuth: []
-      summary: This endpoint retrains existing model.
+      summary: Describe a model
+      description: Gets the attributes of a specific model.
       parameters:
         - name: projectName
           in: path
@@ -714,24 +719,25 @@ paths:
           schema:
             type: string
       requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                modelName:
-                  type: string
-                  description: Name of the model
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  attribute:
+                    type: string
+                    description: Attribute of the model to describe. See our [DESCRIBE documentation](https://docs.mindsdb.com/sql/api/describe). E.g. info, features, model
+
       responses:
         '200':
-          description: Model training started
+          description: A JSON object with model informations
           content:
             application/json:
               schema:
                 type: object
                 items:
                   type: string
+                  description: Array containing model information
         '401':
           description: Invalid API key error message
           content:

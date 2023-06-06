@@ -16,9 +16,7 @@ sidebarTitle: Docker
 
 ## Install Docker
 
-If you haven't done that already, install Docker on your machine following
-[the instructions](https://docs.docker.com/install). To make sure Docker is
-successfully installed on your machine, run a test container as follows:
+If you haven't done that already, install Docker on your machine following [the instructions](https://docs.docker.com/install). To make sure Docker is successfully installed on your machine, run a test container as follows:
 
 ```bash
 docker run hello-world
@@ -32,13 +30,17 @@ You should see the `Hello from Docker!` message. Otherwise, check the
 
 By default, Docker for Mac allocates 2 GB of RAM, which is insufficient for
 deploying MindsDB with Docker. We recommend increasing the default RAM limit to
-4 GB. Please refer to the
+8 GB. Please refer to the
 [Docker Desktop for Mac users manual](https://docs.docker.com/desktop/mac/#resources)
 for more information on how to increase the allocated memory.
 
 </Warning>
 
-## Start MindsDB
+## Install & Start MindsDB
+
+<Tip>
+Please note that this method of MindsDB installation requires a minimum of 8 GB RAM and 10 GB free storage.
+</Tip>
 
 Run the command below to start MindsDB in Docker.
 
@@ -52,11 +54,14 @@ If you wish to simply spin up the container without the logs, run the following 
 docker run -d -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
 ```
 
+<Info>
 What's the difference?
 
 -   On running the previous command, docker will print out all the mindsdb logs in your shell.
 -   Using Docker's `detach` flag, the CLI will simply return the container ID, such that you can use the same shell again for different things.
+</Info>
 
+<Tip>
 If you would like to persist your models & configurations in the host machine, run the following commands:
 
 ```bash
@@ -67,16 +72,23 @@ docker run -p 47334:47334 -p 47335:47335 -v $(pwd)/mdb_data:/root/mdb_storage mi
 Let's analyze this command part by part:
 
 -   `docker run` is a native Docker command used to start a container
--   `-p 47334:47334` publishes port 47334 to access MindsDB GUI and HTTP
-    API
+-   `-p 47334:47334` publishes port 47334 to access MindsDB GUI and HTTP API
 -   `-p 47335:47335` publishes port 47335 to access MindsDB MySQL API
--   `-v $(pwd)/mdb_data:/root/mdb_storage` maps the newly created folder mdb_data on the host machine to the /root/mdb_storage inside the container.
+-   `-v $(pwd)/mdb_data:/root/mdb_storage` maps the newly created folder `mdb_data` on the host machine to the `/root/mdb_storage` inside the container
 -   `mindsdb/mindsdb` is the container we want to start
+</Tip>
 
-## Default Configuration
+Now you can access the MindsDB editor by going to `127.0.0.1:47334` in your browser.
 
-The default configuration for MindsDB's Docker image is stored as a JSON code,
-as below.
+<p align="center">
+  <img src="/assets/mindsdb-local-editor.png" />
+</p>
+
+## Configuration Options
+
+### Default Configuration
+
+The default configuration for MindsDB's Docker image is stored as a JSON code, as below.
 
 ```json
 {
@@ -115,36 +127,28 @@ as below.
 }
 ```
 
-## Custom Configuration
+### Custom Configuration
 
-To override the default configuration, you can provide values via the
-`MDB_CONFIG_CONTENT` environment variable, as below.
+To override the default configuration, you can provide values via the `MDB_CONFIG_CONTENT` environment variable, as below.
 
 ```bash
 docker run -e MDB_CONFIG_CONTENT='{"api":{"http": {"host": "0.0.0.0","port": "8080"}}}' mindsdb/mindsdb
 ```
 
-<Warning>
-    Note that changing only one API value will not override the default values
-    for other API keys. For e.g if you want to change the values for `mysql api`
-    include the values for `http api` too since it will not be started. This
-    should be resolved soon, check the progress
-    [here](https://github.com/mindsdb/mindsdb/issues/4058).
-</Warning>
-
 ## Known Issues
 
 ### #1
 
-If you experience any issues related to MKL or your training process does not
-complete, please add the `MKL_SERVICE_FORCE_INTEL` environment variable,
-as below.
+If you experience any issues related to MKL or your training process does not complete, please add the `MKL_SERVICE_FORCE_INTEL` environment variable, as below.
 
 ```bash
 docker run -e MKL_SERVICE_FORCE_INTEL=1 -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
 ```
 
-<Tip>
-    **What's next?** We recommend you follow one of our tutorials or learn more
-    about the [MindsDB Database](/sql/table-structure/).
-</Tip>
+## What's Next
+
+Now that you installed and started MindsDB locally in your Docker container, go ahead and find out how to create and train a model using the [`CREATE MODEL`](/sql/create/model) statement. In the **MindsDB SQL** section, you'll find a comprehensive overview of the SQL syntax offered by MindsDB. We also provide No-SQL syntax documented in the **MindsDB No-SQL** section.
+
+You can connect MindsDB to different clients, including [PostgreSQL CLI](/connect/postgres-client) and [MySQL CLI](/connect/mysql-client).
+
+Check out the **Use Cases** section to follow tutorials that cover Large Language Models, Natural Language Processing, Time Series, Classification, and Regression models.

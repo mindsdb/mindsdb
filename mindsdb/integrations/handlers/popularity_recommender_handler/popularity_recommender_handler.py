@@ -1,8 +1,7 @@
-from typing import Optional, Dict
+from typing import Dict, Optional
 
-import polars as pl
 import pandas as pd
-
+import polars as pl
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 
@@ -12,41 +11,46 @@ class PopularityRecommenderHandler(BaseMLEngine):
     Integration with the lightfm Recommender library.
     """
 
-    name = 'popularity-recommender'
+    name = "popularity-recommender"
 
-    def create(self, target: str, df: pd.DataFrame = None, meta_data: Dict = None, args: Optional[Dict] = None) -> None:
+    def create(
+        self,
+        target: str,
+        df: pd.DataFrame = None,
+        meta_data: Dict = None,
+        args: Optional[Dict] = None,
+    ) -> None:
 
         args = args["using"]
 
         data = pl.from_pandas(df)
 
-        args['ave_per_item_user'] = (data
-                             .get_column(args["user_id"])
-                             .value_counts()
-                             .mean()['counts'][0]
-                             )
+        args["ave_per_item_user"] = (
+            data.get_column(args["user_id"]).value_counts().mean()["counts"][0]
+        )
 
         popularity = (
-            data
-            .get_column(args["item_id"])
+            data.get_column(args["item_id"])
             .value_counts()
             .sort("counts", descending=True)
             .get_column(args["item_id"])
-            .head(args["n_recommendations"]*args['ave_per_item_user']) # to ensure there are enough to predict
+            .head(
+                args["n_recommendations"] * args["ave_per_item_user"]
+            )  # to ensure there are enough to predict
             .to_pandas()
             .reset_index()
-            .to_dict(orient='list')
+            .to_dict(orient="list")
         )
 
         # return popularity, args
 
-        self.model_storage.json_set('popularity', popularity)
-        self.model_storage.json_set('args', args)
+        self.model_storage.json_set("popularity", popularity)
+        self.model_storage.json_set("args", args)
 
     def predict(self, data=None, args: Optional[dict] = None):
 
-        args = self.model_storage.json_get('args')
-        popularity = self.model_storage.json_get('popularity')
+        args = self.model_storage.json_get("args")
+        popularity = self.model_storage.json_get("popularity")
 
         global_popularity = [*popularity.values()][1]
 
@@ -54,25 +58,33 @@ class PopularityRecommenderHandler(BaseMLEngine):
 
         # aggregate over user
         interacted_items = (
-            interaction_data
-            .groupby(args["user_id"])
-            .agg(pl.col(args['item_id']).alias('items'))
+            interaction_data.groupby(args["user_id"])
+            .agg(pl.col(args["item_id"]).alias("items"))
             .with_columns(
                 pl.lit([global_popularity]).alias("popular_items"),
             )
         ).lazy()
 
         df = (
-            interacted_items.join(
-            (interacted_items.explode("popular_items")
-             .filter(pl.col("popular_items").is_in("items").is_not())
-             .groupby(args['user_id'])
-             .agg(recommended="popular_items")),
-            on=args['user_id']
+            (
+                interacted_items.join(
+                    (
+                        interacted_items.explode("popular_items")
+                        .filter(pl.col("popular_items").is_in("items").is_not())
+                        .groupby(args["user_id"])
+                        .agg(recommended="popular_items")
+                    ),
+                    on=args["user_id"],
+                ).select(
+                    [
+                        pl.col(args["user_id"]),
+                        pl.col("recommended").arr.head(args["n_recommendations"]),
+                    ]
+                )
             )
-            .select([pl.col(args['user_id']), pl.col('recommended').arr.head(args["n_recommendations"])])
-
-        ).explode('recommended').collect().to_pandas()
+            .explode("recommended")
+            .collect()
+            .to_pandas()
+        )
 
         return df
-

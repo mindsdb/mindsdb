@@ -3,16 +3,18 @@ import json
 import pickle
 from uuid import uuid4
 
-import grpc
-from mindsdb.microservices_grpc.executor import executor_pb2_grpc
-from mindsdb.microservices_grpc.executor import executor_pb2
-
 from mindsdb.utilities.log import get_log
 from mindsdb.utilities.context import context as ctx
 from mindsdb.integrations.libs.handler_helpers import action_logger
-
-
 logger = get_log("main")
+
+
+try:
+    import grpc
+    from mindsdb.microservices_grpc.executor import executor_pb2_grpc
+    from mindsdb.microservices_grpc.executor import executor_pb2
+except ImportError:
+    logger.error("to user microservice mode please install 'pip install mindsdb[grpc]'")
 
 
 class ExecutorClientGRPC:

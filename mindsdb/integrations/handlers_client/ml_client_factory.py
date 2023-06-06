@@ -1,5 +1,4 @@
 import os
-from mindsdb.integrations.handlers_client.ml_grpc_client import MLClientGRPC
 from mindsdb.integrations.libs.handler_helpers import discover_services
 from mindsdb.utilities.log import get_log
 
@@ -10,7 +9,8 @@ logger = get_log(logger_name="main")
 class MLClientFactory:
     def __init__(self, handler_class, engine):
         self.engine = engine
-        self.client_class = MLClientGRPC
+        self.client_class = None
+        # self.client_class = MLClientGRPC
         self.handler_class = handler_class
         self.__name__ = self.handler_class.__name__
         self.__module__ = self.handler_class.__module__
@@ -23,6 +23,15 @@ class MLClientFactory:
         else:
             host = os.environ.get("MINDSDB_ML_SERVICE_HOST", None)
             port = os.environ.get("MINDSDB_ML_SERVICE_PORT", None)
+
+        if host is not None and port is not None:
+            try:
+                from mindsdb.integrations.handlers_client.ml_grpc_client import MLClientGRPC
+                self.client_class = MLClientGRPC
+            except (ImportError, ModuleNotFoundError):
+                logger.error("to use microservice mode please install 'pip install mindsdb[grpc]'")
+                host = None
+                port = None
 
         if host is None or port is None:
             logger.info(

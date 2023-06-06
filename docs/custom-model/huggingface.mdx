@@ -11,7 +11,7 @@ Please note that if you use local installation of MindsDB, instead of MindsDB Cl
 
 ## How to Bring the Hugging Face Model to MindsDB
 
-We use the [`CREATE MODEL`](/sql/create/predictor) statement to bring the Hugging Face models to MindsDB.
+We use the [`CREATE MODEL`](/sql/create/model) statement to bring the Hugging Face models to MindsDB.
 
 <Tabs>
 <Tab title="Downloading Models from Hugging Face Repository">
@@ -63,6 +63,8 @@ Please note that the examples presented here use SQL. To see how to create Huggi
 
 Here is an example of a binary classification. The model determines whether a text string is a spam or not.
 
+<Tabs>
+<Tab title="Huggingface Existing Models">
 ```sql
 CREATE MODEL mindsdb.spam_classifier
 PREDICT PRED
@@ -73,6 +75,19 @@ USING
   input_column = 'text_spammy',
   labels = ['ham', 'spam'];
 ```
+</Tab>
+
+<Tab title="Huggingface Inference API">
+```sql
+CREATE MODEL mindsdb.spam_classifier
+PREDICT PRED
+USING
+  engine = 'hf_inference_api',
+  task = 'text-classification',
+  column = 'text_spammy';
+```
+</Tab>
+</Tabs>
 
 On execution, we get:
 
@@ -122,6 +137,8 @@ On execution, we get:
 
 Here is an example of a multi-value classification. The model determines a sentiment of a text string, where possible values are `negative`, `neutral`, and `positive`.
 
+<Tabs>
+<Tab title="Huggingface Existing Model">
 ```sql
 CREATE MODEL mindsdb.sentiment_classifier
 PREDICT sentiment
@@ -132,6 +149,19 @@ USING
   input_column = 'text_short',
   labels = ['negative', 'neutral', 'positive'];
 ```
+</Tab>
+
+<Tab title="Huggingface Inference API">
+```sql
+CREATE MODEL mindsdb.sentiment_classifier
+PREDICT sentiment
+USING
+  engine = 'hf_inference_api',
+  task = 'text-classification',
+  column = 'text_short';
+```
+</Tab>
+</Tabs>
 
 On execution, we get:
 
@@ -181,6 +211,8 @@ On execution, we get:
 
 Here is an example of a zero-shot classification. The model determines to which of the defined categories a text string belongs.
 
+<Tabs>
+<Tab title="Huggingface Existing Model">
 ```sql
 CREATE MODEL mindsdb.zero_shot_tcd
 PREDICT topic
@@ -191,6 +223,19 @@ USING
   input_column = 'text_short',
   candidate_labels = ['travel', 'cooking', 'dancing'];
 ```
+</Tab>
+<Tab title="Huggingface Inference API">
+```sql
+CREATE MODEL mindsdb.zero_shot_tcd
+PREDICT topic
+USING
+  engine = 'hf_inference_api',
+  task = 'zero-shot-classification',
+  candidate_labels = ['travel', 'cooking', 'dancing'],
+  column = 'text_short';
+```
+</Tab>
+</Tabs>
 
 On execution, we get:
 
@@ -240,6 +285,8 @@ On execution, we get:
 
 Here is an example of a translation. The model gets an input string in English and translates it into French.
 
+<Tabs>
+<Tab title="Huggingface Existing Model">
 ```sql
 CREATE MODEL mindsdb.translator_en_fr
 PREDICT translated
@@ -251,6 +298,15 @@ USING
   lang_input = 'en',
   lang_output = 'fr';
 ```
+</Tab>
+
+<Tab title="Huggingface Inference API">
+
+<Note>
+Translation is currently not supported using the Huggingface Inference API.
+</Note>
+</Tab>
+</Tabs>
 
 On execution, we get:
 
@@ -300,6 +356,9 @@ On execution, we get:
 
 Here is an example of a summarisation.
 
+
+<Tabs>
+<Tab title="Huggingface Existing Model">
 ```sql
 CREATE MODEL mindsdb.summarizer_10_20
 PREDICT text_summary
@@ -311,6 +370,21 @@ USING
   min_output_length = 10,
   max_output_length = 20;
 ```
+</Tab>
+
+<Tab title="Huggingface Inference API">
+```sql
+CREATE MODEL mindsdb.summarizer_10_20
+PREDICT text_summary
+USING
+  engine = 'hf_inference_api',
+  task = 'summarization',
+  column = 'text_long',
+  min_output_length = 10,
+  max_output_length = 20;
+```
+</Tab>
+</Tabs>
 
 On execution, we get:
 
@@ -360,6 +434,8 @@ On execution, we get:
 
 Here is an example of a masked language modeling task.
 
+<Tabs>
+<Tab title="Huggingface Existing Model">
 ```sql
 CREATE MODEL mindsdb.fill_mask
 PREDICT text_filled
@@ -369,6 +445,18 @@ USING
   model_name = 'bert-base-uncased',
   input_column = 'text';
 ```
+</Tab>
+<Tab title="Huggingface Inference API">
+```sql
+CREATE MODEL mindsdb.fill_mask
+PREDICT text_filled
+USING
+  engine = 'hf_inference_api',
+  task = 'fill-mask',
+  column = 'text';
+```
+</Tab>
+</Tabs>
 
 On execution, we get:
 

@@ -1,98 +1,97 @@
 import datetime
-from functools import reduce
-from pathlib import Path
 from typing import Optional
+from pathlib import Path
+from functools import reduce
 
 import pandas as pd
-from mindsdb_evaluator.accuracy.general import evaluate_accuracy
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import (
-    Alter,
-    ASTNode,
-    BinaryOperation,
-    CommitTransaction,
-    Constant,
-    CreateTable,
-    Delete,
-    Describe,
-    DropDatabase,
-    DropTables,
-    DropView,
-    Explain,
-    Function,
-    Identifier,
-    Insert,
-    NativeQuery,
-    NullConstant,
-    Operation,
-    RollbackTransaction,
-    Select,
-    Set,
-    Show,
-    Star,
-    StartTransaction,
-    Union,
-    Update,
-    Use,
-)
 from mindsdb_sql.parser.dialects.mindsdb import (
     CreateDatabase,
-    CreateJob,
-    CreateMLEngine,
-    CreatePredictor,
-    CreateView,
-    DropDatasource,
-    DropJob,
-    DropMLEngine,
-    DropPredictor,
-    Evaluate,
-    FinetunePredictor,
     RetrainPredictor,
+    CreatePredictor,
+    FinetunePredictor,
+    CreateMLEngine,
+    DropMLEngine,
+    DropDatasource,
+    DropPredictor,
+    CreateView,
+    CreateJob,
+    DropJob,
+    Evaluate
 )
+from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.dialects.mysql import Variable
+from mindsdb_sql.parser.ast import (
+    RollbackTransaction,
+    CommitTransaction,
+    StartTransaction,
+    BinaryOperation,
+    DropDatabase,
+    NullConstant,
+    NativeQuery,
+    Describe,
+    Constant,
+    Function,
+    Explain,
+    Delete,
+    Insert,
+    Select,
+    Star,
+    Show,
+    Set,
+    Use,
+    Alter,
+    Update,
+    CreateTable,
+    Identifier,
+    DropTables,
+    Operation,
+    ASTNode,
+    DropView,
+    Union,
+)
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
-import mindsdb.utilities.profiler as profiler
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import Column, SQLQuery
-from mindsdb.api.mysql.mysql_proxy.executor.data_types import ANSWER_TYPE, ExecuteAnswer
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
-    CHARSET_NUMBERS,
-    SERVER_VARIABLES,
-    TYPES,
-)
+from mindsdb_evaluator.accuracy.general import evaluate_accuracy
+
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.api.mysql.mysql_proxy.utilities import log
 from mindsdb.api.mysql.mysql_proxy.utilities import (
+    SqlApiException,
     ErBadDbError,
     ErBadTableError,
+    ErTableExistError,
     ErNotSupportedYet,
     ErSqlWrongArguments,
-    ErTableExistError,
-    SqlApiException,
-    log,
 )
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import download_file
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
-from mindsdb.integrations.libs.const import (
-    HANDLER_CONNECTION_ARG_TYPE,
-    PREDICTOR_STATUS,
+from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery, Column
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
+    CHARSET_NUMBERS,
+    TYPES,
+    SERVER_VARIABLES,
 )
+from mindsdb.api.mysql.mysql_proxy.executor.data_types import ExecuteAnswer, ANSWER_TYPE
 from mindsdb.integrations.libs.response import HandlerStatusResponse
-from mindsdb.interfaces.database.projects import ProjectController
-from mindsdb.interfaces.jobs.jobs_controller import JobsController
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE
 from mindsdb.interfaces.model.functions import (
     get_model_record,
     get_model_records,
     get_predictor_integration,
 )
+from mindsdb.integrations.libs.const import PREDICTOR_STATUS
+from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import resolve_model_identifier
+import mindsdb.utilities.profiler as profiler
 
 
 def _get_show_where(
-    statement: ASTNode,
-    from_name: Optional[str] = None,
-    like_name: Optional[str] = None,
-    initial: Optional[ASTNode] = None,
+        statement: ASTNode,
+        from_name: Optional[str] = None,
+        like_name: Optional[str] = None,
+        initial: Optional[ASTNode] = None,
 ) -> ASTNode:
     """combine all possible show filters to single 'where' condition
     SHOW category [FROM name] [LIKE filter] [WHERE filter]
@@ -319,10 +318,10 @@ class ExecuteCommands:
                 query = SQLQuery(new_statement, session=self.session)
                 return self.answer_select(query)
             elif sql_category in (
-                "variables",
-                "session variables",
-                "session status",
-                "global variables",
+                    "variables",
+                    "session variables",
+                    "session status",
+                    "global variables",
             ):
                 new_statement = Select(
                     targets=[
@@ -340,7 +339,7 @@ class ExecuteCommands:
                     if is_session and var_name.startswith("session.") is False:
                         continue
                     if var_name.startswith("session.") or var_name.startswith(
-                        "GLOBAL."
+                            "GLOBAL."
                     ):
                         name = var_name.replace("session.", "").replace("GLOBAL.", "")
                         data[name] = var_data[0]
@@ -365,9 +364,11 @@ class ExecuteCommands:
                 return ExecuteAnswer(
                     answer_type=ANSWER_TYPE.TABLE,
                     columns=[
-                        Column(name="search_path", table_name="search_path", type="str")
+                        Column(
+                            name="search_path", table_name="search_path", type="str"
+                        )
                     ],
-                    data=[['"$user", public']],
+                    data=[["\"$user\", public"]]
                 )
             elif "show status like 'ssl_version'" in sql_lower:
                 return ExecuteAnswer(
@@ -416,7 +417,7 @@ class ExecuteCommands:
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
             elif "show create table" in sql_lower:
                 # SHOW CREATE TABLE `MINDSDB`.`predictors`
-                table = sql[sql.rfind(".") + 1 :].strip(" .;\n\t").replace("`", "")
+                table = sql[sql.rfind(".") + 1:].strip(" .;\n\t").replace("`", "")
                 return self.answer_show_create_table(table)
             elif sql_category in ("character set", "charset"):
                 new_statement = Select(
@@ -486,22 +487,22 @@ class ExecuteCommands:
             else:
                 raise ErNotSupportedYet(f"Statement not implemented: {sql}")
         elif type(statement) in (
-            StartTransaction,
-            CommitTransaction,
-            RollbackTransaction,
+                StartTransaction,
+                CommitTransaction,
+                RollbackTransaction,
         ):
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Set:
             category = (statement.category or "").lower()
             if category == "" and type(statement.arg) == BinaryOperation:
-                if statement.arg.args[0].parts[0].lower() == "profiling":
+                if statement.arg.args[0].parts[0].lower() == 'profiling':
                     if statement.arg.args[1].value in (1, True):
                         profiler.enable()
                         self.session.profiling = True
                     else:
                         profiler.disable()
                         self.session.profiling = False
-                elif statement.arg.args[0].parts[0].lower() == "predictor_cache":
+                elif statement.arg.args[0].parts[0].lower() == 'predictor_cache':
                     if statement.arg.args[1].value in (1, True):
                         self.session.predictor_cache = True
                     else:
@@ -549,8 +550,8 @@ class ExecuteCommands:
             if statement.table.parts[-1].lower() == "models_versions":
                 return self.answer_delete_model_version(statement)
             if (
-                self.session.database != "mindsdb"
-                and statement.table.parts[0] != "mindsdb"
+                    self.session.database != "mindsdb"
+                    and statement.table.parts[0] != "mindsdb"
             ):
                 raise ErBadTableError(
                     "Only 'DELETE' from database 'mindsdb' is possible at this moment"
@@ -574,9 +575,9 @@ class ExecuteCommands:
                 SQLQuery(statement, session=self.session, execute=True)
                 return ExecuteAnswer(ANSWER_TYPE.OK)
         elif (
-            type(statement) == Alter
-            and ("disable keys" in sql_lower)
-            or ("enable keys" in sql_lower)
+                type(statement) == Alter
+                and ("disable keys" in sql_lower)
+                or ("enable keys" in sql_lower)
         ):
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Select:
@@ -599,7 +600,7 @@ class ExecuteCommands:
         elif type(statement) == DropJob:
             return self.answer_drop_job(statement)
         elif type(statement) == Evaluate:
-            statement.data = parse_sql(statement.query_str, dialect="mindsdb")
+            statement.data = parse_sql(statement.query_str, dialect='mindsdb')
             return self.answer_evaluate_metric(statement)
         else:
             log.logger.warning(f"Unknown SQL statement: {sql}")
@@ -612,14 +613,8 @@ class ExecuteCommands:
         job_name = name.parts[-1]
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
 
-        jobs_controller.add(
-            job_name,
-            project_name,
-            statement.query_str,
-            statement.start_str,
-            statement.end_str,
-            statement.repeat_str,
-        )
+        jobs_controller.add(job_name, project_name, statement.query_str,
+                            statement.start_str, statement.end_str, statement.repeat_str)
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -637,39 +632,26 @@ class ExecuteCommands:
         try:
             sqlquery = SQLQuery(statement.data, session=self.session)
         except Exception as e:
-            raise Exception(
-                f'Nested query failed to execute with error: "{e}", please check and try again.'
-            )
+            raise Exception(f'Nested query failed to execute with error: "{e}", please check and try again.')
         result = sqlquery.fetch(self.session.datahub)
         df = pd.DataFrame.from_dict(result["result"])
-        df.columns = [
-            str(t.alias) if hasattr(t, "alias") else str(t.parts[-1])
-            for t in statement.data.targets
-        ]
+        df.columns = [str(t.alias) if hasattr(t, 'alias') else str(t.parts[-1]) for t in statement.data.targets]
 
-        for col in ["actual", "prediction"]:
-            assert (
-                col in df.columns
-            ), f"`{col}` column was not provided, please try again."
-            assert (
-                df[col].isna().sum() == 0
-            ), f"There are missing values in the `{col}` column, please try again."
+        for col in ['actual', 'prediction']:
+            assert col in df.columns, f'`{col}` column was not provided, please try again.'
+            assert df[col].isna().sum() == 0, f'There are missing values in the `{col}` column, please try again.'
 
         metric_name = statement.name.parts[-1]
-        target_series = df.pop("prediction")
+        target_series = df.pop('prediction')
         using_clause = statement.using if statement.using is not None else {}
-        metric_value = evaluate_accuracy(
-            df,
-            target_series,
-            metric_name,
-            target="actual",
-            ts_analysis=using_clause.get("ts_analysis", {}),  # will be deprecated soon
-            n_decimals=using_clause.get("n_decimals", 3),
-        )  # 3 decimals by default
+        metric_value = evaluate_accuracy(df, target_series, metric_name,
+                                         target='actual',
+                                         ts_analysis=using_clause.get('ts_analysis', {}),  # will be deprecated soon
+                                         n_decimals=using_clause.get('n_decimals', 3))  # 3 decimals by default
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
-            columns=[Column(name=metric_name, table_name="", type="str")],
-            data=[[metric_value]],
+            columns=[Column(name=metric_name, table_name='', type='str')],
+            data=[[metric_value]]
         )
 
     def answer_describe_predictor(self, statement):
@@ -682,71 +664,67 @@ class ExecuteCommands:
             attribute = parts.pop(-1)
             model_info = self._get_model_info(Identifier(parts=parts))
             if model_info is None:
-                raise SqlApiException(f"Model not found: {statement.value}")
+                raise SqlApiException(f'Model not found: {statement.value}')
 
         df = self.session.model_controller.describe_model(
-            self.session,
-            model_info["project_name"],
-            model_info["model_record"].name,
-            attribute,
+            self.session, model_info['project_name'], model_info['model_record'].name, attribute
         )
 
-        df_dict = df.to_dict("split")
+        df_dict = df.to_dict('split')
 
         columns = [
-            Column(name=col, table_name="", type="str") for col in df_dict["columns"]
+            Column(name=col, table_name='', type='str')
+            for col in df_dict['columns']
         ]
         return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE, columns=columns, data=df_dict["data"]
+            answer_type=ANSWER_TYPE.TABLE,
+            columns=columns,
+            data=df_dict['data']
         )
 
     def _get_model_info(self, identifier, except_absent=True):
         if len(identifier.parts) == 1:
             identifier.parts = [self.session.database, identifier.parts[0]]
 
-        database_name, model_name, model_version, _describe = resolve_model_identifier(
-            identifier
-        )
+        database_name, model_name, model_version, _describe = resolve_model_identifier(identifier)
 
         model_record = get_model_record(
             name=model_name,
             project_name=database_name,
             except_absent=except_absent,
-            version=model_version,
+            version=model_version
         )
         if not model_record:
             return None
-        return {"model_record": model_record, "project_name": database_name}
+        return {
+            'model_record': model_record,
+            'project_name': database_name
+        }
 
     def _sync_predictor_check(self, phase_name):
-        """Checks if there is already a predictor retraining or fine-tuning
-        Do not allow to run retrain if there is another model in training process in less that 1h
+        """ Checks if there is already a predictor retraining or fine-tuning
+            Do not allow to run retrain if there is another model in training process in less that 1h
         """
-        is_cloud = self.session.config.get("cloud", False)
+        is_cloud = self.session.config.get('cloud', False)
         if is_cloud and ctx.user_class == 0:
             models = get_model_records(active=None)
             shortest_training = None
             for model in models:
                 if (
-                    model.status
-                    in (PREDICTOR_STATUS.GENERATING, PREDICTOR_STATUS.TRAINING)
-                    and model.training_start_at is not None
-                    and model.training_stop_at is None
+                        model.status in (PREDICTOR_STATUS.GENERATING, PREDICTOR_STATUS.TRAINING)
+                        and model.training_start_at is not None and model.training_stop_at is None
                 ):
                     training_time = datetime.datetime.now() - model.training_start_at
                     if shortest_training is None or training_time < shortest_training:
                         shortest_training = training_time
 
-            if (
-                shortest_training is not None
-                and shortest_training < datetime.timedelta(hours=1)
-            ):
+            if shortest_training is not None and shortest_training < datetime.timedelta(hours=1):
                 raise SqlApiException(
                     f"Can't start {phase_name} process while predictor is in status 'training' or 'generating'"
                 )
 
     def answer_retrain_predictor(self, statement):
-        model_record = self._get_model_info(statement.name)["model_record"]
+        model_record = self._get_model_info(statement.name)['model_record']
 
         if statement.integration_name is None:
             if model_record.data_integration_ref is not None:
@@ -774,26 +752,25 @@ class ExecuteCommands:
         if ml_handler is None:
             integration_record = get_predictor_integration(model_record)
             if integration_record is None:
-                raise Exception(
-                    "The ML engine model that was trained with does not exist"
-                )
+                raise Exception("ML engine model was trained with does not esxists")
             ml_handler = self.session.integration_controller.get_handler(
                 integration_record.name
             )
 
-        self._sync_predictor_check(phase_name="retrain")
+        self._sync_predictor_check(phase_name='retrain')
         df = self.session.model_controller.retrain_model(statement, ml_handler)
 
-        resp_dict = df.to_dict(orient="split")
+        resp_dict = df.to_dict(orient='split')
 
-        columns = [Column(col) for col in resp_dict["columns"]]
+        columns = [
+            Column(col)
+            for col in resp_dict['columns']
+        ]
 
-        return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict["data"]
-        )
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
 
     def answer_finetune_predictor(self, statement):
-        model_record = self._get_model_info(statement.name)["model_record"]
+        model_record = self._get_model_info(statement.name)['model_record']
 
         if statement.using is not None:
             # repack using with lower names
@@ -802,23 +779,20 @@ class ExecuteCommands:
         # use current ml handler
         integration_record = get_predictor_integration(model_record)
         if integration_record is None:
-            raise Exception(
-                "The ML engine that the model was trained with does not exist."
-            )
-        ml_handler = self.session.integration_controller.get_handler(
-            integration_record.name
-        )
+            raise Exception('The ML engine that the model was trained with does not exist.')
+        ml_handler = self.session.integration_controller.get_handler(integration_record.name)
 
-        self._sync_predictor_check(phase_name="finetune")
+        self._sync_predictor_check(phase_name='finetune')
         df = self.session.model_controller.finetune_model(statement, ml_handler)
 
-        resp_dict = df.to_dict(orient="split")
+        resp_dict = df.to_dict(orient='split')
 
-        columns = [Column(col) for col in resp_dict["columns"]]
+        columns = [
+            Column(col)
+            for col in resp_dict['columns']
+        ]
 
-        return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict["data"]
-        )
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
 
     def _create_integration(self, name: str, engine: str, connection_args: dict):
         # we have connection checkers not for any db. So do nothing if fail
@@ -901,22 +875,18 @@ class ExecuteCommands:
         if handler_module_meta is None:
             raise SqlApiException(f"There is no engine '{statement.handler}'")
         if handler_module_meta.get("import", {}).get("success") is not True:
-            log.logger.info(
-                f"to use {statement.handler} please install it 'pip install mindsdb[{statement.handler}]'"
-            )
-            raise SqlApiException(
-                f"Can't import engine '{statement.handler}'. to use it please install it 'pip install mindsdb[{statement.handler}]'"
-            )
+            log.logger.info(f"to use {statement.handler} please install it 'pip install mindsdb[{statement.handler}]'")
+            raise SqlApiException(f"Can't import engine '{statement.handler}'. to use it please install it 'pip install mindsdb[{statement.handler}]'")
 
         integration_id = self.session.integration_controller.add(
-            name=name, engine=statement.handler, connection_args=statement.params
+            name=name,
+            engine=statement.handler,
+            connection_args=statement.params
         )
 
-        HandlerClass = self.session.integration_controller.handler_modules[
-            handler_module_meta["name"]
-        ].Handler
+        HandlerClass = self.session.integration_controller.handler_modules[handler_module_meta['name']].Handler
 
-        if hasattr(HandlerClass, "create_engine"):
+        if hasattr(HandlerClass, 'create_engine'):
             handlerStorage = HandlerStorage(integration_id)
             ml_handler = HandlerClass(
                 engine_storage=handlerStorage,
@@ -1106,13 +1076,14 @@ class ExecuteCommands:
         )
 
         df = self.session.model_controller.create_model(statement, ml_handler)
-        resp_dict = df.to_dict(orient="split")
+        resp_dict = df.to_dict(orient='split')
 
-        columns = [Column(col) for col in resp_dict["columns"]]
+        columns = [
+            Column(col)
+            for col in resp_dict['columns']
+        ]
 
-        return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict["data"]
-        )
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
 
     def delete_predictor_query(self, query):
 
@@ -1133,11 +1104,11 @@ class ExecuteCommands:
             self.session.datahub["mindsdb"].delete_predictor(predictor_name)
 
     def answer_show_columns(
-        self,
-        target: Identifier,
-        where: Optional[Operation] = None,
-        like: Optional[str] = None,
-        is_full=False,
+            self,
+            target: Identifier,
+            where: Optional[Operation] = None,
+            like: Optional[str] = None,
+            is_full=False,
     ):
         if len(target.parts) > 1:
             db = target.parts[0]
@@ -1213,7 +1184,7 @@ class ExecuteCommands:
                     "current_user": self.session.username,
                     "user": self.session.username,
                     "version": "8.0.17",
-                    "current_schema": "public",
+                    "current_schema": "public"
                 }
 
                 column_name = f"{target.op}()"

@@ -1,14 +1,13 @@
+import sib_api_v3_sdk
+import pandas as pd
+
 from typing import List
 
-import pandas as pd
-import sib_api_v3_sdk
+from mindsdb.integrations.libs.api_handler import APITable
+
 from mindsdb_sql.parser import ast
 
-from mindsdb.integrations.handlers.utilities.query_utilities import (
-    SELECTQueryExecutor,
-    SELECTQueryParser,
-)
-from mindsdb.integrations.libs.api_handler import APITable
+from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 
 
 class EmailCampaignsTable(APITable):
@@ -34,21 +33,19 @@ class EmailCampaignsTable(APITable):
         """
 
         select_statement_parser = SELECTQueryParser(
-            query, "email_campaigns", self.get_columns()
+            query,
+            'email_campaigns',
+            self.get_columns()
         )
-        (
-            selected_columns,
-            where_conditions,
-            order_by_conditions,
-            result_limit,
-        ) = select_statement_parser.parse_query()
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        email_campaigns_df = pd.json_normalize(
-            self.get_email_campaigns(limit=result_limit)
-        )
+        email_campaigns_df = pd.json_normalize(self.get_email_campaigns(limit=result_limit))
 
         select_statement_executor = SELECTQueryExecutor(
-            email_campaigns_df, selected_columns, where_conditions, order_by_conditions
+            email_campaigns_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
         )
         email_campaigns_df = select_statement_executor.execute_query()
 

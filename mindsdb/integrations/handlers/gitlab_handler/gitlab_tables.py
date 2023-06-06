@@ -1,14 +1,14 @@
-from typing import List
-
 import pandas as pd
-from mindsdb_sql.parser import ast
+
+from typing import List
 
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.utilities.log import get_log
 
-logger = get_log("integrations.gitlab_handler")
+from mindsdb_sql.parser import ast
 
+logger = get_log("integrations.gitlab_handler")
 
 class GitlabIssuesTable(APITable):
     """The GitLab Issue Table implementation"""
@@ -345,9 +345,7 @@ class GitlabMergeRequestsTable(APITable):
             gitlab_merge_requests_df = pd.DataFrame([], columns=selected_columns)
         else:
             gitlab_merge_requests_df.columns = self.get_columns()
-            for col in set(gitlab_merge_requests_df.columns).difference(
-                set(selected_columns)
-            ):
+            for col in set(gitlab_merge_requests_df.columns).difference(set(selected_columns)):
                 gitlab_merge_requests_df = gitlab_merge_requests_df.drop(col, axis=1)
 
             if len(order_by_conditions.get("columns", [])) > 0:

@@ -1,13 +1,13 @@
 import gitlab
-from mindsdb_sql import parse_sql
 
-from mindsdb.integrations.handlers.gitlab_handler.gitlab_tables import (
-    GitlabIssuesTable,
-    GitlabMergeRequestsTable,
-)
+from mindsdb.integrations.handlers.gitlab_handler.gitlab_tables import GitlabIssuesTable, GitlabMergeRequestsTable
 from mindsdb.integrations.libs.api_handler import APIHandler
-from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+)
+
 from mindsdb.utilities.log import get_log
+from mindsdb_sql import parse_sql
 
 logger = get_log("integrations.gitlab_handler")
 
@@ -16,7 +16,7 @@ class GitlabHandler(APIHandler):
     """The GitLab handler implementation"""
 
     def __init__(self, name: str, **kwargs):
-        """constructor
+        """ constructor
         Args:
             name (str): the handler name
         """
@@ -36,7 +36,7 @@ class GitlabHandler(APIHandler):
         self._register_table("merge_requests", gitlab_merge_requests_data)
 
     def connect(self) -> StatusResponse:
-        """Set up the connections required by the handler
+        """ Set up the connections required by the handler
         Returns:
             HandlerStatusResponse
         """

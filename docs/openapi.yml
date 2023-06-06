@@ -64,7 +64,7 @@ components:
         update:
           type: string
           description: Set to "available" when a new version of MindsDB is available that makes the model obsolete, or when new data is available in the data that was used to train the model (trained models only).
-
+        
     Project:
       type: object
       properties:
@@ -452,7 +452,7 @@ paths:
               properties:
                 query:
                   type: string
-                  description: The SQL CREATE MODEL statement used to train this model. See the [CREATE MODEL](https://docs.mindsdb.com/sql/create/model) statement
+                  description: The SQL CREATE MODEL statement used to train this model. See the [CREATE MODEL](https://docs.mindsdb.com/sql/create/model) statement 
       responses:
         '200':
           description: Model training started

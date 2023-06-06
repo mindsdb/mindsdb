@@ -53,5 +53,5 @@ SELECT number, state, creator, reviewers, title, has_conflicts
 ~~~~
 
 ## What is next??
-- GitLab Branches table for a given Repository
+- GitLab Branches table for a given Repository 
 - GitLab ....

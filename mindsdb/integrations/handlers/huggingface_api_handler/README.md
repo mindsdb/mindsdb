@@ -1,9 +1,9 @@
 # Huggingface ML Handler
 
-## Briefly describe what ML framework does this handler integrate to MindsDB, and how?
+## Briefly describe what ML framework does this handler integrate to MindsDB, and how? 
 This handler integrates the Hugging Face Inference API to MindsDB using Hugging-Py-Face, a powerful Python package that provides seamless integration with the Hugging Face Inference API. The source code for the package is available here: https://github.com/MinuraPunchihewa/hugging-py-face
 
-## Why is this integration useful? What does the ideal predictive use case for this integration look like? When would you definitely not use this integration?
+## Why is this integration useful? What does the ideal predictive use case for this integration look like? When would you definitely not use this integration? 
 This integration is useful for a number of reasons,
 - Faster model deployment: Pre-trained models can be quickly deployed for use in applications without having to spend time training the models.
 - Greater model variety: Hugging Face offers a large and growing collection of pre-trained models for a wide range of tasks that are made available through this integration.
@@ -43,7 +43,7 @@ CREATE ML_ENGINE hf_api_engine
 FROM huggingface_api
 USING
   api_key = 'hf_...';
-
+  
 -- Create a model for text classification
 CREATE MODEL mindsdb.hf_sentiment_classifier
 PREDICT sentiment

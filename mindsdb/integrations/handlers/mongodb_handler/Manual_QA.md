@@ -9,11 +9,11 @@
 ```
 db.databases.insertOne({
   name: "cars_db", // database name
-  engine: "mongodb", // database engine
+  engine: "mongodb", // database engine 
   connection_args: {
     "port": 27017, // default connection port
     "host": "mongodb+srv://<user>:<password>@clusterml.ighwwuf.mongodb.net/test", //connection host
-    "database": "cars_db" // database connection
+    "database": "cars_db" // database connection          
     }
 });
 ```
@@ -24,10 +24,10 @@ db.databases.insertOne({
 **2. Testing CREATE PREDICTOR**
 
 ```
-db.predictors.insert({
-  name: "cars_predictor",
-  predict: "Selling_Price",
-  connection: "cars_db",
+db.predictors.insert({ 
+  name: "cars_predictor", 
+  predict: "Selling_Price", 
+  connection: "cars_db", 
   "select_data_query": "db.cars.find()"
 });
 ```
@@ -59,11 +59,11 @@ Drop a remark based on your observation.
 ```
 db.databases.insertOne({
   name: "vaccine_test_db", // database name
-  engine: "mongodb", // database engine
+  engine: "mongodb", // database engine 
   connection_args: {
     "port": 27017, // default connection port
     "host": "mongodb+srv://<user>:<password>@clusterml.e57k8ji.mongodb.net/Clusterml", //connection host
-    "database": "Clusterml" // database connection
+    "database": "Clusterml" // database connection          
     }
 });
 ```
@@ -74,10 +74,10 @@ db.databases.insertOne({
 **2. Testing CREATE PREDICTOR**
 
 ```
-db.predictors.insertOne({
-  name: "vaccinated_predict_model",
-  predict: "Series_Complete_Daily",
-  connection: "vaccine_test_db",
+db.predictors.insertOne({ 
+  name: "vaccinated_predict_model", 
+  predict: "Series_Complete_Daily", 
+  connection: "vaccine_test_db", 
   select_data_query: "db.covid.find({})"
 });
 ```
@@ -108,11 +108,11 @@ Drop a remark based on your observation.
 ```
 db.databases.insertOne({
   name: "fire_test_db", // database name
-  engine: "mongodb", // database engine
+  engine: "mongodb", // database engine 
   connection_args: {
     "port": 27017, // default connection port
     "host": "mongodb+srv://<user>:<password>@clusterml.e57k8ji.mongodb.net/Clusterml", //connection host
-    "database": "AlgerianFire" // database connection
+    "database": "AlgerianFire" // database connection          
     }
 });
 ```
@@ -122,10 +122,10 @@ db.databases.insertOne({
 **2. Testing CREATE PREDICTOR**
 
 ```
-db.predictors.insertOne({
-  name: "fire_predict_model",
-  predict: "Temperature",
-  connection: "fire_test_db",
+db.predictors.insertOne({ 
+  name: "fire_predict_model", 
+  predict: "Temperature", 
+  connection: "fire_test_db", 
   select_data_query: "db.forestfire.find({})"
 });
 ```
@@ -155,11 +155,11 @@ Drop a remark based on your observation.
 ```
 db.databases.insertOne({
   name: "sample_test", // database name
-  engine: "mongodb", // database engine
+  engine: "mongodb", // database engine 
   connection_args: {
     "port": 27017, // default connection port
     "host": "mongodb+srv://<user>:<password>@clusterml.e57k8ji.mongodb.net/Clusterml", //connection host
-    "database": "Clusterml" // database connection
+    "database": "Clusterml" // database connection          
     }
 });
 ```
@@ -169,10 +169,10 @@ db.databases.insertOne({
 **2. Testing CREATE PREDICTOR**
 
 ```
-db.predictors.insertOne({
-  name: "wine_quality_predict_model",
-  predict: "quality",
-  connection: "vaccine_test_db",
+db.predictors.insertOne({ 
+  name: "wine_quality_predict_model", 
+  predict: "quality", 
+  connection: "vaccine_test_db", 
   select_data_query: "db.wine.find({})"
 });
 ```

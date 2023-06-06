@@ -76,7 +76,8 @@ class WriterHandler(BaseMLEngine):
             ingestor.embeddings_to_vectordb()
 
             # Persist changes to chromadb do disk
-            self.engine_storage.folder_sync(args["chromadb_storage_path"])
+            # not sure if this is required?
+            # self.engine_storage.folder_sync(args["chromadb_storage_path"])
 
         else:
             logger.info("Skipping embeddings and ingestion into Chroma VectorDB")

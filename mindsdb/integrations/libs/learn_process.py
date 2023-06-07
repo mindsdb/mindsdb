@@ -16,6 +16,7 @@ from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.integrations.utilities.utils import format_exception_error
 import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.config import Config
 
 
 @mark_process(name='learn')
@@ -26,10 +27,11 @@ def learn_process(class_path, engine, context_dump, integration_id,
     ctx.load(context_dump)
     ctx.profiling = {
         'level': 0,
-        'enabled': False,
+        'enabled': True,
         'pointer': None,
         'tree': None
     }
+    profiler.set_meta(query='learn_process', api='http', environment=Config().get('environment'))
     with profiler.Context('learn_process'):
         with profiler.Context('learn_process init'):
             from mindsdb.interfaces.database.database import DatabaseController

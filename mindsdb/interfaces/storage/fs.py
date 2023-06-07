@@ -140,6 +140,12 @@ class S3FSStore(BaseFSStore):
         self.bucket = self.config['permanent_storage']['bucket']
 
     def get(self, local_name, base_dir):
+        # region FIXME temp for test
+        dest = os.path.join(base_dir, local_name)
+        if os.path.exists(dest):
+            return
+        # endregion
+
         remote_name = local_name
         remote_ziped_name = f'{remote_name}.tar.gz'
         local_ziped_name = f'{local_name}.tar.gz'

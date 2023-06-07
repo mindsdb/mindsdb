@@ -98,7 +98,7 @@ def learn_process(class_path, engine, context_dump, integration_id,
                     **kwargs
                 )
 
-            with profiler.Context('learn_process crete model'):
+            with profiler.Context('learn_process create model'):
                 # create new model
                 if base_predictor_id is None:
                     ml_handler.create(target, df=training_data_df, args=problem_definition)

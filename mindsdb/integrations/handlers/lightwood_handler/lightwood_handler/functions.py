@@ -167,13 +167,10 @@ def run_learn(df: DataFrame, args: dict, model_storage) -> None:
 def run_finetune(df: DataFrame, args: dict, model_storage):
     try:
         base_predictor_id = args['base_model_id']
-        base_predictor_record = db.Predictor.query.filter_by(
-            id=base_predictor_id,
-            status=PREDICTOR_STATUS.COMPLETE
-        ).first()
+        base_predictor_record = db.Predictor.query.get(base_predictor_id)
 
         predictor_id = model_storage.predictor_id
-        predictor_record = db.Predictor.query.filter_by(id=predictor_id).first()
+        predictor_record = db.Predictor.query.get(predictor_id)
 
         # TODO move this to ModelStorage (don't work with database directly)
         predictor_record.data = {'training_log': 'training'}
@@ -203,17 +200,6 @@ def run_finetune(df: DataFrame, args: dict, model_storage):
         predictor_record.update_status = 'up_to_date'
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
         predictor_record.training_stop_at = datetime.now()
-        db.session.commit()
-
-        predictor_records = get_model_records(
-            active=None,
-            name=predictor_record.name,
-        )
-        predictor_records = [
-            x for x in predictor_records
-            if x.training_stop_at is not None
-        ]
-        predictor_records.sort(key=lambda x: x.training_stop_at)
         db.session.commit()
 
     except Exception as e:

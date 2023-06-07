@@ -23,10 +23,16 @@ def learn_process(class_path, engine, context_dump, integration_id,
                   predictor_id, problem_definition, set_active,
                   base_predictor_id=None, training_data_df=None,
                   data_integration_ref=None, fetch_data_query=None, project_name=None):
+    ctx.load(context_dump)
+    ctx.profiling = {
+        'level': 0,
+        'enabled': False,
+        'pointer': None,
+        'tree': None
+    }
     with profiler.Context('learn_process'):
         with profiler.Context('learn_process init'):
             from mindsdb.interfaces.database.database import DatabaseController
-            ctx.load(context_dump)
             db.init()
 
         try:

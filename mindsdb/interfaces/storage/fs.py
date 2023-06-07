@@ -160,18 +160,21 @@ class S3FSStore(BaseFSStore):
         # NOTE: This `make_archive` function is implemente poorly and will create an empty archive file even if
         # the file/dir to be archived doesn't exist or for some other reason can't be archived
         remote_name = local_name
-        shutil.make_archive(
-            os.path.join(base_dir, remote_name),
-            'gztar',
-            root_dir=base_dir,
-            base_dir=local_name
-        )
-        self.s3.upload_file(
-            os.path.join(base_dir, f'{remote_name}.tar.gz'),
-            self.bucket,
-            f'{remote_name}.tar.gz'
-        )
-        os.remove(os.path.join(base_dir, remote_name + '.tar.gz'))
+        with profiler.Context('make_archive'):
+            shutil.make_archive(
+                os.path.join(base_dir, remote_name),
+                'gztar',
+                root_dir=base_dir,
+                base_dir=local_name
+            )
+        with profiler.Context('self.s3.upload_file'):
+            self.s3.upload_file(
+                os.path.join(base_dir, f'{remote_name}.tar.gz'),
+                self.bucket,
+                f'{remote_name}.tar.gz'
+            )
+        with profiler.Context('os.remove'):
+            os.remove(os.path.join(base_dir, remote_name + '.tar.gz'))
 
     def delete(self, remote_name):
         self.s3.delete_object(Bucket=self.bucket, Key=remote_name)

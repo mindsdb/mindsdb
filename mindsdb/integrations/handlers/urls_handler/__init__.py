@@ -10,10 +10,11 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = 'Urls'
+
+title = 'urls'
 name = 'urls'
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.svg'
+icon_path = 'icon.png'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description',

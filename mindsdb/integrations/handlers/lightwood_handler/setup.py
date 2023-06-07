@@ -8,6 +8,9 @@ with open("lightwood_handler/__about__.py") as fp:
 with open('requirements.txt') as req_file:
     requirements = [req.strip() for req in req_file.read().splitlines()]
 
+with open('requirements_standalone.txt') as req_file:
+    requirements = [req.strip() for req in req_file.read().splitlines()]
+
 # TODO: relative import okay?
 with open('../../../../requirements_test.txt', 'r') as req_test_file:
     for req in req_test_file.read().splitlines():

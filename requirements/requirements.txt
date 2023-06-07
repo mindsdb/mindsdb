@@ -53,7 +53,6 @@ jsonschema==4.17.3
 kiwisolver==1.4.4
 langid==1.1.6
 leb128==1.0.5
-lightwood >= 23.5.1.0, < 23.6.1.0
 llvmlite==0.40.0
 lz4==4.3.2
 Mako==1.2.4
@@ -100,7 +99,6 @@ python-dateutil==2.8.2
 python-magic==0.4.27
 python-multipart==0.0.6
 python-tds==1.12.0
-pytorch-ranger==0.1.1
 pytz==2023.3
 PyYAML==6.0
 redis==3.5.3
@@ -117,14 +115,11 @@ statsforecast==1.4.0
 statsmodels==0.14.0
 stevedore==5.1.0
 sympy==1.12
-tab-transformer-pytorch==0.2.6
 tenacity==8.2.2
 threadpoolctl==3.1.0
 tokenizers==0.13.3
 toml==0.10.2
 tomli==1.2.3
-torch==2.0.1
-torch-optimizer==0.1.0
 tqdm==4.65.0
 transformers==4.29.2
 type-infer==0.0.9

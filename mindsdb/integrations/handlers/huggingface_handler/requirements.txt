@@ -1,9 +1,9 @@
-mindsdb>=22.6.2.1
-mindsdb_sql >= 0.4.0
-pandas <=1.4.3
-transformers==4.21.0
+transformers==4.29.2
 sentencepiece==0.1.97
 
-torch
-tensorflow
 tqdm
+
+torch==2.0.1
+pytorch-ranger==0.1.1
+tab-transformer-pytorch==0.2.6
+torch-optimizer==0.1.0

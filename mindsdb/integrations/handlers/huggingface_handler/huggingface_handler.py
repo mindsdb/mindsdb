@@ -2,6 +2,7 @@ from typing import Optional
 
 import pandas as pd
 import transformers
+import torch as _
 from huggingface_hub import HfApi
 
 from mindsdb.utilities import log

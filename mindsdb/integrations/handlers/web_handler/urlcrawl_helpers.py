@@ -45,12 +45,14 @@ def get_all_website_links(url):
     urls = set()
             
     domain_name = urlparse(url).netloc
-    content_html = requests.get(url).content
     try:
+        content_html = requests.get(url).content
         soup = BeautifulSoup(content_html, "html.parser")
     except Exception as e:
+        error_message = traceback.format_exc().splitlines()[-1]
         logging.error("An exception occurred: %s", str(e))
-        return {'urls':urls, 'html_content':'', 'text_content': '', 'error':str(e)}
+        return {'url':url,'urls':urls, 'html_content':'', 'text_content': '', 'error':str(error_message)}
+    
     content_text = get_readable_text_from_soup(soup)
     for a_tag in soup.findAll("a"):
         href = a_tag.attrs.get("href")
@@ -71,7 +73,7 @@ def get_all_website_links(url):
         urls.add(href)
     
 
-    return {'urls':urls, 'html_content':content_html, 'text_content': content_text, 'error': None}
+    return {'url':url,'urls':urls, 'html_content':content_html, 'text_content': content_text, 'error': None}
 
 
 # this returns the soup object
@@ -82,7 +84,7 @@ def get_readable_text_from_soup(soup):
     for script in soup(["script", "style"]):
         script.decompose()
 
-    # Get text
+    # Get text, #todo add new line for li elements
     text = soup.get_text()
 
     # Remove leading and trailing spaces on each line
@@ -107,9 +109,9 @@ def get_all_website_links_rec(url, reviewd_urls, limit = None):
     try:
         reviewd_urls[url]=get_all_website_links(url)
     except Exception as e:
-        error_message = traceback.format_exc()
+        error_message = traceback.format_exc().splitlines()[-1]
         logging.error("An exception occurred: %s", str(e))
-        reviewd_urls[url]= {'urls':[], 'html_content':'', 'text_content': '', 'error':str(error_message)}
+        reviewd_urls[url]= {'url':url, 'urls':[], 'html_content':'', 'text_content': '', 'error':str(error_message)}
     if limit is not None:
         if len(reviewd_urls) >= limit:
             return reviewd_urls

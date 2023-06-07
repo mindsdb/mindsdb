@@ -1,4 +1,4 @@
-from .urlcrawl_helpers import get_df_from_query_str 
+from .urlcrawl_helpers import get_df_from_query_str, get_all_websites 
 import logging
 
 import pandas as pd
@@ -21,7 +21,92 @@ from mindsdb.integrations.libs.response import (
 
 
 
-class UrlsHandler(APIHandler):
+class CrawlerTable(APITable):
+
+    def select(self, query: ast.Select) -> Response:
+
+        conditions = extract_comparison_conditions(query.where)
+
+        params = {}
+        filters = []
+        for op, arg1, arg2 in conditions:
+
+            if op == 'or':
+                raise NotImplementedError(f'OR is not supported')
+            
+            if arg1 == 'url':
+                url = arg2
+                
+                if op == '=':
+                    urls = [str(url)]
+                elif op == 'in':
+                    if type(url) == str:
+                        urls = [str(url)]
+                    else:
+                        urls = url
+                else:
+                    raise NotImplementedError
+
+            
+
+            
+            else:
+                pass
+        
+        limit = None
+
+        if query.limit is not None:
+            limit = query.limit.value
+
+       
+
+       
+
+       
+
+        result = get_all_websites(urls, limit, html=False)
+        
+        # filter targets
+        columns = []
+        for target in query.targets:
+            if isinstance(target, ast.Star):
+                columns = []
+                break
+            elif isinstance(target, ast.Identifier):
+                columns.append(target.parts[-1])
+            else:
+                raise NotImplementedError
+
+        if len(columns) == 0:
+            columns = self.get_columns()
+
+        # columns to lower case
+        columns = [name.lower() for name in columns]
+
+        if len(result) == 0:
+            result = pd.DataFrame([], columns=columns)
+        else:
+            # add absent columns
+            for col in set(columns) & set(result.columns) ^ set(columns):
+                result[col] = None
+
+            # filter by columns
+            result = result[columns]
+        return result
+
+        
+
+    def get_columns(self):
+        return [
+            'url',
+            'text_content',
+            'error'
+        ]
+
+    
+
+
+class WebHandler(APIHandler):
     """A class for handling crawling content from websites.
 
     Attributes:
@@ -34,7 +119,8 @@ class UrlsHandler(APIHandler):
         
         self.api = None
         self.is_connected = True
-
+        crawler = CrawlerTable(self)
+        self._register_table('crawler', crawler)
         # tweets = TweetsTable(self)
         # self._register_table('tweets', tweets)
 

@@ -1,5 +1,5 @@
-__title__ = 'MindsDB Urls handler'
-__package_name__ = 'mindsdb_urls_handler'
+__title__ = 'MindsDB Web crawl handler'
+__package_name__ = 'mindsdb_web_handler'
 __version__ = '0.0.1'
 __description__ = "MindsDB handler for crawling web-sites"
 __author__ = 'MindsDB Inc'

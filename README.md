@@ -58,6 +58,8 @@ We do this by abstracting Generative AI, Large Language and other Models as a vi
 
 By taking a data-centric approach to AI MindsDB brings the process closer to the source of the data minimizing the need to build and maintain data pipelines and ETL’ing, speeding up the time to deployment and reducing complexity.
 
+**P.S. If you like our open-source project we'd appreciate if you star it on GitHub!**
+
 <h2 align="center">
    <br/>
    <br/>

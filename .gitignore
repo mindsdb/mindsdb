@@ -25,6 +25,7 @@ storage_dir
 docker/dist/*
 .directory
 MindsDB.egg-info/*
+mindsdb_env
 
 # Autokeras generated files
 auto_model

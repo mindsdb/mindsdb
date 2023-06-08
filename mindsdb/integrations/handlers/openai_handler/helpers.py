@@ -94,7 +94,7 @@ def truncate_msgs_for_token_limit(messages, model_name, max_tokens, truncate='fi
     n_tokens = count_tokens(messages, encoder, model_name)
     while n_tokens > max_tokens:
         if len(messages) == 2:
-            return messages[-1]  # edge case: if limit is surpassed by just one input, we remove initial instruction
+            return messages[:-1]  # edge case: if limit is surpassed by just one input, we remove initial instruction
         elif len(messages) == 1:
             return messages
 

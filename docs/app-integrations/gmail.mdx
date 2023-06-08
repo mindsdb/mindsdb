@@ -3,15 +3,18 @@ title: Gmail
 sidebarTitle: Gmail
 ---
 
-This is the implementation of the Gmail app handler for MindsDB. todo
+In this section, we present how to integrate a Gmail account with MindsDB.
 
-Gmail is todo
+<Warning>
+Please note that currently you can connect your Gmail account to MindsDB only when using local MindsDB installation.
+</Warning>
 
 ## Connection
 
 The required arguments to establish a connection are as follows:
 
-* `credentials_file` is todo
+* `credentials_file` stores the Google account credentials. Follow the instructions below to generate the credentials file.
+* `scopes` define the level of access granted. It is optional and by default it uses 'https://.../gmail.compose' and 'https://.../gmail.readonly' scopes.
 
 In order to make use of this handler and connect the Google Calendar app to MindsDB, the following syntax can be used:
 
@@ -20,9 +23,16 @@ CREATE DATABASE mindsdb_gmail
 WITH ENGINE = 'gmail',
 parameters = {
     "credentials_file": "mindsdb/integrations/handlers/gmail_handler/credentials.json",
-    -- "scopes": ['SCOPE_1', 'SCOPE_2', ...] -- Optional scopes. By default 'https://.../gmail.compose' & 'https://.../gmail.readonly' scopes are used
+    "scopes": ['https://.../gmail.compose', 'https://.../gmail.readonly', ...]
 };
 ```
+
+<Tip>
+Here is how to get the credentials file:
+
+1. Configure the OAuth consent screen following [this instruction](https://developers.google.com/workspace/guides/configure-oauth-consent).
+2. Create service account credentials following [this instruction](https://developers.google.com/workspace/guides/create-credentials#choose_the_access_credential_that_is_right_for_you).
+</Tip>
 
 ## Usage
 

@@ -26,9 +26,7 @@ class CrawlerTable(APITable):
     def select(self, query: ast.Select) -> Response:
 
         conditions = extract_comparison_conditions(query.where)
-
-        params = {}
-        filters = []
+        url_passed = False
         for op, arg1, arg2 in conditions:
 
             if op == 'or':
@@ -36,7 +34,8 @@ class CrawlerTable(APITable):
             
             if arg1 == 'url':
                 url = arg2
-                
+                url_passed = True
+
                 if op == '=':
                     urls = [str(url)]
                 elif op == 'in':
@@ -45,24 +44,23 @@ class CrawlerTable(APITable):
                     else:
                         urls = url
                 else:
-                    raise NotImplementedError
-
-            
-
+                    raise NotImplementedError(f'url can be url = "someurl", you can also crawl multiple sites, as follows: url IN ("url1", "url2", ..)' )
             
             else:
                 pass
         
+        if url_passed is False:
+            raise NotImplementedError(f'You must specify what url you want to crawl, for example: SELECT * FROM crawl WHERE url IN ("someurl", ..)' )
+            
         limit = None
 
         if query.limit is not None:
             limit = query.limit.value
-
-       
-
-       
-
-       
+            if limit < 0:
+                limit = None
+        if limit is None:
+            raise NotImplementedError(f'You must specify a LIMIT which defines how deep to crawl, a LIMIT -1 means that will crawl ALL websites and subwebsites (this can take a while)' )
+            
 
         result = get_all_websites(urls, limit, html=False)
         
@@ -185,11 +183,7 @@ class WebHandler(APIHandler):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    url = "https://www.lpl.com/join-lpl/managing-your-business/services-and-support.html"  # the website url
-    reviewed_urls  = {}
-    parsed_links = set()
-    get_all_website_links_rec(url, reviewed_urls, 1)
-   
+    
 
 
 

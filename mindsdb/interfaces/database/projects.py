@@ -125,12 +125,12 @@ class Project:
             and predictor_record.training_stop_at is None
             and predictor_record.status != 'error'
         ):
-            training_time = int((datetime.datetime.now() - predictor_record.training_start_at).total_seconds())
+            training_time = round((datetime.datetime.now() - predictor_record.training_start_at).total_seconds(), 3)
         elif (
             predictor_record.training_start_at is not None
             and predictor_record.training_stop_at is not None
         ):
-            training_time = int((predictor_record.training_stop_at - predictor_record.training_start_at).total_seconds())
+            training_time = round((predictor_record.training_stop_at - predictor_record.training_start_at).total_seconds(), 3)
         predictor_meta = {
             'type': 'model',
             'id': predictor_record.id,

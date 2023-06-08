@@ -22,10 +22,11 @@ def is_valid(url):
 # this bad boy gets all the crawling done in parallel
 def parallel_get_all_website_links(urls):
     url_contents = {}
-    # if len(urls) <= 2:
-    #     for url in urls:
-    #         url_contents[url] = get_all_website_links(url)
-    #     return url_contents
+
+    if len(urls) <= 10:
+        for url in urls:
+            url_contents[url] = get_all_website_links(url)
+        return url_contents
     
     with concurrent.futures.ProcessPoolExecutor() as executor:
         future_to_url = {executor.submit(get_all_website_links, url): url for url in urls}

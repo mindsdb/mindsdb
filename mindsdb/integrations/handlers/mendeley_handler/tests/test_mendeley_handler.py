@@ -8,7 +8,7 @@ class MendeleyHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "connection":{"client_id":15253,"client_secret":"BxmSvbrRW5iYEIQR"}
+            "connection_data":{"client_id":15253,"client_secret":"BxmSvbrRW5iYEIQR"}
         }
         cls.handler = MendeleyHandler("test_mendeley_handler",**cls.kwargs)
 
@@ -63,7 +63,7 @@ class MendeleyHandlerTest(unittest.TestCase):
             res = self.handler.call_mendeley_api("method1",None)
 
     def test_11_select_invalid_condition_name(self):
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(ValueError):
             query = "SELECT * FROM catalog_search_data WHERE name='American Journal of Clinical Nutrition'"
             result = self.handler.native_query(query)
 

@@ -35,14 +35,18 @@ def send_profiling_results(profiling_data: dict):
     time_start_at = profiling["tree"]["time_start_at"]
     del profiling["tree"]["time_start_at"]
 
-    connection = psycopg.connect(
-        host=MINDSDB_PROFILING_DB_HOST,
-        port=5432,
-        user=MINDSDB_PROFILING_DB_USER,
-        password=MINDSDB_PROFILING_DB_PASSWORD,
-        dbname="postgres",
-        connect_timeout=5
-    )
+    try:
+        connection = psycopg.connect(
+            host=MINDSDB_PROFILING_DB_HOST,
+            port=5432,
+            user=MINDSDB_PROFILING_DB_USER,
+            password=MINDSDB_PROFILING_DB_PASSWORD,
+            dbname="postgres",
+            connect_timeout=5
+        )
+    except Exception:
+        print('cant get acceess to profiling database')
+        return
     cur = connection.cursor()
     cur.execute("""
         insert into profiling

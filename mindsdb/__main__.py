@@ -16,13 +16,12 @@ from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
 from mindsdb.api.postgres.start import start as start_postgres
+from mindsdb.interfaces.chatbot.chatbot_monitor import start as start_chatbot
 from mindsdb.interfaces.jobs.scheduler import start as start_scheduler
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
 from mindsdb.utilities import log
-from mindsdb.interfaces.stream.stream import StreamController
-from mindsdb.interfaces.stream.utilities import STOP_THREADS_EVENT
 from mindsdb.interfaces.database.integrations import integration_controller
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
@@ -30,7 +29,6 @@ from mindsdb.utilities.fs import create_dirs_recursive, clean_process_marks, cle
 from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
-
 
 import torch.multiprocessing as mp
 try:
@@ -44,7 +42,6 @@ _stop_event = threading.Event()
 
 def close_api_gracefully(apis):
     _stop_event.set()
-    STOP_THREADS_EVENT.set()
     try:
         for api in apis.values():
             process = api['process']
@@ -255,15 +252,6 @@ if __name__ == '__main__':
             except Exception as e:
                 log.logger.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
 
-        stream_controller = StreamController()
-        for integration_name, integration_meta in integration_controller.get_all(sensitive_info=True).items():
-            if (
-                integration_meta.get('type') in stream_controller.known_dbs
-                and integration_meta.get('publish', False) is True
-            ):
-                print(f"Setting up stream: {integration_name}")
-                stream_controller.setup(integration_name)
-        del stream_controller
     # @TODO Backwards compatibility for tests, remove later
 
     if args.api is None:
@@ -290,10 +278,18 @@ if __name__ == '__main__':
         'mongodb': start_mongo,
         'postgres': start_postgres,
         'jobs': start_scheduler,
+        'chatbot': start_chatbot
     }
 
     if config.get('jobs', {}).get('disable') is not True:
         apis['jobs'] = {
+            'process': None,
+            'started': False
+        }
+
+    # disabled on cloud
+    if config.get('chatbot', {}).get('disable') is not True and not is_cloud:
+        apis['chatbot'] = {
             'process': None,
             'started': False
         }

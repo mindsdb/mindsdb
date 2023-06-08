@@ -58,6 +58,7 @@ class HandlersCache:
             return
         self._stop_event.clear()
         self.cleaner_thread = threading.Thread(target=self._clean)
+        self.cleaner_thread.daemon = True
         self.cleaner_thread.start()
 
     def _stop_clean(self) -> None:
@@ -162,8 +163,6 @@ class IntegrationController:
         return integration_record.id
 
     def add(self, name, engine, connection_args):
-        if engine in ['redis', 'kafka']:
-            return self._add_integration_record(name, engine, connection_args)
 
         logger.debug(
             "%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
@@ -365,6 +364,9 @@ class IntegrationController:
             Returns:
                 Handler object
         """
+        handler_meta = self.handlers_import_status[handler_type]
+        if not handler_meta["import"]["success"]:
+            logger.info(f"to use {handler_type} please install 'pip install mindsdb[{handler_type}]'")
 
         logger.debug("%s.create_tmp_handler: connection args - %s", self.__class__.__name__, connection_data)
         resource_id = int(time() * 10000)
@@ -383,10 +385,7 @@ class IntegrationController:
         )
 
         logger.debug("%s.create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
-        if DBClient.is_local:
-            return self.handler_modules[handler_type].Handler(**handler_ars)
-        else:
-            return DBClient(handler_type, **handler_ars)
+        return DBClient(handler_type, self.handler_modules[handler_type].Handler, **handler_ars)
 
     def get_handler(self, name, case_sensitive=False):
         handler = self.handlers_cache.get(name)
@@ -413,6 +412,11 @@ class IntegrationController:
             raise Exception(f"Can't find handler for '{integration_name}' ({integration_engine})")
 
         integration_meta = self.handlers_import_status[integration_engine]
+        if not integration_meta["import"]["success"]:
+            msg = f"to use {integration_engine} please install 'pip install mindsdb[{integration_engine}]'"
+            logger.debug(msg)
+            raise Exception(msg)
+
         connection_args = integration_meta.get('connection_args')
         logger.debug("%s.get_handler: connection args - %s", self.__class__.__name__, connection_args)
 
@@ -458,11 +462,7 @@ class IntegrationController:
         else:
 
             logger.info("%s.get_handler: create a client to db service of %s type, args - %s", self.__class__.__name__, integration_engine, handler_ars)
-            if DBClient.is_local:
-                handler = HandlerClass(**handler_ars)
-                self.handlers_cache.set(handler)
-            else:
-                handler = DBClient(integration_engine, **handler_ars)
+            handler = DBClient(integration_engine, HandlerClass, **handler_ars)
 
         return handler
 
@@ -497,9 +497,7 @@ class IntegrationController:
         dependencies = self._read_dependencies(handler_dir)
 
         self.handler_modules[module.name] = module
-        import_error = None
-        if hasattr(module, 'import_error'):
-            import_error = module.import_error
+        import_error = getattr(module, 'import_error', None)
         handler_meta = {
             'import': {
                 'success': import_error is None,

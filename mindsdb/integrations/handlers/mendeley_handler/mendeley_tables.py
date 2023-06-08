@@ -160,7 +160,7 @@ class CatalogSearchTable(APITable):
                 params=params)
         
         if conditions==[]:
-            raise NotImplementedError('Please give input for the search to be conducted.')
+            raise ValueError('Please give input for the search to be conducted.')
         
 
         columns = []

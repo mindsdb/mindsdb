@@ -5,7 +5,6 @@ from typing import Optional, Dict
 import numpy as np
 import pandas as pd
 
-from langchain.memory import ConversationBufferMemory
 from langchain.schema import SystemMessage
 from langchain.agents import AgentType
 from langchain.llms import OpenAI

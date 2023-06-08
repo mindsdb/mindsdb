@@ -2,13 +2,16 @@
 This handler integrates with the Mendeley API
 
 ### Connect to the Mendeley API
-We start by creating a database to connect to the Mendeley API. In order to do that we currently don't need any parameters.
+We start by creating a database to connect to the Mendeley API. In order to do that we need the client id and client secret that are created after registering an application at https://dev.mendeley.com/myapps.html . More information on the matter can be found at https://dev.mendeley.com/reference/topics/application_registration.html .
 
 ```
 CREATE DATABASE my_mendeley
 WITH
   ENGINE = 'mendeley'
-  PARAMETERS = {};
+  PARAMETERS = {
+    "client_id" : "the client id",
+     "client_secret" : "the client secret"
+  };
 ```
 
 ### Search for documents

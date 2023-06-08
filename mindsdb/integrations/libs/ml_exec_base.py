@@ -54,7 +54,11 @@ from mindsdb.integrations.handlers_client.ml_client_factory import MLClientFacto
 
 from .ml_handler_proc import MLHandlerWrapper, MLHandlerPersistWrapper
 
-import torch.multiprocessing as mp
+try:
+    import torch.multiprocessing as mp
+except (ImportError, ModuleNotFoundError):
+    import multiprocessing as mp
+
 mp.get_context('spawn')
 
 

@@ -32,77 +32,11 @@ class CatalogSearchTable(APITable):
 
         for op,arg1,arg2 in conditions:
 
-            if arg1 == 'arxiv':
+            if arg1 in ['arxiv', 'doi', 'isbn', 'issn', 'pmid', 'scopus', 'filehash']:
 
                 if op != '=':
                     raise NotImplementedError
-                params['arxiv'] = arg2
-
-                result = self.handler.call_mendeley_api(
-                method_name='identifier_search',
-                params=params)
-
-                break
-                
-            elif arg1 == 'doi':
-                if op != '=':
-                    raise NotImplementedError
-                params['doi'] = arg2
-
-                result = self.handler.call_mendeley_api(
-                method_name='identifier_search',
-                params=params)
-
-                break
-                
-            elif arg1 == 'isbn':
-                if op != '=':
-                    raise NotImplementedError
-                params['isbn'] = arg2
-
-                result = self.handler.call_mendeley_api(
-                method_name='identifier_search',
-                params=params)
-
-                break
-                
-            elif arg1 == 'issn':
-                if op != '=':
-                    raise NotImplementedError
-                params['issn'] = arg2
-
-                result = self.handler.call_mendeley_api(
-                method_name='identifier_search',
-                params=params)
-
-                break
-                
-            elif arg1 == 'pmid':
-                if op != '=':
-                    raise NotImplementedError
-                params['pmid'] = arg2
-
-                result = self.handler.call_mendeley_api(
-                method_name='identifier_search',
-                params=params)
-
-                break
-                
-            elif arg1 == 'scopus':
-                if op != '=':
-                    raise NotImplementedError
-                params['scopus'] = arg2
-
-                result = self.handler.call_mendeley_api(
-                method_name='identifier_search',
-                params=params)
-
-                break
-                
-            elif arg1 == 'filehash':
-                if op != '=':
-                    raise NotImplementedError
-                params['filehash'] = arg2
+                params[arg1] = arg2
 
                 result = self.handler.call_mendeley_api(
                 method_name='identifier_search',

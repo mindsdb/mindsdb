@@ -1,9 +1,11 @@
 import pandas as pd
 from typing import Dict, List
 
-from mindsdb.integrations.handlers.rocket_chat_handler.rocket_chat_client import RocketChatClient
-from mindsdb.integrations.handlers.rocket_chat_handler.rocket_chat_tables import RocketChatMessagesTable
-from mindsdb.integrations.libs.api_handler import APIHandler
+from rocketchat_API.rocketchat import RocketChat
+
+from mindsdb.integrations.handlers.rocket_chat_handler.rocket_chat_tables import (
+    ChannelMessagesTable, ChannelsTable, DirectsTable, DirectMessagesTable, UsersTable)
+from mindsdb.integrations.libs.api_handler import APIChatHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -12,7 +14,7 @@ from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
 
-class RocketChatHandler(APIHandler):
+class RocketChatHandler(APIChatHandler):
     """A class for handling connections and interactions with the Rocket Chat API.
 
     Attributes:
@@ -55,8 +57,36 @@ class RocketChatHandler(APIHandler):
         self.client = None
         self.is_connected = False
 
-        messages_table = RocketChatMessagesTable(self)
-        self._register_table('messages', messages_table)
+        self._register_table('channels', ChannelsTable(self))
+
+        self._register_table('channel_messages', ChannelMessagesTable(self))
+
+        self._register_table('directs', DirectsTable(self))
+
+        self._register_table('direct_messages', DirectMessagesTable(self))
+
+        self._register_table('users', UsersTable(self))
+
+    def get_chat_config(self):
+        params = {
+            'polling': {
+                'type': 'message_count',
+                'table': 'directs',
+                'chat_id_col': '_id',
+                'count_col': 'msgs'
+            },
+            'chat_table': {
+                'name': 'direct_messages',
+                'chat_id_col': 'room_id',
+                'username_col': 'username',
+                'text_col': 'text',
+            }
+        }
+        return params
+
+    def get_my_user_name(self):
+        info = self.call_api('me')
+        return info['username']
 
     def connect(self):
         """Creates a new Rocket Chat API client if needed and sets it as the client to use for requests.
@@ -66,12 +96,13 @@ class RocketChatHandler(APIHandler):
         if self.is_connected and self.client is not None:
             return self.client
 
-        self.client = RocketChatClient(
-            self.domain,
-            token=self.auth_token,
+        self.client = RocketChat(
+            user=self.username,
+            password=self.password,
+            auth_token=self.auth_token,
             user_id=self.auth_user_id,
-            username=self.username,
-            password=self.password)
+            server_url=self.domain
+        )
 
         self.is_connected = True
         return self.client
@@ -85,77 +116,22 @@ class RocketChatHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            client = self.connect()
-            response.success = client.ping()
+            self.connect()
+            response.success = True
         except Exception as e:
             log.logger.error(f'Error connecting to Rocket Chat API: {e}!')
             response.error_message = e
 
-        self.is_connected = response.success
+        if response.success is False:
+            self.is_connected = False
         return response
 
     def native_query(self, query: str = None) -> Response:
         ast = parse_sql(query, dialect='mindsdb')
         return self.query(ast)
 
-    def _message_to_dataframe_row(self, message: dict) -> List:
-        id = message['_id']
-        room_id = message['rid']
-        message_text = message['msg']
-        sent_at = message['ts']
-        username = None
-        user = None
-        bot_id = None
-        if 'u' in message:
-            if 'username' in message['u']:
-                username = message['u']['username']
-            if 'name' in message['u']:
-                user = message['u']['name']
-        if 'bot' in message and 'i' in message['bot']:
-            bot_id = message['bot']['i']
-        return [id, room_id, bot_id, message_text, username, user, sent_at]
 
-    def _get_all_direct_messages(self, params):
-        if 'username' not in params:
-            raise ValueError('Missing "username" param to fetch messages for')
-        username = params['username']
-
-        client = self.connect()
-        all_messages = client.get_direct_messages(username)
-        message_rows = [self._message_to_dataframe_row(m) for m in all_messages]
-        return pd.DataFrame(message_rows)
-
-    def _get_all_channel_messages(self, params):
-        if 'room_id' not in params:
-            raise ValueError('Missing "room_id" param to fetch messages for')
-        room_id = params['room_id']
-        limit = params.get('limit', None)
-
-        client = self.connect()
-        all_messages = client.get_all_channel_messages(room_id, limit=limit)
-        message_rows = [self._message_to_dataframe_row(m) for m in all_messages]
-        return pd.DataFrame(message_rows)
-
-    def _post_message(self, params):
-        if 'room_id' not in params:
-            raise ValueError('Missing "room_id" param to post message')
-        room_id = params['room_id']
-        text = params.get('text', None)
-        alias = params.get('alias', None)
-        emoji = params.get('emoji', None)
-        avatar = params.get('avatar', None)
-
-        client = self.connect()
-        posted_message = client.post_message(
-            room_id,
-            text=text,
-            alias=alias,
-            emoji=emoji,
-            avatar=avatar)
-
-        return pd.DataFrame([self._message_to_dataframe_row(posted_message)])
-
-    def call_rocket_chat_api(self, method_name: str = None, params: Dict = None) -> pd.DataFrame:
+    def call_api(self, method_name: str = None, *args, **kwargs) -> pd.DataFrame:
         """Calls the Rocket Chat API method with the given params.
 
         Returns results as a pandas DataFrame.
@@ -164,10 +140,12 @@ class RocketChatHandler(APIHandler):
             method_name (str): Method name to call
             params (Dict): Params to pass to the API call
         """
-        if method_name == 'channels.messages':
-            return self._get_all_channel_messages(params)
-        if method_name == 'chat.postMessage':
-            return self._post_message(params)
-        if method_name == 'im.messages':
-            return self._get_all_direct_messages(params)
-        raise NotImplementedError(f'Method name {method_name} not supported by Rocket Chat API Handler')
+        client = self.connect()
+
+        method = getattr(client, method_name)
+
+        messages_response = method(*args, **kwargs)
+
+        if not messages_response.ok:
+            messages_response.raise_for_status()
+        return messages_response.json()

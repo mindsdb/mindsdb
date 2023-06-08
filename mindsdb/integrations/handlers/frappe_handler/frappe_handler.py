@@ -98,14 +98,8 @@ class FrappeHandler(APIHandler):
             return f"Error: {e}"
         return f"Success"
 
-    # def check_employee_exists(self, name):
-    #     result = self.client.get_documents('Employee', filters=[['name', '=', name]])
-    #     if len(result) == 1:
-    #         return True
-    #     return False
-
     def check_company_exists(self, name):
-        result = self.client.get_documents('', filters=[['name', '=', name]])
+        result = self.client.get_documents('Company', filters=[['name', '=', name]])
         if len(result) == 1:
             return True
         return "Company doesn't exist: please use different name"

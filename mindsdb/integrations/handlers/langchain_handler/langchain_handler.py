@@ -149,7 +149,6 @@ class LangChainHandler(OpenAIHandler):
 
         llm = ChatOpenAI(**model_kwargs)
 
-        # memory = ConversationBufferMemory(memory_key="chat_history")
         memory = ConversationSummaryBufferMemory(llm=llm,
                                                  max_token_limit=model_kwargs.get('max_tokens', None),
                                                  memory_key="chat_history")

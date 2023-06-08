@@ -62,19 +62,15 @@ class ChannelMessagesTable(APITable):
         if query.limit:
             params['count'] = query.limit
 
-        message_data = self.handler.call_api('channels_history', filters['room_id'], **params)
-
         # See Channel Messages endpoint:
         # https://developer.rocket.chat/reference/api/rest-api/endpoints/core-endpoints/channels-endpoints/messages
-        # message_data = self.handler.client.call_rocket_chat_api(method_name='channels.messages', params=params)
+        message_data = self.handler.call_api('channels_history', filters['room_id'], **params)
 
         # Only return the columns we need to.
         message_rows = [message_to_dataframe_row(m) for m in message_data['messages']]
         df = pd.DataFrame(message_rows)
 
         df = project_dataframe(df, query.targets, self.get_columns())
-
-        #     return pd.DataFrame(message_rows)
 
         return df
 
@@ -150,8 +146,6 @@ class DirectMessagesTable(APITable):
         df = pd.DataFrame(message_rows)
 
         df = project_dataframe(df, query.targets, self.get_columns())
-
-        #     return pd.DataFrame(message_rows)
 
         return df
 

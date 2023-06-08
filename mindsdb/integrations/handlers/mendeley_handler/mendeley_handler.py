@@ -22,10 +22,14 @@ class MendeleyHandler(APIHandler):
         """
         super().__init__(name)
 
+        self.connection_args = kwargs.get('connection_data', {})
+        
+        self.client_id = self.connection_args.get('client_id', None)
+        self.client_secret = self.connection_args.get('client_secret', None)
+        self.session = self.connect()
+
         self.session = None
         self.is_connected = False
-        
-        self.session = self.connect()
     
         catalog_search_data = CatalogSearchTable(self)
         self.catalog_search_data = catalog_search_data 
@@ -44,7 +48,7 @@ class MendeleyHandler(APIHandler):
         if self.is_connected == True:
             return self.session
 
-        mendeley = Mendeley(client_id=15253, client_secret="BxmSvbrRW5iYEIQR")
+        mendeley = Mendeley(self.client_id, self.client_secret)
         auth = mendeley.start_client_credentials_flow()
         self.session = auth.authenticate()
 

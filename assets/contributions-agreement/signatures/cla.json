@@ -5039,6 +5039,14 @@
       "created_at": "2023-06-08T14:14:46Z",
       "repoId": 143328315,
       "pullRequestNo": 6510
+    },
+    {
+      "name": "karthikmurali60",
+      "id": 30801730,
+      "comment_id": 1583106155,
+      "created_at": "2023-06-08T18:02:20Z",
+      "repoId": 143328315,
+      "pullRequestNo": 6497
     }
   ]
 }

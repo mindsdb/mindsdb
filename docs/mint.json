@@ -397,6 +397,7 @@
               "pages": [
                 "ml-engines/automl/lightwood",
                 "ml-engines/automl/ludwig",
+                "ml-engines/automl/autokeras",
                 "ml-engines/automl/autosklearn"
               ]
             },
@@ -404,12 +405,14 @@
               "group": "NLP",
               "pages": [
                 "custom-model/huggingface",
-                "custom-model/openai"
+                "custom-model/openai",
+                "custom-model/langchain"
               ]
             },
             {
               "group": "Bring Your Own Models",
               "pages": [
+                "custom-model/byom",
                 "custom-model/ray-serve",
                 "custom-model/mlflow"
               ]
@@ -420,9 +423,11 @@
                 {
                   "group": "Nixtla",
                   "pages": [
-                    "nixtla/statsforecast"
+                    "nixtla/statsforecast",
+                    "nixtla/neuralforecast"
                   ]
-                }
+                },
+                "custom-model/merlion"
               ]
             }
           ]

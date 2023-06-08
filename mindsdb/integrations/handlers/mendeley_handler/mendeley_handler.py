@@ -171,7 +171,16 @@ class MendeleyHandler(APIHandler):
         self.session= self.connect()
 
         if method_name == 'advanced_search':
-            data = self.session.catalog.advanced_search(title=params.get("title"),author=params.get("author"),source=params.get("source"),abstract=params.get("abstract"),min_year=params.get('min_year'),max_year=params.get('max_year'),open_access=params.get("open_access"))
+            search_params = {
+            'title': params.get("title"),
+            'author': params.get("author"),
+            'source': params.get("source"),
+            'abstract': params.get("abstract"),
+            'min_year': params.get("min_year"),
+            'max_year': params.get("max_year"),
+            'open_access': params.get("open_access")
+            }
+            data = self.session.catalog.advanced_search(**search_params)
             sum = 0
             df = pd.DataFrame()
             for x in data.list(page_size=params["limit"]).items:
@@ -187,7 +196,16 @@ class MendeleyHandler(APIHandler):
                 return df
 
         elif method_name == 'identifier_search':
-            data = self.session.catalog.by_identifier(arxiv=params.get("arxiv"),doi=params.get("doi"),isbn=params.get("isbn"),issn=params.get("issn"),pmid=params.get("pmid"),scopus=params.get('scopus'),filehash=params.get('filehash'))
+            search_params = {
+            'arxiv': params.get("arxiv"),
+            'doi': params.get("doi"),
+            'isbn': params.get("isbn"),
+            'issn': params.get("issn"),
+            'pmid': params.get("pmid"),
+            'scopus': params.get("scopus"),
+            'filehash': params.get("filehash")
+            }
+            data = self.session.catalog.by_identifier(**search_params)
             df = pd.DataFrame(self.create_dict(data),index=[0])
             return df
 

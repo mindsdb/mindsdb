@@ -58,7 +58,7 @@ We do this by abstracting Generative AI, Large Language and other Models as a vi
 
 By taking a data-centric approach to AI MindsDB brings the process closer to the source of the data minimizing the need to build and maintain data pipelines and ETL’ing, speeding up the time to deployment and reducing complexity.
 
-**P.S. If you like our open-source project we'd appreciate if you star it on GitHub!**
+**P.S. If you like our open-source project we'd appreciate if you star it on GitHub ⭐!**
 
 <h2 align="center">
    <br/>
@@ -87,7 +87,7 @@ Here are some popular use cases you can build with MindsDB:
 * Sentiment analysis: MindsDB native integration with pre-trained models like OpenAI GPT or Hugging Face can be used to analyze the sentiment of a text data, such as a customer reviews - in a single command, instead of individual API calls and ETL-ing data.
 * Predictive Maintenance: MindsDB can be used to build models to predict when equipment or machinery is likely to fail, allowing for proactive maintenance and minimizing downtime.
 
-See more examples and community tutorials [here](https://docs.mindsdb.com/tutorials)
+See more examples and community tutorials [here](https://docs.mindsdb.com/tutorials).
 
 ## Demo
 
@@ -95,7 +95,7 @@ You can try MindsDB using our [demo environment](https://cloud.mindsdb.com/?utm_
 
 ## Installation
 
-The prefered way is to use MindsDB Cloud [free demo instance](https://cloud.mindsdb.com/home) or use a [dedicated instance](https://cloud.mindsdb.com/home). If you want to move to production use [the AWS AMI image](https://aws.amazon.com/marketplace/seller-profile?id=03a65520-86ca-4ab8-a394-c11eb54573a9)/
+The prefered way is to use MindsDB Cloud [free demo instance](https://cloud.mindsdb.com/home) or use a [dedicated instance](https://cloud.mindsdb.com/home). If you want to move to production use [the AWS AMI image](https://aws.amazon.com/marketplace/seller-profile?id=03a65520-86ca-4ab8-a394-c11eb54573a9).
 
 To install locally or on-premise pull the latest Docker image:
 
@@ -140,8 +140,6 @@ MindsDB works with most of the SQL and NoSQL databases, data lakes and popular a
 | <a href=" https://docs.mindsdb.com/data-integrations/snowflake"><img src="https://img.shields.io/badge/Snowflake-35aedd?style=for-the-badge&logo=snowflake&logoColor=blue" alt="Connect Snowflake"></a> | <a href="https://docs.mindsdb.com/data-integrations/all-data-integrations#informix"><img src="https://img.shields.io/badge/Informix-191A1B?logo=informix&logoColor=fff&style=for-the-badge" alt="Informix Badge"></a> |
 | <a href="https://docs.mindsdb.com/data-integrations/trino"><img src="https://img.shields.io/badge/Trino-dd00a1?style=for-the-badge&logo=trino&logoColor=white" alt="Connect Trino"></a> | <a href="https://docs.mindsdb.com/data-integrations/all-data-integrations#monetdb"><img src="https://img.shields.io/badge/Monetdb-0099E5?logo=Monetdb&logoColor=fff&style=for-the-badge" alt="Monetdb Badge"></a> |
 
-
-
 [:question: :wave: Missing integration?](https://github.com/mindsdb/mindsdb/issues/new?assignees=&labels=&template=feature-mindsdb-request.yaml)
 
 
@@ -155,7 +153,7 @@ If you found a bug, please submit an [issue on GitHub](https://github.com/mindsd
 
 To get community support, you can:
 
-* Post at MindsDB [Slack community](https://mindsdb.com/joincommunity).
+* Post a question at MindsDB [Slack community](https://mindsdb.com/joincommunity).
 * Ask for help at our [GitHub Discussions](https://github.com/mindsdb/mindsdb/discussions).
 * Ask a question at [Stackoverflow](https://stackoverflow.com/questions/tagged/mindsdb) with a MindsDB tag.
 
@@ -165,8 +163,7 @@ If you need commercial support, please [contact](https://mindsdb.com/contact/?ut
 
 A great place to start contributing to MindsDB is to check our GitHub projects :checkered_flag:
 
-* Tutorials & documentation [dashboard tasks](https://github.com/mindsdb/mindsdb/projects/7).
-* Code contributor's [dashboard tasks](https://github.com/mindsdb/mindsdb/projects/8).
+* Community contributor's [dashboard tasks](https://github.com/mindsdb/mindsdb/projects/8).
 * [First timers only issues](https://github.com/mindsdb/mindsdb/issues?q=is%3Aissue+is%3Aopen+label%3Afirst-timers-only), if this is your first time contributing to an open source project.
 
 We are always open to suggestions so feel free to open new issues with your ideas and we can guide you!

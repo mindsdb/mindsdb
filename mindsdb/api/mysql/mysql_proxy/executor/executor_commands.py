@@ -914,7 +914,8 @@ class ExecuteCommands:
         if handler_module_meta is None:
             raise SqlApiException(f"There is no engine '{statement.handler}'")
         if handler_module_meta.get("import", {}).get("success") is not True:
-            raise SqlApiException(f"Can't import engine '{statement.handler}'")
+            log.logger.info(f"to use {statement.handler} please install it 'pip install mindsdb[{statement.handler}]'")
+            raise SqlApiException(f"Can't import engine '{statement.handler}'. to use it please install it 'pip install mindsdb[{statement.handler}]'")
 
         integration_id = self.session.integration_controller.add(
             name=name,

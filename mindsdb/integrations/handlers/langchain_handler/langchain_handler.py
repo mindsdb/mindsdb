@@ -234,7 +234,7 @@ class LangChainHandler(OpenAIHandler):
         model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
 
         # langchain tool setup
-        pred_args['tools'] = args['tools'] if 'tools' not in pred_args else pred_args['tools']
+        pred_args['tools'] = args.get('tools') if 'tools' not in pred_args else pred_args.get('tools', [])
         tools = self._setup_tools(model_kwargs, pred_args, args['executor'])
 
         # langchain agent setup
@@ -401,7 +401,7 @@ class LangChainHandler(OpenAIHandler):
             description="useful to write into data sources connected to mindsdb. command must be a valid SQL query with syntax: `INSERT INTO data_source_name.table_name (column_name_1, column_name_2, [...]) VALUES (column_1_value_row_1, column_2_value_row_1, [...]), (column_1_value_row_2, column_2_value_row_2, [...]), [...];`. note the command always ends with a semicolon. order of column names and values for each row must be a perfect match. If write fails, try casting value with a function, passing the value without quotes, or truncating string as needed.`."  # noqa
         )
 
-        toolkit = pred_args.get('tools', self.default_agent_tools)
+        toolkit = pred_args['tools'] if pred_args['tools'] is not None else self.default_agent_tools
 
         standard_tools = []
         custom_tools = []

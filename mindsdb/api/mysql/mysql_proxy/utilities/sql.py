@@ -1,9 +1,7 @@
 import copy
-import io
 
 import duckdb
 import numpy as np
-import pandas as pd
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -72,11 +70,10 @@ def query_df(df, query, session=None):
         )
         query_str = render.get_string(query_ast, with_failback=True)
 
-    # workaround to prevent duckdb.TypeMismatchException: serialize and deserialize with feather
+    # workaround to prevent duckdb.TypeMismatchException
     if len(df) > 0 and table_name.lower() in ('models', 'predictors'):
-        fd = io.BytesIO()
-        df.to_feather(fd)
-        df = pd.read_feather(fd)
+        if 'TRAINING_OPTIONS' in df.columns:
+            df = df.astype({'TRAINING_OPTIONS': 'string'})
 
     con = duckdb.connect(database=':memory:')
     con.register('df_table', df)

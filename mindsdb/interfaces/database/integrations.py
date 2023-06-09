@@ -299,7 +299,7 @@ class IntegrationController:
             integration_type = integration_module.type
 
         class_type = None
-        if integration_module is not None and inspect.isclass(integration_module.Handler) :
+        if integration_module is not None and inspect.isclass(integration_module.Handler):
             if issubclass(integration_module.Handler, DatabaseHandler):
                 class_type = 'sql'
             if issubclass(integration_module.Handler, APIHandler):

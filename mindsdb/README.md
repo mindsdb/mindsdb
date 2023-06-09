@@ -91,9 +91,9 @@ On execution, you should get:
 
 ---
 
-## 4. Creating a Predictor [`#!sql CREATE MODEL`](/sql/create/predictor/)
+## 4. Creating a Predictor [`#!sql CREATE MODEL`](https://docs.mindsdb.com/sql/create/model)
 
-Now you are ready to create your first predictor. Use the [`#!sql CREATE MODEL`](/sql/create/predictor/) syntax by copying and pasting this command into your SQL client:
+Now you are ready to create your first predictor. Use the [`#!sql CREATE MODEL`](https://docs.mindsdb.com/sql/create/model) syntax by copying and pasting this command into your SQL client:
 
 ```sql 
 CREATE MODEL mindsdb.home_rentals_predictor

@@ -63,7 +63,7 @@ class MendeleyHandlerTest(unittest.TestCase):
             res = self.handler.call_mendeley_api("method1",None)
 
     def test_11_select_invalid_condition_name(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(NotImplementedError):
             query = "SELECT * FROM catalog_search_data WHERE name='American Journal of Clinical Nutrition'"
             result = self.handler.native_query(query)
 
@@ -99,6 +99,11 @@ class MendeleyHandlerTest(unittest.TestCase):
         ]
 
         self.assertListEqual(columns, expected_columns)
+    
+    def test_15_select_invalid_condition_name(self):
+        with self.assertRaises(ValueError):
+            query = "SELECT * FROM catalog_search_data"
+            result = self.handler.native_query(query)
 
 if __name__ == "__main__":
     unittest.main()

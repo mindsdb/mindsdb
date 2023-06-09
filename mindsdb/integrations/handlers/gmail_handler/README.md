@@ -124,3 +124,37 @@ SELECT h.PRED, h.PRED_explain, t.text_spammy AS input_text
 FROM mindsdb.emails_text AS t
 JOIN mindsdb.spam_classifier AS h;
 ~~~~
+
+## Find the email sentiment
+First create the model to find the sentiment of the email:
+~~~~sql
+CREATE MODEL email_sentiment_classifier
+PREDICT sentiment
+USING engine='huggingface',
+  model_name= 'cardiffnlp/twitter-roberta-base-sentiment',
+  input_column = 'email',
+  labels=['negative','neutral','positive'];
+~~~~
+
+Then create a view of the email table that contains the snippet or the body of the email.For example by using the snippet:
+~~~~sql
+CREATE VIEW mindsdb.emails_text AS(
+    SELECT snippet AS email
+    FROM mindsdb_gmail.emails
+)
+
+~~~~
+Finally, you can use the model to predict the sentiment of the email:
+~~~~sql
+SELECT input.email , model.sentiment
+FROM  mindsdb.emails_text AS input
+JOIN email_sentiment_classifier AS model;
+~~~~
+
+
+## Find the most common words in the emails
+You can find the most common words in the emails by using the following query:
+* First you have to create a view of the email table that contains the snippet or the body of the email.For example by using the snippet:
+* Then you can use the following query to find the most common words:
+* First you have to create a view of the email table that contains the snippet or the body of the email.For example by using the snippet:
+* Then you can use the following query to find the most common words:

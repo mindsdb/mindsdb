@@ -37,8 +37,6 @@ Drop a remark based on your observation.
 ---
 
 
-
-
 ## Testing MariaDB Handler with [All Nobel Laureates 1901-Present](https://www.kaggle.com/datasets/prithusharma1/all-nobel-laureates-1901-present?resource=download)
 
 **1. Testing CREATE DATABASE**
@@ -90,4 +88,6 @@ DROP DATABASE mysql_datasource;
 
 ### Results
 
-- [ ] There's a Bug 🪲 [Issue Title](URL To the Issue you created) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
+- [ ] The CREATE DATABASE and DROP DATABASE queries functioned as expected.
+- [ ] There's a Bug in the CREATE MODEL query 🪲 [[Bug]: [Manual QA] Test MariaDB Handler Manually: CREATE MODEL Error](https://github.com/mindsdb/mindsdb/issues/6530).
+- [ ] Unable to run SELECT FROM PREDICTOR query due to bug in CREATE MODEL query.

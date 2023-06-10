@@ -1,1 +1,26 @@
 
+## Testing: Hugging Face - US Political Party Tutorial
+
+Testing CREATE MODEL
+```sql
+CREATE MODEL mindsdb.hf_us_party
+PREDICT PRED
+USING
+engine = 'huggingface',
+task = 'text-classification',
+model_name = 'm-newhauser/distilbert-political-tweets',
+input_column = 'text';
+```
+
+```sql
+
+```
+
+Testing SELECT (making predictions)
+```sql
+<input here the entire executed command>
+```
+
+```sql
+<input here the output (or provide a screenshot of the output)>
+```

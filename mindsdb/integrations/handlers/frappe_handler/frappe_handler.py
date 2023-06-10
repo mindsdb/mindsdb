@@ -93,24 +93,28 @@ class FrappeHandler(APIHandler):
             item['income_account'] = income_account
 
         try:
+            self.connect()
             self.client.post_document('Sales Invoice', invoice)
         except Exception as e:
             return f"Error: {e}"
         return f"Success"
 
     def check_company_exists(self, name):
+        self.connect()
         result = self.client.get_documents('Company', filters=[['name', '=', name]])
         if len(result) == 1:
             return True
         return "Company doesn't exist: please use different name"
 
     def check_expense_type(self, name):
+        self.connect()
         result = self.client.get_documents('Expense Claim Type', filters=[['name', '=', name]])
         if len(result) == 1:
             return True
         return "Expense Claim Type doesn't exist: please use different name"
 
     def check_customer(self, name):
+        self.connect()
         result = self.client.get_documents('Customer', filters=[['name', '=', name]])
         if len(result) == 1:
             return True

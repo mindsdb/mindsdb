@@ -124,6 +124,7 @@
         {
           "group": "Applications",
           "pages": [
+            "app-integrations/github",
             "app-integrations/twitter"
           ]
         },

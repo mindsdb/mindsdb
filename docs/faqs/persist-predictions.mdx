@@ -5,6 +5,22 @@ sidebarTitle: Persisting Predictions
 
 MindsDB provides a range of options for persisting predictions and forecasts. Let's explore all possibilities to save the prediction results.
 
+<Note>
+**Reasons to Save Predictions**
+
+Every time you want to get predictions, you need to query the model, usually joined with an input data table, like this:
+
+```sql
+SELECT input.product_name, input.review, output.sentiment
+FROM mysql_demo_db.amazon_reviews AS input
+JOIN sentiment_classifier AS output;
+```
+
+However, querying the model returns the result set that is not persistent by default. For future use, it is recommended to persist the result set instead of querying the model again with the same data.
+
+MindsDB enables you to save predictions into a view or a table or download as a CSV file.
+</Note>
+
 ## Creating a View
 
 After creating the model, you can save the prediction results into a view.

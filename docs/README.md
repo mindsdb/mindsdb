@@ -1,6 +1,7 @@
 # MindsDB Documentation    <a href="https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo"><img src="https://img.shields.io/website?url=https%3A%2F%2Fwww.mindsdb.com%2F" alt="MindsDB Docs"></a>	
 
 ## Running the docs locally
+Run the following commands in your local repo, and make sure you are located at 'docs' folder.
 
 First install `mintlify`:
 

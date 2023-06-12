@@ -4,7 +4,7 @@ from typing import Text, List, Dict
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 
-from mindsdb.integrations.handlers.stripe_handler.query_handlers.select_query_handlers import SELECTQueryParser, SELECTQueryExecutor
+from mindsdb.integrations.handlers.utilities.query_utilities.select_query_utilities import SELECTQueryParser, SELECTQueryExecutor
 
 
 class CustomersTable(APITable):
@@ -12,7 +12,7 @@ class CustomersTable(APITable):
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """
-        Pulls data from the Stripe Customers.
+        Pulls Stripe Customer data.
 
         Parameters
         ----------
@@ -62,7 +62,7 @@ class ProductsTable(APITable):
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """
-        Pulls data from the Stripe Products.
+        Pulls Stripe Product data.
 
         Parameters
         ----------
@@ -112,7 +112,7 @@ class PaymentIntentsTable(APITable):
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """
-        Pulls data from the Stripe Payment Intents.
+        Pulls Stripe Payment Intents data.
 
         Parameters
         ----------

@@ -16,7 +16,9 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     CreateView,
     CreateJob,
     DropJob,
-    Evaluate
+    Evaluate,
+    CreateChatBot,
+    DropChatBot,
 )
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.dialects.mysql import Variable
@@ -81,6 +83,7 @@ from mindsdb.interfaces.model.functions import (
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
+from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import resolve_model_identifier
@@ -599,6 +602,11 @@ class ExecuteCommands:
             return self.answer_create_job(statement)
         elif type(statement) == DropJob:
             return self.answer_drop_job(statement)
+        # -- chatbots --
+        elif type(statement) == CreateChatBot:
+            return self.answer_create_chatbot(statement)
+        elif type(statement) == DropChatBot:
+            return self.answer_drop_chatbot(statement)
         elif type(statement) == Evaluate:
             statement.data = parse_sql(statement.query_str, dialect='mindsdb')
             return self.answer_evaluate_metric(statement)
@@ -626,6 +634,37 @@ class ExecuteCommands:
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
         jobs_controller.delete(job_name, project_name)
 
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_create_chatbot(self, statement):
+        chatbot_controller = ChatBotController()
+
+        name = statement.name
+        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+
+        database = self.session.integration_controller.get(statement.database.parts[-1])
+        if database is None:
+            raise SqlApiException(f'Database not found: {statement.database}')
+
+        chatbot_controller.add_chatbot(
+            name.parts[-1],
+            project_name=project_name,
+            model_name=statement.model.parts[-1],
+            database_id=database['id'],
+            params=statement.params
+        )
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_drop_chatbot(self, statement):
+        chatbot_controller = ChatBotController()
+
+        name = statement.name
+        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+
+        chatbot_controller.delete_chatbot(
+            name.parts[-1],
+            project_name=project_name
+        )
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_evaluate_metric(self, statement):

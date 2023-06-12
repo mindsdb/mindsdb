@@ -90,9 +90,7 @@ The `ENGINE` parameter in the `USING` clause specifies the ML engine used to mak
 We can check the training status with the following query:
 
 ```sql
-SELECT *
-FROM models
-WHERE name = 'quarterly_expenditure_forecaster';
+DESCRIBE quarterly_expenditure_forecaster;
 ```
 
 One of the pros of using the StatsForecast engine is that it is fast - it doesn’t take long until the model completes the training process.

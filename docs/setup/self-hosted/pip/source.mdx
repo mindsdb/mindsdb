@@ -80,13 +80,13 @@ brew install libmagic
 3. Install MindsDB prerequisites:
 
    ```bash
-   cd mindsdb && pip install -r requirements.txt
+   cd mindsdb/requirements && pip install -r requirements.txt
    ```
 
 4. Install MindsDB:
 
    ```bash
-   python setup.py develop
+   cd .. && python setup.py develop
    ```
 
 5. Verify MindsDB installation by starting the MindsDB server:

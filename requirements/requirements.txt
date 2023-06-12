@@ -8,7 +8,7 @@ attrs==23.1.0
 autopage==0.5.1
 black==21.12b0
 Brotli==1.0.9
-certifi==2021.5.30
+certifi==2022.12.7
 cffi==1.15.1
 charset-normalizer==2.0.2
 checksumdir==1.2.0

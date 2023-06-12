@@ -12,6 +12,7 @@ certifi==2021.5.30
 cffi==1.15.1
 charset-normalizer==2.0.2
 checksumdir==1.2.0
+chromadb==0.3.25
 ciso8601==2.3.0
 click==7.1.2
 clickhouse-cityhash==1.0.2.4
@@ -30,7 +31,7 @@ dataprep-ml==0.0.8
 Deprecated==1.2.14
 dill==0.3.4
 dnspython==2.3.0
-duckdb==0.6.0
+duckdb==0.7.1
 einops==0.6.1
 et-xmlfile==1.1.0
 exceptiongroup==1.1.1
@@ -53,7 +54,7 @@ jsonschema==4.17.3
 kiwisolver==1.4.4
 langid==1.1.6
 leb128==1.0.5
-lightwood >= 23.5.1.0, < 23.6.1.0
+lightwood >= 23.5.1.0
 llvmlite==0.40.0
 lz4==4.3.2
 Mako==1.2.4
@@ -98,6 +99,7 @@ pyrsistent==0.19.3
 pytest==7.3.1
 python-dateutil==2.8.2
 python-magic==0.4.27
+#python-magic-bin >= 0.4.14 #for M1 mac users, comment out the above line and uncomment this one
 python-multipart==0.0.6
 python-tds==1.12.0
 pytorch-ranger==0.1.1
@@ -105,14 +107,14 @@ pytz==2023.3
 PyYAML==6.0
 redis==3.5.3
 regex==2023.5.5
-requests==2.26.0
+requests==2.28.0
 schema==0.7.5
 scikit-learn==1.0.2
 scipy==1.10.1
 six==1.16.0
 sktime==0.14.1
 sly==0.5
-SQLAlchemy >= 1.4.29, < 2.0.0
+SQLAlchemy
 statsforecast==1.4.0
 statsmodels==0.14.0
 stevedore==5.1.0

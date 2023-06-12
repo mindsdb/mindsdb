@@ -128,7 +128,7 @@ tomli==1.2.3
 torch==2.0.1
 torch-optimizer==0.1.0
 tqdm==4.65.0
-transformers==4.29.2
+transformers==4.30.0
 type-infer==0.0.9
 typing-inspect==0.9.0
 typing_extensions==4.6.2

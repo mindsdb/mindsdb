@@ -31,6 +31,17 @@ parameters = {
 Here is how to get the credentials file:
 
 1. Configure the OAuth consent screen following [this instruction](https://developers.google.com/workspace/guides/configure-oauth-consent).
+
+<Note>
+While creating an app, add these scopes:
+.../auth/userinfo.profile
+.../auth/userinfo.email
+openid
+
+Then go to Credentials and Create OAuth client ID, choose app type as xxx
+then you'll get a popup 'OAuth client created' and download json there
+</Note>
+
 2. Create service account credentials following [this instruction](https://developers.google.com/workspace/guides/create-credentials#choose_the_access_credential_that_is_right_for_you).
 </Tip>
 

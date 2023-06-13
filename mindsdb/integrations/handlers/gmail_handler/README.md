@@ -152,10 +152,16 @@ FROM  mindsdb.emails_text AS input
 JOIN email_sentiment_classifier AS model;
 ~~~~
 
+## Delete emails
+You can delete emails by using the following query:
+~~~~sql
+DELETE FROM mindsdb_gmail.emails
+WHERE message_id = '187cbdd861350934d';
+~~~~
 
-## Find the most common words in the emails
-You can find the most common words in the emails by using the following query:
-* First you have to create a view of the email table that contains the snippet or the body of the email.For example by using the snippet:
-* Then you can use the following query to find the most common words:
-* First you have to create a view of the email table that contains the snippet or the body of the email.For example by using the snippet:
-* Then you can use the following query to find the most common words:
+# Update email labels
+You can update the labels of an email by using the following query:
+~~~~sql
+UPDATE mindsdb_gmail.emails
+set addLabel="SPAM",removeLabel = "UNREAD"
+WHERE message_id = '187cbdd861350934d';

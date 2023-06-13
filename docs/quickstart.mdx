@@ -125,10 +125,10 @@ On execution, we get:
 To learn more about MindsDB tables structure, check out
 [this guide](/sql/table-structure/).
 
-## 5. Create a Model Using [`CREATE MODEL`](/sql/create/predictor/)
+## 5. Create a Model Using [`CREATE MODEL`](/sql/create/model/)
 
 Now you are ready to create your first model. Use the
-[`CREATE MODEL`](/sql/create/predictor/) statement, as below.
+[`CREATE MODEL`](/sql/create/model/) statement, as below.
 
 ```sql
 CREATE MODEL mindsdb.home_rentals_model
@@ -149,9 +149,7 @@ It may take a couple of minutes until the model is trained. You can monitor
 the status of your model by executing the following command:
 
 ```sql
-SELECT status
-FROM mindsdb.models
-WHERE name = 'home_rentals_model';
+DESCRIBE home_rentals_model;
 ```
 
 On execution, we get:

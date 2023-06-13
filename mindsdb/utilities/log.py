@@ -102,12 +102,15 @@ def initialize_log(config=None, logger_name='main', wrap_print=False):
     telemtry_enabled = os.getenv('CHECK_FOR_UPDATES', '1').lower() not in ['0', 'false', 'False']
 
     if telemtry_enabled:
-        import sentry_sdk
-        from sentry_sdk import capture_message, add_breadcrumb
-        sentry_sdk.init(
-            "https://29e64dbdf325404ebf95473d5f4a54d3@o404567.ingest.sentry.io/5633566",
-            traces_sample_rate=0  # Set to `1` to experiment with performance metrics
-        )
+        try:
+            import sentry_sdk
+            from sentry_sdk import capture_message, add_breadcrumb
+            sentry_sdk.init(
+                "https://29e64dbdf325404ebf95473d5f4a54d3@o404567.ingest.sentry.io/5633566",
+                traces_sample_rate=0  # Set to `1` to experiment with performance metrics
+            )
+        except (ImportError, ModuleNotFoundError) as e:
+            raise Exception(f"to use telemetry please install 'pip install mindsdb[telemetry]': {e}")
 
     ''' Create new logger
     :param config: object, app config

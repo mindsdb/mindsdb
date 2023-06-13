@@ -219,6 +219,45 @@ class EmailsTable(APITable):
             else:
                 raise NotImplementedError(f'Unknown clause: {arg1}')
 
+    def update(self, query: ast.Update) -> None:
+        """Updates a label of a message.
+
+        Args:
+            query (ASTNode): The SQL query to parse.
+
+        Raises:
+            NotImplementedError: If the query contains an unsupported condition.
+        """
+        params = {}
+        conditions = extract_comparison_conditions(query.where)
+        for op, arg1, arg2 in conditions:
+            if op == 'or':
+                raise NotImplementedError(f'OR is not supported')
+            if arg1 == 'id':
+                if op == '=':
+                    params['id'] = arg2
+                else:
+                    raise NotImplementedError(f'Unknown op: {op}')
+            else:
+                raise NotImplementedError(f'Unknown clause: {arg1}')
+        request_body = {}
+        values = query.update_columns.items()
+        data_list = list(values)
+        add_label = []
+        remove_label = []
+        for key, value in data_list:
+            if key == 'addLabel':
+                add_label.append(str(value)[1:-1])
+            elif key == 'removeLabel':
+                remove_label.append(str(value)[1:-1])
+            else:
+                raise NotImplementedError(f'Unknown clause: {key}')
+        if add_label:
+            request_body['addLabelIds'] = add_label
+        if remove_label:
+            request_body['removeLabelIds'] = remove_label
+        params['body'] = request_body
+        self.handler.call_gmail_api('modify_message', params)
 
 
 class GmailHandler(APIHandler):
@@ -444,8 +483,10 @@ class GmailHandler(APIHandler):
             method = service.users().messages().list
         elif method_name == 'send_message':
             method = service.users().messages().send
-        elif method_name =="delete_message":
+        elif method_name == "delete_message":
             method = service.users().messages().trash
+        elif method_name == 'update_message':
+            method = service.users().messages().modify
         else:
             raise NotImplementedError(f'Unknown method_name: {method_name}')
 

@@ -223,6 +223,13 @@ class EmailsTableTest(unittest.TestCase):
     def test_delete_method(self):
         gmail_handler = Mock(GmailHandler)
         gmail_table = EmailsTable(gmail_handler)
-        query = parse_sql('delete from aaa where id=1', dialect='mindsdb')
+        query = parse_sql('delete from gmail where id=1', dialect='mindsdb')
         gmail_table.delete(query)
         gmail_handler.call_gmail_api.assert_called_once_with('delete_message', {'id': 1})
+
+    def test_update_method(self):
+        gmail_handler = Mock(GmailHandler)
+        gmail_table = EmailsTable(gmail_handler)
+        query = parse_sql('update gmail set addLabel="test1",removeLabel = "test" where id=1', dialect='mindsdb')
+        gmail_table.update(query)
+        gmail_handler.call_gmail_api.assert_called_once_with('modify_message', {'id': 1, 'body': {'addLabelIds': ['test1'], 'removeLabelIds': ['test']}})

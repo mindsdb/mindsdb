@@ -80,6 +80,7 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==23.1.2 &
     pip install --prefer-binary --no-cache-dir slack_sdk || true \
     pip install --no-cache-dir 'neuralforecast>=1.4.0, <1.5.0' 'hierarchicalforecast<1.0' 'hyperopt<1.0' || true && \
     pip install --prefer-binary --no-cache-dir 'statsforecast>=1.4.0, <2.0' || true && \
+    pip install --no-cache-dir google-api-python-client google-auth-httplib2 google-auth-oauthlib || true && \
     pip install --prefer-binary --no-cache-dir hugging_py_face || true 
 
 ARG VERSION=

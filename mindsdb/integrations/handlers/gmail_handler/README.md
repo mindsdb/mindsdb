@@ -68,6 +68,7 @@ where
 * query - The search term. The query parameter supports all the search terms we can use with gmail. For more details please check [this link](https://support.google.com/mail/answer/7190)
 * label_ids - A comma separated string of labels to search for. E.g. "INBOX,UNREAD" will search for unread emails in inbox, "SENT" will search for emails in the sent folder.
 * include_spam_trash - BOOLEAN (TRUE / FALSE). By default it is FALSE. If included, the search will cover the SPAM and TRASH folders.
+* include_attachments - BOOLEAN (TRUE / FALSE). By default it is FALSE. If included, the search will include emails with attachments.
 
 ## Writing Emails
 

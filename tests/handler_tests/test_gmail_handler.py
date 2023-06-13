@@ -2,9 +2,10 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_
 from mindsdb.integrations.handlers.gmail_handler.gmail_handler import GmailHandler
 from mindsdb.integrations.handlers.gmail_handler.gmail_handler import EmailsTable
 from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
+from mindsdb_sql.parser.ast.delete import Delete
+from mindsdb_sql import parse_sql
 import unittest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
 from unittest import mock
 
 
@@ -103,7 +104,6 @@ class GmailHandlerTest(unittest.TestCase):
                 ]
             }
 
-
         ]
         attachments = []
         email_body = self.handler._parse_parts(email_parts, attachments)
@@ -190,18 +190,12 @@ class GmailHandlerTest(unittest.TestCase):
         self.assertEqual(attachments, expected_attachments)
 
 
-
-
-
-
-
 class EmailsTableTest(unittest.TestCase):
 
     def test_get_tables(self):
         handler = Mock(GmailHandler)
         tables = handler.get_tables()
         assert tables.type is not RESPONSE_TYPE.ERROR
-
 
     def test_get_columns_returns_all_columns(self):
         gmail_handler = Mock(GmailHandler)
@@ -223,3 +217,12 @@ class EmailsTableTest(unittest.TestCase):
 
         ]
         self.assertListEqual(gmail_table.get_columns(), expected_columns)
+
+
+
+    def test_delete_method(self):
+        gmail_handler = Mock(GmailHandler)
+        gmail_table = EmailsTable(gmail_handler)
+        query = parse_sql('delete from aaa where id=1', dialect='mindsdb')
+        gmail_table.delete(query)
+        gmail_handler.call_gmail_api.assert_called_once_with('delete_message', {'id': 1})

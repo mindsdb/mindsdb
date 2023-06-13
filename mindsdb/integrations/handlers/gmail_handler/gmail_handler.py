@@ -193,8 +193,32 @@ class EmailsTable(APITable):
 
             if 'thread_id' in params:
                 message['threadId'] = params['thread_id']
-
             self.handler.call_gmail_api('send_message', {'body': message})
+
+    def delete(self, query: ast.Delete):
+        """
+        Deletes an event or events in the calendar.
+
+        Args:
+            query (ast.Delete): SQL query to parse.
+
+        Returns:
+            Response: Response object containing the results.
+        """
+
+        # Parse the query to get the conditions.
+        conditions = extract_comparison_conditions(query.where)
+        for op, arg1, arg2 in conditions:
+            if op == 'or':
+                raise NotImplementedError(f'OR is not supported')
+            if arg1 == 'id':
+                if op == '=':
+                    self.handler.call_gmail_api('delete_message', {'id': arg2})
+                else:
+                    raise NotImplementedError(f'Unknown op: {op}')
+            else:
+                raise NotImplementedError(f'Unknown clause: {arg1}')
+
 
 
 class GmailHandler(APIHandler):
@@ -398,8 +422,6 @@ class GmailHandler(APIHandler):
                 with open(filename, 'wb') as f:
                     f.write(file_data)
 
-
-
     def _handle_list_messages_response(self, data, messages):
         total_pages = len(messages) // self.max_batch_size
         for page in range(total_pages):
@@ -422,8 +444,8 @@ class GmailHandler(APIHandler):
             method = service.users().messages().list
         elif method_name == 'send_message':
             method = service.users().messages().send
-        elif method_name == 'get_attachments':
-            method = service.users().messages().attachments().get
+        elif method_name =="delete_message":
+            method = service.users().messages().trash
         else:
             raise NotImplementedError(f'Unknown method_name: {method_name}')
 

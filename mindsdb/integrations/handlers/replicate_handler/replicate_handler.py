@@ -27,7 +27,6 @@ class ReplicateHandler(BaseMLEngine):
 
             replicate.models.get(args['model_name']).versions.get(args['version'])
         except Exception as e:
-            print(e)
             raise Exception("Check your model_name and version carefully")
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
@@ -47,20 +46,33 @@ class ReplicateHandler(BaseMLEngine):
         The expected output is a dataframe with the predicted values in the target-named column.
         Additional columns can be present, and will be considered row-wise explanations if their names finish with `_explain`.
         """
+        def filter_images(x):
+            output= replicate.run(
+                    f"{args['model_name']}:{args['version']}",
+                    input={**x[1].to_dict(), **pred_args}) # unpacking parameters inputted
+            if isinstance(output, types.GeneratorType):
+                # getting final url if output is generator of frames url
+                output = [list(output)[-1]]
+                return output
+            else:
+                return output
+
+
+
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
         replicate.default_client.api_token = self._get_replicate_api_key(args)
 
-        output = df['prompt'].map(lambda x: replicate.run(
-            f"{args['model_name']}:{args['version']}",
-            input={'prompt': x, **pred_args}
-        ))
+        rows=df.iterrows() # Generator is returned
+        rows_arr=list(rows)# Generator converted to list have tuple consisting (index, row(pandas.Series))
 
-        if isinstance(output, types.GeneratorType):
-            output = [list(output)[-1]]
-        output = pd.DataFrame(output[0])
-        output.columns = [args['target']]
-        return output
+
+        urls = map(filter_images,rows_arr)  # using filter_images function to get url according to inputted parameters
+
+        
+        urls = pd.DataFrame(urls)
+        urls.columns = [args['target']]
+        return urls
 
     def create_engine(self, connection_args: dict):
         #  self.engine_storage.json_set()
@@ -68,12 +80,11 @@ class ReplicateHandler(BaseMLEngine):
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         
-
         if attribute == "features":
             return self._get_schema()
 
         else:
-            return self._get_schema()
+            return pd.DataFrame(['features'],columns=['tables'])
 
     def _get_replicate_api_key(self, args, strict=True):
         """ 
@@ -118,8 +129,7 @@ class ReplicateHandler(BaseMLEngine):
                 if j not in ['default', 'description', 'type']:
                     schema[i].pop(j)
 
-        print(schema)
         df = pd.DataFrame(schema).T
-        df = df.reset_index().rename(columns={'index': 'columns'})
+        df = df.reset_index().rename(columns={'index': 'inputs'})
     
-        return df
+        return df.fillna('-')

@@ -446,8 +446,7 @@ class SQLQuery():
 
     @profiler.profile()
     def create_planner(self):
-        databases_names = self.session.database_controller.get_list()
-        databases_names = [x['name'] for x in databases_names]
+        databases = self.session.database_controller.get_list()
 
         predictor_metadata = []
         predictors_records = get_model_records()
@@ -507,7 +506,7 @@ class SQLQuery():
         self.predictor_metadata = predictor_metadata
         self.planner = query_planner.QueryPlanner(
             self.query,
-            integrations=databases_names,
+            integrations=databases,
             predictor_metadata=predictor_metadata,
             default_namespace=database
         )

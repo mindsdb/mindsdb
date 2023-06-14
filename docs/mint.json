@@ -125,6 +125,7 @@
           "group": "Applications",
           "pages": [
             "app-integrations/github",
+            "app-integrations/gmail",
             "app-integrations/twitter"
           ]
         },

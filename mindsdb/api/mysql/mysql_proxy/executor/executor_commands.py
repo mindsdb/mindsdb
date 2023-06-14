@@ -550,16 +550,16 @@ class ExecuteCommands:
         elif type(statement) == DropView:
             return self.answer_drop_view(statement)
         elif type(statement) == Delete:
+            if statement.table.parts[-1].lower() == "models_versions":
+                return self.answer_delete_model_version(statement)
             if (
                     self.session.database != "mindsdb"
                     and statement.table.parts[0] != "mindsdb"
             ):
-                if statement.table.parts[-1].lower() == "models_versions":
-                    return self.answer_delete_model_version(statement)
-                else:
-                    raise ErBadTableError(
-                        "Only 'DELETE' from table 'models_versions' is possible at this moment"
-                    )
+                raise ErBadTableError(
+                    "Only 'DELETE' from database 'mindsdb' is possible at this moment"
+                )
+
             SQLQuery(statement, session=self.session, execute=True)
             return ExecuteAnswer(ANSWER_TYPE.OK)
 

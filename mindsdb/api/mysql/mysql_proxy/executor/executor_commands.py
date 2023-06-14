@@ -573,10 +573,8 @@ class ExecuteCommands:
                 if statement.table.parts[-1].lower() == "models_versions":
                     return self.answer_update_model_version(statement)
 
-                raise ErNotSupportedYet("Update is not implemented")
-            else:
-                SQLQuery(statement, session=self.session, execute=True)
-                return ExecuteAnswer(ANSWER_TYPE.OK)
+            SQLQuery(statement, session=self.session, execute=True)
+            return ExecuteAnswer(ANSWER_TYPE.OK)
         elif (
                 type(statement) == Alter
                 and ("disable keys" in sql_lower)

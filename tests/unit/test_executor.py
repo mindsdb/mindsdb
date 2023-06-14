@@ -625,6 +625,31 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         assert mock_handler().query.call_args_list[1][0][0].to_string() == "update table2 set a1=1, c1='ccc' where (a1 = 1) AND (b1 = 'ccc')"
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_update_in_integration(self, mock_handler):
+        self.set_handler(mock_handler, name='pg', tables={})
+
+        sql = '''
+            update 
+                pg.table2                   
+            set
+                a1 = 1,
+                c1 = 'ccc'
+            where  
+                b1 = 'b'   
+        '''
+
+        ret = self.command_executor.execute_command(
+            parse_sql(sql, dialect='mindsdb'))
+        assert ret.error_code is None
+
+        # 1 select and 2 updates
+        assert mock_handler().query.call_count == 1
+
+        # second is update
+        assert mock_handler().query.call_args_list[0][0][0].to_string() == "update table2 set a1=1, c1='ccc' where b1 = 'b'"
+
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_create_table(self, mock_handler):
         self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
 

@@ -13,7 +13,7 @@ This handler is implemented using `pymongo`, a Python library that contains tool
 
 The required arguments to establish a connection are as follows:
 
-* `user` is the username associated with the database.
+* `username` is the username associated with the database.
 * `password` is the password to authenticate your access.
 * `host` is the host name or IP address.
 * `port` is the port through which TCP/IP connection is to be made.
@@ -30,7 +30,7 @@ WITH
   PARAMETERS = {
     "host": "127.0.0.1",
     "port": 27017,
-    "user": "mongo",
+    "username": "mongo",
     "password": "password",
     "database": "database"
   };
@@ -63,7 +63,7 @@ mindsdb> db.databases.insertOne({
             'connection_args': {
                 "host": "127.0.0.1",
                 "port": 27017,
-                "user": "mongo",
+                "username": "mongo",
                 "password": "password",
                 "database": "database"
             }

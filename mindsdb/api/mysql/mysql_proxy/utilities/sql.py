@@ -12,6 +12,7 @@ from mindsdb_sql.parser.ast import (
 )
 
 from mindsdb.utilities import log
+from mindsdb.utilities.json_encoder import CustomJSONEncoder
 
 
 def query_df(df, query, session=None):
@@ -39,6 +40,8 @@ def query_df(df, query, session=None):
     table_name = query_ast.from_table.parts[0]
     query_ast.from_table.parts = ['df_table']
 
+    json_columns = set()
+
     def adapt_query(node, is_table, **kwargs):
         if is_table:
             return
@@ -47,19 +50,35 @@ def query_df(df, query, session=None):
                 node.parts = [node.parts[-1]]
                 return node
         if isinstance(node, Function):
-            if node.op.lower() == 'database' and len(node.args) == 0:
+            fnc_name = node.op.lower()
+            if fnc_name == 'database' and len(node.args) == 0:
                 if session is not None:
                     cur_db = session.database
                 else:
                     cur_db = None
                 return Constant(cur_db)
-            if node.op.lower() == 'truncate':
+            if fnc_name == 'truncate':
                 # replace mysql 'truncate' function to duckdb 'round'
                 node.op = 'round'
                 if len(node.args) == 1:
                     node.args.append(0)
+            if fnc_name == 'json_extract':
+                json_columns.add(node.args[0].parts[-1])
 
     query_traversal(query_ast, adapt_query)
+
+    # convert json columns
+    encoder = CustomJSONEncoder()
+
+    def _convert(v):
+        if isinstance(v, dict) or isinstance(v, list):
+            try:
+                return encoder.encode(v)
+            except Exception:
+                pass
+        return v
+    for column in json_columns:
+        df[column] = df[column].apply(_convert)
 
     render = SqlalchemyRender('postgres')
     try:

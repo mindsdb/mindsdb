@@ -17,6 +17,15 @@ class ChatBotController:
         project_controller = ProjectController()
         project = project_controller.get(name=project_name)
 
+        bot = db.ChatBots.query.filter(
+            db.ChatBots.company_id == ctx.company_id,
+            db.ChatBots.name == name,
+            db.ChatBots.project_id == project.id
+        ).first()
+
+        if bot is not None:
+            raise Exception(f'Chat bot already exists: {name}')
+
         bot = db.ChatBots(
             company_id=ctx.company_id,
             name=name,

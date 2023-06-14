@@ -85,8 +85,8 @@ Run more advanced queries:
 
 ~~~~sql
 SELECT  name, email
-FROM shopify_datasource.customers
-WHERE deliquent = 'false'
+FROM stripe_datasource.customers
+WHERE currency = 'inr'
 ORDER BY name
 LIMIT 5
 ~~~~

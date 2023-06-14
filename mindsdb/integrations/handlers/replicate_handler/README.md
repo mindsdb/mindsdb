@@ -10,32 +10,37 @@ Replicate is a platform and tool that aims to make it easier to work with machin
 This handler was implemented using the `replicate` library that is provided by Amazon Web Services.
 
 The required arguments to establish a connection are,
-* `host`: the host name or IP address of the Replicate cluster
-* `port`: the port to use when connecting with the Replicate cluster
-* `database`: the database name to use when connecting with the Replicate cluster
-* `user`: the user to authenticate the user with the Replicate cluster
-* `password`: the password to authenticate the user with the Replicate cluster
+
+* model_name: Model name which you want to access in MindsDB. e.g 'air-forever/kandinsky-2'
+* version: version hash/id which you want to use in MindsDB.
+* api_key: API key from Replicate Platform you can found [here](https://replicate.com/account/api-tokens).
+
 
 ## Usage
-Before attempting to connect to a Replicate cluster using MindsDB, ensure that it accepts incoming connections. The following can be used as a guideline to accomplish this,
-<br>
-https://aws.amazon.com/premiumsupport/knowledge-center/cannot-connect-Replicate-cluster/
+To use this handler and connect to a Replicate cluster in MindsDB, you need an account on Replicate. Make sure to create an account by following this [link](https://replicate.com/signin?next=/account/api-tokens).
 
-In order to make use of this handler and connect to a Replicate cluster in MindsDB, the following syntax can be used,
-~~~~sql
-CREATE DATABASE Replicate_datasource
-WITH
-engine='Replicate',
-parameters={
-    "host": "examplecluster.abc123xyz789.us-west-1.Replicate.amazonaws.com",
-    "port": 5439,
-    "database": "example_db",
-    "user": "awsuser",
-    "password": "my_password"
-};
-~~~~
 
-Now, you can use this established connection to query your database as follows,
-~~~~sql
-SELECT * FROM Replicate_datasource.example_tbl
-~~~~
+To establish the connection and create a model in MindsDB, use the following syntax:
+```sql
+
+CREATE MODEL aiforever
+PREDICT url
+USING
+    engine = 'replicate',
+    model_name= 'ai-forever/kandinsky-2',
+    version ='2af375da21c5b824a84e1c459f45b69a117ec8649c2aa974112d7cf1840fc0ce',
+    api_key = 'r8_BpO.........................';
+```
+
+You can use the DESCRIBE PREDICTOR query to see the available parameters that you can specify to customize your predictions:
+```sql
+DESCRIBE PREDICTOR mindsdb.aiforever.features;
+```
+
+Now, you can use the established connection to query your ML Model as follows:
+```sql
+SELECT *
+FROM aiforever
+WHERE prompt='Great warrior Arjun from Mahabharata with his bow and arrow , 4k quality'
+```
+>> Note: Replicate provides only a few free predictions, so choose your predictions wisely. Don't let the machines have all the fun, save some for yourself! 😉

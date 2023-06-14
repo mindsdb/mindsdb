@@ -61,6 +61,21 @@ class ReplicateHandler(BaseMLEngine):
 
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
+
+
+        params_names=set(df.columns)  | set(pred_args)
+        available_params=self._get_schema(only_keys=True)
+        wrong_params=[]
+        for i in params_names:
+            if i not in available_params:
+                wrong_params.append(i)
+
+        if wrong_params:
+            raise Exception(f"'{wrong_params}' is/are not supported parameter for this model.")
+
+
+
+        
         replicate.default_client.api_token = self._get_replicate_api_key(args)
 
         rows=df.iterrows() # Generator is returned
@@ -68,8 +83,6 @@ class ReplicateHandler(BaseMLEngine):
 
 
         urls = map(filter_images,rows_arr)  # using filter_images function to get url according to inputted parameters
-
-        
         urls = pd.DataFrame(urls)
         urls.columns = [args['target']]
         return urls
@@ -115,7 +128,7 @@ class ReplicateHandler(BaseMLEngine):
             raise Exception(f'Missing API key "api_key". Either re-create this ML_ENGINE specifying the `api_key` parameter,\
                  or re-create this model and pass the API key with `USING` syntax.')
 
-    def _get_schema(self):
+    def _get_schema(self, only_keys=False):
         '''Return features to populate '''
         args = self.model_storage.json_get('args')
         os.environ['REPLICATE_API_TOKEN'] = self._get_replicate_api_key(args)
@@ -123,6 +136,9 @@ class ReplicateHandler(BaseMLEngine):
         model = replicate.models.get(args['model_name'])
         version = model.versions.get(args['version'])
         schema = version.get_transformed_schema()['components']['schemas']['Input']['properties']
+
+        if only_keys:
+            return schema.keys()
 
         for i in list(schema.keys()):
             for j in list(schema[i].keys()):

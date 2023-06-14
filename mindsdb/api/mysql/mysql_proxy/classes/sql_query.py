@@ -56,6 +56,7 @@ from mindsdb_sql.planner.steps import (
     JoinStep,
     GroupByStep,
     SubSelectStep,
+    DeleteStep,
 )
 
 from mindsdb_sql.exceptions import PlanningException
@@ -1303,22 +1304,39 @@ class SQLQuery():
             )
             data = ResultSet()
         elif type(step) == UpdateToTable:
+            data = ResultSet()
 
-            result = step.dataframe.result_data
             integration_name = step.table.parts[0]
             table_name_parts = step.table.parts[1:]
 
             dn = self.datahub.get(integration_name)
 
+            # make command
+            update_query = Update(
+                table=Identifier(parts=table_name_parts),
+                update_columns=step.update_command.update_columns,
+                where=step.update_command.where
+            )
+
+            result = step.dataframe
+            if result is None:
+                # run as is
+                dn.query(query=update_query, session=self.session)
+                return data
+
+            result_data = result.result_data
+
             # link nodes with parameters for fast replacing with values
-            input_table_alias = step.update_command.from_select_alias.parts[0]
+            input_table_alias = step.update_command.from_select_alias
+            if input_table_alias is None:
+                raise ErSqlWrongArguments('Subselect in update requires alias')
 
             params_map_index = []
 
             def prepare_map_index(node, is_table, **kwargs):
                 if isinstance(node, Identifier) and not is_table:
                     # is input table field
-                    if node.parts[0] == input_table_alias:
+                    if node.parts[0] == input_table_alias.parts[0]:
                         node2 = Constant(None)
                         param_name = node.parts[-1]
                         params_map_index.append([param_name, node2])
@@ -1328,24 +1346,18 @@ class SQLQuery():
                         # remove updated table alias
                         node.parts = node.parts[1:]
 
-            # make command
-            update_query = Update(
-                table=Identifier(parts=table_name_parts),
-                update_columns=step.update_command.update_columns,
-                where=step.update_command.where
-            )
             # do mapping
             query_traversal(update_query, prepare_map_index)
 
             # check all params is input data:
-            data_header = [col.alias for col in result.columns]
+            data_header = [col.alias for col in result_data.columns]
 
             for param_name, _ in params_map_index:
                 if param_name not in data_header:
                     raise ErSqlWrongArguments(f'Field {param_name} not found in input data. Input fields: {data_header}')
 
             # perform update
-            for row in result.get_records():
+            for row in result_data.get_records():
                 # run update from every row from input data
 
                 # fill params:
@@ -1353,8 +1365,32 @@ class SQLQuery():
                     param.value = row[param_name]
 
                 dn.query(query=update_query, session=self.session)
+        elif type(step) == DeleteStep:
+
+            integration_name = step.table.parts[0]
+            table_name_parts = step.table.parts[1:]
+
+            dn = self.datahub.get(integration_name)
+
+            # make command
+            query = Delete(
+                table=Identifier(parts=table_name_parts),
+                where=copy.deepcopy(step.where),
+            )
+
+            # fill params
+            def fill_params(node, **kwargs):
+                if isinstance(node, Parameter):
+                    rs = steps_data[node.value.step_num]
+                    items = [Constant(i[0]) for i in rs.get_records_raw()]
+                    return Tuple(items)
+
+            query_traversal(query.where, fill_params)
+
+            dn.query(query=query, session=self.session)
 
             data = ResultSet()
+
         else:
             raise ErLogicError(F'Unknown planner step: {step}')
         return data

@@ -550,21 +550,19 @@ class ExecuteCommands:
         elif type(statement) == DropView:
             return self.answer_drop_view(statement)
         elif type(statement) == Delete:
-            if statement.table.parts[-1].lower() == "models_versions":
-                return self.answer_delete_model_version(statement)
             if (
                     self.session.database != "mindsdb"
                     and statement.table.parts[0] != "mindsdb"
             ):
-                raise ErBadTableError(
-                    "Only 'DELETE' from database 'mindsdb' is possible at this moment"
-                )
-            if statement.table.parts[-1] != "predictors":
-                raise ErBadTableError(
-                    "Only 'DELETE' from table 'mindsdb.models' is possible at this moment"
-                )
-            self.delete_predictor_query(statement)
+                if statement.table.parts[-1].lower() == "models_versions":
+                    return self.answer_delete_model_version(statement)
+                else:
+                    raise ErBadTableError(
+                        "Only 'DELETE' from table 'models_versions' is possible at this moment"
+                    )
+            SQLQuery(statement, session=self.session, execute=True)
             return ExecuteAnswer(ANSWER_TYPE.OK)
+
         elif type(statement) == Insert:
             SQLQuery(statement, session=self.session, execute=True)
             return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -1121,24 +1119,6 @@ class ExecuteCommands:
         ]
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
-
-    def delete_predictor_query(self, query):
-
-        query2 = Select(
-            targets=[Identifier("name")], from_table=query.table, where=query.where
-        )
-
-        sqlquery = SQLQuery(query2.to_string(), session=self.session)
-
-        result = sqlquery.fetch(self.session.datahub)
-
-        predictors_names = [x[0] for x in result["result"]]
-
-        if len(predictors_names) == 0:
-            raise SqlApiException("nothing to delete")
-
-        for predictor_name in predictors_names:
-            self.session.datahub["mindsdb"].delete_predictor(predictor_name)
 
     def answer_show_columns(
             self,

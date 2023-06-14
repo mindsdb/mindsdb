@@ -55,6 +55,7 @@ from mindsdb_sql.planner.steps import (
     JoinStep,
     GroupByStep,
     SubSelectStep,
+    DeleteStep,
 )
 
 from mindsdb_sql.exceptions import PlanningException
@@ -1319,7 +1320,7 @@ class SQLQuery():
             # link nodes with parameters for fast replacing with values
             input_table_alias = step.update_command.from_select_alias
             if input_table_alias is None:
-                raise ErSqlWrongArguments(f'Subselect in update requires alias')
+                raise ErSqlWrongArguments('Subselect in update requires alias')
 
             params_map_index = []
 
@@ -1355,6 +1356,31 @@ class SQLQuery():
                     param.value = row[param_name]
 
                 dn.query(query=update_query, session=self.session)
+        elif type(step) == DeleteStep:
+
+            integration_name = step.table.parts[0]
+            table_name_parts = step.table.parts[1:]
+
+            dn = self.datahub.get(integration_name)
+
+            # make command
+            query = Delete(
+                table=Identifier(parts=table_name_parts),
+                where=copy.deepcopy(step.where),
+            )
+
+            # fill params
+            def fill_params(node, **kwargs):
+                if isinstance(node, Parameter):
+                    rs = steps_data[node.value.step_num]
+                    items = [Constant(i[0]) for i in rs.get_records_raw()]
+                    return Tuple(items)
+
+            query_traversal(query.where, fill_params)
+
+            dn.query(query=query, session=self.session)
+
+            data = ResultSet()
 
         else:
             raise ErLogicError(F'Unknown planner step: {step}')

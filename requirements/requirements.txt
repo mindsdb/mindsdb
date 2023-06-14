@@ -19,7 +19,7 @@ sentry-sdk
 walrus==0.8.2
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
-mindsdb-sql >= 0.6.1, < 0.7.0
+mindsdb-sql >= 0.6.4, < 0.7.0
 mindsdb-evaluator >= 0.0.7, < 0.1.0
 checksumdir >= 1.2.0
 duckdb == 0.6.0

@@ -14,8 +14,8 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = "Popularity-Recommender"
-name = "popularity-recommender"
+title = "Popularity_Recommender"
+name = "popularity_recommender"
 type = HANDLER_TYPE.ML
 permanent = True
 

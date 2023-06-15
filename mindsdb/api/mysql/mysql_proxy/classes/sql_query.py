@@ -105,6 +105,12 @@ def get_table_alias(table_obj, default_db_name):
         else:
             name = table_obj.alias.parts[0]
         name = (default_db_name, name)
+    elif isinstance(table_obj, Join):
+        # get from first table
+        return get_table_alias(table_obj.left, default_db_name)
+    else:
+        # unknown yet object
+        return default_db_name, 't', 't'
 
     if table_obj.alias is not None:
         name = name + ('.'.join(table_obj.alias.parts),)

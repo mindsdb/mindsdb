@@ -15,6 +15,7 @@ from mindsdb.interfaces.database.integrations import integration_controller
 
 def start(verbose, no_studio, with_nlp):
     config = Config()
+    is_cloud = config.get('cloud', False)
 
     server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
     db.init()
@@ -28,7 +29,7 @@ def start(verbose, no_studio, with_nlp):
     host = config['api']['http']['host']
 
     process_cache.init({
-        integration_controller.handler_modules['lightwood'].Handler: 4
+        integration_controller.handler_modules['lightwood'].Handler: 4 if is_cloud else 1
     })
 
     if server.lower() == 'waitress':

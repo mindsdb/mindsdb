@@ -95,6 +95,9 @@ class WarmProcess:
         self.task.add_done_callback(self._init_done_callback)
         # endregion
 
+    def __del__(self):
+        self.pool.shutdown(wait=False)
+
     def _init_done_callback(self, _task):
         """ callback for initial task
         """
@@ -135,10 +138,39 @@ class WarmProcess:
 class ProcessCache:
     """ simple cache for WarmProcess-es
     """
-    def __init__(self):
+    def __init__(self, ttl: int = 120):
+        """ Args:
+            ttl (int) time to live for unused process
+        """
         self.cache = {}
         self._init = False
         self._lock = threading.Lock()
+        self._ttl = ttl
+        self._keep_alive = {}
+        self._stop_event = threading.Event()
+        self.cleaner_thread = None
+        self._start_clean()
+
+    def __del__(self):
+        self._stop_clean()
+
+    def _start_clean(self) -> None:
+        """ start worker that close connections after ttl expired
+        """
+        if (
+            isinstance(self.cleaner_thread, threading.Thread)
+            and self.cleaner_thread.is_alive()
+        ):
+            return
+        self._stop_event.clear()
+        self.cleaner_thread = threading.Thread(target=self._clean)
+        self.cleaner_thread.daemon = True
+        self.cleaner_thread.start()
+
+    def _stop_clean(self) -> None:
+        """ stop clean worker
+        """
+        self._stop_event.set()
 
     def init(self, preload_handlers: dict):
         """ run processes for specified handlers
@@ -150,6 +182,7 @@ class ProcessCache:
             if self._init is False:
                 self._init = True
                 for handler in preload_handlers:
+                    self._keep_alive[handler.__name__] = preload_handlers[handler]
                     self.cache[handler.__name__] = {
                         'last_usade_at': time.time(),
                         'processes': [
@@ -188,6 +221,30 @@ class ProcessCache:
             task = warm_process.apply_async(func, *args, **kwargs)
             self.cache[handler_name]['last_usade_at'] = time.time()
         return task
+
+    def _clean(self) -> None:
+        """ worker that stop unused processes
+        """
+        while self._stop_event.wait(timeout=10) is False:
+            with self._lock:
+                for handler_name in self.cache.keys():
+                    print(f'check {handler_name}')
+                    last_usade_at = self.cache[handler_name]['last_usade_at']
+                    processes = self.cache[handler_name]['processes']
+                    if (
+                        (
+                            handler_name not in self._keep_alive
+                            or self._keep_alive[handler_name] < len(processes)
+                        )
+                        and last_usade_at is not None
+                        and (time.time() - last_usade_at) > self._ttl
+                    ):
+                        for i, process in enumerate(processes):
+                            if process.ready():
+                                print(f'terminate one of {handler_name}')
+                                processes.pop(i)
+                                del process
+                                break
 
 
 process_cache = ProcessCache()

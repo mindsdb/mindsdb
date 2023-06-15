@@ -1,5 +1,6 @@
 import json
 import pandas as pd
+import datetime as dt
 from typing import Dict
 
 from mindsdb.integrations.handlers.frappe_handler.frappe_tables import FrappeDocumentsTable
@@ -43,6 +44,81 @@ class FrappeHandler(APIHandler):
 
         document_data = FrappeDocumentsTable(self)
         self._register_table('documents', document_data)
+        self.connection_data = args
+
+    def back_office_config(self):
+        tools = {
+            'register_sales_invoice': 'have to be used by assistant to register a sales invoice. Input is JSON object serialized as a string. Due date have to be passed in format: "yyyy-mm-dd".',
+            'check_company_exists': 'useful to check the company is exist. Input is company',
+            'check_expense_type': 'useful to check the expense_type is exist. Input is expense_type',
+            'check_customer':  'useful to check the customer is exist. Input is customer',
+
+        }
+        return {
+            'tools': tools,
+        }
+
+    def register_sales_invoice(self, data):
+        """
+          input is:
+            {
+              "due_date": "2023-05-31",
+              "customer": "ksim",
+              "items": [
+                {
+                  "name": "T-shirt--",
+                  "description": "T-shirt",
+                  "quantity": 1
+                }
+              ]
+            }
+        """
+        invoice = json.loads(data)
+        date = dt.datetime.strptime(invoice['due_date'], '%Y-%m-%d')
+        if date <= dt.datetime.today():
+            return 'Error: due_date have to be in the future'
+
+        for item in invoice['items']:
+            # rename column
+            item['item_name'] = item['name']
+            item['qty'] = item['quantity']
+            del item['name']
+            del item['quantity']
+
+            # add required fields
+            item['uom'] = "Nos"
+            item['conversion_factor'] = 1
+
+            income_account = self.connection_data.get('income_account', "Sales Income - C8")
+            item['income_account'] = income_account
+
+        try:
+            self.connect()
+            self.client.post_document('Sales Invoice', invoice)
+        except Exception as e:
+            return f"Error: {e}"
+        return f"Success"
+
+    def check_company_exists(self, name):
+        self.connect()
+        result = self.client.get_documents('Company', filters=[['name', '=', name]])
+        if len(result) == 1:
+            return True
+        return "Company doesn't exist: please use different name"
+
+    def check_expense_type(self, name):
+        self.connect()
+        result = self.client.get_documents('Expense Claim Type', filters=[['name', '=', name]])
+        if len(result) == 1:
+            return True
+        return "Expense Claim Type doesn't exist: please use different name"
+
+    def check_customer(self, name):
+        self.connect()
+        result = self.client.get_documents('Customer', filters=[['name', '=', name]])
+        if len(result) == 1:
+            return True
+        return "Customer doesn't exist"
 
     def connect(self) -> FrappeClient:
         """Creates a new  API client if needed and sets it as the client to use for requests.
@@ -96,14 +172,11 @@ class FrappeHandler(APIHandler):
 
     def _get_documents(self, params: Dict = None) -> pd.DataFrame:
         client = self.connect()
-        limit = None
-        filters = None
         doctype = params['doctype']
-        if 'limit' in params:
-            limit = params['limit']
-        if 'filters' in params:
-            filters = params['filters']
-        documents = client.get_documents(doctype, limit=limit, filters=filters)
+        limit = params.get('limit', None)
+        filters = params.get('filters', None)
+        fields = params.get('fields', None)
+        documents = client.get_documents(doctype, limit=limit, fields=fields, filters=filters)
         return pd.DataFrame.from_records([self._document_to_dataframe_row(doctype, d) for d in documents])
 
     def _create_document(self, params: Dict = None) -> pd.DataFrame:

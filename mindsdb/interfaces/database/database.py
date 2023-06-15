@@ -50,7 +50,8 @@ class DatabaseController:
                     'name': key,
                     'type': value.get('type', 'data'),
                     'id': value.get('id'),
-                    'engine': value.get('engine')
+                    'engine': value.get('engine'),
+                    'class_type': value.get('class_type'),
                 })
 
         if filter_type is not None:

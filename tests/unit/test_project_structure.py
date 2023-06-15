@@ -570,7 +570,7 @@ class TestJobs(BaseExecutorDummyML):
         # job wasn't executed
         ret = self.run_sql('select * from jobs_history', database='proj2')
         assert len(ret) == 1
-        prev_run = ret.RUN_START[0]
+        prev_run = ret.RUN_START[0] - dt.timedelta(seconds=60)
 
         # shift 'next run' and run once again
         job = self.db.Jobs.query.filter(self.db.Jobs.name == 'j2').first()

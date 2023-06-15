@@ -7,7 +7,7 @@ MindsDB lets you create models that utilize features provided by OpenAI GPT-3.
 
 ## How to Bring the OpenAI Model to MindsDB
 
-We use the [`CREATE MODEL`](/sql/create/predictor) statement to bring the OpenAI models to MindsDB.
+We use the [`CREATE MODEL`](/sql/create/model) statement to bring the OpenAI models to MindsDB.
 
 MindsDB provides an OpenAI engine by default. But if you want to use your own OpenAI engine, please create it using the command below and passing your OpenAI API key:
 
@@ -274,9 +274,7 @@ In the `prompt_template` parameter, we use a placeholder for a text value that c
 Before querying for predictions, we should verify the status of the `sentiment_classifier` model.
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name = 'sentiment_classifier';
+DESCRIBE sentiment_classifier;
 ```
 
 On execution, we get:

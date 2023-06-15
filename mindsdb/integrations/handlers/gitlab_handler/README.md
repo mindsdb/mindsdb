@@ -17,6 +17,7 @@ The GitLab handler is initialized with the following parameters:
 ## Implemented Features
 
 - GitLab Issues table for a given Repository (Support LIMIT, WHERE, ORDER BY, SELECT - column)
+- GitLab Merge Requests table for a given Repository (Support LIMIT, WHERE, ORDER BY, SELECT - column)
 
 ## Usage
 In order to make use of this handler and connect to a gitlab api in MindsDB, the following syntax can be used,
@@ -43,6 +44,14 @@ SELECT number, state, creator, assignee, title, labels
   LIMIT 10
 ~~~~
 
+~~~~sql
+SELECT number, state, creator, reviewers, title, has_conflicts
+  FROM mindsdb_gitlab.merge_requests
+  WHERE state="merged"
+  ORDER BY created ASC, creator DESC
+  LIMIT 10
+~~~~
+
 ## What is next??
-- GitLab Merge Requests table for a given Repository 
+- GitLab Branches table for a given Repository 
 - GitLab ....

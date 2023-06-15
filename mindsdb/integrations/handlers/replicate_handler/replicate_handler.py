@@ -61,8 +61,10 @@ class ReplicateHandler(BaseMLEngine):
                 wrong_params.append(i)
 
         if wrong_params:
-            raise Exception(f"""'{wrong_params}' is/are not supported parameter for this model.
-            Use DESCRIBE PREDICTOR mindsdb.<model_name>.features; to know about available parameters.
+            raise Exception(f"""
+'{wrong_params}' is/are not supported parameter for this model.
+Use DESCRIBE PREDICTOR mindsdb.<model_name>.features; to know about available parameters. OR 
+Visit https://replicate.com/f{args['model_name']}/versions/{args['version']} to check parameters.
             """)
 
         replicate.default_client.api_token = self._get_replicate_api_key(args)

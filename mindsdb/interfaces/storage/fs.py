@@ -337,7 +337,11 @@ class FileStorage:
     @profiler.profile()
     def push(self):
         with FileLock(self.folder_path):
-            self.fs_store.put(str(self.folder_name), str(self.resource_group_path))
+            self._push_no_lock()
+
+    @profiler.profile()
+    def _push_no_lock(self):
+        self.fs_store.put(str(self.folder_name), str(self.resource_group_path))
 
     @profiler.profile()
     def push_path(self, path):
@@ -346,6 +350,11 @@ class FileStorage:
 
     @profiler.profile()
     def pull(self):
+        with FileLock(self.folder_path):
+            self._pull_no_lock()
+
+    @profiler.profile()
+    def _pull_no_lock(self):
         try:
             self.fs_store.get(str(self.folder_name), str(self.resource_group_path))
         except Exception:
@@ -368,7 +377,7 @@ class FileStorage:
     def file_set(self, name, content):
         with FileLock(self.folder_path):
             if self.sync is True:
-                self.pull()
+                self._pull_no_lock()
 
             dest_abs_path = self.folder_path / name
 
@@ -376,13 +385,13 @@ class FileStorage:
                 fd.write(content)
 
             if self.sync is True:
-                self.push()
+                self._push_no_lock()
 
     @profiler.profile()
     def file_get(self, name):
         with FileLock(self.folder_path):
             if self.sync is True:
-                self.pull()
+                self._pull_no_lock()
 
             dest_abs_path = self.folder_path / name
 
@@ -412,7 +421,7 @@ class FileStorage:
         """
         with FileLock(self.folder_path):
             if self.sync is True:
-                self.pull()
+                self._pull_no_lock()
 
             path = Path(path)
             if isinstance(dest_rel_path, str):
@@ -429,7 +438,7 @@ class FileStorage:
             )
 
             if self.sync is True:
-                self.push()
+                self._push_no_lock()
 
     @profiler.profile()
     def get_path(self, relative_path: Union[str, Path]) -> Path:
@@ -448,7 +457,7 @@ class FileStorage:
         """
         with FileLock(self.folder_path):
             if self.sync is True:
-                self.pull()
+                self._pull_no_lock()
 
             if isinstance(relative_path, str):
                 relative_path = Path(relative_path)
@@ -479,7 +488,7 @@ class FileStorage:
                 return
 
             if self.sync is True:
-                self.pull()
+                self._pull_no_lock()
 
             if path.exists() is False:
                 raise Exception('Path does not exists')
@@ -490,7 +499,7 @@ class FileStorage:
                 path.rmdir()
 
             if self.sync is True:
-                self.push()
+                self._push_no_lock()
 
     def _complete_removal(self):
         self.fs_store.delete(self.folder_name)

@@ -22,8 +22,8 @@ class LlamaIndexHandler(BaseMLEngine):
     name = 'llama_index'
 
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
+        self.generative = True
         self.default_index_class  = 'GPTVectorStoreIndex'
         self.supported_index_class = ['GPTVectorStoreIndex']
         self.default_reader = 'DFReader'

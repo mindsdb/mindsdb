@@ -131,7 +131,14 @@ class LocalFSStore(BaseFSStore):
 
 
 class FileLock:
+    """ file lock to make safe concurrent access to directory
+        works as context
+    """
+
     def __init__(self, local_path: Path):
+        """ Args:
+            local_path (Path): path to directory
+        """
         self._local_path = local_path
         self._local_file_name = 'dir.lock'
         self._lock_file_path = local_path / self._local_file_name
@@ -141,6 +148,7 @@ class FileLock:
             return
         if self._lock_file_path.is_file() is False:
             try:
+                self._local_path.mkdir(parents=True, exist_ok=True)
                 self._lock_file_path.write_text('')
             except Exception:
                 pass
@@ -329,11 +337,13 @@ class FileStorage:
 
     @profiler.profile()
     def push(self):
-        self.fs_store.put(str(self.folder_name), str(self.resource_group_path))
+        with FileLock(self.folder_path):
+            self.fs_store.put(str(self.folder_name), str(self.resource_group_path))
 
     @profiler.profile()
     def push_path(self, path):
-        self.fs_store.put(os.path.join(self.folder_name, path), str(self.resource_group_path))
+        with FileLock(self.folder_path):
+            self.fs_store.put(os.path.join(self.folder_name, path), str(self.resource_group_path))
 
     @profiler.profile()
     def pull(self):
@@ -344,39 +354,41 @@ class FileStorage:
 
     @profiler.profile()
     def pull_path(self, path, update=True):
-        if update is False:
-            # not pull from source if object is exists
-            if os.path.exists(self.resource_group_path / self.folder_name / path):
-                return
-        try:
-            # TODO not sync if not changed?
-            self.fs_store.get(os.path.join(self.folder_name, path), str(self.resource_group_path))
-        except Exception:
-            pass
+        with FileLock(self.folder_path):
+            if update is False:
+                # not pull from source if object is exists
+                if os.path.exists(self.resource_group_path / self.folder_name / path):
+                    return
+            try:
+                # TODO not sync if not changed?
+                self.fs_store.get(os.path.join(self.folder_name, path), str(self.resource_group_path))
+            except Exception:
+                pass
 
     @profiler.profile()
     def file_set(self, name, content):
-        if self.sync is True:
-            self.pull()
+        with FileLock(self.folder_path):
+            if self.sync is True:
+                self.pull()
 
-        dest_abs_path = self.folder_path / name
+            dest_abs_path = self.folder_path / name
 
-        with open(dest_abs_path, 'wb') as fd:
-            fd.write(content)
+            with open(dest_abs_path, 'wb') as fd:
+                fd.write(content)
 
-        if self.sync is True:
-            self.push()
+            if self.sync is True:
+                self.push()
 
     @profiler.profile()
     def file_get(self, name):
+        with FileLock(self.folder_path):
+            if self.sync is True:
+                self.pull()
 
-        if self.sync is True:
-            self.pull()
+            dest_abs_path = self.folder_path / name
 
-        dest_abs_path = self.folder_path / name
-
-        with open(dest_abs_path, 'rb') as fd:
-            return fd.read()
+            with open(dest_abs_path, 'rb') as fd:
+                return fd.read()
 
     @profiler.profile()
     def add(self, path: Union[str, Path], dest_rel_path: Optional[Union[str, Path]] = None):
@@ -399,25 +411,26 @@ class FileStorage:
             path (Union[str, Path]): path to the resource
             dest_rel_path (Optional[Union[str, Path]]): relative path in storage to file or folder
         """
-        if self.sync is True:
-            self.pull()
+        with FileLock(self.folder_path):
+            if self.sync is True:
+                self.pull()
 
-        path = Path(path)
-        if isinstance(dest_rel_path, str):
-            dest_rel_path = Path(dest_rel_path)
+            path = Path(path)
+            if isinstance(dest_rel_path, str):
+                dest_rel_path = Path(dest_rel_path)
 
-        if dest_rel_path is None:
-            dest_abs_path = self.folder_path / path.name
-        else:
-            dest_abs_path = self.folder_path / dest_rel_path
+            if dest_rel_path is None:
+                dest_abs_path = self.folder_path / path.name
+            else:
+                dest_abs_path = self.folder_path / dest_rel_path
 
-        copy(
-            str(path),
-            str(dest_abs_path)
-        )
+            copy(
+                str(path),
+                str(dest_abs_path)
+            )
 
-        if self.sync is True:
-            self.push()
+            if self.sync is True:
+                self.push()
 
     @profiler.profile()
     def get_path(self, relative_path: Union[str, Path]) -> Path:
@@ -434,52 +447,55 @@ class FileStorage:
         Returns:
             Path: path to requested file or folder
         """
-        if self.sync is True:
-            self.pull()
+        with FileLock(self.folder_path):
+            if self.sync is True:
+                self.pull()
 
-        if isinstance(relative_path, str):
-            relative_path = Path(relative_path)
-        # relative_path = relative_path.resolve()
+            if isinstance(relative_path, str):
+                relative_path = Path(relative_path)
+            # relative_path = relative_path.resolve()
 
-        if relative_path.is_absolute():
-            raise TypeError('FSStorage.get_path() got absolute path as argument')
+            if relative_path.is_absolute():
+                raise TypeError('FSStorage.get_path() got absolute path as argument')
 
-        ret_path = self.folder_path / relative_path
-        if not ret_path.exists():
-            # raise Exception('Path does not exists')
-            os.makedirs(ret_path)
+            ret_path = self.folder_path / relative_path
+            if not ret_path.exists():
+                # raise Exception('Path does not exists')
+                os.makedirs(ret_path)
 
         return ret_path
 
     def delete(self, relative_path: Union[str, Path] = '.'):
-        if isinstance(relative_path, str):
-            relative_path = Path(relative_path)
+        with FileLock(self.folder_path):
+            if isinstance(relative_path, str):
+                relative_path = Path(relative_path)
 
-        if relative_path.is_absolute():
-            raise TypeError('FSStorage.delete() got absolute path as argument')
+            if relative_path.is_absolute():
+                raise TypeError('FSStorage.delete() got absolute path as argument')
 
-        path = (self.folder_path / relative_path).resolve()
+            path = (self.folder_path / relative_path).resolve()
 
-        if path == self.folder_path.resolve():
-            return self.complete_removal()
+            if path == self.folder_path.resolve():
+                return self.complete_removal()
 
-        if self.sync is True:
-            self.pull()
+            if self.sync is True:
+                self.pull()
 
-        if path.exists() is False:
-            raise Exception('Path does not exists')
+            if path.exists() is False:
+                raise Exception('Path does not exists')
 
-        if path.is_file():
-            path.unlink()
-        else:
-            path.rmdir()
+            if path.is_file():
+                path.unlink()
+            else:
+                path.rmdir()
 
-        if self.sync is True:
-            self.push()
+            if self.sync is True:
+                self.push()
 
     def complete_removal(self):
-        shutil.rmtree(str(self.folder_path))
-        self.fs_store.delete(self.folder_name)
+        with FileLock(self.folder_path):
+            self.fs_store.delete(self.folder_name)
+            shutil.rmtree(str(self.folder_path))
 
 
 class FileStorageFactory:

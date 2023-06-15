@@ -28,7 +28,8 @@ from email.message import EmailMessage
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 
 DEFAULT_SCOPES = ['https://www.googleapis.com/auth/gmail.compose',
-                  'https://www.googleapis.com/auth/gmail.readonly']
+                  'https://www.googleapis.com/auth/gmail.readonly',
+                  'https://www.googleapis.com/auth/gmail.modify']
 
 
 class EmailsTable(APITable):
@@ -211,7 +212,7 @@ class EmailsTable(APITable):
         for op, arg1, arg2 in conditions:
             if op == 'or':
                 raise NotImplementedError(f'OR is not supported')
-            if arg1 == 'id':
+            if arg1 == 'message_id':
                 if op == '=':
                     self.handler.call_gmail_api('delete_message', {'id': arg2})
                 else:
@@ -257,7 +258,7 @@ class EmailsTable(APITable):
         if remove_label:
             request_body['removeLabelIds'] = remove_label
         params['body'] = request_body
-        self.handler.call_gmail_api('modify_message', params)
+        self.handler.call_gmail_api('update_message', params)
 
 
 class GmailHandler(APIHandler):

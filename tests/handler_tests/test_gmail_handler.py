@@ -2,7 +2,6 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_
 from mindsdb.integrations.handlers.gmail_handler.gmail_handler import GmailHandler
 from mindsdb.integrations.handlers.gmail_handler.gmail_handler import EmailsTable
 from google.oauth2.credentials import Credentials
-from mindsdb_sql.parser.ast.delete import Delete
 from mindsdb_sql import parse_sql
 import unittest
 from unittest.mock import Mock, patch
@@ -67,7 +66,8 @@ class GmailHandlerTest(unittest.TestCase):
             with mock.patch('os.path.isfile') as mock_isfile:
                 mock_isfile.return_value = True
                 with mock.patch(
-                        'mindsdb.integrations.handlers.gmail_handler.gmail_handler.GmailHandler._has_creds_file') as mock_has_creds_file:
+                        'mindsdb.integrations.handlers.gmail_handler.gmail_handler.GmailHandler._has_creds_file') \
+                        as mock_has_creds_file:
                     mock_has_creds_file.return_value = True
                     result = self.handler.create_connection()
                     self.assertIsNotNone(result)
@@ -89,7 +89,9 @@ class GmailHandlerTest(unittest.TestCase):
                             {
                                 'mimeType': 'text/html',
                                 'body': {
-                                    'data': 'PGh0bWw+CiAgICA8Ym9keT4KICAgICAgPHA+VGhpcyBpcyB0aGUgSFRNTCBib2R5IG9mIHRoZSBlbWFpbC4gPC9wPgogICAgPC9ib2R5PjwvaHRtbD4='
+                                    'data': 'PGh0bWw+CiAgICA8Ym9keT4KICAgICAgPHA+V'
+                                            'GhpcyBpcyB0aGUgSFRNTCBib2R5IG9mIHRoZSBlbWFpbC4'
+                                            'gPC9wPgogICAgPC9ib2R5PjwvaHRtbD4='
                                 }
                             }
                         ]
@@ -149,7 +151,9 @@ class GmailHandlerTest(unittest.TestCase):
                             {
                                 'mimeType': 'text/html',
                                 'body': {
-                                    'data': 'PGh0bWw+CiAgICA8Ym9keT4KICAgICAgPHA+VGhpcyBpcyB0aGUgSFRNTCBib2R5IG9mIHRoZSBlbWFpbC4gPC9wPgogICAgPC9ib2R5PjwvaHRtbD4='
+                                    'data': 'PGh0bWw+CiAgICA8Ym9keT4KICAgICAgPHA+'
+                                            'VGhpcyBpcyB0aGUgSFRNTCBib2R5IG9mIHRoZSBlbWFpb'
+                                            'C4gPC9wPgogICAgPC9ib2R5PjwvaHRtbD4='
                                 }
                             }
                         ]
@@ -218,8 +222,6 @@ class EmailsTableTest(unittest.TestCase):
         ]
         self.assertListEqual(gmail_table.get_columns(), expected_columns)
 
-
-
     def test_delete_method(self):
         gmail_handler = Mock(GmailHandler)
         gmail_table = EmailsTable(gmail_handler)
@@ -232,4 +234,6 @@ class EmailsTableTest(unittest.TestCase):
         gmail_table = EmailsTable(gmail_handler)
         query = parse_sql('update gmail set addLabel="test1",removeLabel = "test" where id=1', dialect='mindsdb')
         gmail_table.update(query)
-        gmail_handler.call_gmail_api.assert_called_once_with('modify_message', {'id': 1, 'body': {'addLabelIds': ['test1'], 'removeLabelIds': ['test']}})
+        gmail_handler.call_gmail_api.assert_called_once_with('modify_message', {'id': 1,
+                                                                                'body': {'addLabelIds': ['test1'],
+                                                                                         'removeLabelIds': ['test']}})

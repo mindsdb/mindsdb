@@ -89,6 +89,8 @@ class BaseUnitTest:
         db.Base.metadata.create_all(db.engine)
 
         # fill with data
+        r = db.Integration(name='replicate', data={}, engine='replicate')
+        db.session.add(r)
         r = db.Integration(name='files', data={}, engine='files')
         db.session.add(r)
         r = db.Integration(name='views', data={}, engine='views')

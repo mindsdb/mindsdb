@@ -78,7 +78,7 @@ class PopularityRecommenderHandler(BaseMLEngine):
                 ).select(
                     [
                         pl.col(args["user_id"]),
-                        pl.col("recommended").arr.head(args["n_recommendations"]),
+                        pl.col("recommended").list.head(args["n_recommendations"]),
                     ]
                 )
             )

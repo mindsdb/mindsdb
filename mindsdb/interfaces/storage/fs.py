@@ -476,7 +476,8 @@ class FileStorage:
             path = (self.folder_path / relative_path).resolve()
 
             if path == self.folder_path.resolve():
-                return self.complete_removal()
+                self._complete_removal()
+                return
 
             if self.sync is True:
                 self.pull()
@@ -492,10 +493,9 @@ class FileStorage:
             if self.sync is True:
                 self.push()
 
-    def complete_removal(self):
-        with FileLock(self.folder_path):
-            self.fs_store.delete(self.folder_name)
-            shutil.rmtree(str(self.folder_path))
+    def _complete_removal(self):
+        self.fs_store.delete(self.folder_name)
+        shutil.rmtree(str(self.folder_path))
 
 
 class FileStorageFactory:

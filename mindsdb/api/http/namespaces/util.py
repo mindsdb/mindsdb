@@ -1,5 +1,4 @@
 import os
-import psutil
 import tempfile
 from pathlib import Path
 

@@ -127,9 +127,10 @@ def learn_process(class_path, engine, context_dump, integration_id,
             **kwargs
         )
 
-        if not ml_handler.generative or target not in training_data_df.columns:
-            raise Exception(
-                f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
+        if training_data_df is not None:
+            if not ml_handler.generative or target not in training_data_df.columns:
+                raise Exception(
+                    f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
 
         # create new model
         if base_predictor_id is None:

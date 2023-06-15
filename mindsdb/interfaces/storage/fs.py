@@ -1,10 +1,13 @@
 import os
+import time
+import fcntl
 import shutil
 import hashlib
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Union, Optional
 from dataclasses import dataclass
+from datetime import datetime
 
 from checksumdir import dirhash
 try:
@@ -127,9 +130,47 @@ class LocalFSStore(BaseFSStore):
             pass
 
 
+class FileLock:
+    def __init__(self, local_path: Path):
+        self._local_path = local_path
+        self._local_file_name = 'dir.lock'
+        self._lock_file_path = local_path / self._local_file_name
+
+    def __enter__(self):
+        if os.name != 'posix':
+            return
+        if self._lock_file_path.is_file() is False:
+            try:
+                self._lock_file_path.write_text('')
+            except Exception:
+                pass
+        try:
+            self._file = open(self._lock_file_path, 'r')
+            fd = self._file.fileno()
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except (ValueError, FileNotFoundError):
+            # file probably was deleted between open and lock
+            print(f'Cant accure lock on {self._local_path}')
+            raise FileNotFoundError
+        except BlockingIOError:
+            print(f'Directory is locked by another process: {self._local_path}')
+            fcntl.flock(fd, fcntl.LOCK_EX)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if os.name != 'posix':
+            return
+        try:
+            fcntl.flock(self._file.fileno(), fcntl.LOCK_UN)
+            self._file.close()
+        except Exception:
+            pass
+
+
 class S3FSStore(BaseFSStore):
     """Storage that stores files in amazon s3
     """
+
+    dt_format = '%d.%m.%y %H:%M:%S.%f'
 
     def __init__(self):
         super().__init__()
@@ -139,43 +180,91 @@ class S3FSStore(BaseFSStore):
             self.s3 = boto3.client('s3')
         self.bucket = self.config['permanent_storage']['bucket']
 
-    def get(self, local_name, base_dir):
-        # region FIXME temp for test
-        dest = os.path.join(base_dir, local_name)
-        if os.path.exists(dest):
-            return
-        # endregion
+    def _get_remote_last_modified(self, object_name: str) -> datetime:
+        """ get time when object was created/modified
 
-        remote_name = local_name
-        remote_ziped_name = f'{remote_name}.tar.gz'
-        local_ziped_name = f'{local_name}.tar.gz'
-        local_ziped_path = os.path.join(base_dir, local_ziped_name)
+            Args:
+                object_name (str): name if file in bucket
+
+            Returns:
+                datetime
+        """
+        last_modified = self.s3.get_object_attributes(
+            Bucket=self.bucket,
+            Key=object_name,
+            ObjectAttributes=['Checksum']
+        )['LastModified']
+        return last_modified
+
+    def _get_local_last_modified(self, local_name: str) -> datetime:
+        last_modified_file_path = Path(local_name) / 'last_modified.txt'
+        if last_modified_file_path.is_file() is False:
+            return None
+        last_modified_text = last_modified_file_path.read_text()
+        last_modified_datetime = datetime.strptime(last_modified_text, self.dt_format)
+        return last_modified_datetime
+
+    def _save_local_last_modified(self, local_name: str, last_modified: datetime):
+        last_modified_file_path = Path(local_name) / 'last_modified.txt'
+        last_modified_text = last_modified.strftime(self.dt_format)
+        last_modified_file_path.write_text(last_modified_text)
+
+    def _download(self, base_dir, remote_ziped_name, local_name, local_ziped_path, last_modified=None):
         os.makedirs(base_dir, exist_ok=True)
         self.s3.download_file(self.bucket, remote_ziped_name, local_ziped_path)
         shutil.unpack_archive(local_ziped_path, base_dir)
         os.system(f'chmod -R 777 {base_dir}')
         os.remove(local_ziped_path)
 
+        if last_modified is None:
+            last_modified = self._get_remote_last_modified(remote_ziped_name)
+        self._save_local_last_modified(last_modified)
+
+    @profiler.profile()
+    def get(self, local_name, base_dir):
+        remote_name = local_name
+        remote_ziped_name = f'{remote_name}.tar.gz'
+        local_ziped_name = f'{local_name}.tar.gz'
+        local_ziped_path = os.path.join(base_dir, local_ziped_name)
+
+        local_last_modified = self._get_local_last_modified(local_name)
+        remote_last_modified = self._get_remote_last_modified(remote_ziped_name)
+        if (
+            local_last_modified is not None
+            and local_last_modified == remote_last_modified
+        ):
+            return
+
+        self._download(
+            base_dir,
+            remote_ziped_name,
+            local_name,
+            local_ziped_path,
+            last_modified=remote_last_modified
+        )
+
+    @profiler.profile()
     def put(self, local_name, base_dir):
         # NOTE: This `make_archive` function is implemente poorly and will create an empty archive file even if
         # the file/dir to be archived doesn't exist or for some other reason can't be archived
         remote_name = local_name
-        with profiler.Context('make_archive'):
-            shutil.make_archive(
-                os.path.join(base_dir, remote_name),
-                'gztar',
-                root_dir=base_dir,
-                base_dir=local_name
-            )
-        with profiler.Context('self.s3.upload_file'):
-            self.s3.upload_file(
-                os.path.join(base_dir, f'{remote_name}.tar.gz'),
-                self.bucket,
-                f'{remote_name}.tar.gz'
-            )
-        with profiler.Context('os.remove'):
-            os.remove(os.path.join(base_dir, remote_name + '.tar.gz'))
+        remote_zipped_name = f'{remote_name}.tar.gz'
+        shutil.make_archive(
+            os.path.join(base_dir, remote_name),
+            'gztar',
+            root_dir=base_dir,
+            base_dir=local_name
+        )
+        self.s3.upload_file(
+            os.path.join(base_dir, remote_zipped_name),
+            self.bucket,
+            remote_zipped_name
+        )
+        os.remove(os.path.join(base_dir, remote_name + '.tar.gz'))
+        last_modified = self._get_remote_last_modified(remote_zipped_name)
+        self._save_local_last_modified(local_name, last_modified)
 
+    @profiler.profile()
     def delete(self, remote_name):
         self.s3.delete_object(Bucket=self.bucket, Key=remote_name)
 
@@ -340,7 +429,7 @@ class FileStorage:
 
         return ret_path
 
-    def delete(self, relative_path: Union[str, Path] = '.') -> Path:
+    def delete(self, relative_path: Union[str, Path] = '.'):
         if isinstance(relative_path, str):
             relative_path = Path(relative_path)
 

@@ -16,7 +16,7 @@ Before proceeding further, we will need to enable the Gmail API from the Google 
 We will also need to create OAuth Client Ids for authenticating users, and possibly an Auth Consent Screen (if this is the first time we're setting up OAuth)
 
 Setting up OAuth Client Id will give us a credentials file which we will need in our mindsdb setup. You can find more information on how to do
-this [here](https://developers.google.com/gmail/quickstart/python).
+this [here](https://developers.google.com/gmail/api/quickstart/python).
 
 **Optional:**  The credentials file can be stored in the gmail_handler folder in
 the `mindsdb/integrations/handlers/gmail_handler` directory.

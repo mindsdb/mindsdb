@@ -5,6 +5,7 @@ import transformers
 from huggingface_hub import HfApi
 
 from mindsdb.utilities import log
+from mindsdb.utilities.device import get_devices
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 
@@ -99,6 +100,7 @@ class HuggingFaceHandler(BaseMLEngine):
 
         ####
         # Check if pipeline has already been downloaded
+        # TODO: add GPU support here, too
         try:
             pipeline = transformers.pipeline(task=args['task_proper'], model=hf_model_storage_path,
                                              tokenizer=hf_model_storage_path)
@@ -220,52 +222,51 @@ class HuggingFaceHandler(BaseMLEngine):
         }
 
         ###### get stuff from model folder
-        args = self.model_storage.json_get('args')
+        args = {**self.model_storage.json_get('args'), **args.get('predict_params', {})}
 
         task = args['task']
 
         if task not in fnc_list:
             raise RuntimeError(f'Unknown task: {task}')
 
-        fnc = fnc_list[task]
-
         hf_model_storage_path = self.engine_storage.folder_get(args['model_name'], update=False)
 
+        _, device_id = get_devices()  # If device_id == 0: cpu. Else: # of available GPUs.
+        device = device_id - 1
+
         pipeline = transformers.pipeline(task=args['task_proper'], model=hf_model_storage_path,
-                                         tokenizer=hf_model_storage_path)
+                                         tokenizer=hf_model_storage_path, device=device)
 
         input_column = args['input_column']
         if input_column not in df.columns:
             raise RuntimeError(f'Column "{input_column}" not found in input data')
         input_list = df[input_column]
 
-        max_tokens = pipeline.tokenizer.model_max_length
-
-        results = []
-        for item in input_list:
-            if max_tokens is not None:
-                tokens = pipeline.tokenizer.encode(item)
-                if len(tokens) > max_tokens:
-                    truncation_policy = args.get('truncation_policy', 'strict')
-                    if truncation_policy == 'strict':
-                        results.append({'error': f'Tokens count exceed model limit: {len(tokens)} > {max_tokens}'})
-                        continue
-                    elif truncation_policy == 'left':
-                        tokens = tokens[-max_tokens + 1: -1]  # cut 2 empty tokens from left and right
-                    else:
-                        tokens = tokens[1: max_tokens - 1]  # cut 2 empty tokens from left and right
-
-                    item = pipeline.tokenizer.decode(tokens)
-
-            item = str(item)
+        batch_size = args.get('batch_size', 1)
+        tokenizer_kwargs = {
+            'padding': True,
+            'truncation': True
+        }
+        if batch_size > 1:
+            data = input_list.tolist()
             try:
-                result = fnc(pipeline, item, args)
+                results = pipeline(data, *args, batch_size=batch_size, **tokenizer_kwargs)
             except Exception as e:
                 msg = str(e).strip()
                 if msg == '':
                     msg = e.__class__.__name__
-                result = {'error': msg}
-            results.append(result)
+                results = [{'error': msg}] * input_list.shape[0]
+        else:
+            results = []
+            for item in input_list:
+                try:
+                    result = fnc(pipeline, item, *args, **tokenizer_kwargs)
+                except Exception as e:
+                    msg = str(e).strip()
+                    if msg == '':
+                        msg = e.__class__.__name__
+                    result = {'error': msg}
+                results.append(result[0])
 
         pred_df = pd.DataFrame(results)
 

@@ -11,7 +11,7 @@ Google Calendar is a time-management and scheduling calendar service developed b
 
 The required arguments to establish a connection are as follows:
 
-* `credentials` is a path to the JSON file that stores credentials to the Google account.
+* `credentials_file` is a path to the JSON file that stores credentials to the Google account.
 
 <Tip>
 Please note that a Google account with enabled Google Calendar is required. You can find more information [here](https://developers.google.com/calendar/api/quickstart/python).
@@ -26,11 +26,51 @@ CREATE DATABASE my_calendar
 WITH
     ENGINE = 'google_calendar',
     PARAMETERS = {
-        'credentials': '\path-to-your-file\credentials.json'
+        'credentials_file': '\path-to-your-file\credentials.json'
     }; 
 ```
+<Tip>
+You need a Google account in order to use this integration. Here is how to get the credentials file:
 
-It creates a database that comes with the `calendar` table.
+1. Create a Google Cloud Platform (GCP) Project:
+
+    1.1 Go to the GCP Console (https://console.cloud.google.com/).
+    
+    1.2 If you haven't created a project before, you'll be prompted to do so now.
+    
+    1.3 Give your new project a name.
+    
+    1.4 Click `Create` to create the new project.
+
+2. Enable the Google Calendar API:
+
+    2.1 In the GCP Console, select your project.
+
+    2.2 Navigate to `APIs & Services` > `Library`.
+
+    2.3 In the search bar, search for `Google Calendar API`.
+
+    2.4 Click on ` Google Calendar API `, then click `Enable`.
+
+3. Create credentials for the  Google Calendar API :
+
+    3.1 Navigate to `APIs & Services` > `Credentials`.
+
+    3.2 Click on the `Create Credentials` button and choose `OAuth client ID`.
+
+    3.3 If you haven't configured the OAuth consent screen before, you'll be prompted to do so now. Make sure to choose `External` for User Type, and add all the necessary scopes. Make sure to save the changes.
+    Now, create the OAuth client ID. Choose `Desktop app` for the Application Type and give it a name.
+
+    3.4 Click `Create`.
+
+4. Download the JSON file:
+
+    4.1 After creating your credentials, click the download button (an icon of an arrow pointing down) on the right side of your client ID. This will download a JSON file, so you will use the location to it in the `credentials_file` param. 
+</Tip>
+
+## Usage
+
+This creates a database that comes with the `calendar` table.
 
 Now you can use your Google Calendar data, like this:
 

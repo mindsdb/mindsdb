@@ -174,24 +174,6 @@ class Integration(Base):
     )
 
 
-class Stream(Base):
-    __tablename__ = 'stream'
-    id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
-    stream_in = Column(String, nullable=False)
-    stream_out = Column(String, nullable=False)
-    anomaly_stream = Column(String)
-    integration = Column(String)
-    predictor = Column(String, nullable=False)
-    company_id = Column(Integer)
-    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    created_at = Column(DateTime, default=datetime.datetime.now)
-    type = Column(String, default='unknown')
-    connection_info = Column(Json, default={})
-    learning_params = Column(Json, default={})
-    learning_threshold = Column(Integer, default=0)
-
-
 class File(Base):
     __tablename__ = 'file'
     id = Column(Integer, primary_key=True)
@@ -267,3 +249,20 @@ class JobsHistory(Base):
     __table_args__ = (
         UniqueConstraint('job_id', 'start_at', name='uniq_job_history_job_id_start'),
     )
+
+
+class ChatBots(Base):
+    __tablename__ = 'chat_bots'
+    id = Column(Integer, primary_key=True)
+    company_id = Column(Integer)
+    user_class = Column(Integer, nullable=True)
+
+    name = Column(String, nullable=False)
+    project_id = Column(Integer, nullable=False)
+
+    model_name = Column(String, nullable=False)
+    database_id = Column(Integer, nullable=False)
+    params = Column(JSON)
+
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.now)

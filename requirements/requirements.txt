@@ -1,4 +1,4 @@
-Werkzeug==1.0.1
+Werkzeug==2.2.3
 lightwood >= 23.6.2.0, < 23.6.3.0
 markupsafe == 2.0.1
 flask-restx >= 1.0.1, < 2.0.0

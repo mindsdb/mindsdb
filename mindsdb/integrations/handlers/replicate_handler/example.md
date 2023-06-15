@@ -4,16 +4,6 @@
 
 # MindsDB example commands
 
-We will follow the "home rentals" tutorial available on the cloud learning hub:
-
-1. Select a subsample of the data to inspect it:
-
-```sql
-SELECT * 
-FROM example_db.demo_data.home_rentals 
-LIMIT 10;
-```
-
 1. Create an Image Generating AI Model using REPLICATE engine:
    
 ```sql
@@ -39,3 +29,7 @@ SELECT *
 FROM aiforever
 WHERE prompt='Great warrior Arjun from Mahabharata with his bow and arrow , 4k quality'
 ```
+
+### OUTPUT 
+![GENERATED_IMAGES](https://replicate.delivery/pbxt/K9dMTBWgQg6cMB7Ekeo88PKAQG5N5lXIx0sVNdv4uf8ztJGRA/out_0.png)
+

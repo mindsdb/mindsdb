@@ -15,7 +15,7 @@ If you want to connect your Gmail account to MindsDB Cloud, you can upload the c
 
 The required arguments to establish a connection are as follows:
 
-* `credentials_file` stores the Google account credentials. Follow the instructions below to generate the credentials file.
+* `credentials_file` local path to the credentials.json or `s3_credentials_file` in case your file is uploaded to s3. Follow the instructions below to generate the credentials file.
 * `scopes` define the level of access granted. It is optional and by default it uses 'https://.../gmail.compose' and 'https://.../gmail.readonly' scopes.
 
 In order to make use of this handler and connect the Google Calendar app to MindsDB, the following syntax can be used:
@@ -29,22 +29,55 @@ parameters = {
 };
 ```
 
+Or, can also connect by giving the credentials file from a s3 [pre signed url](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ShareObjectPreSignedURL.html). To do this you need to pass in the credentials_file parameter as a [pre signed url](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ShareObjectPreSignedURL.html). For example:
+
+~~~~sql
+CREATE DATABASE mindsdb_gmail
+WITH ENGINE = 'gmail',
+parameters = {
+    "s3_credentials_file": "https://s3.amazonaws.com/your_bucket/credentials.json?response-content-disposition=inline&X-Amz-Security-Token=12312...",
+    -- "scopes": ['SCOPE_1', 'SCOPE_2', ...] -- Optional scopes. By default 'https://.../gmail.compose' & 'https://.../gmail.readonly' scopes are used
+};
+~~~~
+
+
 <Tip>
 You need a Google account in order to use this integration. Here is how to get the credentials file:
 
-1. Go to https://console.cloud.google.com/apis/dashboard.
-2. In the `Enabled APIs & services` tab, click on `Enable APIs and Services` button, search for `Gmail API`, and enable it.
-3. In the `OAuth consent screen` tab, create a new project and an app:
-    - name your project,
-    - choose user type as external,
-    - add app name and user support email,
-    - add the following scopes: `.../auth/userinfo.profile`, `.../auth/userinfo.email`, `openid`,
-    - add a test user,
-    - save and go back to the dashboard.
-4. In the `Credentials` tab, click on `Create Credentials` button and choose `OAuth client ID`:
-    - choose application type as `Desktop app` and give it a name,
-    - click on `Create`,
-    - download the JSON file.
+1. Create a Google Cloud Platform (GCP) Project:
+
+    1.1 Go to the GCP Console (https://console.cloud.google.com/).
+    
+    1.2 If you haven't created a project before, you'll be prompted to do so now.
+    
+    1.3 Give your new project a name.
+    
+    1.4 Click `Create` to create the new project.
+
+2. Enable the Gmail API:
+
+    2.1 In the GCP Console, select your project.
+
+    2.2 Navigate to `APIs & Services` > `Library`.
+
+    2.3 In the search bar, search for `Gmail`.
+
+    2.4 Click on `Gmail API`, then click `Enable`.
+
+3. Create credentials for the Gmail API:
+
+    3.1 Navigate to `APIs & Services` > `Credentials`.
+
+    3.2 Click on the `Create Credentials` button and choose `OAuth client ID`.
+
+    3.3 If you haven't configured the OAuth consent screen before, you'll be prompted to do so now. Make sure to choose `External` for User Type, and select the necessary scopes. Make sure to save the changes.
+    Now, create the OAuth client ID. Choose `Desktop app` for the Application Type and give it a name.
+
+    3.4 Click `Create`.
+
+4. Download the JSON file:
+
+    4.1 After creating your credentials, click the download button (an icon of an arrow pointing down) on the right side of your client ID. This will download a JSON file, so you will use the location to it in the `credentials_file` param. 
 </Tip>
 
 ## Usage

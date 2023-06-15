@@ -694,12 +694,11 @@ class ExecuteCommands:
         # try full name
         attribute = None
         model_info = self._get_model_info(statement.value)
+        parts = statement.value.parts.copy()
+        attribute = parts.pop(-1)
+        model_info = self._get_model_info(Identifier(parts=parts)) if not model_info  else model_info
         if model_info is None:
-            parts = statement.value.parts.copy()
-            attribute = parts.pop(-1)
-            model_info = self._get_model_info(Identifier(parts=parts))
-            if model_info is None:
-                raise SqlApiException(f'Model not found: {statement.value}')
+            raise SqlApiException(f'Model not found: {statement.value}')
 
         df = self.session.model_controller.describe_model(
             self.session, model_info['project_name'], model_info['model_record'].name, attribute

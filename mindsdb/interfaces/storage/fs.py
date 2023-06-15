@@ -197,6 +197,14 @@ class S3FSStore(BaseFSStore):
         return last_modified
 
     def _get_local_last_modified(self, local_name: str) -> datetime:
+        """ get 'last_modified' that saved locally
+
+            Args:
+                local_name (str): folder name
+
+            Returns:
+                datetime | None
+        """
         last_modified_file_path = Path(local_name) / 'last_modified.txt'
         if last_modified_file_path.is_file() is False:
             return None
@@ -205,11 +213,26 @@ class S3FSStore(BaseFSStore):
         return last_modified_datetime
 
     def _save_local_last_modified(self, local_name: str, last_modified: datetime):
+        """ Save 'last_modified' to local folder
+
+            Args:
+                local_name (str): folder name
+                last_modified (datetime)
+        """
         last_modified_file_path = Path(local_name) / 'last_modified.txt'
         last_modified_text = last_modified.strftime(self.dt_format)
         last_modified_file_path.write_text(last_modified_text)
 
-    def _download(self, base_dir, remote_ziped_name, local_name, local_ziped_path, last_modified=None):
+    def _download(self, base_dir: str, remote_ziped_name: str,
+                  local_ziped_path: str, last_modified: datetime = None):
+        """ download file to s3 and unarchive it
+
+            Args:
+                base_dir (str)
+                remote_ziped_name (str)
+                local_ziped_path (str)
+                last_modified (datetime, optional)
+        """
         os.makedirs(base_dir, exist_ok=True)
         self.s3.download_file(self.bucket, remote_ziped_name, local_ziped_path)
         shutil.unpack_archive(local_ziped_path, base_dir)
@@ -238,7 +261,6 @@ class S3FSStore(BaseFSStore):
         self._download(
             base_dir,
             remote_ziped_name,
-            local_name,
             local_ziped_path,
             last_modified=remote_last_modified
         )

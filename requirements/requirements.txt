@@ -1,5 +1,5 @@
 Werkzeug==1.0.1
-lightwood >= 23.5.1.0, < 23.6.1.0
+lightwood >= 23.6.2.0, < 23.6.3.0
 markupsafe == 2.0.1
 flask-restx >= 1.0.1, < 2.0.0
 flask >= 1.0, < 2.0

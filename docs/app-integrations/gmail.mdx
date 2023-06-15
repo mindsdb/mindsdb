@@ -1,0 +1,122 @@
+---
+title: Gmail
+sidebarTitle: Gmail
+---
+
+In this section, we present how to integrate a Gmail account with MindsDB.
+
+<Warning>
+Please note that currently you can connect your Gmail account to local MindsDB installation by providing a path to the credentials file stored locally.
+
+If you want to connect your Gmail account to MindsDB Cloud, you can upload the credentials file, for instance, to your S3 bucket and provide a link to it as a parameter.
+</Warning>
+
+## Connection
+
+The required arguments to establish a connection are as follows:
+
+* `credentials_file` stores the Google account credentials. Follow the instructions below to generate the credentials file.
+* `scopes` define the level of access granted. It is optional and by default it uses 'https://.../gmail.compose' and 'https://.../gmail.readonly' scopes.
+
+In order to make use of this handler and connect the Google Calendar app to MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE mindsdb_gmail
+WITH ENGINE = 'gmail',
+parameters = {
+    "credentials_file": "mindsdb/integrations/handlers/gmail_handler/credentials.json",
+    "scopes": ['https://.../gmail.compose', 'https://.../gmail.readonly', ...]
+};
+```
+
+<Tip>
+You need a Google account in order to use this integration. Here is how to get the credentials file:
+
+1. Go to https://console.cloud.google.com/apis/dashboard.
+2. In the `Enabled APIs & services` tab, click on `Enable APIs and Services` button, search for `Gmail API`, and enable it.
+3. In the `OAuth consent screen` tab, create a new project and an app:
+    - name your project,
+    - choose user type as external,
+    - add app name and user support email,
+    - add the following scopes: `.../auth/userinfo.profile`, `.../auth/userinfo.email`, `openid`,
+    - add a test user,
+    - save and go back to the dashboard.
+4. In the `Credentials` tab, click on `Create Credentials` button and choose `OAuth client ID`:
+    - choose application type as `Desktop app` and give it a name,
+    - click on `Create`,
+    - download the JSON file.
+</Tip>
+
+## Usage
+
+This creates a database called mindsdb_gmail. This database ships with a table called emails that we can use to search for emails as well as to write emails.
+
+Now you can use your Gmail data, like this:
+
+* searching for email:
+
+    ```sql
+    SELECT *
+    FROM mindsdb_gmail.emails
+    WHERE query = 'alert from:*@google.com'
+    AND label_ids = "INBOX,UNREAD"
+    LIMIT 20;
+    ```
+
+* writing emails:
+
+    ```sql
+    INSERT INTO mindsdb_gmail.emails (thread_id, message_id, to_email, subject, body)
+    VALUES ('187cbdd861350934d', '8e54ccfd-abd0-756b-a12e-f7bc95ebc75b@Spark', 'test@example2.com', 'Trying out MindsDB',
+            'This seems awesome. You must try it out whenever you can.');
+    ```
+
+## Example 1: Automating Email Replies
+
+Now that we know how to pull emails into our database and write emails, we can make use of OpenAPI engine to write email replies.
+
+```sql
+CREATE MODEL mindsdb.gpt_model
+PREDICT response
+USING
+    engine = 'openai',
+    max_tokens = 500,
+    api_key = 'your_api_key', 
+    model_name = 'gpt-3.5-turbo',
+    prompt_template = 'From input message: {{body}}\
+                        by from_user: {{sender}}\
+                        In less than 500 characters, write an email response to {{sender}} in the following format:\
+                        Start with proper salutation and respond with a short message in a casual tone, and sign the email with my name mindsdb';
+```
+
+## Example 2: Detecting Spam Emails
+
+You can check if an email is spam by using one of the Hugging Face pre-trained models.
+
+```sql
+CREATE MODEL mindsdb.spam_classifier                           
+PREDICT PRED                           
+USING
+  engine = 'huggingface',              
+  task = 'text-classification',        
+  model_name = 'mrm8488/bert-tiny-finetuned-sms-spam-detection', 
+  input_column = 'text_spammy',        
+  labels = ['ham', 'spam'];
+```
+
+Then, create a view that contains the snippet or the body of the email.
+
+```sql
+CREATE VIEW mindsdb.emails_text AS(
+    SELECT snippet AS text_spammy
+    FROM mindsdb_gmail.emails
+);
+```
+
+Finally, you can use the model to classify emails into spam or ham:
+
+```sql
+SELECT h.PRED, h.PRED_explain, t.text_spammy AS input_text
+FROM mindsdb.emails_text AS t
+JOIN mindsdb.spam_classifier AS h;
+```

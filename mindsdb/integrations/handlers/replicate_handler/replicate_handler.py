@@ -23,33 +23,25 @@ class ReplicateHandler(BaseMLEngine):
             # Checking if passed model_name and version  are correct or not
         try:
             replicate.default_client.api_token = args['api_key']
-            # os.environ['REPLICATE_API_TOKEN']= args['api_key']
-
             replicate.models.get(args['model_name']).versions.get(args['version'])
         except Exception as e:
-            raise Exception("Check your model_name and version carefully")
+            raise Exception("Check your model_name and version carefully", e)
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        """
-        Saves a model inside the engine registry for later usage.
-        Normally, an input dataframe is required to train the model.
-        However, some integrations may merely require registering the model instead of training, in which case `df` can be omitted.
-        Any other arguments required to register the model can be passed in an `args` dictionary.
+        """Saves model details in stirage to access it later
         """
         args = args['using']
         args['target'] = target
         self.model_storage.json_set('args', args)
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
-        """
-        Calls a model with some input dataframe `df`, and optionally some arguments `args` that may modify the model behavior.
-        The expected output is a dataframe with the predicted values in the target-named column.
-        Additional columns can be present, and will be considered row-wise explanations if their names finish with `_explain`.
+        """Using replicate makes the prediction according to your parameters
         """
         def filter_images(x):
-            output= replicate.run(
+            output = replicate.run(
                     f"{args['model_name']}:{args['version']}",
                     input={**x[1].to_dict(), **pred_args}) # unpacking parameters inputted
+
             if isinstance(output, types.GeneratorType):
                 # getting final url if output is generator of frames url
                 output = [list(output)[-1]]
@@ -57,42 +49,38 @@ class ReplicateHandler(BaseMLEngine):
             else:
                 return output
 
-
-
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
-
-
-        params_names=set(df.columns)  | set(pred_args)
-        available_params=self._get_schema(only_keys=True)
-        wrong_params=[]
+        
+        # raiseing Exception if wrong parameters is given
+        params_names = set(df.columns) | set(pred_args)
+        available_params = self._get_schema(only_keys=True)
+        wrong_params = []
         for i in params_names:
             if i not in available_params:
                 wrong_params.append(i)
 
         if wrong_params:
-            raise Exception(f"'{wrong_params}' is/are not supported parameter for this model.")
+            raise Exception(f"""'{wrong_params}' is/are not supported parameter for this model.
+            Use DESCRIBE PREDICTOR mindsdb.<model_name>.features; to know about available parameters.
+            """)
 
-
-
-        
         replicate.default_client.api_token = self._get_replicate_api_key(args)
 
-        rows=df.iterrows() # Generator is returned
-        rows_arr=list(rows)# Generator converted to list have tuple consisting (index, row(pandas.Series))
+        rows = df.iterrows()      # Generator is returned
+        rows_arr = list(rows)      # Generator converted to list have tuple consisting (index, row(pandas.Series))
 
-
-        urls = map(filter_images,rows_arr)  # using filter_images function to get url according to inputted parameters
+        urls = map(filter_images, rows_arr)  # using filter_images function to get url according to inputted parameters
         urls = pd.DataFrame(urls)
         urls.columns = [args['target']]
         return urls
 
     def create_engine(self, connection_args: dict):
-        #  self.engine_storage.json_set()
+        #  Implement such that with this api key can be set
         pass
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
-        
+
         if attribute == "features":
             return self._get_schema()
 
@@ -129,7 +117,9 @@ class ReplicateHandler(BaseMLEngine):
                  or re-create this model and pass the API key with `USING` syntax.')
 
     def _get_schema(self, only_keys=False):
-        '''Return features to populate '''
+        '''Return paramters list with it description,default and type,
+         which helps user to customize there prediction '''
+
         args = self.model_storage.json_get('args')
         os.environ['REPLICATE_API_TOKEN'] = self._get_replicate_api_key(args)
         replicate.default_client.api_token = self._get_replicate_api_key(args)
@@ -137,6 +127,7 @@ class ReplicateHandler(BaseMLEngine):
         version = model.versions.get(args['version'])
         schema = version.get_transformed_schema()['components']['schemas']['Input']['properties']
 
+        # returns only list of paramater 
         if only_keys:
             return schema.keys()
 
@@ -147,5 +138,4 @@ class ReplicateHandler(BaseMLEngine):
 
         df = pd.DataFrame(schema).T
         df = df.reset_index().rename(columns={'index': 'inputs'})
-    
         return df.fillna('-')

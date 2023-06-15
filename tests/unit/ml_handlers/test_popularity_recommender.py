@@ -46,7 +46,7 @@ class TestPopularityRecommender(BaseExecutorTest):
             from pg (select * from df)
             predict movieId
             using
-                engine='popularity-recommender',
+                engine='popularity_recommender',
                 item_id='movieId',
                 user_id='userId',
                 n_recommendations=10

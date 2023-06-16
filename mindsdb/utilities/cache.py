@@ -58,13 +58,14 @@ from abc import ABC
 from pathlib import Path
 import hashlib
 import typing as t
-from threading import Lock
 
 import pandas as pd
 import walrus
 
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
+from mindsdb.interfaces.storage.fs import FileLock
+from mindsdb.utilities.context import context as ctx
 
 
 def dataframe_checksum(df: pd.DataFrame):
@@ -118,16 +119,17 @@ class FileCache(BaseCache):
         if path is None:
             path = self.config['paths']['cache']
 
-        # include category
         cache_path = Path(path) / category
-        if not os.path.exists(cache_path):
-            os.makedirs(cache_path)
+
+        company_id = ctx.company_id
+        if company_id is not None:
+            cache_path = cache_path / str(company_id)
+        cache_path.mkdir(parents=True, exist_ok=True)
 
         self.path = cache_path
-        self._lock = Lock()
 
     def clear_old_cache(self):
-        with self._lock:
+        with FileLock(self.path):
             # buffer to delete, to not run delete on every adding
             buffer_size = 5
 
@@ -159,7 +161,7 @@ class FileCache(BaseCache):
 
     def get_df(self, name):
         path = self.file_path(name)
-        with self._lock:
+        with FileLock(self.path):
             if not os.path.exists(path):
                 return None
             value = pd.read_pickle(path)
@@ -168,7 +170,7 @@ class FileCache(BaseCache):
     def get(self, name):
         path = self.file_path(name)
 
-        with self._lock:
+        with FileLock(self.path):
             if not os.path.exists(path):
                 return None
             with open(path, 'rb') as fd:

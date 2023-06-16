@@ -203,7 +203,8 @@ connection_args = OrderedDict(
     port={
         'type': ARG_TYPE.INT,
         'description': 'The TCP/IP port of the PostgreSQL server. Must be an integer.',
-        'required': True
+        'required': True,
+        'label': 'Port'
     },
 )
 

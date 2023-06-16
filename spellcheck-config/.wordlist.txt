@@ -127,6 +127,7 @@ dbname
 dbs
 DBT
 dbt
+dcc
 de
 Deepnote
 Der
@@ -169,6 +170,7 @@ ExploringTech
 failover
 fait
 fbs
+fcd
 FINETUNE
 finetune
 finetuned
@@ -186,6 +188,8 @@ GCP
 Gehen
 geospatial
 Github
+gmail
+Gmail
 Godsent
 GoogleSQL
 GPT
@@ -348,6 +352,7 @@ NLP
 NoSQL
 num
 Nupoor
+OAuth
 OceanBase
 ODBC
 Odumuyiwa
@@ -362,10 +367,12 @@ openai
 OpenAI's
 OpenAI’s
 openapi
+OpenAPI
 OpenGauss
 orderby
 OrioleDB
 overfit
+param
 params
 PartiQL
 Patricio
@@ -416,6 +423,7 @@ RandomForestClassifier
 RandomForestRegressor
 RayServe
 RDBMS
+readonly
 Reddit
 reddit
 redshift

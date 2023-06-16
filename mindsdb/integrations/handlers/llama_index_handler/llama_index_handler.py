@@ -1,11 +1,14 @@
 import os
 from typing import Optional, Dict
 
-import dill
+import openai
 import pandas as pd
 from langchain.llms import OpenAI
+import llama_index
 from llama_index.readers.schema.base import Document
-from llama_index import GPTVectorStoreIndex, download_loader, LLMPredictor, ServiceContext
+from llama_index import download_loader, ServiceContext, StorageContext, load_index_from_storage
+from llama_index import LLMPredictor, OpenAIEmbedding
+from llama_index.indices.vector_store.base import VectorStore
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities.config import Config
@@ -38,8 +41,8 @@ class LlamaIndexHandler(BaseMLEngine):
             raise Exception(f"Invalid operation mode. Please use one of {self.supported_reader}")
 
         if args['using']['reader'] == 'DFReader':
-            docstrs = df.apply(lambda x: ','.join([str(entry) for entry in x]), axis=1).tolist()
-            reader = list(map(lambda x: Document(x), docstrs))  # TODO: different approach?
+            dstrs = df.apply(lambda x: ', '.join([f'{col}: {str(entry)}' for col, entry in zip(df.columns, x)]), axis=1)
+            reader = list(map(lambda x: Document(x), dstrs.tolist()))
 
         elif args['using']['reader'] == 'SimpleWebPageReader':
             if 'source_url_link' not in args['using']:
@@ -51,13 +54,16 @@ class LlamaIndexHandler(BaseMLEngine):
         else:
             raise Exception(f"Invalid operation mode. Please use one of {self.supported_reader}.")
 
-        self.model_storage.file_set('reader', dill.dumps(reader))
+        # TODO: prompt templating!
+
+        index = self._setup_index(reader)
+
+        path = self.model_storage.fileStorage.get_path('./')
+        index.storage_context.persist(persist_dir=path)
         self.model_storage.json_set('args', args)
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> pd.DataFrame:
         args = self.model_storage.json_get('args')
-        data_docs = dill.loads(self.model_storage.file_get('reader'))
-
         input_column = args['using'].get('input_column', None)
 
         if input_column is None:
@@ -66,7 +72,12 @@ class LlamaIndexHandler(BaseMLEngine):
         if input_column not in df.columns:
             raise Exception(f'Column "{input_column}" not found in input data! Please try again.')
 
-        query_engine = self.predict_qa_reader(data_docs)
+        index_path = self.model_storage.fileStorage.get_path('./')
+        storage_context = StorageContext.from_defaults(persist_dir=index_path)
+        service_context = self._get_service_context()
+        index = load_index_from_storage(storage_context, service_context=service_context)
+        query_engine = index.as_query_engine()
+
         questions = df[input_column]
         results = []
 
@@ -77,21 +88,24 @@ class LlamaIndexHandler(BaseMLEngine):
         result_df = pd.DataFrame({'question': questions, args['target']: results})
         return result_df
 
-    def predict_qa_reader(self, documents):
-        """ Connects with llama_index python client to perform Q&A. """
+    def _get_service_context(self):
         args = self.model_storage.json_get('args')
-
         openai_api_key = self._get_llama_index_api_key(args['using'])
-        llm = OpenAI(openai_api_key=openai_api_key)  # TODO: rest of OpenAI params go here
-        service_context = ServiceContext.from_defaults(llm_predictor=LLMPredictor(llm=llm))
+        openai.api_key = openai_api_key  # TODO: shouldn't have to do this! bug?
+        llm = OpenAI(openai_api_key=openai_api_key)  # TODO: all usual params should go here
+        embed_model = OpenAIEmbedding(openai_api_key=openai_api_key)
+        service_context = ServiceContext.from_defaults(
+            llm_predictor=LLMPredictor(llm=llm),
+            embed_model=embed_model
+        )
+        return service_context
+    
+    def _setup_index(self, documents):
+        args = self.model_storage.json_get('args')
+        indexer: VectorStore = getattr(llama_index, args['using']['index_class'])
+        index = indexer.from_documents(documents, service_context=self._get_service_context())
 
-        if args['using']['index_class'] == 'GPTVectorStoreIndex':
-            index = GPTVectorStoreIndex.from_documents(documents, service_context=service_context)
-        else:
-            raise Exception(f"Invalid operation mode. Please use one of {self.supported_index_class}.")
-
-        query_engine = index.as_query_engine()
-        return query_engine
+        return index
 
     def _get_llama_index_api_key(self, args, strict=True):
         """

@@ -6,7 +6,7 @@ import pandas as pd
 from langchain.llms import OpenAI
 import llama_index
 from llama_index.readers.schema.base import Document
-from llama_index import SimpleWebPageReader
+from llama_index import SimpleWebPageReader, QuestionAnswerPrompt
 from llama_index import ServiceContext, StorageContext, load_index_from_storage
 from llama_index import LLMPredictor, OpenAIEmbedding
 from llama_index.indices.vector_store.base import VectorStore
@@ -31,6 +31,9 @@ class LlamaIndexHandler(BaseMLEngine):
         if 'using' not in args:
             raise Exception("LlamaIndex engine requires a USING clause! Refer to its documentation for more details.")
 
+        if 'prompt_template' in args['using']:
+            self._validate_prompt_template(args['using']['prompt_template'])
+
         if 'index_class' not in args['using']:
             args['using']['index_class'] = self.default_index_class
         elif args['using']['index_class'] not in self.supported_index_class:
@@ -54,7 +57,6 @@ class LlamaIndexHandler(BaseMLEngine):
         else:
             raise Exception(f"Invalid operation mode. Please use one of {self.supported_reader}.")
 
-        # TODO: prompt templating!
         self.model_storage.json_set('args', args)
         index = self._setup_index(reader)
         path = self.model_storage.fileStorage.get_path('./')
@@ -63,6 +65,12 @@ class LlamaIndexHandler(BaseMLEngine):
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> pd.DataFrame:
         args = self.model_storage.json_get('args')
         input_column = args['using'].get('input_column', None)
+        engine_kwargs = {}
+
+        prompt_template = args['using'].get('prompt_template', args.get('prompt_template', None))
+        if prompt_template is not None:
+            self._validate_prompt_template(prompt_template)
+            engine_kwargs['text_qa_template'] = QuestionAnswerPrompt(prompt_template)
 
         if input_column is None:
             raise Exception(f'`input_column` must be provided at model creation time or through USING clause when predicting. Please try again.')  # noqa
@@ -74,16 +82,16 @@ class LlamaIndexHandler(BaseMLEngine):
         storage_context = StorageContext.from_defaults(persist_dir=index_path)
         service_context = self._get_service_context()
         index = load_index_from_storage(storage_context, service_context=service_context)
-        query_engine = index.as_query_engine()
+        query_engine = index.as_query_engine(**engine_kwargs)
 
         questions = df[input_column]
         results = []
 
         for question in questions:
-            query_results = query_engine.query(question)
-            results.append(query_results)
+            query_results = query_engine.query(question)  # TODO: provide extra_info in explain_target col
+            results.append(query_results.response)
 
-        result_df = pd.DataFrame({'question': questions, args['target']: results})
+        result_df = pd.DataFrame({'question': questions, args['target']: results})  # result_df['answer'].tolist()
         return result_df
 
     def _get_service_context(self):
@@ -104,6 +112,10 @@ class LlamaIndexHandler(BaseMLEngine):
         index = indexer.from_documents(documents, service_context=self._get_service_context())
 
         return index
+
+    def _validate_prompt_template(self, prompt_template: str):
+        if '{context_str}' not in prompt_template or '{query_str}' not in prompt_template:
+            raise Exception("Provided prompt template is invalid, missing one of `{context_str}` or `{query_str}`. Please ensure both placeholders are present and try again.")  # noqa
 
     def _get_llama_index_api_key(self, args, strict=True):
         """

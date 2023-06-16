@@ -121,7 +121,7 @@ class FileCache(BaseCache):
 
         cache_path = Path(path) / category
 
-        company_id = ctx.get('company_id')
+        company_id = ctx.company_id
         if company_id is not None:
             cache_path = cache_path / str(company_id)
         cache_path.mkdir(parents=True, exist_ok=True)

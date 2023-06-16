@@ -1,5 +1,6 @@
 import time
 
+import pandas as pd
 from flask import request
 from flask_restx import Resource
 from pandas.core.frame import DataFrame
@@ -17,6 +18,17 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_
 def analyze_df(df: DataFrame) -> dict:
     if len(df) == 0:
         return {}
+
+    cols = pd.Series(df.columns)
+
+    # https://stackoverflow.com/questions/24685012/pandas-dataframe-renaming-multiple-identically-named-columns
+    for dup in cols[cols.duplicated()].unique():
+        cols[cols[cols == dup].index.values.tolist()] = [dup + '.' + str(i) if i != 0 else dup for i in
+                                                         range(sum(cols == dup))]
+
+    # rename the columns with the cols list.
+    df.columns = cols
+
     analysis = analyze_dataset(df)
     return analysis.to_dict()
 

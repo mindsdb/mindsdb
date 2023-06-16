@@ -9,14 +9,14 @@ To see how the Gmail handler is used, let's walk through the steps to create a s
 
 ## Connect to the Gmail API
 
-To use the Gmail API we need to setup a Google Cloud Project and a Google Account with Gmail enabled.
+To use the Gmail API we need to set up a Google Cloud Project and a Google Account with Gmail enabled.
 
 Before proceeding further, we will need to enable the Gmail API from the Google Cloud Console.
 
-We will also need to create OAuth Client Ids for authenticating users, and possibly an Auth Consent Screen (if this is the first time we're setting up OAuth)
+We will also need to create OAuth Client Ids for authenticating users, and possibly an Auth Consent Screen (if this is the first time we're setting up OAuth).
 
 Setting up OAuth Client Id will give us a credentials file which we will need in our mindsdb setup. You can find more information on how to do
-this [here](https://developers.google.com/gmail/quickstart/python).
+this [here](https://developers.google.com/gmail/api/quickstart/python).
 
 **Optional:**  The credentials file can be stored in the gmail_handler folder in
 the `mindsdb/integrations/handlers/gmail_handler` directory.
@@ -33,7 +33,7 @@ parameters = {
 This creates a database called mindsdb_gmail. This database ships with a table called emails that we can use to search for
 emails as well as to write emails.
 
-You can also create a database by giving the credentials file from a s3 pre signed url.To do this you need to pass in the credentials_file parameter as a signed url.For example:
+You can also create a database by giving the credentials file from a s3 pre signed url. To do this you need to pass in the credentials_file parameter as a signed url. For example:
 
 ~~~~sql
 CREATE DATABASE mindsdb_gmail
@@ -59,7 +59,7 @@ LIMIT 20;
 ~~~~
 This will search your Gmail inbox for any email which contains the text `alert` and is from `google.com` domain (notice the use of the wildcard `*`).
 
-The returned result should have ROWs like this
+The returned result should have ROWs like this,
 
 | id | message_id | thread_id | label_ids | sender | to | date | subject | snippet | history_id | size_estimate | body | attachments |
 | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- |
@@ -68,7 +68,7 @@ The returned result should have ROWs like this
 where
 * query - The search term. The query parameter supports all the search terms we can use with gmail. For more details please check [this link](https://support.google.com/mail/answer/7190)
 * label_ids - A comma separated string of labels to search for. E.g. "INBOX,UNREAD" will search for unread emails in inbox, "SENT" will search for emails in the sent folder.
-* include_spam_trash - BOOLEAN (TRUE / FALSE). By default it is FALSE. If included, the search will cover the SPAM and TRASH folders.
+* include_spam_trash - BOOLEAN (TRUE / FALSE). By default, it is FALSE. If included, the search will cover the SPAM and TRASH folders.
 
 ## Writing Emails
 
@@ -112,7 +112,7 @@ USING
   input_column = 'text_spammy',        
   labels = ['ham', 'spam'];
 ~~~~
-* Then you can have to create a view of the email table that contains the snippet or the body of the email.For example by using the snippet:
+* Then you can have to create a view of the email table that contains the snippet or the body of the email. For example by using the snippet:
 ~~~~sql
 CREATE VIEW mindsdb.emails_text AS(
     SELECT snippet AS text_spammy

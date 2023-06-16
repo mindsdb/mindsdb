@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import psycopg
 from psycopg.pq import ExecStatus
 from pandas import DataFrame
@@ -7,6 +9,7 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -171,3 +174,43 @@ class PostgresHandler(DatabaseHandler):
                 table_name = '{table_name}'
         """
         return self.native_query(query)
+
+connection_args = OrderedDict(
+    user={
+        'type': ARG_TYPE.STR,
+        'description': 'The user name used to authenticate with the PostgreSQL server.',
+        'required': True,
+        'label': 'User'
+    },
+    password={
+        'type': ARG_TYPE.PWD,
+        'description': 'The password to authenticate the user with the PostgreSQL server.',
+        'required': True,
+        'label': 'Password'
+    },
+    database={
+        'type': ARG_TYPE.STR,
+        'description': 'The database name to use when connecting with the PostgreSQL server.',
+        'required': True,
+        'label': 'Database'
+    },
+    host={
+        'type': ARG_TYPE.STR,
+        'description': 'The host name or IP address of the PostgreSQL server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.',
+        'required': True,
+        'label': 'Host'
+    },
+    port={
+        'type': ARG_TYPE.INT,
+        'description': 'The TCP/IP port of the PostgreSQL server. Must be an integer.',
+        'required': True
+    },
+)
+
+connection_args_example = OrderedDict(
+    host='127.0.0.1',
+    port=5432,
+    user='root',
+    password='password',
+    database='database'
+)

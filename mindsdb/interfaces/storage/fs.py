@@ -219,14 +219,15 @@ class S3FSStore(BaseFSStore):
         last_modified_datetime = datetime.strptime(last_modified_text, self.dt_format)
         return last_modified_datetime
 
-    def _save_local_last_modified(self, local_name: str, last_modified: datetime):
+    def _save_local_last_modified(self, base_dir: str, local_name: str, last_modified: datetime):
         """ Save 'last_modified' to local folder
 
             Args:
+                base_dir (str): path to base folder
                 local_name (str): folder name
                 last_modified (datetime)
         """
-        last_modified_file_path = Path(local_name) / 'last_modified.txt'
+        last_modified_file_path = Path(base_dir) / local_name / 'last_modified.txt'
         last_modified_text = last_modified.strftime(self.dt_format)
         last_modified_file_path.write_text(last_modified_text)
 
@@ -248,7 +249,11 @@ class S3FSStore(BaseFSStore):
 
         if last_modified is None:
             last_modified = self._get_remote_last_modified(remote_ziped_name)
-        self._save_local_last_modified(last_modified)
+        self._save_local_last_modified(
+            base_dir,
+            remote_ziped_name.replace('tar.gz', ''),
+            last_modified
+        )
 
     @profiler.profile()
     def get(self, local_name, base_dir):
@@ -291,7 +296,7 @@ class S3FSStore(BaseFSStore):
         )
         os.remove(os.path.join(base_dir, remote_name + '.tar.gz'))
         last_modified = self._get_remote_last_modified(remote_zipped_name)
-        self._save_local_last_modified(local_name, last_modified)
+        self._save_local_last_modified(base_dir, local_name, last_modified)
 
     @profiler.profile()
     def delete(self, remote_name):

@@ -61,7 +61,7 @@ class MLEngineException(Exception):
     pass
 
 
-def init_lightwood(module_path):
+def init_ml_handler(module_path):
     import importlib  # noqa
 
     from mindsdb.integrations.libs.learn_process import learn_process  # noqa
@@ -186,7 +186,7 @@ class ProcessCache:
                     self.cache[handler.__name__] = {
                         'last_usade_at': time.time(),
                         'processes': [
-                            WarmProcess(init_lightwood, (handler.__module__,))
+                            WarmProcess(init_ml_handler, (handler.__module__,))
                             for _x in range(preload_handlers[handler])
                         ]
                     }
@@ -206,7 +206,7 @@ class ProcessCache:
         with self._lock:
             handler_name = handler.__name__
             if handler_name not in self.cache:
-                warm_process = WarmProcess(init_lightwood, (handler.__module__,))
+                warm_process = WarmProcess(init_ml_handler, (handler.__module__,))
                 self.cache[handler_name] = {
                     'last_usade_at': None,
                     'processes': [warm_process]
@@ -216,7 +216,7 @@ class ProcessCache:
                     if warm_process.ready():
                         break
                 else:
-                    warm_process = WarmProcess(init_lightwood, (handler.__module__,))
+                    warm_process = WarmProcess(init_ml_handler, (handler.__module__,))
                     self.cache[handler_name]['processes'].append(warm_process)
             task = warm_process.apply_async(func, *args, **kwargs)
             self.cache[handler_name]['last_usade_at'] = time.time()
@@ -228,7 +228,6 @@ class ProcessCache:
         while self._stop_event.wait(timeout=10) is False:
             with self._lock:
                 for handler_name in self.cache.keys():
-                    print(f'check {handler_name}')
                     last_usade_at = self.cache[handler_name]['last_usade_at']
                     processes = self.cache[handler_name]['processes']
                     if (
@@ -241,7 +240,6 @@ class ProcessCache:
                     ):
                         for i, process in enumerate(processes):
                             if process.ready():
-                                print(f'terminate one of {handler_name}')
                                 processes.pop(i)
                                 del process
                                 break

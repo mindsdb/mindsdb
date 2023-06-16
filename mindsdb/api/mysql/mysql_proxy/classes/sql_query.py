@@ -889,60 +889,59 @@ class SQLQuery():
         elif type(step) in (ApplyPredictorStep, ApplyTimeseriesPredictorStep):
             try:
                 # set row_id
-                with profiler.Context('ApplyPredictorStep-BEFORE'):
-                    data = steps_data[step.dataframe.step_num]
+                data = steps_data[step.dataframe.step_num]
 
-                    params = step.params or {}
+                params = step.params or {}
 
-                    for table in data.get_tables():
-                        row_id_col = Column(
-                            name='__mindsdb_row_id',
-                            database=table['database'],
-                            table_name=table['table_name'],
-                            table_alias=table['table_alias']
-                        )
+                for table in data.get_tables():
+                    row_id_col = Column(
+                        name='__mindsdb_row_id',
+                        database=table['database'],
+                        table_name=table['table_name'],
+                        table_alias=table['table_alias']
+                    )
 
-                        values = list(range(self.row_id, self.row_id + data.length()))
-                        data.add_column(row_id_col, values)
-                        self.row_id += data.length()
+                    values = list(range(self.row_id, self.row_id + data.length()))
+                    data.add_column(row_id_col, values)
+                    self.row_id += data.length()
 
-                    project_name = step.namespace
-                    predictor_name = step.predictor.parts[0]
+                project_name = step.namespace
+                predictor_name = step.predictor.parts[0]
 
-                    where_data = data.get_records()
+                where_data = data.get_records()
 
-                    predictor_metadata = {}
-                    for pm in self.predictor_metadata:
-                        if pm['name'] == predictor_name and pm['integration_name'].lower() == project_name:
-                            predictor_metadata = pm
-                            break
-                    is_timeseries = predictor_metadata['timeseries']
-                    _mdb_forecast_offset = None
-                    if is_timeseries:
-                        if '> LATEST' in self.query_str:
-                            # stream mode -- if > LATEST, forecast starts on inferred next timestamp
-                            _mdb_forecast_offset = 1
-                        elif '= LATEST' in self.query_str:
-                            # override: when = LATEST, forecast starts on last provided timestamp instead of inferred next time
-                            _mdb_forecast_offset = 0
-                        else:
-                            # normal mode -- emit a forecast ($HORIZON data points on each) for each provided timestamp
-                            params['force_ts_infer'] = True
-                            _mdb_forecast_offset = None
-                        for row in where_data:
-                            if '__mdb_forecast_offset' not in row:
-                                row['__mdb_forecast_offset'] = _mdb_forecast_offset
+                predictor_metadata = {}
+                for pm in self.predictor_metadata:
+                    if pm['name'] == predictor_name and pm['integration_name'].lower() == project_name:
+                        predictor_metadata = pm
+                        break
+                is_timeseries = predictor_metadata['timeseries']
+                _mdb_forecast_offset = None
+                if is_timeseries:
+                    if '> LATEST' in self.query_str:
+                        # stream mode -- if > LATEST, forecast starts on inferred next timestamp
+                        _mdb_forecast_offset = 1
+                    elif '= LATEST' in self.query_str:
+                        # override: when = LATEST, forecast starts on last provided timestamp instead of inferred next time
+                        _mdb_forecast_offset = 0
+                    else:
+                        # normal mode -- emit a forecast ($HORIZON data points on each) for each provided timestamp
+                        params['force_ts_infer'] = True
+                        _mdb_forecast_offset = None
+                    for row in where_data:
+                        if '__mdb_forecast_offset' not in row:
+                            row['__mdb_forecast_offset'] = _mdb_forecast_offset
 
-                    # for row in where_data:
-                    #     for key in row:
-                    #         if isinstance(row[key], datetime.date):
-                    #             row[key] = str(row[key])
+                # for row in where_data:
+                #     for key in row:
+                #         if isinstance(row[key], datetime.date):
+                #             row[key] = str(row[key])
 
-                    table_name = get_preditor_alias(step, self.database)
-                    result = ResultSet()
-                    result.is_prediction = True
+                table_name = get_preditor_alias(step, self.database)
+                result = ResultSet()
+                result.is_prediction = True
 
-                    project_datanode = self.datahub.get(project_name)
+                project_datanode = self.datahub.get(project_name)
                 if len(where_data) == 0:
                     cols = project_datanode.get_table_columns(predictor_name) + ['__mindsdb_row_id']
                     for col in cols:
@@ -953,9 +952,8 @@ class SQLQuery():
                             table_alias=table_name[2]
                         ))
                 else:
-                    with profiler.Context('ApplyPredictorStep-CHECKSUM'):
-                        predictor_id = predictor_metadata['id']
-                        key = f'{predictor_name}_{predictor_id}_{json_checksum(where_data)}'
+                    predictor_id = predictor_metadata['id']
+                    key = f'{predictor_name}_{predictor_id}_{json_checksum(where_data)}'
 
                     if self.session.predictor_cache is False:
                         data = None
@@ -967,38 +965,33 @@ class SQLQuery():
                         version = None
                         if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
                             version = int(step.predictor.parts[-1])
-                        with profiler.Context('ApplyPredictorStep-PREDICT'):
-                            predictions = project_datanode.predict(
-                                model_name=predictor_name,
-                                data=where_data,
-                                version=version,
-                                params=params
-                            )
-                        with profiler.Context('ApplyPredictorStep-PREDICT-CONVERT'):
-                            data = predictions.to_dict(orient='records')
-                            columns_dtypes = dict(predictions.dtypes)
+                        predictions = project_datanode.predict(
+                            model_name=predictor_name,
+                            data=where_data,
+                            version=version,
+                            params=params
+                        )
+                        data = predictions.to_dict(orient='records')
+                        columns_dtypes = dict(predictions.dtypes)
 
                         if data is not None and isinstance(data, list) and self.session.predictor_cache is not False:
                             predictor_cache.set(key, data)
                     else:
                         columns_dtypes = {}
-                    with profiler.Context('ApplyPredictorStep-AFTER-ADD-COLUMN'):
-                        if len(data) > 0:
-                            cols = list(data[0].keys())
-                            for col in cols:
-                                result.add_column(Column(
-                                    name=col,
-                                    table_name=table_name[1],
-                                    table_alias=table_name[2],
-                                    database=table_name[0],
-                                    type=columns_dtypes.get(col)
-                                ))
-                    with profiler.Context('ApplyPredictorStep-APPLY-FILTER'):
-                        # apply filter
-                        if is_timeseries:
-                            data = self.apply_ts_filter(data, where_data, step, predictor_metadata)
-                    with profiler.Context('ApplyPredictorStep-ADD-RECORDS'):
-                        result.add_records(data)
+                    if len(data) > 0:
+                        cols = list(data[0].keys())
+                        for col in cols:
+                            result.add_column(Column(
+                                name=col,
+                                table_name=table_name[1],
+                                table_alias=table_name[2],
+                                database=table_name[0],
+                                type=columns_dtypes.get(col)
+                            ))
+                    # apply filter
+                    if is_timeseries:
+                        data = self.apply_ts_filter(data, where_data, step, predictor_metadata)
+                    result.add_records(data)
 
                 data = result
 

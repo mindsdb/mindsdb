@@ -28,6 +28,7 @@ class OpenAIHandler(BaseMLEngine):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.generative = True
         self.default_model = 'gpt-3.5-turbo'
         self.default_mode = 'default'  # can also be 'conversational' or 'conversational-full'
         self.supported_modes = ['default', 'conversational', 'conversational-full', 'image']

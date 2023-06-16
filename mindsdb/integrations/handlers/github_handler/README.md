@@ -73,7 +73,7 @@ CREATE DATABASE mindsdb_github
 WITH ENGINE = 'github',
 PARAMETERS = {
   "repository": "mindsdb/mindsdb",
-  "api_key": "your_api_key",    -- optional GitHub API key
+  "api_key": "your_api_key"    -- optional GitHub API key
 };
 ~~~~
 

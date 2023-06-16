@@ -1,3 +1,4 @@
 llama-index==0.6.11
-langchain
+langchain<=0.0.192
+openai<=0.28.0
 html2text

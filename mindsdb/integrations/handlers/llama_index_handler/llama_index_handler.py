@@ -6,7 +6,8 @@ import pandas as pd
 from langchain.llms import OpenAI
 import llama_index
 from llama_index.readers.schema.base import Document
-from llama_index import download_loader, ServiceContext, StorageContext, load_index_from_storage
+from llama_index import SimpleWebPageReader
+from llama_index import ServiceContext, StorageContext, load_index_from_storage
 from llama_index import LLMPredictor, OpenAIEmbedding
 from llama_index.indices.vector_store.base import VectorStore
 
@@ -48,19 +49,16 @@ class LlamaIndexHandler(BaseMLEngine):
             if 'source_url_link' not in args['using']:
                 raise Exception("SimpleWebPageReader requires a `source_url_link` parameter. Refer to LlamaIndex documentation for more details.")  # noqa
 
-            SimpleWebPageReader = download_loader("SimpleWebPageReader")
             reader = SimpleWebPageReader(html_to_text=True).load_data([args['using']['source_url_link']])
 
         else:
             raise Exception(f"Invalid operation mode. Please use one of {self.supported_reader}.")
 
         # TODO: prompt templating!
-
+        self.model_storage.json_set('args', args)
         index = self._setup_index(reader)
-
         path = self.model_storage.fileStorage.get_path('./')
         index.storage_context.persist(persist_dir=path)
-        self.model_storage.json_set('args', args)
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> pd.DataFrame:
         args = self.model_storage.json_get('args')

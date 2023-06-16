@@ -64,7 +64,7 @@ Please note that the examples presented here use SQL. To see how to create Huggi
 Here is an example of a binary classification. The model determines whether a text string is a spam or not.
 
 <Tabs>
-<Tab title="Huggingface Existing Models">
+<Tab title="Downloading Models from Hugging Face Repository">
 ```sql
 CREATE MODEL mindsdb.spam_classifier
 PREDICT PRED
@@ -74,25 +74,6 @@ USING
   model_name = 'mrm8488/bert-tiny-finetuned-sms-spam-detection',
   input_column = 'text_spammy',
   labels = ['ham', 'spam'];
-```
-</Tab>
-
-<Tab title="Huggingface Inference API">
-```sql
-CREATE MODEL mindsdb.spam_classifier
-PREDICT PRED
-USING
-  engine = 'hf_inference_api',
-  task = 'text-classification',
-  column = 'text_spammy';
-```
-</Tab>
-</Tabs>
-
-On execution, we get:
-
-```sql
-Query successfully completed
 ```
 
 Before querying for predictions, we should verify the status of the `spam_classifier` model.
@@ -132,13 +113,30 @@ On execution, we get:
 |spam|{'spam': 0.9064534902572632, 'ham': 0.09354648739099503} |WINNER!! As a valued network customer you have been selected to receivea £900 prize reward! To claim call 09061701461. Claim code KL341. Valid 12 hours only.    |
 +----+---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
+</Tab>
+
+<Tab title="Using Hugging Face Inference API">
+```sql
+CREATE MODEL mindsdb.spam_classifier
+PREDICT PRED
+USING
+  engine = 'hf_inference_api',
+  task = 'text-classification',
+  column = 'text_spammy';
+```
+
+<Note>
+Please note that the `text-classification` task uses two labels: `POSITIVE` and `NEGATIVE`.
+</Note>
+</Tab>
+</Tabs>
 
 ### Model 2: Sentiment Classifier
 
 Here is an example of a multi-value classification. The model determines a sentiment of a text string, where possible values are `negative`, `neutral`, and `positive`.
 
 <Tabs>
-<Tab title="Huggingface Existing Model">
+<Tab title="Downloading Models from Hugging Face Repository">
 ```sql
 CREATE MODEL mindsdb.sentiment_classifier
 PREDICT sentiment
@@ -148,25 +146,6 @@ USING
   model_name = 'cardiffnlp/twitter-roberta-base-sentiment',
   input_column = 'text_short',
   labels = ['negative', 'neutral', 'positive'];
-```
-</Tab>
-
-<Tab title="Huggingface Inference API">
-```sql
-CREATE MODEL mindsdb.sentiment_classifier
-PREDICT sentiment
-USING
-  engine = 'hf_inference_api',
-  task = 'text-classification',
-  column = 'text_short';
-```
-</Tab>
-</Tabs>
-
-On execution, we get:
-
-```sql
-Query successfully completed
 ```
 
 Before querying for predictions, we should verify the status of the `sentiment_classifier` model.
@@ -206,13 +185,30 @@ On execution, we get:
 |positive |{'positive': 0.9835041761398315, 'neutral': 0.014900505542755127, 'negative': 0.0015953202964738011}|Baking is the best |
 +---------+----------------------------------------------------------------------------------------------------+-------------------+
 ```
+</Tab>
+
+<Tab title="Using Hugging Face Inference API">
+```sql
+CREATE MODEL mindsdb.sentiment_classifier
+PREDICT sentiment
+USING
+  engine = 'hf_inference_api',
+  task = 'text-classification',
+  column = 'text_short';
+```
+
+<Note>
+Please note that the `text-classification` task uses two labels: `POSITIVE` and `NEGATIVE`.
+</Note>
+</Tab>
+</Tabs>
 
 ### Model 3: Zero-Shot Classifier
 
 Here is an example of a zero-shot classification. The model determines to which of the defined categories a text string belongs.
 
 <Tabs>
-<Tab title="Huggingface Existing Model">
+<Tab title="Downloading Models from Hugging Face Repository">
 ```sql
 CREATE MODEL mindsdb.zero_shot_tcd
 PREDICT topic
@@ -222,25 +218,6 @@ USING
   model_name = 'facebook/bart-large-mnli',
   input_column = 'text_short',
   candidate_labels = ['travel', 'cooking', 'dancing'];
-```
-</Tab>
-<Tab title="Huggingface Inference API">
-```sql
-CREATE MODEL mindsdb.zero_shot_tcd
-PREDICT topic
-USING
-  engine = 'hf_inference_api',
-  task = 'zero-shot-classification',
-  candidate_labels = ['travel', 'cooking', 'dancing'],
-  column = 'text_short';
-```
-</Tab>
-</Tabs>
-
-On execution, we get:
-
-```sql
-Query successfully completed
 ```
 
 Before querying for predictions, we should verify the status of the `zero_shot_tcd` model.
@@ -280,13 +257,26 @@ On execution, we get:
 |cooking|{'cooking': 0.9936348795890808, 'travel': 0.0034196735359728336, 'dancing': 0.0029454431496560574}|Baking is the best |
 +-------+--------------------------------------------------------------------------------------------------+-------------------+
 ```
+</Tab>
+<Tab title="Using Hugging Face Inference API">
+```sql
+CREATE MODEL mindsdb.zero_shot_tcd
+PREDICT topic
+USING
+  engine = 'hf_inference_api',
+  task = 'zero-shot-classification',
+  candidate_labels = ['travel', 'cooking', 'dancing'],
+  column = 'text_short';
+```
+</Tab>
+</Tabs>
 
 ### Model 4: Translation
 
 Here is an example of a translation. The model gets an input string in English and translates it into French.
 
 <Tabs>
-<Tab title="Huggingface Existing Model">
+<Tab title="Downloading Models from Hugging Face Repository">
 ```sql
 CREATE MODEL mindsdb.translator_en_fr
 PREDICT translated
@@ -297,21 +287,6 @@ USING
   input_column = 'text_short',
   lang_input = 'en',
   lang_output = 'fr';
-```
-</Tab>
-
-<Tab title="Huggingface Inference API">
-
-<Note>
-Translation is currently not supported using the Huggingface Inference API.
-</Note>
-</Tab>
-</Tabs>
-
-On execution, we get:
-
-```sql
-Query successfully completed
 ```
 
 Before querying for predictions, we should verify the status of the `translator_en_fr` model.
@@ -351,6 +326,15 @@ On execution, we get:
 |La boulangerie est la meilleure|Baking is the best |
 +-------------------------------+-------------------+
 ```
+</Tab>
+
+<Tab title="Using Hugging Face Inference API">
+
+<Note>
+Translation is currently not supported using the Huggingface Inference API.
+</Note>
+</Tab>
+</Tabs>
 
 ### Model 5: Summarisation
 
@@ -358,7 +342,7 @@ Here is an example of a summarisation.
 
 
 <Tabs>
-<Tab title="Huggingface Existing Model">
+<Tab title="Downloading Models from Hugging Face Repository">
 ```sql
 CREATE MODEL mindsdb.summarizer_10_20
 PREDICT text_summary
@@ -369,27 +353,6 @@ USING
   input_column = 'text_long',
   min_output_length = 10,
   max_output_length = 20;
-```
-</Tab>
-
-<Tab title="Huggingface Inference API">
-```sql
-CREATE MODEL mindsdb.summarizer_10_20
-PREDICT text_summary
-USING
-  engine = 'hf_inference_api',
-  task = 'summarization',
-  column = 'text_long',
-  min_output_length = 10,
-  max_output_length = 20;
-```
-</Tab>
-</Tabs>
-
-On execution, we get:
-
-```sql
-Query successfully completed
 ```
 
 Before querying for predictions, we should verify the status of the `summarizer_10_20` model.
@@ -429,13 +392,28 @@ On execution, we get:
 |Baking is a method of preparing food that uses dry heat, typically in an oven                                 |Baking is a method of preparing food that uses dry heat, typically in an oven, but can also be done in hot ashes, or on hot stones. The most common baked item is bread but many other types of foods can be baked. Heat is gradually transferred from the surface of cakes, cookies, and pieces of bread to their center. As heat travels through, it transforms batters and doughs into baked goods and more with a firm dry crust and a softer center. Baking can be combined with grilling to produce a hybrid barbecue variant by using both methods simultaneously, or one after the other. Baking is related to barbecuing because the concept of the masonry oven is similar to that of a smoke pit.|
 +--------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
+</Tab>
+
+<Tab title="Using Hugging Face Inference API">
+```sql
+CREATE MODEL mindsdb.summarizer_10_20
+PREDICT text_summary
+USING
+  engine = 'hf_inference_api',
+  task = 'summarization',
+  column = 'text_long',
+  min_output_length = 10,
+  max_output_length = 20;
+```
+</Tab>
+</Tabs>
 
 ### Model 6: Fill Mask
 
 Here is an example of a masked language modeling task.
 
 <Tabs>
-<Tab title="Huggingface Existing Model">
+<Tab title="Downloading Models from Hugging Face Repository">
 ```sql
 CREATE MODEL mindsdb.fill_mask
 PREDICT text_filled
@@ -444,24 +422,6 @@ USING
   task = 'fill-mask',
   model_name = 'bert-base-uncased',
   input_column = 'text';
-```
-</Tab>
-<Tab title="Huggingface Inference API">
-```sql
-CREATE MODEL mindsdb.fill_mask
-PREDICT text_filled
-USING
-  engine = 'hf_inference_api',
-  task = 'fill-mask',
-  column = 'text';
-```
-</Tab>
-</Tabs>
-
-On execution, we get:
-
-```sql
-Query successfully completed
 ```
 
 Before querying for predictions, we should verify the status of the `fill_mask` model.
@@ -500,6 +460,18 @@ On execution, we get:
 |the weather is good today|The weather is [MASK] today|{'the weather is good today': 0.22563229501247406, 'the weather is warm today': 0.07954009622335434, 'the weather is fine today': 0.047255873680114746, 'the weather is better today': 0.034303560853004456, 'the weather is mild today': 0.03092862293124199}|
 +-------------------------+---------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
+</Tab>
+<Tab title="Using Hugging Face Inference API">
+```sql
+CREATE MODEL mindsdb.fill_mask
+PREDICT text_filled
+USING
+  engine = 'hf_inference_api',
+  task = 'fill-mask',
+  column = 'text';
+```
+</Tab>
+</Tabs>
 
 ## HuggingFace + MindsDB Models Library
 

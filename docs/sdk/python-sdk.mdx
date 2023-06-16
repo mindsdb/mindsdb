@@ -380,7 +380,7 @@ project.drop_job('job_name')
 
 ## Example
 
-Here is a sample code to create and train a model and make predictions:
+Here is a sample code to create and train a simple regression model and make predictions:
 
 ```bash
 # get the default project
@@ -434,6 +434,85 @@ print('Making prediction on the first 3 rows of home_rentals table')
 ret = home_rentals_model.predict(rentals_table_limit)
 
 print(ret[['number_of_rooms', 'number_of_bathrooms', 'rental_price']])
+```
+
+And here is a sample code to create and train a time series model and make predictions:
+
+```bash
+# get the default project
+project = server.get_project()
+
+# prepare the training data
+files = server.get_database('files')
+housesales_table = files.get_table('house_sales')
+print('First 3 rows of house_sales:')
+print(housesales_table.limit(3).fetch())
+
+# get all models
+model_names = [i.name for i in  project.list_models()]
+
+# create a model if it doesn't exist yet
+print('Creating house_sales_model model')
+
+house_sales_model = project.create_model(
+    name = 'house_sales_model',
+    predict = 'MA',
+    query = files.query('SELECT * FROM house_sales'),
+    timeseries_options={
+    	  'ORDER BY': 'saledate',
+    	  'GROUP BY': 'bedroom',
+          'WINDOW': 8,
+          'HORIZON': 4
+      }
+)
+print('Created house_sales_model successfully:')
+print(house_sales_model)
+
+print('Waiting for model training to complete...please be patient')
+for i in range(400):
+  print('.', end='')
+  time.sleep(0.5)
+
+  if house_sales_model.get_status() not in ('generating', 'training'):
+    print('\nFinished training house_sales_model:')
+    break
+
+# get model's details      
+print(house_sales_model.data)
+
+if house_sales_model.get_status() == 'error':
+  print('Something went wrong while training:')
+  print(house_sales_model.data['error'])
+
+# make predictions
+housesales_table_limit = housesales_table.limit(3)
+
+print('Making prediction on the first 3 rows of house_sales table')
+ret = house_sales_model.predict(housesales_table_limit)
+
+print(ret[['MA', 'saledate']])
+```
+
+On execution, we get:
+
+```bash
+First 3 rows of house_sales:
+     saledate      MA   type  bedrooms
+0  30/09/2007  441854  house         2
+1  31/12/2007  441854  house         2
+2  31/03/2008  441854  house         2
+Creating house_sales_model model
+Created house_sales_model successfully:
+Model(house_sales_model_pythonsdktest9, status=generating)
+Waiting for model training to complete...please be patient
+...........
+Finished training house_sales_model:
+{'name': 'house_sales_model_pythonsdktest9', 'engine': 'lightwood', 'project': 'mindsdb', 'version': 1, 'status': 'complete', 'accuracy': 0.996, 'predict': 'MA', 'update_status': 'up_to_date', 'mindsdb_version': '23.5.3.2', 'error': None, 'select_data_query': 'SELECT * FROM house_sales', 'training_options': "{'target': 'MA'}", 'current_training_phase': 5.0, 'total_training_phases': 5.0, 'training_phase_name': 'Complete', 'tag': None, 'created_at': '2023-06-12 16:42:06.500404'}
+Making prediction on the first 3 rows of house_sales table
+       MA    saledate
+0  441305  30/09/2007
+1  439289  31/12/2007
+2  440130  31/03/2008
 ```
 
 <Tip>

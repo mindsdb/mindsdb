@@ -2165,6 +2165,7 @@ Check out the Vitess data handler details [here](/data-integrations/vitess).
       "host": " ",                            --- host name or IP address
       "port": ,                               --- port used to make TCP/IP connection
       "database": " "                         --- database name
+      "schema": " "                           --- schema name, if multiple schemas then comma seperated
     };
     ```
     </Tab>
@@ -2177,7 +2178,8 @@ Check out the Vitess data handler details [here](/data-integrations/vitess).
       "password": "password",
       "host": "127.0.0.1",
       "port": 5433,
-      "database": "yugabyte_db"
+      "database": "yugabyte_db",
+      "schema":"cd"
     };
     ```
     </Tab>

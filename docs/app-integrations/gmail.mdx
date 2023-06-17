@@ -17,6 +17,10 @@ The required arguments to establish a connection are as follows:
 
 * `credentials_file` local path to the credentials.json or `s3_credentials_file` in case your file is uploaded to s3. Follow the instructions below to generate the credentials file.
 * `scopes` define the level of access granted. It is optional and by default it uses 'https://.../gmail.compose' and 'https://.../gmail.readonly' scopes.
+* 
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/gmail_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
 
 In order to make use of this handler and connect the Google Calendar app to MindsDB, the following syntax can be used:
 

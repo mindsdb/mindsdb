@@ -7,6 +7,10 @@ This is the implementation of the Google Calendar app handler for MindsDB. It ma
 
 Google Calendar is a time-management and scheduling calendar service developed by Google.
 
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/gmail_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
 ## Implementation
 
 The required arguments to establish a connection are as follows:
@@ -30,6 +34,7 @@ WITH
     }; 
 ```
 <Tip>
+    
 You need a Google account in order to use this integration. Here is how to get the credentials file:
 
 1. Create a Google Cloud Platform (GCP) Project:

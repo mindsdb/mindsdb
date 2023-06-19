@@ -39,7 +39,7 @@ def start(verbose, no_studio, with_nlp):
         logger = logging.getLogger('werkzeug')
         logger.setLevel(logging.WARNING)
 
-        app.run(debug=False, port=port, host=host)
+        app.run(debug=os.environ.get("FLASK_DEBUG", False), port=port, host=host)
     elif server.lower() == 'gunicorn':
         try:
             from mindsdb.api.http.gunicorn_wrapper import StandaloneApplication

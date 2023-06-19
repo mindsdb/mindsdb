@@ -3,16 +3,17 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.chatbot.chatbot_message import ChatBotMessage
 from mindsdb.utilities.context import context as ctx
 
+
 class RealtimeChatBotTask:
     """
     Manages the lifecycle and operation of a single chatbot.
     """
-    
+
     _DEFAULT_MAX_ITERATIONS = 10
     _PROMPT_USER_COLUMN = 'input'
 
     def __init__(self, handler_factory, chat_engine, bot_record):
-        
+
         # Need to set context first.
         self._bot_record = bot_record
         self._set_context()
@@ -67,7 +68,7 @@ class RealtimeChatBotTask:
         if message.type == ChatBotMessage.Type.DIRECT:
             chatbot_response = self._project_datanode.predict(
                 model_name=self._model_name,
-                data={ self._user_col: message.text },
+                data={self._user_col: message.text},
                 params=predict_params
             )
 
@@ -91,5 +92,5 @@ class RealtimeChatBotTask:
             db.session.add(reply_history)
             db.session.commit()
             return
-        
+
         raise NotImplementedError('Realtime chatbots only support direct messages currently')

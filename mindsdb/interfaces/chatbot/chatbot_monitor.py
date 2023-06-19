@@ -8,6 +8,7 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.chatbot.chatbot_thread import ChatBotThread
 from mindsdb.interfaces.chatbot.realtime_chatbot_thread import RealtimeChatBotThread
 
+
 class ChatBotMonitor:
     """Starts and stops chatbots based on their configuration in the database."""
 
@@ -69,7 +70,7 @@ class ChatBotMonitor:
     def stop_bot(self, bot_id: int):
         """
         Stops a bot by id.
-        
+
         Parameters:
             bot_id (int): ID of the bot to stop.
         """

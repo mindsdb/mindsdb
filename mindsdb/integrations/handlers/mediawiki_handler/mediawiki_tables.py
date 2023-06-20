@@ -69,3 +69,22 @@ class PagesTable(APITable):
         page = connection.page(pageid=page_id)
 
         return page
+
+    def convert_page_to_dict(self, page):
+        return {
+            'pageid': page.pageid,
+            'title': page.title,
+            'original_title': page.original_title,
+            'content': page.content,
+            'summary': page.summary,
+            'url': page.url,
+            'categories': page.categories,
+            'coordinates': page.coordinates,
+            'images': page.images,
+            'references': page.references,
+            'section': page.section,
+            'sections': page.sections,
+            'links': page.links,
+            'revision_id': page.revision_id,
+            'parent_id': page.parent_id
+        }

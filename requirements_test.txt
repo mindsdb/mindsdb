@@ -5,6 +5,5 @@ pytest
 pytest-subtests
 flake8==5.0.4
 pycodestyle==2.9.1
-slack_sdk
 
 openai >= 0.27.0 # for ml handler tests [should match version defined in handler's requirements.txt]

@@ -1,17 +1,11 @@
-from .urlcrawl_helpers import get_df_from_query_str, get_all_websites 
 import logging
 
 import pandas as pd
 
-
-from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
-
 from mindsdb_sql.parser import ast
 
-from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from mindsdb.integrations.utilities.date_utils import parse_utc_date
+from mindsdb.integrations.libs.api_handler import APIHandler, APITable
+from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, project_dataframe
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -19,16 +13,16 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 
+from .urlcrawl_helpers import get_df_from_query_str, get_all_websites, get_all_website_links_rec
 
 
 class CrawlerTable(APITable):
 
-    def select(self, query: ast.Select) -> Response:
+    def select(self, query: ast.Select) -> pd.DataFrame:
 
         conditions = extract_comparison_conditions(query.where)
 
-        params = {}
-        filters = []
+        urls = []
         for op, arg1, arg2 in conditions:
 
             if op == 'or':
@@ -46,10 +40,6 @@ class CrawlerTable(APITable):
                         urls = url
                 else:
                     raise NotImplementedError
-
-            
-
-            
             else:
                 pass
         
@@ -58,43 +48,15 @@ class CrawlerTable(APITable):
         if query.limit is not None:
             limit = query.limit.value
 
-       
-
-       
-
-       
+        if len(urls) == 0:
+            # empty result
+            return pd.DataFrame([], columns=self.get_columns())
 
         result = get_all_websites(urls, limit, html=False)
-        
-        # filter targets
-        columns = []
-        for target in query.targets:
-            if isinstance(target, ast.Star):
-                columns = []
-                break
-            elif isinstance(target, ast.Identifier):
-                columns.append(target.parts[-1])
-            else:
-                raise NotImplementedError
 
-        if len(columns) == 0:
-            columns = self.get_columns()
+        result = project_dataframe(result, query.targets, self.get_columns())
 
-        # columns to lower case
-        columns = [name.lower() for name in columns]
-
-        if len(result) == 0:
-            result = pd.DataFrame([], columns=columns)
-        else:
-            # add absent columns
-            for col in set(columns) & set(result.columns) ^ set(columns):
-                result[col] = None
-
-            # filter by columns
-            result = result[columns]
         return result
-
-        
 
     def get_columns(self):
         return [
@@ -102,8 +64,6 @@ class CrawlerTable(APITable):
             'text_content',
             'error'
         ]
-
-    
 
 
 class WebHandler(APIHandler):
@@ -116,17 +76,11 @@ class WebHandler(APIHandler):
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
 
-        
         self.api = None
         self.is_connected = True
         crawler = CrawlerTable(self)
         self._register_table('crawler', crawler)
-        # tweets = TweetsTable(self)
-        # self._register_table('tweets', tweets)
 
-    
-
-    
     def check_connection(self) -> StatusResponse:
 
         response = StatusResponse(False)
@@ -142,45 +96,6 @@ class WebHandler(APIHandler):
             RESPONSE_TYPE.TABLE,
             data_frame=df
         )
-
-    def _apply_filters(self, data, filters):
-        if not filters:
-            return data
-
-        data2 = []
-        for row in data:
-            add = False
-            for op, key, value in filters:
-                value2 = row.get(key)
-                if isinstance(value, int):
-                    # twitter returns ids as string
-                    value = str(value)
-
-                if op in ('!=', '<>'):
-                    if value == value2:
-                        break
-                elif op in ('==', '='):
-                    if value != value2:
-                        break
-                elif op == 'in':
-                    if not isinstance(value, list):
-                        value = [value]
-                    if value2 not in value:
-                        break
-                elif op == 'not in':
-                    if not isinstance(value, list):
-                        value = [value]
-                    if value2 in value:
-                        break
-                else:
-                    raise NotImplementedError(f'Unknown filter: {op}')
-                # only if there wasn't breaks
-                add = True
-            if add:
-                data2.append(row)
-        return data2
-
-    
 
 
 if __name__ == "__main__":

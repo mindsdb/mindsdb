@@ -149,9 +149,7 @@ Query successfully completed
 Before querying for predictions, we should verify the status of the `spam_classifier` model.
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name = 'spam_classifier';
+DESCRIBE spam_classifier;
 ```
 
 On execution, we get:

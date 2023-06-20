@@ -28,6 +28,7 @@ class OpenAIHandler(BaseMLEngine):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.generative = True
         self.default_model = 'gpt-3.5-turbo'
         self.default_mode = 'default'  # can also be 'conversational' or 'conversational-full'
         self.supported_modes = ['default', 'conversational', 'conversational-full', 'image']
@@ -43,12 +44,13 @@ class OpenAIHandler(BaseMLEngine):
         else:
             args = args['using']
 
-        if len(set(args.keys()) & {'question_column', 'prompt_template', 'json_struct'}) == 0:
+        if len(set(args.keys()) & {'question_column', 'prompt_template', 'json_struct', 'prompt'}) == 0:
             raise Exception('One of `question_column`, `prompt_template` or `json_struct` is required for this engine.')
 
         keys_collection = [
             ['prompt_template'],
             ['question_column', 'context_column'],
+            ['prompt', 'user_column', 'assistant_column'],
             ['json_struct']
         ]
         for keys in keys_collection:
@@ -58,6 +60,7 @@ class OpenAIHandler(BaseMLEngine):
                         1) a `prompt_template`
                         2) a `question_column` and an optional `context_column`
                         3) a `json_struct`
+                        4) a `prompt' and 'user_column' and 'assistant_column`
                 '''))
 
     def create(self, target, args=None, **kwargs):
@@ -217,7 +220,9 @@ class OpenAIHandler(BaseMLEngine):
                             continue
                         p = p.replace(f'{{{{{column}}}}}', str(df[column][i]))
                     prompts.append(p)
-
+            elif 'prompt' in args:
+                empty_prompt_ids = []
+                prompts = list(df[args['user_column']])
             else:
                 empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
                 prompts = list(df[args['question_column']].apply(lambda x: str(x)))
@@ -312,12 +317,25 @@ class OpenAIHandler(BaseMLEngine):
                 return tidy_comps
 
             completions = []
-            initial_prompt = {"role": "system", "content": "You are a helpful assistant. Your task is to continue the chat."}  # noqa
+            if mode != 'conversational':
+                initial_prompt = {"role": "system", "content": "You are a helpful assistant. Your task is to continue the chat."}  # noqa
+            else:
+                # get prompt from model
+                initial_prompt = {"role": "system",  "content": args['prompt']}  # noqa
+
             kwargs['messages'] = [initial_prompt]
             last_completion_content = None
 
             for pidx in range(len(prompts)):
-                kwargs['messages'].append({'role': 'user', 'content': prompts[pidx]})
+                if mode != 'conversational':
+                    kwargs['messages'].append({'role': 'user', 'content': prompts[pidx]})
+                else:
+                    question = prompts[pidx]
+                    if question:
+                        kwargs['messages'].append({'role': 'user', 'content': question})
+                    answer = df.iloc[pidx][args.get('assistant_column')]
+                    if answer:
+                        kwargs['messages'].append({'role': 'assistant', 'content': answer})
 
                 if mode == 'conversational-full' or (mode == 'conversational' and pidx == len(prompts) - 1):
                     kwargs['messages'] = truncate_msgs_for_token_limit(kwargs['messages'],

@@ -1,70 +1,82 @@
-from mindsdb.integrations.libs.api_handler import APITable
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from mindsdb_sql.parser import ast
+from typing import List
 
 import pandas as pd
 
+from mindsdb.integrations.libs.api_handler import APITable
+from mindsdb.integrations.utilities.sql_utils import conditions_to_filter, project_dataframe
+from mindsdb_sql.parser import ast
 
-class RocketChatMessagesTable(APITable):
+
+def message_to_dataframe_row(message: dict):
+    message['id'] = message['_id']
+    message['room_id'] = message['rid']
+    message['text'] = message['msg']
+    message['sent_at'] = message['ts']
+
+    if 'u' in message:
+        if 'username' in message['u']:
+            message['username'] = message['u']['username']
+        if 'name' in message['u']:
+            message['name'] = message['u']['name']
+    if 'bot' in message and 'i' in message['bot']:
+        message['bot_id'] = message['bot']['i']
+    return message
+
+
+class ChannelsTable(APITable):
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        message_data = self.handler.call_api('channels_list')
+        df = pd.DataFrame(message_data['channels'])
+        df = project_dataframe(df, query.targets, self.get_columns())
+
+        return df
+
+    def get_columns(self):
+        """Gets all columns to be returned in pandas DataFrame responses"""
+        return [
+            '_id',
+            'name',
+            'usersCount',
+            'msgs',
+        ]
+
+
+class ChannelMessagesTable(APITable):
     """Manages SELECT and INSERT operations for Rocket Chat messages."""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Selects message data from the Rocket Chat API and returns it as a pandas DataFrame.
-        
+
         Returns dataframe representing the Rocket Chat API results.
 
         Args:
             query (ast.Select): Given SQL SELECT query
         """
-        conditions = extract_comparison_conditions(query.where)
+        filters = conditions_to_filter(query.where)
+
+        if 'room_id' not in filters:
+            raise NotImplementedError()
 
         params = {}
-        for op, arg1, arg2 in conditions:
-            if arg1 == 'room_id':
-                if op != '=':
-                    raise NotImplementedError
-                params['room_id'] = arg2
-            if arg1 == 'username':
-                if op != '=':
-                    raise NotImplementedError
-                params['username'] = arg2
-        if query.limit:
-            params['limit'] = query.limit
 
-        # See IM Messages endpoint:
-        # https://developer.rocket.chat/reference/api/rest-api/endpoints/core-endpoints/im-endpoints/messages
-        if 'username' in params:
-            message_data = self.handler.call_rocket_chat_api(method_name='im.messages', params=params)
+        if query.limit:
+            params['count'] = query.limit
 
         # See Channel Messages endpoint:
         # https://developer.rocket.chat/reference/api/rest-api/endpoints/core-endpoints/channels-endpoints/messages
-        else:
-            message_data = self.handler.call_rocket_chat_api(method_name='channels.messages', params=params)
+        message_data = self.handler.call_api('channels_history', filters['room_id'], **params)
 
         # Only return the columns we need to.
-        columns = []
-        for target in query.targets:
-            if isinstance(target, ast.Star):
-                columns = self.get_columns()
-                break
-            elif isinstance(target, ast.Identifier):
-                columns.append(target.parts[-1])
-            else:
-                raise NotImplementedError
+        message_rows = [message_to_dataframe_row(m) for m in message_data['messages']]
+        df = pd.DataFrame(message_rows)
 
-        if len(message_data) == 0:
-            message_data = pd.DataFrame([], columns=columns)
-        else:
-            # Remove columns not part of select.
-            message_data.columns = self.get_columns()
-            for col in set(message_data.columns).difference(set(columns)):
-                message_data = message_data.drop(col, axis=1)
+        df = project_dataframe(df, query.targets, self.get_columns())
 
-        return message_data
+        return df
 
     def insert(self, query: ast.Insert):
         """Posts a message using the Rocket Chat API.
-        
+
         Args:
             query (ast.Insert): Given SQL INSERT query
         """
@@ -73,7 +85,8 @@ class RocketChatMessagesTable(APITable):
         column_names = [col.name for col in query.columns]
         for insert_row in query.values:
             insert_params = dict(zip(column_names, insert_row))
-            self.handler.call_rocket_chat_api(method_name='chat.postMessage', params=insert_params)
+
+            self.handler.call_api('chat_post_message', **insert_params)
 
     def get_columns(self):
         """Gets all columns to be returned in pandas DataFrame responses"""
@@ -86,3 +99,102 @@ class RocketChatMessagesTable(APITable):
             'name',
             'sent_at'
         ]
+
+
+class DirectsTable(APITable):
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        message_data = self.handler.call_api('im_list')
+        df = pd.DataFrame(message_data['ims'])
+        df = project_dataframe(df, query.targets, self.get_columns())
+
+        return df
+
+    def insert(self, query: ast.Insert):
+        column_names = [col.name for col in query.columns]
+        for insert_row in query.values:
+            insert_params = dict(zip(column_names, insert_row))
+
+            self.handler.call_api('im_create', **insert_params)
+
+    def get_columns(self):
+        """Gets all columns to be returned in pandas DataFrame responses"""
+        return [
+            '_id',
+            'usernames',
+            'usersCount',
+            'msgs',
+        ]
+
+
+class DirectMessagesTable(APITable):
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+
+        filters = conditions_to_filter(query.where)
+
+        if 'room_id' not in filters:
+            raise NotImplementedError()
+
+        params = {}
+
+        if query.limit:
+            params['count'] = query.limit
+
+        message_data = self.handler.call_api('im_history', filters['room_id'], **params)
+
+        message_rows = [message_to_dataframe_row(m) for m in message_data['messages']]
+        df = pd.DataFrame(message_rows)
+
+        df = project_dataframe(df, query.targets, self.get_columns())
+
+        return df
+
+    def insert(self, query: ast.Insert):
+
+        column_names = [col.name for col in query.columns]
+        for insert_row in query.values:
+            insert_params = dict(zip(column_names, insert_row))
+
+            if 'username' in insert_params:
+                # resolve username
+                resp = self.handler.call_api('users_info', insert_params['username'])
+                if 'user' in resp:
+                    insert_params['room_id'] = resp['user']['_id']
+                    del insert_params['username']
+                else:
+                    raise ValueError(f'User not found: {insert_params["username"]}')
+
+            self.handler.call_api('chat_post_message', **insert_params)
+
+    def get_columns(self):
+        """Gets all columns to be returned in pandas DataFrame responses"""
+        return [
+            'id',
+            'room_id',
+            'bot_id',
+            'text',
+            'username',
+            'name',
+            'sent_at'
+        ]
+
+
+class UsersTable(APITable):
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        message_data = self.handler.call_api('users_list')
+        df = pd.DataFrame(message_data['users'])
+        df = project_dataframe(df, query.targets, self.get_columns())
+
+        return df
+
+    def get_columns(self):
+        """Gets all columns to be returned in pandas DataFrame responses"""
+        return [
+            '_id',
+            'username',
+            'name',
+            'status',
+            'active',
+            'type',
+        ]
+

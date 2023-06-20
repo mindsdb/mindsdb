@@ -13,7 +13,7 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 
-from .urlcrawl_helpers import get_df_from_query_str, get_all_websites, get_all_website_links_rec
+from .urlcrawl_helpers import get_df_from_query_str, get_all_websites
 
 
 class CrawlerTable(APITable):
@@ -21,16 +21,15 @@ class CrawlerTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
 
         conditions = extract_comparison_conditions(query.where)
-
         urls = []
         for op, arg1, arg2 in conditions:
 
             if op == 'or':
                 raise NotImplementedError(f'OR is not supported')
-            
+
             if arg1 == 'url':
                 url = arg2
-                
+
                 if op == '=':
                     urls = [str(url)]
                 elif op == 'in':
@@ -39,23 +38,30 @@ class CrawlerTable(APITable):
                     else:
                         urls = url
                 else:
-                    raise NotImplementedError
+                    raise NotImplementedError(
+                        f'url can be url = "someurl", you can also crawl multiple sites, as follows: url IN ("url1", "url2", ..)')
+
             else:
                 pass
-        
+
+        if len(urls) == 0:
+            raise NotImplementedError(
+                f'You must specify what url you want to crawl, for example: SELECT * FROM crawl WHERE url IN ("someurl", ..)')
+
         limit = None
 
         if query.limit is not None:
             limit = query.limit.value
-
-        if len(urls) == 0:
-            # empty result
-            return pd.DataFrame([], columns=self.get_columns())
+            if limit < 0:
+                limit = None
+        if limit is None:
+            raise NotImplementedError(
+                f'You must specify a LIMIT which defines how deep to crawl, a LIMIT -1 means that will crawl ALL websites and subwebsites (this can take a while)')
 
         result = get_all_websites(urls, limit, html=False)
 
+        # filter targets
         result = project_dataframe(result, query.targets, self.get_columns())
-
         return result
 
     def get_columns(self):
@@ -85,11 +91,11 @@ class WebHandler(APIHandler):
 
         response = StatusResponse(False)
         response.success = True
-        
+
         return response
 
     def native_query(self, query_string: str = None):
-        
+
         df = get_df_from_query_str(query_string)
 
         return Response(
@@ -100,12 +106,3 @@ class WebHandler(APIHandler):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    url = "https://www.lpl.com/join-lpl/managing-your-business/services-and-support.html"  # the website url
-    reviewed_urls  = {}
-    parsed_links = set()
-    get_all_website_links_rec(url, reviewed_urls, 1)
-   
-
-
-
-

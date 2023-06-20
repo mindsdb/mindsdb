@@ -7,11 +7,9 @@ from .__about__ import __version__ as version, __description__ as description
 try:
     from .cohere_handler import CohereHandler as Handler
     import_error = None
-    logger.info("Cohere ML engine successfully imported"")
 except Exception as e:
     Handler = None
     import_error = e
-    logger.error("Error Importing Cohere ML engine")
 
 title = 'Cohere'
 name = 'cohere'

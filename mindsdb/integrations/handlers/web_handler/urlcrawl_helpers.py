@@ -11,12 +11,10 @@ import requests
 import concurrent.futures
 from urllib.parse import urlparse
 
+
 def is_valid(url):
     parsed = urlparse(url)
     return bool(parsed.netloc) and bool(parsed.scheme)
-
-
-
 
 
 # this bad boy gets all the crawling done in parallel
@@ -66,19 +64,17 @@ def get_all_website_links(url):
             continue
         if href in urls:
             continue
-        if domain_name !=parsed_href.netloc:
+        if domain_name != parsed_href.netloc:
             continue
         
         href = href.rstrip('/')    
         urls.add(href)
-    
 
-    return {'url':url,'urls':urls, 'html_content':content_html, 'text_content': content_text, 'error': None}
+    return {'url': url,'urls': urls, 'html_content': content_html, 'text_content': content_text, 'error': None}
 
 
 # this returns the soup object
 def get_readable_text_from_soup(soup):
-
 
     # Remove script and style elements
     for script in soup(["script", "style"]):
@@ -97,30 +93,23 @@ def get_readable_text_from_soup(soup):
     return text
 
 
-
 # this bad girl does the recursive crawling of the websites
 def get_all_website_links_rec(url, reviewd_urls, limit = None):
 
-    
-    
-    
-    
     # if something happens getting the website links for this url then log the error
     try:
-        reviewd_urls[url]=get_all_website_links(url)
+        reviewd_urls[url] = get_all_website_links(url)
     except Exception as e:
         error_message = traceback.format_exc().splitlines()[-1]
         logging.error("An exception occurred: %s", str(e))
-        reviewd_urls[url]= {'url':url, 'urls':[], 'html_content':'', 'text_content': '', 'error':str(error_message)}
+        reviewd_urls[url] = {'url': url, 'urls': [], 'html_content': '', 'text_content': '', 'error': str(error_message)}
     if limit is not None:
         if len(reviewd_urls) >= limit:
             return reviewd_urls
-        
-    
-    so_far_rev = list(reviewd_urls.keys())
+
     to_rev_url_list = []
 
-    # create a list of new urls to review that dont exist in the already reviewed ones
+    # create a list of new urls to review that don't exist in the already reviewed ones
     for new_url in reviewd_urls[url]['urls']:
         
         # if this is already in the urls, then no need to go and crawl for it
@@ -129,16 +118,15 @@ def get_all_website_links_rec(url, reviewd_urls, limit = None):
         
         # if exceeds the limit continue
         if limit is not None:
-            if len(reviewd_urls) + len(to_rev_url_list)  >= limit:
+            if len(reviewd_urls) + len(to_rev_url_list) >= limit:
                 continue
 
         to_rev_url_list += [new_url]
     
     new_revised_urls = {}
-    
 
-    # if there is somehting to fetch, go fetch
-    if len(to_rev_url_list) > 0 :
+    # if there is something to fetch, go fetch
+    if len(to_rev_url_list) > 0:
         new_revised_urls = parallel_get_all_website_links(to_rev_url_list)
     
     reviewd_urls.update(new_revised_urls)
@@ -148,12 +136,7 @@ def get_all_website_links_rec(url, reviewd_urls, limit = None):
     #print("post:{p}".format(p=len(reviewd_urls)))
 
     for new_url in new_revised_urls:
-        
-
-        
         get_all_website_links_rec(new_url, reviewd_urls, limit)
-
-    
 
     return reviewd_urls
 
@@ -191,7 +174,7 @@ def get_all_websites(urls, limit=1, html=False):
             reviewd_urls.update(reviewd_urls_iter)
 
     columns_to_ignore=['urls']
-    if html == False:
+    if html is False:
         columns_to_ignore += ['html_content']
     df = dict_to_dataframe(reviewd_urls, columns_to_ignore=columns_to_ignore, index_name='url')
 
@@ -250,19 +233,8 @@ def dict_to_dataframe(dict_of_dicts, columns_to_ignore=None, index_name=None):
     return df
 
 
-
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     df = get_df_from_query_str('docs.mindsdb.com, docs.airbyte.com, limit=4')
     print(df)
-
-
-
-
-
-
-   
-
-
-
 

@@ -5,12 +5,14 @@ import logging
 import re
 import traceback
 import pandas as pd
-
+from threading import Lock
 
 import requests
 import concurrent.futures
 from urllib.parse import urlparse
 
+
+url_list_lock = Lock()
 
 def is_valid(url):
     parsed = urlparse(url)
@@ -95,18 +97,20 @@ def get_readable_text_from_soup(soup):
 
 
 # this bad girl does the recursive crawling of the websites
-def get_all_website_links_rec(url, reviewd_urls, limit = None):
+def get_all_website_links_rec(url, reviewd_urls, limit=None):
 
-    # if something happens getting the website links for this url then log the error
-    try:
-        reviewd_urls[url] = get_all_website_links(url)
-    except Exception as e:
-        error_message = traceback.format_exc().splitlines()[-1]
-        logging.error("An exception occurred: %s", str(e))
-        reviewd_urls[url] = {'url': url, 'urls': [], 'html_content': '', 'text_content': '', 'error': str(error_message)}
     if limit is not None:
         if len(reviewd_urls) >= limit:
             return reviewd_urls
+
+    if url not in reviewd_urls:
+        # if something happens getting the website links for this url then log the error
+        try:
+            reviewd_urls[url] = get_all_website_links(url)
+        except Exception as e:
+            error_message = traceback.format_exc().splitlines()[-1]
+            logging.error("An exception occurred: %s", str(e))
+            reviewd_urls[url] = {'url': url, 'urls': [], 'html_content': '', 'text_content': '', 'error': str(error_message)}
 
     to_rev_url_list = []
 
@@ -114,38 +118,31 @@ def get_all_website_links_rec(url, reviewd_urls, limit = None):
     for new_url in reviewd_urls[url]['urls']:
         
         # if this is already in the urls, then no need to go and crawl for it
-        if new_url in reviewd_urls: 
+        if new_url in reviewd_urls or new_url in to_rev_url_list:
             continue
         
-        # if exceeds the limit continue
-        if limit is not None:
-            if len(reviewd_urls) + len(to_rev_url_list) >= limit:
-                continue
-
-        to_rev_url_list += [new_url]
-    
-    new_revised_urls = {}
+        # insert immediately to count limit between threads. fill later
+        with url_list_lock:
+            if limit is None or len(reviewd_urls) < limit:
+                reviewd_urls[new_url] = {}
+                to_rev_url_list.append(new_url)
+            else:
+                break
 
     # if there is something to fetch, go fetch
     if len(to_rev_url_list) > 0:
         new_revised_urls = parallel_get_all_website_links(to_rev_url_list)
     
-    reviewd_urls.update(new_revised_urls)
-    
-    #print("----\nprev:{p}".format(p=len(reviewd_urls)))
-    
-    #print("post:{p}".format(p=len(reviewd_urls)))
+        reviewd_urls.update(new_revised_urls)
 
-    for new_url in new_revised_urls:
-        get_all_website_links_rec(new_url, reviewd_urls, limit)
-
-    return reviewd_urls
+        for new_url in new_revised_urls:
+            get_all_website_links_rec(new_url, reviewd_urls, limit)
 
 
 # this crawls the websites and retuns it all as a dataframe, ready to be served
 def get_all_websites(urls, limit=1, html=False):
     reviewd_urls = {}
-    
+
     # def fetch_url(url):
     #     url = url.rstrip('/')
     #     if urlparse(url).scheme == "":
@@ -162,26 +159,23 @@ def get_all_websites(urls, limit=1, html=False):
         if urlparse(url).scheme == "":
             # Try HTTPS first
             url = "https://" + url
-        reviewd_urls_iter = {}
-        get_all_website_links_rec(url, reviewd_urls_iter, limit)
-        return reviewd_urls_iter
+        get_all_website_links_rec(url, reviewd_urls, limit)
 
     # Use a ThreadPoolExecutor to run the helper function in parallel.
     with concurrent.futures.ThreadPoolExecutor() as executor:
         future_to_url = {executor.submit(fetch_url, url): url for url in urls}
 
         for future in concurrent.futures.as_completed(future_to_url):
-            reviewd_urls_iter = future.result()
-            reviewd_urls.update(reviewd_urls_iter)
+            future.result()
 
-    columns_to_ignore=['urls']
+    columns_to_ignore = ['urls']
     if html is False:
         columns_to_ignore += ['html_content']
     df = dict_to_dataframe(reviewd_urls, columns_to_ignore=columns_to_ignore, index_name='url')
 
     return df
-    
-    
+
+
 # this can parse the native query    
 def parse_urls_limit(input_str):
     # Split the input string into 'url', 'limit' or 'html' parts
@@ -217,6 +211,7 @@ def get_df_from_query_str(query_str):
     args = parse_urls_limit(query_str)
     df = get_all_websites(args['urls'], args['limit'], args['html'])
     return df
+
 
 # this flips a dictionary of dictionaries into a dataframe so we can use it in mindsdb
 def dict_to_dataframe(dict_of_dicts, columns_to_ignore=None, index_name=None):

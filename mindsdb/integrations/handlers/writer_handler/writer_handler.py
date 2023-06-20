@@ -32,6 +32,7 @@ class WriterHandler(BaseMLEngine):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.generative = True
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):

@@ -44,6 +44,28 @@ class PagesTable(APITable):
     def get_columns(self) -> List[str]:
         return pd.json_normalize(self.get_pages(limit=1)).columns.tolist()
 
-    def get_pages(self, **kwargs):
-        connection = self.handler.connect()
+    def get_pages(self, search_term: str = None, title: str = None, page_id: int = None, limit: int = 20):
         return
+
+    def get_pages_by_search_term(self, search_term: str, limit: int = 20):
+        connection = self.handler.connect()
+
+        pages = []
+        for result in connection.search(search_term, results=limit):
+            pages.append(connection.page(result, auto_suggest=False))
+
+        return pages
+
+    def get_page_by_title(self, title: str):
+        connection = self.handler.connect()
+
+        page = connection.page(title, auto_suggest=False)
+
+        return page
+
+    def get_page_by_id(self, page_id: int):
+        connection = self.handler.connect()
+
+        page = connection.page(pageid=page_id)
+
+        return page

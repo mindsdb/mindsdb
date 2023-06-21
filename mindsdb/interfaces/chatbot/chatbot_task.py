@@ -10,6 +10,7 @@ from mindsdb.integrations.libs.api_handler import APIChatHandler
 class BotException(Exception):
     pass
 
+
 class ChatBotTask:
     def __init__(self, session, database, project_name, model_name, params):
 
@@ -203,16 +204,15 @@ class ChatBotTask:
         tasks = '\n'.join(task_items)
 
         prompt = f'''
-You are a helpful assistant and you can help with various types of tasks. 
+You are a helpful assistant and you can help with various types of tasks.
 Available types of tasks:
-{tasks}   
-After user choose a task use a tool to select it  
-        '''
-
+{tasks}
+After user choose a task use a tool to select it
+'''
 
         def _select_task(mode_name):
             avail_modes = list(self.params['modes'].keys())
-            if not mode_name in avail_modes:
+            if mode_name not in avail_modes:
                 return f'Error: task is not found. Available tasks: {", ".join(avail_modes)}'
             self.chat_memory[chat_id]['mode'] = mode_name
             return 'success'

@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage import db
@@ -42,7 +42,7 @@ class ChatBotController:
         ).first()
         return bot
 
-    def get_chatbots(self, project_name: str = 'mindsdb'):
+    def get_chatbots(self, project_name: str = 'mindsdb') -> List[db.ChatBots]:
         '''
         Gets all chatbots in a project.
 

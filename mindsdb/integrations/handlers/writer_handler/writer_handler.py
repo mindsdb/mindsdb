@@ -56,7 +56,7 @@ class WriterHandler(BaseMLEngine):
         """
         args = args["using"]
 
-        if not df.empty and args["get_embeddings"]:
+        if not df.empty and args["run_embeddings"]:
             if "context_columns" not in args:
                 # if no context columns provided, use all columns in df
                 args["context_columns"] = df.columns.tolist()

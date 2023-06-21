@@ -213,7 +213,7 @@ connection_args = OrderedDict(
         'label': 'Schema'
     },
     sslmode={
-        'type': ARG_TYPE.str,
+        'type': ARG_TYPE.STR,
         'description': 'sslmode that will be used for connection.',
         'required': False,
         'label': 'sslmode'

@@ -206,6 +206,18 @@ connection_args = OrderedDict(
         'required': True,
         'label': 'Port'
     },
+    schema={
+        'type': ARG_TYPE.STR,
+        'description': 'The schema in which objects are searched first.',
+        'required': False,
+        'label': 'Schema'
+    },
+    sslmode={
+        'type': ARG_TYPE.str,
+        'description': 'sslmode that will be used for connection.',
+        'required': False,
+        'label': 'sslmode'
+    }
 )
 
 connection_args_example = OrderedDict(

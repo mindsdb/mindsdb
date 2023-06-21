@@ -296,7 +296,6 @@ class ChatBots(Base):
         }
 
 
-
 class ChatBotsHistory(Base):
     __tablename__ = 'chat_bots_history'
     id = Column(Integer, primary_key=True)

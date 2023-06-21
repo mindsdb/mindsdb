@@ -1,4 +1,5 @@
 import datetime as dt
+from collections import defaultdict
 
 from mindsdb_sql.parser.ast import Identifier, Select, Insert, BinaryOperation, Constant
 from mindsdb.interfaces.storage import db
@@ -6,12 +7,15 @@ from mindsdb.interfaces.storage import db
 from mindsdb.integrations.libs.api_handler import APIChatHandler
 
 
+class BotException(Exception):
+    pass
+
 class ChatBotTask:
     def __init__(self, session, database, project_name, model_name, params):
 
         self.session = session
+        self.project_name = project_name
 
-        self.model_name = model_name
         self.db_handler = self.session.integration_controller.get_handler(database)
         self.project_datanode = self.session.datahub.get(project_name)
 
@@ -26,19 +30,13 @@ class ChatBotTask:
         if params is not None:
             self.params.update(params)
 
+        # previous chats information
         self.chats_prev = None
 
         # get model info
-        model = self.session.model_controller.get_model(model_name, project_name=project_name)
-        model_record = db.Predictor.query.get(model['id'])
-        integration_record = db.Integration.query.get(model_record.integration_id)
+        self.params['model'] = self._get_model(model_name)
 
-        self.params['model'] = {
-            'user_column': model_record.learn_args['using']['user_column'],
-            'bot_column': model_record.learn_args['using']['assistant_column'],
-            'output': model_record.to_predict[0],
-            'engine': integration_record.engine,
-        }
+        self.chat_memory = defaultdict(dict)
 
         self.params['back_db'] = {}
         back_db = self.params.get('backoffice_db')
@@ -49,16 +47,28 @@ class ChatBotTask:
                 self.params['back_db']['config'] = self.back_db.back_office_config()
 
             if 'tools' in self.params['back_db']['config']:
-                if self.params['model']['engine'] == 'langchain':
-                    tools = [
-                        {
-                            'name': name,
-                            'func': getattr(self.back_db, name),
-                            'description': description
-                        }
-                        for name, description in self.params['back_db']['config']['tools'].items()
-                    ]
-                    self.params['back_db']['tools'] = tools
+                tools = [
+                    {
+                        'name': name,
+                        'func': getattr(self.back_db, name),
+                        'description': description
+                    }
+                    for name, description in self.params['back_db']['config']['tools'].items()
+                ]
+                self.params['back_db']['tools'] = tools
+
+    def _get_model(self, model_name):
+        model = self.session.model_controller.get_model(model_name, project_name=self.project_name)
+        model_record = db.Predictor.query.get(model['id'])
+        integration_record = db.Integration.query.get(model_record.integration_id)
+
+        return {
+            'model_name': model_name,
+            'user_column': model_record.learn_args['using']['user_column'],
+            'bot_column': model_record.learn_args['using']['assistant_column'],
+            'output': model_record.to_predict[0],
+            'engine': integration_record.engine,
+        }
 
     def run(self):
 
@@ -89,7 +99,7 @@ class ChatBotTask:
 
         resp = self.db_handler.query(query=ast_query)
         if resp.data_frame is None:
-            raise Exception()
+            raise BotException('Error to get count of messages')
 
         chats = {}
         for row in resp.data_frame.to_dict('records'):
@@ -134,7 +144,7 @@ class ChatBotTask:
 
         resp = self.db_handler.query(ast_query)
         if resp.data_frame is None:
-            raise Exception()
+            raise Exception('Error to get list of messages')
 
         df = resp.data_frame
 
@@ -183,10 +193,74 @@ class ChatBotTask:
 
         self.db_handler.query(ast_query)
 
+    def _make_select_mode_prompt(self, chat_id):
+        # select mode tool
+        avail_tasks = []
+        task_items = []
+        for key, value in self.params['modes'].items():
+            avail_tasks.append(key)
+            task_items.append(f'- code: {key}, description: {value["info"]}')
+        tasks = '\n'.join(task_items)
+
+        prompt = f'''
+You are a helpful assistant and you can help with various types of tasks. 
+Available types of tasks:
+{tasks}   
+After user choose a task use a tool to select it  
+        '''
+
+
+        def _select_task(mode_name):
+            avail_modes = list(self.params['modes'].keys())
+            if not mode_name in avail_modes:
+                return f'Error: task is not found. Available tasks: {", ".join(avail_modes)}'
+            self.chat_memory[chat_id]['mode'] = mode_name
+            return 'success'
+
+        tools = [
+            {
+                'name': 'select_task',
+                'func': _select_task,
+                'description': 'Have to be used by assistant to select task. Input is task type'
+            }
+        ]
+
+        return prompt, tools
+
     def apply_model(self, messages, chat_id):
 
+        mode_info = self.params['model']
+        prompt = None
         tools = None
-        if 'tools' in self.params['back_db']:
+
+        if self.params.get('modes') is not None:
+            # a bot with modes
+
+            mode_name = self.chat_memory[chat_id].get('mode')
+            if mode_name is not None:
+                # mode is selected
+
+                mode = self.params['modes'].get(mode_name)
+                if mode is None:
+                    # wrong mode
+                    self.chat_memory[chat_id]['mode'] = None
+                    raise BotException(f'Error to use mode: {mode_name}')
+
+                if 'model' in mode:
+                    # this is model
+                    mode_info = self._get_model(mode['model'])
+
+                elif 'prompt' in mode:
+                    # it is just a prompt. let's use a bot model and custom prompt
+                    prompt = mode['prompt']
+
+                else:
+                    raise BotException(f'Mode is not supported: {mode}')
+            else:
+                # mode in not selected, lets to go to select menu
+                prompt, tools = self._make_select_mode_prompt(chat_id)
+
+        if mode_info['engine'] == 'langchain' and tools is None:
             tools = self.params['back_db']['tools']
 
         context_list = [
@@ -195,12 +269,16 @@ class ChatBotTask:
         context = '\n'.join(context_list)
 
         # call model
+        params = {'tools': tools, 'context': context, 'max_iterations': 10}
+        if prompt is not None:
+            params['prompt'] = prompt
+
         predictions = self.project_datanode.predict(
-            model_name=self.model_name,
+            model_name=mode_info['model_name'],
             data=messages,
-            params={'tools': tools, 'context': context, 'max_iterations': 10}
+            params=params
         )
 
-        output_col = self.params['model']['output']
+        output_col = mode_info['output']
         model_output = predictions.iloc[-1][output_col]
         return model_output

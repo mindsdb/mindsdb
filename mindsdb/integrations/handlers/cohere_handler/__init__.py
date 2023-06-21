@@ -14,7 +14,6 @@ except Exception as e:
 title = 'Cohere'
 name = 'cohere'
 type = HANDLER_TYPE.ML
-permanent = True
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error'

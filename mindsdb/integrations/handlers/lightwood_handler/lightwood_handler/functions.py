@@ -168,6 +168,8 @@ def run_finetune(df: DataFrame, args: dict, model_storage):
     try:
         base_predictor_id = args['base_model_id']
         base_predictor_record = db.Predictor.query.get(base_predictor_id)
+        if base_predictor_record.status != PREDICTOR_STATUS.COMPLETE:
+            raise Exception("Base model must be in status 'complete'")
 
         predictor_id = model_storage.predictor_id
         predictor_record = db.Predictor.query.get(predictor_id)

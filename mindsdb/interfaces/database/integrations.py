@@ -27,7 +27,6 @@ from mindsdb.integrations.handlers_client.db_client_factory import DBClient
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.log import get_log
-from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 import mindsdb.utilities.profiler as profiler
 

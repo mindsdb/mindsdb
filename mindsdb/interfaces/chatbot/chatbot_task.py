@@ -196,42 +196,43 @@ class ChatBotTask:
 
     def _make_select_mode_prompt(self, chat_id):
         # select mode tool
-        avail_tasks = []
-        task_items = []
-        for key, value in self.params['modes'].items():
-            avail_tasks.append(key)
-            task_items.append(f'- code: {key}, description: {value["info"]}')
-        tasks = '\n'.join(task_items)
-
-        prompt = f'''
-You are a helpful assistant and you can help with various types of tasks.
-Available types of tasks:
-{tasks}
-After user choose a task use a tool to select it
-'''
-
-        def _select_task(mode_name):
-            avail_modes = list(self.params['modes'].keys())
-            if mode_name not in avail_modes:
-                return f'Error: task is not found. Available tasks: {", ".join(avail_modes)}'
-            self.chat_memory[chat_id]['mode'] = mode_name
-            return 'success'
-
-        tools = [
-            {
-                'name': 'select_task',
-                'func': _select_task,
-                'description': 'Have to be used by assistant to select task. Input is task type'
-            }
+        task_items = [
+            f'- code: {key}, description: {value["info"]}'
+            for key, value in self.params['modes'].items()
         ]
 
-        return prompt, tools
+        tasks = '\n'.join(task_items)
+
+        prompt = f'You are a helpful assistant and you can help with various types of tasks.' \
+                 f'\nAvailable types of tasks:' \
+                 f'\n{tasks}' \
+                 f'\nAfter user chooses a task use a tool to select it'
+
+        return prompt
 
     def apply_model(self, messages, chat_id):
 
         mode_info = self.params['model']
         prompt = None
         tools = None
+
+        def _select_task(mode_name):
+            if mode_name == '':
+                self.chat_memory[chat_id]['mode'] = None
+                return 'success'
+
+            avail_modes = list(self.params['modes'].keys())
+            if mode_name not in avail_modes:
+                return f'Error: task is not found. Available tasks: {", ".join(avail_modes)}'
+            self.chat_memory[chat_id]['mode'] = mode_name
+            return 'success'
+
+        select_task_tool = {
+            'name': 'select_task',
+            'func': _select_task,
+            'description': 'Have to be used by assistant to select task. Input is task type. '
+                           'If user want to unselect task sent empty string on input'
+        }
 
         if self.params.get('modes') is not None:
             # a bot with modes
@@ -258,13 +259,19 @@ After user choose a task use a tool to select it
                     raise BotException(f'Mode is not supported: {mode}')
             else:
                 # mode in not selected, lets to go to select menu
-                prompt, tools = self._make_select_mode_prompt(chat_id)
+                prompt = self._make_select_mode_prompt(chat_id)
 
-        if mode_info['engine'] == 'langchain' and tools is None:
-            tools = self.params['back_db']['tools']
+        if mode_info['engine'] == 'langchain':
+            if tools is None:
+                tools = self.params['back_db']['tools'].copy()
+
+            if self.params.get('modes') is not None:
+                # add mode tool
+                tools.append(select_task_tool)
 
         context_list = [
-            f"- Today's date is {dt.datetime.now().strftime('%Y-%m-%d')}. It must be used to understand the input date from string like 'tomorrow', 'today', 'yesterday'"
+            f"- Today's date is {dt.datetime.now().strftime('%Y-%m-%d')}."
+            f" It must be used to understand the input date from string like 'tomorrow', 'today', 'yesterday'"
         ]
         context = '\n'.join(context_list)
 

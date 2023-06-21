@@ -74,7 +74,7 @@ The first step is to create a database with the new `shopify` engine by passing 
 CREATE DATABASE shopify_datasource
 WITH ENGINE = 'shopify',
 PARAMETERS = {
-  "shop_url": "your-shop-name.myshopify.com
+  "shop_url": "your-shop-name.myshopify.com",
   "access_token": "shppa_..."
 };
 ~~~~

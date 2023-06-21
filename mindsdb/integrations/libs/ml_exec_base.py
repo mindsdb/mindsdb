@@ -109,10 +109,6 @@ def learn_process(class_path, engine, context_dump, integration_id,
             training_data_columns_count = len(training_data_df.columns)
             training_data_rows_count = len(training_data_df)
 
-            if target not in training_data_df.columns:
-                raise Exception(
-                    f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
-
         predictor_record.training_data_columns_count = training_data_columns_count
         predictor_record.training_data_rows_count = training_data_rows_count
         db.session.commit()
@@ -134,6 +130,11 @@ def learn_process(class_path, engine, context_dump, integration_id,
             model_storage=modelStorage,
             **kwargs
         )
+
+        if not ml_handler.generative:
+            if training_data_df is not None and target not in training_data_df.columns:
+                raise Exception(
+                    f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
 
         # create new model
         if base_predictor_id is None:

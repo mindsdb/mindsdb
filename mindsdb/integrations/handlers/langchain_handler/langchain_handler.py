@@ -268,10 +268,10 @@ class LangChainHandler(OpenAIHandler):
 
     def run_agent(self, df, agent, args, pred_args):
         # TODO abstract prompt templating into a common utility method, this is also used in vanilla OpenAI
-        if args.get('prompt_template', False):
-            base_template = args['prompt_template']  # override with predict-time template if available
-        elif 'prompt_template' in pred_args:
-            base_template = pred_args['prompt_template']
+        if 'prompt_template' in pred_args:
+            base_template = pred_args['prompt_template']  # override with predict-time template if available
+        elif args.get('prompt_template', False):
+            base_template = args['prompt_template']
         else:
             base_template = '{{question}}'
 

@@ -45,6 +45,8 @@ The MediaWiki handler does not require any parameters to be initialized.
 - Only the page ID, title, original title, content, summary, url and categories are returned for each page.
 - WHERE clause only supports filtering by page ID and title.
 
+Note: If a query is made without a WHERE clause, the handler will return 20 random pages.
+
 ## TODO
 - [ ] Support INSERT, UPDATE and DELETE for Pages table
 - [ ] Support more columns for Pages table

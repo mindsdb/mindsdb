@@ -57,6 +57,14 @@ class PagesTable(APITable):
 
         pages_df = pd.json_normalize(self.get_pages(title=title, page_id=page_id, limit=result_limit))
 
+        select_statement_executor = SELECTQueryExecutor(
+            pages_df,
+            selected_columns,
+            [],
+            order_by_conditions
+        )
+        pages_df = select_statement_executor.execute_query()
+
         return pages_df
 
     def get_columns(self) -> List[str]:

@@ -47,7 +47,7 @@ class PagesTable(APITable):
         return pages_df
 
     def get_columns(self) -> List[str]:
-        return pd.json_normalize(self.get_pages(limit=1)).columns.tolist()
+        return ['pageid', 'title', 'original_title', 'content', 'summary', 'url', 'categories']
 
     def get_pages(self, title: str = None, page_id: int = None, limit: int = 20):
         query_parts = []
@@ -66,7 +66,7 @@ class PagesTable(APITable):
 
     def convert_page_to_dict(self, page):
         result = {}
-        attributes = ['pageid', 'title', 'original_title', 'content', 'summary', 'url', 'categories']
+        attributes = self.get_columns()
 
         for attribute in attributes:
             try:

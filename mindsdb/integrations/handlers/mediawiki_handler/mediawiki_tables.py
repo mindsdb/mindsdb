@@ -8,6 +8,10 @@ from mindsdb_sql.parser import ast
 
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 
+from mindsdb.utilities.log import get_log
+
+logger = get_log("integrations.mediawiki_handler")
+
 
 class PagesTable(APITable):
     """The MediaWiki Pages Table implementation"""
@@ -61,20 +65,13 @@ class PagesTable(APITable):
             return [self.convert_page_to_dict(connection.page(result, auto_suggest=False)) for result in connection.random(pages=limit)]
 
     def convert_page_to_dict(self, page):
-        return {
-            'pageid': page.pageid,
-            'title': page.title,
-            'original_title': page.original_title,
-            'content': page.content,
-            'summary': page.summary,
-            'url': page.url,
-            'categories': page.categories,
-            'coordinates': page.coordinates,
-            'images': page.images,
-            'references': page.references,
-            'section': page.section,
-            'sections': page.sections,
-            'links': page.links,
-            'revision_id': page.revision_id,
-            'parent_id': page.parent_id
-        }
+        result = {}
+        attributes = ['pageid', 'title', 'original_title', 'content', 'summary', 'url', 'categories']
+
+        for attribute in attributes:
+            try:
+                result[attribute] = getattr(page, attribute)
+            except KeyError:
+                logger.debug(f"Error accessing '{attribute}' attribute. Skipping...")
+
+        return result

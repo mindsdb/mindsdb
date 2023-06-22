@@ -44,38 +44,16 @@ class PagesTable(APITable):
     def get_columns(self) -> List[str]:
         return pd.json_normalize(self.get_pages(limit=1)).columns.tolist()
 
-    def get_pages(self, search_term: str = None, title: str = None, page_id: int = None, limit: int = 20):
-        if search_term:
-            pages = self.get_pages_by_search_term(search_term, limit)
-        elif title:
-            pages = [self.get_page_by_title(title)]
-        elif page_id:
-            pages = [self.get_page_by_id(page_id)]
+    def get_pages(self, title: str = None, page_id: int = None, limit: int = 20):
+        query_parts = []
 
-        return [self.convert_page_to_dict(page) for page in pages]
+        query_parts.append(f'intitle:{title}') if title is not None else None
+        query_parts.append(f'pageid:{page_id}') if page_id is not None else None
 
-    def get_pages_by_search_term(self, search_term: str, limit: int = 20):
+        search_query = ' | '.join(query_parts)
+
         connection = self.handler.connect()
-
-        pages = []
-        for result in connection.search(search_term, results=limit):
-            pages.append(connection.page(result, auto_suggest=False))
-
-        return pages
-
-    def get_page_by_title(self, title: str):
-        connection = self.handler.connect()
-
-        page = connection.page(title, auto_suggest=False)
-
-        return page
-
-    def get_page_by_id(self, page_id: int):
-        connection = self.handler.connect()
-
-        page = connection.page(pageid=page_id)
-
-        return page
+        return [self.convert_page_to_dict(page) for page in connection.search(search_query, results=limit)]
 
     def convert_page_to_dict(self, page):
         return {

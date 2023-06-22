@@ -244,12 +244,15 @@ class ChatBotTask:
 
         return prompt, model_info, allowed_tools
 
-    def _make_select_mode_prompt(self):
-        # select mode tool
-        task_items = [
+    def _get_avail_modes_items(self):
+        return [
             f'- code: {key}, description: {value["info"]}'
             for key, value in self.params['modes'].items()
         ]
+
+    def _make_select_mode_prompt(self):
+        # select mode tool
+        task_items = self._get_avail_modes_items()
 
         tasks = '\n'.join(task_items)
 
@@ -288,7 +291,8 @@ class ChatBotTask:
             'name': 'select_task',
             'func': _select_task,
             'description': 'Have to be used by assistant to select task. Input is task type. '
-                           'If user want to unselect task input should be empty string'
+                           'If user want to unselect task input should be empty string. '
+                           'Available tasks: ' + '; '.join(self._get_avail_modes_items())
         }
 
         if self.params.get('modes') is not None:

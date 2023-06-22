@@ -325,7 +325,8 @@ class LangChainHandler(OpenAIHandler):
             try:
                 ast_query = parse_sql(query.strip('`'), dialect='mindsdb')
                 ret = executor.execute_command(ast_query)
-
+                if ret.data is None and ret.error_code is None:
+                    return ''
                 data = ret.data  # list of lists
                 data = '\n'.join([  # rows
                     '\t'.join(      # columns

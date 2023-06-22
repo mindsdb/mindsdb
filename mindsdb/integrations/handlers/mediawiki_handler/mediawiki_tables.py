@@ -45,7 +45,14 @@ class PagesTable(APITable):
         return pd.json_normalize(self.get_pages(limit=1)).columns.tolist()
 
     def get_pages(self, search_term: str = None, title: str = None, page_id: int = None, limit: int = 20):
-        return
+        if search_term:
+            pages = self.get_pages_by_search_term(search_term, limit)
+        elif title:
+            pages = [self.get_page_by_title(title)]
+        elif page_id:
+            pages = [self.get_page_by_id(page_id)]
+
+        return [self.convert_page_to_dict(page) for page in pages]
 
     def get_pages_by_search_term(self, search_term: str, limit: int = 20):
         connection = self.handler.connect()

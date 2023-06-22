@@ -1,4 +1,3 @@
-import mediawikiapi
 import pandas as pd
 
 from typing import List
@@ -39,7 +38,9 @@ class PagesTable(APITable):
         )
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        return
+        pages_df = pd.json_normalize(self.get_pages(limit=result_limit))
+
+        return pages_df
 
     def get_columns(self) -> List[str]:
         return pd.json_normalize(self.get_pages(limit=1)).columns.tolist()

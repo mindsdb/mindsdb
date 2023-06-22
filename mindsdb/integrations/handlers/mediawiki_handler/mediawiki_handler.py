@@ -16,3 +16,22 @@ class MediaWikiHandler(APIHandler):
     """
 
     name = 'mediawiki'
+
+    def __init__(self, name: str, **kwargs):
+        """
+        Initialize the handler.
+        Args:
+            name (str): name of particular handler instance
+            **kwargs: arbitrary keyword arguments.
+        """
+        super().__init__(name)
+
+        connection_data = kwargs.get("connection_data", {})
+        self.connection_data = connection_data
+        self.kwargs = kwargs
+
+        self.connection = None
+        self.is_connected = False
+
+        pages_data = PagesTable(self)
+        self._register_table("pages", pages_data)

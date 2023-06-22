@@ -53,7 +53,11 @@ class PagesTable(APITable):
         search_query = ' | '.join(query_parts)
 
         connection = self.handler.connect()
-        return [self.convert_page_to_dict(page) for page in connection.search(search_query, results=limit)]
+
+        if search_query:
+            return [self.convert_page_to_dict(page) for page in connection.search(search_query, results=limit)]
+        else:
+            return [self.convert_page_to_dict(page) for page in connection.random(pages=limit)]
 
     def convert_page_to_dict(self, page):
         return {

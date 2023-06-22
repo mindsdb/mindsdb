@@ -1,4 +1,4 @@
-import mediawikiapi
+from mediawikiapi import MediaWikiAPI
 
 from mindsdb.integrations.handlers.mediawiki_handler.mediawiki_tables import PagesTable
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -26,8 +26,6 @@ class MediaWikiHandler(APIHandler):
         """
         super().__init__(name)
 
-        connection_data = kwargs.get("connection_data", {})
-        self.connection_data = connection_data
         self.kwargs = kwargs
 
         self.connection = None
@@ -35,3 +33,20 @@ class MediaWikiHandler(APIHandler):
 
         pages_data = PagesTable(self)
         self._register_table("pages", pages_data)
+
+    def connect(self):
+        """
+        Set up the connection required by the handler.
+        Returns
+        -------
+        StatusResponse
+            connection object
+        """
+        if self.is_connected is True:
+            return self.connection
+
+        self.connection = MediaWikiAPI()
+
+        self.is_connected = True
+
+        return self.connection

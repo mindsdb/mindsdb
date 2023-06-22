@@ -157,7 +157,7 @@ class LangChainHandler(OpenAIHandler):
 
         # system prompt
         prompt = args['prompt']
-        if 'prompt' in pred_args:
+        if 'prompt' in pred_args and pred_args['prompt'] is not None:
             prompt = pred_args['prompt']
         if 'context' in pred_args:
             prompt += '\n\n' + 'Useful information:\n' + pred_args['context'] + '\n'

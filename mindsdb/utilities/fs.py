@@ -129,8 +129,6 @@ def clean_unlinked_process_marks():
                         f"We have mark for process/thread {process_id}/{thread_id} but it does not exists"
                     )
                     file.unlink()
-            except psutil.AccessDenied:
-                continue
 
             except psutil.NoSuchProcess:
                 from mindsdb.utilities.log import get_log

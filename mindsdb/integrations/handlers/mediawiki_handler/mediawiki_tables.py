@@ -56,9 +56,9 @@ class PagesTable(APITable):
         connection = self.handler.connect()
 
         if search_query:
-            return [self.convert_page_to_dict(page) for page in connection.search(search_query, results=limit)]
+            return [self.convert_page_to_dict(connection.page(result, auto_suggest=False)) for result in connection.search(search_query, results=limit)]
         else:
-            return [self.convert_page_to_dict(page) for page in connection.random(pages=limit)]
+            return [self.convert_page_to_dict(connection.page(result, auto_suggest=False)) for result in connection.random(pages=limit)]
 
     def convert_page_to_dict(self, page):
         return {

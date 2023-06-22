@@ -261,8 +261,25 @@ class ChatBots(Base):
     project_id = Column(Integer, nullable=False)
 
     model_name = Column(String, nullable=False)
+    # If database_id is set we use an API Handler to poll chat messages.
     database_id = Column(Integer, nullable=False)
+    # If chat_engine is set we use a RealtimeChatHandler to subscribe to chat messages.
+    # TODO(tmichaeldb): Consolidate existing polling logic and realtime chat logic together.
+    chat_engine = Column(String)
     params = Column(JSON)
 
+    is_running = Column(Boolean, default=False)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
+
+
+class ChatBotsHistory(Base):
+    __tablename__ = 'chat_bots_history'
+    id = Column(Integer, primary_key=True)
+    chat_bot_id = Column(Integer)
+    type = Column(String)
+    text = Column(String)
+    user = Column(String)
+    destination = Column(String)
+    sent_at = Column(DateTime, default=datetime.datetime.now)
+    error = Column(String)

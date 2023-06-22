@@ -143,6 +143,7 @@ class BaseMLEngine:
         """
         self.model_storage = model_storage
         self.engine_storage = engine_storage
+        self.generative = False  # if True, the target column name does not have to be specified at creation time
 
         if kwargs.get('base_model_storage'):
             self.base_model_storage = kwargs['base_model_storage']  # available when updating a model

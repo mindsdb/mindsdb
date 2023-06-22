@@ -12,6 +12,7 @@ from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb_sql.parser import ast
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
+from mindsdb.interfaces.storage.model_fs import HandlerStorage
 
 import os
 import time
@@ -284,6 +285,8 @@ class GmailHandler(APIHandler):
         self.service = None
         self.is_connected = False
 
+        self.storage = HandlerStorage(kwargs['integration_id'])
+
         emails = EmailsTable(self)
         self.emails = emails
         self._register_table('emails', emails)
@@ -307,7 +310,7 @@ class GmailHandler(APIHandler):
         creds = None
 
         # Get the current dir, we'll check for Token & Creds files in this dir
-        curr_dir = os.path.dirname(__file__)
+        curr_dir = self.storage.folder_get('config')
 
         token_file = os.path.join(curr_dir, 'token.json')
         creds_file = os.path.join(curr_dir, 'creds.json')
@@ -328,6 +331,7 @@ class GmailHandler(APIHandler):
             with open(token_file, 'w') as token:
                 token.write(creds.to_json())
 
+        self.storage.folder_sync('config')
         return build('gmail', 'v1', credentials=creds)
 
     def connect(self) -> object:

@@ -15,8 +15,12 @@ If you want to connect your Gmail account to MindsDB Cloud, you can upload the c
 
 The required arguments to establish a connection are as follows:
 
-* `credentials_file` stores the Google account credentials. Follow the instructions below to generate the credentials file.
+* `credentials_file` local path to the credentials.json or `s3_credentials_file` in case your file is uploaded to s3. Follow the instructions below to generate the credentials file.
 * `scopes` define the level of access granted. It is optional and by default it uses 'https://.../gmail.compose' and 'https://.../gmail.readonly' scopes.
+* 
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/gmail_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
 
 In order to make use of this handler and connect the Google Calendar app to MindsDB, the following syntax can be used:
 
@@ -28,6 +32,18 @@ parameters = {
     "scopes": ['https://.../gmail.compose', 'https://.../gmail.readonly', ...]
 };
 ```
+
+Or, can also connect by giving the credentials file from a s3 [pre signed url](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ShareObjectPreSignedURL.html). To do this you need to pass in the credentials_file parameter as a [pre signed url](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ShareObjectPreSignedURL.html). For example:
+
+~~~~sql
+CREATE DATABASE mindsdb_gmail
+WITH ENGINE = 'gmail',
+parameters = {
+    "s3_credentials_file": "https://s3.amazonaws.com/your_bucket/credentials.json?response-content-disposition=inline&X-Amz-Security-Token=12312...",
+    -- "scopes": ['SCOPE_1', 'SCOPE_2', ...] -- Optional scopes. By default 'https://.../gmail.compose' & 'https://.../gmail.readonly' scopes are used
+};
+~~~~
+
 
 <Tip>
 You need a Google account in order to use this integration. Here is how to get the credentials file:

@@ -26,6 +26,7 @@ class QuestionAnswerer:
         retriever = get_retriever(
             embeddings_model_name=self.embeddings_model_name,
             persist_directory=self.persist_directory,
+            collection_name=args.get('collection_name', '_default_collection')
         )
 
         self.qa = RetrievalQA.from_chain_type(

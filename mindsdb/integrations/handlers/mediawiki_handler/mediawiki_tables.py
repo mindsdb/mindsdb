@@ -42,7 +42,20 @@ class PagesTable(APITable):
         )
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        pages_df = pd.json_normalize(self.get_pages(limit=result_limit))
+        title, page_id = None, None
+        for condition in where_conditions:
+            if condition[1] == 'title':
+                if condition[0] != '=':
+                    raise ValueError(f"Unsupported operator '{condition[0]}' for column '{condition[1]}' in WHERE clause.")
+                title = condition[2]
+            elif condition[1] == 'pageid':
+                if condition[0] != '=':
+                    raise ValueError(f"Unsupported operator '{condition[0]}' for column '{condition[1]}' in WHERE clause.")
+                page_id = condition[2]
+            else:
+                raise ValueError(f"Unsupported column '{condition[1]}' in WHERE clause.")
+
+        pages_df = pd.json_normalize(self.get_pages(title=title, page_id=page_id, limit=result_limit))
 
         return pages_df
 

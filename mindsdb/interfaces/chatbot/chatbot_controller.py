@@ -68,7 +68,7 @@ class ChatBotController:
             model_name: str,
             database_id: int = None,
             chat_engine: str = None,
-            is_running: bool = False,
+            is_running: bool = True,
             params: Dict[str, str] = {}) -> db.ChatBots:
         '''
         Adds a chatbot to the database.

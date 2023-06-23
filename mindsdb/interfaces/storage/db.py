@@ -279,7 +279,7 @@ class ChatBots(Base):
     chat_engine = Column(String)
     params = Column(JSON)
 
-    is_running = Column(Boolean, default=False)
+    is_running = Column(Boolean, default=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
 

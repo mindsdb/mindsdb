@@ -19,7 +19,7 @@ depends_on = None
 def upgrade():
     with op.batch_alter_table('chat_bots', schema=None) as batch_op:
         batch_op.add_column(sa.Column('chat_engine', sa.String(), nullable=True))
-        batch_op.add_column(sa.Column('is_running', sa.Boolean(), default=False))
+        batch_op.add_column(sa.Column('is_running', sa.Boolean(), default=True))
 
 
 def downgrade():

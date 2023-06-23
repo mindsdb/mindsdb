@@ -1,6 +1,7 @@
 import os
 import json
 import datetime
+from typing import Dict
 
 import numpy as np
 from sqlalchemy import create_engine, types, UniqueConstraint
@@ -133,6 +134,16 @@ class Predictor(Base):
     training_phase_total = Column(Integer)
     training_phase_name = Column(String)
 
+    @staticmethod
+    def get_name_and_version(full_name):
+        name_no_version = full_name
+        version = None
+        parts = full_name.split('.')
+        if len(parts) > 1 and parts[-1].isdigit():
+            version = int(parts[-1])
+            name_no_version = '.'.join(parts[:-1])
+        return name_no_version, version
+
 
 class Project(Base):
     __tablename__ = 'project'
@@ -262,15 +273,27 @@ class ChatBots(Base):
 
     model_name = Column(String, nullable=False)
     # If database_id is set we use an API Handler to poll chat messages.
-    database_id = Column(Integer, nullable=False)
+    database_id = Column(Integer)
     # If chat_engine is set we use a RealtimeChatHandler to subscribe to chat messages.
     # TODO(tmichaeldb): Consolidate existing polling logic and realtime chat logic together.
     chat_engine = Column(String)
     params = Column(JSON)
 
-    is_running = Column(Boolean, default=False)
+    is_running = Column(Boolean, default=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
+
+    def as_dict(self) -> Dict:
+        return {
+            'id': self.id,
+            'name': self.name,
+            'project_id': self.project_id,
+            'model_name': self.model_name,
+            'chat_engine': self.chat_engine,
+            'params': self.params,
+            'is_running': self.is_running,
+            'created_at': self.created_at
+        }
 
 
 class ChatBotsHistory(Base):

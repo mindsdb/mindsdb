@@ -222,7 +222,6 @@ class EmailsTableTest(unittest.TestCase):
         ]
         self.assertListEqual(gmail_table.get_columns(), expected_columns)
 
-
     def test_delete_method_with_normal_query(self):
         gmail_handler = Mock(GmailHandler)
         gmail_table = EmailsTable(gmail_handler)
@@ -243,6 +242,7 @@ class EmailsTableTest(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             query = parse_sql('delete from gmail where id=1', dialect='mindsdb')
             gmail_table.delete(query)
+
     def test_delete_method_with_invalid_opperator_in_where_clause(self):
         gmail_handler = Mock(GmailHandler)
         gmail_table = EmailsTable(gmail_handler)
@@ -258,23 +258,28 @@ class EmailsTableTest(unittest.TestCase):
         gmail_handler.call_gmail_api.assert_called_once_with('modify_message', {'id': 1,
                                                                                 'body': {'addLabelIds': ['test1'],
                                                                                          'removeLabelIds': ['test']}})
+
     def test_update_method_with_invalid_variable_in_where_clause(self):
         gmail_handler = Mock(GmailHandler)
         gmail_table = EmailsTable(gmail_handler)
         with self.assertRaises(NotImplementedError):
-            query = parse_sql('update gmail set addLabel="test1",removeLabel = "test" where message_id=1', dialect='mindsdb')
+            query = parse_sql('update gmail set addLabel="test1",removeLabel = "test" where message_id=1',
+                              dialect='mindsdb')
             gmail_table.update(query)
 
     def test_update_method_with_invalid_opperator_in_where_clause(self):
         gmail_handler = Mock(GmailHandler)
         gmail_table = EmailsTable(gmail_handler)
         with self.assertRaises(NotImplementedError):
-            query = parse_sql('update gmail set addLabel="test1",removeLabel = "test" where message_id!=1', dialect='mindsdb')
+            query = parse_sql('update gmail set addLabel="test1",removeLabel = "test" where message_id!=1',
+                              dialect='mindsdb')
             gmail_table.update(query)
 
     def test_update_method_with_or_in_where_clause(self):
         gmail_handler = Mock(GmailHandler)
         gmail_table = EmailsTable(gmail_handler)
         with self.assertRaises(NotImplementedError):
-            query = parse_sql('update gmail set addLabel="test1",removeLabel = "test" where message_id=1 or label_ids="test"', dialect='mindsdb')
+            query = parse_sql(
+                'update gmail set addLabel="test1",removeLabel = "test" where message_id=1 or label_ids="test"',
+                dialect='mindsdb')
             gmail_table.update(query)

@@ -433,7 +433,7 @@ class OpenAIHandler(BaseMLEngine):
                 if not completion:
                     completion = p['choices'].result()
                 else:
-                    completion['choices'].extend(p['choices'].result()['choices'])
+                    completion.extend(p['choices'].result())
 
         return completion
 

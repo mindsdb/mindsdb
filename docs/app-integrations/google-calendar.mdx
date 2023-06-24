@@ -7,6 +7,10 @@ This is the implementation of the Google Calendar app handler for MindsDB. It ma
 
 Google Calendar is a time-management and scheduling calendar service developed by Google.
 
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/gmail_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
 ## Implementation
 
 The required arguments to establish a connection are as follows:
@@ -30,6 +34,7 @@ WITH
     }; 
 ```
 <Tip>
+    
 You need a Google account in order to use this integration. Here is how to get the credentials file:
 
 1. Create a Google Cloud Platform (GCP) Project:
@@ -78,7 +83,7 @@ Now you can use your Google Calendar data, like this:
 
     ```sql
     SELECT id, created_at, author_username, text
-    FROM my_calendar.calendar
+    FROM my_calendar.events
     WHERE start_time = '2023-02-16'
     AND end_time = '2023-04-09' LIMIT 20;
     ```
@@ -93,7 +98,7 @@ Now you can use your Google Calendar data, like this:
 * updating one or more events:
 
     ```sql
-    UPDATE my_calendar.calendar
+    UPDATE my_calendar.events
     SET summary     = 'MindsDB Meeting',
         description = 'Discussing the future of MindsDB',
         location    = 'MindsDB HQ',
@@ -106,6 +111,6 @@ Now you can use your Google Calendar data, like this:
 
     ```sql
     DELETE
-    FROM my_calendar.calendar
+    FROM my_calendar.events
     WHERE id = '1';
     ```

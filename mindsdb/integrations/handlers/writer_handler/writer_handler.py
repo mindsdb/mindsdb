@@ -32,6 +32,7 @@ class WriterHandler(BaseMLEngine):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.generative = True
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -56,7 +57,7 @@ class WriterHandler(BaseMLEngine):
         """
         args = args["using"]
 
-        if not df.empty and args["get_embeddings"]:
+        if not df.empty and args["run_embeddings"]:
             if "context_columns" not in args:
                 # if no context columns provided, use all columns in df
                 args["context_columns"] = df.columns.tolist()

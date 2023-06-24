@@ -19,7 +19,7 @@ sentry-sdk
 walrus==0.8.2
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
-mindsdb-sql >= 0.6.4, < 0.7.0
+mindsdb-sql >= 0.6.5, < 0.7.0
 mindsdb-evaluator >= 0.0.7, < 0.1.0
 checksumdir >= 1.2.0
 duckdb == 0.6.0
@@ -33,6 +33,5 @@ pyOpenSSL >= 22.0.0
 pydateinfer==0.3.0
 pyarrow >= 10.0.1, < 10.1.0
 dataprep_ml
-grpcio-tools
 python-magic >= 0.4.27
 openpyxl >= 3.1.1

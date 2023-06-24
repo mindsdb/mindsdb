@@ -108,8 +108,9 @@ def load_embeddings_model(embeddings_model_name):
     return embedding_model
 
 
-def load_chroma(embeddings_model_name, persist_directory, chroma_settings):
+def load_chroma(embeddings_model_name, persist_directory, collection_name, chroma_settings):
     return Chroma(
+        collection_name=collection_name,
         persist_directory=persist_directory,
         embedding_function=load_embeddings_model(embeddings_model_name),
         client_settings=chroma_settings,
@@ -124,8 +125,8 @@ def get_chroma_settings(persist_directory):
     )
 
 
-def get_retriever(embeddings_model_name, persist_directory):
+def get_retriever(embeddings_model_name, persist_directory, collection_name):
     chroma_settings = get_chroma_settings(persist_directory)
-    db = load_chroma(embeddings_model_name, persist_directory, chroma_settings)
+    db = load_chroma(embeddings_model_name, persist_directory, collection_name, chroma_settings)
     retriever = db.as_retriever()
     return retriever

@@ -47,6 +47,7 @@ class LangChainHandler(OpenAIHandler):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.generative = True
         self.stops = []
         self.default_model = _DEFAULT_MODEL
         self.default_max_tokens = _DEFAULT_MAX_TOKENS

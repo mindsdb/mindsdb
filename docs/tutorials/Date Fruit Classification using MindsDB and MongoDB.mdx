@@ -1,9 +1,9 @@
 ## Introduction
-In this tutorial, we’ll create and train a machine learning model, or as **MindsDB** call it, an `AI Table` or a `predictor`. By querying the model, we’ll predict the class of Date Fruit from these *seven types*: Berhi, Iraqi, Sogay, Deglet, Rotana, Safavi, Dokol. We're going to use **MongoDB** as the datasource here.
+In this tutorial, we’ll create and train a machine learning model, or as **MindsDB** calls it, an `AI Table` or a `predictor`. By querying the model, we’ll predict the class of Date Fruit from these *seven types*: Berhi, Iraqi, Sogay, Deglet, Rotana, Safavi, Dokol. We're going to use **MongoDB** as the data source here.
 
 ### Pre-requisites
-1. Make sure you have access to a working MindsDB installation, either locally or at **[MindsDB Cloud](https://cloud.mindsdb.com/)**. If you want to learn how to set up your account at MindsDB Cloud, follow **[this guide](https://docs.mindsdb.com/setup/cloud)**. It takes few minutes only.
-2. We need to download **MongoDB Compass** in order to connect with **MindsDB Cloud.** You can download it from **[here](https://www.mongodb.com/try/download/compass)**
+1. Make sure you have access to a working MindsDB installation, either locally or at **[MindsDB Cloud](https://cloud.mindsdb.com/)**. If you want to learn how to set up your account at MindsDB Cloud, follow **[this guide](https://docs.mindsdb.com/setup/cloud)**. It takes a few minutes only.
+2. We need to download **MongoDB Database & MongoDB Compass** in order to connect with **MindsDB Cloud.** You can download the **[Database here](https://www.mongodb.com/try/download/community) & [Compass here.](https://www.mongodb.com/try/download/compass)** Do follow their MongoDB Database download **[guide here](https://www.mongodb.com/docs/manual/installation/)**
 
 ![mongodb-compass](images/date-fruit-classification/data-setup.png)
 
@@ -13,6 +13,7 @@ Let’s get started.
 
 
 ## Data Setup
+If you're going to use **MindsDB Cloud's files database** for connecting to the MongoDB database, then follow the steps as shown below--
 
 ### Upload the dataset to MindsDB Cloud
 Follow the steps along:
@@ -21,7 +22,7 @@ Follow the steps along:
 
 ![add-data](images/date-fruit-classification/add-data-1.png)
 
-3. Import the `.csv` file (here it is `Date_fruit.csv`), name the datasource table that is used to store the file (here it is `date_fruit_data`), and click on the `Save and Continue` button.
+3. Import the `.csv` file (here it is `Date_fruit.csv`), name the data source table that is used to store the file (here it is `date_fruit_data`), and click on the `Save and Continue` button.
 
 ![file-upload](images/date-fruit-classification/add-data-2.png)
 
@@ -33,7 +34,7 @@ SELECT * FROM files.date_fruit_data LIMIT 10;
 ![run-queries](images/date-fruit-classification/check-data.png)
 
 ### Connecting the Data
-After successful installation, it's now time to connect **MongoDB Compass** with **MindsDB Cloud** and create *Mongo database*. Follow the steps 👇
+After successful installation, it's now time to connect **MongoDB Compass** with **MindsDB Cloud** and create a *Mongo database*. Follow the steps 👇
 1. Create a new connection in **MongoDB Compass** by changing the host value *from* `localhost:27017` *to* `cloud.mindsdb.com` in the **URI** section as highlighted below.
 
 ![mongo-connect-1](images/date-fruit-classification/mongo-connect-1.png)
@@ -61,14 +62,14 @@ db.databases.insertOne({
     engine: "mongodb", // database engine to use
     connection_args: {
             "port": 27017, // connection port
-            "host": "mongodb://cloud.mindsdb.com:27017", // connection host
+            "host": "mongodb://localhost:27017", // connection host
             "database": "date_fruit_db"  // connecting database
     }
 });
 ```
 ![create-database](images/date-fruit-classification/create-database.png)
 
-*P.S.: You need to first create a *Mongo database* (here `date_fruit_db`) and add the `date_fruit_data` csv file. Then later you connect the above database with this one.*
+*P.S.: You need to first create a *Mongo Database* locally (here `date_fruit_db`) and add the `date_fruit_data` csv file. Then later you connect the above database with this one.*
 
 ### Understanding the Data
 We use the **Date Fruit dataset**, where each row are the factors that determine the type of date fruit along with features (columns) such as area, length, diameter, shape, etc. *The external appearance of the fruits is a major determinant of the fruit type.* 
@@ -125,7 +126,7 @@ db.predictors.insertOne({
 ```
 ![create-predictor](images/date-fruit-classification/create-predictor.png)
 
-On successful query run, you can see the `predictor` model under `mindsdb` database. Also, you have to wait for a few minutes for the model to get trained.
+On successful query run, you can see the `predictor` model under the `mindsdb` database. Also, you have to wait for a few minutes for the model to get trained.
 
 
 ## Status of a Predictor
@@ -153,7 +154,7 @@ db.date_fruit_predictor.find({AREA:447729, PERIMETER:2454.4851, MAJOR_AXIS:825.5
 ## Conclusion
 We have now reached the end of this tutorial, where we summarized all the tasks we performed above as a list below:
 
-- [x] Created a **MindsDB Cloud** account, downloaded **MongoDB Compass** and the *Date Fruit* dataset from **Kaggle**.
+- [x] Created a **MindsDB Cloud** account, downloaded **MongoDB Database, MongoDB Compass** and the *Date Fruit* dataset from **Kaggle**.
 
 - [x] Imported the dataset into **MindsDB Cloud**, connected the **MindsDB Cloud with MongoDB Compass** and created the *Mongo* database as well.
 

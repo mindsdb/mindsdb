@@ -274,9 +274,7 @@ In the `prompt_template` parameter, we use a placeholder for a text value that c
 Before querying for predictions, we should verify the status of the `sentiment_classifier` model.
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name = 'sentiment_classifier';
+DESCRIBE sentiment_classifier;
 ```
 
 On execution, we get:

@@ -155,7 +155,7 @@ class GoogleCalendarHandler(APIHandler):
                 'timeZone': params['end']['timeZone'],
             },
             'recurrence': [
-                'RRULE:FREQ=DAILY;COUNT=2'
+                'RRULE:FREQ=DAILY;COUNT=1'
             ],
             'attendees': [{'email': attendee['email']} for attendee in (params['attendees'] 
                             if isinstance(params['attendees'], list) else [params['attendees']])],
@@ -241,7 +241,7 @@ class GoogleCalendarHandler(APIHandler):
                 df = pd.concat([df, pd.DataFrame([{'eventId': str(i), 'status': 'deleted'}])], ignore_index=True)
             return df
 
-    def call_application_api(self, method_name: str = None, params: dict = None) -> DataFrame:
+    def call_application_api(self, method_name: str = None, params: dict = None) -> pd.DataFrame:
         """
         Call Google Calendar API and map the data to pandas DataFrame
         Args:

@@ -5,6 +5,8 @@ from typing import Optional, Dict
 import numpy as np
 import pandas as pd
 
+from langchain.schema import SystemMessage
+from langchain.agents import AgentType
 from langchain.llms import OpenAI
 from langchain.chat_models import ChatOpenAI  # GPT-4 fails to follow the output langchain requires, avoid using for now
 from langchain.agents import initialize_agent, load_tools, Tool, create_sql_agent
@@ -45,6 +47,7 @@ class LangChainHandler(OpenAIHandler):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.generative = True
         self.stops = []
         self.default_model = _DEFAULT_MODEL
         self.default_max_tokens = _DEFAULT_MAX_TOKENS
@@ -80,8 +83,9 @@ class LangChainHandler(OpenAIHandler):
         else:
             args = args['using']
 
-        if len(set(args.keys()) & {'prompt_template'}) == 0:
-            raise Exception('Please provide a `prompt_template` for this engine.')
+        if args.get('mode') != 'conversational':
+            if len(set(args.keys()) & {'prompt_template'}) == 0:
+                raise Exception('Please provide a `prompt_template` for this engine.')
 
     def predict(self, df, args=None):
         """
@@ -95,21 +99,107 @@ class LangChainHandler(OpenAIHandler):
 
         df = df.reset_index(drop=True)
 
-        if 'prompt_template' not in args and 'prompt_template' not in pred_args:
-            raise Exception(f"This model expects a prompt template, please provide one.")
+        if args.get('mode') != 'conversational':
+            if 'prompt_template' not in args and 'prompt_template' not in pred_args:
+                raise Exception(f"This model expects a prompt template, please provide one.")
 
         if 'stops' in pred_args:
             self.stops = pred_args['stops']
 
         # TODO: offload creation to the `create` method instead for faster inference?
+
         modal_dispatch = {
             'default': 'default_completion',
             'sql_agent': 'sql_agent_completion',
         }
 
         agent_creation_method = modal_dispatch.get(args.get('modal_dispatch', 'default'), 'default_completion')
-        agent = getattr(self, agent_creation_method)(df, args, pred_args)
+
+        if args.get('mode') == 'conversational':
+            agent_creation_method = 'conversational_completion'
+
+        # input dataframe can be modified
+        agent, df = getattr(self, agent_creation_method)(df, args, pred_args)
         return self.run_agent(df, agent, args, pred_args)
+
+    def conversational_completion(self, df, args=None, pred_args=None):
+        pred_args = pred_args if pred_args else {}
+
+        # api argument validation
+        model_name = args.get('model_name', self.default_model)
+
+        model_kwargs = {
+            'model_name': model_name,
+            'temperature': min(1.0, max(0.0, args.get('temperature', 0.0))),
+            'max_tokens': pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens)),
+            'top_p': pred_args.get('top_p', None),
+            'frequency_penalty': pred_args.get('frequency_penalty', None),
+            'presence_penalty': pred_args.get('presence_penalty', None),
+            'n': pred_args.get('n', None),
+            'best_of': pred_args.get('best_of', None),
+            'request_timeout': pred_args.get('request_timeout', None),
+            'logit_bias': pred_args.get('logit_bias', None),
+            'openai_api_key': self._get_openai_api_key(args, strict=True),
+            'serper_api_key': self._get_serper_api_key(args, strict=False),
+        }
+        model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
+
+        # langchain tool setup
+        tools = self._setup_tools(model_kwargs, pred_args, args['executor'])
+
+        llm = ChatOpenAI(**model_kwargs)
+
+        memory = ConversationSummaryBufferMemory(llm=llm,
+                                                 max_token_limit=model_kwargs.get('max_tokens', None),
+                                                 memory_key="chat_history")
+
+        # fill memory
+
+        # system prompt
+        prompt = args['prompt']
+        if 'prompt' in pred_args:
+            prompt = pred_args['prompt']
+        if 'context' in pred_args:
+            prompt += '\n\n' + 'Useful information:\n' + pred_args['context'] + '\n'
+        memory.chat_memory.messages.insert(0, SystemMessage(content=prompt))
+
+        # user - assistant conversation. get all except the last message
+        for row in df[:-1].to_dict('records'):
+            question = row[args['user_column']]
+            answer = row[args['assistant_column']]
+
+            if question:
+                memory.chat_memory.add_user_message(question)
+            if answer:
+                memory.chat_memory.add_ai_message(answer)
+
+        # use last message as prompt, remove other questions
+        df.iloc[:-1, df.columns.get_loc('question')] = ''
+
+        agent_name = AgentType.CONVERSATIONAL_REACT_DESCRIPTION
+        agent = initialize_agent(
+            tools,
+            llm,
+            memory=memory,
+            agent=agent_name,
+            max_iterations=pred_args.get('max_iterations', 3),
+            verbose=pred_args.get('verbose', args.get('verbose', False)),
+            handle_parsing_errors=True,
+        )
+
+        # setup model description
+        description = {
+            'allowed_tools': [agent.agent.allowed_tools],  # packed as list to avoid additional rows
+            'agent_type': agent_name,
+            'max_iterations': agent.max_iterations,
+            'memory_type': memory.__class__.__name__,
+        }
+
+        description = {**description, **model_kwargs}
+        description.pop('openai_api_key', None)
+        self.model_storage.json_set('description', description)
+
+        return agent, df
 
     def default_completion(self, df, args=None, pred_args=None):
         """
@@ -174,14 +264,16 @@ class LangChainHandler(OpenAIHandler):
         description.pop('openai_api_key', None)
         self.model_storage.json_set('description', description)
 
-        return agent
+        return agent, df
 
     def run_agent(self, df, agent, args, pred_args):
         # TODO abstract prompt templating into a common utility method, this is also used in vanilla OpenAI
-        if pred_args.get('prompt_template', False):
-            base_template = pred_args['prompt_template']  # override with predict-time template if available
+        if args.get('prompt_template', False):
+            base_template = args['prompt_template']  # override with predict-time template if available
+        elif 'prompt_template' in pred_args:
+            base_template = pred_args['prompt_template']
         else:
-            base_template = args['prompt_template']
+            base_template = '{{question}}'
 
         input_variables = []
         matches = list(re.finditer("{{(.*?)}}", base_template))
@@ -207,6 +299,10 @@ class LangChainHandler(OpenAIHandler):
             # TODO: use async API if possible for parallelized completion
             completions = []
             for prompt in prompts:
+                if not prompt:
+                    # skip empty values
+                    completions.append('')
+                    continue
                 try:
                     completions.append(agent.run(prompt))
                 except Exception as e:
@@ -306,7 +402,17 @@ class LangChainHandler(OpenAIHandler):
         )
 
         toolkit = pred_args['tools'] if pred_args['tools'] is not None else self.default_agent_tools
-        tools = load_tools(toolkit)
+
+        standard_tools = []
+        custom_tools = []
+        # possible to pass standart tool name or custom function
+        for tool in toolkit:
+            if isinstance(tool, str):
+                standard_tools.append(tool)
+            else:
+                custom_tools.append(tool)
+
+        tools = load_tools(standard_tools)
         if model_kwargs.get('serper_api_key', False):
             search = GoogleSerperAPIWrapper(serper_api_key=model_kwargs.pop('serper_api_key'))
             tools.append(Tool(
@@ -321,6 +427,13 @@ class LangChainHandler(OpenAIHandler):
 
         if self.write_privileges:
             tools.append(mdb_write_tool)
+
+        for tool in custom_tools:
+            tools.append(Tool(
+                name=tool['name'],
+                func=tool['func'],
+                description=tool['description'],
+            ))
 
         return tools
 
@@ -354,4 +467,4 @@ class LangChainHandler(OpenAIHandler):
             toolkit=toolkit,
             verbose=True
         )
-        return agent
+        return agent, df

@@ -12,6 +12,7 @@ from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb_sql.parser import ast
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
+from mindsdb.interfaces.storage.model_fs import HandlerStorage
 
 import os
 import time
@@ -28,7 +29,8 @@ from email.message import EmailMessage
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 
 DEFAULT_SCOPES = ['https://www.googleapis.com/auth/gmail.compose',
-                  'https://www.googleapis.com/auth/gmail.readonly']
+                  'https://www.googleapis.com/auth/gmail.readonly',
+                  'https://www.googleapis.com/auth/gmail.modify']
 
 
 class EmailsTable(APITable):
@@ -56,17 +58,20 @@ class EmailsTable(APITable):
         conditions = extract_comparison_conditions(query.where)
 
         params = {}
+        include_attachments = False
         for op, arg1, arg2 in conditions:
 
             if op == 'or':
                 raise NotImplementedError(f'OR is not supported')
 
-            if arg1 in ['query', 'label_ids', 'include_spam_trash']:
+            if arg1 in ['query', 'label_ids', 'include_spam_trash', 'include_attachments']:
                 if op == '=':
                     if arg1 == 'query':
                         params['q'] = arg2
                     elif arg1 == 'label_ids':
                         params['labelIds'] = arg2.split(',')
+                    elif arg1 == 'include_attachments':
+                        include_attachments = arg2 == 'true'
                     else:
                         params['includeSpamTrash'] = arg2
                 else:
@@ -82,7 +87,9 @@ class EmailsTable(APITable):
             method_name='list_messages',
             params=params
         )
-
+        attachments = []
+        if include_attachments:
+            attachments = self.handler.get_attachments(result)
         # filter targets
         columns = []
         for target in query.targets:
@@ -188,8 +195,71 @@ class EmailsTable(APITable):
 
             if 'thread_id' in params:
                 message['threadId'] = params['thread_id']
-
             self.handler.call_gmail_api('send_message', {'body': message})
+
+    def delete(self, query: ast.Delete):
+        """
+        Deletes an event or events in the calendar.
+
+        Args:
+            query (ast.Delete): SQL query to parse.
+
+        Returns:
+            Response: Response object containing the results.
+        """
+
+        # Parse the query to get the conditions.
+        conditions = extract_comparison_conditions(query.where)
+        for op, arg1, arg2 in conditions:
+            if op == 'or':
+                raise NotImplementedError(f'OR is not supported')
+            if arg1 == 'message_id':
+                if op == '=':
+                    self.handler.call_gmail_api('delete_message', {'id': arg2})
+                else:
+                    raise NotImplementedError(f'Unknown op: {op}')
+            else:
+                raise NotImplementedError(f'Unknown clause: {arg1}')
+
+    def update(self, query: ast.Update) -> None:
+        """Updates a label of a message.
+
+        Args:
+            query (ASTNode): The SQL query to parse.
+
+        Raises:
+            NotImplementedError: If the query contains an unsupported condition.
+        """
+        params = {}
+        conditions = extract_comparison_conditions(query.where)
+        for op, arg1, arg2 in conditions:
+            if op == 'or':
+                raise NotImplementedError(f'OR is not supported')
+            if arg1 == 'id':
+                if op == '=':
+                    params['id'] = arg2
+                else:
+                    raise NotImplementedError(f'Unknown op: {op}')
+            else:
+                raise NotImplementedError(f'Unknown clause: {arg1}')
+        request_body = {}
+        values = query.update_columns.items()
+        data_list = list(values)
+        add_label = []
+        remove_label = []
+        for key, value in data_list:
+            if key == 'addLabel':
+                add_label.append(str(value)[1:-1])
+            elif key == 'removeLabel':
+                remove_label.append(str(value)[1:-1])
+            else:
+                raise NotImplementedError(f'Unknown clause: {key}')
+        if add_label:
+            request_body['addLabelIds'] = add_label
+        if remove_label:
+            request_body['removeLabelIds'] = remove_label
+        params['body'] = request_body
+        self.handler.call_gmail_api('update_message', params)
 
 
 class GmailHandler(APIHandler):
@@ -215,6 +285,8 @@ class GmailHandler(APIHandler):
         self.service = None
         self.is_connected = False
 
+        self.storage = HandlerStorage(kwargs['integration_id'])
+
         emails = EmailsTable(self)
         self.emails = emails
         self._register_table('emails', emails)
@@ -226,7 +298,6 @@ class GmailHandler(APIHandler):
             if response.status_code == 200:
                 with open(creds_file, 'w') as creds:
                     creds.write(response.text)
-
                 return True
             else:
                 log.logger.error("Failed to get credentials from S3", response.status_code)
@@ -239,7 +310,7 @@ class GmailHandler(APIHandler):
         creds = None
 
         # Get the current dir, we'll check for Token & Creds files in this dir
-        curr_dir = os.path.dirname(__file__)
+        curr_dir = self.storage.folder_get('config')
 
         token_file = os.path.join(curr_dir, 'token.json')
         creds_file = os.path.join(curr_dir, 'creds.json')
@@ -256,10 +327,11 @@ class GmailHandler(APIHandler):
                 flow = InstalledAppFlow.from_client_secrets_file(creds_file, self.scopes)
                 creds = flow.run_local_server(port=0, timeout_seconds=120)
 
-        # Save the credentials for the next run
-        with open(token_file, 'w') as token:
-            token.write(creds.to_json())
+            # Save the credentials for the next run
+            with open(token_file, 'w') as token:
+                token.write(creds.to_json())
 
+        self.storage.folder_sync('config')
         return build('gmail', 'v1', credentials=creds)
 
     def connect(self) -> object:
@@ -315,7 +387,7 @@ class GmailHandler(APIHandler):
 
     def _parse_parts(self, parts, attachments):
         if not parts:
-            return
+            return ''
 
         body = ''
         for part in parts:
@@ -379,6 +451,21 @@ class GmailHandler(APIHandler):
 
         batch_req.execute()
 
+    def get_attachments(self, result):
+        for index, email in result.iterrows():
+            attachments = json.loads(email['attachments'])
+            for attachment in attachments:
+                attachment_id = attachment['attachmentId']
+                filename = attachment['filename']
+                mimeType = attachment['mimeType']
+                attachment_data = self.service.users().messages().attachments().get(
+                    userId='me', messageId=email['id'], id=attachment_id).execute()
+                file_data = attachment_data['data']
+                file_data = file_data.replace('-', '+').replace('_', '/')
+                file_data = urlsafe_b64decode(file_data)
+                with open(filename, 'wb') as f:
+                    f.write(file_data)
+
     def _handle_list_messages_response(self, data, messages):
         total_pages = len(messages) // self.max_batch_size
         for page in range(total_pages):
@@ -401,6 +488,10 @@ class GmailHandler(APIHandler):
             method = service.users().messages().list
         elif method_name == 'send_message':
             method = service.users().messages().send
+        elif method_name == "delete_message":
+            method = service.users().messages().trash
+        elif method_name == 'update_message':
+            method = service.users().messages().modify
         else:
             raise NotImplementedError(f'Unknown method_name: {method_name}')
 

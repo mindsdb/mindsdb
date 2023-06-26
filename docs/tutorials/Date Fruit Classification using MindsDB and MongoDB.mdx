@@ -13,25 +13,6 @@ Let’s get started.
 
 
 ## Data Setup
-If you're going to use **MindsDB Cloud's files database** for connecting to the MongoDB database, then follow the steps as shown below--
-
-### Upload the dataset to MindsDB Cloud
-Follow the steps along:
-1. Log in to your **[MindsDB Cloud](https://cloud.mindsdb.com/login)** account to open the MindsDB Editor.
-2. Navigate to `Add` button in the editor and click on the dropdown arrow as highlighted below. Choose the `Upload File` option.
-
-![add-data](images/date-fruit-classification/add-data-1.png)
-
-3. Import the `.csv` file (here it is `Date_fruit.csv`), name the data source table that is used to store the file (here it is `date_fruit_data`), and click on the `Save and Continue` button.
-
-![file-upload](images/date-fruit-classification/add-data-2.png)
-
-Now you can run queries directly on the file as if it were a table. Let’s preview the data that we’ll use to train our predictor.
-```sql
-SHOW TABLES FROM files;
-SELECT * FROM files.date_fruit_data LIMIT 10;
-```
-![run-queries](images/date-fruit-classification/check-data.png)
 
 ### Connecting the Data
 After successful installation, it's now time to connect **MongoDB Compass** with **MindsDB Cloud** and create a *Mongo database*. Follow the steps 👇

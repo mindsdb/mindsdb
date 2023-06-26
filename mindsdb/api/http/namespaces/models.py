@@ -11,6 +11,7 @@ from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
+from mindsdb.interfaces.storage.db import Predictor
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
 
@@ -126,12 +127,7 @@ class ModelResource(Resource):
                 'Project not found',
                 f'Project name {project_name} does not exist')
 
-        name_no_version = model_name
-        version = None
-        parts = model_name.split('.')
-        if len(parts) > 1 and parts[-1].isdigit():
-            version = int(parts[-1])
-            name_no_version = '.'.join(parts[:-1])
+        name_no_version, version = Predictor.get_name_and_version(model_name)
         try:
             return session.model_controller.get_model(name_no_version, version=version, project_name=project_name)
         except PredictorRecordNotFound:
@@ -152,13 +148,7 @@ class ModelResource(Resource):
                 'Project not found',
                 f'Project name {project_name} does not exist')
 
-        name_no_version = model_name
-        version = None
-        parts = model_name.split('.')
-        if len(parts) > 1 and parts[-1].isdigit():
-            version = int(parts[-1])
-            name_no_version = '.'.join(parts[:-1])
-
+        name_no_version, version = Predictor.get_name_and_version(model_name)
         try:
             session.model_controller.get_model(name_no_version, version=version, project_name=project_name)
         except PredictorRecordNotFound:
@@ -186,12 +176,7 @@ class ModelPredict(Resource):
     def post(self, project_name, model_name):
         '''Call prediction'''
 
-        name_no_version = model_name
-        version = None
-        parts = model_name.split('.')
-        if len(parts) > 1 and parts[-1].isdigit():
-            version = int(parts[-1])
-            name_no_version = '.'.join(parts[:-1])
+        name_no_version, version = Predictor.get_name_and_version(model_name)
 
         session = SessionController()
         project_datanode = session.datahub.get(project_name)
@@ -241,12 +226,7 @@ class ModelDescribe(Resource):
                 'Project not found',
                 f'Project name {project_name} does not exist')
 
-        name_no_version = model_name
-        version = None
-        parts = model_name.split('.')
-        if len(parts) > 1 and parts[-1].isdigit():
-            version = int(parts[-1])
-            name_no_version = '.'.join(parts[:-1])
+        name_no_version, version = Predictor.get_name_and_version(model_name)
 
         try:
             session.model_controller.get_model(name_no_version, version=version, project_name=project_name)

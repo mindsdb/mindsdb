@@ -4,6 +4,7 @@ import sys
 import requests
 import subprocess
 
+
 def build_container(reltype):
     installer_version_url = f'https://public.api.mindsdb.com/installer/{reltype}/docker___success___None'
 
@@ -30,11 +31,10 @@ def build_container(reltype):
 
     subprocess.run(command, shell=True, check=True)
 
+
 if __name__ == '__main__':
     if not sys.argv[1:]:
         sys.exit("usage: build.py <beta|release>")
 
     reltype = sys.argv[1]
     build_container(reltype)
-
-

@@ -3,8 +3,9 @@ from typing import Optional, Dict
 
 import pandas as pd
 
+from huggingface_hub import HfApi
 from hugging_py_face import NLP, ComputerVision, AudioProcessing
-
+from hugging_py_face.config_parser import ConfigParser
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.base import BaseMLEngine
 
@@ -16,9 +17,54 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
 
     name = 'huggingface_api'
 
+    @staticmethod
+    def create_validation(target, args=None, **kwargs):
+
+        if 'using' in args:
+            args = args['using']
+
+        hf_api = HfApi()
+
+        if 'model_name' not in args:
+            # detect model by task
+            task = args.get('task')
+            if task is None:
+                raise Exception('model_name or task have to be specified')
+
+            # get from task
+            config = ConfigParser()
+            model_name = config.get_config_dict()['TASK_MODEL_MAP'].get(task)
+            if model_name is None:
+                raise Exception(f'Model not found by task: {task}')
+
+            args['model_name'] = model_name
+        else:
+            # detect task by model
+            metadata = hf_api.model_info(args['model_name'])
+
+            if 'task' not in args:
+                args['task'] = metadata.pipeline_tag
+            elif args['task'] != metadata.pipeline_tag:
+                raise Exception(f'Task mismatch for model: {args["task"]}!={metadata.pipeline_tag}')
+
+        # TODO raise if task is not supported
+
+        input_keys = list(args.keys())
+
+        # task, model_name, input_column is essential
+        for key in ['task', 'model_name', 'input_column']:
+            if key not in args:
+                raise Exception(f'Parameter "{key}" is required')
+            input_keys.remove(key)
+
+        #TODO check columns for specific tasks
+
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         if 'using' not in args:
             raise Exception("Hugging Face Inference engine requires a USING clause! Refer to its documentation for more details.")
+
+        args = args['using']
+        args['target'] = target
 
         self.model_storage.json_set('args', args)
 
@@ -26,108 +72,111 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
         args = self.model_storage.json_get('args')
         api_key = self._get_huggingface_api_key(args)
 
-        if args['using']['task'] == 'text-classification':
+        input_column = args['input_column']
+        model_name = args['model_name']
+
+        if args['task'] == 'text-classification':
             nlp = NLP(api_key)
             result_df = nlp.text_classification_in_df(
                 df,
-                args['using']['column'],
-                args['using']['options'] if 'options' in args['using'] else None,
-                args['using']['model'] if 'model' in args['using'] else None
+                input_column,
+                args['options'] if 'options' in args else None,
+                model_name,
             )
 
-        elif args['using']['task'] == 'fill-mask':
+        elif args['task'] == 'fill-mask':
             nlp = NLP(api_key)
             result_df = nlp.fill_mask_in_df(
                 df,
-                args['using']['column'],
-                args['using']['options'] if 'options' in args['using'] else None,
-                args['using']['model'] if 'model' in args['using'] else None
+                input_column,
+                args['options'] if 'options' in args else None,
+                model_name
             )
 
-        elif args['using']['task'] == 'summarization':
+        elif args['task'] == 'summarization':
             nlp = NLP(api_key)
             result_df = nlp.summarization_in_df(
                 df,
-                args['using']['column'],
-                args['using']['parameters'] if 'parameters' in args['using'] else None,
-                args['using']['options'] if 'options' in args['using'] else None,
-                args['using']['model'] if 'model' in args['using'] else None
+                input_column,
+                args['parameters'] if 'parameters' in args else None,
+                args['options'] if 'options' in args else None,
+                model_name
             )
 
-        elif args['using']['task'] == 'text-generation':
+        elif args['task'] == 'text-generation':
             nlp = NLP(api_key)
             result_df = nlp.text_generation_in_df(
                 df,
-                args['using']['column'],
-                args['using']['parameters'] if 'parameters' in args['using'] else None,
-                args['using']['options'] if 'options' in args['using'] else None,
-                args['using']['model'] if 'model' in args['using'] else None
+                input_column,
+                args['parameters'] if 'parameters' in args else None,
+                args['options'] if 'options' in args else None,
+                model_name
             )
 
-        elif args['using']['task'] == 'question-answering':
+        elif args['task'] == 'question-answering':
             nlp = NLP(api_key)
             result_df = nlp.question_answering_in_df(
                 df,
-                args['using']['question_column'],
-                args['using']['context_column'],
-                args['using']['model'] if 'model' in args['using'] else None
+                input_column,
+                args['context_column'],
+                model_name
             )
 
-        elif args['using']['task'] == 'sentence-similarity':
+        elif args['task'] == 'sentence-similarity':
             nlp = NLP(api_key)
             result_df = nlp.sentence_similarity_in_df(
                 df,
-                args['using']['source_sentence_column'],
-                args['using']['sentence_column'],
-                args['using']['options'] if 'options' in args['using'] else None,
-                args['using']['model'] if 'model' in args['using'] else None
+                input_column,
+                args['sentence_column'],  # TODO name it input_column2?
+                args['options'] if 'options' in args else None,
+                model_name
             )
 
-        elif args['using']['task'] == 'zero-shot-classification':
+        elif args['task'] == 'zero-shot-classification':
             nlp = NLP(api_key)
             result_df = nlp.zero_shot_classification_in_df(
                 df,
-                args['using']['column'],
-                args['using']['candidate_labels'],
-                args['using']['parameters'] if 'parameters' in args['using'] else None,
-                args['using']['options'] if 'options' in args['using'] else None,
-                args['using']['model'] if 'model' in args['using'] else None
+                input_column,
+                args['candidate_labels'],
+                args['parameters'] if 'parameters' in args else None,
+                args['options'] if 'options' in args else None,
+                model_name
             )
 
-        elif args['using']['task'] == 'image-classification':
+        elif args['task'] == 'image-classification':
             cp = ComputerVision(api_key)
             result_df = cp.image_classification_in_df(
                 df,
-                args['using']['column'],
-                args['using']['model'] if 'model' in args['using'] else None
+                input_column,
+                model_name
             )
 
-        elif args['using']['task'] == 'object-detection':
+        elif args['task'] == 'object-detection':
             cp = ComputerVision(api_key)
             result_df = cp.object_detection_in_df(
                 df,
-                args['using']['column'],
-                args['using']['model'] if 'model' in args['using'] else None
+                input_column,
+                model_name
             )
 
-        elif args['using']['task'] == 'speech-recognition':
+        elif args['task'] == 'speech-recognition':
             ap = AudioProcessing(api_key)
             result_df = ap.speech_recognition_in_df(
                 df,
-                args['using']['column'],
-                args['using']['model'] if 'model' in args['using'] else None
+                input_column,
+                model_name
             )
 
-        elif args['using']['task'] == 'audio-classification':
+        elif args['task'] == 'audio-classification':
             ap = AudioProcessing(api_key)
             result_df = ap.audio_classification_in_df(
                 df,
-                args['using']['column'],
-                args['using']['model'] if 'model' in args['using'] else None
+                input_column,
+                model_name
             )
 
         else:
-            raise Exception(f"Task {args['using']['task']} is not supported!")
+            raise Exception(f"Task {args['task']} is not supported!")
 
         result_df = result_df.rename(columns={'predictions': args['target']})
         return result_df

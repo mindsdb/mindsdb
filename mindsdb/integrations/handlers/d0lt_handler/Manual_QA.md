@@ -2,36 +2,48 @@
 
 > **Please submit your PR in the following format after the underline below `Results` section. Don't forget to add an underline after adding your changes i.e., at the end of your `Results` section.**
 
-## Testing DoIt Handler with [Dataset Name](URL to the Dataset)
+## Testing DoIt Handler with [Pumpkin Seeds Dataset](https://www.kaggle.com/datasets/muratkokludataset/pumpkin-seeds-dataset)
 
 **1. Testing CREATE DATABASE**
 
-```
-COMMAND THAT YOU RAN TO CREATE DATABASE.
+```sql
+CREATE DATABASE d0lt_handler            --- display name for database
+WITH engine = 'd0lt',                   --- name of the mindsdb handler 
+parameters = {
+    "user": "demo_user",                --- Your database user
+    "password": "demo_password",        --- Your password
+    "host": "cloud.mindsdb.com",        --- host, it can be an ip or an url
+    "port": 3306,                       --- common port is 3306
+    "database": "files"                 --- The name of your database
+};
 ```
 
-![CREATE_DATABASE](Image URL of the screenshot)
+![CREATE_DATABASE](create-db.png)
 
 **2. Testing CREATE PREDICTOR**
 
-```
-COMMAND THAT YOU RAN TO CREATE PREDICTOR.
+```sql
+CREATE PREDICTOR mindsdb.pumpkin_predictor
+FROM d0lt_handler (
+    SELECT * FROM pumpkin_seeds_data
+) PREDICT Class;
 ```
 
-![CREATE_PREDICTOR](Image URL of the screenshot)
+![CREATE_PREDICTOR](create-predictor.png)
 
 **3. Testing SELECT FROM PREDICTOR**
 
-```
-COMMAND THAT YOU RAN TO DO A SELECT FROM.
+```sql
+SELECT * 
+FROM mindsdb.models
+WHERE name='pumpkin_predictor';
 ```
 
-![SELECT_FROM](Image URL of the screenshot)
+![SELECT_FROM](predict-target.png)
 
 ### Results
 
 Drop a remark based on your observation.
-- [ ] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
-- [ ] There's a Bug 🪲 [Issue Title](URL To the Issue you created) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
+- [x] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.
 
 ---

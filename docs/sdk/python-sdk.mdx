@@ -1,0 +1,522 @@
+---
+title: Python SDK
+sidebarTitle: Python SDK
+---
+
+Python SDK enables you to connect to the MindsDB server from Python using HTTP API. Read along to see how to install, test, and use the MindsDB Python SDK.
+
+## How to Install
+
+### Simple Installation
+
+To install the MindsDB Python SDK, run the below command:
+
+```bash
+pip install mindsdb_sdk
+```
+
+Here is the expected output:
+
+<p align="center">
+  <img src="/assets/pythonsdk_install_output.png" />
+</p>
+
+### Advanced Installation
+
+Instead of using the `pip install mindsdb_sdk` command, you can install it by cloning the [Python SDK repository](https://github.com/mindsdb/mindsdb_python_sdk). Then you should create a virtual environment, install all dependencies from the `requirements.txt` file, and run tests as instructed below.
+
+To test all the components, go to the project directory (`mindsdb_sdk`) and run the below command:
+
+```bash
+env PYTHONPATH=./ pytest
+```
+
+To generate the API documentation, run the below commands:
+
+```bash
+pip install sphinx
+cd docs
+make html
+```
+
+The documentation is generated in the `docs/build/html` folder.
+
+## How to Use
+
+### Connecting to MindsDB
+
+You can connect to your local MindsDB server, MindsDB Cloud server, or MindsDB Pro server.
+
+<Tabs>
+<Tab title="Local MindsDB">
+Here is how to connect to your local MindsDB server:
+
+```
+import mindsdb_sdk
+
+# connects to the default port (47334) on localhost 
+server = mindsdb_sdk.connect()
+
+# connects to the specified host and port
+server = mindsdb_sdk.connect('http://127.0.0.1:47334')
+```
+</Tab>
+<Tab title="MindsDB Cloud">
+Here is how to connect to the MindsDB Cloud server:
+
+```
+import mindsdb_sdk
+
+# option 1
+server = mindsdb_sdk.connect(login='a@b.com', password='-')
+
+# option 2
+server = mindsdb_sdk.connect('https://cloud.mindsdb.com', login='a@b.com', password='-')
+```
+</Tab>
+<Tab title="MindsDB Pro">
+Here is how to connect to the MindsDB Pro server:
+
+```
+import mindsdb_sdk
+
+server = mindsdb_sdk.connect('http://<YOUR_INSTANCE_IP>', login='a@b.com', password='-', is_managed=True)
+```
+</Tab>
+</Tabs>
+
+### Working with Databases
+
+Use the `get_database()` method to get an existing database:
+
+```bash
+mysql_demo_db = server.get_database('mysql_demo_db')
+```
+
+Or use the `create_database()` method to connect data to MindsDB:
+
+```bash
+mysql_demo_db = server.create_database(
+    engine = "mysql",
+    name = "mysql_demo_db",
+    connection_args = {
+      "user": "user",
+      "password": "MindsDBUser123!",
+      "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
+      "port": "3306",
+      "database": "public"
+    }
+)
+```
+
+Use the `list_databases()` method to list all databases:
+
+```bash
+server.list_databases()
+```
+
+Use the `query()` method to submit a query to a database:
+
+```bash
+query = mysql_demo_db.query('SELECT * FROM my_table;')
+query.fetch()
+```
+
+Use the `drop_database()` method to remove a database:
+
+```bash
+server.drop_database('mysql_demo_db')
+```
+
+### Working with Tables
+
+Each table is stored in a database. Hence, we use the `mysql_demo_db` variable to run some of the commands below.
+
+Use the `get_table()` method to fetch a table from the `mysql_demo_db` database:
+
+```bash
+my_table = mysql_demo_db.get_table('my_table')
+```
+
+Or use the `create_table()` method to create a new table:
+
+```bash
+# option 1
+my_table = mysql_demo_db.create_table('my_table', 'SELECT * FROM some_table WHERE key=value')
+
+# option 2
+my_table = mysql_demo_db.create_table('my_table', base_table)
+```
+
+Use the `list_tables()` method to list all database tables:
+
+```bash
+mysql_demo_db.list_tables()
+```
+
+Use the `fetch()` method to query for table's data:
+
+```bash
+my_table.filter(my_column='value')
+my_table.limit(3)
+my_table.fetch()
+```
+
+The `filter()` method filters the data based on the provided condition, and the `limit()` method limits the output rows.
+
+### Working with Projects
+
+MindsDB uses projects to keep artifacts, such as models or views, separate according to what predictive task they solve. You can learn more about [MindsDB projects here](https://docs.mindsdb.com/sql/project).
+
+Use the `get_project()` method to get the default `mindsdb` project:
+
+```bash
+project = server.get_project()
+```
+
+Use the `get_project()` method to get other project:
+
+```bash
+project = server.get_project('project_name')
+```
+
+Use the `create_project()` method to create a new project:
+
+```bash
+project = server.create_project('project_name')
+```
+
+Use the `list_projects()` method to lists all available projects:
+
+```bash
+server.list_projects()
+```
+
+Use the `query()` method to submit a query to a project:
+
+```bash
+query = project.query('SELECT * FROM my_table;')
+query.fetch()
+```
+
+Use the `drop_project()` method to remove a project:
+
+```bash
+server.drop_project('project_name')
+```
+
+### Working with Models
+
+Each model is stored in a project. Hence, we use the `project` variable to run some of the commands below.
+
+Use the `get_model()` method to get an existing model:
+
+```bash
+my_model = project.get_model('my_model')
+```
+
+Or use the `create_model()` method to create and train a new model:
+
+```bash
+my_model = project.create_model (
+    name = 'my_model',
+    predict = 'target',
+    query = my_table
+)
+```
+
+Use the `list_models()` method to list all models contained in the project:
+
+```bash
+project.list_models()
+```
+
+Use the `get_status()` method to check the training status of the model:
+
+```bash
+my_model.get_status()
+```
+
+Use the `predict()` method to make predictions:
+
+```bash
+my_model.predict(my_table.limit(10))
+```
+
+Above command returns predictions for the first 10 rows of the `my_table` table.
+
+Use the `describe()` method to get information about a model:
+
+```bash
+model_name.describe()
+```
+
+Use the `refresh()` method to refresh model's data from the MindsDB server:
+
+```bash
+model_name.refresh()
+```
+
+Use the `drop_model()` method to remove a model:
+
+```bash
+project.drop_model('my_model')
+```
+
+### Working with Model Versions
+
+Use the `finetune()` method to finetune a model with specific data:
+
+```bash
+model_name.finetune(data_table)
+```
+
+Use the `retrain()` method to retrain a model:
+
+```bash
+model_name.retrain()
+```
+
+Use the `list_versions()` method to view all available version of a model:
+
+```bash
+model_name.list_versions()
+```
+
+Use the `get_version()` method to use a specific version of a model:
+
+```bash
+model_name.get_version(9)
+```
+
+Use the `set_active()` method to set a specific version of a model as active:
+
+```bash
+model_name.set_active(9)
+```
+
+Use the `drop_model_version()` method to remove a specific version of a model:
+
+```bash
+project.drop_model_version('my_model', 3)
+```
+
+Please note that the model version should be deactivated before it is removed.
+
+### Working with Views
+
+Each view is stored in a project. Hence, we use the `project` variable to run the commands below.
+
+Use the `get_view()` method to get an existing view:
+
+```bash
+my_view = project.get_view('my_view')
+```
+
+Or use the `create_view()` method to create a view:
+
+```bash
+my_view = project.create_view(
+    'view_name',
+    mysql_demo_db.query('SELECT * FROM my_table LIMIT 100')
+)
+```
+
+Use the `list_views()` method to list all views in a project:
+
+```bash
+project.list_views()
+```
+
+Use the `drop_view()` method to remove a view:
+
+```bash
+project.drop_view('view_name')
+```
+
+### Working with Jobs
+
+Each job is stored in a project. Hence, we use the `project` variable to run the commands below.
+
+Use the `get_job()` method to get an existing job:
+
+```bash
+my_job = project.get_job('my_job')
+```
+
+Or use the `create_job()` method to create a job:
+
+```bash
+my_job = project.create_job(
+    'job_name',
+    'select * from models',
+    repeat_str = '1 hour'
+)
+```
+
+Use the `list_jobs()` method to list all jobs in a project:
+
+```bash
+project.list_jobs()
+```
+
+Use the `refresh()` method to retrieve job data from the MindsDB server:
+
+```bash
+my_job.refresh()
+```
+
+Use the `get_history()` method to get history of job execution:
+
+```bash
+my_job.get_history()
+```
+
+Use the `drop_job()` method to remove a job:
+
+```bash
+project.drop_job('job_name')
+```
+
+## Example
+
+Here is a sample code to create and train a simple regression model and make predictions:
+
+```bash
+# get the default project
+project = server.get_project()
+
+# prepare the training data
+example_db = server.get_database('example_db')
+rentals_table = example_db.get_table('demo_data.home_rentals')
+print('First 3 rows of home_rentals:')
+print(rentals_table.limit(3).fetch())
+
+# get all models
+model_names = [i.name for i in  project.list_models()]
+
+# create a model if it doesn't exist yet
+if 'home_rentals_model' in model_names:
+  print('home_rentals_model already exists. Returning existing model')
+  home_rentals_model = project.get_model('home_rentals_model')
+
+else:
+  print('Creating home_rentals_model model')
+
+  home_rentals_model = project.create_model(
+      name = 'home_rentals_model',
+      predict = 'rental_price',
+      query = rentals_table
+  )
+  print('Created home_rentals_model successfully:')
+  print(home_rentals_model)
+
+  print('Waiting for model training to complete...please be patient')
+  for i in range(400):
+    print('.', end='')
+    time.sleep(0.5)
+
+  if home_rentals_model.get_status() not in ('generating', 'training'):
+    print('\nFinished training home_rentals_model:')
+    break
+
+# get model's details      
+print(home_rentals_model.data)
+
+if home_rentals_model.get_status() == 'error':
+  print('Something went wrong while training:')
+  print(home_rentals_model.data['error'])
+
+# make predictions
+rentals_table_limit = rentals_table.limit(3)
+
+print('Making prediction on the first 3 rows of home_rentals table')
+ret = home_rentals_model.predict(rentals_table_limit)
+
+print(ret[['number_of_rooms', 'number_of_bathrooms', 'rental_price']])
+```
+
+And here is a sample code to create and train a time series model and make predictions:
+
+```bash
+# get the default project
+project = server.get_project()
+
+# prepare the training data
+files = server.get_database('files')
+housesales_table = files.get_table('house_sales')
+print('First 3 rows of house_sales:')
+print(housesales_table.limit(3).fetch())
+
+# get all models
+model_names = [i.name for i in  project.list_models()]
+
+# create a model if it doesn't exist yet
+print('Creating house_sales_model model')
+
+house_sales_model = project.create_model(
+    name = 'house_sales_model',
+    predict = 'MA',
+    query = files.query('SELECT * FROM house_sales'),
+    timeseries_options={
+    	  'ORDER BY': 'saledate',
+    	  'GROUP BY': 'bedroom',
+          'WINDOW': 8,
+          'HORIZON': 4
+      }
+)
+print('Created house_sales_model successfully:')
+print(house_sales_model)
+
+print('Waiting for model training to complete...please be patient')
+for i in range(400):
+  print('.', end='')
+  time.sleep(0.5)
+
+  if house_sales_model.get_status() not in ('generating', 'training'):
+    print('\nFinished training house_sales_model:')
+    break
+
+# get model's details      
+print(house_sales_model.data)
+
+if house_sales_model.get_status() == 'error':
+  print('Something went wrong while training:')
+  print(house_sales_model.data['error'])
+
+# make predictions
+housesales_table_limit = housesales_table.limit(3)
+
+print('Making prediction on the first 3 rows of house_sales table')
+ret = house_sales_model.predict(housesales_table_limit)
+
+print(ret[['MA', 'saledate']])
+```
+
+On execution, we get:
+
+```bash
+First 3 rows of house_sales:
+     saledate      MA   type  bedrooms
+0  30/09/2007  441854  house         2
+1  31/12/2007  441854  house         2
+2  31/03/2008  441854  house         2
+Creating house_sales_model model
+Created house_sales_model successfully:
+Model(house_sales_model_pythonsdktest9, status=generating)
+Waiting for model training to complete...please be patient
+...........
+Finished training house_sales_model:
+{'name': 'house_sales_model_pythonsdktest9', 'engine': 'lightwood', 'project': 'mindsdb', 'version': 1, 'status': 'complete', 'accuracy': 0.996, 'predict': 'MA', 'update_status': 'up_to_date', 'mindsdb_version': '23.5.3.2', 'error': None, 'select_data_query': 'SELECT * FROM house_sales', 'training_options': "{'target': 'MA'}", 'current_training_phase': 5.0, 'total_training_phases': 5.0, 'training_phase_name': 'Complete', 'tag': None, 'created_at': '2023-06-12 16:42:06.500404'}
+Making prediction on the first 3 rows of house_sales table
+       MA    saledate
+0  441305  30/09/2007
+1  439289  31/12/2007
+2  440130  31/03/2008
+```
+
+<Tip>
+You can find the MindsDB Python SDK on the [PyPI webpage here](https://pypi.org/project/mindsdb-sdk/).
+
+For more examples, visit the [Google Colab Notebook here](https://colab.research.google.com/drive/1QouwAR3saFb9ffthrIs1LSH5COzyQa11#scrollTo=nquWuOxEIV09).
+</Tip>

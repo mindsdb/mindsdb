@@ -5,13 +5,15 @@ import math
 import openai
 import tiktoken
 
+import mindsdb.utilities.profiler as profiler
+
 
 def retry_with_exponential_backoff(
         initial_delay: float = 1,
         hour_budget: float = 0.3,
         jitter: bool = False,
         exponential_base: int = 2,
-        errors: tuple = (openai.error.RateLimitError,),
+        errors: tuple = (openai.error.RateLimitError, openai.error.APIConnectionError),
 ):
     """
     Wrapper to enable optional arguments. It means this decorator always needs to be called with parenthesis:
@@ -21,6 +23,7 @@ def retry_with_exponential_backoff(
     
     """  # noqa
 
+    @profiler.profile()
     def _retry_with_exponential_backoff(func):
         """
         Exponential backoff to retry requests on a rate-limited API call, as recommended by OpenAI.
@@ -49,13 +52,14 @@ def retry_with_exponential_backoff(
                 try:
                     return func(*args, **kwargs)
                 except errors as e:
-                    if e.error['type'] == 'invalid_request_error' and \
-                            'Too many parallel completions' in e.error['message'] or \
-                            'Please reduce the length of the messages' in e.error['message']:
-                        raise e  # InvalidRequestError triggers batched mode in the previous call
-                    if e.error['type'] == 'insufficient_quota':
-                        raise Exception(
-                            'API key has exceeded its quota, please try 1) increasing it or 2) using another key.')  # noqa
+                    if e.error is not None:
+                        if e.error['type'] == 'invalid_request_error' and \
+                                'Too many parallel completions' in e.error['message'] or \
+                                'Please reduce the length of the messages' in e.error['message']:
+                            raise e  # InvalidRequestError triggers batched mode in the previous call
+                        if e.error['type'] == 'insufficient_quota':
+                            raise Exception(
+                                'API key has exceeded its quota, please try 1) increasing it or 2) using another key.')  # noqa
 
                     num_retries += 1
                     if num_retries > max_retries:
@@ -67,7 +71,7 @@ def retry_with_exponential_backoff(
                     time.sleep(delay)
 
                 except openai.error.OpenAIError as e:
-                    if e.error['type'] == 'insufficient_quota':
+                    if e.error is not None and e.error['type'] == 'insufficient_quota':
                         raise Exception(
                             'API key has exceeded its quota, please try 1) increasing it or 2) using another key.')  # noqa
                     raise e
@@ -90,7 +94,7 @@ def truncate_msgs_for_token_limit(messages, model_name, max_tokens, truncate='fi
     n_tokens = count_tokens(messages, encoder, model_name)
     while n_tokens > max_tokens:
         if len(messages) == 2:
-            return messages[-1]  # edge case: if limit is surpassed by just one input, we remove initial instruction
+            return messages[:-1]  # edge case: if limit is surpassed by just one input, we remove initial instruction
         elif len(messages) == 1:
             return messages
 

@@ -1,0 +1,48 @@
+---
+title: Apache Impala
+sidebarTitle: Apache Impala
+---
+
+This is the implementation of the Impala data handler for MindsDB.
+
+[Apache Impala](https://impala.apache.org/) is an MPP (Massive Parallel Processing) SQL query engine for processing huge volumes of data that is stored in the Apache Hadoop cluster. It is an open source software written in C++ and Java. It provides high performance and low latency compared to other SQL engines for Hadoop. In other words, Impala is the highest performing SQL engine (giving RDBMS-like experience) that provides the fastest way to access data stored in Hadoop Distributed File System.
+
+## Implementation
+
+This handler is implemented using `impyla`, a Python library that allows you to use Python code to run SQL commands on Impala.
+
+The required arguments to establish a connection are:
+
+* `user` is the username associated with the database.
+* `password` is the password to authenticate your access.
+* `host` is the server IP address or hostname.
+* `port` is the port through which TCP/IP connection is to be made.
+* `database` is the database name to be connected.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/impala_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the Impala database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE impala_datasource
+WITH
+  engine = 'impala',
+  parameters = {
+    "user":"root",
+    "password":"p@55w0rd",
+    "host":"127.0.0.1",
+    "port":21050,
+    "database":"Db_NamE"
+  };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM impala_datasource.TEST;
+```

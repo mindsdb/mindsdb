@@ -1,7 +1,7 @@
 [
     {
       "runs_on": "ubuntu-latest",
-      "python-version": 3.7,
+      "python-version": 3.9,
       "runOn": "always"
     },
     {

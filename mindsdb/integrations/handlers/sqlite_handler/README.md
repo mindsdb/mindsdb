@@ -14,6 +14,8 @@ The only required argument to establish a connection is `db_file`. This points t
 Optionally, this may also be set to `:memory:`, which will create an in-memory database.
 
 ## Usage
+If you have local file that need to connect into MindsDB, you have to [deploy MindsDB locally](https://docs.mindsdb.com/setup/self-hosted/pip/source), ways like via Docker or via pip. Then copy the file into the desired folder in source folder. This way MindsDB can successfully access your file.
+
 In order to make use of this handler and connect to a SQLite database in MindsDB, the following syntax can be used,
 ~~~~sql
 CREATE DATABASE sqlite_datasource

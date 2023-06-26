@@ -14,7 +14,7 @@ In particular, three big components are included:
 
     - `predict_process` method: handles async dispatch of the `predict` method in an engine.
 
-""" # noqa
+"""  # noqa
 
 import datetime as dt
 import traceback
@@ -25,16 +25,16 @@ import pandas as pd
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Identifier, Select, Show, Star, NativeQuery
+from mindsdb_sql.parser.ast import Identifier, Select, Star, NativeQuery
 
-from mindsdb.integrations.utilities.utils import make_sql_session, get_where_data
+from mindsdb.integrations.utilities.sql_utils import make_sql_session
 from mindsdb.utilities.config import Config
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb import __version__ as mindsdb_version
+from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.model.functions import (
@@ -64,9 +64,9 @@ class MLEngineException(Exception):
 
 @mark_process(name='learn')
 def learn_process(class_path, engine, context_dump, integration_id,
-                  predictor_id, data_integration_ref, fetch_data_query,
-                  project_name, problem_definition, set_active,
-                  base_predictor_id=None):
+                  predictor_id, problem_definition, set_active,
+                  base_predictor_id=None, training_data_df=None,
+                  data_integration_ref=None, fetch_data_query=None, project_name=None):
     ctx.load(context_dump)
     db.init()
 
@@ -74,6 +74,7 @@ def learn_process(class_path, engine, context_dump, integration_id,
 
     try:
         target = problem_definition['target']
+
         training_data_df = None
 
         database_controller = DatabaseController()
@@ -104,10 +105,6 @@ def learn_process(class_path, engine, context_dump, integration_id,
             training_data_columns_count = len(training_data_df.columns)
             training_data_rows_count = len(training_data_df)
 
-            if target not in training_data_df.columns:
-                raise Exception(
-                    f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
-
         predictor_record.training_data_columns_count = training_data_columns_count
         predictor_record.training_data_rows_count = training_data_rows_count
         db.session.commit()
@@ -130,17 +127,23 @@ def learn_process(class_path, engine, context_dump, integration_id,
             **kwargs
         )
 
+        if not ml_handler.generative:
+            if training_data_df is not None and target not in training_data_df.columns:
+                raise Exception(
+                    f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
+
         # create new model
         if base_predictor_id is None:
             ml_handler.create(target, df=training_data_df, args=problem_definition)
 
-        # adjust (partially train) existing model
+        # fine-tune (partially train) existing model
         else:
             # load model from previous version, use it as starting point
             problem_definition['base_model_id'] = base_predictor_id
-            ml_handler.update(df=training_data_df, args=problem_definition)
+            ml_handler.finetune(df=training_data_df, args=problem_definition)
 
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
+        predictor_record.active = set_active
         db.session.commit()
         # if retrain and set_active after success creation
         if set_active is True:
@@ -269,29 +272,6 @@ class BaseMLEngineExec:
     def query_(self, query: ASTNode) -> Response:
         raise Exception('Should not be used')
 
-        """ Intakes a pre-parsed SQL query (via `mindsdb_sql`) and returns the answer given by the ML engine. """
-        statement = query
-
-        if type(statement) == Show:
-            if statement.category.lower() == 'tables':
-                return self.get_tables()
-            else:
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=f"Cant determine how to show '{statement.category}'"
-                )
-            return response
-        elif type(statement) == Select:
-            model_name = statement.from_table.parts[-1]
-            where_data = get_where_data(statement.where)
-            predictions = self.predict(model_name, where_data)
-            return Response(
-                RESPONSE_TYPE.TABLE,
-                data_frame=pd.DataFrame(predictions)
-            )
-        else:
-            raise Exception(f"Query type {type(statement)} not supported")
-
     def learn(
         self, model_name, project_name,
         data_integration_ref=None,
@@ -349,15 +329,17 @@ class BaseMLEngineExec:
             ctx.dump(),
             self.integration_id,
             predictor_record.id,
-            data_integration_ref,
-            fetch_data_query,
-            project_name,
             problem_definition,
-            set_active
+            set_active,
+            data_integration_ref=data_integration_ref,
+            fetch_data_query=fetch_data_query,
+            project_name=project_name
         )
         p.start()
         if join_learn_process is True:
             p.join()
+            predictor_record = db.Predictor.query.get(predictor_record.id)
+            db.session.refresh(predictor_record)
 
         return predictor_record
 
@@ -367,10 +349,17 @@ class BaseMLEngineExec:
         if isinstance(data, dict):
             data = [data]
         df = pd.DataFrame(data)
-        predictor_record = get_model_record(
-            name=model_name, ml_handler_name=self.name, project_name=project_name,
-            version=version
-        )
+        kwargs = {
+            'name': model_name,
+            'ml_handler_name': self.name,
+            'project_name': project_name
+        }
+        if version is None:
+            kwargs['active'] = True
+        else:
+            kwargs['active'] = None
+            kwargs['version'] = version
+        predictor_record = get_model_record(**kwargs)
         if predictor_record is None:
             if version is not None:
                 model_name = f'{model_name}.{version}'
@@ -392,10 +381,24 @@ class BaseMLEngineExec:
             args['dtype_dict'] = predictor_record.dtype_dict
             args['learn_args'] = predictor_record.learn_args
 
+        if self.handler_class.__name__ in ('LangChainHandler',):
+            from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
+            from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+
+            sql_session = SessionController()
+            sql_session.database = 'mindsdb'
+
+            command_executor = ExecuteCommands(sql_session, executor=None)
+
+            args['executor'] = command_executor
+
         try:
             predictions = ml_handler.predict(df, args)
         except Exception as e:
-            msg = f'[{self.name}/{model_name}]: {str(e)}'
+            msg = str(e).strip()
+            if msg == '':
+                msg = e.__class__.__name__
+            msg = f'[{self.name}/{model_name}]: {msg}'
             raise MLEngineException(msg) from e
 
         ml_handler.close()
@@ -415,6 +418,7 @@ class BaseMLEngineExec:
 
     def update(
             self, model_name, project_name, version,
+            base_model_version: int,
             data_integration_ref=None,
             fetch_data_query=None,
             join_learn_process=False,
@@ -424,17 +428,19 @@ class BaseMLEngineExec:
     ):
         # generate new record from latest version as starting point
         project = self.database_controller.get_project(name=project_name)
-        predictor_records = get_model_records(
-            active=None,
-            name=model_name,
-        )
-        predictor_records = [
-            x for x in predictor_records
-            if x.training_stop_at is not None
-        ]
-        predictor_records.sort(key=lambda x: x.training_stop_at, reverse=True)
 
+        search_args = {
+            'active': None,
+            'name': model_name,
+            'status': PREDICTOR_STATUS.COMPLETE
+        }
+        if base_model_version is not None:
+            search_args['version'] = base_model_version
+        predictor_records = get_model_records(**search_args)
+        predictor_records.sort(key=lambda x: x.training_stop_at, reverse=True)
+        predictor_records = [x for x in predictor_records if x.training_stop_at is not None]
         base_predictor_record = predictor_records[0]
+
         learn_args = base_predictor_record.learn_args
         learn_args['using'] = args if not learn_args.get('using', False) else {**learn_args['using'], **args}
 
@@ -470,15 +476,17 @@ class BaseMLEngineExec:
             ctx.dump(),
             self.integration_id,
             predictor_record.id,
-            data_integration_ref,
-            fetch_data_query,
-            project_name,
             predictor_record.learn_args,
             set_active,
             base_predictor_record.id,
+            data_integration_ref=data_integration_ref,
+            fetch_data_query=fetch_data_query,
+            project_name=project_name
         )
         p.start()
         if join_learn_process is True:
             p.join()
+            predictor_record = db.Predictor.query.get(predictor_record.id)
+            db.session.refresh(predictor_record)
 
-        return base_predictor_record
+        return predictor_record

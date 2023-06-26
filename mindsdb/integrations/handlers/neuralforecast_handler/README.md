@@ -12,6 +12,11 @@ Neuralforecast uses fast and accurate deep learning methods.
 These can make accurate forecasts, with little domain knowledge about the problem requires, as they will automatically assign appropriate weights to exogenous variables.
 The ideal use case is forecasting complex time series, such as predicting high-frequency energy prices over the course of each day.
 
+This handler will also be useful when data has a hierarchical structure (for example: you have a series for each region in a certain country).
+Users can supply an optional argument to perform hierarchical reconciliation during forecasting with Nixtla's HierarchicalForecast package.
+Reconciliation may improve forecast accuracy, by accounting for the hierarchical structure in the data.
+You can learn more about this package at https://nixtla.github.io/hierarchicalforecast/
+
 Do not use this integration for non time-series data.
 
 Do not use this integration for short time-series, as they won't have enough data to prevent overfitting.
@@ -33,8 +38,12 @@ Users can specify `train_time` as a USING arg (see example in PR). `train_time` 
 
 Users can define `exogenous_vars` as a USING arg. These are complementary variables in the table that may improve forecast accuracy. Pass this as a list of strings e.g. `USING exogenous_vars=['var_1', 'var_2']`
 
+Users can optionally define a hierarchy to the data, with the "hierarchy" arg.
+The model will reconcile forecasts according to the hierarchy, which may improve their accuracy.
+This is further explained in https://github.com/mindsdb/mindsdb/pull/5605
+
 # Does this integration offer model explainability or insights via the DESCRIBE syntax?
-Not implemented yet.
+Yes - see https://github.com/mindsdb/mindsdb/pull/5445 for an example of how to call the DESCRIBE method.
 
 # Does this integration support fine-tuning pre-existing models (i.e. is the update() method implemented)? Are there any caveats?
 Not implemented yet.
@@ -46,7 +55,7 @@ If users specify a very low training time (below 0.1), the model will switch to 
 While this is much faster, it is less accurate.
 
 # Any directions for future work in subsequent versions of the handler?
-Implement the DESCRIBE and UPDATE methods.
+Implement the UPDATE method.
 
 Implement alternative forecasting models, other than NHITS, from the NeuralForecast package.
 

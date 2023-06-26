@@ -12,6 +12,8 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
 )
 import mindsdb.utilities.hooks as hooks
 from mindsdb.utilities.context import context as ctx
+import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.config import Config
 
 
 @ns_conf.route('/query')
@@ -22,62 +24,67 @@ class Query(Resource):
         query = request.json['query']
         context = request.json.get('context', {})
 
+        if context.get('profiling') is True:
+            profiler.enable()
+
         error_type = None
         error_code = None
         error_text = None
         error_traceback = None
 
-        mysql_proxy = FakeMysqlProxy()
-        mysql_proxy.set_context(context)
-        try:
-            result = mysql_proxy.process_query(query)
+        profiler.set_meta(query=query, api='http', environment=Config().get('environment'))
+        with profiler.Context('http_query_processing'):
+            mysql_proxy = FakeMysqlProxy()
+            mysql_proxy.set_context(context)
+            try:
+                result = mysql_proxy.process_query(query)
 
-            if result.type == SQL_RESPONSE_TYPE.OK:
+                if result.type == SQL_RESPONSE_TYPE.OK:
+                    query_response = {
+                        'type': SQL_RESPONSE_TYPE.OK
+                    }
+                elif result.type == SQL_RESPONSE_TYPE.TABLE:
+                    query_response = {
+                        'type': SQL_RESPONSE_TYPE.TABLE,
+                        'data': result.data,
+                        'column_names': [x['alias'] or x['name'] if 'alias' in x else x['name'] for x in result.columns]
+                    }
+            except SqlApiException as e:
+                # classified error
+                error_type = 'expected'
                 query_response = {
-                    'type': SQL_RESPONSE_TYPE.OK
+                    'type': SQL_RESPONSE_TYPE.ERROR,
+                    'error_code': e.err_code,
+                    'error_message': str(e)
                 }
-            elif result.type == SQL_RESPONSE_TYPE.TABLE:
+
+            except SqlApiUnknownError as e:
+                # unclassified
+                error_type = 'unexpected'
                 query_response = {
-                    'type': SQL_RESPONSE_TYPE.TABLE,
-                    'data': result.data,
-                    'column_names': [x['alias'] or x['name'] if 'alias' in x else x['name'] for x in result.columns]
+                    'type': SQL_RESPONSE_TYPE.ERROR,
+                    'error_code': e.err_code,
+                    'error_message': str(e)
                 }
-        except SqlApiException as e:
-            # classified error
-            error_type = 'expected'
-            query_response = {
-                'type': SQL_RESPONSE_TYPE.ERROR,
-                'error_code': e.err_code,
-                'error_message': str(e)
-            }
 
-        except SqlApiUnknownError as e:
-            # unclassified
-            error_type = 'unexpected'
-            query_response = {
-                'type': SQL_RESPONSE_TYPE.ERROR,
-                'error_code': e.err_code,
-                'error_message': str(e)
-            }
+            except Exception as e:
+                error_type = 'unexpected'
+                query_response = {
+                    'type': SQL_RESPONSE_TYPE.ERROR,
+                    'error_code': 0,
+                    'error_message': str(e)
+                }
+                error_traceback = traceback.format_exc()
+                print(error_traceback)
 
-        except Exception as e:
-            error_type = 'unexpected'
-            query_response = {
-                'type': SQL_RESPONSE_TYPE.ERROR,
-                'error_code': 0,
-                'error_message': str(e)
-            }
-            error_traceback = traceback.format_exc()
-            print(error_traceback)
+            if query_response.get('type') == SQL_RESPONSE_TYPE.ERROR:
+                error_type = 'expected'
+                error_code = query_response.get('error_code')
+                error_text = query_response.get('error_message')
 
-        if query_response.get('type') == SQL_RESPONSE_TYPE.ERROR:
-            error_type = 'expected'
-            error_code = query_response.get('error_code')
-            error_text = query_response.get('error_message')
+            context = mysql_proxy.get_context(context)
 
-        context = mysql_proxy.get_context(context)
-
-        query_response['context'] = context
+            query_response['context'] = context
 
         hooks.after_api_query(
             company_id=ctx.company_id,

@@ -1,2 +1,1 @@
-clickhouse-driver
 clickhouse-sqlalchemy

@@ -1,6 +1,7 @@
 import os
 import json
 import datetime
+from typing import Dict
 
 import numpy as np
 from sqlalchemy import create_engine, types, UniqueConstraint
@@ -14,12 +15,14 @@ Base = declarative_base()
 session, engine = None, None
 
 
-def init():
+def init(connection_str: str = None):
     global Base, session, engine
-    if os.environ['MINDSDB_DB_CON'].startswith('sqlite:'):
-        engine = create_engine(os.environ['MINDSDB_DB_CON'], echo=False)
+    if connection_str is None:
+        connection_str = os.environ['MINDSDB_DB_CON']
+    if connection_str.startswith('sqlite:'):
+        engine = create_engine(connection_str, echo=False)
     else:
-        engine = create_engine(os.environ['MINDSDB_DB_CON'], convert_unicode=True, pool_size=30, max_overflow=200, echo=False)
+        engine = create_engine(connection_str, convert_unicode=True, pool_size=30, max_overflow=200, echo=False)
     session = scoped_session(sessionmaker(bind=engine, autoflush=True))
     Base.query = session.query_property()
 
@@ -85,7 +88,7 @@ class PREDICTOR_STATUS:
     __slots__ = ()
     COMPLETE = 'complete'
     TRAINING = 'training'
-    ADJUSTING = 'adjusting'
+    FINETUNING = 'finetuning'
     GENERATING = 'generating'
     ERROR = 'error'
     VALIDATION = 'validation'
@@ -131,6 +134,16 @@ class Predictor(Base):
     training_phase_total = Column(Integer)
     training_phase_name = Column(String)
 
+    @staticmethod
+    def get_name_and_version(full_name):
+        name_no_version = full_name
+        version = None
+        parts = full_name.split('.')
+        if len(parts) > 1 and parts[-1].isdigit():
+            version = int(parts[-1])
+            name_no_version = '.'.join(parts[:-1])
+        return name_no_version, version
+
 
 class Project(Base):
     __tablename__ = 'project'
@@ -170,24 +183,6 @@ class Integration(Base):
     __table_args__ = (
         UniqueConstraint('name', 'company_id', name='unique_integration_name_company_id'),
     )
-
-
-class Stream(Base):
-    __tablename__ = 'stream'
-    id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
-    stream_in = Column(String, nullable=False)
-    stream_out = Column(String, nullable=False)
-    anomaly_stream = Column(String)
-    integration = Column(String)
-    predictor = Column(String, nullable=False)
-    company_id = Column(Integer)
-    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    created_at = Column(DateTime, default=datetime.datetime.now)
-    type = Column(String, default='unknown')
-    connection_info = Column(Json, default={})
-    learning_params = Column(Json, default={})
-    learning_threshold = Column(Integer, default=0)
 
 
 class File(Base):
@@ -254,12 +249,60 @@ class JobsHistory(Base):
 
     job_id = Column(Integer)
 
+    query_str = Column(String)
     start_at = Column(DateTime)
     end_at = Column(DateTime)
 
     error = Column(String)
     created_at = Column(DateTime, default=datetime.datetime.now)
+    updated_at = Column(DateTime, default=datetime.datetime.now)
 
     __table_args__ = (
         UniqueConstraint('job_id', 'start_at', name='uniq_job_history_job_id_start'),
     )
+
+
+class ChatBots(Base):
+    __tablename__ = 'chat_bots'
+    id = Column(Integer, primary_key=True)
+    company_id = Column(Integer)
+    user_class = Column(Integer, nullable=True)
+
+    name = Column(String, nullable=False)
+    project_id = Column(Integer, nullable=False)
+
+    model_name = Column(String, nullable=False)
+    # If database_id is set we use an API Handler to poll chat messages.
+    database_id = Column(Integer)
+    # If chat_engine is set we use a RealtimeChatHandler to subscribe to chat messages.
+    # TODO(tmichaeldb): Consolidate existing polling logic and realtime chat logic together.
+    chat_engine = Column(String)
+    params = Column(JSON)
+
+    is_running = Column(Boolean, default=True)
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+
+    def as_dict(self) -> Dict:
+        return {
+            'id': self.id,
+            'name': self.name,
+            'project_id': self.project_id,
+            'model_name': self.model_name,
+            'chat_engine': self.chat_engine,
+            'params': self.params,
+            'is_running': self.is_running,
+            'created_at': self.created_at
+        }
+
+
+class ChatBotsHistory(Base):
+    __tablename__ = 'chat_bots_history'
+    id = Column(Integer, primary_key=True)
+    chat_bot_id = Column(Integer)
+    type = Column(String)
+    text = Column(String)
+    user = Column(String)
+    destination = Column(String)
+    sent_at = Column(DateTime, default=datetime.datetime.now)
+    error = Column(String)

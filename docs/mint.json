@@ -348,6 +348,7 @@
       "group": "REST API",
       "pages": [
         "rest/disclaimer",
+        "rest/usage",
         {
           "group": "Endpoints",
           "pages": [

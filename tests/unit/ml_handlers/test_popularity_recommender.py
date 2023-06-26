@@ -33,11 +33,13 @@ class TestPopularityRecommender(BaseExecutorTest):
             return pd.DataFrame(ret.data, columns=columns)
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_popularity_handler(self, mock_handler, interaction_data):
+    def test_popularity_handler(self, mock_handler, lightfm_interaction_data):
 
         # create project
         self.run_sql("create database proj")
-        self.set_handler(mock_handler, name="pg", tables={"df": interaction_data})
+        self.set_handler(
+            mock_handler, name="pg", tables={"df": lightfm_interaction_data}
+        )
 
         # create predictor
         self.run_sql(
@@ -68,4 +70,6 @@ class TestPopularityRecommender(BaseExecutorTest):
         assert result_df.userId.value_counts().isin([10]).all()
 
         # check we have predictions for all user_ids
-        assert set(interaction_data.userId.unique()) == set(result_df.userId.unique())
+        assert set(lightfm_interaction_data.userId.unique()) == set(
+            result_df.userId.unique()
+        )

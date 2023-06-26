@@ -1,6 +1,4 @@
-from collections import namedtuple
 from enum import Enum
-from typing import Dict, List, Optional, Tuple, Union
 
 import lightfm
 import numpy as np
@@ -8,55 +6,36 @@ import pandas as pd
 import scipy as sp
 from pydantic import BaseModel
 
-# possibly redundant
-'''
-def item_mapping(
-		item_df: pd.DataFrame,
-		item_id_column_name,
-		item_description_column_name
-) -> dict:
-	"""
-
-	takes in item metadata and creates a dict with key being mapped against the index and values being
-	a namedtuple containing item id and product name. Creates an easy way to see what was predicted to a given user
-
-	:param item_df:
-	:param item_id_column_name:
-	:param item_description_column_name:
-
-
-	:return dict:
-	"""
-	item_map = {}
-	item_data = namedtuple("ItemData", [item_id_column_name, item_description_column_name])
-
-	for idx, item in enumerate(
-			zip(
-				item_df[item_id_column_name],
-				item_df[item_description_column_name]
-			)
-	):
-		item_map[idx] = item_data._make(item)
-
-	return item_map
-'''
-
 
 def get_user_item_recommendations(
-    n_users: int, n_items: int, args: dict, model: lightfm.LightFM
+    n_users: int, n_items: int, args: dict, item_ids, user_ids, model: lightfm.LightFM
 ):
     """
     gets N user-item recommendations for a given model
     :param n_users:
     :param n_items:
     :param args:
+    :param item_ids:
+    :param user_ids:
     :param model:
     :return:
     """
     # recommend items for each user
 
-    user_idxs = np.concatenate([np.full((n_items,), i) for i in range(0, n_users)])
-    item_idxs = np.concatenate([np.arange(n_items) for i in range(n_users)])
+    if item_ids or user_ids:
+        item_idx = [
+            key for key, val in args["idx_to_item_id_map"].items() if val in item_ids
+        ]
+        user_idx = [
+            key for key, val in args["idx_to_user_id_map"].items() if val in user_ids
+        ]
+
+        user_idxs = np.repeat(user_idx, n_items)
+        item_idxs = np.tile(item_idx, n_users)
+
+    else:
+        user_idxs = np.repeat([i for i in range(0, n_users)], n_items)
+        item_idxs = np.tile([i for i in range(0, n_items)], n_users)
 
     scores = model.predict(user_idxs, item_idxs)
 
@@ -90,7 +69,11 @@ def get_user_item_recommendations(
 
 
 def get_item_item_recommendations(
-    model: lightfm.LightFM, args: dict, item_features=None, N: int = 10
+    model: lightfm.LightFM,
+    args: dict,
+    item_ids: list = None,
+    item_features=None,
+    n_recommendations: int = 10,
 ) -> pd.DataFrame:
     """
     gets similar items to a given item index inside user-item interaction matrix
@@ -99,8 +82,9 @@ def get_item_item_recommendations(
 
     :param args:
     :param model:
+    :param item_ids:
     :param item_features:
-    :param N:
+    :param n_recommendations:
 
     :return:
     """
@@ -109,7 +93,17 @@ def get_item_item_recommendations(
 
     similar_items_dfs = []
 
-    for item_idx, item_id in args["idx_to_item_id_map"].items():
+    idx_to_item_id_map = args["idx_to_item_id_map"]
+
+    if item_ids:
+        # filter out item_ids that are not in the request
+        idx_to_item_id_map = {
+            key: val
+            for key, val in args["idx_to_item_id_map"].items()
+            if val in item_ids
+        }
+
+    for item_idx, item_id in idx_to_item_id_map.items():
         # ensure item_idx is int
         item_idx = int(item_idx)
 
@@ -126,7 +120,7 @@ def get_item_item_recommendations(
         scores /= item_norms
 
         # get the top N items
-        best = np.argpartition(scores, -N)
+        best = np.argpartition(scores, -n_recommendations)
         # sort the scores
 
         rec = sorted(
@@ -136,14 +130,14 @@ def get_item_item_recommendations(
         intermediate_df = (
             pd.DataFrame(rec, columns=["item_idx", "score"])
             .tail(-1)  # remove the item itself
-            .head(N)
+            .head(n_recommendations)
         )
         intermediate_df["item_id_one"] = item_id
         similar_items_dfs.append(intermediate_df)
 
     similar_items_df = pd.concat(similar_items_dfs, ignore_index=True)
     similar_items_df["item_id_two"] = (
-        similar_items_df["item_idx"].astype("str").map(args["idx_to_item_id_map"])
+        similar_items_df["item_idx"].astype("str").map(idx_to_item_id_map)
     )
 
     return similar_items_df[["item_id_one", "item_id_two", "score"]].astype(

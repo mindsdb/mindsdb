@@ -11,11 +11,11 @@ from mindsdb.integrations.handlers.lightfm_handler.helpers import (
 )
 
 
-def test_preprocessing_cf(interaction_data):
+def test_preprocessing_cf(lightfm_interaction_data):
     """Tests helper function for preprocessing"""
 
     rec_preprocessor = RecommenderPreprocessor(
-        interaction_data=interaction_data,
+        interaction_data=lightfm_interaction_data,
         user_id_column_name="userId",
         item_id_column_name="movieId",
     )
@@ -38,7 +38,6 @@ def test_preprocessing_cf(interaction_data):
         .all()
     )
 
-    print("d")
     # check interaction matrix is the expected shape
     assert preprocessed_data.interaction_matrix.shape == (503, 89)
     assert isinstance(preprocessed_data.interaction_matrix, sp.sparse.coo_matrix)
@@ -71,10 +70,12 @@ class TestLightFM(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_collaborative_filter_user_item_recommendation_light_fm_handler(
-        self, mock_handler, interaction_data
+        self, mock_handler, lightfm_interaction_data
     ):
 
-        self.set_handler(mock_handler, name="pg", tables={"df": interaction_data})
+        self.set_handler(
+            mock_handler, name="pg", tables={"df": lightfm_interaction_data}
+        )
 
         # create project
         self.run_sql("create database proj")
@@ -109,10 +110,12 @@ class TestLightFM(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_collaborative_filter_item_item_recommendation_light_fm_handler(
-        self, mock_handler, interaction_data
+        self, mock_handler, lightfm_interaction_data
     ):
 
-        self.set_handler(mock_handler, name="pg", tables={"df": interaction_data})
+        self.set_handler(
+            mock_handler, name="pg", tables={"df": lightfm_interaction_data}
+        )
 
         # create project
         self.run_sql("create database proj")
@@ -147,24 +150,24 @@ class TestLightFM(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_collaborative_filter_user_user_recommendation_light_fm_handler_with_item_data(
-        self, mock_handler, interaction_data
+        self, mock_handler, lightfm_interaction_data
     ):
         ...
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_hybrid_user_item_recommendation_light_fm_handler(
-        self, mock_handler, interaction_data
+        self, mock_handler, lightfm_interaction_data
     ):
         ...
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_hybrid_item_item_recommendation_light_fm_handler(
-        self, mock_handler, interaction_data
+        self, mock_handler, lightfm_interaction_data
     ):
         ...
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_hybrid_user_user_recommendation_light_fm_handler(
-        self, mock_handler, interaction_data
+        self, mock_handler, lightfm_interaction_data
     ):
         ...

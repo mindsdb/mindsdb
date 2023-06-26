@@ -2,7 +2,7 @@ from typing import Dict, Optional
 
 import dill
 import pandas as pd
-from lightfm import LightFM
+from lighftfm import LightFM
 
 from mindsdb.integrations.handlers.lightfm_handler.helpers import (
     ModelParameters,
@@ -77,15 +77,32 @@ class LightFMHandler(BaseMLEngine):
 
         n_users = args["n_users_items"][0]
         n_items = args["n_users_items"][1]
+        item_ids, user_ids = None, None
 
-        if args["recommendation_type"] == "item_item":
-            return get_item_item_recommendations(
-                model=model, args=args, item_features=None, N=args["n_recommendations"]
+        if args["recommendation_type"] == "user_item":
+            if df:
+                n_items = df[args["item_id"]].nunique()
+                n_users = df[args["user_id"]].nunique()
+                item_ids = df[args["item_id"]].unique()
+                user_ids = df[args["user_id"]].unique()
+
+            return get_user_item_recommendations(
+                n_users=n_users,
+                n_items=n_items,
+                args=args,
+                model=model,
+                item_ids=item_ids,
+                user_ids=user_ids,
             )
 
-        elif args["recommendation_type"] == "user_item":
-            return get_user_item_recommendations(
-                n_users=n_users, n_items=n_items, args=args, model=model
+        elif args["recommendation_type"] == "item_item":
+            if df:
+                item_ids = df[args["item_id"]].unique()
+            return get_item_item_recommendations(
+                model=model,
+                args=args,
+                item_ids=item_ids,
+                n_recommendations=args["n_recommendations"],
             )
 
         elif args["recommendation_type"] == "user_user":

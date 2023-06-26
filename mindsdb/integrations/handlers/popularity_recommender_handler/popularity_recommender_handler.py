@@ -8,7 +8,7 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 
 class PopularityRecommenderHandler(BaseMLEngine):
     """
-    Integration with the lightfm Recommender library.
+    Integration with polar based popularity recommender.
     """
 
     name = "popularity-recommender"

@@ -47,15 +47,42 @@ Follow the steps below to connect your MindsDB to Metabase.
 3. Click on _Add database_ in the top right corner.
 4. Fill in the form using the following data:
 
-   ```text
-   Database type: `MySQL`
-   Display name: `MindsDB`
-   Host: `localhost`
-   Port: `47335`
-   Database name: `mindsdb`
-   Username: `mindsdb`
-   Password: *leave it empty*
-   ```
+  <Tabs>
+    <Tab title="Local MindsDB">
+      ```text
+      Database type: `MySQL`
+      Display name: `MindsDB`
+      Host: `localhost`
+      Port: `47335`
+      Database name: `mindsdb`
+      Username: `mindsdb`
+      Password: *leave it empty*
+      ```
+    </Tab>
+    <Tab title="MindsDB Cloud">
+      ```text
+      Database type: `MySQL`
+      Display name: `MindsDB`
+      Host: `cloud.mindsdb.com`
+      Port: `3306`
+      Database name: `mindsdb`
+      Username: `<your MindsDB Cloud username>`
+      Password: `<your MindsDB Cloud password>`
+      ```
+    </Tab>
+    <Tab title="MindsDB Pro">
+      ```text
+      Database type: `MySQL`
+      Display name: `MindsDB`
+      Host: `<dedicated instace ip>`
+      Port: 3306
+      Database name: `mindsdb`
+      Username: `<your MindsDB Cloud username>`
+      Password: `<your MindsDB Cloud password>`
+      ```
+    </Tab>
+  </Tabs>
+  
 
    <p align="center">
      <img src="/assets/metabase_add_database.png" />

@@ -1,22 +1,22 @@
 ---
 title: Creating Predictors in Mongo
-sidebarTitle: Predictors
+sidebarTitle: predictors.insertOne()
 ---
 
-Predictors are the machine learning models that enable us to forecast future data based on the available data. By using the `db.predictors.insert()` method, we create and train predictors in Mongo.
+Predictors are the machine learning models that enable us to forecast future data based on the available data. By using the `db.predictors.insertOne()` method, we create and train predictors in Mongo.
 
-### The `db.predictors.insert()` Method
+## The `db.predictors.insertOne()` Method
 
 ### Description
 
-The `db.predictors.insert()` method creates and trains a new model.
+The `db.predictors.insertOne()` method creates and trains a new model.
 
 ### Syntax
 
 Here is the syntax:
 
 ```sql
-db.predictors.insert({
+db.predictors.insertOne({
      name: "predictor_name",
      predict: "target_column",
      connection: "integration_name",
@@ -44,7 +44,7 @@ Where:
 <Note>
 Checking Predictor Status
 
-After running the `db.predictors.insert()`
+After running the `db.predictors.insertOne()`
 method, execute the `db.predictors.find()` method from the `mindsdb.models`
 collection to check the status of the model.
 
@@ -63,7 +63,7 @@ learning model to predict the rental prices for real estate properties inside
 the dataset.
 
 ```sql
-db.predictors.insert({
+db.predictors.insertOne({
      name: "home_rentals_model",
      predict: "rental_price",
      connection: "mongo_integration",

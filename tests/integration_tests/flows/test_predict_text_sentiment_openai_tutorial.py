@@ -16,6 +16,9 @@ OVERRIDE_CONFIG = {
 API_LIST = ["http", ]
 OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
 
+# make openai handler to use api key
+os.environ["OPENAI_API_KEY"] = OPEN_AI_API_KEY
+
 
 class QueryStorage:
     create_db = """
@@ -36,7 +39,7 @@ FROM mysql_demo_db.amazon_reviews LIMIT 3;
 """
 
     create_engine = """
-CREATE ML_ENGINE openai
+CREATE ML_ENGINE openai2
  FROM openai USING api_key='%s';
     """
 

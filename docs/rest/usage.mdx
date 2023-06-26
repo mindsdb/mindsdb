@@ -1,0 +1,69 @@
+---
+title: REST API Usage Instructions
+sidebarTitle: Usage Instructions
+---
+
+Here is how to connect and use REST API on local MindsDB, MindsDB Cloud, and managed instances.
+
+## Local MindsDB
+
+Here is an example in Python:
+
+```
+import requests
+
+# connect
+url = 'http://127.0.0.1:47334/api/sql/query'
+
+# query
+resp = requests.post(url, json={'query':
+                    'SELECT * FROM example_db.demo_data.home_rentals LIMIT 10;'})
+
+# response
+print(resp.text) # alternative: print(resp.json())
+```
+
+## MindsDB Cloud
+
+Here is an example in Python:
+
+```
+import requests
+
+# connect
+session = requests.Session()
+session.post('https://cloud.mindsdb.com/cloud/login', json={
+    'email': 'martyna@mindsdb.com',
+    'password': 'xxx'
+})
+
+# query
+resp = session.post('https://cloud.mindsdb.com/api/sql/query', json={'query':
+                    'SELECT * FROM example_db.demo_data.home_rentals LIMIT 10;'})
+
+# response
+print(resp.text) # alternative: print(resp.json())
+```
+
+## MindsDB Pro
+
+Here is an example in Python:
+
+```
+import requests
+
+# connect
+session = requests.Session()
+HTTP_API_ROOT = 'https://martyna.managed.mindsdb.com'
+session.post(f'{HTTP_API_ROOT}/api/login', json={
+    'username': 'admin',
+    'password': 'i-0833651c933908af0'
+})
+
+# query
+resp = session.post(f'{HTTP_API_ROOT}/api/sql/query', json={'query':
+                    'SELECT * FROM example_db.demo_data.home_rentals LIMIT 10;'})
+
+# response
+print(resp.text) # alternative: print(resp.json())
+```

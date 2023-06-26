@@ -4,9 +4,10 @@ from flask import request, session
 from flask_restx import Resource
 from flask_restx import fields
 
+from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.namespaces.configs.default import ns_conf
-from mindsdb.utilities.config import Config
 from mindsdb.api.http.utils import http_error
+from mindsdb.utilities.config import Config
 from mindsdb.utilities.log import get_log
 
 
@@ -102,6 +103,7 @@ class StatusRoute(Resource):
         },
         model=ns_conf.model('response_status', {
             'environment': fields.String(description='The name of current environment: cloud, local or other'),
+            'mindsdb_version': fields.String(description='Current version of mindsdb'),
             'auth': fields.Nested(
                 ns_conf.model('response_status_auth', {
                     'confirmed': fields.Boolean(description='is current user autentificated'),
@@ -134,6 +136,7 @@ class StatusRoute(Resource):
                 auth_provider = 'local'
 
         resp = {
+            'mindsdb_version': mindsdb_version,
             'environment': environment,
             'auth': {
                 'confirmed': check_auth(),

@@ -4,6 +4,7 @@ import ast as py_ast
 import pandas as pd
 
 from mindsdb_sql.parser.ast import ASTNode, Select, Insert, Update, Delete
+from mindsdb_sql.parser.ast.select.identifier import Identifier
 
 from mindsdb.integrations.libs.base import BaseHandler
 
@@ -167,11 +168,11 @@ class APIHandler(BaseHandler):
         """
         self._tables[table_name] = table_class
 
-    def _get_table(self, name):
+    def _get_table(self, name: Identifier):
         """
         Check if the table name was added to the the _register_table
         Args:
-            name (str): the table name
+            name (Identifier): the table name
         """
         name = name.parts[-1]
         if name not in self._tables:
@@ -207,7 +208,7 @@ class APIHandler(BaseHandler):
             RESPONSE_TYPE.TABLE
         """
 
-        result = self._get_table(table_name).get_columns()
+        result = self._get_table(Identifier(table_name)).get_columns()
 
         df = pd.DataFrame(result, columns=['Field'])
         df['Type'] = 'str'
@@ -220,10 +221,28 @@ class APIHandler(BaseHandler):
         Returns:
             RESPONSE_TYPE.TABLE
         """
-
         result = list(self._tables.keys())
 
         df = pd.DataFrame(result, columns=['table_name'])
         df['table_type'] = 'BASE TABLE'
 
         return Response(RESPONSE_TYPE.TABLE, df)
+
+
+class APIChatHandler(APIHandler):
+
+    def get_chat_config(self):
+        """Return configuration to connect to chatbot
+
+        Returns:
+            Dict
+        """
+        raise NotImplementedError()
+
+    def get_my_user_name(self) -> list:
+        """Return configuration to connect to chatbot
+
+        Returns:
+            Dict
+        """
+        raise NotImplementedError()

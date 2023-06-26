@@ -1,6 +1,6 @@
 __title__ = 'MindsDB ClickHouse handler'
 __package_name__ = 'mindsdb_clickhouse_handler'
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 __description__ = "MindsDB handler for ClickHouse"
 __author__ = 'MindsDB Inc'
 __github__ = 'https://github.com/mindsdb/mindsdb'

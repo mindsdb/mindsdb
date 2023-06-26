@@ -13,7 +13,24 @@ on:
       - 'README.md'
 
 jobs:
+  code_checking:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - name: Install flake8
+      run: |
+        pip install flake8==5.0.4 pycodestyle==2.9.1
+      shell: bash
+    - name: Static code checking
+      run: |
+        python3 -m flake8
+      shell: bash
   matrix_prep:
+    needs: code_checking
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -48,23 +65,15 @@ jobs:
       env:
         ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
         mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
-    - name: Install dependencies Windows
-      run: |
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          pip install torch==1.7.0+cpu torchvision==0.8.1+cpu -f https://download.pytorch.org/whl/torch_stable.html;
-        fi
-      shell: bash
-      env:
-        CHECK_FOR_UPDATES: False
-    - name: Install lightwood/staging if it's not mindsdb/stable
+    - name: Install staging mdb libraries if it's not mindsdb/stable
       if: ${{ github.ref != 'refs/heads/stable' }}
       run: |
+          pip install git+https://github.com/mindsdb/mindsdb_sql.git@staging --upgrade --no-cache-dir
           pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
           pip uninstall pycodestyle -y && pip install pycodestyle==2.9.1  # temp fix while exist conflict in last version with flake8
           pip install gluonts==0.11.4  # temp fix until next lightwood release (>23.1.2.1)
     - name: Run integration api and flow tests
       run: |
-        python3 -m flake8
 
         if [ "$RUNNER_OS" == "Linux" ]; then
           # Unit tests
@@ -72,7 +81,7 @@ jobs:
           cat mindsdb/interfaces/storage/db.py | grep integration
 
           env PYTHONPATH=./ pytest tests/unit/test_executor.py
-        
+
           # need fix in LW. not working yet 
           env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
           
@@ -89,15 +98,6 @@ jobs:
           # it is too early for such tests
           # env PYTHONPATH=./ pytest tests/unit/test_interfaces_consistency.py
 
-          echo -e "\n===============MySQL Handler===============\n"
-          pytest -svx tests/handler_tests/test_mysql_handler.py
-
-          echo -e "\n===============PostgreSQL Handler===============\n"
-          pytest -svx tests/handler_tests/test_postgres_handler.py
-
-          echo -e "\n===============MariaDB Handler===============\n"
-          pytest -svx tests/handler_tests/test_mariadb_handler.py
-
           # MySQL API
           echo -e "\n===============test MySQL API===============\n"
           pytest -vx tests/integration_tests/flows/test_mysql_api.py
@@ -105,6 +105,9 @@ jobs:
           # MySQL binary API
           echo -e "\n===============test MySQL binary API===============\n"
           pytest -vx -k 'not TestMySqlApi' tests/integration_tests/flows/test_mysql_bin_api.py
+
+          # echo -e "\n===============TS predictions===============\n"
+          pytest -svx tests/integration_tests/flows/test_ts_predictions.py
 
           # HTTP
           echo -e "\n===============test HTTP===============\n"
@@ -123,16 +126,6 @@ jobs:
           # sudo chmod 644 ~/.mindsdb_credentials.json
 
           # export USE_EXTERNAL_DB_SERVER="1"
-
-
-          # # Kafka Stream
-          # echo -e "\n===============\ntest Kafka Stream\n===============\n"
-          # python tests/integration_tests/flows/test_kafka.py
-
-          # # Redis Stream
-          # echo -e "\n===============\ntest Redis Stream\n===============\n"
-          # python tests/integration_tests/flows/test_redis.py
-        
         fi
       shell: bash
       env:

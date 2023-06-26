@@ -1,6 +1,5 @@
 import datetime
 from typing import List
-from copy import deepcopy
 from collections import OrderedDict
 
 import sqlalchemy as sa
@@ -94,6 +93,19 @@ class Project:
             project_name=self.name
         )
 
+    def update_view(self, name: str, query: str):
+        ViewController().update(
+            name,
+            query=query,
+            project_name=self.name
+        )
+
+    def delete_view(self, name: str):
+        ViewController().delete(
+            name,
+            project_name=self.name
+        )
+
     def query_view(self, query: ASTNode) -> ASTNode:
         view_name = query.from_table.parts[-1]
         view_meta = ViewController().get(
@@ -119,7 +131,19 @@ class Project:
         data = []
 
         for predictor_record, integraion_record in query.all():
-            predictor_data = deepcopy(predictor_record.data) or {}
+            predictor_data = predictor_record.data or {}
+            training_time = None
+            if (
+                predictor_record.training_start_at is not None
+                and predictor_record.training_stop_at is None
+                and predictor_record.status != 'error'
+            ):
+                training_time = int((datetime.datetime.now() - predictor_record.training_start_at).total_seconds())
+            elif (
+                predictor_record.training_start_at is not None
+                and predictor_record.training_stop_at is not None
+            ):
+                training_time = int((predictor_record.training_stop_at - predictor_record.training_start_at).total_seconds())
             predictor_meta = {
                 'type': 'model',
                 'id': predictor_record.id,
@@ -140,8 +164,9 @@ class Project:
                 'current_training_phase': predictor_record.training_phase_current,
                 'total_training_phases': predictor_record.training_phase_total,
                 'training_phase_name': predictor_record.training_phase_name,
+                'training_time': training_time
             }
-            if predictor_data is not None and predictor_data.get('accuracies', None) is not None:
+            if predictor_data.get('accuracies', None) is not None:
                 if len(predictor_data['accuracies']) > 0:
                     predictor_meta['accuracy'] = float(np.mean(list(predictor_data['accuracies'].values())))
             data.append({
@@ -163,6 +188,7 @@ class Project:
         )
         data = [{
             'name': view_record.name,
+            'query': view_record.query,
             'metadata': {
                 'type': 'view',
                 'id': view_record.id,
@@ -171,6 +197,24 @@ class Project:
             for view_record in records
         ]
         return data
+
+    def get_view(self, name):
+        view_record = db.session.query(db.View).filter_by(
+            project_id=self.id,
+            company_id=ctx.company_id,
+            name=name
+        ).one_or_none()
+        if view_record is None:
+            return view_record
+        return {
+            'name': view_record.name,
+            'query': view_record.query,
+            'metadata': {
+                'type': 'view',
+                'id': view_record.id,
+                'deletable': True
+            }
+        }
 
     def get_tables(self):
         data = OrderedDict()
@@ -198,8 +242,14 @@ class Project:
             name=table_name
         ).first()
         columns = []
-        if predictor_record is not None and isinstance(predictor_record.dtype_dict, dict):
-            columns = list(predictor_record.dtype_dict.keys())
+        if predictor_record is not None:
+            if isinstance(predictor_record.dtype_dict, dict):
+                columns = list(predictor_record.dtype_dict.keys())
+            elif predictor_record.to_predict is not None:
+                # no dtype_dict, use target
+                columns = predictor_record.to_predict
+                if not isinstance(columns, list):
+                    columns = [columns]
 
         return columns
 

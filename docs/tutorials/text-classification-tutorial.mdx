@@ -63,21 +63,26 @@ CREATE TABLE tweets (
 
 Query OK, 0 rows affected (0.03 sec)
 
-mysql> SHOW TABLES;
+```sql 
+SHOW TABLES;
+```
+
+```sql
 +-----------------------+
 | Tables_in_nlp_mindsdb |
 +-----------------------+
 | tweets                |
 +-----------------------+
 1 row in set (0.00 sec)
-
+```
 ---
 
 - Next grant the user access to the new database table:
 
-'GRANT ALL PRIVILEGES ON `nlp_mindsdb.tweets` TO user@localhost;'
+`GRANT ALL PRIVILEGES ON nlp_mindsdb.tweets TO user@localhost;`
 
 ***output should read:***
+
 `Query OK, 0 rows affected (0.01 sec)`
 
 ---
@@ -94,7 +99,7 @@ This next section will show you how to import this [dataset file](https://raw.gi
 mysql> LOAD DATA LOCAL INFILE '/Users/alissa/Downloads/tweets.csv' INTO TABLE tweets FIELDS TERMINATED BY `,`;
 ```
 
-```
+```sql
 Query OK, 24784 rows affected, 17300 warnings (0.26 sec)
 Records: 26952  Deleted: 0  Skipped: 2168  Warnings: 17300
 ```
@@ -103,16 +108,15 @@ Records: 26952  Deleted: 0  Skipped: 2168  Warnings: 17300
 
 - Go ahead and confirm your import:
 
-`SELECT * FROM tweets LIMIT `0`
+`SELECT * FROM tweets LIMIT 0`
 
 ```sql
-------------------------------------------------------------+
-    -> | id | hate_speech | offensive | neither | tweet                                                                                                                                         |
-    -> +----+-------------+-----------+---------+-----------------------------------------------------------------------------------------------------------------------------------------------+
-    -> |  0 |           0 |         0 |       3 | !!! RT @mayasolovely: As a woman you shouldn't complain about cleaning up your hou |. &amp; as a man you should always take the trash out...
-    '> |  1 |           0 |         3 |       0 | !!!!! RT @mleew17: boy dats cold...tyga dwn bad for cuffin dat hoe in the 1st plac                                                        |
-    '> |  2 |           0 |         3 |       0 | !!!!!!! RT @UrKindOfBrand Dawg!!!! RT @80sbaby4life: You ever
-    '> +----+-------------+-----------+---------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+| id | hate_speech | offensive | neither | tweet |
++----+-------------+-----------+---------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+|  0 |           0 |         0 |       3 | !!! RT @mayasolovely: As a woman you shouldn't...            |
+|  1 |           0 |         3 |       0 | !!!!! RT @mleew17: boy dats cold..                           |
+|  2 |           0 |         3 |       0 | !!!!!!! RT @UrKindOfBrand Dawg!!!! RT @80sbaby4life: You ever|
++----+-------------+-----------+---------+-----------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 ---
 
@@ -151,11 +155,12 @@ LIMIT 10;
 
 ***your output will look like this, but with 10 rows***
 
+```sql
 | id  | hate_speech | offensive | neither | tweet |
 | --- | ----------- | --------- | ------- | ----- |
 | 0 | 0 | 0 | 3 | !!! RT @mayasolovely: As a woman you shouldn't complain about cleaning up your house. &amp; as a man you should always take the trash out... |
 | 1 | 0 | 3 | 0 | !!!!! RT @mleew17: boy dats cold...tyga dwn bad for cuffin dat... |
-
+```
 ---
 
 ## Creating and Training a Predictor
@@ -178,11 +183,12 @@ LIMIT 3;
 ```
 ***your output will look like this, but with 10 rows***
 
+```sql
 | id  | hate_speech | offensive | neither | tweet |
 | --- | ----------- | --------- | ------- | ----- |
 | 0 | 0 | 0 | 3 | !!! RT @mayasolovely: As a woman you shouldn't complain about cleaning up your house. &amp; as a man you should always take the trash out... |
 | 1 | 0 | 3 | 0 | !!!!! RT @mleew17: boy dats cold...tyga dwn bad for cuffin dat h** in the 1st place!! |
-
+```
 ---
 
 - Now, it's time to create your prediction model!
@@ -198,8 +204,9 @@ input_column = 'tweet',
 labels = ['hate_speech', 'neither', 'offensive'];
 ```
 
+```sql
 | hf_test | huggingface | mindsdb | true | 1 | generating | [NULL] | PRED | up_to_date | 23.3.4.0 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'task': 'text-classification', 'model_name': 'Hate-speech-CNERG/bert-base-uncased-hatexplain', 'input_column': 'tweet', 'labels': ['hate_speech', 'neither', 'offensive']}}  | [NULL] |
-
+```
 
 ## Checking The Status of a Predictor
 
@@ -210,9 +217,9 @@ SELECT *
 FROM mindsdb.models 
 WHERE name = 'hf_test';
 ```
-
+```sql
 | hf_test | huggingface | mindsdb | 1 | complete | [NULL] | PRED | up_to_date | 23.3.5.0 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'task': 'text-classification', 'model_name': 'Hate-speech-CNERG/bert-base-uncased-hatexplain', 'input_column': 'tweet', 'labels': ['hate_speech', 'neither', 'offensive']}} | [NULL] | [NULL] | [NULL] | [NULL] | 2023-03-29 17:15:38.683663 |
-
+```
 ---
 
 `DESCRIBE PREDICTOR mindsdb.hf_test;`

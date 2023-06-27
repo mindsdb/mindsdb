@@ -5,11 +5,11 @@ import pandas as pd
 from lighftfm import LightFM
 
 from mindsdb.integrations.handlers.lightfm_handler.helpers import (
-    ModelParameters,
     RecommenderPreprocessor,
     get_item_item_recommendations,
     get_user_item_recommendations,
 )
+from mindsdb.integrations.handlers.lightfm_handler.settings import ModelParameters
 from mindsdb.integrations.libs.base import BaseMLEngine
 
 

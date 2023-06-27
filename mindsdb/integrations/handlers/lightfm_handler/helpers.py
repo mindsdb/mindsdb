@@ -175,12 +175,6 @@ def get_item_item_recommendations(
     )
 
 
-class ModelParameters(BaseModel):
-    learning_rate: float = 0.05
-    loss: str = "warp"
-    epochs: int = 10
-
-
 class RecommenderType(Enum):
     cf = 1
     hybrid = 2

@@ -1,4 +1,4 @@
-from typing import Text, List, Any, Optional
+from typing import Text, List, Dict, Any, Optional
 
 from mindsdb_sql.parser import ast
 
@@ -11,6 +11,12 @@ class INSERTQueryParser:
         self.supported_columns = supported_columns
         self.mandatory_columns = mandatory_columns
         self.all_mandatory = all_mandatory
+
+    def parse_query(self) -> Dict[Text, Any]:
+        columns = self.parse_columns()
+        values = self.parse_values()
+
+        return dict(zip(columns, values))
 
     def parse_columns(self):
         columns = self.query.columns

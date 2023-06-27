@@ -98,11 +98,11 @@ class LightFMHandler(BaseMLEngine):
         elif args["recommendation_type"] == "item_item":
             if df:
                 item_ids = df[args["item_id"]].unique()
+
             return get_item_item_recommendations(
                 model=model,
                 args=args,
                 item_ids=item_ids,
-                n_recommendations=args["n_recommendations"],
             )
 
         elif args["recommendation_type"] == "user_user":

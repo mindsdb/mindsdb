@@ -693,7 +693,7 @@ class ExecuteCommands:
 
         # try full name
         attribute = None
-        model_info = self._get_model_info(statement.value)
+        model_info = self._get_model_info(statement.value, except_absent=False)
         if model_info is None:
             parts = statement.value.parts.copy()
             attribute = parts.pop(-1)
@@ -721,7 +721,13 @@ class ExecuteCommands:
         if len(identifier.parts) == 1:
             identifier.parts = [self.session.database, identifier.parts[0]]
 
-        database_name, model_name, model_version, _describe = resolve_model_identifier(identifier)
+        database_name, model_name, model_version = resolve_model_identifier(identifier)
+
+        if model_name is None:
+            if except_absent:
+                raise Exception(f'Model not found: {identifier.to_string()}')
+            else:
+                return
 
         model_record = get_model_record(
             name=model_name,

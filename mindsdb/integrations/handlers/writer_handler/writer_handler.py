@@ -67,15 +67,15 @@ class WriterHandler(BaseMLEngine):
                 )
 
             chromadb_folder_name = args["chromadb_folder_name"]
+            # create folder for chromadb to persist embeddings
             args["chromadb_storage_path"] = self.engine_storage.folder_get(
                 chromadb_folder_name
             )
             ingestor = Ingestor(df=df, args=args)
             ingestor.embeddings_to_vectordb()
 
-            # Persist changes to chromadb do disk
-            # not sure if this is required?
-            # self.engine_storage.folder_sync(args["chromadb_storage_path"])
+            # for mindsdb cloud, store data in shared file system for cloud version of mindsdb to make it be usable by all mindsdb nodes
+            self.engine_storage.folder_sync(chromadb_folder_name)
 
         else:
             logger.info("Skipping embeddings and ingestion into Chroma VectorDB")

@@ -475,6 +475,28 @@ class TestProjectStructure(BaseExecutorDummyML):
                 '''
             )
 
+    def test_describe(self):
+        self.run_sql(
+            '''
+                CREATE PREDICTOR mindsdb.pred
+                PREDICT p
+                using engine='dummy_ml',
+                join_learn_process=true
+            '''
+        )
+        ret = self.run_sql('describe mindsdb.pred')
+        assert ret['tables'][0] == ['info']
+
+        ret = self.run_sql('describe pred')
+        assert ret['tables'][0] == ['info']
+
+        ret = self.run_sql('describe mindsdb.pred.info')
+        assert ret['type'][0] == 'dummy'
+
+        ret = self.run_sql('describe pred.info')
+        assert ret['type'][0] == 'dummy'
+
+
 class TestJobs(BaseExecutorDummyML):
 
     def run_sql(self, sql, throw_error=True, database='mindsdb'):

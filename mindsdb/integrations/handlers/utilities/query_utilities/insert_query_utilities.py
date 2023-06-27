@@ -27,6 +27,9 @@ class INSERTQueryParser:
         self.all_mandatory = all_mandatory
 
     def parse_query(self) -> List[Dict[Text, Any]]:
+        """
+        Parses a SQL INSERT statement into its components: columns, values and returns a list of dictionaries with the values to insert.
+        """
         columns = self.parse_columns()
         values = self.parse_values()
 
@@ -40,6 +43,9 @@ class INSERTQueryParser:
         return values_to_insert
 
     def parse_columns(self):
+        """
+        Parses the columns in the query. Raises an exception if the columns are not supported or if mandatory columns are missing.
+        """
         columns = [col.name for col in self.query.columns]
 
         if self.supported_columns:
@@ -60,4 +66,7 @@ class INSERTQueryParser:
         return columns
 
     def parse_values(self):
+        """
+        Parses the values in the query.
+        """
         return self.query.values

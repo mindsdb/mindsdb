@@ -1,5 +1,5 @@
 # Mendeley API Handler
-This handler integrates with the Mendeley API
+This handler integrates with the Mendeley API.
 
 ### Connect to the Mendeley API
 We start by creating a database to connect to the Mendeley API. In order to do that we need the client id and client secret that are created after registering an application at https://dev.mendeley.com/myapps.html . More information on the matter can be found at https://dev.mendeley.com/reference/topics/application_registration.html .
@@ -16,7 +16,7 @@ WITH
 
 ### Search for documents
 Using the Mendeley Handler you can find information about documents of your interest such as a document's id, title, type, source, year, identifiers, keywords, link and authors.
-In order to conduct your search you need a number of paremeters. The supported parameters are:
+In order to conduct your search you can choose from a number of supported parameters. Those parameters are:
 
 ### First category of parameters
 
@@ -43,11 +43,11 @@ In order to conduct your search you need a number of paremeters. The supported p
 * id – the ID of the document to get
 
 
-The first category of parameters is not considered very specific compared to the other two, so the use of parameters from only that category may result in a document catalog and not a single document. If one is in need of information about a specific document and can use parameters from many categories, it is in his best interest to use the parameters of the second or third category, since they return the most specific result, a single document (provided the validity of the parameters and the existance of the document in mendeley catalogs)
+The first category of parameters is not considered very specific compared to the other two, so the use of parameters from only that category may result in a document catalog and not a single document. If one is in need of information about a specific document and can use parameters from many categories, it is in his best interest to use those of the second or third category, since they return the most specific result, a single document (provided the validity of the parameters and the existence of the document in mendeley catalogs)
 
 ### Fields returned
 
-Through the use of the handler one hs access to a document's:
+Through the use of the handler one has access to a document's:
 
   * title
   * type
@@ -64,11 +64,11 @@ Through the use of the handler one hs access to a document's:
   * link
   * id
 
-Of course through the use of SELECT, one can choose which fields to display.
+Of course through the use of SELECT, one can choose what fields to display.
 
 ### Examples
 
-If using parameters form the first category, since the result may not be a single document but more, one can use LIMIT to specify the number of documents to return. The default number of documents returned is 30.
+If using parameters from the first category, since the result may not be a single document but more, one can use LIMIT to specify the number of documents to return. The default number of documents returned is 30.
 
 ```
 SELECT *

@@ -33,6 +33,6 @@ pyOpenSSL >= 22.0.0
 pydateinfer==0.3.0
 pyarrow >= 10.0.1, < 10.1.0
 dataprep_ml
-grpcio-tools
 python-magic >= 0.4.27
 openpyxl >= 3.1.1
+slack_sdk

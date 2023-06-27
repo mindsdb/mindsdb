@@ -20,6 +20,10 @@ The required arguments to establish a connection are as follows:
 Please follow [this link](https://docs.influxdata.com/influxdb/cloud/security/tokens/create-token/#create-a-token-in-the-influxdb-ui) to generate token for accessing InfluxDB API.
 </Tip>
 
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/influxdb_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
 ## Usage
 
 In order to make use of this handler and connect to the InfluxDB database in MindsDB, the following syntax can be used:

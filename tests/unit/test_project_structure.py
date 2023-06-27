@@ -70,7 +70,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         # -- create model --
         ret = self.run_sql(
             '''
-                CREATE PREDICTOR proj.task_model
+                CREATE model proj.task_model
                 from pg (select * from tasks)
                 PREDICT a
                 using engine='dummy_ml',
@@ -297,7 +297,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         # ----------------------------------------------------
 
         # drop predictor and check model is deleted and no versions
-        self.run_sql('drop predictor proj.task_model')
+        self.run_sql('drop model proj.task_model')
         ret = self.run_sql('select * from proj.models')
         assert len(ret) == 0
 
@@ -323,7 +323,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         # -- create model --
         self.run_sql(
             '''
-                CREATE PREDICTOR mindsdb.task_model
+                CREATE model mindsdb.task_model
                 from mindsdb (select * from vtasks)
                 PREDICT a
                 using engine='dummy_ml'
@@ -349,7 +349,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         # -- create model --
         self.run_sql(
             '''
-                CREATE PREDICTOR mindsdb.task_model
+                CREATE model mindsdb.task_model
                 PREDICT a
                 using engine='dummy_ml',
                 join_learn_process=true
@@ -374,7 +374,7 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         self.run_sql(
             '''
-                CREATE PREDICTOR mindsdb.pred
+                CREATE model mindsdb.pred
                 PREDICT p
                 using engine='dummy_ml',
                 join_learn_process=true
@@ -474,6 +474,28 @@ class TestProjectStructure(BaseExecutorDummyML):
                        error=1
                 '''
             )
+
+    def test_describe(self):
+        self.run_sql(
+            '''
+                CREATE model mindsdb.pred
+                PREDICT p
+                using engine='dummy_ml',
+                join_learn_process=true
+            '''
+        )
+        ret = self.run_sql('describe mindsdb.pred')
+        assert ret['tables'][0] == ['info']
+
+        ret = self.run_sql('describe pred')
+        assert ret['tables'][0] == ['info']
+
+        ret = self.run_sql('describe mindsdb.pred.info')
+        assert ret['type'][0] == 'dummy'
+
+        ret = self.run_sql('describe pred.info')
+        assert ret['type'][0] == 'dummy'
+
 
 class TestJobs(BaseExecutorDummyML):
 

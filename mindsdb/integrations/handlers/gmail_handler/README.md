@@ -68,7 +68,9 @@ The returned result should have ROWs like this,
 where
 * query - The search term. The query parameter supports all the search terms we can use with gmail. For more details please check [this link](https://support.google.com/mail/answer/7190)
 * label_ids - A comma separated string of labels to search for. E.g. "INBOX,UNREAD" will search for unread emails in inbox, "SENT" will search for emails in the sent folder.
-* include_spam_trash - BOOLEAN (TRUE / FALSE). By default, it is FALSE. If included, the search will cover the SPAM and TRASH folders.
+* include_spam_trash - BOOLEAN (TRUE / FALSE). By default it is FALSE. If included, the search will cover the SPAM and TRASH folders.
+* include_attachments - BOOLEAN (TRUE / FALSE). By default it is FALSE. If included, the search will include emails with attachments.
+
 
 ## Writing Emails
 
@@ -125,3 +127,43 @@ SELECT h.PRED, h.PRED_explain, t.text_spammy AS input_text
 FROM mindsdb.emails_text AS t
 JOIN mindsdb.spam_classifier AS h;
 ~~~~
+
+## Find the email sentiment
+First create the model to find the sentiment of the email:
+~~~~sql
+CREATE MODEL email_sentiment_classifier
+PREDICT sentiment
+USING engine='huggingface',
+  model_name= 'cardiffnlp/twitter-roberta-base-sentiment',
+  input_column = 'email',
+  labels=['negative','neutral','positive'];
+~~~~
+
+Then create a view of the email table that contains the snippet or the body of the email.For example by using the snippet:
+~~~~sql
+CREATE VIEW mindsdb.emails_text AS(
+    SELECT snippet AS email
+    FROM mindsdb_gmail.emails
+)
+
+~~~~
+Finally, you can use the model to predict the sentiment of the email:
+~~~~sql
+SELECT input.email , model.sentiment
+FROM  mindsdb.emails_text AS input
+JOIN email_sentiment_classifier AS model;
+~~~~
+
+## Delete emails
+You can delete emails by using the following query:
+~~~~sql
+DELETE FROM mindsdb_gmail.emails
+WHERE message_id = '187cbdd861350934d';
+~~~~
+
+# Update email labels
+You can update the labels of an email by using the following query:
+~~~~sql
+UPDATE mindsdb_gmail.emails
+set addLabel="SPAM",removeLabel = "UNREAD"
+WHERE message_id = '187cbdd861350934d';

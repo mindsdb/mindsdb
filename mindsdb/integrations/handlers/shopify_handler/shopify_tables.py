@@ -6,6 +6,7 @@ from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
+from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilities import INSERTQueryParser
 
 
 class ProductsTable(APITable):
@@ -99,6 +100,31 @@ class CustomersTable(APITable):
 
         return customers_df
 
+    def insert(self, query: ast.Insert) -> None:
+        """Inserts data into the Shopify "POST /customers" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Insert
+           Given SQL INSERT query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        insert_statement_parser = INSERTQueryParser(
+            query,
+            supported_columns=['first_name', 'last_name'],
+            mandatory_columns=['first_name', 'last_name']
+        )
+        values_to_insert = insert_statement_parser.parse_query()
+        return values_to_insert
+
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_customers(limit=1)).columns.tolist()
 
@@ -107,6 +133,7 @@ class CustomersTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         customers = shopify.Customer.find(**kwargs)
         return [customer.to_dict() for customer in customers]
+
 
 
 class OrdersTable(APITable):

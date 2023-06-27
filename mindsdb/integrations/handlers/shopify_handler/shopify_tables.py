@@ -1,6 +1,6 @@
 import shopify
 import pandas as pd
-from typing import Text, List, Dict
+from typing import Text, List, Dict, Any
 
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
@@ -122,8 +122,8 @@ class CustomersTable(APITable):
             supported_columns=['first_name', 'last_name'],
             mandatory_columns=['first_name', 'last_name']
         )
-        values_to_insert = insert_statement_parser.parse_query()
-        return values_to_insert
+        customer_data = insert_statement_parser.parse_query()
+        self.create_customers(customer_data)
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_customers(limit=1)).columns.tolist()

@@ -188,7 +188,8 @@
             "data-integrations/trino",
             "data-integrations/vertica",
             "data-integrations/vitess",
-            "data-integrations/yugabytedb"
+            "data-integrations/yugabytedb",
+            "data-integrations/amazon-aurora"
           ]
         }
       ]

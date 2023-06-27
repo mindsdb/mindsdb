@@ -123,8 +123,9 @@ class CustomersTable(APITable):
         """
         insert_statement_parser = INSERTQueryParser(
             query,
-            supported_columns=['first_name', 'last_name'],
-            mandatory_columns=['first_name', 'last_name']
+            supported_columns=['first_name', 'last_name', 'email', 'phone', 'tags', 'currency'],
+            mandatory_columns=['first_name', 'last_name', 'email', 'phone'],
+            all_mandatory=False
         )
         customer_data = insert_statement_parser.parse_query()
         self.create_customers(customer_data)

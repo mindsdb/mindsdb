@@ -2,7 +2,7 @@ from typing import Text, List, Dict, Any, Optional
 
 from mindsdb_sql.parser import ast
 
-from .exceptions import UnsupportedColumnException, MandatoryColumnException
+from .exceptions import UnsupportedColumnException, MandatoryColumnException, ColumnCountMismatchException
 
 
 class INSERTQueryParser:
@@ -12,11 +12,18 @@ class INSERTQueryParser:
         self.mandatory_columns = mandatory_columns
         self.all_mandatory = all_mandatory
 
-    def parse_query(self) -> Dict[Text, Any]:
+    def parse_query(self) -> List[Dict[Text, Any]]:
         columns = self.parse_columns()
         values = self.parse_values()
 
-        return dict(zip(columns, values))
+        values_to_insert = []
+        for value in values:
+            if len(columns) != len(value):
+                raise ColumnCountMismatchException("Number of columns does not match the number of values")
+            else:
+                values_to_insert.append(dict(zip(columns, value)))
+
+        return values_to_insert
 
     def parse_columns(self):
         columns = [col.name for col in self.query.columns]

@@ -6,6 +6,20 @@ from .exceptions import UnsupportedColumnException, MandatoryColumnException, Co
 
 
 class INSERTQueryParser:
+    """
+    Parses a INSERT query into its component parts.
+
+    Parameters
+    ----------
+    query : ast.Insert
+        Given SQL INSERT query.
+    supported_columns : Optional[List[Text]]
+        List of columns supported by the table.
+    mandatory_columns : Optional[List[Text]]
+        List of columns that must be present in the query.
+    all_mandatory : Optional[Any]
+        Whether all mandatory columns must be present in the query. If False, only one of the mandatory columns must be present.
+    """
     def __init__(self, query: ast.Insert, supported_columns: Optional[List[Text]] = None, mandatory_columns: Optional[List[Text]] = None, all_mandatory: Optional[Any] = True):
         self.query = query
         self.supported_columns = supported_columns

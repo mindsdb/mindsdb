@@ -13,11 +13,11 @@ class INSERTQueryParser:
     ----------
     query : ast.Insert
         Given SQL INSERT query.
-    supported_columns : Optional[List[Text]]
+    supported_columns : List[Text], Optional
         List of columns supported by the table.
-    mandatory_columns : Optional[List[Text]]
+    mandatory_columns : List[Text], Optional
         List of columns that must be present in the query.
-    all_mandatory : Optional[Any]
+    all_mandatory : Optional[Any], Optional (default=True)
         Whether all mandatory columns must be present in the query. If False, only one of the mandatory columns must be present.
     """
     def __init__(self, query: ast.Insert, supported_columns: Optional[List[Text]] = None, mandatory_columns: Optional[List[Text]] = None, all_mandatory: Optional[Any] = True):

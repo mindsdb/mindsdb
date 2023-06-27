@@ -409,7 +409,7 @@ class ModelController():
         return last_version + 1
 
     def prepare_finetune_statement(self, statement, database_controller):
-        project_name, model_name, model_version, _describe = resolve_model_identifier(statement.name)
+        project_name, model_name, model_version = resolve_model_identifier(statement.name)
         data_integration_ref, fetch_data_query = self._get_data_integration_ref(statement, database_controller)
 
         set_active = True

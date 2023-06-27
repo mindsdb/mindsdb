@@ -57,9 +57,9 @@ class PopularityRecommenderHandler(BaseMLEngine):
 
         global_popularity = [*popularity.values()][1]
 
-        if df:
+        if df is not None:
             # get recommendations for specific users if specified
-            user_ids = df[args["user_id"]].unique().to_list()
+            user_ids = df[args["user_id"]].unique().tolist()
 
             interaction_data = pl.from_pandas(interaction).filter(
                 pl.col(args["user_id"]).is_in(user_ids)

@@ -2,7 +2,9 @@ from typing import Dict, Optional
 
 import dill
 import pandas as pd
-from lighftfm import LightFM
+from lightfm import LightFM
+from lightfm.cross_validation import random_train_test_split
+from lightfm.evaluation import auc_score, precision_at_k, recall_at_k
 
 from mindsdb.integrations.handlers.lightfm_handler.helpers import (
     RecommenderPreprocessor,
@@ -43,28 +45,53 @@ class LightFMHandler(BaseMLEngine):
             threshold=args["threshold"],
         )
 
+        # todo update imports once merged into dataprep_ml
         # preprocess data
         preprocessed_data = rec_preprocessor.preprocess()
 
         args["n_users_items"] = rec_preprocessor.n_users_items
 
-        # get idx to item_id and user_id maps
-        args["idx_to_item_id_map"] = preprocessed_data.idx_item_map
-        args["idx_to_user_id_map"] = preprocessed_data.idx_user_map
+        # get item idx to id and user idx to id maps
+        args["item_idx_to_id_map"] = preprocessed_data.idx_item_map
+        args["user_idx_to_id_map"] = preprocessed_data.idx_user_map
 
-        # todo train/test split
+        # get item_id to idx and user_id to idx maps
+        args["item_id_to_idx_map"] = dict(
+            zip(args["item_idx_to_id_map"].values(), args["item_idx_to_id_map"].keys())
+        )
+        args["user_id_to_idx_map"] = dict(
+            zip(args["user_idx_to_id_map"].values(), args["user_idx_to_id_map"].keys())
+        )
+
+        # run evaluation if specified
+        if args.get("evaluate", False):
+            train, test = random_train_test_split(
+                preprocessed_data.interaction_matrix,
+                test_percentage=0.2,
+                random_state=42,
+            )
+            model = LightFM(
+                learning_rate=model_parameters.learning_rate,
+                loss=model_parameters.loss,
+                random_state=42,
+            )
+
+            model.fit(train, epochs=model_parameters.epochs)
+
+            evaluation_metrics = dict(
+                auc=auc_score(model, test, train).mean(),
+                precision=precision_at_k(model, test, train).mean(),
+                recall=recall_at_k(model, test, train).mean(),
+            )
+            self.model_storage.json_set("evaluation_metrics", evaluation_metrics)
 
         # train model
-
         model = LightFM(
             learning_rate=model_parameters.learning_rate,
             loss=model_parameters.loss,
             random_state=42,
         )
         model.fit(preprocessed_data.interaction_matrix, epochs=model_parameters.epochs)
-
-        # todo evaluate model
-        # todo check and return precision@k
 
         self.model_storage.file_set("model", dill.dumps(model))
         self.model_storage.json_set("args", args)
@@ -80,11 +107,11 @@ class LightFMHandler(BaseMLEngine):
         item_ids, user_ids = None, None
 
         if args["recommendation_type"] == "user_item":
-            if df:
+            if df is not None:
                 n_items = df[args["item_id"]].nunique()
                 n_users = df[args["user_id"]].nunique()
-                item_ids = df[args["item_id"]].unique()
-                user_ids = df[args["user_id"]].unique()
+                item_ids = df[args["item_id"]].unique().tolist()
+                user_ids = df[args["user_id"]].unique().tolist()
 
             return get_user_item_recommendations(
                 n_users=n_users,
@@ -96,8 +123,8 @@ class LightFMHandler(BaseMLEngine):
             )
 
         elif args["recommendation_type"] == "item_item":
-            if df:
-                item_ids = df[args["item_id"]].unique()
+            if df is not None:
+                item_ids = df[args["item_id"]].unique().tolist()
 
             return get_item_item_recommendations(
                 model=model,

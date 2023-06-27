@@ -364,9 +364,7 @@ network rather than a simple logistic regression.
 You can check the model status using this query:
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name='byom_ray_serve_nlp';
+DESCRIBE byom_ray_serve_nlp;
 ```
 
 Once the status of the predictor has a value of `trained`, you can fetch

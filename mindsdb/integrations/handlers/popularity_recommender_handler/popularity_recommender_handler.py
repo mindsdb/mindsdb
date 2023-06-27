@@ -1,5 +1,6 @@
 from typing import Dict, Optional
 
+import dill
 import pandas as pd
 import polars as pl
 
@@ -23,14 +24,16 @@ class PopularityRecommenderHandler(BaseMLEngine):
 
         args = args["using"]
 
-        data = pl.from_pandas(df)
+        interaction_data = pl.from_pandas(df)
 
         args["ave_per_item_user"] = (
-            data.get_column(args["user_id"]).value_counts().mean()["counts"][0]
+            interaction_data.get_column(args["user_id"])
+            .value_counts()
+            .mean()["counts"][0]
         )
 
         popularity = (
-            data.get_column(args["item_id"])
+            interaction_data.get_column(args["item_id"])
             .value_counts()
             .sort("counts", descending=True)
             .get_column(args["item_id"])
@@ -42,19 +45,29 @@ class PopularityRecommenderHandler(BaseMLEngine):
             .to_dict(orient="list")
         )
 
-        # return popularity, args
-
+        self.model_storage.file_set("interaction", dill.dumps(df))
         self.model_storage.json_set("popularity", popularity)
         self.model_storage.json_set("args", args)
 
-    def predict(self, data=None, args: Optional[dict] = None):
+    def predict(self, df=None, args: Optional[dict] = None):
 
         args = self.model_storage.json_get("args")
         popularity = self.model_storage.json_get("popularity")
+        interaction = dill.loads(self.model_storage.file_get("interaction"))
 
         global_popularity = [*popularity.values()][1]
 
-        interaction_data = pl.from_pandas(data)
+        if df:
+            # get recommendations for specific users if specified
+            user_ids = df[args["user_id"]].unique().to_list()
+
+            interaction_data = pl.from_pandas(interaction).filter(
+                pl.col(args["user_id"]).is_in(user_ids)
+            )
+
+        else:
+            # get recommendations for all users
+            interaction_data = pl.from_pandas(interaction)
 
         # aggregate over user
         interacted_items = (

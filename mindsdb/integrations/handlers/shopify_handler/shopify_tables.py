@@ -134,6 +134,14 @@ class CustomersTable(APITable):
         customers = shopify.Customer.find(**kwargs)
         return [customer.to_dict() for customer in customers]
 
+    def create_customers(self, customer_data: List[Dict[Text, Any]]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for customer in customer_data:
+            created_customer = shopify.Customer.create(customer)
+            if 'id' not in created_customer.to_dict():
+                raise Exception('Customer creation failed')
 
 
 class OrdersTable(APITable):

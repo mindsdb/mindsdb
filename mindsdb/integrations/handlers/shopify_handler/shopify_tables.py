@@ -8,6 +8,10 @@ from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilities import INSERTQueryParser
 
+from mindsdb.utilities.log import get_log
+
+logger = get_log("integrations.shopify_handler")
+
 
 class ProductsTable(APITable):
     """The Shopify Products Table implementation"""
@@ -142,6 +146,8 @@ class CustomersTable(APITable):
             created_customer = shopify.Customer.create(customer)
             if 'id' not in created_customer.to_dict():
                 raise Exception('Customer creation failed')
+            else:
+                logger.info(f'Customer {created_customer.to_dict()["id"]} created')
 
 
 class OrdersTable(APITable):

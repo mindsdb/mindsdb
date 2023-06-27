@@ -19,7 +19,7 @@ class INSERTQueryParser:
         return dict(zip(columns, values))
 
     def parse_columns(self):
-        columns = self.query.columns
+        columns = [col.name for col in self.query.columns]
 
         if self.supported_columns:
             if not set(columns).issubset(self.supported_columns):
@@ -36,7 +36,7 @@ class INSERTQueryParser:
                     missing_mandatory_columns = set(self.mandatory_columns).difference(columns)
                     raise MandatoryColumnException(f"Mandatory columns missing: {', '.join(missing_mandatory_columns)}")
 
-        return self.query.columns
+        return columns
 
     def parse_values(self):
         return self.query.values

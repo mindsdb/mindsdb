@@ -2,45 +2,8 @@ import time
 from unittest.mock import patch
 
 import pandas as pd
-import scipy as sp
 from mindsdb_sql import parse_sql
 from unit.executor_test_base import BaseExecutorTest
-
-from mindsdb.integrations.handlers.lightfm_handler.helpers import (
-    RecommenderPreprocessor,
-)
-
-
-def test_preprocessing_cf(lightfm_interaction_data):
-    """Tests helper function for preprocessing"""
-
-    rec_preprocessor = RecommenderPreprocessor(
-        interaction_data=lightfm_interaction_data,
-        user_id_column_name="userId",
-        item_id_column_name="movieId",
-    )
-
-    preprocessed_data = rec_preprocessor.preprocess()
-
-    # check ids are int64
-    assert (
-        preprocessed_data.interaction_df[
-            [rec_preprocessor.user_id_column_name, rec_preprocessor.item_id_column_name]
-        ]
-        .dtypes[preprocessed_data.interaction_df.dtypes == "int64"]
-        .all()
-    )
-
-    # check interaction are equal to 1 or -1 e.g. positive or negative
-    assert (
-        preprocessed_data.interaction_df["interaction"]
-        .apply(lambda x: x == -1 or x == 1)
-        .all()
-    )
-
-    # check interaction matrix is the expected shape
-    assert preprocessed_data.interaction_matrix.shape == (503, 89)
-    assert isinstance(preprocessed_data.interaction_matrix, sp.sparse.coo_matrix)
 
 
 class TestLightFM(BaseExecutorTest):

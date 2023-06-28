@@ -2,12 +2,12 @@ from typing import Dict, Optional
 
 import dill
 import pandas as pd
+from dataprep_ml.recommenders import RecommenderPreprocessor
 from lightfm import LightFM
 from lightfm.cross_validation import random_train_test_split
 from lightfm.evaluation import auc_score, precision_at_k, recall_at_k
 
 from mindsdb.integrations.handlers.lightfm_handler.helpers import (
-    RecommenderPreprocessor,
     get_item_item_recommendations,
     get_user_item_recommendations,
 )

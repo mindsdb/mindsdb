@@ -90,7 +90,7 @@ class TestLightFM(BaseExecutorTest):
                 engine='lightfm',
                 item_id='movieId',
                 user_id='userId',
-                recommendation_type='user_item',
+                recommendation_type='{recommender_type}',
                 threshold=4,
                 n_recommendations=10
                 """
@@ -103,6 +103,7 @@ class TestLightFM(BaseExecutorTest):
             FROM pg.df as t
             JOIN proj.useritemtest as p
             on p.movieId = t.movieId
+            where p.recommender_type='user_item'
             """
         )
 
@@ -132,7 +133,7 @@ class TestLightFM(BaseExecutorTest):
                 item_id='movieId',
                 user_id='userId',
                 threshold=4,
-                recommendation_type='item_item',
+                recommendation_type='{recommender_type}',
                 n_recommendations=10
                 """
         )
@@ -144,6 +145,7 @@ class TestLightFM(BaseExecutorTest):
             FROM pg.df as t
             JOIN proj.itemitemtest as p
             on t.movieId = p.movieId
+            where p.recommender_type='item_item'
             """
         )
 

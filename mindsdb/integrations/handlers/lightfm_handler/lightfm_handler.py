@@ -99,6 +99,7 @@ class LightFMHandler(BaseMLEngine):
     # todo change for hybrid recommender
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None):
 
+        predict_params = args["predict_params"]
         args = self.model_storage.json_get("args")
         model = dill.loads(self.model_storage.file_get("model"))
 
@@ -106,7 +107,7 @@ class LightFMHandler(BaseMLEngine):
         n_items = args["n_users_items"][1]
         item_ids, user_ids = None, None
 
-        if args["recommendation_type"] == "user_item":
+        if predict_params["recommender_type"] == "user_item":
             if df is not None:
                 n_items = df[args["item_id"]].nunique()
                 n_users = df[args["user_id"]].nunique()
@@ -122,7 +123,7 @@ class LightFMHandler(BaseMLEngine):
                 user_ids=user_ids,
             )
 
-        elif args["recommendation_type"] == "item_item":
+        elif predict_params["recommender_type"] == "item_item":
             if df is not None:
                 item_ids = df[args["item_id"]].unique().tolist()
 
@@ -132,12 +133,12 @@ class LightFMHandler(BaseMLEngine):
                 item_ids=item_ids,
             )
 
-        elif args["recommendation_type"] == "user_user":
+        elif predict_params["recommender_type"] == "user_user":
             raise NotImplementedError(
                 "user_user recommendation type is not implemented yet"
             )
 
         else:
             raise ValueError(
-                "recommendation_type must be either 'user_item', 'item_item' or 'user_user'"
+                "recommender_type must be either 'user_item', 'item_item' or 'user_user'"
             )

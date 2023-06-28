@@ -102,6 +102,7 @@ class TestLightFM(BaseExecutorTest):
             SELECT p.*
             FROM pg.df as t
             JOIN proj.useritemtest as p
+            on p.movieId = t.movieId
             """
         )
 
@@ -142,6 +143,7 @@ class TestLightFM(BaseExecutorTest):
             SELECT p.*
             FROM pg.df as t
             JOIN proj.itemitemtest as p
+            on t.movieId = p.movieId
             """
         )
 

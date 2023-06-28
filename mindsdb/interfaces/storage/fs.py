@@ -201,6 +201,7 @@ class S3FSStore(BaseFSStore):
             Key=object_name,
             ObjectAttributes=['Checksum']
         )['LastModified']
+        last_modified = last_modified.replace(tzinfo=None)
         return last_modified
 
     @profiler.profile()

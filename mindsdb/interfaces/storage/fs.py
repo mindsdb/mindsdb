@@ -204,16 +204,17 @@ class S3FSStore(BaseFSStore):
         return last_modified
 
     @profiler.profile()
-    def _get_local_last_modified(self, local_name: str) -> datetime:
+    def _get_local_last_modified(self, base_dir: str, local_name: str) -> datetime:
         """ get 'last_modified' that saved locally
 
             Args:
+                base_dir (str): path to base folder
                 local_name (str): folder name
 
             Returns:
                 datetime | None
         """
-        last_modified_file_path = Path(local_name) / 'last_modified.txt'
+        last_modified_file_path = Path(base_dir) / local_name / 'last_modified.txt'
         if last_modified_file_path.is_file() is False:
             return None
         last_modified_text = last_modified_file_path.read_text()

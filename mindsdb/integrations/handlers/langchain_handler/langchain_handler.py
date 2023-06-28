@@ -168,10 +168,7 @@ class LangChainHandler(OpenAIHandler):
             question = row[args['user_column']]
             answer = row[args['assistant_column']]
 
-            if question:
-                memory.chat_memory.add_user_message(question)
-            if answer:
-                memory.chat_memory.add_ai_message(answer)
+            memory.save_context({"input": question}, {"output": answer})
 
         # use last message as prompt, remove other questions
         df.iloc[:-1, df.columns.get_loc('question')] = ''

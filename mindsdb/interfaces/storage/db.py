@@ -47,8 +47,8 @@ def serializable_insert(record: Base, try_count: int = 100):
         except OperationalError:
             # catch 'SerializationFailure' (it should be in str(e), but it may depend on engine)
             session.rollback()
-            try_count += 1
-            if try_count == 100:
+            try_count += -1
+            if try_count == 0:
                 raise
         else:
             commited = True

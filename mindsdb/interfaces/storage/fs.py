@@ -266,7 +266,7 @@ class S3FSStore(BaseFSStore):
         local_ziped_name = f'{local_name}.tar.gz'
         local_ziped_path = os.path.join(base_dir, local_ziped_name)
 
-        local_last_modified = self._get_local_last_modified(local_name)
+        local_last_modified = self._get_local_last_modified(base_dir, local_name)
         remote_last_modified = self._get_remote_last_modified(remote_ziped_name)
         if (
             local_last_modified is not None

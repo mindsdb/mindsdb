@@ -203,6 +203,7 @@ class S3FSStore(BaseFSStore):
         )['LastModified']
         return last_modified
 
+    @profiler.profile()
     def _get_local_last_modified(self, local_name: str) -> datetime:
         """ get 'last_modified' that saved locally
 
@@ -219,6 +220,7 @@ class S3FSStore(BaseFSStore):
         last_modified_datetime = datetime.strptime(last_modified_text, self.dt_format)
         return last_modified_datetime
 
+    @profiler.profile()
     def _save_local_last_modified(self, base_dir: str, local_name: str, last_modified: datetime):
         """ Save 'last_modified' to local folder
 
@@ -231,6 +233,7 @@ class S3FSStore(BaseFSStore):
         last_modified_text = last_modified.strftime(self.dt_format)
         last_modified_file_path.write_text(last_modified_text)
 
+    @profiler.profile()
     def _download(self, base_dir: str, remote_ziped_name: str,
                   local_ziped_path: str, last_modified: datetime = None):
         """ download file to s3 and unarchive it

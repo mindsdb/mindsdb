@@ -23,6 +23,7 @@ from mindsdb.interfaces.model.functions import (
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.fs import FileStorage, RESOURCE_GROUP
 from mindsdb.interfaces.storage.json import get_json_storage
+import mindsdb.utilities.profiler as profiler
 
 from .utils import rep_recur, brack_to_mod, unpack_jsonai_old_args
 
@@ -42,6 +43,7 @@ def delete_learn_mark():
 
 
 @mark_process(name='learn')
+@profiler.profile()
 def run_generate(df: DataFrame, predictor_id: int, model_storage, args: dict = None):
 
     model_storage.training_state_set(current_state_num=1, total_states=5, state_name='Generating problem definition')
@@ -83,6 +85,7 @@ def run_generate(df: DataFrame, predictor_id: int, model_storage, args: dict = N
 
 
 @mark_process(name='learn')
+@profiler.profile()
 def run_fit(predictor_id: int, df: pd.DataFrame, model_storage) -> None:
     try:
         predictor_record = db.Predictor.query.with_for_update().get(predictor_id)

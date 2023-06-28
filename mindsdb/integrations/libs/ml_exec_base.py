@@ -184,7 +184,7 @@ class ProcessCache:
                 for handler in preload_handlers:
                     self._keep_alive[handler.__name__] = preload_handlers[handler]
                     self.cache[handler.__name__] = {
-                        'last_usade_at': time.time(),
+                        'last_usage_at': time.time(),
                         'processes': [
                             WarmProcess(init_ml_handler, (handler.__module__,))
                             for _x in range(preload_handlers[handler])
@@ -208,7 +208,7 @@ class ProcessCache:
             if handler_name not in self.cache:
                 warm_process = WarmProcess(init_ml_handler, (handler.__module__,))
                 self.cache[handler_name] = {
-                    'last_usade_at': None,
+                    'last_usage_at': None,
                     'processes': [warm_process]
                 }
             else:
@@ -219,7 +219,7 @@ class ProcessCache:
                     warm_process = WarmProcess(init_ml_handler, (handler.__module__,))
                     self.cache[handler_name]['processes'].append(warm_process)
             task = warm_process.apply_async(func, *args, **kwargs)
-            self.cache[handler_name]['last_usade_at'] = time.time()
+            self.cache[handler_name]['last_usage_at'] = time.time()
         return task
 
     def _clean(self) -> None:
@@ -228,15 +228,15 @@ class ProcessCache:
         while self._stop_event.wait(timeout=10) is False:
             with self._lock:
                 for handler_name in self.cache.keys():
-                    last_usade_at = self.cache[handler_name]['last_usade_at']
+                    last_usage_at = self.cache[handler_name]['last_usage_at']
                     processes = self.cache[handler_name]['processes']
                     if (
                         (
                             handler_name not in self._keep_alive
                             or self._keep_alive[handler_name] < len(processes)
                         )
-                        and last_usade_at is not None
-                        and (time.time() - last_usade_at) > self._ttl
+                        and last_usage_at is not None
+                        and (time.time() - last_usage_at) > self._ttl
                     ):
                         for i, process in enumerate(processes):
                             if process.ready():

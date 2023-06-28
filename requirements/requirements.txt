@@ -35,3 +35,4 @@ dataprep_ml
 python-magic >= 0.4.27
 openpyxl >= 3.1.1
 dill == 0.3.6
+slack_sdk

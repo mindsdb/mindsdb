@@ -102,271 +102,272 @@ class LightwoodHandler(BaseMLEngine):
         with profiler.Context('predict'):
             predictions = predictor.predict(df, args=pred_args)
 
-        predictions = predictions.to_dict(orient='records')
+        with profiler.Context('predict-postprocessing'):
+            predictions = predictions.to_dict(orient='records')
 
-        # TODO!!!
-        # after_predict_hook(
-        #     company_id=self.company_id,
-        #     predictor_id=predictor_record.id,
-        #     rows_in_count=df.shape[0],
-        #     columns_in_count=df.shape[1],
-        #     rows_out_count=len(predictions)
-        # )
+            # TODO!!!
+            # after_predict_hook(
+            #     company_id=self.company_id,
+            #     predictor_id=predictor_record.id,
+            #     rows_in_count=df.shape[0],
+            #     columns_in_count=df.shape[1],
+            #     rows_out_count=len(predictions)
+            # )
 
-        # region format result
-        target = args['target']
-        explain_arr = []
-        pred_dicts = []
-        for i, row in enumerate(predictions):
-            values = {
-                'predicted_value': row['prediction'],
-                'confidence': row.get('confidence', None),
-                'anomaly': row.get('anomaly', None),
-                'truth': row.get('truth', None)
-            }
+            # region format result
+            target = args['target']
+            explain_arr = []
+            pred_dicts = []
+            for i, row in enumerate(predictions):
+                values = {
+                    'predicted_value': row['prediction'],
+                    'confidence': row.get('confidence', None),
+                    'anomaly': row.get('anomaly', None),
+                    'truth': row.get('truth', None)
+                }
 
-            if predictor.supports_proba:
-                for cls in predictor.statistical_analysis.train_observed_classes:
-                    if row.get(f'__mdb_proba_{cls}', False):
-                        values[f'probability_class_{cls}'] = round(row[f'__mdb_proba_{cls}'], 4)
+                if predictor.supports_proba:
+                    for cls in predictor.statistical_analysis.train_observed_classes:
+                        if row.get(f'__mdb_proba_{cls}', False):
+                            values[f'probability_class_{cls}'] = round(row[f'__mdb_proba_{cls}'], 4)
 
-            for block in predictor.analysis_blocks:
-                if type(block).__name__ == 'ShapleyValues':
-                    cols = block.columns
-                    values['shap_base_response'] = round(row['shap_base_response'], 4)
-                    values['shap_final_response'] = round(row['shap_final_response'], 4)
-                    for col in cols:
-                        values[f'shap_contribution_{col}'] = round(row[f'shap_contribution_{col}'], 4)
+                for block in predictor.analysis_blocks:
+                    if type(block).__name__ == 'ShapleyValues':
+                        cols = block.columns
+                        values['shap_base_response'] = round(row['shap_base_response'], 4)
+                        values['shap_final_response'] = round(row['shap_final_response'], 4)
+                        for col in cols:
+                            values[f'shap_contribution_{col}'] = round(row[f'shap_contribution_{col}'], 4)
 
-            if 'lower' in row:
-                values['confidence_lower_bound'] = row.get('lower', None)
-                values['confidence_upper_bound'] = row.get('upper', None)
+                if 'lower' in row:
+                    values['confidence_lower_bound'] = row.get('lower', None)
+                    values['confidence_upper_bound'] = row.get('upper', None)
 
-            obj = {target: values}
-            explain_arr.append(obj)
+                obj = {target: values}
+                explain_arr.append(obj)
 
-            td = {'predicted_value': row['prediction']}
-            for col in df.columns:
-                if col in row:
-                    td[col] = row[col]
-                elif f'order_{col}' in row:
-                    td[col] = row[f'order_{col}']
-                elif f'group_{col}' in row:
-                    td[col] = row[f'group_{col}']
-                else:
-                    orginal_index = row.get('original_index')
-                    if orginal_index is None:
-                        orginal_index = i
-                    td[col] = df.iloc[orginal_index][col]
-            pred_dicts.append({target: td})
+                td = {'predicted_value': row['prediction']}
+                for col in df.columns:
+                    if col in row:
+                        td[col] = row[col]
+                    elif f'order_{col}' in row:
+                        td[col] = row[f'order_{col}']
+                    elif f'group_{col}' in row:
+                        td[col] = row[f'group_{col}']
+                    else:
+                        orginal_index = row.get('original_index')
+                        if orginal_index is None:
+                            orginal_index = i
+                        td[col] = df.iloc[orginal_index][col]
+                pred_dicts.append({target: td})
 
-        new_pred_dicts = []
-        for row in pred_dicts:
-            new_row = {}
-            for key in row:
-                new_row.update(row[key])
-                new_row[key] = new_row['predicted_value']
-            del new_row['predicted_value']
-            new_pred_dicts.append(new_row)
-        pred_dicts = new_pred_dicts
+            new_pred_dicts = []
+            for row in pred_dicts:
+                new_row = {}
+                for key in row:
+                    new_row.update(row[key])
+                    new_row[key] = new_row['predicted_value']
+                del new_row['predicted_value']
+                new_pred_dicts.append(new_row)
+            pred_dicts = new_pred_dicts
 
-        columns = list(dtype_dict.keys())
-        predicted_columns = target
-        if not isinstance(predicted_columns, list):
-            predicted_columns = [predicted_columns]
-        # endregion
-
-        original_target_values = {}
-        for col in predicted_columns:
-            df = df.reset_index()
-            original_target_values[col + '_original'] = []
-            for _index, row in df.iterrows():
-                original_target_values[col + '_original'].append(row.get(col))
-
-        # region transform ts predictions
-        timeseries_settings = learn_args.get('timeseries_settings', {'is_timeseries': False})
-
-        if timeseries_settings['is_timeseries'] is True:
-            # offset forecast if have __mdb_forecast_offset > 0
-            forecast_offset = any([
-                row.get('__mdb_forecast_offset') is not None and row['__mdb_forecast_offset'] > 0
-                for row in pred_dicts
-            ])
-
-            group_by = timeseries_settings.get('group_by', [])
-            order_by_column = timeseries_settings['order_by']
-            if isinstance(order_by_column, list):
-                order_by_column = order_by_column[0]
-            horizon = timeseries_settings['horizon']
-
-            # region convert values to lists in case of horizon==1.
-            # That needs to make processing below unified for any case.
-            if horizon == 1:
-                for row in pred_dicts:
-                    if isinstance(row[order_by_column], list) is False:
-                        row[order_by_column] = [row[order_by_column]]
-                    if isinstance(row[target], list) is False:
-                        row[target] = [row[target]]
-                for row in explain_arr:
-                    for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
-                        if isinstance(row[target][col], list) is False:
-                            row[target][col] = [row[target][col]]
+            columns = list(dtype_dict.keys())
+            predicted_columns = target
+            if not isinstance(predicted_columns, list):
+                predicted_columns = [predicted_columns]
             # endregion
 
-            if len(group_by) == 0:
-                rows_by_groups = {
-                    (): {
-                        'rows': pred_dicts,
-                        'explanations': explain_arr
+            original_target_values = {}
+            for col in predicted_columns:
+                df = df.reset_index()
+                original_target_values[col + '_original'] = []
+                for _index, row in df.iterrows():
+                    original_target_values[col + '_original'].append(row.get(col))
+
+            # region transform ts predictions
+            timeseries_settings = learn_args.get('timeseries_settings', {'is_timeseries': False})
+
+            if timeseries_settings['is_timeseries'] is True:
+                # offset forecast if have __mdb_forecast_offset > 0
+                forecast_offset = any([
+                    row.get('__mdb_forecast_offset') is not None and row['__mdb_forecast_offset'] > 0
+                    for row in pred_dicts
+                ])
+
+                group_by = timeseries_settings.get('group_by', [])
+                order_by_column = timeseries_settings['order_by']
+                if isinstance(order_by_column, list):
+                    order_by_column = order_by_column[0]
+                horizon = timeseries_settings['horizon']
+
+                # region convert values to lists in case of horizon==1.
+                # That needs to make processing below unified for any case.
+                if horizon == 1:
+                    for row in pred_dicts:
+                        if isinstance(row[order_by_column], list) is False:
+                            row[order_by_column] = [row[order_by_column]]
+                        if isinstance(row[target], list) is False:
+                            row[target] = [row[target]]
+                    for row in explain_arr:
+                        for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
+                            if isinstance(row[target][col], list) is False:
+                                row[target][col] = [row[target][col]]
+                # endregion
+
+                if len(group_by) == 0:
+                    rows_by_groups = {
+                        (): {
+                            'rows': pred_dicts,
+                            'explanations': explain_arr
+                        }
                     }
-                }
-            else:
-                groups = set()
-                for row in pred_dicts:
-                    groups.add(
-                        tuple([row[x] for x in group_by])
-                    )
+                else:
+                    groups = set()
+                    for row in pred_dicts:
+                        groups.add(
+                            tuple([row[x] for x in group_by])
+                        )
 
-                # split rows by groups
-                rows_by_groups = {}
-                for group in groups:
-                    rows_by_groups[group] = {
-                        'rows': [],
-                        'explanations': []
-                    }
-                    for row_index, row in enumerate(pred_dicts):
-                        is_wrong_group = False
-                        for i, group_by_key in enumerate(group_by):
-                            if row[group_by_key] != group[i]:
-                                is_wrong_group = True
-                                break
-                        if not is_wrong_group:
-                            rows_by_groups[group]['rows'].append(row)
-                            rows_by_groups[group]['explanations'].append(explain_arr[row_index])
+                    # split rows by groups
+                    rows_by_groups = {}
+                    for group in groups:
+                        rows_by_groups[group] = {
+                            'rows': [],
+                            'explanations': []
+                        }
+                        for row_index, row in enumerate(pred_dicts):
+                            is_wrong_group = False
+                            for i, group_by_key in enumerate(group_by):
+                                if row[group_by_key] != group[i]:
+                                    is_wrong_group = True
+                                    break
+                            if not is_wrong_group:
+                                rows_by_groups[group]['rows'].append(row)
+                                rows_by_groups[group]['explanations'].append(explain_arr[row_index])
 
-            for group, data in rows_by_groups.items():
-                rows = data['rows']
-                explanations = data['explanations']
+                for group, data in rows_by_groups.items():
+                    rows = data['rows']
+                    explanations = data['explanations']
 
-                if len(rows) == 0:
-                    break
+                    if len(rows) == 0:
+                        break
 
-                for row in rows:
-                    predictions = row[target]
-                    if isinstance(predictions, list) is False:
-                        predictions = [predictions]
+                    for row in rows:
+                        predictions = row[target]
+                        if isinstance(predictions, list) is False:
+                            predictions = [predictions]
 
-                    date_values = row[order_by_column]
-                    if isinstance(date_values, list) is False:
-                        date_values = [date_values]
+                        date_values = row[order_by_column]
+                        if isinstance(date_values, list) is False:
+                            date_values = [date_values]
 
-                if pred_args.get('force_ts_infer') is True:
-                    # last row contains one additional prediction (used for cases like date > '2020-10-10').
-                    # Extract that prediction from there and join to previous row
-                    rows[-2][order_by_column] = rows[-2][order_by_column].copy()
-                    rows[-2][target] = rows[-2][target].copy()
+                    if pred_args.get('force_ts_infer') is True:
+                        # last row contains one additional prediction (used for cases like date > '2020-10-10').
+                        # Extract that prediction from there and join to previous row
+                        rows[-2][order_by_column] = rows[-2][order_by_column].copy()
+                        rows[-2][target] = rows[-2][target].copy()
 
-                    rows[-2][order_by_column].append(rows[-1][order_by_column][-1])
-                    rows[-2][target].append(rows[-1][target][-1])
-                    for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
-                        explanations[-2][target][col].append(explanations[-1][target][col][-1])
-                    rows.pop()
-                    explanations.pop()
-                    # horizon = horizon + 1
+                        rows[-2][order_by_column].append(rows[-1][order_by_column][-1])
+                        rows[-2][target].append(rows[-1][target][-1])
+                        for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
+                            explanations[-2][target][col].append(explanations[-1][target][col][-1])
+                        rows.pop()
+                        explanations.pop()
+                        # horizon = horizon + 1
 
-                for i in range(len(rows) - 1):
-                    row_horizon = len(rows[i][target])
-                    if row_horizon > 1:
-                        rows[i][target] = rows[i][target][0]
-                        if isinstance(rows[i][order_by_column], list):
-                            rows[i][order_by_column] = rows[i][order_by_column][0]
-                    for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
-                        if row_horizon > 1 and col in explanations[i][target]:
-                            explanations[i][target][col] = explanations[i][target][col][0]
+                    for i in range(len(rows) - 1):
+                        row_horizon = len(rows[i][target])
+                        if row_horizon > 1:
+                            rows[i][target] = rows[i][target][0]
+                            if isinstance(rows[i][order_by_column], list):
+                                rows[i][order_by_column] = rows[i][order_by_column][0]
+                        for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
+                            if row_horizon > 1 and col in explanations[i][target]:
+                                explanations[i][target][col] = explanations[i][target][col][0]
 
-                last_row = rows.pop()
-                last_explanation = explanations.pop()
-                for i in range(len(last_row[target])):
-                    new_row = copy.deepcopy(last_row)
-                    new_row[target] = new_row[target][i]
-                    if isinstance(new_row[order_by_column], list):
-                        new_row[order_by_column] = new_row[order_by_column][i]
-                    if '__mindsdb_row_id' in new_row and (i > 0 or forecast_offset):
-                        new_row['__mindsdb_row_id'] = None
+                    last_row = rows.pop()
+                    last_explanation = explanations.pop()
+                    for i in range(len(last_row[target])):
+                        new_row = copy.deepcopy(last_row)
+                        new_row[target] = new_row[target][i]
+                        if isinstance(new_row[order_by_column], list):
+                            new_row[order_by_column] = new_row[order_by_column][i]
+                        if '__mindsdb_row_id' in new_row and (i > 0 or forecast_offset):
+                            new_row['__mindsdb_row_id'] = None
 
-                    new_explanation = copy.deepcopy(last_explanation)
-                    for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
-                        if col in new_explanation[target]:
-                            new_explanation[target][col] = new_explanation[target][col][i]
-                    if i != 0:
-                        new_explanation[target]['anomaly'] = None
-                        new_explanation[target]['truth'] = None
+                        new_explanation = copy.deepcopy(last_explanation)
+                        for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
+                            if col in new_explanation[target]:
+                                new_explanation[target][col] = new_explanation[target][col][i]
+                        if i != 0:
+                            new_explanation[target]['anomaly'] = None
+                            new_explanation[target]['truth'] = None
 
-                    rows.append(new_row)
-                    explanations.append(new_explanation)
+                        rows.append(new_row)
+                        explanations.append(new_explanation)
 
-            pred_dicts = []
-            explanations = []
-            for group, data in rows_by_groups.items():
-                pred_dicts.extend(data['rows'])
-                explanations.extend(data['explanations'])
+                pred_dicts = []
+                explanations = []
+                for group, data in rows_by_groups.items():
+                    pred_dicts.extend(data['rows'])
+                    explanations.extend(data['explanations'])
 
-            original_target_values[f'{target}_original'] = []
-            for i in range(len(pred_dicts)):
-                original_target_values[f'{target}_original'].append(explanations[i][target].get('truth', None))
+                original_target_values[f'{target}_original'] = []
+                for i in range(len(pred_dicts)):
+                    original_target_values[f'{target}_original'].append(explanations[i][target].get('truth', None))
 
-            if dtype_dict[order_by_column] == dtype.date:
-                for row in pred_dicts:
-                    if isinstance(row[order_by_column], (int, float)):
-                        row[order_by_column] = datetime.fromtimestamp(row[order_by_column]).date()
-            elif dtype_dict[order_by_column] == dtype.datetime:
-                for row in pred_dicts:
-                    if isinstance(row[order_by_column], (int, float)):
-                        row[order_by_column] = datetime.fromtimestamp(row[order_by_column])
+                if dtype_dict[order_by_column] == dtype.date:
+                    for row in pred_dicts:
+                        if isinstance(row[order_by_column], (int, float)):
+                            row[order_by_column] = datetime.fromtimestamp(row[order_by_column]).date()
+                elif dtype_dict[order_by_column] == dtype.datetime:
+                    for row in pred_dicts:
+                        if isinstance(row[order_by_column], (int, float)):
+                            row[order_by_column] = datetime.fromtimestamp(row[order_by_column])
 
-            explain_arr = explanations
-        # endregion
+                explain_arr = explanations
+            # endregion
 
-        if pred_format == 'explain':
-            return explain_arr
+            if pred_format == 'explain':
+                return explain_arr
 
-        keys = [x for x in pred_dicts[0] if x in columns]
-        min_max_keys = []
-        for col in predicted_columns:
-            if dtype_dict[col] in (dtype.integer, dtype.float, dtype.num_tsarray):
-                min_max_keys.append(col)
+            keys = [x for x in pred_dicts[0] if x in columns]
+            min_max_keys = []
+            for col in predicted_columns:
+                if dtype_dict[col] in (dtype.integer, dtype.float, dtype.num_tsarray):
+                    min_max_keys.append(col)
 
-        data = []
-        explains = []
-        keys_to_save = [*keys, '__mindsdb_row_id', 'select_data_query', 'when_data']
-        for i, el in enumerate(pred_dicts):
-            data.append({key: el.get(key) for key in keys_to_save})
-            explains.append(explain_arr[i])
+            data = []
+            explains = []
+            keys_to_save = [*keys, '__mindsdb_row_id', 'select_data_query', 'when_data']
+            for i, el in enumerate(pred_dicts):
+                data.append({key: el.get(key) for key in keys_to_save})
+                explains.append(explain_arr[i])
 
-        for i, row in enumerate(data):
-            cast_row_types(row, dtype_dict)
+            for i, row in enumerate(data):
+                cast_row_types(row, dtype_dict)
 
-            for k in original_target_values:
-                try:
-                    row[k] = original_target_values[k][i]
-                except Exception:
-                    row[k] = None
+                for k in original_target_values:
+                    try:
+                        row[k] = original_target_values[k][i]
+                    except Exception:
+                        row[k] = None
 
-            for column_name in columns:
-                if column_name not in row:
-                    row[column_name] = None
+                for column_name in columns:
+                    if column_name not in row:
+                        row[column_name] = None
 
-            explanation = explains[i]
-            for key in predicted_columns:
-                row[key + '_confidence'] = explanation[key]['confidence']
-                row[key + '_explain'] = json.dumps(explanation[key], cls=NumpyJSONEncoder, ensure_ascii=False)
-                if 'anomaly' in explanation[key]:
-                    row[key + '_anomaly'] = explanation[key]['anomaly']
-            for key in min_max_keys:
-                if 'confidence_lower_bound' in explanation[key]:
-                    row[key + '_min'] = explanation[key]['confidence_lower_bound']
-                if 'confidence_upper_bound' in explanation[key]:
-                    row[key + '_max'] = explanation[key]['confidence_upper_bound']
+                explanation = explains[i]
+                for key in predicted_columns:
+                    row[key + '_confidence'] = explanation[key]['confidence']
+                    row[key + '_explain'] = json.dumps(explanation[key], cls=NumpyJSONEncoder, ensure_ascii=False)
+                    if 'anomaly' in explanation[key]:
+                        row[key + '_anomaly'] = explanation[key]['anomaly']
+                for key in min_max_keys:
+                    if 'confidence_lower_bound' in explanation[key]:
+                        row[key + '_min'] = explanation[key]['confidence_lower_bound']
+                    if 'confidence_upper_bound' in explanation[key]:
+                        row[key + '_max'] = explanation[key]['confidence_upper_bound']
 
         return pd.DataFrame(data)
 

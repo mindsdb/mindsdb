@@ -24,6 +24,7 @@ from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.interfaces.storage.model_fs import ModelStorage
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import resolve_model_identifier
+import mindsdb.utilities.profiler as profiler
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -377,8 +378,6 @@ class ModelController():
         if base_predictor_record is None:
             raise Exception(f"Error: model '{model_name}' does not exist")
 
-        params['version'] = self._get_retrain_finetune_version(params['project_name'], base_predictor_record)
-
         if params['data_integration_ref'] is None:
             params['data_integration_ref'] = base_predictor_record.data_integration_ref
         if params['fetch_data_query'] is None:
@@ -393,20 +392,6 @@ class ModelController():
         predictor_record = ml_handler.learn(**params)
 
         return self.get_model_info(predictor_record)
-
-    @staticmethod
-    def _get_retrain_finetune_version(project_name, base_predictor_record):
-        if base_predictor_record is None:
-            raise Exception(f"Error: model '{base_predictor_record.name}' does not exist")
-
-        models = get_model_records(
-            name=base_predictor_record.name,
-            project_name=project_name,
-            active=None
-        )
-        last_version = max([x.version or 1 for x in models])
-
-        return last_version + 1
 
     def prepare_finetune_statement(self, statement, database_controller):
         project_name, model_name, model_version = resolve_model_identifier(statement.name)
@@ -430,9 +415,8 @@ class ModelController():
             name=model_name,
             project_name=project_name,
             version=model_version,
-            active=None
+            active=True if model_version is None else None
         )
-        version = self._get_retrain_finetune_version(project_name, base_predictor_record)
 
         if data_integration_ref is None:
             data_integration_ref = base_predictor_record.data_integration_ref
@@ -445,13 +429,13 @@ class ModelController():
             data_integration_ref=data_integration_ref,
             fetch_data_query=fetch_data_query,
             base_model_version=model_version,
-            version=version,
             args=args,
             join_learn_process=join_learn_process,
             label=label,
             set_active=set_active
         )
 
+    @profiler.profile()
     def finetune_model(self, statement, ml_handler):
         params = self.prepare_finetune_statement(statement, ml_handler.database_controller)
         predictor_record = ml_handler.update(**params)

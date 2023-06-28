@@ -1,12 +1,13 @@
 from typing import Optional
 from collections import OrderedDict
 
-from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.database.projects import ProjectController
+import mindsdb.utilities.profiler as profiler
 
 
 class DatabaseController:
     def __init__(self):
+        from mindsdb.interfaces.database.integrations import integration_controller
         self.integration_controller = integration_controller
         self.project_controller = ProjectController()
 
@@ -25,6 +26,7 @@ class DatabaseController:
         else:
             raise Exception(f"Database with type '{db_type}' cannot be deleted")
 
+    @profiler.profile()
     def get_list(self, filter_type: Optional[str] = None):
         projects = self.project_controller.get_list()
         integrations = self.integration_controller.get_all()

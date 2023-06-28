@@ -58,6 +58,7 @@ class Ingestor:
             embedding=embeddings_model,
             persist_directory=self.persist_directory,
             client_settings=self.chroma_settings,
+            collection_name=self.args.get("collection_name", "langchain"),
         )
         db.persist()
         db = None

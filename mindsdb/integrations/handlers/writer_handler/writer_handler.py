@@ -11,7 +11,6 @@ from .settings import (
     DEFAULT_EMBEDDINGS_MODEL,
     USER_DEFINED_MODEL_PARAMS,
     ModelParameters,
-    check_path_exists,
 )
 
 # these require no additional arguments
@@ -57,7 +56,7 @@ class WriterHandler(BaseMLEngine):
         """
         args = args["using"]
 
-        if not df.empty and args["get_embeddings"]:
+        if not df.empty and args["run_embeddings"]:
             if "context_columns" not in args:
                 # if no context columns provided, use all columns in df
                 args["context_columns"] = df.columns.tolist()
@@ -68,17 +67,15 @@ class WriterHandler(BaseMLEngine):
                 )
 
             chromadb_folder_name = args["chromadb_folder_name"]
+            # create folder for chromadb to persist embeddings
             args["chromadb_storage_path"] = self.engine_storage.folder_get(
                 chromadb_folder_name
             )
-            # check path exists and make
-            check_path_exists(args["chromadb_storage_path"])
             ingestor = Ingestor(df=df, args=args)
             ingestor.embeddings_to_vectordb()
 
-            # Persist changes to chromadb do disk
-            # not sure if this is required?
-            # self.engine_storage.folder_sync(args["chromadb_storage_path"])
+            # for mindsdb cloud, store data in shared file system for cloud version of mindsdb to make it be usable by all mindsdb nodes
+            self.engine_storage.folder_sync(chromadb_folder_name)
 
         else:
             logger.info("Skipping embeddings and ingestion into Chroma VectorDB")

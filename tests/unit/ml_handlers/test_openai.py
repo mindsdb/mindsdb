@@ -9,6 +9,7 @@ from mindsdb_sql import parse_sql
 
 from tests.unit.executor_test_base import BaseExecutorTest
 
+from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
 
 OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
 os.environ["OPENAI_API_KEY"] = OPEN_AI_API_KEY
@@ -201,3 +202,35 @@ class TestOpenAI(BaseExecutorTest):
 
         for i in range(2):
             assert "boom!" in result_df["completion"].iloc[i].lower()
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_bulk_normal_completion(self, mock_handler):
+        """ Tests normal completions (e.g. text-davinci-003) with bulk joins that are larger than the max batch_size """
+        # create project
+        self.run_sql("create database proj")
+        handler_instance = OpenAIHandler()
+        N = 1 + handler_instance.max_batch_size  # get N larger than default batch size
+        df = pd.DataFrame.from_dict({"input": ["I feel happy!"] * N})
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.run_sql(
+            f"""
+           create model proj.test_openai_bulk_normal_completion
+           predict completion
+           using
+             engine='openai',
+             prompt_template='What is the sentiment of the following phrase? Answer either "positive" or "negative": {{{{input}}}}',
+             openai_api_key='{OPEN_AI_API_KEY}';
+        """  # noqa
+        )
+        self.wait_predictor("proj", "test_openai_prompt_template")
+
+        result_df = self.run_sql(
+            """
+            SELECT p.completion
+            FROM pg.df as t
+            JOIN proj.test_openai_prompt_template as p;
+        """
+        )
+
+        for i in range(N):
+            assert "positive" in result_df["completion"].iloc[i].lower()

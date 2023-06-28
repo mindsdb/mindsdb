@@ -94,10 +94,7 @@
             {
               "group": "External Cloud Services",
               "pages": [
-                "setup/digital-ocean",
-                "setup/gcp",
-                "setup/vultr",
-                "setup/civo"
+                "setup/gcp"
               ]
             },
             {
@@ -135,6 +132,7 @@
           "pages": [
             "data-integrations/all-data-integrations",
             "data-integrations/airtable",
+            "data-integrations/amazon-aurora",
             "data-integrations/amazon-dynamodb",
             "data-integrations/amazon-redshift",
             "data-integrations/amazon-s3",
@@ -218,18 +216,13 @@
         {
           "group": "AutoML",
           "pages": [
-            "ml-engines/automl/lightwood",
-            "ml-engines/automl/ludwig",
-            "ml-engines/automl/autokeras",
-            "ml-engines/automl/autosklearn"
+            "ml-engines/automl/lightwood"
           ]
         },
         {
           "group": "Time Series Models",
           "pages": [
-            "nixtla/statsforecast",
-            "nixtla/neuralforecast",
-            "custom-model/merlion"
+            "nixtla/statsforecast"
           ]
         }
       ]
@@ -318,12 +311,11 @@
               ]
             }
           ]
-        },
-        "tutorials_mindsdb_sql"
+        }
       ]
     },
     {
-      "group": "MindsDB No-SQL",
+      "group": "MindsDB Mongo-QL",
       "pages": [
         {
           "group": "Connect to MindsDB",
@@ -333,7 +325,7 @@
           ]
         },
         {
-          "group": "No-SQL Commands",
+          "group": "Mongo-QL Commands",
           "pages": [
             "mongo/collection-structure",
             "mongo/ml_engine",
@@ -343,14 +335,21 @@
             "mongo/find",
             "mongo/delete"
           ]
-        },
-        "tutorials_mindsdb_no_sql"
+        }
+      ]
+    },
+    {
+      "group": "SDKs",
+      "pages": [
+        "sdk/javascript-sdk",
+        "sdk/python-sdk"
       ]
     },
     {
       "group": "REST API",
       "pages": [
         "rest/disclaimer",
+        "rest/usage",
         {
           "group": "Endpoints",
           "pages": [
@@ -404,14 +403,7 @@
           ]
         }
       ]
-    },
-    {
-      "group": "SDKs",
-      "pages": [
-        "sdk/javascript-sdk",
-        "sdk/python-sdk"
-      ]
-    },
+    },  
     {
       "group": "Use Cases",
       "pages": [

@@ -27,7 +27,7 @@ def upgrade():
         sa.Column('name', sa.String(), nullable=False),
         sa.Column('project_id', sa.Integer(), nullable=False),
         sa.Column('model_name', sa.String(), nullable=False),
-        sa.Column('database_id', sa.Integer(), nullable=False),
+        sa.Column('database_id', sa.Integer()),
         sa.Column('params', sa.JSON(), nullable=True),
         sa.Column('updated_at', sa.DateTime(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=True),

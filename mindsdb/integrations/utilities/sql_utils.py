@@ -54,19 +54,44 @@ def extract_comparison_conditions(binary_op: ASTNode):
 
 
 def project_dataframe(df, targets, table_columns):
+    '''
+        case-insensitive projection
+        'select A' and 'select a' return different column case but with the same content
+    '''
+
     columns = []
+    df_cols_idx = {
+        col.lower(): col
+        for col in df.columns
+    }
+    df_col_rename = {}
+
     for target in targets:
         if isinstance(target, ast.Star):
-            columns = table_columns
+            for col in table_columns:
+                col_df = df_cols_idx.get(col.lower())
+                if col_df is not None:
+                    df_col_rename[col_df] = col
+                columns.append(col)
+
             break
         elif isinstance(target, ast.Identifier):
-            columns.append(target.parts[-1])
+            col = target.parts[-1]
+            col_df = df_cols_idx.get(col.lower())
+            if col_df is not None:
+                df_col_rename[col_df] = col
+            columns.append(col)
         else:
             raise NotImplementedError
 
     if len(df) == 0:
         df = pd.DataFrame([], columns=columns)
     else:
+
+        # adapt column names to projection
+        if len(df_col_rename) > 0:
+            df = df.rename(columns=df_col_rename)
+
         # add absent columns
         for col in set(columns) & set(df.columns) ^ set(columns):
             df[col] = None

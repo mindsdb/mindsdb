@@ -193,7 +193,8 @@ connection_args = OrderedDict(
     port={
         'type': ARG_TYPE.INT,
         'description': 'The TCP/IP port of the MySQL server. Must be an integer.',
-        'required': True
+        'required': True,
+        'label': 'Port'
     },
     ssl={
         'type': ARG_TYPE.BOOL,

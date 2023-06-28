@@ -22,7 +22,8 @@ class LightFMHandler(BaseMLEngine):
 
     name = "lightfm"
 
-    # todo change for hybrid recommender
+    # todo add ability to partially update model based on new data for existing users, items
+    # todo add support for hybrid recommender
     def create(self, target: str, df: pd.DataFrame = None, args: Optional[Dict] = None):
 
         args = args["using"]
@@ -96,10 +97,13 @@ class LightFMHandler(BaseMLEngine):
         self.model_storage.file_set("model", dill.dumps(model))
         self.model_storage.json_set("args", args)
 
-    # todo change for hybrid recommender
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None):
 
         predict_params = args["predict_params"]
+
+        # if user doesn't specify recommender type, default to user_item
+        recommender_type = predict_params.get("recommender_type", "user_item")
+
         args = self.model_storage.json_get("args")
         model = dill.loads(self.model_storage.file_get("model"))
 
@@ -107,7 +111,7 @@ class LightFMHandler(BaseMLEngine):
         n_items = args["n_users_items"][1]
         item_ids, user_ids = None, None
 
-        if predict_params["recommender_type"] == "user_item":
+        if recommender_type == "user_item":
             if df is not None:
                 n_items = df[args["item_id"]].nunique()
                 n_users = df[args["user_id"]].nunique()
@@ -123,7 +127,7 @@ class LightFMHandler(BaseMLEngine):
                 user_ids=user_ids,
             )
 
-        elif predict_params["recommender_type"] == "item_item":
+        elif recommender_type == "item_item":
             if df is not None:
                 item_ids = df[args["item_id"]].unique().tolist()
 
@@ -133,7 +137,7 @@ class LightFMHandler(BaseMLEngine):
                 item_ids=item_ids,
             )
 
-        elif predict_params["recommender_type"] == "user_user":
+        elif recommender_type == "user_user":
             raise NotImplementedError(
                 "user_user recommendation type is not implemented yet"
             )

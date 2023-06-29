@@ -1,5 +1,4 @@
 import os
-import fcntl
 import shutil
 import hashlib
 from pathlib import Path
@@ -14,6 +13,10 @@ try:
 except Exception:
     # Only required for remote storage on s3
     pass
+
+if os.name == 'posix':
+    import fcntl
+
 
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx

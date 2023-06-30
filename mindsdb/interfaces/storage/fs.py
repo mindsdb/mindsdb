@@ -118,7 +118,7 @@ class LocalFSStore(BaseFSStore):
         if not os.path.exists(dest) or get_dir_size(src) != get_dir_size(dest):
             copy(src, dest)
 
-    def put(self, local_name, base_dir, compression_level):
+    def put(self, local_name, base_dir, compression_level=9):
         remote_name = local_name
         copy(
             os.path.join(base_dir, local_name),

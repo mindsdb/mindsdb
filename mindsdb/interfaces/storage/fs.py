@@ -256,7 +256,9 @@ class S3FSStore(BaseFSStore):
         """
         os.makedirs(base_dir, exist_ok=True)
 
-        remote_size = self.s3.Object(self.bucket, remote_ziped_name).content_length
+        remote_size = self.s3.get_object_attributes(
+            self.bucket, remote_ziped_name, ObjectAttributes=['ObjectSize']
+        )['ObjectSize']
         if (remote_size * 2) > psutil.virtual_memory().available:
             fh = io.BytesIO()
             self.s3.download_fileobj(self.bucket, remote_ziped_name, fh)

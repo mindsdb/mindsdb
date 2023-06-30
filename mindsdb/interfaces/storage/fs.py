@@ -1,13 +1,17 @@
 import os
+import io
 import fcntl
 import shutil
+import tarfile
 import hashlib
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Union, Optional
 from dataclasses import dataclass
 from datetime import datetime
+import threading
 
+import psutil
 from checksumdir import dirhash
 try:
     import boto3
@@ -111,7 +115,7 @@ class LocalFSStore(BaseFSStore):
         if not os.path.exists(dest) or get_dir_size(src) != get_dir_size(dest):
             copy(src, dest)
 
-    def put(self, local_name, base_dir):
+    def put(self, local_name, base_dir, compression_level):
         remote_name = local_name
         copy(
             os.path.join(base_dir, local_name),
@@ -186,6 +190,7 @@ class S3FSStore(BaseFSStore):
         else:
             self.s3 = boto3.client('s3')
         self.bucket = self.config['permanent_storage']['bucket']
+        self._thread_lock = threading.Lock()
 
     def _get_remote_last_modified(self, object_name: str) -> datetime:
         """ get time when object was created/modified
@@ -283,23 +288,45 @@ class S3FSStore(BaseFSStore):
         )
 
     @profiler.profile()
-    def put(self, local_name, base_dir):
+    def put(self, local_name, base_dir, compression_level=9):
         # NOTE: This `make_archive` function is implemente poorly and will create an empty archive file even if
         # the file/dir to be archived doesn't exist or for some other reason can't be archived
         remote_name = local_name
         remote_zipped_name = f'{remote_name}.tar.gz'
-        shutil.make_archive(
-            os.path.join(base_dir, remote_name),
-            'gztar',
-            root_dir=base_dir,
-            base_dir=local_name
-        )
-        self.s3.upload_file(
-            os.path.join(base_dir, remote_zipped_name),
-            self.bucket,
-            remote_zipped_name
-        )
-        os.remove(os.path.join(base_dir, remote_name + '.tar.gz'))
+
+        old_cwd = os.getcwd()
+        fh = io.BytesIO()
+        dir_path = Path(base_dir) / remote_name
+        dir_size = sum(f.stat().st_size for f in dir_path.glob('**/*') if f.is_file())
+        if (dir_size * 2) < psutil.virtual_memory().available:
+            with self._thread_lock:
+                os.chdir(base_dir)
+                with tarfile.open(fileobj=fh, mode='w:gz', compresslevel=compression_level) as tar:
+                    for path in dir_path.iterdir():
+                        if path.is_file() and path.name in ('dir.lock', 'last_modified.txt'):
+                            pass
+                        tar.add(path.name)
+                os.chdir(old_cwd)
+
+            self.s3.upload_fileobj(
+                fh,
+                self.bucket,
+                remote_zipped_name
+            )
+        else:
+            shutil.make_archive(
+                os.path.join(base_dir, remote_name),
+                'gztar',
+                root_dir=base_dir,
+                base_dir=local_name
+            )
+            self.s3.upload_file(
+                os.path.join(base_dir, remote_zipped_name),
+                self.bucket,
+                remote_zipped_name
+            )
+            os.remove(os.path.join(base_dir, remote_zipped_name))
+
         last_modified = self._get_remote_last_modified(remote_zipped_name)
         self._save_local_last_modified(base_dir, local_name, last_modified)
 
@@ -345,13 +372,17 @@ class FileStorage:
             self.folder_path.mkdir(parents=True, exist_ok=True)
 
     @profiler.profile()
-    def push(self):
+    def push(self, compression_level=9):
         with FileLock(self.folder_path):
-            self._push_no_lock()
+            self._push_no_lock(compression_level=compression_level)
 
     @profiler.profile()
-    def _push_no_lock(self):
-        self.fs_store.put(str(self.folder_name), str(self.resource_group_path))
+    def _push_no_lock(self, compression_level=9):
+        self.fs_store.put(
+            str(self.folder_name),
+            str(self.resource_group_path),
+            compression_level=compression_level
+        )
 
     @profiler.profile()
     def push_path(self, path):

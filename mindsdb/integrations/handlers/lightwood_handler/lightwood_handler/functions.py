@@ -107,7 +107,7 @@ def run_fit(predictor_id: int, df: pd.DataFrame, model_storage) -> None:
             sync=True
         )
         predictor.save(fs.folder_path / fs.folder_name)
-        fs.push()
+        fs.push(compression_level=0)
 
         predictor_record.data = predictor.model_analysis.to_dict()
 
@@ -198,7 +198,7 @@ def run_finetune(df: DataFrame, args: dict, model_storage):
             sync=True
         )
         predictor.save(fs.folder_path / fs.folder_name)
-        fs.push()
+        fs.push(compression_level=0)
 
         predictor_record.data = predictor.model_analysis.to_dict()  # todo: update accuracy in LW as post-finetune hook
         predictor_record.code = base_predictor_record.code

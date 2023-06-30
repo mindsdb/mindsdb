@@ -1,53 +1,59 @@
 ---
-title: UPDATE FROM SELECT Statement
+title: UPDATE Statement
 sidebarTitle: UPDATE
 ---
 
 ## Description
 
-The `UPDATE FROM SELECT` statement updates data in existing table. The data comes from a subselect query.
-It can be used as alternative to 'create table' and 'insert into' for store predictions in distinct columns of existing rows
+MindsDB provides two ways of using the `UPDATE` statement:
+
+1. The regular `UPDATE` statement updates specific column values in an existing table.
+
+2. The `UPDATE FROM SELECT` statement updates data in an existing table from a subselect query. It can be used as an alternative to `CREATE TABLE` or `INSERT INTO` to store predictions.
 
 ## Syntax
 
-Here is an example:
+Here is an example of the regular `UPDATE` statement:
+
+```sql
+UPDATE integration_name.table_name
+SET column_name = new_value
+WHERE column_name = old_value
+```
+
+<Info>
+Please replace the placeholders as follows:
+
+- `integration_name` is the name of the connected data source.
+- `table_name` is the table name within that data asource.
+- `column_name` is the column name within that table.
+</Info>
+
+And here is an example of the `UPDATE FROM SELECT` statement that updates a table with predictions made within MindsDB:
 
 ```sql
 UPDATE
-    int2.table2
+    integration_to_be_updated.table_to_be_updated
 SET
-    predicted = source.result,
-FROM
- (
-     SELECT p.result, p.prod_id, p.shop_id
-      FROM int1.table1 as t
-     JOIN mindsdb.pred1 as p
- ) AS source
+    column_to_be_updated = prediction_data.predicted_value_column,
+FROM 
+    (
+        SELECT p.predicted_value_column, p.column1, p.column2
+        FROM integration_name.table_name as t
+        JOIN model_name as p
+    ) AS prediction_data
 WHERE
-    prod_id = source.prod_id
-    and shop_id = source.shop_id
+    column1 = prediction_data.column1
+    AND column2 = prediction_data.column2
 ```
 
-And the steps followed by the syntax:
+<Info>
+The steps followed by the syntax:
 
-- It executes query from 'FROM' block to get the output data.
-  In our example it is join of table _table1_ (from integration _int1_) with predictor _pred1_.
-  It also can be select from integration
-- _source_ is the alias for fetched data
-- then it updates _table2_ from _int2_ using conditions from `WHERE` block and fields for update from `SET` block
-  - under the hood it splits input data to rows and execute this query for every row:
-  ```sql
-  UPDATE
-      table2
-  SET
-      predicted = <row.result>,
-  WHERE
-      prod_id = <row.prod_id>
-      and shop_id = <row.shop_id>
-  ```
+- It executes query from the `FROM` clause to get the output data. In our example, we query for predictions, but it could be a simple select from another table. Please note that it is aliased as `prediction_data`.
+- It updates all rows from the `table_to_be_updated` table (that belongs to the `integration_to_be_updated` integration) that match the `WHERE` clause criteria. The rows are updated with values as defined in the `SET` clause.
+</Info>
 
 <Tip>
-It is recommended to use the primary key column(s) in the WHERE clause, as the primary key column(s) uniquely 
-identify each row. Otherwise, the UPDATE statement may lead to unexpected results by altering rows that you didn't 
-want to affect.
+It is recommended to use the primary key column(s) in the WHERE clause (here, `column1` and `column2`), as the primary key column(s) uniquely identify each row. Otherwise, the `UPDATE` statement may lead to unexpected results by altering rows that you didn't want to affect.
 </Tip>

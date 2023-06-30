@@ -646,7 +646,7 @@ class ExecuteCommands:
         database = self.session.integration_controller.get(statement.database.parts[-1])
         if database is None and chat_engine is None:
             raise SqlApiException(f'Database not found and no chat engine provided: {statement.database}')
-        
+
         # Database ID cannot be null
         database_id = database['id'] if database is not None else -1
 
@@ -660,14 +660,14 @@ class ExecuteCommands:
             params=statement.params
         )
         return ExecuteAnswer(ANSWER_TYPE.OK)
-    
+
     def answer_update_chatbot(self, statement):
         chatbot_controller = ChatBotController()
 
         name = statement.name
         name_no_project = name.parts[-1]
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
-        
+
         # From SET keyword parameters
         updated_name = statement.params.pop('name', None)
         model_name = statement.params.pop('model', None)

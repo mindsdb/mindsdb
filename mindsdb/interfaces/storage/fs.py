@@ -1,6 +1,5 @@
 import os
 import io
-import fcntl
 import shutil
 import tarfile
 import hashlib
@@ -11,6 +10,9 @@ from dataclasses import dataclass
 from datetime import datetime
 import threading
 
+if os.name == 'posix':
+    import fcntl
+
 import psutil
 from checksumdir import dirhash
 try:
@@ -18,6 +20,7 @@ try:
 except Exception:
     # Only required for remote storage on s3
     pass
+
 
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx

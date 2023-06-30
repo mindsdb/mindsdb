@@ -32,7 +32,7 @@ class RealtimeChatBotTask:
         # Configure columns to use for responding.
         self._user_col = RealtimeChatBotTask._PROMPT_USER_COLUMN
         if 'using' in model_record.learn_args and 'user_column' in model_record.learn_args['using']:
-            self._user_col = model_record.learn_args['using']['user_column'],
+            self._user_col = model_record.learn_args['using']['user_column']
         self._output_col = model_record.to_predict[0]
 
     def _set_context(self):

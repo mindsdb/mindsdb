@@ -255,10 +255,23 @@ class S3FSStore(BaseFSStore):
                 last_modified (datetime, optional)
         """
         os.makedirs(base_dir, exist_ok=True)
-        self.s3.download_file(self.bucket, remote_ziped_name, local_ziped_path)
-        shutil.unpack_archive(local_ziped_path, base_dir)
-        os.system(f'chmod -R 777 {base_dir}')
-        os.remove(local_ziped_path)
+
+        remote_size = self.s3.Object(self.bucket, remote_ziped_name).content_length
+        if (remote_size * 2) > psutil.virtual_memory().available:
+            fh = io.BytesIO()
+            self.s3.download_fileobj(self.bucket, remote_ziped_name, fh)
+            old_cwd = os.getcwd()
+            with self._thread_lock:
+                os.chdir(base_dir)
+                with tarfile.open(fileobj=fh) as tar:
+                    tar.extractall()
+                os.chdir(old_cwd)
+        else:
+            self.s3.download_file(self.bucket, remote_ziped_name, local_ziped_path)
+            shutil.unpack_archive(local_ziped_path, base_dir)
+            os.remove(local_ziped_path)
+
+        # os.system(f'chmod -R 777 {base_dir}')
 
         if last_modified is None:
             last_modified = self._get_remote_last_modified(remote_ziped_name)
@@ -297,11 +310,11 @@ class S3FSStore(BaseFSStore):
         remote_name = local_name
         remote_zipped_name = f'{remote_name}.tar.gz'
 
-        old_cwd = os.getcwd()
-        fh = io.BytesIO()
         dir_path = Path(base_dir) / remote_name
         dir_size = sum(f.stat().st_size for f in dir_path.glob('**/*') if f.is_file())
         if (dir_size * 2) < psutil.virtual_memory().available:
+            old_cwd = os.getcwd()
+            fh = io.BytesIO()
             with self._thread_lock:
                 os.chdir(base_dir)
                 with tarfile.open(fileobj=fh, mode='w:gz', compresslevel=compression_level) as tar:

@@ -158,8 +158,8 @@ LIMIT 10;
 ```sql
 | id  | hate_speech | offensive | neither | tweet |
 | --- | ----------- | --------- | ------- | ----- |
-| 0 | 0 | 0 | 3 | !!! RT @mayasolovely: As a woman you shouldn't complain about cleaning up your house. &amp; as a man you should always take the trash out... |
-| 1 | 0 | 3 | 0 | !!!!! RT @mleew17: boy dats cold...tyga dwn bad for cuffin dat... |
+| 0 | 0 | 0 | 3 | !!! RT @mayasolovely: As a woman you shouldn't complain about cleaning up your house... |
+| 1 | 0 | 3 | 0 | !!!!! RT @mleew17: boy dats cold... |
 ```
 ---
 
@@ -186,8 +186,8 @@ LIMIT 3;
 ```sql
 | id  | hate_speech | offensive | neither | tweet |
 | --- | ----------- | --------- | ------- | ----- |
-| 0 | 0 | 0 | 3 | !!! RT @mayasolovely: As a woman you shouldn't complain about cleaning up your house. &amp; as a man you should always take the trash out... |
-| 1 | 0 | 3 | 0 | !!!!! RT @mleew17: boy dats cold...tyga dwn bad for cuffin dat h** in the 1st place!! |
+| 0 | 0 | 0 | 3 | !!! RT @mayasolovely: As a woman you... |
+| 1 | 0 | 3 | 0 | !!!!! RT @mleew17: boy dats cold...tyga  |
 ```
 ---
 
@@ -217,6 +217,7 @@ SELECT *
 FROM mindsdb.models 
 WHERE name = 'hf_test';
 ```
+
 ```sql
 | hf_test | huggingface | mindsdb | 1 | complete | [NULL] | PRED | up_to_date | 23.3.5.0 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'task': 'text-classification', 'model_name': 'Hate-speech-CNERG/bert-base-uncased-hatexplain', 'input_column': 'tweet', 'labels': ['hate_speech', 'neither', 'offensive']}} | [NULL] | [NULL] | [NULL] | [NULL] | 2023-03-29 17:15:38.683663 |
 ```

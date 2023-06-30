@@ -158,6 +158,9 @@ class ChatBotController:
         if is_running is not None:
             existing_chatbot.is_running = is_running
         if params is not None:
+            # Merge params on update
+            existing_params = {} if not existing_chatbot.params else existing_chatbot.params 
+            params.update(existing_params)
             existing_chatbot.params = params
         db.session.commit()
 

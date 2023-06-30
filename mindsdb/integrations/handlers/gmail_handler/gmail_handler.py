@@ -235,7 +235,7 @@ class EmailsTable(APITable):
         for op, arg1, arg2 in conditions:
             if op == 'or':
                 raise NotImplementedError(f'OR is not supported')
-            if arg1 == 'id':
+            if arg1 == 'message_id':
                 if op == '=':
                     params['id'] = arg2
                 else:

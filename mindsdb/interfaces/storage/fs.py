@@ -321,7 +321,7 @@ class S3FSStore(BaseFSStore):
                             continue
                         tar.add(path.relative_to(base_dir))
                 os.chdir(old_cwd)
-
+            fh.seek(0)
             self.s3.upload_fileobj(
                 fh,
                 self.bucket,

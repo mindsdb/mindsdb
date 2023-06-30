@@ -318,7 +318,7 @@ class S3FSStore(BaseFSStore):
                 with tarfile.open(fileobj=fh, mode='w:gz', compresslevel=compression_level) as tar:
                     for path in dir_path.iterdir():
                         if path.is_file() and path.name in ('dir.lock', 'last_modified.txt'):
-                            pass
+                            continue
                         tar.add(path.relative_to(base_dir))
                 os.chdir(old_cwd)
 

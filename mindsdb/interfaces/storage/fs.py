@@ -305,7 +305,7 @@ class S3FSStore(BaseFSStore):
                     for path in dir_path.iterdir():
                         if path.is_file() and path.name in ('dir.lock', 'last_modified.txt'):
                             pass
-                        tar.add(path.name)
+                        tar.add(tar.add(path.relative_to(base_dir)))
                 os.chdir(old_cwd)
 
             self.s3.upload_fileobj(

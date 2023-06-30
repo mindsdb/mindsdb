@@ -260,12 +260,8 @@ class S3FSStore(BaseFSStore):
         if (remote_size * 2) > psutil.virtual_memory().available:
             fh = io.BytesIO()
             self.s3.download_fileobj(self.bucket, remote_ziped_name, fh)
-            old_cwd = os.getcwd()
-            with self._thread_lock:
-                os.chdir(base_dir)
-                with tarfile.open(fileobj=fh) as tar:
-                    tar.extractall()
-                os.chdir(old_cwd)
+            with tarfile.open(fileobj=fh) as tar:
+                tar.extractall(path=base_dir)
         else:
             self.s3.download_file(self.bucket, remote_ziped_name, local_ziped_path)
             shutil.unpack_archive(local_ziped_path, base_dir)

@@ -1,7 +1,5 @@
 import datetime as dt
-import smtplib
-import imaplib
-import email
+import email_helpers
 import ast
 from collections import defaultdict
 import pytz
@@ -159,25 +157,29 @@ class EmailHandler(APIHandler):
         args = kwargs.get('connection_data', {})
 
         self.connection_args = {}
-        for k in ['bearer_token', 'consumer_key', 'consumer_secret',
-                  'access_token', 'access_token_secret', 'wait_on_rate_limit']:
+        for k in ['smptp_server', 'smptp_port', 'imap_server',
+                  'username', 'password']:
             if k in args:
                 self.connection_args[k] = args[k]
 
         self.api = None
         self.is_connected = False
 
-        tweets = TweetsTable(self)
+        tweets = EmailsTable(self)
         self._register_table('tweets', tweets)
 
     def connect(self):
-        """Authenticate with the Twitter API using the API keys and secrets stored in the `consumer_key`, `consumer_secret`, `access_token`, and `access_token_secret` attributes."""
+        """Authenticate with the email servers using credentials."""
 
         if self.is_connected is True:
             return self.api
 
-        self.api = tweepy.Client(**self.connection_args)
-
+        try:
+            self.api = email_helpers.EmailClient(**self.connection_args)
+        except Exception as e:
+            log.logger.error(f'Error connecting to email api: {e}!')
+            raise e
+        
         self.is_connected = True
         return self.api
 
@@ -187,16 +189,12 @@ class EmailHandler(APIHandler):
 
         try:
             api = self.connect()
-
-            # call get_user with unknown id.
-            #   it raises an error in case if auth is not success and returns not-found otherwise
-            #   api.get_me() is not exposed for OAuth 2.0 App-only authorisation
             api.get_user(id=1)
 
             response.success = True
 
-        except tweepy.Unauthorized as e:
-            log.logger.error(f'Error connecting to Twitter api: {e}!')
+        except Exception as e:
+            log.logger.error(f'Error connecting to email api: {e}!')
             response.error_message = e
 
         if response.success is False and self.is_connected is True:

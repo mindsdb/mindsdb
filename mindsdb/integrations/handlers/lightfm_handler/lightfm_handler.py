@@ -46,7 +46,6 @@ class LightFMHandler(BaseMLEngine):
             threshold=args["threshold"],
         )
 
-        # todo update imports once merged into dataprep_ml
         # preprocess data
         preprocessed_data = rec_preprocessor.preprocess()
 
@@ -56,41 +55,20 @@ class LightFMHandler(BaseMLEngine):
         args["item_idx_to_id_map"] = preprocessed_data.idx_item_map
         args["user_idx_to_id_map"] = preprocessed_data.idx_user_map
 
-        # get item_id to idx and user_id to idx maps
-        args["item_id_to_idx_map"] = dict(
-            zip(args["item_idx_to_id_map"].values(), args["item_idx_to_id_map"].keys())
-        )
-        args["user_id_to_idx_map"] = dict(
-            zip(args["user_idx_to_id_map"].values(), args["user_idx_to_id_map"].keys())
-        )
+        random_state = 42
 
         # run evaluation if specified
         if args.get("evaluate", False):
-            train, test = random_train_test_split(
-                preprocessed_data.interaction_matrix,
-                test_percentage=0.2,
-                random_state=42,
-            )
-            model = LightFM(
-                learning_rate=model_parameters.learning_rate,
-                loss=model_parameters.loss,
-                random_state=42,
-            )
 
-            model.fit(train, epochs=model_parameters.epochs)
-
-            evaluation_metrics = dict(
-                auc=auc_score(model, test, train).mean(),
-                precision=precision_at_k(model, test, train).mean(),
-                recall=recall_at_k(model, test, train).mean(),
+            self.evaluate(
+                preprocessed_data.interaction_matrix, random_state, model_parameters
             )
-            self.model_storage.json_set("evaluation_metrics", evaluation_metrics)
 
         # train model
         model = LightFM(
             learning_rate=model_parameters.learning_rate,
             loss=model_parameters.loss,
-            random_state=42,
+            random_state=random_state,
         )
         model.fit(preprocessed_data.interaction_matrix, epochs=model_parameters.epochs)
 
@@ -102,9 +80,21 @@ class LightFMHandler(BaseMLEngine):
         predict_params = args["predict_params"]
 
         # if user doesn't specify recommender type, default to user_item
-        recommender_type = predict_params.get("recommender_type", "user_item")
+        try:
+            recommender_type = df["recommender_type"].tolist()[0]
+        except KeyError:
+            recommender_type = predict_params.get("recommender_type", "user_item")
 
         args = self.model_storage.json_get("args")
+
+        # get item_id to idx and user_id to idx maps
+        args["item_id_to_idx_map"] = dict(
+            zip(args["item_idx_to_id_map"].values(), args["item_idx_to_id_map"].keys())
+        )
+        args["user_id_to_idx_map"] = dict(
+            zip(args["user_idx_to_id_map"].values(), args["user_idx_to_id_map"].keys())
+        )
+
         model = dill.loads(self.model_storage.file_get("model"))
 
         n_users = args["n_users_items"][0]
@@ -113,10 +103,14 @@ class LightFMHandler(BaseMLEngine):
 
         if recommender_type == "user_item":
             if df is not None:
-                n_items = df[args["item_id"]].nunique()
-                n_users = df[args["user_id"]].nunique()
-                item_ids = df[args["item_id"]].unique().tolist()
-                user_ids = df[args["user_id"]].unique().tolist()
+
+                if args["item_id"] in df.columns:
+                    n_items = df[args["item_id"]].nunique()
+                    item_ids = df[args["item_id"]].unique().tolist()
+
+                if args["user_id"] in df.columns:
+                    n_users = df[args["user_id"]].nunique()
+                    user_ids = df[args["user_id"]].unique().tolist()
 
             return get_user_item_recommendations(
                 n_users=n_users,
@@ -128,7 +122,7 @@ class LightFMHandler(BaseMLEngine):
             )
 
         elif recommender_type == "item_item":
-            if df is not None:
+            if df is not None and args["item_id"] in df.columns:
                 item_ids = df[args["item_id"]].unique().tolist()
 
             return get_item_item_recommendations(
@@ -146,3 +140,26 @@ class LightFMHandler(BaseMLEngine):
             raise ValueError(
                 "recommender_type must be either 'user_item', 'item_item' or 'user_user'"
             )
+
+    def evaluate(self, interaction_matrix, random_state, model_parameters):
+
+        train, test = random_train_test_split(
+            interaction_matrix,
+            test_percentage=0.2,
+            random_state=random_state,
+        )
+        model = LightFM(
+            learning_rate=model_parameters.learning_rate,
+            loss=model_parameters.loss,
+            random_state=random_state,
+        )
+
+        model.fit(train, epochs=model_parameters.epochs)
+
+        evaluation_metrics = dict(
+            auc=auc_score(model, test, train).mean(),
+            precision=precision_at_k(model, test, train).mean(),
+            recall=recall_at_k(model, test, train).mean(),
+        )
+
+        self.model_storage.json_set("evaluation_metrics", evaluation_metrics)

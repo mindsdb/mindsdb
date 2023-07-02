@@ -15,10 +15,10 @@ def get_item_user_idx(args: dict, n_users, n_items, item_ids=None, user_ids=None
     """
     if item_ids and user_ids:
         item_idx = np.array(
-            [args["item_id_to_idx_map"][item_id] for item_id in item_ids]
+            [int(args["item_id_to_idx_map"][item_id]) for item_id in item_ids]
         )
         user_idx = np.array(
-            [args["user_id_to_idx_map"][user_id] for user_id in user_ids]
+            [int(args["user_id_to_idx_map"][user_id]) for user_id in user_ids]
         )
 
         # repeat each user id index n_items times

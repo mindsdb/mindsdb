@@ -1,3 +1,4 @@
+import overpy
 import pandas as pd
 from typing import Text, List, Dict
 
@@ -5,6 +6,7 @@ from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
+
 
 class OpenStreetMapNodeTable(APITable):
     """The OpenStreetMap Nodes Table implementation"""
@@ -27,6 +29,7 @@ class OpenStreetMapNodeTable(APITable):
         ValueError
             If the query contains an unsupported condition
         """
+
         select_statement_parser = SELECTQueryParser(
             query,
             'nodes',
@@ -51,7 +54,7 @@ class OpenStreetMapNodeTable(APITable):
     
     def get_nodes(self, **kwargs) -> List[Dict]:
             
-        api_session = self.connect()
+        api_session = self.handler.connect()
         nodes = api_session.query("""
             node
             ({{bbox}});
@@ -91,7 +94,7 @@ class OpenStreetMapWayTable(APITable):
     
     def get_ways(self, **kwargs) -> List[Dict]:
 
-        api_session = self.connect()
+        api_session = self.handler.connect()
         ways = api_session.query("""
             way
             ({{bbox}});
@@ -132,7 +135,7 @@ class OpenStreetMapRelationTable(APITable):
     
     def get_relations(self, **kwargs) -> List[Dict]:
                 
-                api_session = self.connect()
+                api_session = self.handler.connect()
                 relations = api_session.query("""
                     relation
                     ({{bbox}});

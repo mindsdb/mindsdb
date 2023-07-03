@@ -1,7 +1,10 @@
+import overpy
+
 import pandas as pd
 from typing import Text, List, Dict
 
-from mindsdb.integrations.handlers.openstreetmap_handler.openstreetmap_tables import ( OpenStreetMapNodeTable, OpenStreetMapWayTable, OpenStreetMapRelationTable )
+from mindsdb.integrations.handlers.openstreetmap_handler.openstreetmap_tables import ( OpenStreetMapNodeTable, 
+    OpenStreetMapWayTable, OpenStreetMapRelationTable )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -12,7 +15,7 @@ from mindsdb.integrations.libs.response import (
 class OpenStreetMapHandler(APIHandler):
     """The OpenStreetMap handler implementation."""
 
-    def __init__(self, name: str = None, **kwargs):
+    def __init__(self, name: str, **kwargs):
         """Registers all API tables and prepares the handler for an API connection.
 
         Args:
@@ -27,16 +30,16 @@ class OpenStreetMapHandler(APIHandler):
         self.connection = None
         self.is_connected = False
 
-        nodes_data = NodesTable(self)
+        nodes_data = OpenStreetMapNodeTable(self)
         self._register_table("nodes", nodes_data)
 
-        ways_data = WaysTable(self)
+        ways_data = OpenStreetMapWayTable(self)
         self._register_table("ways", ways_data)
 
-        relations_data = RelationsTable(self)
+        relations_data = OpenStreetMapRelationTable(self)
         self._register_table("relations", relations_data)
 
-    def connect(self):
+    def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.
 
         Returns:
@@ -45,7 +48,7 @@ class OpenStreetMapHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        api_session = overpy.Overpass()
+        api_session = overpy.Overpass( **self.connection_data)
 
         self.connection = api_session
 
@@ -65,60 +68,38 @@ class OpenStreetMapHandler(APIHandler):
         except Exception as e:
             return StatusResponse(status=False, message=str(e))
         
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-    
-    def get_table(self, table_name: str, **kwargs) -> List[Dict]:
-        """Get data from the table.
+    def native_query(self, query: Text) -> Response:
+        """Execute a native query on the handler.
 
         Args:
-            table_name (str): The name of the table to get data from.
-            **kwargs: Arbitrary keyword arguments.
+            query (Text): The query to execute.
 
         Returns:
-            List[Dict]: The data from the table.
+            Response: The response from the query.
         """
-        if table_name == "nodes":
-            return self.get_nodes(**kwargs)
-        elif table_name == "ways":
-            return self.get_ways(**kwargs)
-        elif table_name == "relations":
-            return self.get_relations(**kwargs)
-        else:
-            raise ValueError(f"Table {table_name} is not supported.")
+        try:
+            self.connect()
+            result = self.connection.query(query)
+            return Response(status=True, data=result)
+        except Exception as e:
+            return Response(status=False, message=str(e))
         
-    def get_table_as_pandas(self, table_name: str, **kwargs) -> pd.DataFrame:
-        """Get data from the table as a pandas dataframe.
+    def call_openstreetmap_api(self, method_name:str = None, params:dict = None) -> pd.DataFrame:
+        """Call the OpenStreetMap API.
 
         Args:
-            table_name (str): The name of the table to get data from.
-            **kwargs: Arbitrary keyword arguments.
+            method_name (str): The name of the API method to call.
+            params (dict): The parameters to pass to the API method.
 
         Returns:
-            pd.DataFrame: The data from the table.
+            pd.DataFrame: The response from the API.
         """
-        return pd.json_normalize(self.get_table(table_name, **kwargs))
-    
-    def get_table_as_mindsdb(self, table_name: str, **kwargs) -> DataFrame:
-        """Get data from the table as a mindsdb dataframe.
+        if method_name is None:
+            raise ValueError("method_name must be specified.")
+        if params is None:
+            params = {}
+        self.connect()
+        method = getattr(self.connection, method_name)
+        result = method(**params)
+        return pd.DataFrame(result)
 
-        Args:
-            table_name (str): The name of the table to get data from.
-            **kwargs: Arbitrary keyword arguments.
-
-        Returns:
-            DataFrame: The data from the table.
-        """
-        return DataFrame(self.get_table_as_pandas(table_name, **kwargs))

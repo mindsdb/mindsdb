@@ -36,6 +36,7 @@ class OpenAIHandler(BaseMLEngine):
         self.max_batch_size = 20
         self.default_max_tokens = 100
         self.chat_completion_models = CHAT_MODELS
+        self.supported_ft_models = ('davinci', 'curie', 'babbage', 'ada')  # base models compatible with finetuning
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -432,7 +433,7 @@ class OpenAIHandler(BaseMLEngine):
                 if not completion:
                     completion = p['choices'].result()
                 else:
-                    completion['choices'].extend(p['choices'].result()['choices'])
+                    completion.extend(p['choices'].result())
 
         return completion
 
@@ -479,6 +480,9 @@ class OpenAIHandler(BaseMLEngine):
         args = {**using_args, **args}
         prev_model_name = self.base_model_storage.json_get('args').get('model_name', '')
 
+        if prev_model_name not in self.supported_ft_models:
+            raise Exception(f"This model cannot be finetuned. Supported base models are {self.supported_ft_models}")
+
         openai.api_key = self._get_openai_api_key(args)
         finetune_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
@@ -510,7 +514,7 @@ class OpenAIHandler(BaseMLEngine):
                     file=open(f"{temp_storage_path}/{file_name}", "rb"),
                     purpose='fine-tune')
 
-        train_file_id = jsons['train'].id if isinstance(jsons['train'], openai.File) else jsons['base']
+        train_file_id = jsons['train'].id if isinstance(jsons['train'], openai.File) else jsons['base'].id
         val_file_id = jsons['val'].id if isinstance(jsons['val'], openai.File) else None
 
         def _get_model_type(model_name: str):

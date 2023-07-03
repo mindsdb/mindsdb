@@ -62,6 +62,66 @@ The OpenStreetMap handler is initialized with the following parameters:
 
 ## Example Usage
 
+~~~~sql
+CREATE DATABASE openstreetmap_datasource
+WITH
+engine='openstreetmap',
+parameters={
+    "area": "New York City",
+    "timeout": 1000
+};
+~~~~
+
+```sql 
+SELECT * FROM nodes LIMIT 10;
+```
+
+```sql
+SELECT * FROM nodes WHERE id = 1;
+```
+
+```sql
+SELECT * FROM nodes ORDER BY id DESC LIMIT 10;
+```
+
+```sql
+SELECT id, latitude, longitude FROM nodes LIMIT 10;
+```
+
+```sql
+SELECT * FROM ways LIMIT 10;
+```
+
+```sql
+SELECT * FROM ways WHERE id = 1;
+```
+
+```sql
+SELECT * FROM ways ORDER BY id DESC LIMIT 10;
+```
+
+```sql
+SELECT id, nodes, tags FROM ways LIMIT 10;
+```
+
+```sql
+SELECT * FROM relations LIMIT 10;
+```
+
+```sql
+SELECT * FROM relations WHERE id = 1;
+```
+
+```sql
+SELECT * FROM relations ORDER BY id DESC LIMIT 10;
+```
+
+```sql
+SELECT id, members, tags FROM relations LIMIT 10;
+```
+
+## Example Usage with MindsDB
+
 ```python
 from mindsdb import Predictor
 from mindsdb.config import CONFIG

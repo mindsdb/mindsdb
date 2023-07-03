@@ -16,7 +16,9 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     CreateView,
     CreateJob,
     DropJob,
-    Evaluate
+    Evaluate,
+    CreateChatBot,
+    DropChatBot,
 )
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.dialects.mysql import Variable
@@ -81,10 +83,12 @@ from mindsdb.interfaces.model.functions import (
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
+from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import resolve_model_identifier
 import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.functions import mark_process
 
 
 def _get_show_where(
@@ -556,12 +560,10 @@ class ExecuteCommands:
                 raise ErBadTableError(
                     "Only 'DELETE' from database 'mindsdb' is possible at this moment"
                 )
-            if statement.table.parts[-1] != "predictors":
-                raise ErBadTableError(
-                    "Only 'DELETE' from table 'mindsdb.models' is possible at this moment"
-                )
-            self.delete_predictor_query(statement)
+
+            SQLQuery(statement, session=self.session, execute=True)
             return ExecuteAnswer(ANSWER_TYPE.OK)
+
         elif type(statement) == Insert:
             SQLQuery(statement, session=self.session, execute=True)
             return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -570,10 +572,8 @@ class ExecuteCommands:
                 if statement.table.parts[-1].lower() == "models_versions":
                     return self.answer_update_model_version(statement)
 
-                raise ErNotSupportedYet("Update is not implemented")
-            else:
-                SQLQuery(statement, session=self.session, execute=True)
-                return ExecuteAnswer(ANSWER_TYPE.OK)
+            SQLQuery(statement, session=self.session, execute=True)
+            return ExecuteAnswer(ANSWER_TYPE.OK)
         elif (
                 type(statement) == Alter
                 and ("disable keys" in sql_lower)
@@ -599,6 +599,11 @@ class ExecuteCommands:
             return self.answer_create_job(statement)
         elif type(statement) == DropJob:
             return self.answer_drop_job(statement)
+        # -- chatbots --
+        elif type(statement) == CreateChatBot:
+            return self.answer_create_chatbot(statement)
+        elif type(statement) == DropChatBot:
+            return self.answer_drop_chatbot(statement)
         elif type(statement) == Evaluate:
             statement.data = parse_sql(statement.query_str, dialect='mindsdb')
             return self.answer_evaluate_metric(statement)
@@ -626,6 +631,37 @@ class ExecuteCommands:
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
         jobs_controller.delete(job_name, project_name)
 
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_create_chatbot(self, statement):
+        chatbot_controller = ChatBotController()
+
+        name = statement.name
+        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+
+        database = self.session.integration_controller.get(statement.database.parts[-1])
+        if database is None:
+            raise SqlApiException(f'Database not found: {statement.database}')
+
+        chatbot_controller.add_chatbot(
+            name.parts[-1],
+            project_name=project_name,
+            model_name=statement.model.parts[-1],
+            database_id=database['id'],
+            params=statement.params
+        )
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_drop_chatbot(self, statement):
+        chatbot_controller = ChatBotController()
+
+        name = statement.name
+        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+
+        chatbot_controller.delete_chatbot(
+            name.parts[-1],
+            project_name=project_name
+        )
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_evaluate_metric(self, statement):
@@ -658,7 +694,7 @@ class ExecuteCommands:
 
         # try full name
         attribute = None
-        model_info = self._get_model_info(statement.value)
+        model_info = self._get_model_info(statement.value, except_absent=False)
         if model_info is None:
             parts = statement.value.parts.copy()
             attribute = parts.pop(-1)
@@ -686,13 +722,20 @@ class ExecuteCommands:
         if len(identifier.parts) == 1:
             identifier.parts = [self.session.database, identifier.parts[0]]
 
-        database_name, model_name, model_version, _describe = resolve_model_identifier(identifier)
+        database_name, model_name, model_version = resolve_model_identifier(identifier)
+
+        if model_name is None:
+            if except_absent:
+                raise Exception(f'Model not found: {identifier.to_string()}')
+            else:
+                return
 
         model_record = get_model_record(
             name=model_name,
             project_name=database_name,
             except_absent=except_absent,
-            version=model_version
+            version=model_version,
+            active=True if model_version is None else None
         )
         if not model_record:
             return None
@@ -769,6 +812,8 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
 
+    @profiler.profile()
+    @mark_process('learn')
     def answer_finetune_predictor(self, statement):
         model_record = self._get_model_info(statement.name)['model_record']
 
@@ -1056,6 +1101,7 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
+    @mark_process('learn')
     def answer_create_predictor(self, statement):
         integration_name = self.session.database
         if len(statement.name.parts) > 1:
@@ -1084,24 +1130,6 @@ class ExecuteCommands:
         ]
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
-
-    def delete_predictor_query(self, query):
-
-        query2 = Select(
-            targets=[Identifier("name")], from_table=query.table, where=query.where
-        )
-
-        sqlquery = SQLQuery(query2.to_string(), session=self.session)
-
-        result = sqlquery.fetch(self.session.datahub)
-
-        predictors_names = [x[0] for x in result["result"]]
-
-        if len(predictors_names) == 0:
-            raise SqlApiException("nothing to delete")
-
-        for predictor_name in predictors_names:
-            self.session.datahub["mindsdb"].delete_predictor(predictor_name)
 
     def answer_show_columns(
             self,

@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import importlib
 import threading
+import inspect
 import multiprocessing
 from time import time
 from pathlib import Path
@@ -19,12 +20,15 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore, FileStorage, FileStorageFactory, RESOURCE_GROUP
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
 from mindsdb.integrations.handlers_client.db_client_factory import DBClient
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.log import get_log
-
+from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
+import mindsdb.utilities.profiler as profiler
 
 logger = get_log()
 
@@ -295,10 +299,20 @@ class IntegrationController:
         if hasattr(integration_module, 'type'):
             integration_type = integration_module.type
 
+        class_type = None
+        if integration_module is not None and inspect.isclass(integration_module.Handler):
+            if issubclass(integration_module.Handler, DatabaseHandler):
+                class_type = 'sql'
+            if issubclass(integration_module.Handler, APIHandler):
+                class_type = 'api'
+            if issubclass(integration_module.Handler, BaseMLEngine):
+                class_type = 'ml'
+
         return {
             'id': integration_record.id,
             'name': integration_record.name,
             'type': integration_type,
+            'class_type': class_type,
             'engine': integration_record.engine,
             'date_last_update': deepcopy(integration_record.updated_at),
             'connection_data': data
@@ -387,6 +401,7 @@ class IntegrationController:
         logger.debug("%s.create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
         return DBClient(handler_type, self.handler_modules[handler_type].Handler, **handler_ars)
 
+    @profiler.profile()
     def get_handler(self, name, case_sensitive=False):
         handler = self.handlers_cache.get(name)
         if handler is not None:
@@ -447,8 +462,6 @@ class IntegrationController:
                 resource_group=RESOURCE_GROUP.PREDICTOR,
                 sync=True
             )
-        from mindsdb.integrations.libs.base import BaseMLEngine
-        from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 
         HandlerClass = self.handler_modules[integration_engine].Handler
 

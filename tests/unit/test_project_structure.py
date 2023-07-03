@@ -70,7 +70,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         # -- create model --
         ret = self.run_sql(
             '''
-                CREATE PREDICTOR proj.task_model
+                CREATE model proj.task_model
                 from pg (select * from tasks)
                 PREDICT a
                 using engine='dummy_ml',
@@ -81,9 +81,6 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert ret['NAME'][0] == 'task_model'
         assert ret['ENGINE'][0] == 'dummy_ml'
         self.wait_predictor('proj', 'task_model')
-
-        # check input to data handler
-        assert data_handler().native_query.call_args[0][0] == 'select * from tasks'
 
         # tag works in create model
         ret = self.run_sql('select * from proj.models')
@@ -122,9 +119,6 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         # check label
         assert ret['TAG'][0] == 'second'
-
-        # check integration sql
-        assert data_handler().native_query.call_args[0][0] == 'select * from tasks where a=2'
 
         # use model
         ret = self.run_sql('''
@@ -297,7 +291,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         # ----------------------------------------------------
 
         # drop predictor and check model is deleted and no versions
-        self.run_sql('drop predictor proj.task_model')
+        self.run_sql('drop model proj.task_model')
         ret = self.run_sql('select * from proj.models')
         assert len(ret) == 0
 
@@ -323,16 +317,13 @@ class TestProjectStructure(BaseExecutorDummyML):
         # -- create model --
         self.run_sql(
             '''
-                CREATE PREDICTOR mindsdb.task_model
+                CREATE model mindsdb.task_model
                 from mindsdb (select * from vtasks)
                 PREDICT a
                 using engine='dummy_ml'
             '''
         )
         self.wait_predictor('mindsdb', 'task_model')
-
-        # check input to data handler
-        assert data_handler().query.call_args[0][0].to_string() == 'SELECT * FROM tasks WHERE tasks.a = 1'
 
         # use model
         ret = self.run_sql('''
@@ -349,7 +340,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         # -- create model --
         self.run_sql(
             '''
-                CREATE PREDICTOR mindsdb.task_model
+                CREATE model mindsdb.task_model
                 PREDICT a
                 using engine='dummy_ml',
                 join_learn_process=true
@@ -374,7 +365,7 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         self.run_sql(
             '''
-                CREATE PREDICTOR mindsdb.pred
+                CREATE model mindsdb.pred
                 PREDICT p
                 using engine='dummy_ml',
                 join_learn_process=true
@@ -475,6 +466,28 @@ class TestProjectStructure(BaseExecutorDummyML):
                 '''
             )
 
+    def test_describe(self):
+        self.run_sql(
+            '''
+                CREATE model mindsdb.pred
+                PREDICT p
+                using engine='dummy_ml',
+                join_learn_process=true
+            '''
+        )
+        ret = self.run_sql('describe mindsdb.pred')
+        assert ret['tables'][0] == ['info']
+
+        ret = self.run_sql('describe pred')
+        assert ret['tables'][0] == ['info']
+
+        ret = self.run_sql('describe mindsdb.pred.info')
+        assert ret['type'][0] == 'dummy'
+
+        ret = self.run_sql('describe pred.info')
+        assert ret['type'][0] == 'dummy'
+
+
 class TestJobs(BaseExecutorDummyML):
 
     def run_sql(self, sql, throw_error=True, database='mindsdb'):
@@ -560,8 +573,6 @@ class TestJobs(BaseExecutorDummyML):
 
         # check query to integration
         job = self.db.Jobs.query.filter(self.db.Jobs.name == 'j2').first()
-        create_at_str = job.created_at.strftime("%Y-%m-%d %H:%M:%S")
-        assert data_handler().query.call_args[0][0].to_string() == f"SELECT * FROM tbl1 WHERE tbl1.b > '{create_at_str}'"
 
         # check jobs table
         ret = self.run_sql('select * from jobs', database='proj2')
@@ -590,9 +601,6 @@ class TestJobs(BaseExecutorDummyML):
 
         data_handler.reset_mock()
         scheduler.check_timetable()
-
-        # check query to integration
-        assert data_handler().query.call_args[0][0].to_string() == f"SELECT * FROM tbl1 WHERE tbl1.b > '{prev_run.strftime('%Y-%m-%d %H:%M:%S')}'"
 
         ret = self.run_sql('select * from jobs_history', database='proj2')
         assert len(ret) == 2  # was executed

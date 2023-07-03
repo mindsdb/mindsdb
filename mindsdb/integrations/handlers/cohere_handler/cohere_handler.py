@@ -19,10 +19,12 @@ class CohereHandler(BaseMLEngine):
     name = 'cohere'
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        super().__init__(*args)
 
         if 'using' not in args:
             raise Exception("Cohere engine requires a USING clause! Refer to its documentation for more details.")
 
+        self.generative = True
         self.model_storage.json_set('args', args)
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:

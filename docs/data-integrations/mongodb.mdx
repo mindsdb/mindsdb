@@ -13,11 +13,15 @@ This handler is implemented using `pymongo`, a Python library that contains tool
 
 The required arguments to establish a connection are as follows:
 
-* `user` is the username associated with the database.
+* `username` is the username associated with the database.
 * `password` is the password to authenticate your access.
 * `host` is the host name or IP address.
 * `port` is the port through which TCP/IP connection is to be made.
 * `database` is the database name to be connected.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/mongodb_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
 
 ## Usage
 
@@ -30,7 +34,7 @@ WITH
   PARAMETERS = {
     "host": "127.0.0.1",
     "port": 27017,
-    "user": "mongo",
+    "username": "mongo",
     "password": "password",
     "database": "database"
   };
@@ -63,7 +67,7 @@ mindsdb> db.databases.insertOne({
             'connection_args': {
                 "host": "127.0.0.1",
                 "port": 27017,
-                "user": "mongo",
+                "username": "mongo",
                 "password": "password",
                 "database": "database"
             }

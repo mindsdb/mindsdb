@@ -19,6 +19,10 @@ The required arguments to establish a connection are as follows:
 * `password` specifies the password for the user.
 * `schema` sets the current schema, which is used for identifiers without a defined schema.
 
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/hana_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
 ## Usage
 
 You can use the below SQL statements to create a schema in SAP HANA called `MINDSDB` and a table called `TEST`.

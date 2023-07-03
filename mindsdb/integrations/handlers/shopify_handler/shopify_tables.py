@@ -1,11 +1,16 @@
 import shopify
 import pandas as pd
-from typing import Text, List, Dict
+from typing import Text, List, Dict, Any
 
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
+from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilities import INSERTQueryParser
+
+from mindsdb.utilities.log import get_log
+
+logger = get_log("integrations.shopify_handler")
 
 
 class ProductsTable(APITable):
@@ -99,6 +104,32 @@ class CustomersTable(APITable):
 
         return customers_df
 
+    def insert(self, query: ast.Insert) -> None:
+        """Inserts data into the Shopify "POST /customers" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Insert
+           Given SQL INSERT query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        insert_statement_parser = INSERTQueryParser(
+            query,
+            supported_columns=['first_name', 'last_name', 'email', 'phone', 'tags', 'currency'],
+            mandatory_columns=['first_name', 'last_name', 'email', 'phone'],
+            all_mandatory=False
+        )
+        customer_data = insert_statement_parser.parse_query()
+        self.create_customers(customer_data)
+
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_customers(limit=1)).columns.tolist()
 
@@ -107,6 +138,17 @@ class CustomersTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         customers = shopify.Customer.find(**kwargs)
         return [customer.to_dict() for customer in customers]
+
+    def create_customers(self, customer_data: List[Dict[Text, Any]]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for customer in customer_data:
+            created_customer = shopify.Customer.create(customer)
+            if 'id' not in created_customer.to_dict():
+                raise Exception('Customer creation failed')
+            else:
+                logger.info(f'Customer {created_customer.to_dict()["id"]} created')
 
 
 class OrdersTable(APITable):

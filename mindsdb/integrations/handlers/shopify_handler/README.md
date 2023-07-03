@@ -50,6 +50,7 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+  - [x] Support INSERT
 - [x] Shopify Orders Table for a given Store
   - [x] Support SELECT
     - [x] Support LIMIT
@@ -59,7 +60,8 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
 
 ## TODO
 
-- [ ] Support INSERT, UPDATE and DELETE for Products, Customers and Orders tables
+- [ ] Support UPDATE and DELETE for Customers table
+- [ ] Support INSERT, UPDATE and DELETE for Product and Orders tables
 - [ ] Shopify Payments table
 - [ ] Shopify Inventory table
 - [ ] Shopify Discounts table
@@ -85,7 +87,7 @@ Use the established connection to query your database:
 SELECT * FROM shopify_datasource.products
 ~~~~
 
-Run more advanced queries:
+Run more advanced SELECT queries:
 
 ~~~~sql
 SELECT  id, title
@@ -94,3 +96,14 @@ WHERE status = 'active'
 ORDER BY id
 LIMIT 5
 ~~~~
+
+It is also possible to INSERT data into your Shopify store. At the moment, only the `customers` table supports INSERT:
+
+~~~~sql
+INSERT INTO shopify_datasource.customers(first_name, last_name, email)
+VALUES 
+('John', 'Doe', 'john.doe@example.com')
+~~~~
+
+A limited number of columns are supported for INSERT: 'first_name', 'last_name', 'email', 'phone', 'tags' and 'currency'. Of these either 'first_name', 'last_name', 'email' or 'phone' must be provided. 
+

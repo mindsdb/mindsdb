@@ -9,10 +9,13 @@ from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import init_lexer_parsers
+from mindsdb.integrations.libs.ml_exec_base import process_cache
+from mindsdb.interfaces.database.integrations import integration_controller
 
 
 def start(verbose, no_studio, with_nlp):
     config = Config()
+    is_cloud = config.get('cloud', False)
 
     server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
     db.init()
@@ -24,6 +27,10 @@ def start(verbose, no_studio, with_nlp):
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']
+
+    process_cache.init({
+        integration_controller.handler_modules['lightwood'].Handler: 4 if is_cloud else 1
+    })
 
     if server.lower() == 'waitress':
         serve(

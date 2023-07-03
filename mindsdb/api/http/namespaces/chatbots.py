@@ -177,7 +177,7 @@ class ChatBotResource(Resource):
                     f'Model with name {model_name} not found')
 
         # Chatbot must not exist with new name.
-        if name is not None:
+        if name is not None and name != chatbot_name:
             chatbot_with_new_name = chatbot_controller.get_chatbot(name, project_name=project_name)
             if chatbot_with_new_name is not None:
                 return http_error(

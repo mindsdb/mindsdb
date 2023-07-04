@@ -128,7 +128,6 @@ class WebzHandler(APIHandler):
         left = None
         count_results = None
 
-        params['token'] = self.connection_args['token']
         data = []
 
         if 'size' in params:

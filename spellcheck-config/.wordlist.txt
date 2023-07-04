@@ -7,6 +7,7 @@ Airtable
 airtable
 Akbulut
 akhilcoder
+ALLdaub
 Allez
 Allocine
 allocine
@@ -41,6 +42,7 @@ BaseHandler
 BaseMixer
 BaseMLEngine
 behaviour
+Berhi
 berkeley
 bert
 BestOf
@@ -83,6 +85,8 @@ codebase
 Coetzee
 Coinbase
 Colab
+companyID
+companyId
 Conda
 conda
 config
@@ -118,6 +122,7 @@ datasource
 datasources
 Datastax
 DataStax
+datastax
 DataStore
 davinci
 DBA
@@ -130,6 +135,7 @@ dbt
 dcc
 de
 Deepnote
+Deglet
 Der
 Dev
 dev
@@ -141,10 +147,12 @@ dl
 Docker's
 Dogg
 Dohri
+Dokol
 dropdown
 ds
 DSE
 DSN
+dtype
 DuckDB
 duckdb
 dynamodb
@@ -156,8 +164,12 @@ Eliel
 english
 ensembled
 ensembling
+EntropyRB
+EntropyRG
+EntropyRR
 Entrée
 Ephraimx
+EQDIASQ
 Eren
 ESG
 Ethereum
@@ -201,6 +213,7 @@ Hacktoberfest
 hain
 Hallo
 HANA
+hana
 HandlerResponse
 HandlerStatusResponse
 hartmann
@@ -225,8 +238,10 @@ il
 IMDb
 imputers
 InfluxDB
+influxdb
 Informatica
 Informix
+informix
 init
 insertOne
 integrations
@@ -241,6 +256,7 @@ Javi
 JDBC
 Je
 Jira
+jobType
 JOINed
 js
 JSON
@@ -260,6 +276,9 @@ Keras
 keyspace
 Kinie
 Kulkarni
+KurtosisRB
+KurtosisRG
+KurtosisRR
 Kusuma
 Lafleur
 lakehouse
@@ -291,15 +310,21 @@ m'appelle
 MacOS
 Mardini
 Mariadb
+mariadb
 MatrixOne
+matrixone
 mdb
 MeanEnsemble
+MeanRB
+MeanRG
+MeanRR
 mein
 Merlion
 Metabase
 Metabase's
 metres
 MichaelLantz
+milesFromMetropolis
 Millau
 MindsDB
 mindsdb
@@ -354,6 +379,7 @@ num
 Nupoor
 OAuth
 OceanBase
+oceanbase
 ODBC
 Odumuyiwa
 ok
@@ -371,6 +397,7 @@ OpenAPI
 OpenGauss
 orderby
 OrioleDB
+orioledb
 overfit
 param
 params
@@ -386,6 +413,7 @@ Pinot
 pinot
 pixpack
 PlanetScale
+planetscale
 Posterizedsoul
 Postgres
 postgres
@@ -413,6 +441,7 @@ PyPi
 PyPI
 pypi
 pytorch
+QL
 Quelle
 queryable
 QuestDB
@@ -432,13 +461,16 @@ regressor
 reimplementing
 repo
 restecg
+RG
 riurwehe
 roadmap
 roBERTa
 rockstar
+Rotana
 RPC
 runtime
 Rutam
+Safavi
 saledate
 Salim
 Sapkota
@@ -452,6 +484,7 @@ schemas
 schön
 scikit
 scrollbar
+scylla
 ScyllaDB
 SDK
 sdk
@@ -460,6 +493,7 @@ selectdate
 selectfromsource
 serverless
 shahrukhx
+SHAPEFACTOR
 Sharma
 Shetty
 Shetye
@@ -471,6 +505,9 @@ Sie
 signup
 SingleStore
 Sinha
+SkewRB
+SkewRG
+SkewRR
 skillset
 sklearn
 SkTime
@@ -480,6 +517,7 @@ sms
 snf
 SNF
 SnoopStein
+Sogay
 Solr
 solr
 Sourcecode
@@ -491,6 +529,7 @@ sql
 Sqlachemy
 sqlalchemy
 SQLAlchemy
+sqlany
 sqlplot
 SQLServer
 SSL
@@ -499,7 +538,11 @@ StarRocks
 StastForecast
 statemet
 StatsForecast
+statsforecast
 statuscheck
+StdDevRB
+StdDevRG
+StdDevRR
 storey
 str
 stringified
@@ -531,6 +574,7 @@ templating
 Teradata
 Teslim
 tf
+th
 thal
 thalach
 thowsand
@@ -591,6 +635,7 @@ XGBoostMixer
 xsum
 yagueto
 Yay
+yearsExperience
 yml
 YugabyteDB
 Zindi

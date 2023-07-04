@@ -8,6 +8,9 @@ import pandas as pd
 
 class WebzBaseAPITable(APITable):
 
+    ENDPOINT = None
+    SORTABLE_COLUMNS = []
+
     def select(self, query: ast.Select) -> pd.DataFrame:
         """ Selects data from the API and returns it as a pandas DataFrame
 
@@ -28,10 +31,22 @@ class WebzBaseAPITable(APITable):
             else:
                 raise NotImplementedError(f'Unknown clause: {arg1}')
 
+        if query.order_by:
+            if len(query.order_by) > 1:
+                raise ValueError("Unsupported to order by multiple fields")
+            order_item = query.order_by[0]
+            # make sure that column is sortable
+            if order_item.field.parts[0] not in type(self).SORTABLE_COLUMNS:
+                raise ValueError(f"Order by unknown column {order_item.field.parts[0]}")
+            params.update({
+                'sort': order_item.field.parts[0],
+                'order': order_item.direction.lower()
+            })
+
         if query.limit is not None:
             params['size'] = query.limit.value
         result = self.handler.call_webz_api(
-            method_name='filterWebContent',
+            method_name=type(self).ENDPOINT,
             params=params
         )
 
@@ -91,6 +106,25 @@ class WebzPostsTable(WebzBaseAPITable):
     """
 
     ENDPOINT = 'filterWebContent'
+    SORTABLE_COLUMNS = [
+        'relevancy',
+        'social.facebook.likes',
+        'social.facebook.shares',
+        'social.facebook.comments',
+        'social.gplus.shares',
+        'social.pinterest.shares',
+        'social.linkedin.shares',
+        'social.stumbledupon.shares',
+        'social.vk.shares',
+        'replies_count',
+        'participants_count',
+        'performance_score',
+        'published',
+        'thread.published',
+        'domain_rank',
+        'ord_in_thread',
+        'rating'
+    ]
 
 
 class WebzReviewsTable(WebzBaseAPITable):
@@ -100,3 +134,12 @@ class WebzReviewsTable(WebzBaseAPITable):
     """
 
     ENDPOINT = 'reviewFilter'    
+    SORTABLE_COLUMNS = [
+        'relevancy',
+        'reviews_count',
+        'reviewers_count',
+        'spam_score',
+        'domain_rank',
+        'review_order',
+        'rating'
+    ]

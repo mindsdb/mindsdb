@@ -29,7 +29,7 @@ def get_item_user_idx(args: dict, n_users, n_items, item_ids=None, user_ids=None
 
     elif item_ids and not user_ids:
         item_idx = np.array(
-            [args["item_id_to_idx_map"][item_id] for item_id in item_ids]
+            [int(args["item_id_to_idx_map"][item_id]) for item_id in item_ids]
         )
 
         user_idxs = np.repeat([i for i in range(0, n_users)], n_items)
@@ -37,7 +37,7 @@ def get_item_user_idx(args: dict, n_users, n_items, item_ids=None, user_ids=None
 
     elif user_ids and not item_ids:
         user_idx = np.array(
-            [args["user_id_to_idx_map"][user_id] for user_id in user_ids]
+            [int(args["user_id_to_idx_map"][user_id]) for user_id in user_ids]
         )
 
         user_idxs = np.repeat(user_idx, n_items)
@@ -92,9 +92,7 @@ def get_user_item_recommendations(
         .map(args["user_idx_to_id_map"])
     )
 
-    return user_item_recommendations_df[["user_id", "item_id", "score"]].astype(
-        {"user_id": "str", "item_id": "str"}
-    )
+    return user_item_recommendations_df[["user_id", "item_id", "score"]]
 
 
 def get_item_item_recommendations(
@@ -154,21 +152,24 @@ def get_item_item_recommendations(
         best = np.argpartition(scores, -N)
 
         # sort the scores
-        rec = sorted(zip(best, scores[best]), key=lambda x: -x[1])
+        rec = sorted(
+            zip(best, scores[best] / item_norms[item_idx]), key=lambda x: -x[1]
+        )
 
         intermediate_df = (
             pd.DataFrame(rec, columns=["item_idx", "score"])
             .tail(-1)  # remove the item itself
             .head(N)
         )
+
         intermediate_df["item_id_one"] = item_id
         similar_items_dfs.append(intermediate_df)
 
     similar_items_df = pd.concat(similar_items_dfs, ignore_index=True)
-    similar_items_df["item_id_two"] = (
-        similar_items_df["item_idx"].astype("str").map(item_idx_to_id_map)
+    similar_items_df["item_idx"] = similar_items_df["item_idx"].astype("str")
+
+    similar_items_df["item_id_two"] = similar_items_df["item_idx"].map(
+        args["item_idx_to_id_map"]
     )
 
-    return similar_items_df[["item_id_one", "item_id_two", "score"]].astype(
-        {"item_id_one": "str", "item_id_two": "str"}
-    )
+    return similar_items_df[["item_id_one", "item_id_two", "score"]]

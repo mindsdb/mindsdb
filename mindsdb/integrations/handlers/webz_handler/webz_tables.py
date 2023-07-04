@@ -107,6 +107,7 @@ class WebzPostsTable(WebzBaseAPITable):
 
     ENDPOINT = 'filterWebContent'
     SORTABLE_COLUMNS = [
+        'crawled',
         'relevancy',
         'social.facebook.likes',
         'social.facebook.shares',
@@ -135,11 +136,12 @@ class WebzReviewsTable(WebzBaseAPITable):
 
     ENDPOINT = 'reviewFilter'    
     SORTABLE_COLUMNS = [
+        'crawled',
         'relevancy',
         'reviews_count',
         'reviewers_count',
         'spam_score',
         'domain_rank',
-        'review_order',
+        'ord_in_thread',
         'rating'
     ]

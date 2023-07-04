@@ -7,6 +7,7 @@ airtable
 akbulut
 akhilcoder
 alldaub
+ALLdaub
 allez
 allocine
 allowlist
@@ -16,6 +17,7 @@ anamika
 apache
 api
 apis
+APIs
 architected
 args
 arima
@@ -29,6 +31,7 @@ auth
 autocorrect
 autokeras
 automl
+AutoML
 autoregressive
 autosklearn
 axios
@@ -54,6 +57,7 @@ bqdataset
 bson
 byom
 camembert
+CamemBERT
 cardinality
 cassandra
 catalogue
@@ -78,6 +82,7 @@ coetzee
 coinbase
 colab
 companyid
+companyId
 conda
 config
 const
@@ -143,8 +148,11 @@ english
 ensembled
 ensembling
 entropyrb
+EntropyRB
 entropyrg
+EntropyRG
 entropyrr
+EntropyRR
 entrée
 ephraimx
 eqdiasq
@@ -204,6 +212,7 @@ http
 https
 huawei's
 huggingface
+HuggingFace
 hyperparameter
 hyperparameters
 iam
@@ -221,6 +230,7 @@ io
 iot
 ip
 ips
+IPs
 ist
 j'ai
 javi
@@ -228,6 +238,7 @@ jdbc
 je
 jira
 jobtype
+jobType
 joined
 js
 json
@@ -246,8 +257,11 @@ keyspace
 kinie
 kulkarni
 kurtosisrb
+KurtosisRB
 kurtosisrg
+KurtosisRG
 kurtosisrr
+KurtosisRR
 kusuma
 lafleur
 lakehouse
@@ -275,14 +289,18 @@ lucene
 luwig
 m'appelle
 macos
+MacOS
 mardini
 mariadb
 matrixone
 mdb
 meanensemble
 meanrb
+MeanRB
 meanrg
+MeanRG
 meanrr
+MeanRR
 mein
 merlion
 metabase
@@ -290,9 +308,12 @@ metabase's
 metres
 michaellantz
 milesfrommetropolis
+milesFromMetropolis
 millau
 mindsdb
+MindsDB
 mindsdb's
+MindsDB's
 mindsdbpassword
 mintlify
 mishra
@@ -305,6 +326,7 @@ mohd
 monetdb
 mongo
 mongodb
+MongoDb
 mongoshell
 mpp
 mql
@@ -335,6 +357,7 @@ nosql
 num
 nupoor
 oauth
+OAuth
 oceanbase
 odbc
 odumuyiwa
@@ -344,6 +367,8 @@ olap
 oldpeak
 oltp
 openai
+OpenAI
+OpenAi
 openai's
 openai’s
 openapi
@@ -409,6 +434,7 @@ rg
 riurwehe
 roadmap
 roberta
+roBERTa
 rockstar
 rotana
 rpc
@@ -443,13 +469,17 @@ shirdhankar
 shopify
 showdb
 sidebartitle
+sidebarTitle
 sie
 signup
 singlestore
 sinha
 skewrb
+SkewRB
 skewrg
+SkewRG
 skewrr
+SkewRR
 skillset
 sklearn
 sktime
@@ -478,8 +508,11 @@ statemet
 statsforecast
 statuscheck
 stddevrb
+StdDevRB
 stddevrg
+StdDevRG
 stddevrr
+StdDevRR
 storey
 str
 stringified
@@ -532,6 +565,7 @@ troiano
 tsstackedensemble
 tweepy
 tweeteval
+TweetEval
 twitterhandler
 uber
 uc
@@ -568,6 +602,7 @@ xsum
 yagueto
 yay
 yearsexperience
+yearsExperience
 yml
 yugabytedb
 zindi

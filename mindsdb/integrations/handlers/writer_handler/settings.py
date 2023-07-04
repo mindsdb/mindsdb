@@ -1,4 +1,3 @@
-import os
 from functools import lru_cache
 from typing import List, Union
 
@@ -11,8 +10,6 @@ from langchain.document_loaders import DataFrameLoader
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import Chroma
 from pydantic import BaseModel
-
-check_path_exists = lambda path: os.makedirs(path, exist_ok=True)
 
 DEFAULT_EMBEDDINGS_MODEL = "sentence-transformers/all-mpnet-base-v2"
 USER_DEFINED_MODEL_PARAMS = (
@@ -108,8 +105,11 @@ def load_embeddings_model(embeddings_model_name):
     return embedding_model
 
 
-def load_chroma(embeddings_model_name, persist_directory, chroma_settings):
+def load_chroma(
+    embeddings_model_name, persist_directory, collection_name, chroma_settings
+):
     return Chroma(
+        collection_name=collection_name,
         persist_directory=persist_directory,
         embedding_function=load_embeddings_model(embeddings_model_name),
         client_settings=chroma_settings,
@@ -124,8 +124,10 @@ def get_chroma_settings(persist_directory):
     )
 
 
-def get_retriever(embeddings_model_name, persist_directory):
+def get_retriever(embeddings_model_name, persist_directory, collection_name):
     chroma_settings = get_chroma_settings(persist_directory)
-    db = load_chroma(embeddings_model_name, persist_directory, chroma_settings)
+    db = load_chroma(
+        embeddings_model_name, persist_directory, collection_name, chroma_settings
+    )
     retriever = db.as_retriever()
     return retriever

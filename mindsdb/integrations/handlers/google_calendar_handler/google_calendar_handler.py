@@ -155,7 +155,7 @@ class GoogleCalendarHandler(APIHandler):
                 'timeZone': params['end']['timeZone'],
             },
             'recurrence': [
-                'RRULE:FREQ=DAILY;COUNT=2'
+                'RRULE:FREQ=DAILY;COUNT=1'
             ],
             'attendees': [{'email': attendee['email']} for attendee in (params['attendees'] 
                             if isinstance(params['attendees'], list) else [params['attendees']])],

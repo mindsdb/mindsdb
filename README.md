@@ -21,7 +21,7 @@
 
 <p>
 	<a href="https://github.com/mindsdb/mindsdb/actions"><img src="https://github.com/mindsdb/mindsdb/workflows/MindsDB%20workflow/badge.svg" alt="MindsDB workflow"></a>
-	<a href="https://www.python.org/downloads/" target="_blank"><img src=" https://img.shields.io/badge/python-3.8.x%7C%203.9.x-brightgreen.svg" alt="Python supported"></a>
+	<a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.8.x%7C%203.9.x-brightgreen.svg" alt="Python supported"></a>
 	<a href="https://pypi.org/project/MindsDB/" target="_blank"><img src="https://badge.fury.io/py/MindsDB.svg" alt="PyPi Version"></a>
 	<br />
 	<img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/Mindsdb">  <a href="https://hub.docker.com/u/mindsdb" target="_blank"><img src="https://img.shields.io/docker/pulls/mindsdb/mindsdb" alt="Docker pulls"></a>
@@ -52,23 +52,32 @@
 
 ----------------------------------------
 
-[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) is a Server for Artificial Intelligence Logic, enabling developers to ship AI powered projects from prototyping & experimentation to production in a fast & scalable way. [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Build%20AI-Centered%20Applications%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,nlp,machine_learning,neural_networks,databases,gpt3)
+[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) is a Server for Artificial Intelligence Logic, enabling developers to ship AI powered systems from prototyping & experimentation to production in a fast & scalable way. [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Build%20AI-Centered%20Applications%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,nlp,machine_learning,neural_networks,databases,gpt3)
 
-We do this by abstracting Generative AI, Large Language and other Models as a virtual tables ([AI Tables](https://www.youtube.com/watch?v=tnB4Y9T1E2k)) on top of enterprise databases. This increases accessibility with organizations and enables development teams to use their existing skills to build applications powered by AI.
+## What can you build with MindsDB?
 
-By taking a data-centric approach to AI MindsDB brings the process closer to the source of the data minimizing the need to build and maintain data pipelines and ETL’ing, speeding up the time to deployment and reducing complexity.
+* **Question Answering**: This is useful when you have data (we support more than 120 data sources) and you need answers from your data given a question in natural language.
+* **Semantic Search**: Similar to Question Answering, but in this case, you want to retrieve specific parts of your data where the answer to a question may exist.
+* **AI Agent serving**: This is useful when you want to publish your AI Agents to enterprise conversational applications like Slack, email, Twilio, etc.
+* **Recommendation systems**: When you use your data to help predict, narrow down, and find what people are looking for among an exponentially growing number of options.
+* **Time Series Forecasting**: When you want to use your historical data to estimate how things will look in the future.
+* **AI Automation pipelines**: When you need your AI systems to consume enterprise data and have the AI output stored back into your enterprise tools in an automated way.
 
+## Generative AI Tables
+
+MindsDB empowers developers to harness the power of AI by treating AI models as **([Generative AI Tables](https://www.youtube.com/watch?v=tnB4Y9T1E2k))**. These tables are capable of learning from data in enterprise data sources. This abstraction makes AI highly accessible, allowing development teams to create AI-driven applications using their existing skills.
+
+<center>
+  
+  <img width="90%" src="https://docs.google.com/drawings/d/e/2PACX-1vR7DCzimVKnIf22CGtKhFryBJKVLn08ZRL56862XxGh_zQQaVQD-0EoMXrvjKqP4ZujHxQAoSgd5jXX/pub?w=1439&h=812" alt="MindsDB">
+
+<center>
+
+The data-centric approach of MindsDB AI Logic server brings the process closer to the source of the data minimizing the need to build and maintain data pipelines and ETL’ing, speeding up the time to deployment and reducing complexity and because it'sa server, everything you build on top of mindsdb is automatically ready for production.
+
+MindsDB has an active and helpful community. Feel free to join our [Slack](https://mindsdb.com/joincommunity) and check-out the [rewards and community programs](https://mindsdb.com/community?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo). 
 **P.S. If you like our open-source project we'd appreciate if you star it on GitHub ⭐!**
 
-<h2 align="center">
-   <br/>
-   <br/>
-  <img width="100%" src="https://github.com/mindsdb/mindsdb/assets/12409467/8418fec3-8c8b-4414-b1dc-7943041047b4" alt="MindsDB">
-
-</h2>
-
-----------------------------------------
-MindsDB has an active and helpful community. Feel free to join our [Slack](https://mindsdb.com/joincommunity) and check-out the [rewards and community programs](https://mindsdb.com/community?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 
 ----------------------------------------
 
@@ -76,18 +85,6 @@ MindsDB has an active and helpful community. Feel free to join our [Slack](https
 
 ----------------------------------------
 
-## Use cases
-
-Here are some popular use cases you can build with MindsDB:
-
-* Conversational AI: Leverage MindsDB native integrations with data platforms and pre-trained large language models, like OpenAI's GPT, to quickly build conversational AI solutions without the overhead of managing complex data pipelines.
-* Fraud Detection: MindsDB can help developers build models to detect fraudulent activity in financial transactions, eCommerce platforms etc.
-* Sales Forecasting: MindsDB can be used to develop models to predict future sales based on historical sales data, allowing businesses to make better-informed decisions.
-* Customer Segmentation: MindsDB can help developers segment customers based on their behavior, preferences, and other factors, allowing businesses to tailor their marketing efforts.
-* Sentiment analysis: MindsDB native integration with pre-trained models like OpenAI GPT or Hugging Face can be used to analyze the sentiment of a text data, such as a customer reviews - in a single command, instead of individual API calls and ETL-ing data.
-* Predictive Maintenance: MindsDB can be used to build models to predict when equipment or machinery is likely to fail, allowing for proactive maintenance and minimizing downtime.
-
-See more examples and community tutorials [here](https://docs.mindsdb.com/tutorials).
 
 ## Demo
 

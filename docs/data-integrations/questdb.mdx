@@ -19,7 +19,9 @@ The required arguments to establish a connection are as follows:
 * `port` is the port used to make TCP/IP connection.
 * `database` is the database name.
 * `public` stores a value of `True` or `False`. Defaults to `True` if left blank.
-
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/questdb_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
 ## Usage
 
 In order to make use of this handler and connect to the QuestDB server in MindsDB, the following syntax can be used:

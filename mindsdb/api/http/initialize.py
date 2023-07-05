@@ -254,7 +254,11 @@ def initialize_app(config, no_studio, with_nlp):
 
         company_id = request.headers.get('company-id')
         user_class = request.headers.get('user-class')
-        email_confirmed = request.headers.get('email-confirmed')
+
+        try:
+            email_confirmed = int(request.headers.get('email-confirmed', 1))
+        except ValueError:
+            email_confirmed = 1
 
         if company_id is not None:
             try:

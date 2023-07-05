@@ -417,8 +417,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             user_class = struct.unpack('B', user_class)[0]
             email_confirmed = 1
             if user_class > 1:
-                email_confirmed = (user_class >> 1) & 1
-            user_class = user_class & 1
+                email_confirmed = (user_class >> 2) & 1
+            user_class = user_class & 3
 
             database_name_len = self.request.recv(2)
             database_name_len = struct.unpack('H', database_name_len)[0]

@@ -102,6 +102,11 @@ class LightwoodHandler(BaseMLEngine):
         with profiler.Context('predict'):
             predictions = predictor.predict(df, args=pred_args)
 
+        # embedding mode
+        if predictor.problem_definition.embedding_only or pred_args.get('return_embedding', False):
+            predictions['prediction'] = predictions.values.tolist()
+            predictions = predictions[['prediction']]
+
         with profiler.Context('predict-postprocessing'):
             predictions = predictions.to_dict(orient='records')
 

@@ -1,0 +1,9 @@
+mindsdb>=22.6.2.1
+mindsdb_sql >= 0.4.0
+pandas <=1.4.3
+transformers==4.21.0
+sentencepiece==0.1.97
+
+tensorflow
+tqdm
+torch==2.0.1+cpu --index-url https://download.pytorch.org/whl/cpu

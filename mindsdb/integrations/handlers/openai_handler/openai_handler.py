@@ -14,6 +14,7 @@ import openai
 import numpy as np
 import pandas as pd
 
+from mindsdb.utilities.hooks import before_openai_query, after_openai_query
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -289,6 +290,8 @@ class OpenAIHandler(BaseMLEngine):
                 return _submit_normal_completion(kwargs, prompts, api_args)
 
         def _log_api_call(params, response):
+            after_openai_query(params, response)
+
             params2 = params.copy()
             params2.pop('api_key', None)
             params2.pop('user', None)
@@ -305,6 +308,7 @@ class OpenAIHandler(BaseMLEngine):
             kwargs['prompt'] = prompts
             kwargs = {**kwargs, **api_args}
 
+            before_openai_query(kwargs)
             resp = _tidy(openai.Completion.create(**kwargs))
             _log_api_call(kwargs, resp)
             return resp
@@ -343,6 +347,8 @@ class OpenAIHandler(BaseMLEngine):
                                                                        kwargs['model'],
                                                                        api_args['max_tokens'])
                     pkwargs = {**kwargs, **api_args}
+
+                    before_openai_query(kwargs)
                     resp = _tidy(openai.ChatCompletion.create(**pkwargs))
                     _log_api_call(pkwargs, resp)
 
@@ -351,6 +357,7 @@ class OpenAIHandler(BaseMLEngine):
                     kwargs['messages'] = [initial_prompt] + [kwargs['messages'][-1]]
                     pkwargs = {**kwargs, **api_args}
 
+                    before_openai_query(kwargs)
                     resp = _tidy(openai.ChatCompletion.create(**pkwargs))
                     _log_api_call(pkwargs, resp)
 

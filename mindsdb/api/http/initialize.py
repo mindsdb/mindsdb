@@ -254,6 +254,7 @@ def initialize_app(config, no_studio, with_nlp):
 
         company_id = request.headers.get('company-id')
         user_class = request.headers.get('user-class')
+        email_confirmed = request.headers.get('email-confirmed')
 
         if company_id is not None:
             try:
@@ -273,6 +274,7 @@ def initialize_app(config, no_studio, with_nlp):
 
         ctx.company_id = company_id
         ctx.user_class = user_class
+        ctx.email_confirmed = email_confirmed
 
     # Wait for static initialization.
     if not no_studio and init_static_thread is not None:

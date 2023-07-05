@@ -105,8 +105,8 @@ class LightwoodHandler(BaseMLEngine):
 
         with profiler.Context('predict-postprocessing'):
             if embedding_mode:
-                predictions['embedding'] = predictions.values.tolist()
-                return predictions[['embedding']]
+                predictions['prediction'] = predictions.values.tolist()
+                predictions = predictions[['prediction']]
 
             predictions = predictions.to_dict(orient='records')
 

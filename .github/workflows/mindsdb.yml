@@ -25,7 +25,7 @@ jobs:
       uses: tj-actions/changed-files@v37
     - uses: pre-commit/action@v3.0.0
       with:
-        extra_args: pip-compile --files ${{ steps.changed-files.outputs.all_changed_files }}
+        extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }}
   matrix_prep:
     needs: code_checking
     runs-on: ubuntu-latest

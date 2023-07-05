@@ -22,6 +22,8 @@ jobs:
       with:
         python-version: 3.9
     - uses: pre-commit/action@v3.0.0
+      with:
+        extra_args: --from-ref HEAD^ --to-ref HEAD
   matrix_prep:
     needs: code_checking
     runs-on: ubuntu-latest

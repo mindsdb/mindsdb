@@ -12,7 +12,7 @@ Let's see in action
 # Should be able to create a web crawler database
 CREATE DATABASE my_web 
 With 
-    ENGINE = 'webr';
+    ENGINE = 'web';
 ```
 
 This creates a database called my_web. This database ships with a table called crawler that we can use to crawl data given some url/urls.

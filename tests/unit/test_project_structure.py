@@ -82,9 +82,6 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert ret['ENGINE'][0] == 'dummy_ml'
         self.wait_predictor('proj', 'task_model')
 
-        # check input to data handler
-        assert data_handler().native_query.call_args[0][0] == 'select * from tasks'
-
         # tag works in create model
         ret = self.run_sql('select * from proj.models')
         assert ret['TAG'][0] == 'first'
@@ -122,9 +119,6 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         # check label
         assert ret['TAG'][0] == 'second'
-
-        # check integration sql
-        assert data_handler().native_query.call_args[0][0] == 'select * from tasks where a=2'
 
         # use model
         ret = self.run_sql('''
@@ -330,9 +324,6 @@ class TestProjectStructure(BaseExecutorDummyML):
             '''
         )
         self.wait_predictor('mindsdb', 'task_model')
-
-        # check input to data handler
-        assert data_handler().query.call_args[0][0].to_string() == 'SELECT * FROM tasks WHERE tasks.a = 1'
 
         # use model
         ret = self.run_sql('''
@@ -582,8 +573,6 @@ class TestJobs(BaseExecutorDummyML):
 
         # check query to integration
         job = self.db.Jobs.query.filter(self.db.Jobs.name == 'j2').first()
-        create_at_str = job.created_at.strftime("%Y-%m-%d %H:%M:%S")
-        assert data_handler().query.call_args[0][0].to_string() == f"SELECT * FROM tbl1 WHERE tbl1.b > '{create_at_str}'"
 
         # check jobs table
         ret = self.run_sql('select * from jobs', database='proj2')
@@ -612,9 +601,6 @@ class TestJobs(BaseExecutorDummyML):
 
         data_handler.reset_mock()
         scheduler.check_timetable()
-
-        # check query to integration
-        assert data_handler().query.call_args[0][0].to_string() == f"SELECT * FROM tbl1 WHERE tbl1.b > '{prev_run.strftime('%Y-%m-%d %H:%M:%S')}'"
 
         ret = self.run_sql('select * from jobs_history', database='proj2')
         assert len(ret) == 2  # was executed

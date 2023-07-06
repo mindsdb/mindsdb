@@ -93,7 +93,7 @@ class Config():
             'root': os.environ['MINDSDB_STORAGE_DIR'],
             'cloud_root': os.environ['MINDSDB_CLOUD_DIR']
         }
-      
+
         # content - temporary storage for entities
         paths['content'] = os.path.join(paths['root'], 'content')
         # storage - persist storage for entities

@@ -328,7 +328,7 @@ class ChatBotsHistory(Base):
     __tablename__ = 'chat_bots_history'
     id = Column(Integer, primary_key=True)
     chat_bot_id = Column(Integer)
-    type = Column(String)
+    type = Column(String)  # TODO replace to enum
     text = Column(String)
     user = Column(String)
     destination = Column(String)

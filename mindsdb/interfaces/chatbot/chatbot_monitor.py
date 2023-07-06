@@ -6,7 +6,6 @@ from mindsdb.utilities.log import initialize_log
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.chatbot.chatbot_thread import ChatBotThread
-from mindsdb.interfaces.chatbot.realtime_chatbot_thread import RealtimeChatBotThread
 
 
 class ChatBotMonitor:
@@ -53,12 +52,8 @@ class ChatBotMonitor:
 
             if bot_id not in self._active_bots and bot.is_running:
                 # Start new bot if configured to run.
-                if bot.chat_engine is not None:
-                    thread = RealtimeChatBotThread(bot)
-                elif bot.database_id is not None:
-                    thread = ChatBotThread(bot)
-                else:
-                    continue
+                thread = ChatBotThread(bot)
+
                 thread.start()
                 self._active_bots[bot_id] = thread
 

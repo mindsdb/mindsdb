@@ -8,8 +8,8 @@ from threading import Event
 from typing import Callable, Dict
 
 from mindsdb.integrations.libs.realtime_chat_handler import RealtimeChatHandler
-from mindsdb.interfaces.chatbot.chatbot_message import ChatBotMessage
-from mindsdb.interfaces.chatbot.chatbot_response import ChatBotResponse
+from mindsdb.interfaces.chatbot.types import ChatBotMessage
+from mindsdb.interfaces.chatbot._chatbot_response import ChatBotResponse
 
 class RealtimeSlackChatHandler(RealtimeChatHandler):
     """Implements RealtimeChatHandler interface for sending/receiving Slack messages."""

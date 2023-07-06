@@ -6,6 +6,12 @@ import pandas as pd
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from slack_sdk.web.slack_response import SlackResponse
+from slack_sdk.socket_mode import SocketModeClient
+from slack_sdk.socket_mode.request import SocketModeRequest
+from slack_sdk.socket_mode.response import SocketModeResponse
+
+from mindsdb.interfaces.chatbot.types import ChatBotMessage
+
 
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
@@ -14,7 +20,8 @@ from mindsdb_sql.parser import ast
 from mindsdb_sql.parser.ast import ASTNode, Update, Delete
 from mindsdb_sql.planner.utils import query_traversal
 
-from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
+from mindsdb.integrations.libs.api_handler import APIChatHandler, APITable, FuncParser
+
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
 from mindsdb.integrations.libs.response import (
@@ -256,7 +263,7 @@ class SlackChannelsTable(APITable):
         except SlackApiError as e:
             raise Exception(f"Error deleting message from Slack channel '{params['channel']}' with timestamp '{params['ts']}': {e.response['error']}")
 
-class SlackHandler(APIHandler):
+class SlackHandler(APIChatHandler):
     """
     A class for handling connections and interactions with Slack API.
     Agrs:
@@ -285,10 +292,86 @@ class SlackHandler(APIHandler):
         channels = SlackChannelsTable(self)
         self._register_table('channels', channels)
 
+        self._socket_mode_client = None
+
+    def get_chat_config(self):
+        params = {
+            'polling': {
+                'type': 'realtime',
+            }
+        }
+        return params
+
+    def get_my_user_name(self):
+        # TODO
+        api = self.connect()
+        resp = api.users_profile_get()
+        return resp['profile']['display_name']
+
+    def realtime_subscribe(self, callback):
+        self._socket_mode_client = SocketModeClient(
+            # This app-level token will be used only for establishing a connection
+            app_token=self.connection_args['api_token'],  # xapp-A111-222-xyz
+            # You will be using this WebClient for performing Web API calls in listeners
+            web_client=WebClient(token=self.connection_args['token'])  # xoxb-111-222-xyz
+        )
+
+        def _process_websocket_message(self, client: SocketModeClient, request: SocketModeRequest):
+            # Acknowledge the request
+            response = SocketModeResponse(envelope_id=request.envelope_id)
+            client.send_socket_mode_response(response)
+
+            if request.type != 'events_api':
+                return
+
+            payload_event = request.payload['event']
+            if payload_event['type'] != 'message':
+                return
+            if 'subtype' in payload_event:
+                # Don't respond to message_changed, message_deleted, etc.
+                return
+            if payload_event['channel_type'] != 'im':
+                # Only support IMs currently.
+                return
+            if 'bot_id' in payload_event:
+                # A bot sent this message.
+                return
+
+            chatbot_message = ChatBotMessage(
+                ChatBotMessage.Type.DIRECT,
+                payload_event['text'],
+                # In Slack direct messages are treated as channels themselves.
+                payload_event['channel'],
+                payload_event['channel']
+            )
+            callback(chatbot_message)
+
+        self._socket_mode_client.socket_mode_request_listeners.append(_process_websocket_message)
+        self._socket_mode_client.connect()
+
+    def realtime_send(self, message: ChatBotMessage):
+        """
+               Sends a Slack message.
+
+               Parameters: message (ChatBotMessage): The message to send
+
+               Returns: response (ChatBotResponse): Response indicating whether the message was sent successfully
+               """
+        if message.type != ChatBotMessage.Type.DIRECT:
+            raise NotImplementedError('Only sending direct messages is supported by RealtimeSlackChatHandler')
+        response = self._socket_mode_client.web_client.chat_postMessage(
+            channel=message.destination,
+            text=message.text
+        )
+
+        response.validate()
+
     def create_connection(self):
         """
         Creates a WebClient object to connect to the Slack API token stored in the connection_args attribute.
         """
+        # TODO check connection_args['api_token'] too
+
         client = WebClient(token=self.connection_args['token'])
         return client
     

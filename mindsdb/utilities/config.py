@@ -64,7 +64,7 @@ class Config():
         else:
             root_storage_dir = get_or_create_data_dir()
             os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir
-            os.environ['MINDSDB_CLOUD_DIR'] = root_storage_dir # backward compatibility for cloud dir
+            os.environ['MINDSDB_CLOUD_DIR'] = root_storage_dir  # backward compatibility for cloud dir
         # endregion
 
         # cloud storage setup
@@ -91,10 +91,9 @@ class Config():
 
         paths = {
             'root': os.environ['MINDSDB_STORAGE_DIR'],
-            'cloud_root': os.environ['MINDSDB_CLOUD_DIR'] 
+            'cloud_root': os.environ['MINDSDB_CLOUD_DIR']
         }
-        
-
+      
         # content - temporary storage for entities
         paths['content'] = os.path.join(paths['root'], 'content')
         # storage - persist storage for entities

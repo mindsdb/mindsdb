@@ -58,30 +58,47 @@ class Config():
         if 'storage_dir' in self._override_config:
             root_storage_dir = self._override_config['storage_dir']
             os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir
+            os.environ['MINDSDB_CLOUD_DIR'] = root_storage_dir  # backward compatibility for cloud dir
         elif os.environ.get('MINDSDB_STORAGE_DIR') is not None:
             root_storage_dir = os.environ['MINDSDB_STORAGE_DIR']
         else:
             root_storage_dir = get_or_create_data_dir()
             os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir
+            os.environ['MINDSDB_CLOUD_DIR'] = root_storage_dir # backward compatibility for cloud dir
         # endregion
+
+        # cloud storage setup
+        cloud_storage_dir = None
+        if 'cloud_storage_dir' in self._override_config:
+            cloud_storage_dir = self._override_config['cloud_storage_dir']
+            os.environ['MINDSDB_CLOUD_DIR'] = cloud_storage_dir
+        # end cloud storage setup
 
         if os.path.isdir(root_storage_dir) is False:
             os.makedirs(root_storage_dir)
+        if os.path.isdir(cloud_storage_dir) is False:
+            os.makedirs(cloud_storage_dir)
 
         if 'storage_db' in self._override_config:
             os.environ['MINDSDB_DB_CON'] = self._override_config['storage_db']
         elif os.environ.get('MINDSDB_DB_CON', '') == '':
-            os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(root_storage_dir,
+            db_storage_dir = root_storage_dir
+            # use cloud storage if configured
+            if cloud_storage_dir is not None:
+                db_storage_dir = cloud_storage_dir
+            os.environ['MINDSDB_DB_CON'] = 'sqlite:///' + os.path.join(db_storage_dir,
                                                                        'mindsdb.sqlite3.db') + '?check_same_thread=False&timeout=30'
 
         paths = {
-            'root': os.environ['MINDSDB_STORAGE_DIR']
+            'root': os.environ['MINDSDB_STORAGE_DIR'],
+            'cloud_root': os.environ['MINDSDB_CLOUD_DIR'] 
         }
+        
 
         # content - temporary storage for entities
         paths['content'] = os.path.join(paths['root'], 'content')
         # storage - persist storage for entities
-        paths['storage'] = os.path.join(paths['root'], 'storage')
+        paths['storage'] = os.path.join(paths['cloud_root'], 'storage')
         paths['static'] = os.path.join(paths['root'], 'static')
         paths['tmp'] = os.path.join(paths['root'], 'tmp')
         paths['log'] = os.path.join(paths['root'], 'log')
@@ -96,6 +113,7 @@ class Config():
                 'location': 'local'
             },
             'storage_dir': os.environ['MINDSDB_STORAGE_DIR'],
+            'cloud_storage_dir': os.environ['MINDSDB_CLOUD_DIR'],
             'paths': paths,
             'auth': {
                 'http_auth_enabled': False,

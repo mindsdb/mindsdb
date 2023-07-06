@@ -1,6 +1,7 @@
 {
     "config_version":"1.4",
     "storage_dir": "/root/mdb_storage",
+    "cloud_storage_dir": "/root/cloud",
     "log": {
         "level": {
             "console": "ERROR",

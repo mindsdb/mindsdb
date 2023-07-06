@@ -4,6 +4,8 @@ if [[ -n "$MDB_CONFIG_CONTENT" ]]; then
   echo "$MDB_CONFIG_CONTENT" > /root/mindsdb_config.json;
 fi;
 
+bash /root/setup_cloud.sh
+
 if [[ -n "$MDB_AUTOUPDATE" ]]; then
   URL="https://public.api.mindsdb.com/installer/$MDB_RELTYPE/docker___started___None"
   VERSION=$(python -c "import urllib.request as r; print(r.urlopen('$URL').read().decode())")

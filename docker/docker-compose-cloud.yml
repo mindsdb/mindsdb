@@ -1,0 +1,24 @@
+version: "3.2"
+
+services:
+
+  mindsdb:
+    image:
+      mindsdb:cloud
+    ports:
+      - '47334:47334'
+      - '47335:47335'
+      - '47336:47336'
+    command: bash -c "cd /mindsdb && ./mindsdb_launcher.sh start"
+    privileged: true
+    volumes:
+      - /home/h1t35h/.gcs_creds:/tmp/creds.json:ro
+    environment:
+      MINDSDB_CLOUD_DIR: "/root/cloud"
+      GCS_BUCKET: "minds-db-cloud"
+      GOOGLE_APPLICATION_CREDENTIALS: "/tmp/creds.json"
+    healthcheck:
+      test:  ["CMD", "curl", "-f", "http://localhost:47334/api/util/ping"]
+      interval: 30s
+      timeout: 4s
+      retries: 100

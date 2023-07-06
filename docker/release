@@ -1,4 +1,4 @@
-FROM docker.io/pytorch/pytorch:1.13.0-cuda11.6-cudnn8-runtime
+FROM --platform=linux/amd64 docker.io/pytorch/pytorch:1.13.0-cuda11.6-cudnn8-runtime
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
@@ -89,6 +89,17 @@ ARG VERSION=
 RUN pip install --no-cache-dir mindsdb${VERSION:+"==$VERSION"}
 
 COPY mindsdb_config.release.json /root/mindsdb_config.json
+COPY setup_cloud.sh /root/
 COPY mindsdb_launcher.sh /root/
+
+RUN chmod +x /root/setup_cloud.sh
+
+# Adding Support for cloud storage setup
+RUN apt install -y jq; \
+    apt install -y fuse; \
+    apt install -y curl; \
+    curl -L -O https://github.com/GoogleCloudPlatform/gcsfuse/releases/download/v0.42.5/gcsfuse_0.42.5_amd64.deb ; \
+    dpkg --install gcsfuse_0.42.5_amd64.deb; \
+    rm gcsfuse_0.42.5_amd64.deb;
 
 CMD bash /root/mindsdb_launcher.sh start

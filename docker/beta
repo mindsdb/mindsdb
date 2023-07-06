@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:latest
+FROM  --platform=linux/amd64 pytorch/pytorch:latest
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
@@ -10,6 +10,17 @@ ENV MDB_RELTYPE=beta
 
 COPY mindsdb_config.beta.json /root/mindsdb_config.json
 COPY mindsdb_launcher.sh /root/
+COPY setup_cloud.sh /root/
+
+RUN chmod +x /root/setup_cloud.sh
+
+# Adding Support for cloud storage setup
+RUN apt install -y jq; \
+    apt install -y fuse; \
+    apt install -y curl; \
+    curl -L -O https://github.com/GoogleCloudPlatform/gcsfuse/releases/download/v0.42.5/gcsfuse_0.42.5_amd64.deb ; \
+    dpkg --install gcsfuse_0.42.5_amd64.deb; \
+    rm gcsfuse_0.42.5_amd64.deb;
 
 # run launcher to install beta MindsDB as specified at
 # https://public.api.mindsdb.com/installer/beta/docker___success___None

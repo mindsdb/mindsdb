@@ -131,6 +131,8 @@ def clean_unlinked_process_marks():
                     file.unlink()
 
             except psutil.AccessDenied:
+                from mindsdb.utilities.log import get_log
+
                 get_log("main").warning(f"access to {process_id} denied")
 
                 continue

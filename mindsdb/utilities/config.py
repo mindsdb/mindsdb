@@ -76,7 +76,7 @@ class Config():
 
         if os.path.isdir(root_storage_dir) is False:
             os.makedirs(root_storage_dir)
-        if os.path.isdir(cloud_storage_dir) is False:
+        if cloud_storage_dir is not None and os.path.isdir(cloud_storage_dir) is False:
             os.makedirs(cloud_storage_dir)
 
         if 'storage_db' in self._override_config:

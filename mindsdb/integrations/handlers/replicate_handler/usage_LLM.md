@@ -63,31 +63,29 @@ USING
 ```
 
 ```sql
-+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------+
-| output                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | prompt                                 |
-+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------+
-|
-
-Opensource software, oh how we love thee
-With bugs and glitches, oh so free
-You bring us laughter and joy each day
-And we'll never have to pay
-
-The licence is open, the code is there
-For all to see and share in cheer
-You bring us together, from far and wide
-To work on projects, side by side
-
-With open source, there's no end
-To the code we can bend
-We can change it, mold it, make it our own
-And create something truly great, or really strange
-
-So here's to open source, the future is bright
-With code that's free, and with all of our might
-We'll make the future shine, with technology so fine
-And open source will always be our shining line | Write a humourous  poem on Open Source |
-+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------+
++--------------------------------------------------------------+----------------------------------------+
+| output                                                       | prompt                                 |
++--------------------------------------------------------------+----------------------------------------+
+| Opensource software, oh how we love thee                     | Write a humourous  poem on Open Source |  
+| With bugs and glitches, oh so free                           |                                        |  
+| You bring us laughter and joy each day                       |                                        |  
+| And we'll never have to pay                                  |                                        |  
+|                                                              |                                        |  
+| The licence is open, the code is there                       |                                        |  
+| For all to see and share in cheer                            |                                        |  
+| You bring us together, from far and wide                     |                                        |  
+| To work on projects, side by side                            |                                        |  
+|                                                              |                                        |  
+| With open source, there's no end                             |                                        |  
+| To the code we can bend                                      |                                        |  
+| We can change it, mold it, make it our own                   |                                        |  
+| And create something truly great, or really strange          |                                        |  
+|                                                              |                                        |  
+| So here's to open source, the future is bright               |                                        |  
+| With code that's free, and with all of our might             |                                        |  
+| We"ll make the future shine, with technology fine            |                                        |  
+| And open source will always be our shining line              |                                        |  
++--------------------------------------------------------------+----------------------------------------+
 ```
 
 >> Note: Replicate provides only a few free predictions, so choose your predictions wisely. Don't let the machines have all the fun, save some for yourself! 😉

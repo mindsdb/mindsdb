@@ -159,9 +159,9 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
                 model_name
             )
 
-        elif args['task'] == 'speech-recognition':
+        elif args['task'] == 'automatic-speech-recognition':
             ap = AudioProcessing(api_key)
-            result_df = ap.speech_recognition_in_df(
+            result_df = ap.automatic_speech_recognition_in_df(
                 df,
                 input_column,
                 model_name

@@ -160,9 +160,6 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
                 model_name
             )
 
-        else:
-            raise Exception(f"Task {args['task']} is not supported!")
-
         result_df = result_df.rename(columns={'predictions': args['target']})
         return result_df
 

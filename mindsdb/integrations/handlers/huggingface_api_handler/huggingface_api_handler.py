@@ -112,7 +112,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             result_df = nlp.sentence_similarity_in_df(
                 df,
                 input_column,
-                args['sentence_column'],  # TODO name it input_column2?
+                args['input_column2'],
                 args['options'] if 'options' in args else None,
                 model_name
             )

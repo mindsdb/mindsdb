@@ -3,6 +3,7 @@ import datetime as dt
 
 import time
 from collections import defaultdict
+from typing import Any
 
 import pandas as pd
 import tweepy
@@ -22,6 +23,7 @@ from mindsdb.integrations.libs.response import (
 )
 
 from tripadvisor_api import TripAdvisorAPI
+from tripadvisor_table import SearchLocationTable
 
 
 class TripAdvisorHandler(APIHandler):
@@ -30,13 +32,13 @@ class TripAdvisorHandler(APIHandler):
     Attributes:
         api_key (str): The unique API key to access Tripadvisor content.
         api (TripAdvisorAPI): The `TripAdvisorAPI` object for checking the connection to the Twitter API.
-
     """
 
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
 
         args = kwargs.get("connection_data", {})
+        self._tables = {}
 
         self.connection_args = {}
         handler_config = Config().get("tripadvisor_handler", {})
@@ -51,8 +53,8 @@ class TripAdvisorHandler(APIHandler):
         self.api = None
         self.is_connected = False
 
-        # tweets = TweetsTable(self)
-        # self._register_table('tweets', tweets)
+        tripAdvisor = SearchLocationTable(self)
+        self._register_table("searchLocationTable", tripAdvisor)
 
     def connect(self, api_version=2):
         """Check the connection with TripAdvisor API"""
@@ -66,6 +68,7 @@ class TripAdvisorHandler(APIHandler):
         return self.api
 
     def check_connection(self) -> StatusResponse:
+        """This function evaluates if the connection is alive and healthy"""
         response = StatusResponse(False)
 
         try:
@@ -77,10 +80,14 @@ class TripAdvisorHandler(APIHandler):
             response.success = True
 
         except Exception as e:
-            response.error_message = f"Error connecting to Twitter api: {e}"
+            response.error_message = f"Error connecting to TripAdvisor api: {e}"
             log.logger.error(response.error_message)
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False
 
         return response
+
+    def _register_table(self, table_name: str, table_class: Any):
+        """It registers the data resource in memory."""
+        self._tables[table_name] = table_class

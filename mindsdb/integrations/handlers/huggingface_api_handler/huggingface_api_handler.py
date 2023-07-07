@@ -20,7 +20,8 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
     name = 'huggingface_api'
 
     @staticmethod
-    def create_validation(args=None):
+    def create_validation(target, args=None, **kwargs):
+        args = args['using']
         if 'input_column' not in args:
             raise InsufficientParametersException('input_column has to be specified')
 
@@ -52,8 +53,6 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
 
         args = args['using']
         args['target'] = target
-
-        self.create_validation(args)
 
         self.model_storage.json_set('args', args)
 

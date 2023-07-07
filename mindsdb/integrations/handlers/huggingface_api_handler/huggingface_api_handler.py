@@ -5,9 +5,11 @@ import pandas as pd
 
 from huggingface_hub import HfApi
 from hugging_py_face import NLP, ComputerVision, AudioProcessing
-from hugging_py_face.config_parser import ConfigParser
+
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.base import BaseMLEngine
+
+from .exceptions import UnsupportedTaskException, InsufficientParametersException
 
 
 class HuggingFaceInferenceAPIHandler(BaseMLEngine):
@@ -19,35 +21,25 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
-
-        if 'using' in args:
-            args = args['using']
-
-        hf_api = HfApi()
+        if 'input_column' not in args:
+            raise InsufficientParametersException('input_column has to be specified')
 
         if 'model_name' not in args:
             # detect model by task
             task = args.get('task')
             if task is None:
-                raise Exception('model_name or task have to be specified')
+                raise InsufficientParametersException('model_name or task have to be specified')
 
             args['model_name'] = None
         else:
             # detect task by model
+            hf_api = HfApi()
             metadata = hf_api.model_info(args['model_name'])
 
             if 'task' not in args:
                 args['task'] = metadata.pipeline_tag
 
         # TODO raise if task is not supported
-
-        input_keys = list(args.keys())
-
-        # task, model_name, input_column is essential
-        for key in ['task', 'model_name', 'input_column']:
-            if key not in args:
-                raise Exception(f'Parameter "{key}" is required')
-            input_keys.remove(key)
 
         #TODO check columns for specific tasks
 

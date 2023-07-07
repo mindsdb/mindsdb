@@ -42,7 +42,9 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
         if args['task'] not in get_supported_tasks():
             raise UnsupportedTaskException(f'The task {args["task"]} is not supported by the Hugging Face Inference API engine.')
 
-        #TODO check columns for specific tasks
+        if args['task'] == 'sentence-similarity':
+            if 'input_column2' not in args:
+                raise InsufficientParametersException('input_column2 has to be specified')
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         if 'using' not in args:

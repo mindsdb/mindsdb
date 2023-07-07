@@ -38,8 +38,6 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
 
             if 'task' not in args:
                 args['task'] = metadata.pipeline_tag
-            elif args['task'] != metadata.pipeline_tag:
-                raise Exception(f'Task mismatch for model: {args["task"]}!={metadata.pipeline_tag}')
 
         # TODO raise if task is not supported
 

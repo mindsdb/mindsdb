@@ -31,13 +31,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             if task is None:
                 raise Exception('model_name or task have to be specified')
 
-            # get from task
-            config = ConfigParser()
-            model_name = config.get_config_dict()['TASK_MODEL_MAP'].get(task)
-            if model_name is None:
-                raise Exception(f'Model not found by task: {task}')
-
-            args['model_name'] = model_name
+            args['model_name'] = None
         else:
             # detect task by model
             metadata = hf_api.model_info(args['model_name'])

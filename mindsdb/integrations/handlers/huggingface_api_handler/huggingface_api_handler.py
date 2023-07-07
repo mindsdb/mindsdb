@@ -20,7 +20,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
     name = 'huggingface_api'
 
     @staticmethod
-    def create_validation(target, args=None, **kwargs):
+    def create_validation(args=None):
         if 'input_column' not in args:
             raise InsufficientParametersException('input_column has to be specified')
 
@@ -48,10 +48,12 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         if 'using' not in args:
-            raise Exception("Hugging Face Inference engine requires a USING clause! Refer to its documentation for more details.")
+            raise InsufficientParametersException("Hugging Face Inference engine requires a USING clause! Refer to its documentation for more details.")
 
         args = args['using']
         args['target'] = target
+
+        self.create_validation(args)
 
         self.model_storage.json_set('args', args)
 

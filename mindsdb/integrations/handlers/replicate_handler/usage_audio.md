@@ -95,9 +95,10 @@ USING
 | https://replicate.delivery/pbxt/EQj2DtBn5fxVA6P97GfPYthmgd0I3VaOEGFnweE4hvl5BPUiA/audio.wav | An image captured by NASA's Mars Curiosity Rover shows a faint figure of a woman against the desert landscape of Mars. If you take a closer look, it will seem that the lady is standing on a cliff overlooking the vast undulating expanse. She seems to wear a long cloak and has long hair. |
 +---------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+```
 
-If above predicted url don't work , then use [this](https://sndup.net/smy3/)
+Above predicted url will work , therfore use [this](https://sndup.net/smy3/).
 
 This is just an one model used in this example there are more with vast variation and usescases.
 Also there is no limit to imagination, how can you use this.
 
+>> IMPORTANT NOTE: PREDICTED **URL** will only work for **24 hours** after prediction.
 >> Note: Replicate provides only a few free predictions, so choose your predictions wisely. Don't let the machines have all the fun, save some for yourself! 😉

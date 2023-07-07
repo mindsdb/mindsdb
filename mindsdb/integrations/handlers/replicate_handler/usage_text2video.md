@@ -63,6 +63,8 @@ WHERE animation_prompts='a human and animals are friends by Asher Brown Durand, 
 USING
  max_frames=119;
 ```
+
+### OUTPUT
 ```sql
 +---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------+
 | output                                                                                                                                                                                                                                                                                                                    | prompt                                 |
@@ -71,6 +73,7 @@ USING
 +---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------+
 ```
 
-Chexkout [here](https://www.pexels.com/video/ai-generated-video-17489162/)
+Checkout generated video [here](https://www.pexels.com/video/ai-generated-video-17489162/) as above link will not work, reason is given below.
 
+>> IMPORTANT NOTE: PREDICTED **URL** will only work for **24 hours** after prediction.
 >> Note: Replicate provides only a few free predictions, so choose your predictions wisely. Don't let the machines have all the fun, save some for yourself! 😉

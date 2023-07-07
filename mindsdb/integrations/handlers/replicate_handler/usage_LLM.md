@@ -14,6 +14,7 @@ The required arguments to establish a connection are,
 * model_name: Model name which you want to access in MindsDB. e.g 'air-forever/kandinsky-2'
 * version: version hash/id which you want to use in MindsDB.
 * api_key: API key from Replicate Platform you can found [here](https://replicate.com/account/api-tokens).
+* model_type: It should be set to '**LLM**' while using Large language Model else it Optional
 
 
 ## Usage
@@ -61,7 +62,7 @@ USING
  max_length=200,
  temperature=0.75;
 ```
-
+### OUTPUT
 ```sql
 +--------------------------------------------------------------+----------------------------------------+
 | output                                                       | prompt                                 |

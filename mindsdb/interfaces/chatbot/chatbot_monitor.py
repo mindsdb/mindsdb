@@ -46,11 +46,13 @@ class ChatBotMonitor:
         """Periodic check to see if new chatbots need to be started, or if existing chatbots need to be stopped."""
         allowed_bots = set()
 
-        for bot in db.ChatBots.query.all():
+        for bot in db.ChatBots.query\
+                .filter(db.ChatBots.is_running == True)\
+                .all():
             bot_id = bot.id
             allowed_bots.add(bot_id)
 
-            if bot_id not in self._active_bots and bot.is_running:
+            if bot_id not in self._active_bots:
                 # Start new bot if configured to run.
                 thread = ChatBotThread(bot)
 
@@ -60,11 +62,7 @@ class ChatBotMonitor:
         # Check old bots to stop
         active_bots = list(self._active_bots.keys())
         for bot_id in active_bots:
-            bot = db.ChatBots.query.filter(
-                db.ChatBots.id == bot_id
-            ).first()
-            is_running = bot is not None and bot.is_running
-            if bot_id not in allowed_bots or not is_running:
+            if bot_id not in allowed_bots:
                 self.stop_bot(bot_id)
 
     def stop_bot(self, bot_id: int):

@@ -4,7 +4,7 @@ from typing import Optional, Dict
 import pandas as pd
 
 from huggingface_hub import HfApi
-from hugging_py_face import NLP, ComputerVision, AudioProcessing, get_supported_tasks
+from hugging_py_face import NLP, ComputerVision, AudioProcessing, get_in_df_supported_tasks
 
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -40,7 +40,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             if 'task' not in args:
                 args['task'] = metadata.pipeline_tag
 
-        if args['task'] not in get_supported_tasks():
+        if args['task'] not in get_in_df_supported_tasks():
             raise UnsupportedTaskException(f'The task {args["task"]} is not supported by the Hugging Face Inference API engine.')
 
         if args['task'] == 'sentence-similarity':

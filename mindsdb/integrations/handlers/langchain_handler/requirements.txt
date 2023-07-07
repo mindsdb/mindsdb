@@ -1,3 +1,5 @@
 openai==0.27.0
 langchain==0.0.186
 wikipedia==1.4.0
+pandas
+tiktoken >= 0.3.0

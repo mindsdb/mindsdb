@@ -4,7 +4,7 @@ from typing import Optional, Dict
 import pandas as pd
 
 from huggingface_hub import HfApi
-from hugging_py_face import NLP, ComputerVision, AudioProcessing
+from hugging_py_face import NLP, ComputerVision, AudioProcessing, get_supported_tasks
 
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -39,7 +39,8 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             if 'task' not in args:
                 args['task'] = metadata.pipeline_tag
 
-        # TODO raise if task is not supported
+        if args['task'] not in get_supported_tasks():
+            raise UnsupportedTaskException(f'The task {args["task"]} is not supported by the Hugging Face Inference API engine.')
 
         #TODO check columns for specific tasks
 
@@ -83,7 +84,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
                 df,
                 input_column,
                 args['parameters'] if 'parameters' in args else None,
-                args['options'] if 'options' in args else None,
+                args['options'] if 'optiInsufficientParametersExceptionons' in args else None,
                 model_name
             )
 

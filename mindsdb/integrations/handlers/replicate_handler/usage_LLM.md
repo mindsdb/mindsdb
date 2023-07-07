@@ -89,4 +89,4 @@ USING
 +--------------------------------------------------------------+----------------------------------------+
 ```
 
->> Note: Replicate provides only a few free predictions, so choose your predictions wisely. Don't let the machines have all the fun, save some for yourself! 😉
+> Note: Replicate provides only a few free predictions, so choose your predictions wisely. Don't let the machines have all the fun, save some for yourself! 😉

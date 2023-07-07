@@ -75,5 +75,6 @@ USING
 
 Checkout generated video [here](https://www.pexels.com/video/ai-generated-video-17489162/) as above link will not work, reason is given below.
 
->> IMPORTANT NOTE: PREDICTED **URL** will only work for **24 hours** after prediction.
->> Note: Replicate provides only a few free predictions, so choose your predictions wisely. Don't let the machines have all the fun, save some for yourself! 😉
+- IMPORTANT NOTE: PREDICTED **URL** will only work for **24 hours** after prediction.
+
+> Note: Replicate provides only a few free predictions, so choose your predictions wisely. Don't let the machines have all the fun, save some for yourself! 😉

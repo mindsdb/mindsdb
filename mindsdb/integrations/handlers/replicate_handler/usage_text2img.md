@@ -65,5 +65,6 @@ WHERE prompt='Great warrior Arjun from Mahabharata, looking at camera,cinematic 
 ![GENERATE_IMAGE](https://github-production-user-asset-6210df.s3.amazonaws.com/75653580/249064359-737c2686-ae5c-4b2f-bcc6-8b8f1a8fb8e1.png)
 
 
->> IMPORTANT NOTE: PREDICTED **URL** will only work for **24 hours** after prediction.
->> Note: Replicate provides only a few free predictions, so choose your predictions wisely. Don't let the machines have all the fun, save some for yourself! 😉
+- IMPORTANT NOTE: PREDICTED **URL** will only work for **24 hours** after prediction.
+
+> Note: Replicate provides only a few free predictions, so choose your predictions wisely. Don't let the machines have all the fun, save some for yourself! 😉

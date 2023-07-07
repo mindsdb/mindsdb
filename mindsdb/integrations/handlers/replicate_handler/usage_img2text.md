@@ -104,4 +104,4 @@ The image feature and text feature has a cosine similarity of 0.3615. | https://
 This is just an one model used in this example there are more with vast variation and usescases.
 Also there is no limit to imagination, how can you use this.
 
->> Note: Replicate provides only a few free predictions, so choose your predictions wisely. Don't let the machines have all the fun, save some for yourself! 😉
+ Note: Replicate provides only a few free predictions, so choose your predictions wisely. Don't let the machines have all the fun, save some for yourself! 😉

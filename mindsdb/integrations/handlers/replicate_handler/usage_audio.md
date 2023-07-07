@@ -103,4 +103,4 @@ This is just an one model used in this example there are more with vast variatio
 Also there is no limit to imagination, how can you use this.
 
 - IMPORTANT NOTE: PREDICTED **URL** will only work for **24 hours** after prediction.
->> Note: Replicate provides only a few free predictions, so choose your predictions wisely. Don't let the machines have all the fun, save some for yourself! 😉
+> Note: Replicate provides only a few free predictions, so choose your predictions wisely. Don't let the machines have all the fun, save some for yourself! 😉

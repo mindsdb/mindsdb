@@ -1,7 +1,8 @@
 class HANDLER_TYPE:
     __slots__ = ()
-    DATA = 'data'
-    ML = 'ml'
+    DATA = "data"
+    VECTOR_STORE = "vector_store"
+    ML = "ml"
 
 
 HANDLER_TYPE = HANDLER_TYPE()
@@ -9,13 +10,13 @@ HANDLER_TYPE = HANDLER_TYPE()
 
 class HANDLER_CONNECTION_ARG_TYPE:
     __slots__ = ()
-    STR = 'str'
-    INT = 'int'
-    BOOL = 'bool'
-    URL = 'url'
-    PATH = 'path'
-    DICT = 'dict'
-    PWD = 'pwd'
+    STR = "str"
+    INT = "int"
+    BOOL = "bool"
+    URL = "url"
+    PATH = "path"
+    DICT = "dict"
+    PWD = "pwd"
 
 
 HANDLER_CONNECTION_ARG_TYPE = HANDLER_CONNECTION_ARG_TYPE()

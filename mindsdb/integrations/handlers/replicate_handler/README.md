@@ -28,7 +28,7 @@ Most remarkable aspects of this handler is its wide range of model categories, i
 Yes, Of Course few that comes to my mind are 
 - [ ] prompt template
 - [ ] NLP to parameter generation 
-- [ ] Storing Predicted images, videos and audio to some persistent storage
+- [ ] Storing Predicted images, videos and audio to some persistent storage because replicate URL is only available for 24 hours
 
 
 ### Please provide a minimal SQL example that uses this ML engine (pointers to integration tests in the PR also valid)

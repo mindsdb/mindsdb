@@ -27,8 +27,8 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
         self._client_settings = kwargs.get("connection_data")
 
         self._collection_name = self._client_settings.get("collection_name", "default")
-        self._embedding_function = self._client_settings.get("embedding_function")
-        self._persist_directory = self._client_settings.get("persist_directory")
+        self._embedding_function = self._client_settings.get("collection_name")
+        self._persist_directory = None
         self._collection_metadata = self._client_settings.get("collection_metadata")
 
         self._client = chromadb.Client(Settings())
@@ -114,7 +114,7 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
             self.connect()
             # parse query and extract collection name and any conditions
             collection_name = extract_collection_name(query)
-            result = self._client.get_collection(collection_name)
+            result = self._client.get_collection(collection_name).query(query)
 
         except Exception as e:
             log.logger.error(

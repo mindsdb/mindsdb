@@ -13,11 +13,10 @@ Of Course, model are scalable but Replicate offers a free tier that allows users
 N/A
 
 ### To what degree can users control the underlying framework by passing parameters via the USING syntax?
-Every model have different parameters which can be be known by `DESCRIBE PREDICTOR mindsdb.<model_name>.features`.
+Every model have different parameters which can be used for customizing prediction through **USING** syntax. You can get paramaeter list by executing `DESCRIBE PREDICTOR mindsdb.<model_name>.features`.
 
 ### Does this integration offer model explainability or insights via the DESCRIBE syntax?
-
-Not Supported Now.
+`DESCRIBE PREDICTOR mindsdb.<model_name>.features` can be used to see list of parameters can be use with model.
 
 ### Does this integration support fine-tuning pre-existing models (i.e. is the update() method implemented)? Are there any caveats?
 No
@@ -26,7 +25,11 @@ No
 Most remarkable aspects of this handler is its wide range of model categories, including audio generation, diffusion models, text-to-image, style transfer, language model, image-to-text, videos, and many more. These models can be seamlessly integrated into MindsDB, enhancing its capabilities and providing diverse functionalities for various tasks
 
 ### Any directions for future work in subsequent versions of the handler?
-Yes  Of Course few that comes to my mind are prompt template,NLP to parameter generation etc
+Yes, Of Course few that comes to my mind are 
+- [ ] prompt template,
+- [ ] NLP to parameter generation 
+- [ ] Storing Predicted images, videos and audio to some persitent storage
+
 
 ### Please provide a minimal SQL example that uses this ML engine (pointers to integration tests in the PR also valid)
 [Example](./Manual_QA.md)

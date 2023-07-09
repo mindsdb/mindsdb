@@ -1,9 +1,13 @@
+<<<<<<< HEAD
 import ast
 import inspect
 import logging
 import textwrap
 from _ast import AnnAssign, AugAssign
 from typing import Any, Dict, List, Optional
+=======
+from typing import Any, Dict, Optional
+>>>>>>> first commit for chromadb handler
 
 import pandas as pd
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -14,14 +18,14 @@ LOG = logging.getLogger(__name__)
 
 
 class BaseHandler:
-    """ Base class for database handlers
+    """Base class for database handlers
 
     Base class for handlers that associate a source of information with the
     broader MindsDB ecosystem via SQL commands.
     """
 
     def __init__(self, name: str):
-        """ constructor
+        """constructor
         Args:
             name (str): the handler name
         """
@@ -29,7 +33,7 @@ class BaseHandler:
         self.name = name
 
     def connect(self):
-        """ Set up any connections required by the handler
+        """Set up any connections required by the handler
 
         Should return connection
 
@@ -37,7 +41,7 @@ class BaseHandler:
         raise NotImplementedError()
 
     def disconnect(self):
-        """ Close any existing connections
+        """Close any existing connections
 
         Should switch self.is_connected.
         """
@@ -45,7 +49,7 @@ class BaseHandler:
         return
 
     def check_connection(self) -> HandlerStatusResponse:
-        """ Check connection to the handler
+        """Check connection to the handler
 
         Returns:
             HandlerStatusResponse
@@ -77,7 +81,7 @@ class BaseHandler:
         raise NotImplementedError()
 
     def get_tables(self) -> HandlerResponse:
-        """ Return list of entities
+        """Return list of entities
 
         Return list of entities that will be accesible as tables.
 
@@ -89,7 +93,7 @@ class BaseHandler:
         raise NotImplementedError()
 
     def get_columns(self, table_name: str) -> HandlerResponse:
-        """ Returns a list of entity columns
+        """Returns a list of entity columns
 
         Args:
             table_name (str): name of one of tables returned by self.get_tables()
@@ -308,12 +312,19 @@ class BaseMLEngine(ArgProbeMixin):
         self.engine_storage = engine_storage
         self.generative = False  # if True, the target column name does not have to be specified at creation time
 
-        if kwargs.get('base_model_storage'):
-            self.base_model_storage = kwargs['base_model_storage']  # available when updating a model
+        if kwargs.get("base_model_storage"):
+            self.base_model_storage = kwargs[
+                "base_model_storage"
+            ]  # available when updating a model
         else:
             self.base_model_storage = None
 
-    def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+    def create(
+        self,
+        target: str,
+        df: Optional[pd.DataFrame] = None,
+        args: Optional[Dict] = None,
+    ) -> None:
         """
         Saves a model inside the engine registry for later usage.
 
@@ -333,7 +344,9 @@ class BaseMLEngine(ArgProbeMixin):
         """
         raise NotImplementedError
 
-    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+    def finetune(
+        self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None
+    ) -> None:
         """
         Optional.
 

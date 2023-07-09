@@ -1,6 +1,7 @@
 class HANDLER_TYPE:
     __slots__ = ()
     DATA = "data"
+    VECTOR_STORE = "vector_store"
     ML = "ml"
 
 

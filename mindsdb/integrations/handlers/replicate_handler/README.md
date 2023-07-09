@@ -26,7 +26,7 @@ Most remarkable aspects of this handler is its wide range of model categories, i
 
 ### Any directions for future work in subsequent versions of the handler?
 Yes, Of Course few that comes to my mind are 
-- [ ] prompt template,
+- [ ] prompt template
 - [ ] NLP to parameter generation 
 - [ ] Storing Predicted images, videos and audio to some persitent storage
 

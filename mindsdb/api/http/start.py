@@ -1,6 +1,6 @@
 import logging
+import multiprocessing as mp
 import os
-import torch.multiprocessing as mp
 
 from waitress import serve
 
@@ -14,19 +14,20 @@ from mindsdb.interfaces.database.integrations import integration_controller
 
 
 def start(verbose, no_studio, with_nlp):
+    log.configure_logging()  # Because this is the entrypoint for a process, we need to config logging
+    logger = logging.getLogger(__name__)
+    logger.info("HTTP API is starting..")
     config = Config()
     is_cloud = config.get('cloud', False)
 
-    server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
+    server = os.environ.get("MINDSDB_DEFAULT_SERVER", "waitress")
     db.init()
-    log.initialize_log(config, 'http', wrap_print=True if server.lower() != 'gunicorn' else False)
-
     init_lexer_parsers()
 
     app = initialize_app(config, no_studio, with_nlp)
 
-    port = config['api']['http']['port']
-    host = config['api']['http']['host']
+    port = config["api"]["http"]["port"]
+    host = config["api"]["http"]["host"]
 
     # region preload ml handlers
     preload_hendlers = {}
@@ -47,37 +48,49 @@ def start(verbose, no_studio, with_nlp):
     # endregion
 
     if server.lower() == 'waitress':
+        logger.debug("Serving HTTP app with waitres..")
         serve(
             app,
-            host='*' if host in ('', '0.0.0.0') else host,
+            host="*" if host in ("", "0.0.0.0") else host,
             port=port,
             threads=16,
             max_request_body_size=1073741824 * 10,
-            inbuf_overflow=1073741824 * 10
+            inbuf_overflow=1073741824 * 10,
         )
-    elif server.lower() == 'flask':
+    elif server.lower() == "flask":
+        logger.debug("Serving HTTP app with flask..")
         # that will 'disable access' log in console
-        logger = logging.getLogger('werkzeug')
-        logger.setLevel(logging.WARNING)
+        # logger = logging.getLogger("werkzeug")
+        # logger.setLevel(logging.WARNING)
 
-        app.run(debug=False, port=port, host=host)
-    elif server.lower() == 'gunicorn':
+        app.run(
+            debug=False,
+            port=port,
+            host=host,
+            use_reloader=True,
+            use_debugger=True,
+            passthrough_errors=True,
+        )
+    elif server.lower() == "gunicorn":
+        logger.debug("Serving HTTP app with gunicorn..")
         try:
             from mindsdb.api.http.gunicorn_wrapper import StandaloneApplication
         except ImportError:
-            print("Gunicorn server is not available by default. If you wish to use it, please install 'gunicorn'")
+            logger.error(
+                "Gunicorn server is not available by default. If you wish to use it, please install 'gunicorn'"
+            )
             return
 
         def post_fork(arbiter, worker):
             db.engine.dispose()
 
         options = {
-            'bind': f'{host}:{port}',
-            'workers': mp.cpu_count(),
-            'timeout': 600,
-            'reuse_port': True,
-            'preload_app': True,
-            'post_fork': post_fork,
-            'threads': 4
+            "bind": f"{host}:{port}",
+            "workers": mp.cpu_count(),
+            "timeout": 600,
+            "reuse_port": True,
+            "preload_app": True,
+            "post_fork": post_fork,
+            "threads": 4,
         }
         StandaloneApplication(app, options).run()

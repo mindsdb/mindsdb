@@ -1,3 +1,4 @@
+import logging
 import os
 import tempfile
 import threading
@@ -7,6 +8,8 @@ from typing import Optional
 
 import psutil
 from appdirs import user_data_dir
+
+logger = logging.getLogger(__name__)
 
 
 def create_directory(path):
@@ -88,6 +91,7 @@ def clean_process_marks():
     if os.name != "posix":
         return
 
+    logger.debug("Deleting PIDs..")
     p = Path(tempfile.gettempdir()).joinpath("mindsdb/processes/")
     if p.exists() is False:
         return

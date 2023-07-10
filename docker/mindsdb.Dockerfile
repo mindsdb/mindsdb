@@ -7,7 +7,7 @@ RUN apt update && apt-get upgrade -y && apt install -y build-essential
 RUN apt install -y libxml2 libmagic1 || true
 
 RUN python3 -m pip install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir boto3 psycopg2-binary 
+    pip3 install --no-cache-dir boto3 psycopg2-binary
 
 WORKDIR /
 # COPY requirements.txt /requirements.txt

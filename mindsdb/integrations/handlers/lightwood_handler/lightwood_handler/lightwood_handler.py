@@ -98,7 +98,11 @@ class LightwoodHandler(BaseMLEngine):
             predictor = LightwoodHandler.get_predictor(predictor_path, predictor_code)
 
         dtype_dict = predictor.dtype_dict
-        embedding_mode = predictor.problem_definition.embedding_only or pred_args.get('return_embedding', False)
+
+        if hasattr(predictor.problem_definition, 'embedding_only'):
+            embedding_mode = predictor.problem_definition.embedding_only or pred_args.get('return_embedding', False)
+        else:
+            embedding_mode = False
 
         with profiler.Context('predict'):
             predictions = predictor.predict(df, args=pred_args)
@@ -107,7 +111,7 @@ class LightwoodHandler(BaseMLEngine):
             if embedding_mode:
                 predictions['prediction'] = predictions.values.tolist()
                 # note: return here once ml engine executor supports non-target named outputs
-                predictions = predictions[['prediction']]  
+                predictions = predictions[['prediction']]
 
             predictions = predictions.to_dict(orient='records')
 

@@ -114,7 +114,7 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
             self.connect()
             # parse query and extract collection name and any conditions
             collection_name = extract_collection_name(query)
-            result = self._client.get_collection(collection_name).query(query)
+            result = self._client.get_collection(collection_name)
 
         except Exception as e:
             log.logger.error(

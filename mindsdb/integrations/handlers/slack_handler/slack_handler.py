@@ -93,9 +93,7 @@ class SlackChannelsTable(APITable):
         # Retrieve the conversation history
         try:
             result = self.client.conversations_history(channel=params['channel'])
-            print(result)
             conversation_history = result["messages"]
-            print(conversation_history)
         except SlackApiError as e:
             log.logger.error("Error creating conversation: {}".format(e))
 
@@ -254,7 +252,6 @@ class SlackChannelsTable(APITable):
             raise Exception("To update a message in Slack, you need to provide the 'channel', 'ts', and 'message' parameters.")
 
         # update message in Slack channel
-        print('Channel: {}, ts: {}, text: {}'.format(params['channel'], params['ts'], params['message']))
         try:
             response = self.client.chat_update(
                 channel=params['channel'],

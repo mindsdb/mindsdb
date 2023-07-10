@@ -18,32 +18,35 @@ The Slack Handler is initialized with the following parameters:
 - `token`: Slack API token to use for authentication
 
 To Generate a Slack API Token, follow these steps:
-- Go to Slack App Management Dashboard
-- Create a new App or select an existing App.
-- In the app settings, go to the "OAuth & Permissions" section.
-- Under the "Bot Token Scopes" section, add the necessary scopes for you application. You can add more later as well.
-- Install the app to your workspace.
-- In the "OAuth Tokens & Redirect URLs" Section, copy the the Bot User OAuth Access Token.
-- Go to your Slack App, in order to use the Slack App which we created, we have to add the bot into the channel where we want to use this bot.
-    - Click on the channel in which you want to use the bot.
-    - Go to 'View Channel Details'.
+
+1. Follow this [Link](https://api.slack.com/apps) and sign in with your Slack Account
+2. Create a new App/Bot or select an existing App.
+3. In the app settings, go to the "OAuth & Permissions" section.
+4. Under the "Bot Token Scopes" section, add the necessary scopes for your application. You can add more later as well.
+5. Install the bot to your workspace.
+6. In the "OAuth Tokens & Redirect URLs" Section, copy the the Bot User OAuth Access Token.
+7. Open your Slack Application, in order to use the bot which we created, we have to add the bot into the channel where we want to use this.
+    - Go to any the channel where you want to use the bot.
+    - Right Click on the channel and select 'View Channel Details'.
     - Select 'Integrations'.
     - Click on 'Add an App'.
     - You can see the name of the bot under the 'In your workspace' Section, Go ahead and add the app to the channel.
 
-Now, You can use the token from the second last step to initialize the Slack Handler in MindsDB
+Now, You can use the token from step 6 to initialize the Slack Handler in MindsDB
 
 ## Implemented Features
 
-- [x] Slack channels Table
-    - [x] Support SELECT
-    - [x] Support WHERE
-    - [x] Support ORDER BY
-    - [x] Support LIMIT
+**Slack channels Table**
+   - [x] Supports SELECT
+   - [x] Supports DELETE
+   - [x] Supports WHERE
+   - [x] Supports ORDER BY
+   - [x] Supports LIMIT
+   - [x] Integrate with OpenAI Integration
 
 ## Example Usage
 
-Firstly, we have to create a database with the `slack` engine
+Creates a database with the `slack` engine
 
 ~~~~sql
 CREATE DATABASE mindsdb_slack
@@ -54,27 +57,120 @@ WITH
     };
 ~~~~
 
+Retrieve the Conversation from a specific Slack channel
+
 ~~~~sql
-SELECT messages
-FROM slack_test.channels
+SELECT *
+FROM mindsdb_slack.channels
 WHERE channel="general";
 ~~~~
 
+Post a new message to a Channel
+
 ~~~~sql
-SELECT messages
-FROM slack_test.channels
-WHERE channel="testing"
+INSERT INTO mindsdb_slack.channels (channel, message)
+VALUES("general", "Hey MindsDB, Thanks to you! Now I can respond to my Slack messages through SQL Queries. 🚀 ");
+~~~~
+
+Whoops, Sent it by mistake, No worries, use this to delete a specific message
+
+~~~~sql
+DELETE FROM mindsdb_slack.channels
+WHERE channel = "general" AND ts = "1688863707.197229";
+~~~~
+
+Selects only 10 latest messages
+
+~~~~sql
+SELECT *
+FROM mindsdb_slack.channels
+WHERE channel="general"
 LIMIT 10;
 ~~~~
 
+Retrieves 5 latest messages in Ascending order
+
 ~~~~sql
-SELECT messages
-FROM slack_test.channels
-WHERE channel="testing"
+SELECT *
+FROM mindsdb_slack.channels
+WHERE channel="general"
 ORDER BY messages ASC
 LIMIT 5;
 ~~~~
 
+## Let's Use GPT Model to respond to messages for us
+Let's first create a GPT model that can respond to messages asked by the users. We will create a model that accepts prompt based on the prompt, the model will respond to the messages.
+
+~~~~sql
+CREATE MODEL mindsdb.slack_response_model
+PREDICT response
+USING
+engine = 'openai',
+max_tokens = 300,
+api_key = '<your-api-token>',
+model_name = 'gpt-3.5-turbo',
+prompt_template = 'From input message: {{messages}}\
+write a short response to the user in the following format:\
+Hi, I am an automated bot here to help you, Can you please elaborate the issue which you are facing! ✨🚀 -- mdb.ai/bot by @mindsdb';
+~~~~
+
+We can ask basic questions to the bot about the project, it will respond with the appropriate answer.
+
+~~~~sql
+SELECT
+  messages, response
+FROM mindsdb.slack_response_model
+WHERE
+  messages = 'Hi, can you please explain me more about MindsDB?';
+~~~~
+
+Let's now work with the real-time questions asked by the users in the slack channel. We will generate a View from which we can query and insert the responses from the GPT model into our Channel.
+
+~~~~sql
+CREATE VIEW test_view (
+SELECT
+  t.channel,
+  t.messages as input_text, 
+  r.response
+FROM mindsdb_slack.channels as t
+JOIN mindsdb.slack_response_model as r
+WHERE t.channel = 'general'
+LIMIT 1;
+);
+~~~~
+
+~~~~sql
+INSERT INTO mindsdb_slack.channels (channel, message)
+SELECT
+  channel as channel,
+  response as message
+FROM test_view
+LIMIT 1;
+~~~~
+
+## Schedule a Job
+
+Finally, we can let GPT model respond to all the questions asked by the users by scheduling a Job where:
+- GPT model will check for new messages
+- Generate an appropriate response
+- Posts the message into the Channel
+
+~~~~sql
+CREATE JOB mindsdb.gpt4_slack_job AS (
+   -- insert into channels the output of joining model and new responses
+  INSERT INTO mindsdb_slack.channels (channel, message)
+  SELECT
+    channel as channel,
+    response as message
+  FROM test_view
+  LIMIT 2;
+)
+EVERY minute;
+~~~~
+
+Every minute, our model is going to look for the questions, and the model will generate the response and send the message to the channel. Model can send only two messages every minute.
+
 ## What's Next?
-- Add functionality to Update and Delete messages
-- Experiment with SQL to use existing OpenAI and Hugging Face Integrations
+
+- Add functionality to Update messages
+  

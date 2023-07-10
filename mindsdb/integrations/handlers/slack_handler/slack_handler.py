@@ -48,7 +48,7 @@ class SlackChannelsTable(APITable):
         
         # Extract comparison conditions from the query
         conditions = extract_comparison_conditions(query.where)
-        
+        channel_name = conditions[0][2];
         filters = []
         params = {}
         order_by_conditions = {}
@@ -93,7 +93,9 @@ class SlackChannelsTable(APITable):
         # Retrieve the conversation history
         try:
             result = self.client.conversations_history(channel=params['channel'])
+            print(result)
             conversation_history = result["messages"]
+            print(conversation_history)
         except SlackApiError as e:
             log.logger.error("Error creating conversation: {}".format(e))
 
@@ -127,9 +129,14 @@ class SlackChannelsTable(APITable):
 
         # Append the history to the response
         response_history = []
+        response_ts = []
         for message in conversation_history:
             response_history.append(message['text'])
+            timestamp = message['ts']
+            response_ts.append(timestamp)
+        result['channel'] = channel_name
         result['messages'] = response_history
+        result['ts'] = response_ts
         
         # Sort the data based on order_by_conditions
         if len(order_by_conditions.get("columns", [])) > 0:
@@ -199,7 +206,7 @@ class SlackChannelsTable(APITable):
             inserted_id = response['ts']
             params['ts'] = inserted_id
 
-    def update(self, query: ASTNode):
+    def update(self, query: ast.Update):
         """
         Updates the message in the Slack Channel
 
@@ -208,17 +215,46 @@ class SlackChannelsTable(APITable):
             channel_name
             ts  [TimeStamp -> Can be found by running select command, the entire result will be printed in the terminal]
         """
+        
+        # Get the channels list and ids
+        channels = self.client.conversations_list(types="public_channel,private_channel")['channels']
+        channel_ids = {c['name']: c['id'] for c in channels}
+        
+        # Extract comparison conditions from the query
+        conditions = extract_comparison_conditions(query.where)
+        
+        filters = []
+        params = {}
+        
+        keys = list(query.update_columns.keys())
+        
+        # Build the filters and parameters for the query
+        for op, arg1, arg2 in conditions:
+            if arg1 == 'channel':
+                if arg2 in channel_ids:
+                    params['channel'] = channel_ids[arg2]
+                else:
+                    raise ValueError(f"Channel '{arg2}' not found")
+           
+            if keys[0] == 'message':
+                params['message'] = str(query.update_columns['message'])
+            else:
+                raise ValueError(f"Message '{arg2}' not found")
 
-        # get column names and values from the query
-        columns = [col.name for col in query.update_columns]
-        for row in query.values:
-            params = dict(zip(columns, row))
+            if arg1 == 'ts':
+                if op == '=': 
+                    params['ts'] = float(arg2)
+                else:
+                    raise NotImplementedError(f'Unknown op: {op}')
+            else:
+                filters.append([op, arg1, arg2])
 
         # check if required parameters are provided
         if 'channel' not in params or 'ts' not in params or 'message' not in params:
             raise Exception("To update a message in Slack, you need to provide the 'channel', 'ts', and 'message' parameters.")
 
         # update message in Slack channel
+        print('Channel: {}, ts: {}, text: {}'.format(params['channel'], params['ts'], params['message']))
         try:
             response = self.client.chat_update(
                 channel=params['channel'],
@@ -226,9 +262,11 @@ class SlackChannelsTable(APITable):
                 text=params['message']
             )
         except SlackApiError as e:
-            raise Exception(f"Error updating message in Slack channel '{params['channel']}' with timestamp '{params['ts']}': {e.response['error']}")
+            raise Exception(f"Error updating message in Slack channel '{params['channel']}' with timestamp '{params['ts']}' and message '{params['message']}': {e.response['error']}")
+        
+        return response
     
-    def delete(self, query: ASTNode):
+    def delete(self, query: ast.Delete):
         """
         Deletes the message in the Slack Channel
 
@@ -236,11 +274,31 @@ class SlackChannelsTable(APITable):
             channel_name
             ts  [TimeStamp -> Can be found by running select command, the entire result will be printed in the terminal]
         """
+        # Get the channels list and ids
+        channels = self.client.conversations_list(types="public_channel,private_channel")['channels']
+        channel_ids = {c['name']: c['id'] for c in channels}
+        # Extract comparison conditions from the query
+        conditions = extract_comparison_conditions(query.where)
+        
+        filters = []
+        params = {}
+        
+        # Build the filters and parameters for the query
+        for op, arg1, arg2 in conditions:
+            if arg1 == 'channel':
+                if arg2 in channel_ids:
+                    params['channel'] = channel_ids[arg2]
+                else:
+                    raise ValueError(f"Channel '{arg2}' not found")
 
-        # get column names and values from the query
-        columns = [col.name for col in query.columns]
-        for row in query.values:
-            params = dict(zip(columns, row))
+            if arg1 == 'ts':
+                if op == '=': 
+                    params['ts'] = float(arg2)
+                else:
+                    raise NotImplementedError(f'Unknown op: {op}')
+
+            else:
+                filters.append([op, arg1, arg2])
 
         # check if required parameters are provided
         if 'channel' not in params or 'ts' not in params:

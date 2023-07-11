@@ -64,6 +64,7 @@ class LightwoodHandler(BaseMLEngine):
                     if column.lower() not in columns:
                         raise Exception(f"There is no column '{column}' in dataframe")
 
+    @profiler.profile('LightwoodHandler.create')
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         args['target'] = target
         run_learn(
@@ -72,6 +73,7 @@ class LightwoodHandler(BaseMLEngine):
             self.model_storage
         )
 
+    @profiler.profile('LightwoodHandler.finetune')
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         run_finetune(
             df,

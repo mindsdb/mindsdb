@@ -62,9 +62,10 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
 
         input_column = args['input_column']
         model_name = args['model_name']
+        endpoint = args['endpoint'] if 'endpoint' in args else None
 
         if args['task'] == 'text-classification':
-            nlp = NLP(api_key)
+            nlp = NLP(api_key, endpoint)
             result_df = nlp.text_classification_in_df(
                 df,
                 input_column,
@@ -73,7 +74,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['task'] == 'fill-mask':
-            nlp = NLP(api_key)
+            nlp = NLP(api_key, endpoint)
             result_df = nlp.fill_mask_in_df(
                 df,
                 input_column,
@@ -82,7 +83,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['task'] == 'summarization':
-            nlp = NLP(api_key)
+            nlp = NLP(api_key, endpoint)
             result_df = nlp.summarization_in_df(
                 df,
                 input_column,
@@ -92,7 +93,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['task'] == 'text-generation':
-            nlp = NLP(api_key)
+            nlp = NLP(api_key, endpoint)
             result_df = nlp.text_generation_in_df(
                 df,
                 input_column,
@@ -102,7 +103,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['task'] == 'question-answering':
-            nlp = NLP(api_key)
+            nlp = NLP(api_key, endpoint)
             result_df = nlp.question_answering_in_df(
                 df,
                 input_column,
@@ -111,7 +112,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['task'] == 'sentence-similarity':
-            nlp = NLP(api_key)
+            nlp = NLP(api_key, endpoint)
             result_df = nlp.sentence_similarity_in_df(
                 df,
                 input_column,
@@ -121,7 +122,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['task'] == 'zero-shot-classification':
-            nlp = NLP(api_key)
+            nlp = NLP(api_key, endpoint)
             result_df = nlp.zero_shot_classification_in_df(
                 df,
                 input_column,
@@ -132,7 +133,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['task'] == 'image-classification':
-            cp = ComputerVision(api_key)
+            cp = ComputerVision(api_key, endpoint)
             result_df = cp.image_classification_in_df(
                 df,
                 input_column,
@@ -140,7 +141,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['task'] == 'object-detection':
-            cp = ComputerVision(api_key)
+            cp = ComputerVision(api_key, endpoint)
             result_df = cp.object_detection_in_df(
                 df,
                 input_column,
@@ -148,7 +149,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['task'] == 'automatic-speech-recognition':
-            ap = AudioProcessing(api_key)
+            ap = AudioProcessing(api_key, endpoint)
             result_df = ap.automatic_speech_recognition_in_df(
                 df,
                 input_column,
@@ -156,7 +157,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['task'] == 'audio-classification':
-            ap = AudioProcessing(api_key)
+            ap = AudioProcessing(api_key, endpoint)
             result_df = ap.audio_classification_in_df(
                 df,
                 input_column,

@@ -6,4 +6,5 @@ sentencepiece==0.1.97
 
 tensorflow
 tqdm
-torch==2.0.1+cpu --index-url https://download.pytorch.org/whl/cpu
+# Needs to be installed with `pip install --extra-index-url https://download.pytorch.org/whl/ .[huggingface_cpu]`
+torch==2.0.1+cpu

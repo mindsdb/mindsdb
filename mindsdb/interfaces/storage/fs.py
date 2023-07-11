@@ -280,7 +280,7 @@ class S3FSStore(BaseFSStore):
             last_modified = self._get_remote_last_modified(remote_ziped_name)
         self._save_local_last_modified(
             base_dir,
-            remote_ziped_name.replace('tar.gz', ''),
+            remote_ziped_name.replace('.tar.gz', ''),
             last_modified
         )
 

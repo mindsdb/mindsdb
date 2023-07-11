@@ -74,7 +74,6 @@ def define_deps():
             for req_file_path in glob.glob(
                 os.path.join(handlers_dir_path, fn, "requirements*.txt")
             ):
-                print(req_file_path)
                 with open(req_file_path) as fp:
                     extra = [req.strip() for req in fp.read().splitlines()]
                 extra_name = fn.replace("_handler", "")
@@ -83,10 +82,7 @@ def define_deps():
                     extra_name += "_" + file_name.replace("requirements_", "").replace(
                         ".txt", ""
                     )
-                print(extra_name)
                 extra_requirements[extra_name] = extra
-                print(extra_requirements[extra_name])
-                print("")
                 full_handlers_requirements += extra
 
     extra_requirements["all_handlers_extras"] = list(set(full_handlers_requirements))

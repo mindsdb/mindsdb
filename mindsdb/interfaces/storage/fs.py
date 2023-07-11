@@ -226,8 +226,11 @@ class S3FSStore(BaseFSStore):
         last_modified_file_path = Path(base_dir) / local_name / 'last_modified.txt'
         if last_modified_file_path.is_file() is False:
             return None
-        last_modified_text = last_modified_file_path.read_text()
-        last_modified_datetime = datetime.strptime(last_modified_text, self.dt_format)
+        try:
+            last_modified_text = last_modified_file_path.read_text()
+            last_modified_datetime = datetime.strptime(last_modified_text, self.dt_format)
+        except Exception:
+            return None
         return last_modified_datetime
 
     @profiler.profile()

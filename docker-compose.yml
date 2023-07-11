@@ -4,6 +4,7 @@ services:
 
   mindsdb:
     #image: 454861456664.dkr.ecr.us-east-2.amazonaws.com/mindsdb:latest
+    #image: 454861456664.dkr.ecr.ap-southeast-2.amazonaws.com/mindsdb:latest
     build:
       context: .
       dockerfile: docker/mindsdb.Dockerfile

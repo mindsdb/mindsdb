@@ -63,13 +63,15 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
         input_column = args['input_column']
         model_name = args['model_name']
         endpoint = args['endpoint'] if 'endpoint' in args else None
+        options = args['options'] if 'options' in args else None
+        parameters = args['parameters'] if 'parameters' in args else None
 
         if args['task'] == 'text-classification':
             nlp = NLP(api_key, endpoint)
             result_df = nlp.text_classification_in_df(
                 df,
                 input_column,
-                args['options'] if 'options' in args else None,
+                options,
                 model_name,
             )
 
@@ -78,7 +80,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             result_df = nlp.fill_mask_in_df(
                 df,
                 input_column,
-                args['options'] if 'options' in args else None,
+                options,
                 model_name
             )
 
@@ -87,8 +89,8 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             result_df = nlp.summarization_in_df(
                 df,
                 input_column,
-                args['parameters'] if 'parameters' in args else None,
-                args['options'] if 'optiInsufficientParametersExceptionons' in args else None,
+                parameters,
+                options,
                 model_name
             )
 
@@ -97,8 +99,8 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             result_df = nlp.text_generation_in_df(
                 df,
                 input_column,
-                args['parameters'] if 'parameters' in args else None,
-                args['options'] if 'options' in args else None,
+                parameters,
+                options,
                 model_name
             )
 
@@ -117,7 +119,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
                 df,
                 input_column,
                 args['input_column2'],
-                args['options'] if 'options' in args else None,
+                options,
                 model_name
             )
 
@@ -127,8 +129,8 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
                 df,
                 input_column,
                 args['candidate_labels'],
-                args['parameters'] if 'parameters' in args else None,
-                args['options'] if 'options' in args else None,
+                parameters,
+                options,
                 model_name
             )
 

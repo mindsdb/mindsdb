@@ -10,16 +10,8 @@ from distutils.version import LooseVersion
 from pathlib import Path
 
 import requests
-from flask import (
-    Flask,
-    has_request_context,
-    make_response,
-    request,
-    send_from_directory,
-    url_for,
-)
+from flask import Flask, make_response, request, send_from_directory, url_for
 from flask.json import dumps
-from flask.logging import default_handler
 from flask_compress import Compress
 from flask_restx import Api
 from werkzeug.exceptions import HTTPException
@@ -55,27 +47,6 @@ from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
 
 
-class RequestFormatter(logging.Formatter):
-    def format(self, record):
-        if has_request_context():
-            record.url = request.url
-            record.remote_addr = request.remote_addr
-        else:
-            record.url = None
-            record.remote_addr = None
-
-        return super().format(record)
-
-
-formatter = RequestFormatter(
-    "[%(asctime)s] %(remote_addr)s requested %(url)s\n"
-    "%(levelname)s in %(module)s: %(message)s"
-)
-default_handler.setFormatter(formatter)
-
-logger = logging.getLogger(__name__)
-
-
 class Swagger_Api(Api):
     """
     This is a modification of the base Flask Restplus Api class due to the issue described here
@@ -85,6 +56,9 @@ class Swagger_Api(Api):
     @property
     def specs_url(self):
         return url_for(self.endpoint("specs"), _external=False)
+
+
+logger = logging.getLogger(__name__)
 
 
 def custom_output_json(data, code, headers=None):
@@ -217,7 +191,7 @@ def initialize_static():
 
 
 def initialize_app(config, no_studio, with_nlp):
-    logger.debug("Initializing app..")
+    logger.error("Initializing app..")
     static_root = config["paths"]["static"]
     logger.debug(f"Static route: {static_root}")
     gui_exists = Path(static_root).joinpath("index.html").is_file()
@@ -307,7 +281,7 @@ def initialize_app(config, no_studio, with_nlp):
         user_class = request.headers.get("user-class")
 
         try:
-            email_confirmed = int(request.headers.get('email-confirmed', 1))
+            email_confirmed = int(request.headers.get("email-confirmed", 1))
         except ValueError:
             email_confirmed = 1
 

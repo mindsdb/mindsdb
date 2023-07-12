@@ -1,5 +1,9 @@
-# Do this as early as possible
 import logging
+
+from mindsdb.utilities import log
+
+# Do this as early as possible
+log.configure_logging()
 
 logger = logging.getLogger(__name__)
 logger.debug("Starting MindsDB...")
@@ -90,7 +94,6 @@ def do_clean_process_marks():
 
 if __name__ == "__main__":
     # ----------------  __init__.py section ------------------
-    logger.debug("----------__main__----------")
     clean_process_marks()
     ctx.set_default()
     args = args_parse()
@@ -142,16 +145,16 @@ if __name__ == "__main__":
 
     if telemetry_file_exists(mindsdb_config["storage_dir"]):
         os.environ["CHECK_FOR_UPDATES"] = "0"
-        logger.info("\n x telemetry disabled! \n")
+        logger.info("x telemetry disabled")
     elif os.getenv("CHECK_FOR_UPDATES", "1").lower() in [
         "0",
         "false",
         "False",
     ] or mindsdb_config.get("cloud", False):
         disable_telemetry(mindsdb_config["storage_dir"])
-        logger.info("\n x telemetry disabled \n")
+        logger.info("x telemetry disabled")
     else:
-        logger.info("\n ✓ telemetry enabled \n")
+        logger.info("✓ telemetry enabled")
 
     if os.environ.get("FLASK_SECRET_KEY") is None:
         os.environ["FLASK_SECRET_KEY"] = secrets.token_hex(32)
@@ -160,7 +163,6 @@ if __name__ == "__main__":
 
     # initialization
     db.init()
-    # log.initialize_log()
 
     mp.freeze_support()
     config = Config()
@@ -251,8 +253,10 @@ if __name__ == "__main__":
         dependencies = import_meta.get("dependencies")
         if import_meta.get("success", False) is not True:
             logger.info(
-                f"Dependencies for the handler '{handler_name}' are not installed by default.\n",
-                f'If you want to use "{handler_name}" please install "{dependencies}"',
+                f"Dependencies for the handler '{handler_name}' are not installed by default."
+            )
+            logger.info(
+                f'If you want to use "{handler_name}" please install "{dependencies}"'
             )
 
     # from mindsdb.utilities.fs import get_marked_processes_and_threads
@@ -427,7 +431,7 @@ if __name__ == "__main__":
         for i, future in enumerate(asyncio.as_completed(futures)):
             api_name, port, started = await future
             if started:
-                print(f"{api_name} API: started on {port}")
+                logger.info(f"{api_name} API: started on {port}")
             else:
                 logger.error(f"ERROR: {api_name} API cant start on {port}")
 
@@ -435,10 +439,10 @@ if __name__ == "__main__":
         try:
             process.join()
         except KeyboardInterrupt:
-            print("Got keyboard interrupt, stopping APIs")
+            logger.info("Got keyboard interrupt, stopping APIs")
             close_api_gracefully(apis)
         finally:
-            print(f"{name} API: stopped")
+            logger.info(f"{name} API: stopped")
 
     async def gather_apis():
         await asyncio.gather(

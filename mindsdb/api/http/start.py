@@ -5,25 +5,24 @@ import os
 from waitress import serve
 
 from mindsdb.api.http.initialize import initialize_app
-from mindsdb.interfaces.storage import db
-from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
-from mindsdb.utilities.functions import init_lexer_parsers
 from mindsdb.integrations.libs.ml_exec_base import process_cache
 from mindsdb.interfaces.database.integrations import integration_controller
+from mindsdb.interfaces.storage import db
+from mindsdb.utilities.config import Config
+from mindsdb.utilities.functions import init_lexer_parsers
+from mindsdb.utilities.log import configure_logging
 
 
 def start(verbose, no_studio, with_nlp):
-    log.configure_logging()  # Because this is the entrypoint for a process, we need to config logging
+    configure_logging()  # Because this is the entrypoint for a process, we need to config logging
     logger = logging.getLogger(__name__)
     logger.info("HTTP API is starting..")
     config = Config()
-    is_cloud = config.get('cloud', False)
+    is_cloud = config.get("cloud", False)
 
     server = os.environ.get("MINDSDB_DEFAULT_SERVER", "waitress")
     db.init()
     init_lexer_parsers()
-
     app = initialize_app(config, no_studio, with_nlp)
 
     port = config["api"]["http"]["port"]
@@ -47,8 +46,8 @@ def start(verbose, no_studio, with_nlp):
     process_cache.init(preload_hendlers)
     # endregion
 
-    if server.lower() == 'waitress':
-        logger.debug("Serving HTTP app with waitres..")
+    if server.lower() == "waitress":
+        logger.debug("Serving HTTP app with waitress..")
         serve(
             app,
             host="*" if host in ("", "0.0.0.0") else host,

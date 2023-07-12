@@ -184,6 +184,7 @@ class Project:
             db.session.query(db.Predictor, db.Integration).filter_by(
                 project_id=self.id,
                 deleted_at=sa.null(),
+                active=True,
                 company_id=ctx.company_id
             )
             .join(db.Integration, db.Integration.id == db.Predictor.integration_id)

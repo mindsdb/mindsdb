@@ -1,5 +1,5 @@
 import re
-
+import time
 from bson import ObjectId
 import certifi
 import pandas as pd
@@ -70,6 +70,25 @@ class MongoDBHandler(DatabaseHandler):
         self.is_connected = True
         self.connection = connection
         return self.connection
+
+    def subscribe(self, callback, table_name, stop_event, col_name, **kwargs):
+        con = self.connect()
+        cur = con[self.database][table_name].watch()
+        while True:
+            if stop_event.is_set():
+                cur.close()
+
+                return
+
+            res = cur.try_next()
+            if cur is None:
+                time.sleep(0.1)
+                continue
+            _id = res['documentKey']['_id']
+            if res['operationType'] == 'insert':
+                callback(data=res['fullDocument'], key={'_id': _id})
+            if res['operationType'] == 'update':
+                callback(data=res['updateDescription']['updatedFields'], key={'_id': _id})
 
     def disconnect(self):
         if self.is_connected is False:

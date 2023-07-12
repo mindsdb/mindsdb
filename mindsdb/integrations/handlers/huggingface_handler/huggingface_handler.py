@@ -29,7 +29,7 @@ class HuggingFaceHandler(BaseMLEngine):
         supported_tasks = ['text-classification',
                            'zero-shot-classification',
                            'translation',
-                           'summarization',
+                           'sentence-similarity',
                            'text2text-generation',
                            'fill-mask']
 
@@ -175,6 +175,13 @@ class HuggingFaceHandler(BaseMLEngine):
 
         return final
 
+    def predict_embedding(self, pipeline, item, args):
+        result = pipeline([item], max_length=args['max_length'])[0]
+
+        final = {}
+        final[args['target']] = result['translation_text']
+        return final
+
     def predict_translation(self, pipeline, item, args):
         result = pipeline([item], max_length=args['max_length'])[0]
 
@@ -216,7 +223,8 @@ class HuggingFaceHandler(BaseMLEngine):
             'zero-shot-classification': self.predict_zero_shot,
             'translation': self.predict_translation,
             'summarization': self.predict_summarization,
-            'fill-mask': self.predict_fill_mask
+            'fill-mask': self.predict_fill_mask,
+            'sentence-similarity':self.predict_embedding
         }
 
         ###### get stuff from model folder

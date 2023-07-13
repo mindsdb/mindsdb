@@ -139,14 +139,14 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
                 for arg in query.where.args:
                     if arg.op == "=":
                         # todo add support for in operator
-                        where[arg.args[0].parts[-1]] = arg.args[1].value
+                        where[arg.args[0].parts[-1]] = arg.args[1].parts[-1]
                     else:
                         raise NotImplementedError(
                             f"Unsupported where clause {arg.op} operator, only '=' is supported"
                         )
 
             elif query.where.op == "=":
-                where[query.where.args[0].parts[-1]] = query.where.args[1].value
+                where[query.where.args[0].parts[-1]] = query.where.args[1].parts[-1]
 
             else:
                 raise NotImplementedError(

@@ -91,3 +91,157 @@ class TripAdvisorHandler(APIHandler):
     def _register_table(self, table_name: str, table_class: Any):
         """It registers the data resource in memory."""
         self._tables[table_name] = table_class
+
+    def call_twitter_api(
+        self, method_name: str = None, params: dict = None, filters: list = None
+    ):
+        # method > table > columns
+        expansions_map = {
+            "search_recent_tweets": {
+                "users": ["author_id", "in_reply_to_user_id"],
+            },
+            "search_all_tweets": {
+                "users": ["author_id"],
+            },
+        }
+
+        api = self.connect()
+        method = getattr(api, method_name)
+
+        # pagination handle
+
+        count_results = None
+        if "max_results" in params:
+            count_results = params["max_results"]
+
+        data = []
+        includes = defaultdict(list)
+
+        max_page_size = 100
+        min_page_size = 10
+        left = None
+
+        limit_exec_time = time.time() + 60
+
+        if filters:
+            # if we have filters: do big page requests
+            params["max_results"] = max_page_size
+
+        while True:
+            if time.time() > limit_exec_time:
+                raise RuntimeError("Handler request timeout error")
+
+            if count_results is not None:
+                left = count_results - len(data)
+                if left == 0:
+                    break
+                elif left < 0:
+                    # got more results that we need
+                    data = data[:left]
+                    break
+
+                if left > max_page_size:
+                    params["max_results"] = max_page_size
+                elif left < min_page_size:
+                    params["max_results"] = min_page_size
+                else:
+                    params["max_results"] = left
+
+            log.logger.debug(f">>>twitter in: {method_name}({params})")
+            resp = method(**params)
+
+            if hasattr(resp, "includes"):
+                for table, records in resp.includes.items():
+                    includes[table].extend([r.data for r in records])
+
+            if isinstance(resp.data, list):
+                chunk = [r.data for r in resp.data]
+            else:
+                if isinstance(resp.data, dict):
+                    data.append(resp.data)
+                if hasattr(resp.data, "data") and isinstance(resp.data.data, dict):
+                    data.append(resp.data.data)
+                break
+
+            # unwind columns
+            for row in chunk:
+                if "referenced_tweets" in row:
+                    refs = row["referenced_tweets"]
+                    if isinstance(refs, list) and len(refs) > 0:
+                        if refs[0]["type"] == "replied_to":
+                            row["in_reply_to_tweet_id"] = refs[0]["id"]
+                        if refs[0]["type"] == "retweeted":
+                            row["in_retweeted_to_tweet_id"] = refs[0]["id"]
+                        if refs[0]["type"] == "quoted":
+                            row["in_quote_to_tweet_id"] = refs[0]["id"]
+
+            if filters:
+                chunk = self._apply_filters(chunk, filters)
+
+            # limit output
+            if left is not None:
+                chunk = chunk[:left]
+
+            data.extend(chunk)
+            # next page ?
+            if (
+                count_results is not None
+                and hasattr(resp, "meta")
+                and "next_token" in resp.meta
+            ):
+                params["next_token"] = resp.meta["next_token"]
+            else:
+                break
+
+        df = pd.DataFrame(data)
+
+        # enrich
+        expansions = expansions_map.get(method_name)
+        if expansions is not None:
+            for table, records in includes.items():
+                df_ref = pd.DataFrame(records)
+
+                if table not in expansions:
+                    continue
+
+                for col_id in expansions[table]:
+                    col = col_id[:-3]  # cut _id
+                    if col_id not in df.columns:
+                        continue
+
+                    col_map = {
+                        col_ref: f"{col}_{col_ref}" for col_ref in df_ref.columns
+                    }
+                    df_ref2 = df_ref.rename(columns=col_map)
+                    df_ref2 = df_ref2.drop_duplicates(col_id)
+
+                    df = df.merge(df_ref2, on=col_id, how="left")
+
+        return df
+
+    def call_tripadvisor_searchlocation_api(
+        self, method_name: str = None, params: dict = None
+    ) -> pd.DataFrame:
+        # This will implement api base on the native query
+        # By processing native query to convert it to api callable parameters
+        if self.is_connected is False:
+            self.connect()
+
+        pages = params["page"]
+        data = []
+
+        for page in range(1, pages + 1):
+            params["page"] = page
+            result = self.api.get_everything(**params)
+            articles = result["articles"]
+            for article in articles:
+                article["source_id"] = article["source"]["id"]
+                article["source_name"] = article["source"]["name"]
+                del article["source"]
+                article["query"] = params.get("q")
+                article["searchIn"] = params.get("searchIn")
+                article["domains"] = params.get("domains")
+                article["excludedDomains"] = params.get("exclude_domains")
+                data.append(article)
+
+        return pd.DataFrame(data=data)

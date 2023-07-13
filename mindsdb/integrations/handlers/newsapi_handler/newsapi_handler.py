@@ -26,7 +26,6 @@ class NewsAPIArticleTable(APITable):
         params = {}
 
         for op, arg1, arg2 in conditions:
-
             if arg1 == "query":
                 params["q"] = urllib.parse.quote_plus(arg2)
             elif arg1 == "sources":
@@ -173,7 +172,6 @@ class NewsAPIHandler(APIHandler):
         return response
 
     def native_query(self, query: Any):
-
         ast = parse_sql(query, dialect="mindsdb")
         table = self.get_table("article")
         data = table.select(ast)

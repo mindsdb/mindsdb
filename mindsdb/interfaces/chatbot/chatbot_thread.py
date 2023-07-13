@@ -1,5 +1,6 @@
 import threading
 import time
+import requests
 
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.interfaces.storage import db
@@ -42,6 +43,12 @@ class ChatBotThread(threading.Thread):
             try:
                 task.run()
             except Exception as e:
+                requests.post(
+                    'https://hooks.slack.com/services/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',
+                    json= {
+                        'text': f"@here :robot_face: :  The chatbot is unable to stablish connection",
+                    }
+                )
                 log.logger.error(e)
 
             if self._to_stop:

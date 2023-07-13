@@ -1,3 +1,5 @@
+import requests
+
 from slack_sdk.web import WebClient
 from slack_sdk.errors import SlackApiError
 from slack_sdk.socket_mode import SocketModeClient
@@ -85,6 +87,26 @@ class RealtimeSlackChatHandler(RealtimeChatHandler):
             response.validate()
             return ChatBotResponse(message.text)
         except SlackApiError as e:
+            slack_message = {
+                'text': f"@here :robot_face: : Oh! there is an inconvenience, the chatbot can't send messages ",
+                'attachments': [
+                    {
+                    'color': '#C80001',
+                    'fields': [
+                        {
+                            'title': 'Destination',
+                            'value': message.destination
+                        },
+                        {
+                            'title': 'Message',
+                            'value': message.text
+                        },
+                    ],
+                    }
+                ]
+            }
+            requests.post(
+                'https://hooks.slack.com/services/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', 
+                json= slack_message
+            )
             return ChatBotResponse(message.text, error=str(e))
-
-        

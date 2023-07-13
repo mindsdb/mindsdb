@@ -179,7 +179,23 @@ class Project:
             return None
         return self._get_model_data(record[0], record[1])
 
-    def get_models(self, model_id=None):
+    def get_model_by_id(self, model_id: int):
+        record = (
+            db.session.query(db.Predictor, db.Integration).filter_by(
+                project_id=self.id,
+                id=model_id,
+                deleted_at=sa.null(),
+                company_id=ctx.company_id
+            )
+            .join(db.Integration, db.Integration.id == db.Predictor.integration_id)
+            .order_by(db.Predictor.name, db.Predictor.id)
+            .first()
+        )
+        if record is None:
+            return None
+        return self._get_model_data(record[0], record[1])
+
+    def get_models(self):
         query = (
             db.session.query(db.Predictor, db.Integration).filter_by(
                 project_id=self.id,
@@ -190,8 +206,6 @@ class Project:
             .join(db.Integration, db.Integration.id == db.Predictor.integration_id)
             .order_by(db.Predictor.name, db.Predictor.id)
         )
-        if model_id is not None:
-            query = query.filter(db.Predictor.id == model_id)
 
         data = []
 

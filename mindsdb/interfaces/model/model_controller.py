@@ -395,6 +395,8 @@ class ModelController():
 
     def prepare_finetune_statement(self, statement, database_controller):
         project_name, model_name, model_version = resolve_model_identifier(statement.name)
+        if project_name is None:
+            project_name = 'mindsdb'
         data_integration_ref, fetch_data_query = self._get_data_integration_ref(statement, database_controller)
 
         set_active = True
@@ -450,7 +452,7 @@ class ModelController():
                    'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG']
 
         project_name = project.name
-        model = project.get_models(model_id=predictor_record.id)[0]
+        model = project.get_model_by_id(model_id=predictor_record.id)
         table_name = model['name']
         table_meta = model['metadata']
         record = [

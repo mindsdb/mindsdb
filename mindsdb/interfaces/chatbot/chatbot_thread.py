@@ -43,6 +43,7 @@ class ChatBotThread(threading.Thread):
             try:
                 task.run()
             except Exception as e:
+                # TODO: Replace hooks url
                 requests.post(
                     'https://hooks.slack.com/services/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',
                     json= {

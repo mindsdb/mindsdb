@@ -57,6 +57,7 @@ from mindsdb_sql.planner.steps import (
     GroupByStep,
     SubSelectStep,
     DeleteStep,
+    DataStep,
 )
 
 from mindsdb_sql.exceptions import PlanningException
@@ -1403,6 +1404,11 @@ class SQLQuery():
             dn.query(query=query, session=self.session)
 
             data = ResultSet()
+
+        elif type(step) == DataStep:
+            # create resultset
+            df = pd.DataFrame(step.data)
+            data = ResultSet().from_df(df, database='', table_name='')
 
         else:
             raise ErLogicError(F'Unknown planner step: {step}')

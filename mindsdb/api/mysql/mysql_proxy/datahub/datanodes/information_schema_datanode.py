@@ -14,6 +14,7 @@ from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, 
 from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
+from mindsdb.interfaces.triggers.triggers_controller import TriggersController
 
 
 class InformationSchemaDataNode(DataNode):
@@ -39,6 +40,7 @@ class InformationSchemaDataNode(DataNode):
         'ML_ENGINES': ['NAME', 'HANDLER', 'CONNECTION_DATA'],
         'HANDLERS': ['NAME', 'TITLE', 'DESCRIPTION', 'VERSION', 'CONNECTION_ARGS', 'IMPORT_SUCCESS', 'IMPORT_ERROR'],
         'JOBS': ['NAME', 'PROJECT', 'START_AT', 'END_AT', 'NEXT_RUN_AT', 'SCHEDULE_STR', 'QUERY'],
+        'MDB_TRIGGERS': ['NAME', 'DATABASE', 'TABLE', 'QUERY'],
         'JOBS_HISTORY': ['NAME', 'PROJECT', 'RUN_START', 'RUN_END', 'ERROR', 'QUERY']
     }
 
@@ -72,6 +74,7 @@ class InformationSchemaDataNode(DataNode):
             'HANDLERS': self._get_handlers,
             'JOBS': self._get_jobs,
             'JOBS_HISTORY': self._get_jobs_history,
+            'MDB_TRIGGERS': self._get_triggers,
         }
         for table_name in self.information_schema:
             if table_name not in self.get_dataframe_funcs:
@@ -299,6 +302,35 @@ class InformationSchemaDataNode(DataNode):
         data = jobs_controller.get_history(project_name)
 
         columns = self.information_schema['JOBS_HISTORY']
+        columns_lower = [col.lower() for col in columns]
+
+        # to list of lists
+        data = [
+            [
+                row[k]
+                for k in columns_lower
+            ]
+            for row in data
+        ]
+
+        return pd.DataFrame(data, columns=columns)
+
+    def _get_triggers(self, query: ASTNode = None):
+        triggers_controller = TriggersController()
+
+        project_name = None
+        if (
+                isinstance(query, Select)
+                and type(query.where) == BinaryOperation
+                and query.where.op == '='
+                and query.where.args[0].parts == ['project']
+                and isinstance(query.where.args[1], Constant)
+        ):
+            project_name = query.where.args[1].value
+
+        data = triggers_controller.get_list(project_name)
+
+        columns = self.information_schema['MDB_TRIGGERS']
         columns_lower = [col.lower() for col in columns]
 
         # to list of lists

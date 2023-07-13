@@ -189,9 +189,8 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
         df = pd.DataFrame(data=query.values, columns=columns)
         documents = split_documents(df, columns)
 
-        # todo fix insert, need to get embeddings before inserting
-
-        db = Chroma.from_documents(
+        # converts list of Documents to embedding vectors and stores them in a ChromaDB collection
+        Chroma.from_documents(
             documents=documents,
             embedding=self._embedding_function,
             persist_directory=self._persist_directory,

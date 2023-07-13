@@ -17,37 +17,91 @@ class SearchLocationTable(APITable):
 
         tripAdvisor = self.handler.connect()
 
-        submission_id = None
         conditions = extract_comparison_conditions(query.where)
 
-        for condition in conditions:
-            if condition[0] == "=" and condition[1] == "submission_id":
-                submission_id = condition[2]
+        params = {}
+        filters = []
+        for op, arg1, arg2 in conditions:
+            if op == "or":
+                raise NotImplementedError(f"OR is not supported")
+            if arg1 == "searchQuery":
+                if op == "=":
+                    params[arg1] = arg2
+                else:
+                    NotImplementedError(f"Unknown op: {op}")
+            elif arg1 == "category":
+                if op == "=":
+                    params[arg1] = arg2
+                else:
+                    NotImplementedError(f"Unknown op: {op}")
+            elif arg1 == "phone":
+                if op == "=":
+                    params[arg1] = arg2
+                else:
+                    NotImplementedError(f"Unknown op: {op}")
+            elif arg1 == "address":
+                if op == "=":
+                    params[arg1] = arg2
+                else:
+                    NotImplementedError(f"Unknown op: {op}")
+            elif arg1 == "latLong":
+                if op == "=":
+                    params[arg1] = arg2
+                else:
+                    NotImplementedError(f"Unknown op: {op}")
+            elif arg1 == "radius":
+                if op == "=":
+                    params[arg1] = arg2
+                else:
+                    NotImplementedError(f"Unknown op: {op}")
+            elif arg1 == "radiusUnit":
+                if op == "=":
+                    params[arg1] = arg2
+                else:
+                    NotImplementedError(f"Unknown op: {op}")
+            elif arg1 == "language":
+                if op == "=":
+                    params[arg1] = arg2
+                else:
+                    NotImplementedError(f"Unknown op: {op}")
+            else:
+                filters.append([op, arg1, arg2])
+
+        if query.limit is not None:
+            params["max_results"] = query.limit.value
+
+        if "searchQuery" not in params:
+            # search not works without searchQuery, use 'London'
+            params["searchQuery"] = "London"
+
+        result = self.handler.call_twitter_api(params=params, filters=filters)
+
+        # filter targets
+        columns = []
+        for target in query.targets:
+            if isinstance(target, ast.Star):
+                columns = []
                 break
+            elif isinstance(target, ast.Identifier):
+                columns.append(target.parts[-1])
+            else:
+                raise NotImplementedError
 
-        if submission_id is None:
-            raise ValueError("Submission ID is missing in the SQL query")
+        if len(columns) == 0:
+            columns = self.get_columns()
 
-        submission = reddit.submission(id=submission_id)
-        submission.comments.replace_more(limit=None)
+        # columns to lower case
+        columns = [name.lower() for name in columns]
 
-        result = []
-        for comment in submission.comments.list():
-            data = {
-                "id": comment.id,
-                "body": comment.body,
-                "author": comment.author.name if comment.author else None,
-                "created_utc": comment.created_utc,
-                "score": comment.score,
-                "permalink": comment.permalink,
-                "ups": comment.ups,
-                "downs": comment.downs,
-                "subreddit": comment.subreddit.display_name,
-            }
-            result.append(data)
+        if len(result) == 0:
+            result = pd.DataFrame([], columns=columns)
+        else:
+            # add absent columns
+            for col in set(columns) & set(result.columns) ^ set(columns):
+                result[col] = None
 
-        result = pd.DataFrame(result)
-        self.filter_columns(result, query)
+            # filter by columns
+            result = result[columns]
         return result
 
     def get_columns(self):

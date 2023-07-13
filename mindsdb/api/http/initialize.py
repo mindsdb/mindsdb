@@ -20,6 +20,7 @@ from mindsdb.api.http.gui import update_static
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.analysis import ns_conf as analysis_ns
 from mindsdb.api.http.namespaces.auth import ns_conf as auth_ns
+from mindsdb.api.http.namespaces.chatbots import ns_conf as chatbots_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.namespaces.databases import ns_conf as databases_ns
 from mindsdb.api.http.namespaces.default import ns_conf as default_ns, check_auth
@@ -210,7 +211,8 @@ def initialize_app(config, no_studio, with_nlp):
         projects_ns,
         databases_ns,
         views_ns,
-        models_ns
+        models_ns,
+        chatbots_ns
     ]
     if with_nlp:
         protected_namespaces.append(nlp_ns)
@@ -253,6 +255,11 @@ def initialize_app(config, no_studio, with_nlp):
         company_id = request.headers.get('company-id')
         user_class = request.headers.get('user-class')
 
+        try:
+            email_confirmed = int(request.headers.get('email-confirmed', 1))
+        except ValueError:
+            email_confirmed = 1
+
         if company_id is not None:
             try:
                 company_id = int(company_id)
@@ -271,6 +278,7 @@ def initialize_app(config, no_studio, with_nlp):
 
         ctx.company_id = company_id
         ctx.user_class = user_class
+        ctx.email_confirmed = email_confirmed
 
     # Wait for static initialization.
     if not no_studio and init_static_thread is not None:

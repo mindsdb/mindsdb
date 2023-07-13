@@ -132,6 +132,7 @@
           "pages": [
             "data-integrations/all-data-integrations",
             "data-integrations/airtable",
+            "data-integrations/amazon-aurora",
             "data-integrations/amazon-dynamodb",
             "data-integrations/amazon-redshift",
             "data-integrations/amazon-s3",
@@ -348,6 +349,7 @@
       "group": "REST API",
       "pages": [
         "rest/disclaimer",
+        "rest/usage",
         {
           "group": "Endpoints",
           "pages": [

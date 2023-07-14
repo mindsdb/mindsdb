@@ -60,6 +60,10 @@ WITH
     };
 ```
 
+<Note>
+Please change the `slack-bot-token` with the token mentioned in `Bot User OAuth Access Token`.
+</Note>
+
 ## Usage
 
 This query will create a database called `mindsdb_slack` and `channels` table automatically.
@@ -69,16 +73,20 @@ Here is how to retrieve the 10 latest messages from the channel:
 ```sql
 SELECT *
 FROM mindsdb_slack.channels
-WHERE channel="general"
+WHERE channel="<channel-name>"
 LIMIT 10;
 ```
+
+<Note>
+Please change the `channel-name` in the `WHERE` clause to the channel where, you added the bot in your Slack Workspace.
+</Note>
 
 However, you can also retrieve messages in alphabetical order by using:
 
 ```sql
 SELECT *
 FROM mindsdb_slack.channels
-WHERE channel="general"
+WHERE channel="<channel-name>"
 ORDER BY messages ASC
 LIMIT 5;
 ```
@@ -90,15 +98,15 @@ Here is how to post messages:
 ```sql
 INSERT INTO mindsdb_slack.channels (channel, message)
 VALUES
-    ("general", "Hey MindsDB, Thanks to you! Now I can respond to my Slack messages through SQL Queries. 🚀 "),
-    ("general", "It's never been that easy to build ML apps using MindsDB!");
+    ("<channel-name>", "Hey MindsDB, Thanks to you! Now I can respond to my Slack messages through SQL Queries. 🚀 "),
+    ("<channel-name>", "It's never been that easy to build ML apps using MindsDB!");
 ```
 
 Whoops! Sent it by mistake, No worries, use this to delete a specific message
 
 ```sql
 DELETE FROM mindsdb_slack.channels
-WHERE channel = "general" AND ts = "1688863707.197229";
+WHERE channel = "<channel-name>" AND ts = "1688863707.197229";
 ```
 
 Now, let's roll up our sleeves and start building the GPT-4 Model together. 

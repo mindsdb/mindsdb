@@ -57,26 +57,30 @@ WITH
     };
 ~~~~
 
+Please change the `slack-bot-token` with the token mentioned in `Bot User OAuth Access Token`.
+
 Retrieve the Conversation from a specific Slack channel
 
 ~~~~sql
 SELECT *
 FROM mindsdb_slack.channels
-WHERE channel="general";
+WHERE channel="<channel-name>";
 ~~~~
+
+Please change the `channel-name` in the `WHERE` clause to the channel where, you added the bot in your Slack Workspace.
 
 Post a new message to a Channel
 
 ~~~~sql
 INSERT INTO mindsdb_slack.channels (channel, message)
-VALUES("general", "Hey MindsDB, Thanks to you! Now I can respond to my Slack messages through SQL Queries. 🚀 ");
+VALUES("<channel-name>", "Hey MindsDB, Thanks to you! Now I can respond to my Slack messages through SQL Queries. 🚀 ");
 ~~~~
 
 Whoops, Sent it by mistake, No worries, use this to delete a specific message
 
 ~~~~sql
 DELETE FROM mindsdb_slack.channels
-WHERE channel = "general" AND ts = "1688863707.197229";
+WHERE channel = "<channel-name>" AND ts = "1688863707.197229";
 ~~~~
 
 Selects only 10 latest messages
@@ -84,7 +88,7 @@ Selects only 10 latest messages
 ~~~~sql
 SELECT *
 FROM mindsdb_slack.channels
-WHERE channel="general"
+WHERE channel="<channel-name>"
 LIMIT 10;
 ~~~~
 
@@ -93,7 +97,7 @@ Retrieves 5 latest messages in Ascending order
 ~~~~sql
 SELECT *
 FROM mindsdb_slack.channels
-WHERE channel="general"
+WHERE channel="<channel-name>"
 ORDER BY messages ASC
 LIMIT 5;
 ~~~~

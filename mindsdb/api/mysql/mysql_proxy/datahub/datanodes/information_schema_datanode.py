@@ -355,7 +355,7 @@ class InformationSchemaDataNode(DataNode):
         data = []
         for project_name in self.get_projects_names():
             project = self.database_controller.get_project(name=project_name)
-            project_models = project.get_models()
+            project_models = project.get_models(active=None)
             for row in project_models:
                 table_name = row['name']
                 table_meta = row['metadata']

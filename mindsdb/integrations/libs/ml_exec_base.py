@@ -191,9 +191,6 @@ class ProcessCache:
                         ]
                     }
 
-    def apply_predict_async():
-        ...
-
     def apply_async(self, handler: object, func: Callable, *args, **kwargs) -> Future:
         """ run new task. If possible - do it in existing process, if not - start new one.
 
@@ -484,23 +481,14 @@ class BaseMLEngineExec:
 
             args['executor'] = command_executor
 
-        # process_cache
-        future = process_cache.apply_async(
-            self.handler_class,
-            ml_handler.predict,
-            df=df,
-            args=args
-        )
-        predictions = future.result()
-
-        # try:
-        #     predictions = ml_handler.predict(df, args)
-        # except Exception as e:
-        #     msg = str(e).strip()
-        #     if msg == '':
-        #         msg = e.__class__.__name__
-        #     msg = f'[{self.name}/{model_name}]: {msg}'
-        #     raise MLEngineException(msg) from e
+        try:
+            predictions = ml_handler.predict(df, args)
+        except Exception as e:
+            msg = str(e).strip()
+            if msg == '':
+                msg = e.__class__.__name__
+            msg = f'[{self.name}/{model_name}]: {msg}'
+            raise MLEngineException(msg) from e
 
         ml_handler.close()
 

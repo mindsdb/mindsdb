@@ -9,7 +9,6 @@ from mindsdb_sql.parser.ast import Data, Identifier
 
 from mindsdb_sql import parse_sql, ParsingException
 
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.context import context as ctx
@@ -28,6 +27,7 @@ class TriggersController:
         project_controller = ProjectController()
         project = project_controller.get(name=project_name)
 
+        from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
         session = SessionController()
 
         # check exists
@@ -91,6 +91,7 @@ class TriggersController:
         db.session.commit()
 
     def get_list(self, project_name=None):
+        from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
         session = SessionController()
 
         query = db.session.query(

@@ -46,6 +46,19 @@
       "url": "https://mindsdb.com/blog-categories/product-updates"
     }
   ],
+  "tabs": [
+    {
+        "name": "Contribute",
+        "url": "contribute"
+    },
+    {
+        "name": "FAQs",
+        "url": "faqs"
+    }
+  ],
+  "primaryTab": {
+    "name": "Home"
+  },
   "navigation": [
     {
       "group": "Quickstart",
@@ -464,7 +477,7 @@
     {
       "group": "Contribute",
       "pages": [
-        "contribute",
+        "contribute/contribute",
         "contribute/issues",
         "contribute/issue-labels",
         "contribute/install",
@@ -474,8 +487,8 @@
         "contribute/tests",
         "contribute/tutorials",
         "contribute/docs",
-        "docs-rules",
-        "community"
+        "contribute/docs-rules",
+        "contribute/community"
       ]
     },
     {

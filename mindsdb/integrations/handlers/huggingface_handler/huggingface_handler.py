@@ -1,4 +1,5 @@
 from typing import Optional, Dict
+import shutil
 
 
 import numpy as np
@@ -236,10 +237,16 @@ class HuggingFaceHandler(BaseMLEngine):
 
         fnc = fnc_list[task]
 
-        hf_model_storage_path = self.engine_storage.folder_get(args['model_name'], update=False)
-
-        pipeline = transformers.pipeline(task=args['task_proper'], model=hf_model_storage_path,
-                                         tokenizer=hf_model_storage_path)
+        try:
+            # load from model storage (finetuned models will use this)
+            hf_model_storage_path = self.model_storage.folder_get(args['model_name'], update=False)
+            pipeline = transformers.pipeline(task=args['task_proper'], model=hf_model_storage_path,
+                                             tokenizer=hf_model_storage_path)
+        except OSError:
+            # load from engine storage (i.e. 'common' models)
+            hf_model_storage_path = self.engine_storage.folder_get(args['model_name'], update=False)
+            pipeline = transformers.pipeline(task=args['task_proper'], model=hf_model_storage_path,
+                                             tokenizer=hf_model_storage_path)
 
         input_column = args['input_column']
         if input_column not in df.columns:
@@ -295,11 +302,13 @@ class HuggingFaceHandler(BaseMLEngine):
         def _tokenize_fn(examples):
             return tokenizer(examples['text'], padding="max_length", truncation=True)
 
-        finetune_args = args if args else {}
+        # finetune_args = args if args else {}
         args = self.base_model_storage.json_get('args')
         model_name = args['model_name']
         base_model_name = model_name
-        hf_model_storage_path = self.engine_storage.folder_get(model_name)
+        model_folder = self.model_storage.folder_get(model_name)
+        model_folder_name = model_folder.split('/')[-1]
+
         task = args['task']
 
         # rename columns to properly finetune, depends on use case
@@ -325,10 +334,11 @@ class HuggingFaceHandler(BaseMLEngine):
                 predictions = np.argmax(logits, axis=-1)
                 return metric.compute(predictions=predictions, references=labels)
 
+            ft_args = {}
             training_args = TrainingArguments(
-                output_dir=hf_model_storage_path,
+                output_dir=model_folder,
                 evaluation_strategy="epoch",
-                **finetune_args
+                **ft_args
             )
 
             trainer = Trainer(
@@ -341,7 +351,10 @@ class HuggingFaceHandler(BaseMLEngine):
 
             try:
                 trainer.train()
+                trainer.save_model(model_folder)  # TODO: save entire pipeline instead  # https://huggingface.co/docs/transformers/main_classes/pipelines#transformers.Pipeline.save_pretrained
+                tokenizer.save_pretrained(model_folder)
             except Exception as e:
                 log.logger.debug(f'Finetune failed with error: {str(e)}')
 
-            self.engine_storage.folder_sync(model_name)
+            self.model_storage.json_set('args', args)
+            self.model_storage.folder_sync(model_folder_name)  # persist changes

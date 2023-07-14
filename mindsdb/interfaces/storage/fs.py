@@ -226,8 +226,11 @@ class S3FSStore(BaseFSStore):
         last_modified_file_path = Path(base_dir) / local_name / 'last_modified.txt'
         if last_modified_file_path.is_file() is False:
             return None
-        last_modified_text = last_modified_file_path.read_text()
-        last_modified_datetime = datetime.strptime(last_modified_text, self.dt_format)
+        try:
+            last_modified_text = last_modified_file_path.read_text()
+            last_modified_datetime = datetime.strptime(last_modified_text, self.dt_format)
+        except Exception:
+            return None
         return last_modified_datetime
 
     @profiler.profile()
@@ -257,7 +260,9 @@ class S3FSStore(BaseFSStore):
         os.makedirs(base_dir, exist_ok=True)
 
         remote_size = self.s3.get_object_attributes(
-            self.bucket, remote_ziped_name, ObjectAttributes=['ObjectSize']
+            Bucket=self.bucket,
+            Key=remote_ziped_name,
+            ObjectAttributes=['ObjectSize']
         )['ObjectSize']
         if (remote_size * 2) > psutil.virtual_memory().available:
             fh = io.BytesIO()
@@ -275,7 +280,7 @@ class S3FSStore(BaseFSStore):
             last_modified = self._get_remote_last_modified(remote_ziped_name)
         self._save_local_last_modified(
             base_dir,
-            remote_ziped_name.replace('tar.gz', ''),
+            remote_ziped_name.replace('.tar.gz', ''),
             last_modified
         )
 

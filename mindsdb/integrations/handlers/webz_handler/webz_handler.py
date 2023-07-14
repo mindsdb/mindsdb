@@ -1,4 +1,5 @@
 import os
+import time
 import pandas as pd
 from typing import Dict, Any
 
@@ -68,11 +69,13 @@ class WebzHandler(APIHandler):
         Returns:
             HandlerStatusResponse
         """
-        if self.is_connected and self.service is not None:
-            return webzio
+        if self.is_connected and self.client is not None:
+            return self.client
 
         webzio.config(token=self.connection_args['token'])
-        return webzio
+        self.client = webzio
+        self.is_connected = True
+        return self.client
 
     def check_connection(self) -> StatusResponse:
         """ Check connection to the handler
@@ -129,11 +132,20 @@ class WebzHandler(APIHandler):
         count_results = None
 
         data = []
+        limit_exec_time = time.time() + 60
 
         if 'size' in params:
             count_results = params['size']
 
+        #  GET param q is mandatory, so in order to collect all data,
+        # it's needed to use as a query an asterisk (*)
+        if 'q' not in params:
+            params['q'] = '*'
+
         while True:
+            if time.time() > limit_exec_time:
+                raise RuntimeError('Handler request timeout error')
+
             if count_results is not None:
                 left = count_results - len(data)
                 if left == 0:

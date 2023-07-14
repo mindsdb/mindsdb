@@ -27,8 +27,9 @@ class Project:
         return p
 
     def create(self, name: str):
+        name = name.lower()
         existing_record = db.Project.query.filter(
-            (db.Project.name == name)
+            (sa.func.lower(db.Project.name) == name)
             & (db.Project.company_id == ctx.company_id)
             & (db.Project.deleted_at == sa.null())
         ).first()
@@ -308,7 +309,7 @@ class ProjectController:
         else:
             q = q.filter_by(deleted_at=sa.null())
 
-        record = q.one()
+        record = q.first()
 
         return Project.from_record(record)
 

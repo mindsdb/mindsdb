@@ -383,10 +383,10 @@ class IntegrationController:
             logger.info(f"to use {handler_type} please install 'pip install mindsdb[{handler_type}]'")
 
         logger.debug("%s.create_tmp_handler: connection args - %s", self.__class__.__name__, connection_data)
-        resource_id = int(time() * 10000)
+        integration_id = int(time() * 10000)
         fs_store = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
-            resource_id=resource_id,
+            resource_id=integration_id,
             root_dir='tmp',
             sync=False
         )
@@ -395,7 +395,8 @@ class IntegrationController:
         handler_ars = dict(
             name='tmp_handler',
             fs_store=fs_store,
-            connection_data=connection_data
+            connection_data=connection_data,
+            integration_id=integration_id,
         )
 
         logger.debug("%s.create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)

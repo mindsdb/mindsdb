@@ -1,8 +1,10 @@
 Werkzeug==1.0.1
-lightwood >= 23.6.2.0, < 23.6.3.0
+lightwood >= 23.6.4.0, < 23.7.1.0
 markupsafe == 2.0.1
 flask-restx >= 1.0.1, < 2.0.0
 flask >= 1.0, < 2.0
+itsdangerous==2.0.1
+jinja2<3.1.0
 python-multipart >= 0.0.5
 pyparsing == 2.3.1
 cryptography>=35.0
@@ -28,11 +30,11 @@ mysql-connector-python
 clickhouse-driver
 clickhouse-sqlalchemy
 charset-normalizer
-dill >= 0.3.4
 pyOpenSSL >= 22.0.0
 pydateinfer==0.3.0
 pyarrow >= 10.0.1, < 10.1.0
 dataprep_ml
 python-magic >= 0.4.27
 openpyxl >= 3.1.1
+dill == 0.3.6
 slack_sdk

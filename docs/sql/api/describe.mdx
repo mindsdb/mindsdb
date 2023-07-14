@@ -43,13 +43,49 @@ On execution we get:
 +--------------------------------------+--------------------+-----------+---------+--------+---------+----------+----------+--------------+---------------+-----------------+--------+--------------------------------------+----------------------------+--------+
 | tables                               | NAME               | ENGINE    | PROJECT | ACTIVE | VERSION | STATUS   | ACCURACY | PREDICT      | UPDATE_STATUS | MINDSDB_VERSION | ERROR  | SELECT_DATA_QUERY                    | TRAINING_OPTIONS           | TAG    |
 +--------------------------------------+--------------------+-----------+---------+--------+---------+----------+----------+--------------+---------------+-----------------+--------+--------------------------------------+----------------------------+--------+
-| ["features","model","jsonai"]        | home_rentals_model | lightwood | mindsdb | true   | 1       | complete | 0.999    | rental_price | up_to_date    | 23.4.4.0        | [NULL] | SELECT * FROM demo_data.home_rentals | {'target': 'rental_price'} | [NULL] |
+| ["info","features","model","jsonai"] | home_rentals_model | lightwood | mindsdb | true   | 1       | complete | 0.999    | rental_price | up_to_date    | 23.4.4.0        | [NULL] | SELECT * FROM demo_data.home_rentals | {'target': 'rental_price'} | [NULL] |
 +--------------------------------------+--------------------+-----------+---------+--------+---------+----------+----------+--------------+---------------+-----------------+--------+--------------------------------------+----------------------------+--------+
 ```
 
 The `tables` output column lists all available options to describe a model.
 
 <Tabs>
+<Tab title='DESCRIBE info'>
+
+```sql
+DESCRIBE home_rentals_model.info;
+```
+
+The above command returns the following output columns:
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>accuracies</code></td>
+          <td>It lists the accuracy function used to evaluate the model and the achieved score.</td>
+        </tr>
+        <tr>
+          <td><code>column_importances</code></td>
+          <td>It lists all feature-type columns and assigns importance values.</td>
+        </tr>
+        <tr>
+          <td><code>outputs</code></td>
+          <td>The target column.</td>
+        </tr>
+        <tr>
+          <td><code>inputs</code></td>
+          <td>All the feature columns.</td>
+        </tr>
+      </tbody>
+    </table>
+
+</Tab>
 <Tab title='DESCRIBE features'>
 
 ```sql
@@ -371,5 +407,5 @@ DESCRIBE other_model.info;
 The above command lists basic model information.
 
 <Note>
-If you need more information on how to `DESCRIBE [MODEL]` or understand the results, feel free to ask us on the [community Slack workspace](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ).
+If you need more information on how to `DESCRIBE [MODEL]` or understand the results, feel free to ask us on the [community Slack workspace](https://mindsdb.com/joincommunity).
 </Note>

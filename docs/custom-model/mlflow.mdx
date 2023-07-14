@@ -45,9 +45,7 @@ USING
 Here is how to check the models status:
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name = 'mlflow_model';
+DESCRIBE mlflow_model;
 ```
 
 Once the status is `complete`, we can query for predictions.

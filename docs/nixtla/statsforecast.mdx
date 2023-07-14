@@ -80,7 +80,7 @@ USING ENGINE = 'statsforecast';
 ```
 
 <Tip>
-Please visit our docs on the [`CREATE MODEL`](/sql/create/predictor) statement to learn more.
+Please visit our docs on the [`CREATE MODEL`](/sql/create/model) statement to learn more.
 </Tip>
 
 Please note that the `WINDOW` clause is not required because StatsForecast automatically calculates the best window as part of hyperparameter tuning.
@@ -90,9 +90,7 @@ The `ENGINE` parameter in the `USING` clause specifies the ML engine used to mak
 We can check the training status with the following query:
 
 ```sql
-SELECT *
-FROM models
-WHERE name = 'quarterly_expenditure_forecaster';
+DESCRIBE quarterly_expenditure_forecaster;
 ```
 
 One of the pros of using the StatsForecast engine is that it is fast - it doesn’t take long until the model completes the training process.

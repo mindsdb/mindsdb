@@ -4,6 +4,7 @@ from sqlalchemy import null, func
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.context import context as ctx
+import mindsdb.utilities.profiler as profiler
 
 
 class PredictorRecordNotFound(Exception):
@@ -24,6 +25,7 @@ class MultiplePredictorRecordsFound(Exception):
         )
 
 
+@profiler.profile()
 def get_integration_record(name: str) -> db.Integration:
     company_id = ctx.company_id
     if company_id is None:
@@ -37,6 +39,7 @@ def get_integration_record(name: str) -> db.Integration:
     return record
 
 
+@profiler.profile()
 def get_project_record(name: str) -> db.Project:
     company_id = ctx.company_id
     if company_id is None:
@@ -53,6 +56,7 @@ def get_project_record(name: str) -> db.Project:
     return project_record
 
 
+@profiler.profile()
 def get_predictor_integration(record: db.Predictor) -> db.Integration:
     integration_record = (
         db.session.query(db.Integration)
@@ -61,6 +65,7 @@ def get_predictor_integration(record: db.Predictor) -> db.Integration:
     return integration_record
 
 
+@profiler.profile()
 def get_predictor_project(record: db.Predictor) -> db.Project:
     project_record = (
         db.session.query(db.Project)
@@ -69,6 +74,7 @@ def get_predictor_project(record: db.Predictor) -> db.Project:
     return project_record
 
 
+@profiler.profile()
 def get_model_records(integration_id=None, active=True, deleted_at=null(),
                       project_name: Optional[str] = None, ml_handler_name: Optional[str] = None, **kwargs):
     kwargs['company_id'] = ctx.company_id
@@ -105,6 +111,7 @@ def get_model_records(integration_id=None, active=True, deleted_at=null(),
     )
 
 
+@profiler.profile()
 def get_model_record(except_absent=False, ml_handler_name: Optional[str] = None,
                      project_name: Optional[str] = None, active: bool = True,
                      deleted_at=null(), version: Optional[int] = None, **kwargs):
@@ -114,11 +121,9 @@ def get_model_record(except_absent=False, ml_handler_name: Optional[str] = None,
 
     kwargs['deleted_at'] = deleted_at
     if active is not None:
-        # not use active if version was chosen
-        if version is not None:
-            kwargs['version'] = version
-        else:
-            kwargs['active'] = active
+        kwargs['active'] = active
+    if version is not None:
+        kwargs['version'] = version
 
     if project_name is not None:
         project_record = get_project_record(name=project_name)

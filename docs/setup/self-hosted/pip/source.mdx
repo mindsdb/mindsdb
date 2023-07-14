@@ -12,10 +12,10 @@ installation. Please have a look at them below.
 
 ### Pip and Python Versions
 
-We suggest using **Python 3.7.x, 3.8.x, or 3.9.x versions** for now.
+We suggest using **Python 3.8.x, or 3.9.x versions** for now.
 
 To successfully install MindsDB, use **Python 64-bit version**. Also, make sure
-that **Python >= 3.7** and **pip >= 20.3**. You can check the pip and python
+that **Python >= 3.8** and **pip >= 20.3**. You can check the pip and python
 versions by running the `pip --version` and
 `python --version` commands.
 
@@ -48,6 +48,15 @@ the `starting` phase. But if the server has started and you still get this
 error, please report it on our
 [GitHub repository](https://github.com/mindsdb/mindsdb/issues).
 
+### How to Overcome `ImportError: failed to find libmagic`
+
+If you get the `ImportError: failed to find libmagic` error, you should install the `libmagic` manually by running one of the commands below:
+
+```bash
+pip install python-magic-bin
+brew install libmagic
+```
+
 ## Installation
 
 1. Clone the MindsDB repository:
@@ -71,13 +80,13 @@ error, please report it on our
 3. Install MindsDB prerequisites:
 
    ```bash
-   cd mindsdb && pip install -r requirements.txt
+   cd mindsdb/requirements && pip install -r requirements.txt
    ```
 
 4. Install MindsDB:
 
    ```bash
-   python setup.py develop
+   cd .. && python setup.py develop
    ```
 
 5. Verify MindsDB installation by starting the MindsDB server:
@@ -115,8 +124,10 @@ Also, please create an issue with detailed description in the
 [MindsDB GitHub repository](https://github.com/mindsdb/mindsdb/issues) so we can
 help you. Usually, we review issues and respond within a few hours.
 
-<Tip>
-**What's next?** We recommend you follow one of our tutorials or learn more about the
-[MindsDB Database](/sql/table-structure/).
+## What's Next
 
-</Tip>
+Now that you installed and started MindsDB locally in your Docker container, go ahead and find out how to create and train a model using the [`CREATE MODEL`](/sql/create/model) statement. In the **MindsDB SQL** section, you'll find a comprehensive overview of the SQL syntax offered by MindsDB. We also provide Mongo-QL syntax documented in the **MindsDB Mongo-QL** section.
+
+You can connect MindsDB to different clients, including [PostgreSQL CLI](/connect/postgres-client) and [MySQL CLI](/connect/mysql-client).
+
+Check out the **Use Cases** section to follow tutorials that cover Large Language Models, Natural Language Processing, Time Series, Classification, and Regression models.

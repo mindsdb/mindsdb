@@ -18,6 +18,10 @@ The required arguments to establish a connection are as follows:
 * `project` is the identifier of the project that owns the resources.
 * `credentials` is a stringified GCP service account key JSON.
 
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/cloud_spanner_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
 ## Usage
 
 In order to make use of this handler and connect to the Cloud Spanner database in MindsDB, the following syntax can be used:

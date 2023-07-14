@@ -30,7 +30,7 @@ class HuggingFaceHandler(BaseMLEngine):
         # check model is pytorch based
         metadata = hf_api.model_info(args['model_name'])
         if 'pytorch' not in metadata.tags:
-            raise Exception('Currently only PyTorch models are supported (https://huggingface.co/models?library=pytorch&sort=downloads). To request another library, please contact us on our community slack (https://mindsdbcommunity.slack.com/join/shared_invite/zt-1e2cxo4ts-dUuoryp8n2hhyymPlzjD0A#/shared-invite/email).')
+            raise Exception('Currently only PyTorch models are supported (https://huggingface.co/models?library=pytorch&sort=downloads). To request another library, please contact us on our community slack (https://mindsdb.com/joincommunity).')
 
         # check model task
         supported_tasks = ['text-classification',

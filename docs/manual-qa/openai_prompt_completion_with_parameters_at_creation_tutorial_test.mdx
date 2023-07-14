@@ -1,0 +1,36 @@
+## Testing: OpenAI - Prompt Completion with Parameters Provided at Creation Time Tutorial
+
+Testing CREATE MODEL
+
+```sql
+CREATE MODEL project_a.openai_test_c
+PREDICT answer
+USING
+    engine = 'openai',
+    prompt_template = 'Context: {{context}}. Question: {{question}}. Answer:',
+    max_tokens = 100,
+    temperature = 0.3;
+```
+
+```sql
+Query successfully completed
+```
+
+EXAMPLE:
+
+```sql
+SELECT context, question, answer
+FROM project_a.openai_test_c
+WHERE context = 'Answer accurately'
+AND question = 'How many planets exist in the solar system?';
+```
+
+OUTPUT:
+
+```sql
++-------------------+-------------------------------------------+----------------------------------------------+
+|context            |question                                   |answer                                        |
++-------------------+-------------------------------------------+----------------------------------------------+
+|Answer accurately  |How many planets exist in the solar system?| There are eight planets in the solar system. |
++-------------------+-------------------------------------------+----------------------------------------------+
+```

@@ -1,11 +1,16 @@
 import os
+import sys
 import base64
 import shutil
 import tempfile
 import importlib
+import threading
+import inspect
+import multiprocessing
 from time import time
 from pathlib import Path
 from copy import deepcopy
+from typing import Optional
 from collections import OrderedDict
 
 from sqlalchemy import func
@@ -14,14 +19,131 @@ from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore, FileStorage, FileStorageFactory, RESOURCE_GROUP
 from mindsdb.interfaces.file.file_controller import FileController
+from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
 from mindsdb.integrations.handlers_client.db_client_factory import DBClient
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.log import get_log
-
+from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
+import mindsdb.utilities.profiler as profiler
 
 logger = get_log()
+
+
+class HandlersCache:
+    """ Cache for data handlers that keep connections opened during ttl time from handler last use
+    """
+
+    def __init__(self, ttl: int = 60):
+        """ init cache
+
+            Args:
+                ttl (int): time to live (in seconds) for record in cache
+        """
+        self.ttl = ttl
+        self.handlers = {}
+        self._lock = threading.RLock()
+        self._stop_event = threading.Event()
+        self.cleaner_thread = None
+
+    def __del__(self):
+        self._stop_clean()
+
+    def _start_clean(self) -> None:
+        """ start worker that close connections after ttl expired
+        """
+        if (
+            isinstance(self.cleaner_thread, threading.Thread)
+            and self.cleaner_thread.is_alive()
+        ):
+            return
+        self._stop_event.clear()
+        self.cleaner_thread = threading.Thread(target=self._clean)
+        self.cleaner_thread.daemon = True
+        self.cleaner_thread.start()
+
+    def _stop_clean(self) -> None:
+        """ stop clean worker
+        """
+        self._stop_event.set()
+
+    def set(self, handler: DatabaseHandler):
+        """ add (or replace) handler in cache
+
+            Args:
+                handler (DatabaseHandler)
+        """
+        # do not cache connections in handlers processes
+        if multiprocessing.current_process().name.startswith('HandlerProcess'):
+            return
+        with self._lock:
+            try:
+                key = (handler.name, ctx.company_id, threading.get_native_id())
+                handler.connect()
+                self.handlers[key] = {
+                    'handler': handler,
+                    'expired_at': time() + self.ttl
+                }
+            except Exception:
+                pass
+            self._start_clean()
+
+    def get(self, name: str) -> Optional[DatabaseHandler]:
+        """ get handler from cache by name
+
+            Args:
+                name (str): handler name
+
+            Returns:
+                DatabaseHandler
+        """
+        with self._lock:
+            key = (name, ctx.company_id, threading.get_native_id())
+            if (
+                key not in self.handlers
+                or self.handlers[key]['expired_at'] < time()
+            ):
+                return None
+            self.handlers[key]['expired_at'] = time() + self.ttl
+            return self.handlers[key]['handler']
+
+    def delete(self, name: str) -> None:
+        """ delete handler from cache
+
+            Args:
+                name (str): handler name
+        """
+        with self._lock:
+            key = (name, ctx.company_id, threading.get_native_id())
+            if key in self.handlers:
+                try:
+                    self.handlers[key].disconnect()
+                except Exception:
+                    pass
+                del self.handlers[key]
+            if len(self.handlers) == 0:
+                self._stop_clean()
+
+    def _clean(self) -> None:
+        """ worker that delete from cache handlers that was not in use for ttl
+        """
+        while self._stop_event.wait(timeout=3) is False:
+            with self._lock:
+                for key in list(self.handlers.keys()):
+                    if (
+                        self.handlers[key]['expired_at'] < time()
+                        and sys.getrefcount(self.handlers[key]) == 2    # returned ref count is always 1 higher
+                    ):
+                        try:
+                            self.handlers[key].disconnect()
+                        except Exception:
+                            pass
+                        del self.handlers[key]
+                if len(self.handlers) == 0:
+                    self._stop_event.set()
 
 
 class IntegrationController:
@@ -31,6 +153,7 @@ class IntegrationController:
 
     def __init__(self):
         self._load_handler_modules()
+        self.handlers_cache = HandlersCache()
 
     def _add_integration_record(self, name, engine, connection_args):
         integration_record = db.Integration(
@@ -44,8 +167,6 @@ class IntegrationController:
         return integration_record.id
 
     def add(self, name, engine, connection_args):
-        if engine in ['redis', 'kafka']:
-            return self._add_integration_record(name, engine, connection_args)
 
         logger.debug(
             "%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
@@ -82,6 +203,7 @@ class IntegrationController:
         return integration_id
 
     def modify(self, name, data):
+        self.handlers_cache.delete(name)
         integration_record = db.session.query(db.Integration).filter_by(
             company_id=ctx.company_id, name=name
         ).first()
@@ -96,6 +218,8 @@ class IntegrationController:
     def delete(self, name):
         if name in ('files', 'lightwood'):
             raise Exception('Unable to drop: is system database')
+
+        self.handlers_cache.delete(name)
 
         # check permanent integration
         if name in self.handler_modules:
@@ -175,10 +299,20 @@ class IntegrationController:
         if hasattr(integration_module, 'type'):
             integration_type = integration_module.type
 
+        class_type = None
+        if integration_module is not None and inspect.isclass(integration_module.Handler):
+            if issubclass(integration_module.Handler, DatabaseHandler):
+                class_type = 'sql'
+            if issubclass(integration_module.Handler, APIHandler):
+                class_type = 'api'
+            if issubclass(integration_module.Handler, BaseMLEngine):
+                class_type = 'ml'
+
         return {
             'id': integration_record.id,
             'name': integration_record.name,
             'type': integration_type,
+            'class_type': class_type,
             'engine': integration_record.engine,
             'date_last_update': deepcopy(integration_record.updated_at),
             'connection_data': data
@@ -244,6 +378,9 @@ class IntegrationController:
             Returns:
                 Handler object
         """
+        handler_meta = self.handlers_import_status[handler_type]
+        if not handler_meta["import"]["success"]:
+            logger.info(f"to use {handler_type} please install 'pip install mindsdb[{handler_type}]'")
 
         logger.debug("%s.create_tmp_handler: connection args - %s", self.__class__.__name__, connection_data)
         resource_id = int(time() * 10000)
@@ -262,12 +399,14 @@ class IntegrationController:
         )
 
         logger.debug("%s.create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
-        if DBClient.is_local:
-            return self.handler_modules[handler_type].Handler(**handler_ars)
-        else:
-            return DBClient(handler_type, **handler_ars)
+        return DBClient(handler_type, self.handler_modules[handler_type].Handler, **handler_ars)
 
+    @profiler.profile()
     def get_handler(self, name, case_sensitive=False):
+        handler = self.handlers_cache.get(name)
+        if handler is not None:
+            return handler
+
         if case_sensitive:
             integration_record = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, name=name).first()
         else:
@@ -288,6 +427,11 @@ class IntegrationController:
             raise Exception(f"Can't find handler for '{integration_name}' ({integration_engine})")
 
         integration_meta = self.handlers_import_status[integration_engine]
+        if not integration_meta["import"]["success"]:
+            msg = f"to use {integration_engine} please install 'pip install mindsdb[{integration_engine}]'"
+            logger.debug(msg)
+            raise Exception(msg)
+
         connection_args = integration_meta.get('connection_args')
         logger.debug("%s.get_handler: connection args - %s", self.__class__.__name__, connection_args)
 
@@ -318,8 +462,6 @@ class IntegrationController:
                 resource_group=RESOURCE_GROUP.PREDICTOR,
                 sync=True
             )
-        from mindsdb.integrations.libs.base import BaseMLEngine
-        from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 
         HandlerClass = self.handler_modules[integration_engine].Handler
 
@@ -333,10 +475,7 @@ class IntegrationController:
         else:
 
             logger.info("%s.get_handler: create a client to db service of %s type, args - %s", self.__class__.__name__, integration_engine, handler_ars)
-            if DBClient.is_local:
-                handler = HandlerClass(**handler_ars)
-            else:
-                handler = DBClient(integration_engine, **handler_ars)
+            handler = DBClient(integration_engine, HandlerClass, **handler_ars)
 
         return handler
 
@@ -371,9 +510,7 @@ class IntegrationController:
         dependencies = self._read_dependencies(handler_dir)
 
         self.handler_modules[module.name] = module
-        import_error = None
-        if hasattr(module, 'import_error'):
-            import_error = module.import_error
+        import_error = getattr(module, 'import_error', None)
         handler_meta = {
             'import': {
                 'success': import_error is None,

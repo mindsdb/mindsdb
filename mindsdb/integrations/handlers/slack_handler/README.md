@@ -137,7 +137,7 @@ SELECT
     r.response as message
 FROM mindsdb_slack.channels as t
 JOIN mindsdb.slack_response_model as r
-WHERE t.channel = 'testing'
+WHERE t.channel = '<channel-name>'
 LIMIT 3;
 ~~~~
 
@@ -151,7 +151,7 @@ INSERT INTO mindsdb_slack.channels(channel, message)
     r.response as message
   FROM mindsdb_slack.channels as t
   JOIN mindsdb.slack_response_model as r
-  WHERE t.channel = 'testing'
+  WHERE t.channel = '<channel-name>'
   LIMIT 3;
 ~~~~
 
@@ -172,7 +172,7 @@ CREATE JOB mindsdb.gpt4_slack_job AS (
     r.response as message
   FROM mindsdb_slack.channels as t
   JOIN mindsdb.slack_response_model as r
-  WHERE t.channel = 'testing'
+  WHERE t.channel = '<channel-name>'
   LIMIT 10;
 )
 EVERY hour;

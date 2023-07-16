@@ -1,4 +1,5 @@
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
+from typing import Dict
 
 import chromadb
 import pandas as pd
@@ -6,7 +7,7 @@ from chromadb import API
 from chromadb.config import Settings
 from integrations.handlers.chromadb_handler.settings import DEFAULT_EMBEDDINGS_MODEL
 from langchain.vectorstores import Chroma
-from mindsdb_sql import ASTNode, CreateTable, Insert, Select
+from mindsdb_sql import ASTNode, Constant, CreateTable, Insert, Select
 
 from mindsdb.integrations.handlers.chromadb_handler.helpers import (
     extract_collection_name,
@@ -119,6 +120,61 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
 
         return responseCode
 
+    def filter_query(self, query: ASTNode) -> Dict:
+        """Converts WHERE clause to mongodb query like syntax to filter Chromadb collection.
+
+        Args:
+            query (ASTNode): The query to filter.
+
+        Returns:
+            Dict: filter for collection.
+        """
+        # todo add support for other operators
+        # todo add support for WHERE IN
+
+        where = {}
+        if query.where.op == "and":
+
+            for arg in query.where.args:
+                if arg.op == "=":
+                    # todo add support for in operator
+                    # todo add support for > and < operators
+                    # todo fix and operator
+
+                    chroma_query = (
+                        query.where.args[1].value
+                        if isinstance(query.where.args[1], Constant)
+                        else query.where.args[1].parts[-1]
+                    )
+
+                    where["where"] = defaultdict(set)
+                    where["where_document"] = defaultdict(set)
+
+                    where["where"]["column"].add(arg.args[0].parts[-1])
+                    where["where_document"]["$contains"].add(chroma_query)
+
+                else:
+                    raise NotImplementedError(
+                        f"Unsupported where clause {arg.op} operator, only '=' is supported"
+                    )
+
+        elif query.where.op == "=":
+            chroma_query = (
+                {"$contains": query.where.args[1].value}
+                if isinstance(query.where.args[1], Constant)
+                else {"$contains": query.where.args[1].parts[-1]}
+            )
+            # filters on column name
+            where["where"] = {"column": query.where.args[0].parts[-1]}
+            where["where_document"] = chroma_query
+
+        else:
+            raise NotImplementedError(
+                f"Unsupported where clause {query.where.op} operator, only '=' and 'and' is supported"
+            )
+
+        return where
+
     def get_collection(self, query: ASTNode) -> Response:
         """
         Run a select query on the ChromaDB database, filter collection (if where clause)
@@ -128,36 +184,18 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
         collection_name = query.from_table.parts[-1]
 
         if query.where:
-            # if there is a where clause, parse it and extract the conditions
-
-            # todo add support for other operators
-            # todo add support for WHERE IN
-
-            where = {}
-            if query.where.op == "and":
-
-                for arg in query.where.args:
-                    if arg.op == "=":
-                        # todo add support for in operator
-                        where[arg.args[0].parts[-1]] = arg.args[1].parts[-1]
-                    else:
-                        raise NotImplementedError(
-                            f"Unsupported where clause {arg.op} operator, only '=' is supported"
-                        )
-
-            elif query.where.op == "=":
-                where[query.where.args[0].parts[-1]] = query.where.args[1].parts[-1]
-
-            else:
-                raise NotImplementedError(
-                    f"Unsupported where clause {query.where.op} operator, only '=' and 'and' is supported"
-                )
+            # if there is a where clause, parse it to mongodb query syntax
+            where = self.filter_query(query)
         else:
-            # if there is no where clause, set it to None
-            where = None
+            where = {}
 
+        # filter if there is a where clause
+        # where_document using mongodb query like syntax
+        # where using the column name to filter on metadata nb it may take longer to filter on metadata as it is not indexed
         collection_data = self._client.get_collection(collection_name).get(
-            where=where, include=["documents", "metadatas"]
+            where=where.get("where"),
+            where_document=where.get("where_document"),
+            include=["documents", "metadatas"],
         )
 
         result = pd.DataFrame(

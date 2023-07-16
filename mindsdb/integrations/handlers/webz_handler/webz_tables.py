@@ -35,11 +35,12 @@ class WebzBaseAPITable(APITable):
             if len(query.order_by) > 1:
                 raise ValueError("Unsupported to order by multiple fields")
             order_item = query.order_by[0]
+            sort_column = '.'.join(order_item.field.parts[1:])
             # make sure that column is sortable
-            if order_item.field.parts[0] not in type(self).SORTABLE_COLUMNS:
-                raise ValueError(f"Order by unknown column {order_item.field.parts[0]}")
+            if sort_column not in type(self).SORTABLE_COLUMNS:
+                raise ValueError(f"Order by unknown column {sort_column}")
             params.update({
-                'sort': order_item.field.parts[0],
+                'sort': sort_column,
                 'order': order_item.direction.lower()
             })
 

@@ -96,10 +96,12 @@ class TriggersController:
 
         query = db.session.query(
             db.Tasks.object_id,
+            db.Triggers.project_id,
             db.Triggers.name,
             db.Triggers.database_id,
             db.Triggers.table_name,
             db.Triggers.query_str,
+            db.Triggers.last_error,
         )\
             .join(db.Triggers, db.Triggers.id == db.Tasks.object_id)\
             .filter(
@@ -113,17 +115,23 @@ class TriggersController:
             query = query.filter(db.Triggers.project_id == project.id)
 
         database_names = {
-            i.id: i.name
-            for i in session.integration_controller.get_list()
+            i['id']: i['name']
+            for i in session.database_controller.get_list()
         }
 
+        project_names = {
+            i.id: i.name
+            for i in project_controller.get_list()
+        }
         data = []
         for record in query:
             data.append({
                 'id': record.object_id,
+                'project': project_names[record.project_id],
                 'name': record.name.lower(),
-                'database': database_names[record.database_id],
+                'database': database_names.get(record.database_id, '?'),
                 'table': record.table_name,
                 'query': record.query_str,
+                'last_error': record.last_error,
             })
         return data

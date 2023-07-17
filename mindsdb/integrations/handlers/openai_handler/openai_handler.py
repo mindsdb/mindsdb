@@ -334,7 +334,7 @@ class OpenAIHandler(BaseMLEngine):
                 tidy_comps = []
                 for c in comp['data']:
                     if 'embedding' in c:
-                        tidy_comps.append(','.join([str(e) for e in c['embedding']]))
+                        tidy_comps.append([c['embedding']])
                 return tidy_comps
 
             kwargs['input'] = prompts

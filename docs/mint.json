@@ -52,6 +52,7 @@
       "pages": [
         "what-is-mindsdb",
         "quickstart",
+        "mindsdb-gui",
         {
           "group": "Learn More",
           "pages": [

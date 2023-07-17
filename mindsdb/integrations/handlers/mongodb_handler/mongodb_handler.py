@@ -3,6 +3,7 @@ import time
 from bson import ObjectId
 import certifi
 import pandas as pd
+import pymongo
 from pymongo import MongoClient
 
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -80,8 +81,8 @@ class MongoDBHandler(DatabaseHandler):
                 return
 
             res = cur.try_next()
-            if cur is None:
-                time.sleep(0.1)
+            if res is None:
+                time.sleep(0.5)
                 continue
             _id = res['documentKey']['_id']
             if res['operationType'] == 'insert':
@@ -156,8 +157,9 @@ class MongoDBHandler(DatabaseHandler):
                 cursor = fnc(*step['args'])
 
             result = []
-            for row in cursor:
-                result.append(self.flatten(row, level=self.flatten_level))
+            if not isinstance(cursor, pymongo.results.UpdateResult):
+                for row in cursor:
+                    result.append(self.flatten(row, level=self.flatten_level))
 
             if len(result) > 0:
                 df = pd.DataFrame(result)

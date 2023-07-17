@@ -40,12 +40,17 @@ class TriggersController:
             raise Exception(f'Database or table not found: {table}')
 
         table_name = Identifier(parts=table.parts[1:]).to_string()
-        db_name = table.parts[1]
+        db_name = table.parts[0]
 
+        db_integration = session.integration_controller.get(db_name)
         db_handler = session.integration_controller.get_handler(db_name)
+
+        if not hasattr(db_handler, 'subscribe'):
+            raise Exception(f'Handler {db_integration["engine"]} does''t support subscription')
+
         df = db_handler.get_tables().data_frame
-        tables = df[df.columns[0]]
-        if not table_name in tables:
+        tables = list(df[df.columns[0]])
+        if table_name not in tables:
             raise Exception(f'Table {table_name} not found in {db_name}')
 
         # check sql
@@ -59,18 +64,28 @@ class TriggersController:
             name=name,
             project_id=project.id,
 
-            database_id=db_handler['id'],
+            database_id=db_integration['id'],
             table_name=table_name,
             query_str=query_str,
         )
         db.session.add(record)
         db.session.commit()
 
+        task_record = db.Tasks(
+            company_id=ctx.company_id,
+            user_class=ctx.user_class,
+
+            object_type=self.OBJECT_TYPE,
+            object_id=record.id,
+        )
+        db.session.add(task_record)
+        db.session.commit()
+
     def delete(self, name, project_name):
         # check exists
         all_triggers = self.get_list(project_name)
         if not any([i for i in all_triggers if i['name'] == name]):
-            raise Exception(f"Trigger already doesn't exist: {name}")
+            raise Exception(f"Trigger doesn't exist: {name}")
 
         project_controller = ProjectController()
         project = project_controller.get(name=project_name)
@@ -83,9 +98,11 @@ class TriggersController:
         task = db.Tasks.query.filter(
             db.Tasks.object_type == self.OBJECT_TYPE,
             db.Tasks.object_id == trigger.id
-        )
+        ).first()
 
-        db.session.delete(task)
+        if task is not None:
+            db.session.delete(task)
+
         db.session.delete(trigger)
 
         db.session.commit()

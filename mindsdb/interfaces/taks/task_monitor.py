@@ -60,7 +60,7 @@ class TaskMonitor:
         # Check old tasks to stop
         active_tasks = list(self._active_tasks.keys())
         for task_id in active_tasks:
-            if task_id not in active_tasks:
+            if task_id not in allowed_tasks:
                 self.stop_task(task_id)
 
         # check dead tasks

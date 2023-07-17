@@ -43,9 +43,9 @@ class TriggerTask:
         self.command_executor = ExecuteCommands(session, executor=None)
 
         # subscribe
-        data_handler = session.integration_controller.get_by_id(trigger.database_id)
-
-        data_handler.subscribe(self._callback, trigger.table_name, stop_event)
+        database = session.integration_controller.get_by_id(trigger.database_id)
+        data_handler = session.integration_controller.get_handler(database['name'])
+        data_handler.subscribe(stop_event, self._callback, trigger.table_name)
 
     def _callback(self, row, key):
         log.logger.debug(f'trigger call: {row}, {key}')
@@ -64,14 +64,18 @@ class TriggerTask:
             def find_table(node, is_table, **kwargs):
 
                 if is_table:
-                    if isinstance(node, Identifier) and node.to_string() == 'TABLE_DELTA':
+                    if (
+                            isinstance(node, Identifier)
+                            and len(node.parts) == 1
+                            and node.parts[0] == 'TABLE_DELTA'
+                    ):
                         # replace with data
-                        return Data(table)
+                        return Data(table, alias=node.alias)
 
             query_traversal(query, find_table)
 
             # exec query
-            ret = self.command_executor.execute_command(self.query)
+            ret = self.command_executor.execute_command(query)
             if ret.error_code is not None:
                 trigger.last_error = ret.error_message
 

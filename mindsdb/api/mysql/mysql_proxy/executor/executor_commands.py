@@ -622,18 +622,21 @@ class ExecuteCommands:
     def answer_create_trigger(self, statement):
         triggers_controller = TriggersController()
 
-        name = statement.name.parts[-1]
+        name = statement.name
+        trigger_name = statement.name.parts[-1]
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
 
-        triggers_controller.add(name, project_name, statement.table, statement.query_str)
+        triggers_controller.add(trigger_name, project_name, statement.table, statement.query_str)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_trigger(self, statement):
         triggers_controller = TriggersController()
 
-        name = statement.name.parts[-1]
+        name = statement.name
+        trigger_name = statement.name.parts[-1]
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
-        triggers_controller.delete(name, project_name)
+
+        triggers_controller.delete(trigger_name, project_name)
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 

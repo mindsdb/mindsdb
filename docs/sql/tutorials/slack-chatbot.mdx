@@ -244,7 +244,7 @@ Let's do it in single SQL statement:
 
 ```sql
 CREATE JOB mindsdb.gpt4_slack_job AS (
-   -- insert into tweets the output of joining model and new tweets
+   -- insert into channels the output of joining model and new responses
   INSERT INTO mindsdb_slack.channels(channel, message)
   SELECT
     t.channel as channel,

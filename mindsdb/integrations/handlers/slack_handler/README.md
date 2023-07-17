@@ -164,7 +164,7 @@ Finally, we can let GPT model respond to all the questions asked by the users by
 
 ~~~~sql
 CREATE JOB mindsdb.gpt4_slack_job AS (
-   -- insert into tweets the output of joining model and new tweets
+   -- insert into channels the output of joining model and new responses
   INSERT INTO mindsdb_slack.channels(channel, message)
   SELECT
     t.channel as channel,

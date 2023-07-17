@@ -164,9 +164,14 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
                 if isinstance(query.where.args[1], Constant)
                 else {"$contains": query.where.args[1].parts[-1]}
             )
+
             # filters on column name
             where["where"] = {"column": query.where.args[0].parts[-1]}
             where["where_document"] = chroma_query
+            # if user using "search_query" in where clause, then we need to use the search_query
+            if where["where"]["column"] == "search_query":
+                # remove the where key as we are not filtering using column name in metadata
+                del where["where"]
 
         else:
             raise NotImplementedError(
@@ -182,6 +187,11 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
         """
 
         collection_name = query.from_table.parts[-1]
+        if query.targets:
+            if query.targets[0].op == "count":
+                Response(
+                    resp_type=RESPONSE_TYPE.ERROR, error_message="Count not supported"
+                )
 
         if query.where:
             # if there is a where clause, parse it to mongodb query syntax
@@ -189,9 +199,6 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
         else:
             where = {}
 
-        # filter if there is a where clause
-        # where_document using mongodb query like syntax
-        # where using the column name to filter on metadata nb it may take longer to filter on metadata as it is not indexed
         collection_data = self._client.get_collection(collection_name).get(
             where=where.get("where"),
             where_document=where.get("where_document"),
@@ -203,7 +210,7 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
         )
 
         if query.limit:
-            # if there is a limit clause, limit the result
+            # if there is a limit clause, limit the result.
             result = result.head(query.limit.value)
 
         return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=result)

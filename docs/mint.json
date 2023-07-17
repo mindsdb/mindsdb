@@ -52,6 +52,7 @@
       "pages": [
         "what-is-mindsdb",
         "quickstart",
+        "mindsdb-gui",
         {
           "group": "Learn More",
           "pages": [
@@ -292,7 +293,8 @@
                 "sql/api/select",
                 "sql/api/update",
                 "sql/api/insert",
-                "sql/api/join-on"
+                "sql/api/join-on",
+                "sql/api/delete"
               ]
             },
             {

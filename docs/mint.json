@@ -292,7 +292,8 @@
                 "sql/api/select",
                 "sql/api/update",
                 "sql/api/insert",
-                "sql/api/join-on"
+                "sql/api/join-on",
+                "sql/api/delete"
               ]
             },
             {

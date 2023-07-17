@@ -48,7 +48,7 @@ class TaskMonitor:
     def check_tasks(self):
         allowed_tasks = set()
 
-        for task in db.Tasks.query.filter(db.Tasks.active == True).all():
+        for task in db.Tasks.query.filter(db.Tasks.active == True): # noqa
             allowed_tasks.add(task.id)
 
             # start new tasks

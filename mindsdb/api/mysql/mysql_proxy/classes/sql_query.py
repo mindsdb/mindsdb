@@ -1341,11 +1341,12 @@ class SQLQuery():
             dn = self.datahub.get(integration_name)
 
             result = step.dataframe
-            result_data = result.result_data
 
             params_map_index = []
 
             if step.update_command.keys is not None:
+                result_data = result.result_data
+
                 where = None
                 update_columns = {}
 
@@ -1397,6 +1398,7 @@ class SQLQuery():
                     # run as is
                     dn.query(query=update_query, session=self.session)
                     return data
+                result_data = result.result_data
 
                 # link nodes with parameters for fast replacing with values
                 input_table_alias = step.update_command.from_select_alias

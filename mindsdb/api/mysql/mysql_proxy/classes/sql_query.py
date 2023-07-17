@@ -1240,6 +1240,21 @@ class SQLQuery():
             query = step.query
             query.from_table = Identifier('df_table')
 
+            if step.add_absent_cols and isinstance(query, Select):
+                query_cols = set()
+
+                def f_all_cols(node, **kwargs):
+                    if isinstance(node, Identifier):
+                        query_cols.add(node.parts[-1])
+
+                query_traversal(query.where, f_all_cols)
+
+                result_cols = [col.name for col in result.columns]
+
+                for col_name in query_cols:
+                    if col_name not in result_cols:
+                        result.add_column(Column(col_name))
+
             df = result.to_df()
             res = query_df(df, query)
 

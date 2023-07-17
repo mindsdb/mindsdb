@@ -83,5 +83,3 @@ class TriggerTask:
             trigger.last_error = str(traceback.format_exc())
 
         db.session.commit()
-
-

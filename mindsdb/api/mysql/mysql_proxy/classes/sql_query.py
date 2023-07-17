@@ -1351,7 +1351,7 @@ class SQLQuery():
 
                 key_columns = [i.to_string() for i in step.update_command.keys]
                 if len(key_columns) == 0:
-                    raise ErSqlWrongArguments(f'No key columns in update statement')
+                    raise ErSqlWrongArguments('No key columns in update statement')
                 for col in result_data.columns:
                     name = col.name
                     value = Constant(None)

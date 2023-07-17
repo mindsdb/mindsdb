@@ -1,19 +1,10 @@
-
-import re
-import datetime as dt
-from dateutil.relativedelta import relativedelta
-
-import sqlalchemy as sa
-
-from mindsdb_sql.parser.ast import Data, Identifier
+from mindsdb_sql.parser.ast import Identifier
 
 from mindsdb_sql import parse_sql, ParsingException
 
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
 
 
 class TriggersController:

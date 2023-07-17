@@ -40,8 +40,8 @@ class WebzHandler(APIHandler):
         self.is_connected = False
         self.max_page_size = 100
 
-        self._register_table('posts', WebzPostsTable(self))
-        self._register_table('reviews', WebzReviewsTable(self))
+        self._register_table(WebzPostsTable.TABLE_NAME, WebzPostsTable(self))
+        self._register_table(WebzReviewsTable.TABLE_NAME, WebzReviewsTable(self))
 
     def _read_connection_args(self, name: str = None, **kwargs) -> Dict[str, Any]:
         """ Read the connection arguments by following the order of precedence below:
@@ -106,13 +106,9 @@ class WebzHandler(APIHandler):
         ast = parse_sql(query, dialect='mindsdb')
         return self.query(ast)
 
-    def _parse_post(self, post, endpoint):
-        MAPPING_OUTPUT_FIELDS = {
-            'filterWebContent': ['language', 'title', 'uuid', 'text', 'url', 'author', 'published', 'updated', 'crawled']
-        }
-        output_fields = MAPPING_OUTPUT_FIELDS[endpoint]
-        dotted_post = dotty(post)
-        return {field.replace('.', '_'):dotted_post[field] for field in output_fields}
+    def _parse_item(self, item, output_colums):
+        dotted_item = dotty(item)
+        return {field.replace('.', '__'):dotted_item[field] for field in output_colums}
 
     def call_webz_api(self, method_name: str = None, params: Dict = None) -> pd.DataFrame:
         """Calls the API method with the given params.
@@ -123,8 +119,8 @@ class WebzHandler(APIHandler):
             method_name (str): Method name to call
             params (Dict): Params to pass to the API call
         """
-        if method_name not in ['filterWebContent', 'reviewFilter']:
-            raise NotImplementedError('Method name {} not supported by Webz API Handler'.format(method_name))
+        table_name = method_name
+        table = self._tables[table_name]
 
         client = self.connect()
 
@@ -160,11 +156,11 @@ class WebzHandler(APIHandler):
                 else:
                     params['size'] = left
 
-            log.logger.debug(f'Calling Webz API: {method_name} with params ({params})')
+            log.logger.debug(f'Calling Webz API: {table.ENDPOINT} with params ({params})')
 
-            output = client.query(method_name, params) if len(data) == 0 else client.get_next()
-            for post in output['posts']:
-                data.append(self._parse_post(post, method_name))
+            output = client.query(table.ENDPOINT, params) if len(data) == 0 else client.get_next()
+            for item in output.get(table_name, []):
+                data.append(self._parse_item(item, table.OUTPUT_COLUMNS))
 
         df = pd.DataFrame(data)
         return df

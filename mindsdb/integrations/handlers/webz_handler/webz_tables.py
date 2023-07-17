@@ -9,7 +9,9 @@ import pandas as pd
 class WebzBaseAPITable(APITable):
 
     ENDPOINT = None
+    OUTPUT_COLUMNS = []
     SORTABLE_COLUMNS = []
+    TABLE_NAME = None
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """ Selects data from the API and returns it as a pandas DataFrame
@@ -47,7 +49,7 @@ class WebzBaseAPITable(APITable):
         if query.limit is not None:
             params['size'] = query.limit.value
         result = self.handler.call_webz_api(
-            method_name=type(self).ENDPOINT,
+            method_name=type(self).TABLE_NAME,
             params=params
         )
 
@@ -88,16 +90,7 @@ class WebzBaseAPITable(APITable):
             List of columns
 
         """
-        return [
-            'language',
-            'title',
-            'uuid',
-            'text',
-            'url',
-            'author',
-            'published',
-            'crawled'
-        ]
+        return [column.replace('.', '__') for column in type(self).OUTPUT_COLUMNS]
 
 
 class WebzPostsTable(WebzBaseAPITable):
@@ -107,6 +100,53 @@ class WebzPostsTable(WebzBaseAPITable):
     """
 
     ENDPOINT = 'filterWebContent'
+    OUTPUT_COLUMNS = [
+        'thread.uuid',
+        'thread.url',
+        'thread.site_full',
+        'thread.site',
+        'thread.site_section',
+        'thread.section_title',
+        'thread.title',
+        'thread.title_full',
+        'thread.published',
+        'thread.replies_count',
+        'thread.participants_count',
+        'thread.site_type',
+        'thread.main_image',
+        'thread.country',
+        'thread.site_categories',
+        'thread.social.facebook.likes',
+        'thread.social.facebook.shares',
+        'thread.social.facebook.comments',
+        'thread.social.gplus.shares',
+        'thread.social.pinterest.shares',
+        'thread.social.linkedin.shares',
+        'thread.social.stumbledupon.shares',
+        'thread.social.vk.shares',
+        'thread.performance_score',
+        'thread.domain_rank',
+        'thread.domain_rank_updated',
+        'thread.reach.per_million',
+        'thread.reach.page_views',
+        'thread.reach.updated',
+        'uuid',
+        'url',
+        'ord_in_thread',
+        'parent_url',
+        'author',
+        'published',
+        'title',
+        'text',
+        'language',
+        'external_links',
+        'external_images',
+        'rating',
+        'entities.persons',
+        'entities.organizations',
+        'entities.locations',
+        'crawled'
+    ]
     SORTABLE_COLUMNS = [
         'crawled',
         'relevancy',
@@ -127,6 +167,7 @@ class WebzPostsTable(WebzBaseAPITable):
         'ord_in_thread',
         'rating'
     ]
+    TABLE_NAME = 'posts'
 
 
 class WebzReviewsTable(WebzBaseAPITable):
@@ -135,7 +176,36 @@ class WebzReviewsTable(WebzBaseAPITable):
 
     """
 
-    ENDPOINT = 'reviewFilter'    
+    ENDPOINT = 'reviewFilter'
+    OUTPUT_COLUMNS = [
+        'item.uuid',
+        'item.url',
+        'item.site_full',
+        'item.site',
+        'item.site_section',
+        'item.section_title',
+        'item.title',
+        'item.title_full',
+        'item.published',
+        'item.reviews_count',
+        'item.reviewers_count',
+        'item.main_image',
+        'item.country',
+        'item.site_categories',
+        'item.domain_rank',
+        'item.domain_rank_updated',
+        'uuid',
+        'url',
+        'ord_in_thread',
+        'author',
+        'published',        
+        'title',
+        'text',
+        'language',
+        'external_links',
+        'rating',
+        'crawled'
+    ]
     SORTABLE_COLUMNS = [
         'crawled',
         'relevancy',
@@ -146,3 +216,4 @@ class WebzReviewsTable(WebzBaseAPITable):
         'ord_in_thread',
         'rating'
     ]
+    TABLE_NAME = 'reviews'

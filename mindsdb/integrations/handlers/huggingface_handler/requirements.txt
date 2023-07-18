@@ -3,6 +3,7 @@ mindsdb_sql >= 0.4.0
 pandas <=1.4.3
 transformers==4.21.0
 sentencepiece==0.1.97
+huggingface-hub
 
 torch
 tensorflow

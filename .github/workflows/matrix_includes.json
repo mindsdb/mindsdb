@@ -7,15 +7,15 @@
     {
       "runs_on": "ubuntu-latest",
       "python-version": 3.9,
-      "runOnBranch": "always"
-    },
-    {
-      "runs_on": "macos-latest",
-      "python-version": 3.8,
       "runOnBranch": "refs/heads/stable"
     },
     {
       "runs_on": "ubuntu-latest",
+      "python-version": 3.8,
+      "runOnBranch": "always"
+    },
+    {
+      "runs_on": "macos-latest",
       "python-version": 3.8,
       "runOnBranch": "refs/heads/stable"
     }

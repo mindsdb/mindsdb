@@ -47,6 +47,10 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
         if args['task'] not in get_in_df_supported_tasks():
             raise UnsupportedTaskException(f'The task {args["task"]} is not supported by the Hugging Face Inference API engine.')
 
+        if args['task'] == 'zero-shot-classification':
+            if 'candidate_labels' not in args:
+                raise Exception('"candidate_labels" is required for zero-shot-classification')
+
         if args['task'] == 'sentence-similarity':
             if 'input_column2' not in args:
                 raise InsufficientParametersException('input_column2 has to be specified')

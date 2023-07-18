@@ -59,6 +59,9 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
         if 'using' not in args:
             raise InsufficientParametersException("Hugging Face Inference engine requires a USING clause! Refer to its documentation for more details.")
 
+        # check api key
+        self._get_huggingface_api_key(args)
+
         args = args['using']
         args['target'] = target
 

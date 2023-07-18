@@ -32,7 +32,7 @@ ORDER BY posts.relevancy DESC
 LIMIT 5;
 ```
 
-The returned results should have ROWs like this:
+The returned results should have rows like this:
 
 | thread__uuid | thread__url | thread__site_full | thread__site | thread__site_section | thread__section_title | thread__title | thread__title_full | thread__published | thread__replies_count | thread__participants_count | thread__site_type | thread__main_image | thread__country | thread__site_categories | thread__social__facebook__likes | thread__social__facebook__shares | thread__social__facebook__comments | thread__social__gplus__shares | thread__social__pinterest__shares | thread__social__linkedin__shares | thread__social__stumbledupon__shares | thread__social__vk__shares | thread__performance_score | thread__domain_rank | thread__domain_rank_updated | thread__reach__per_million | thread__reach__page_views | thread__reach__updated | uuid | url | ord_in_thread | parent_url | author | published | title | text | language | external_links | external_images | rating | entities__persons | entities__organizations | entities__locations | crawled |
 | ------------ | ----------- | ----------------- | ------------ | -------------------- | --------------------- | ------------- | ------------------ | ----------------- | --------------------- | -------------------------- | ----------------- | ------------------ | --------------- | ----------------------- | ------------------------------- | -------------------------------- | ---------------------------------- | ----------------------------- | --------------------------------- | -------------------------------- | ------------------------------------ | -------------------------- | ------------------------- | ------------------- | --------------------------- | -------------------------- | ------------------------- | ---------------------- | ---- | --- | ------------- | ---------- | ------ | --------- | ----- | ---- | -------- | -------------- | --------------- | ------ | ----------------- | ----------------------- | ------------------- | ------- |
@@ -51,7 +51,7 @@ ORDER BY reviews.crawled ASC
 LIMIT 10;
 ```
 
-The returned results should have ROWs like this:
+The returned results should have rows like this:
 
 | item__uuid | item__url | item__site_full | item__site | item__site_section | item__section_title | item__title | item__title_full | item__published | item__reviews_count | item__reviewers_count | item__main_image | item__country | item__site_categories | item__domain_rank | item__domain_rank_updated | uuid | url | ord_in_thread | author | published | title | text | language | external_links | rating | crawled |
 | ---------- | --------- | --------------- | ---------- | ------------------ | ------------------- | ----------- | ---------------- | --------------- | ------------------- | --------------------- | ---------------- | ------------- | --------------------- | ----------------- | ------------------------- | ---- | --- | ------------- | ------ | --------- | ----- | ---- | -------- | -------------- | ------ | ------- |

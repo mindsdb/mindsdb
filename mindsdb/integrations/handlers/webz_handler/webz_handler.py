@@ -23,6 +23,7 @@ class WebzHandler(APIHandler):
 
     """
 
+    API_CALL_EXEC_LIMIT_SECONDS = 60
     AVAILABLE_CONNECTION_ARGUMENTS = ['token']
 
     def __init__(self, name: str = None, **kwargs):
@@ -128,7 +129,7 @@ class WebzHandler(APIHandler):
         count_results = None
 
         data = []
-        limit_exec_time = time.time() + 60
+        limit_exec_time = time.time() + type(self).API_CALL_EXEC_LIMIT_SECONDS
 
         if 'size' in params:
             count_results = params['size']

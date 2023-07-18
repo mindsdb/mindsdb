@@ -37,9 +37,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - id: set-matrix
-        uses: JoshuaTheMiller/conditional-build-matrix@0.0.1
+        uses: JoshuaTheMiller/conditional-build-matrix@1.0.1
         with:
-          filter: '[?runOn==`${{ github.ref }}` || runOn==`always`]'
+          filter: '[?runOnBranch==`${{ github.ref }}` || runOnBranch==`always`]'
   test:
     needs: matrix_prep
     strategy:

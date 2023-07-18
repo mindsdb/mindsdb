@@ -1,13 +1,13 @@
 [
     {
       "runs_on": "ubuntu-latest",
-      "python-version": 3.10,
-      "runOnBranch": "refs/heads/stable"
+      "python-version": "3.10",
+      "runOnBranch": "refs/heads/staging"
     },
     {
       "runs_on": "ubuntu-latest",
       "python-version": 3.9,
-      "runOnBranch": "refs/heads/stable"
+      "runOnBranch": "refs/heads/staging"
     },
     {
       "runs_on": "ubuntu-latest",

@@ -119,6 +119,7 @@
     {
       "group": "Data Sources",
       "pages": [
+        "data-sources-overview",
         {
           "group": "Applications",
           "pages": [
@@ -198,6 +199,7 @@
     {
       "group": "ML Engines",
       "pages": [
+        "ml-engines-overview",
         {
           "group": "Large Language Models",
           "pages": [
@@ -231,6 +233,7 @@
     {
       "group": "MindsDB SQL",
       "pages": [
+        "mindsdb-sql-overview",
         {
           "group": "Connect to MindsDB",
           "pages": [
@@ -319,6 +322,7 @@
     {
       "group": "MindsDB Mongo-QL",
       "pages": [
+        "mindsdb-mongo-ql-overview",
         {
           "group": "Connect to MindsDB",
           "pages": [

@@ -79,9 +79,7 @@ USING
 Before querying for predictions, we should verify the status of the `spam_classifier` model.
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name = 'spam_classifier';
+DESCRIBE spam_classifier;
 ```
 
 On execution, we get:
@@ -151,9 +149,7 @@ USING
 Before querying for predictions, we should verify the status of the `sentiment_classifier` model.
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name = 'sentiment_classifier';
+DESCRIBE sentiment_classifier;
 ```
 
 On execution, we get:
@@ -223,9 +219,7 @@ USING
 Before querying for predictions, we should verify the status of the `zero_shot_tcd` model.
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name = 'zero_shot_tcd';
+DESCRIBE zero_shot_tcd;
 ```
 
 On execution, we get:
@@ -292,9 +286,7 @@ USING
 Before querying for predictions, we should verify the status of the `translator_en_fr` model.
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name = 'translator_en_fr';
+DESCRIBE translator_en_fr;
 ```
 
 On execution, we get:
@@ -358,9 +350,7 @@ USING
 Before querying for predictions, we should verify the status of the `summarizer_10_20` model.
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name = 'summarizer_10_20';
+DESCRIBE summarizer_10_20;
 ```
 
 On execution, we get:
@@ -427,9 +417,7 @@ USING
 Before querying for predictions, we should verify the status of the `fill_mask` model.
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name = 'fill_mask';
+DESCRIBE fill_mask;
 ```
 
 On execution, we get:
@@ -495,9 +483,7 @@ USING
 And check its status.
 
 ```sql
-SELECT *
-FROM mindsdb.models 
-WHERE name = 'hf_spam';
+DESCRIBE hf_spam;
 ```
 
 Once the status is `complete`, we can query for predictions.
@@ -536,9 +522,7 @@ USING
 And check its status.
 
 ```sql
-SELECT *
-FROM mindsdb.models 
-WHERE name = 'hf_sentiment';
+DESCRIBE hf_sentiment;
 ```
 
 Once the status is `complete`, we can query for predictions.
@@ -576,9 +560,7 @@ USING
 And check its status.
 
 ```sql
-SELECT *
-FROM mindsdb.models 
-WHERE name = 'hf_sentiment_finance';
+DESCRIBE hf_sentiment_finance;
 ```
 
 Once the status is `complete`, we can query for predictions.
@@ -616,9 +598,7 @@ USING
 And check its status.
 
 ```sql
-SELECT *
-FROM mindsdb.models 
-WHERE name = 'hf_emotions_6';
+DESCRIBE hf_emotions_6;
 ```
 
 Once the status is `complete`, we can query for predictions.
@@ -656,9 +636,7 @@ USING
 And check its status.
 
 ```sql
-SELECT *
-FROM mindsdb.models 
-WHERE name = 'hf_toxicity';
+DESCRIBE hf_toxicity;
 ```
 
 Once the status is `complete`, we can query for predictions.
@@ -696,9 +674,7 @@ USING
 And check its status.
 
 ```sql
-SELECT *
-FROM mindsdb.models 
-WHERE name = 'hf_esg_6';
+DESCRIBE hf_esg_6;
 ```
 
 Once the status is `complete`, we can query for predictions.
@@ -735,9 +711,7 @@ USING
 And check its status.
 
 ```sql
-SELECT *
-FROM mindsdb.models 
-WHERE name = 'hf_esg_26';
+DESCRIBE hf_esg_26;
 ```
 
 Once the status is `complete`, we can query for predictions.
@@ -775,9 +749,7 @@ USING
 And check its status.
 
 ```sql
-SELECT *
-FROM mindsdb.models 
-WHERE name = 'hf_hate';
+DESCRIBE hf_hate;
 ```
 
 Once the status is `complete`, we can query for predictions.
@@ -815,9 +787,7 @@ USING
 And check its status.
 
 ```sql
-SELECT *
-FROM mindsdb.models 
-WHERE name = 'hf_crypto';
+DESCRIBE hf_crypto;
 ```
 
 Once the status is `complete`, we can query for predictions.
@@ -855,9 +825,7 @@ USING
 And check its status.
 
 ```sql
-SELECT *
-FROM mindsdb.models 
-WHERE name = 'hf_us_party';
+DESCRIBE hf_us_party;
 ```
 
 Once the status is `complete`, we can query for predictions.
@@ -896,9 +864,7 @@ USING
 And check its status.
 
 ```sql
-SELECT *
-FROM mindsdb.models 
-WHERE name = 'hf_question';
+DESCRIBE hf_question;
 ```
 
 Once the status is `complete`, we can query for predictions.
@@ -936,9 +902,7 @@ USING
 And check its status.
 
 ```sql
-SELECT *
-FROM mindsdb.models 
-WHERE name = 'hf_industry';
+DESCRIBE hf_industry;
 ```
 
 Once the status is `complete`, we can query for predictions.
@@ -979,9 +943,7 @@ USING
 And check its status.
 
 ```sql
-SELECT *
-FROM mindsdb.models 
-WHERE name = 'hf_zs_bart';
+DESCRIBE hf_zs_bart;
 ```
 
 Once the status is `complete`, we can query for predictions.
@@ -1023,9 +985,7 @@ USING
 And check its status.
 
 ```sql
-SELECT *
-FROM mindsdb.models 
-WHERE name = 'hf_t5_en_fr';
+DESCRIBE hf_t5_en_fr;
 ```
 
 Once the status is `complete`, we can query for predictions.
@@ -1067,9 +1027,7 @@ USING
 And check its status.
 
 ```sql
-SELECT *
-FROM mindsdb.models 
-WHERE name = 'hf_bart_sum_20';
+DESCRIBE hf_bart_sum_20;
 ```
 
 Once the status is `complete`, we can query for predictions.
@@ -1109,9 +1067,7 @@ USING
 And check its status.
 
 ```sql
-SELECT *
-FROM mindsdb.models 
-WHERE name = 'hf_peg_sum_20';
+DESCRIBE hf_peg_sum_20;
 ```
 
 Once the status is `complete`, we can query for predictions.

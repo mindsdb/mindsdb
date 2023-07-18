@@ -4,6 +4,7 @@ import json
 import base64
 import datetime as dt
 from copy import deepcopy
+from multiprocessing.pool import ThreadPool
 
 import pandas as pd
 from dateutil.parser import parse as parse_datetime
@@ -27,6 +28,15 @@ from mindsdb.utilities.functions import resolve_model_identifier
 import mindsdb.utilities.profiler as profiler
 
 IS_PY36 = sys.version_info[1] <= 6
+
+
+def delete_model_storage(model_id, ctx_dump):
+    try:
+        ctx.load(ctx_dump)
+        modelStorage = ModelStorage(model_id)
+        modelStorage.delete()
+    except Exception as e:
+        print(f'Something went wrong during deleting storage of model {model_id}: {e}')
 
 
 class ModelController():
@@ -198,9 +208,17 @@ class ModelController():
                 predictor_record.deleted_at = dt.datetime.now()
             else:
                 db.session.delete(predictor_record)
-            modelStorage = ModelStorage(predictor_record.id)
-            modelStorage.delete()
         db.session.commit()
+
+        # region delete storages
+        if len(predictors_records) > 1:
+            ctx_dump = ctx.dump()
+            with ThreadPool(min(len(predictors_records), 100)) as pool:
+                pool.starmap(delete_model_storage, [(record.id, ctx_dump) for record in predictors_records])
+        else:
+            modelStorage = ModelStorage(predictors_records[0].id)
+            modelStorage.delete()
+        # endregion
 
     def rename_model(self, old_name, new_name):
         model_record = get_model_record(name=new_name)

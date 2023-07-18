@@ -3,8 +3,9 @@ import socket
 import os
 import datetime as dt
 
-from mindsdb.utilities import log
+import sqlalchemy as sa
 
+from mindsdb.utilities import log
 from mindsdb.utilities.log import initialize_log
 
 from mindsdb.utilities.config import Config
@@ -15,7 +16,8 @@ from .task_thread import TaskThread
 
 class TaskMonitor:
 
-    _MONITOR_INTERVAL_SECONDS = 1
+    MONITOR_INTERVAL_SECONDS = 1
+    LOCK_EXPIRED_SECONDS = MONITOR_INTERVAL_SECONDS * 10
 
     def __init__(self):
         self._active_tasks = {}
@@ -30,14 +32,14 @@ class TaskMonitor:
             try:
                 self.check_tasks()
 
+                db.session.rollback()  # disable cache
+                time.sleep(self.MONITOR_INTERVAL_SECONDS)
+
             except (SystemExit, KeyboardInterrupt):
                 self.stop_all_tasks()
                 raise
             except Exception as e:
                 log.logger.error(e)
-
-            db.session.rollback()  # disable cache
-            time.sleep(self._MONITOR_INTERVAL_SECONDS)
 
     def stop_all_tasks(self):
 
@@ -73,19 +75,20 @@ class TaskMonitor:
 
     def _lock_task(self, task):
         run_by = f'{socket.gethostname()} {os.getpid()}'
+        db_date = db.session.query(sa.func.current_timestamp()).first()[0]
         if task.run_by == run_by:
             # already locked
-            task.alive_time = dt.datetime.now()
+            task.alive_time = db_date
 
         elif task.alive_time is None:
             # not locked yet
             task.run_by = run_by
-            task.alive_time = dt.datetime.now()
+            task.alive_time = db_date
 
-        elif dt.datetime.now() - task.alive_time > dt.timedelta(seconds=self._MONITOR_INTERVAL_SECONDS * 10):
+        elif db_date - task.alive_time > dt.timedelta(seconds=self.LOCK_EXPIRED_SECONDS):
             # lock expired
             task.run_by = run_by
-            task.alive_time = dt.datetime.now()
+            task.alive_time = db_date
 
         else:
             return False

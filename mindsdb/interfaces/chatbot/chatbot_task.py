@@ -16,9 +16,12 @@ class ChatBotTask:
 
     """A thread for polling style chatbots to operate."""
 
-    def __init__(self, bot_record):
+    def __init__(self, bot_id):
+        self.bot_id = bot_id
 
-        self.bot_record = bot_record
+    def run(self, stop_event):
+
+        bot_record = db.ChatBots.query.get(self.bot_id)
 
         session = SessionController()
         # TODO check deleted, raise errors
@@ -58,10 +61,7 @@ class ChatBotTask:
 
         self.model_manager = ...
 
-        self.chat_pooling.run()
-
-    def stop(self):
-        self.chat_pooling.stop()
+        self.chat_pooling.run(stop_event)
 
     def on_message(self, chat_memory, message: ChatBotMessage):
 

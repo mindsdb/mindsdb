@@ -15,14 +15,23 @@ class BasePolling:
         self.params = chat_params
         self.chat_task = chat_task
 
-    def start(self):
-        raise NotImplementedError
-
-    def stop(self):
+    def start(self, stop_event):
         raise NotImplementedError
 
     def send_message(self, message: ChatBotMessage):
-        raise NotImplementedError
+        chat_id = message.destination
+        text = message.text
+
+        t_params = self.params['chat_table']
+        ast_query = Insert(
+            table=Identifier(t_params['name']),
+            columns=[t_params['chat_id_col'], t_params['text_col']],
+            values=[
+                [chat_id, text],
+            ]
+        )
+
+        self.chat_task.chat_handler.query(ast_query)
 
 
 class MessageCountPolling(BasePolling):
@@ -32,7 +41,7 @@ class MessageCountPolling(BasePolling):
         self._to_stop = False
         self.chats_prev = None
 
-    def run(self):
+    def run(self, stop_event):
 
         self.chat_memory = defaultdict(dict)
 
@@ -49,7 +58,7 @@ class MessageCountPolling(BasePolling):
             except Exception as e:
                 log.logger.error(e)
 
-            if self._to_stop:
+            if stop_event.is_set():
                 return
             log.logger.debug('running ' + self.chat_task.bot_record.name)
             time.sleep(7)
@@ -102,21 +111,6 @@ class MessageCountPolling(BasePolling):
             self.chats_prev = chats
         return chat_ids
 
-    def send_message(self, message: ChatBotMessage):
-        chat_id = message.destination
-        text = message.text
-
-        t_params = self.params['chat_table']
-        ast_query = Insert(
-            table=Identifier(t_params['name']),
-            columns=[t_params['chat_id_col'], t_params['text_col']],
-            values=[
-                [chat_id, text],
-            ]
-        )
-
-        self.chat_task.chat_handler.query(ast_query)
-
     def stop(self):
         self._to_stop = True
 
@@ -125,20 +119,28 @@ class RealtimePolling(BasePolling):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._stop_event = Event()
+    def _callback(self, row, key):
+        row.update(key)
 
-    def _callback(self, message: ChatBotMessage):
-        chat_id = message.destination
+        t_params = self.params['chat_table']
+
+        message = ChatBotMessage(
+            ChatBotMessage.Type.DIRECT,
+            row[t_params['text_col']],
+            # In Slack direct messages are treated as channels themselves.
+            row[t_params['username_col']],
+            row['chat_id_col']
+        )
+
+        chat_id = row[t_params['chat_id_col']]
 
         chat_memory = self.chat_task.memory.get_chat(chat_id)
         self.chat_task.on_message(chat_memory, message)
 
-    def start(self):
-        self.chat_task.chat_handler.realtime_subscribe(self._callback)
-        self._stop_event.wait()
+    def start(self, stop_event):
+        t_params = self.params['chat_table']
+        self.chat_task.chat_handler.subscribe(stop_event, self._callback, t_params['name'])
 
-    def send_message(self, message: ChatBotMessage):
-        self.chat_task.chat_handler.realtime_send(message)
-
-    def stop(self):
-        self._stop_event.set()
+    # def send_message(self, message: ChatBotMessage):
+    #
+    #     self.chat_task.chat_handler.realtime_send(message)

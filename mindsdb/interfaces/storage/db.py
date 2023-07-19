@@ -293,8 +293,6 @@ class JobsHistory(Base):
 class ChatBots(Base):
     __tablename__ = 'chat_bots'
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer)
-    user_class = Column(Integer, nullable=True)
 
     name = Column(String, nullable=False)
     project_id = Column(Integer, nullable=False)
@@ -304,10 +302,10 @@ class ChatBots(Base):
     database_id = Column(Integer)
     # If chat_engine is set we use a RealtimeChatHandler to subscribe to chat messages.
     # TODO(tmichaeldb): Consolidate existing polling logic and realtime chat logic together.
-    chat_engine = Column(String)
+    # chat_engine = Column(String)
     params = Column(JSON)
 
-    is_running = Column(Boolean, default=True)
+    # is_running = Column(Boolean, default=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
@@ -319,7 +317,7 @@ class ChatBots(Base):
             'model_name': self.model_name,
             'chat_engine': self.chat_engine,
             'params': self.params,
-            'is_running': self.is_running,
+            # 'is_running': self.is_running,
             'created_at': self.created_at
         }
 

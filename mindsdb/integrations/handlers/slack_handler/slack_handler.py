@@ -298,6 +298,14 @@ class SlackHandler(APIChatHandler):
         params = {
             'polling': {
                 'type': 'realtime',
+                'table_name': 'channels'
+            },
+            'chat_table': {
+                'name': 'channels',
+                'chat_id_col': 'channel',
+                'username_col': 'user',
+                'text_col': 'text',
+                'time_col': 'thread_ts',
             }
         }
         return params
@@ -308,7 +316,10 @@ class SlackHandler(APIChatHandler):
         resp = api.users_profile_get()
         return resp['profile']['display_name']
 
-    def realtime_subscribe(self, callback):
+    def subscribe(self, stop_event, callback, table_name, **kwargs):
+        if table_name != 'channels':
+            raise RuntimeError(f'Table not supported: {table_name}')
+
         self._socket_mode_client = SocketModeClient(
             # This app-level token will be used only for establishing a connection
             app_token=self.connection_args['api_token'],  # xapp-A111-222-xyz
@@ -316,7 +327,7 @@ class SlackHandler(APIChatHandler):
             web_client=WebClient(token=self.connection_args['token'])  # xoxb-111-222-xyz
         )
 
-        def _process_websocket_message(self, client: SocketModeClient, request: SocketModeRequest):
+        def _process_websocket_message(client: SocketModeClient, request: SocketModeRequest):
             # Acknowledge the request
             response = SocketModeResponse(envelope_id=request.envelope_id)
             client.send_socket_mode_response(response)
@@ -337,34 +348,37 @@ class SlackHandler(APIChatHandler):
                 # A bot sent this message.
                 return
 
-            chatbot_message = ChatBotMessage(
-                ChatBotMessage.Type.DIRECT,
-                payload_event['text'],
-                # In Slack direct messages are treated as channels themselves.
-                payload_event['channel'],
-                payload_event['channel']
-            )
-            callback(chatbot_message)
+            key = {
+                'channel': payload_event['channel'],
+            }
+            row = {
+                'text': payload_event['text'],
+                'user': payload_event['channel'] # TODO ?,
+            }
+
+            callback(row, key)
 
         self._socket_mode_client.socket_mode_request_listeners.append(_process_websocket_message)
         self._socket_mode_client.connect()
 
-    def realtime_send(self, message: ChatBotMessage):
-        """
-               Sends a Slack message.
+        stop_event.wait()
 
-               Parameters: message (ChatBotMessage): The message to send
-
-               Returns: response (ChatBotResponse): Response indicating whether the message was sent successfully
-               """
-        if message.type != ChatBotMessage.Type.DIRECT:
-            raise NotImplementedError('Only sending direct messages is supported by RealtimeSlackChatHandler')
-        response = self._socket_mode_client.web_client.chat_postMessage(
-            channel=message.destination,
-            text=message.text
-        )
-
-        response.validate()
+    # def realtime_send(self, message: ChatBotMessage):
+    #     """
+    #            Sends a Slack message.
+    #
+    #            Parameters: message (ChatBotMessage): The message to send
+    #
+    #            Returns: response (ChatBotResponse): Response indicating whether the message was sent successfully
+    #            """
+    #     if message.type != ChatBotMessage.Type.DIRECT:
+    #         raise NotImplementedError('Only sending direct messages is supported by RealtimeSlackChatHandler')
+    #     response = self._socket_mode_client.web_client.chat_postMessage(
+    #         channel=message.destination,
+    #         text=message.text
+    #     )
+    #
+    #     response.validate()
 
     def create_connection(self):
         """

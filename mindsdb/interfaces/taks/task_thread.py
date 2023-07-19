@@ -3,6 +3,7 @@ import threading
 from mindsdb.utilities.context import context as ctx
 
 from mindsdb.interfaces.triggers.trigger_task import TriggerTask
+from mindsdb.interfaces.chatbot.chatbot_task import ChatBotTask
 
 
 class TaskThread(threading.Thread):
@@ -20,15 +21,21 @@ class TaskThread(threading.Thread):
         if self.task_record.user_class is not None:
             ctx.user_class = self.task_record.user_class
 
-        if self.task_record.object_type == 'trigger':
-            trigger_id = self.task_record.object_id
+        try:
+            if self.task_record.object_type == 'trigger':
+                trigger_id = self.task_record.object_id
 
-            trigger = TriggerTask(trigger_id)
-            trigger.run(self._stop_event)
+                trigger = TriggerTask(trigger_id)
+                trigger.run(self._stop_event)
 
-        elif self.task_record.object_type == 'chatbot':
-            # TODO
-            ...
+            elif self.task_record.object_type == 'chatbot':
+                bot_id = self.task_record.object_id
+
+                bot = ChatBotTask(bot_id)
+                bot.run(self._stop_event)
+
+        except Exception:
+            pass
 
     def stop(self):
         self._stop_event.set()

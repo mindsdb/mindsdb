@@ -49,8 +49,6 @@ class AnthropicHandler(BaseMLEngine):
 
         self.connection = Anthropic(api_key=api_key,)
 
-        input_keys = list(args.keys())
-
         input_column = args['using']['column']
 
         if input_column not in df.columns:
@@ -102,7 +100,7 @@ class AnthropicHandler(BaseMLEngine):
         """ 
 
         args = self.model_storage.json_get('args')
-        
+
         completion = self.connection.completions.create(
             model=args['using']['model'],
             max_tokens_to_sample=args['using']['max_tokens'],

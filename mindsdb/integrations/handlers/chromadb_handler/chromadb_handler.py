@@ -1,4 +1,4 @@
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 from typing import Dict
 
 import chromadb
@@ -7,11 +7,12 @@ from chromadb import API
 from chromadb.config import Settings
 from integrations.handlers.chromadb_handler.settings import DEFAULT_EMBEDDINGS_MODEL
 from langchain.vectorstores import Chroma
-from mindsdb_sql import ASTNode, Constant, CreateTable, Insert, Select, Star
+from mindsdb_sql import ASTNode, CreateTable, Insert, Select, Star
 
 from mindsdb.integrations.handlers.chromadb_handler.helpers import (
     documents_to_df,
     extract_collection_name,
+    get_metadata_filter,
     load_embeddings_model,
     split_documents,
 )
@@ -22,7 +23,7 @@ from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.utilities import log
 
-# todo create separate util dir for vectorstores
+# todo create separate util dir for vectorstore
 
 
 class ChromaDBHandler(Chroma, VectorStoreHandler):
@@ -74,7 +75,7 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
             self.disconnect()
 
     def connect(self) -> API:
-        """Connect to a DuckDB database.
+        """Connect to a ChromaDB database.
 
         Returns:
             API: The ChromaDB _client.
@@ -122,7 +123,7 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
         return responseCode
 
     def filter_query(self, query: ASTNode) -> Dict:
-        """Converts WHERE clause to mongodb query like syntax to filter Chromadb collection.
+        """Converts WHERE clause to ChromaDB query syntax to filter Chromadb collection.
 
         Args:
             query (ASTNode): The query to filter.
@@ -135,24 +136,24 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
 
         where = {}
         if query.where.op == "and":
-            # todo fix 'and' operator
-
             for arg in query.where.args:
                 if arg.op == "=":
-                    # todo add support for 'IN' operator
-                    # todo add support for '>' and '<' operators - maybe not essential
+                    # todo add support for 'IN' operator - not essential
+                    # todo add support for '>' and '<' operators - not essential
+                    if arg.args[0].parts[-1] == "meta_data_filter":
+                        # filters on metadata
+                        where["meta_data_filter"] = get_metadata_filter(
+                            arg.args[1].value
+                        )
 
-                    chroma_query = (
-                        query.where.args[1].value
-                        if isinstance(query.where.args[1], Constant)
-                        else query.where.args[1].parts[-1]
-                    )
-
-                    where["where"] = defaultdict(set)
-                    where["where_document"] = defaultdict(set)
-
-                    where["where"]["column"].add(arg.args[0].parts[-1])
-                    where["where_document"]["$contains"].add(chroma_query)
+                    elif arg.args[0].parts[-1] == "search_query":
+                        # extract the search query
+                        where["search_query"] = arg.args[1].value
+                    else:
+                        raise NotImplementedError(
+                            f"where clause parameter {arg.args[0].parts[-1]} is not supported, "
+                            f"only 'meta_data_filter' and 'search_query' are supported"
+                        )
 
                 else:
                     raise NotImplementedError(
@@ -160,19 +161,21 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
                     )
 
         elif query.where.op == "=":
-            chroma_query = (
-                query.where.args[1].value
-                if isinstance(query.where.args[1], Constant)
-                else query.where.args[1].parts[-1]
-            )
 
-            # filters on column name
-            where["where"] = {"column": query.where.args[0].parts[-1]}
-            where["query_text"] = chroma_query
-            # if user using "search_query" in where clause, then we need to use the search_query
-            if where["where"]["column"] == "search_query":
-                # remove the where key as we are not filtering using column name in metadata
-                del where["where"]
+            if query.where.args[0].parts[-1] == "meta_data_filter":
+                # filters on metadata
+                where["meta_data_filter"] = get_metadata_filter(
+                    query.where.args[1].value
+                )
+
+            elif query.where.args[0].parts[-1] == "search_query":
+                # extract the search query
+                where["search_query"] = query.where.args[1].value
+            else:
+                raise NotImplementedError(
+                    f"where clause parameter {query.where.args[0].parts[-1]} is not supported, "
+                    f"only 'meta_data_filter' and 'search_query' are supported"
+                )
 
         else:
             raise NotImplementedError(
@@ -205,18 +208,26 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
 
         else:
 
-            if query.where:
-                # if there is a where clause, parse it to Chromadb query syntax
-                where = self.filter_query(query)
+            # if there is a where clause, parse it to Chromadb query syntax
+            where = self.filter_query(query) if query.where else {}
+
+            if where.get("search_query"):
+                # if 'search_query' provided, run similarity search
+
                 collection_data = self.similarity_search(
                     filter=where.get(
-                        "where"
+                        "meta_data_filter"
                     ),  # filters on metadata, for now only column name
-                    query=where.get("query_text"),
+                    query=where.get("search_query"),
+                    k=query.limit.value if query.limit else 5,
                 )
                 result = documents_to_df(collection_data)
+
             else:
-                collection_data = self._collection.get()
+                # if no 'search_query' provided, run a regular query and filter on metadata if provided
+                collection_data = self._collection.get(
+                    where=where.get("meta_data_filter")
+                )
                 result = pd.DataFrame(collection_data)[
                     ["ids", "documents", "metadatas"]
                 ]
@@ -289,7 +300,7 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
         Execute a native query on the ChromaDB database.
         """
 
-        # todo fix this
+        # todo fix this - not sure if we need this?
         try:
             self.connect()
             # parse query and extract collection name and any conditions
@@ -337,18 +348,25 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
 connection_args = OrderedDict(
     chroma_api_impl={
         "type": ARG_TYPE.STR,
-        "description": "blah blah blah",
+        "description": "chromadb api implementation",
     },
     chroma_server_host={
         "type": ARG_TYPE.STR,
-        "description": "blah blah blah",
+        "description": "chromadb server host",
     },
     chroma_server_http_port={
         "type": ARG_TYPE.INT,
-        "description": "blah blah blah",
+        "description": "chromadb server port",
+    },
+    embedding_function={
+        "type": ARG_TYPE.STR,
+        "description": "embedding function to use (optional)",
     },
 )
 
 connection_args_example = OrderedDict(
-    chroma_api_impl="local", chroma_server_host="local", chroma_server_http_port=5432
+    chroma_api_impl="rest",
+    chroma_server_host="localhost",
+    chroma_server_http_port=8000,
+    embedding_function="sentence-transformers/all-mpnet-base-v2",
 )

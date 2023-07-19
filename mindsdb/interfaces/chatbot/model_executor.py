@@ -32,7 +32,7 @@ class ModelExecutor:
     def call(self, history, functions):
         model_info = self.model_info
 
-        if model_info['model'] != 'conversational':
+        if model_info['mode'] != 'conversational':
             raise BotException('Not supported')
 
         messages = self._chat_history_to_conversation(history, model_info)

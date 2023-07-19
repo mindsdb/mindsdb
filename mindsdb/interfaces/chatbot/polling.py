@@ -41,8 +41,6 @@ class MessageCountPolling(BasePolling):
 
     def run(self, stop_event):
 
-        self.chat_memory = defaultdict(dict)
-
         while True:
             try:
                 chat_ids = self.check_message_count()
@@ -65,7 +63,7 @@ class MessageCountPolling(BasePolling):
         # retrive from history
         history = chat_memory.get_history(cached=False)
         last_message = history[-1]
-        if last_message.user == self.params['bot_username']:
+        if last_message.user == self.chat_task.bot_params['bot_username']:
             # the last message is from bot
             return
         return last_message

@@ -47,11 +47,11 @@ class BaseMemory:
         return [
             msg
             for msg in history
-            if msg.sent_at >= self._hide_history_before
+            if msg.sent_at >= before
         ]
 
     def get_mode(self, chat_id):
-        self._modes.get(chat_id)
+        return self._modes.get(chat_id)
 
     def set_mode(self, chat_id, mode):
         self._modes[chat_id] = mode
@@ -133,7 +133,7 @@ class HandlerMemory(BaseMemory):
 
 class DBMemory(BaseMemory):
     '''
-    uses mindsdb database to store memory
+    uses mindsdb database to store messages
     '''
 
     def _add_to_history(self, chat_id, message):
@@ -178,14 +178,14 @@ class ChatMemory:
         self.memory = memory
         self.chat_id = chat_id
 
-    def get_history(self, cached):
-        self.memory.get_chat_history(self.chat_id, cached=cached)
+    def get_history(self, cached=True):
+        return self.memory.get_chat_history(self.chat_id, cached=cached)
 
     def add_to_history(self, message):
         self.memory.add_to_history(self.chat_id, message)
 
     def get_mode(self):
-        self.memory.get_mode(self.chat_id)
+        return self.memory.get_mode(self.chat_id)
 
     def set_mode(self, mode):
         self.memory.set_mode(self.chat_id, mode)

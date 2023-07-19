@@ -18,32 +18,31 @@ class ChatBotTask:
 
     def __init__(self, bot_id):
         self.bot_id = bot_id
+        self.bot_record = db.ChatBots.query.get(self.bot_id)
+        self.session = SessionController()
 
     def run(self, stop_event):
 
-        bot_record = db.ChatBots.query.get(self.bot_id)
-
-        session = SessionController()
         # TODO check deleted, raise errors
-        # TODO checks on delete predictor/ project/ integration
+        # TODO checks on delete predictor / project/ integration
 
-        self.base_model_name = bot_record.model_name
-        self.project_name = db.Project.query.get(bot_record.project_id).name
-        self.project_datanode = session.datahub.get(self.project_name)
+        self.base_model_name = self.bot_record.model_name
+        self.project_name = db.Project.query.get(self.bot_record.project_id).name
+        self.project_datanode = self.session.datahub.get(self.project_name)
 
-        database_name = db.Integration.query.get(bot_record.database_id).name
+        database_name = db.Integration.query.get(self.bot_record.database_id).name
 
-        self.chat_handler = session.integration_controller.get_handler(database_name)
+        self.chat_handler = self.session.integration_controller.get_handler(database_name)
         if not isinstance(self.chat_handler, APIChatHandler):
             raise Exception(f"Can't use chat database: {database_name}")
 
         # get chat handler info
-        self.bot_params = bot_record.params or {}
+        self.bot_params = self.bot_record.params or {}
 
         chat_params = self.chat_handler.get_chat_config()
         self.bot_params['bot_username'] = self.chat_handler.get_my_user_name()
 
-        polling = chat_params['polling']
+        polling = chat_params['polling']['type']
         if polling == 'message_count':
             self.chat_pooling = MessageCountPolling(self, chat_params)
             self.memory = HandlerMemory(self, chat_params)
@@ -73,7 +72,7 @@ class ChatBotTask:
         bot_executor = self.bot_executor_cls(self, chat_memory)
         response_text = bot_executor.process()
 
-        chat_id = message.destination
+        chat_id = chat_memory.chat_id
         bot_username = self.bot_params['bot_username']
         response_message = ChatBotMessage(
             ChatBotMessage.Type.DIRECT,
@@ -88,4 +87,4 @@ class ChatBotTask:
         self.chat_pooling.send_message(response_message)
 
         # send to history
-        history.add_to_history(response_message)
+        chat_memory.add_to_history(response_message)

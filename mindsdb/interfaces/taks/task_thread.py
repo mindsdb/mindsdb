@@ -7,6 +7,8 @@ from mindsdb.interfaces.triggers.trigger_task import TriggerTask
 from mindsdb.interfaces.chatbot.chatbot_task import ChatBotTask
 from mindsdb.utilities import log
 
+from mindsdb.interfaces.storage import db
+
 
 class TaskThread(threading.Thread):
 
@@ -38,6 +40,7 @@ class TaskThread(threading.Thread):
 
         except Exception:
             log.logger.error(traceback.format_exc())
+            db.session.commit()
             pass
 
     def stop(self):

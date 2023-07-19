@@ -20,15 +20,12 @@ jobs:
     - name: Set up Python 3.8
       uses: actions/setup-python@v4.7.0
       with:
-        python-version: 3.8
-    - name: Install flake8
-      run: |
-        pip install flake8==5.0.4 pycodestyle==2.9.1
-      shell: bash
-    - name: Static code checking
-      run: |
-        python3 -m flake8
-      shell: bash
+        python-version: 3.9
+    - id: changed-files
+      uses: tj-actions/changed-files@v37
+    - uses: pre-commit/action@v3.0.0
+      with:
+        extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }}
   matrix_prep:
     needs: code_checking
     runs-on: ubuntu-latest
@@ -82,13 +79,13 @@ jobs:
 
           env PYTHONPATH=./ pytest tests/unit/test_executor.py
 
-          # need fix in LW. not working yet 
+          # need fix in LW. not working yet
           env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
-          
+
           # env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_lightwood.py
 
           env PYTHONPATH=./ pytest tests/unit/test_predictor_params.py
-        
+
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
 
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
@@ -175,4 +172,3 @@ jobs:
         AWS_REGION: 'us-west-2'
         SOURCE_DIR: 'distributions/ver/dist'
         DEST_DIR: 'mindsdb-installer/ver'
-

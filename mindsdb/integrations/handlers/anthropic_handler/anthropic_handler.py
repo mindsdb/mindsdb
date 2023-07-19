@@ -21,10 +21,10 @@ class AnthropicHandler(BaseMLEngine):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.default_chat_model = 'claude-2'
-        self.supported_chat_model = ['claude-1', 'claude-2']
+        self.supported_chat_models = ['claude-1', 'claude-2']
         self.default_max_tokens = 100
         self.generative = True
-
+        self.connection = None
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
 
@@ -34,8 +34,8 @@ class AnthropicHandler(BaseMLEngine):
 
         if 'model' not in args['using']:
             args['using']['model'] = self.default_chat_model
-        elif args['using']['model'] not in self.supported_chat_model:
-            raise Exception(f"Invalid chat model. Please use one of {self.supported_chat_model}")
+        elif args['using']['model'] not in self.supported_chat_models:
+            raise Exception(f"Invalid chat model. Please use one of {self.supported_chat_models}")
 
         if 'max_tokens' not in args['using']:
             args['using']['max_tokens'] = self.default_max_tokens
@@ -45,6 +45,9 @@ class AnthropicHandler(BaseMLEngine):
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
 
         args = self.model_storage.json_get('args')
+        api_key = self._get_anthropic_api_key(args)
+
+        self.connection = Anthropic(api_key=api_key,)
 
         input_keys = list(args.keys())
 
@@ -99,11 +102,8 @@ class AnthropicHandler(BaseMLEngine):
         """ 
 
         args = self.model_storage.json_get('args')
-
-        api_key = self._get_anthropic_api_key(args)
-
-        anthropic = Anthropic(api_key=api_key,)
-        completion = anthropic.completions.create(
+        
+        completion = self.connection.completions.create(
             model=args['using']['model'],
             max_tokens_to_sample=args['using']['max_tokens'],
             prompt=f"{HUMAN_PROMPT} {text} {AI_PROMPT}",

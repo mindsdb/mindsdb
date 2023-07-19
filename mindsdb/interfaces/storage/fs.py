@@ -1,21 +1,25 @@
 import os
+import io
 import shutil
+import tarfile
 import hashlib
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Union, Optional
 from dataclasses import dataclass
 from datetime import datetime
+import threading
 
+if os.name == 'posix':
+    import fcntl
+
+import psutil
 from checksumdir import dirhash
 try:
     import boto3
 except Exception:
     # Only required for remote storage on s3
     pass
-
-if os.name == 'posix':
-    import fcntl
 
 
 from mindsdb.utilities.config import Config
@@ -114,7 +118,7 @@ class LocalFSStore(BaseFSStore):
         if not os.path.exists(dest) or get_dir_size(src) != get_dir_size(dest):
             copy(src, dest)
 
-    def put(self, local_name, base_dir):
+    def put(self, local_name, base_dir, compression_level=9):
         remote_name = local_name
         copy(
             os.path.join(base_dir, local_name),
@@ -189,6 +193,7 @@ class S3FSStore(BaseFSStore):
         else:
             self.s3 = boto3.client('s3')
         self.bucket = self.config['permanent_storage']['bucket']
+        self._thread_lock = threading.Lock()
 
     def _get_remote_last_modified(self, object_name: str) -> datetime:
         """ get time when object was created/modified
@@ -204,24 +209,31 @@ class S3FSStore(BaseFSStore):
             Key=object_name,
             ObjectAttributes=['Checksum']
         )['LastModified']
+        last_modified = last_modified.replace(tzinfo=None)
         return last_modified
 
-    def _get_local_last_modified(self, local_name: str) -> datetime:
+    @profiler.profile()
+    def _get_local_last_modified(self, base_dir: str, local_name: str) -> datetime:
         """ get 'last_modified' that saved locally
 
             Args:
+                base_dir (str): path to base folder
                 local_name (str): folder name
 
             Returns:
                 datetime | None
         """
-        last_modified_file_path = Path(local_name) / 'last_modified.txt'
+        last_modified_file_path = Path(base_dir) / local_name / 'last_modified.txt'
         if last_modified_file_path.is_file() is False:
             return None
-        last_modified_text = last_modified_file_path.read_text()
-        last_modified_datetime = datetime.strptime(last_modified_text, self.dt_format)
+        try:
+            last_modified_text = last_modified_file_path.read_text()
+            last_modified_datetime = datetime.strptime(last_modified_text, self.dt_format)
+        except Exception:
+            return None
         return last_modified_datetime
 
+    @profiler.profile()
     def _save_local_last_modified(self, base_dir: str, local_name: str, last_modified: datetime):
         """ Save 'last_modified' to local folder
 
@@ -234,6 +246,7 @@ class S3FSStore(BaseFSStore):
         last_modified_text = last_modified.strftime(self.dt_format)
         last_modified_file_path.write_text(last_modified_text)
 
+    @profiler.profile()
     def _download(self, base_dir: str, remote_ziped_name: str,
                   local_ziped_path: str, last_modified: datetime = None):
         """ download file to s3 and unarchive it
@@ -245,16 +258,29 @@ class S3FSStore(BaseFSStore):
                 last_modified (datetime, optional)
         """
         os.makedirs(base_dir, exist_ok=True)
-        self.s3.download_file(self.bucket, remote_ziped_name, local_ziped_path)
-        shutil.unpack_archive(local_ziped_path, base_dir)
-        os.system(f'chmod -R 777 {base_dir}')
-        os.remove(local_ziped_path)
+
+        remote_size = self.s3.get_object_attributes(
+            Bucket=self.bucket,
+            Key=remote_ziped_name,
+            ObjectAttributes=['ObjectSize']
+        )['ObjectSize']
+        if (remote_size * 2) > psutil.virtual_memory().available:
+            fh = io.BytesIO()
+            self.s3.download_fileobj(self.bucket, remote_ziped_name, fh)
+            with tarfile.open(fileobj=fh) as tar:
+                tar.extractall(path=base_dir)
+        else:
+            self.s3.download_file(self.bucket, remote_ziped_name, local_ziped_path)
+            shutil.unpack_archive(local_ziped_path, base_dir)
+            os.remove(local_ziped_path)
+
+        # os.system(f'chmod -R 777 {base_dir}')
 
         if last_modified is None:
             last_modified = self._get_remote_last_modified(remote_ziped_name)
         self._save_local_last_modified(
             base_dir,
-            remote_ziped_name.replace('tar.gz', ''),
+            remote_ziped_name.replace('.tar.gz', ''),
             last_modified
         )
 
@@ -265,7 +291,7 @@ class S3FSStore(BaseFSStore):
         local_ziped_name = f'{local_name}.tar.gz'
         local_ziped_path = os.path.join(base_dir, local_ziped_name)
 
-        local_last_modified = self._get_local_last_modified(local_name)
+        local_last_modified = self._get_local_last_modified(base_dir, local_name)
         remote_last_modified = self._get_remote_last_modified(remote_ziped_name)
         if (
             local_last_modified is not None
@@ -281,23 +307,45 @@ class S3FSStore(BaseFSStore):
         )
 
     @profiler.profile()
-    def put(self, local_name, base_dir):
+    def put(self, local_name, base_dir, compression_level=9):
         # NOTE: This `make_archive` function is implemente poorly and will create an empty archive file even if
         # the file/dir to be archived doesn't exist or for some other reason can't be archived
         remote_name = local_name
         remote_zipped_name = f'{remote_name}.tar.gz'
-        shutil.make_archive(
-            os.path.join(base_dir, remote_name),
-            'gztar',
-            root_dir=base_dir,
-            base_dir=local_name
-        )
-        self.s3.upload_file(
-            os.path.join(base_dir, remote_zipped_name),
-            self.bucket,
-            remote_zipped_name
-        )
-        os.remove(os.path.join(base_dir, remote_name + '.tar.gz'))
+
+        dir_path = Path(base_dir) / remote_name
+        dir_size = sum(f.stat().st_size for f in dir_path.glob('**/*') if f.is_file())
+        if (dir_size * 2) < psutil.virtual_memory().available:
+            old_cwd = os.getcwd()
+            fh = io.BytesIO()
+            with self._thread_lock:
+                os.chdir(base_dir)
+                with tarfile.open(fileobj=fh, mode='w:gz', compresslevel=compression_level) as tar:
+                    for path in dir_path.iterdir():
+                        if path.is_file() and path.name in ('dir.lock', 'last_modified.txt'):
+                            continue
+                        tar.add(path.relative_to(base_dir))
+                os.chdir(old_cwd)
+            fh.seek(0)
+            self.s3.upload_fileobj(
+                fh,
+                self.bucket,
+                remote_zipped_name
+            )
+        else:
+            shutil.make_archive(
+                os.path.join(base_dir, remote_name),
+                'gztar',
+                root_dir=base_dir,
+                base_dir=local_name
+            )
+            self.s3.upload_file(
+                os.path.join(base_dir, remote_zipped_name),
+                self.bucket,
+                remote_zipped_name
+            )
+            os.remove(os.path.join(base_dir, remote_zipped_name))
+
         last_modified = self._get_remote_last_modified(remote_zipped_name)
         self._save_local_last_modified(base_dir, local_name, last_modified)
 
@@ -343,13 +391,17 @@ class FileStorage:
             self.folder_path.mkdir(parents=True, exist_ok=True)
 
     @profiler.profile()
-    def push(self):
+    def push(self, compression_level=9):
         with FileLock(self.folder_path):
-            self._push_no_lock()
+            self._push_no_lock(compression_level=compression_level)
 
     @profiler.profile()
-    def _push_no_lock(self):
-        self.fs_store.put(str(self.folder_name), str(self.resource_group_path))
+    def _push_no_lock(self, compression_level=9):
+        self.fs_store.put(
+            str(self.folder_name),
+            str(self.resource_group_path),
+            compression_level=compression_level
+        )
 
     @profiler.profile()
     def push_path(self, path):

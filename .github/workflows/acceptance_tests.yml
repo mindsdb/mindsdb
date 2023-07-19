@@ -12,9 +12,9 @@ jobs:
     name: Learning Hub Acceptance Tests
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3.5.3
     - name: Set up Python 3.8
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4.7.0
       with:
         python-version: 3.8
     - name: Install dependencies
@@ -61,9 +61,9 @@ jobs:
     name: Microservice Mode Tests
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3.5.3
     - name: Set up Python 3.8
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4.7.0
       with:
         python-version: 3.8
     - name: Install dependencies

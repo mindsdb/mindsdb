@@ -146,9 +146,7 @@ A predictor may take a couple of minutes for the training to complete. You can
 monitor the status of the predictor by using this SQL command:
 
 ```sql
-SELECT status
-FROM mindsdb.models
-WHERE name='house_sales_predictor';
+DESCRIBE house_sales_predictor;
 ```
 
 If we run it right after creating a predictor, we get this output:

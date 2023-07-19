@@ -52,6 +52,7 @@
       "pages": [
         "what-is-mindsdb",
         "quickstart",
+        "mindsdb-gui",
         {
           "group": "Learn More",
           "pages": [
@@ -118,6 +119,7 @@
     {
       "group": "Data Sources",
       "pages": [
+        "data-sources-overview",
         {
           "group": "Applications",
           "pages": [
@@ -153,6 +155,7 @@
             "data-integrations/databricks",
             "data-integrations/datastax",
             "data-integrations/duckdb",
+            "data-integrations/edgelessdb",
             "data-integrations/elasticsearch",
             "data-integrations/firebird",
             "data-integrations/google-bigquery",
@@ -197,6 +200,7 @@
     {
       "group": "ML Engines",
       "pages": [
+        "ml-engines-overview",
         {
           "group": "Large Language Models",
           "pages": [
@@ -230,6 +234,7 @@
     {
       "group": "MindsDB SQL",
       "pages": [
+        "mindsdb-sql-overview",
         {
           "group": "Connect to MindsDB",
           "pages": [
@@ -292,7 +297,8 @@
                 "sql/api/select",
                 "sql/api/update",
                 "sql/api/insert",
-                "sql/api/join-on"
+                "sql/api/join-on",
+                "sql/api/delete"
               ]
             },
             {
@@ -317,6 +323,7 @@
     {
       "group": "MindsDB Mongo-QL",
       "pages": [
+        "mindsdb-mongo-ql-overview",
         {
           "group": "Connect to MindsDB",
           "pages": [

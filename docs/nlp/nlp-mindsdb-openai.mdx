@@ -49,6 +49,11 @@ FROM openai
 USING
   api_key = 'YOUR_OPENAI_API_KEY';
 ```
+
+<Note>
+If you want to use the OpenAI API key provided by MindsDB, please confirm your email. Alternatively, you have the option to utilize your own OpenAI API key by specifying it in the `api_key` parameter.
+</Note>
+
 <Tip>
 
 **MindsDB Pro**
@@ -100,9 +105,7 @@ Where:
 Before querying for predictions, we should verify the status of the `sentiment_classifier` model.
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name = 'sentiment_classifier';
+DESCRIBE sentiment_classifier;
 ```
 
 On execution, we get:

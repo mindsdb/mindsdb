@@ -1,6 +1,5 @@
 from typing import Dict, List
 
-from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 
@@ -10,16 +9,12 @@ from mindsdb.utilities.context import context as ctx
 class ChatBotController:
     '''Handles CRUD operations at the database level for Chatbots'''
 
+    OBJECT_TYPE = 'chatbot'
+
     def __init__(self, project_controller: ProjectController = None):
         if project_controller is None:
             project_controller = ProjectController()
         self.project_controller = project_controller
-
-    def _raise_if_on_cloud(self):
-        # TODO(tmichaeldb): Remove for public Chatbots release.
-        is_cloud = Config().get('cloud', False)
-        if is_cloud is True:
-            raise Exception('Chatbots are disabled on cloud')
 
     def get_chatbot(self, chatbot_name: str, project_name: str = 'mindsdb') -> db.ChatBots:
         '''
@@ -32,15 +27,21 @@ class ChatBotController:
         Returns:
             bot (db.ChatBots): The database chatbot object
         '''
-        self._raise_if_on_cloud()
 
         project = self.project_controller.get(name=project_name)
-        bot = db.ChatBots.query.filter(
-            db.ChatBots.company_id == ctx.company_id,
+
+        query = db.session.query(
+            db.ChatBots
+        ).join(
+            db.Tasks, db.ChatBots.id == db.Tasks.object_id
+        ).filter(
             db.ChatBots.name == chatbot_name,
-            db.ChatBots.project_id == project.id
-        ).first()
-        return bot
+            db.ChatBots.project_id == project.id,
+            db.Tasks.object_type == self.OBJECT_TYPE,
+            db.Tasks.company_id == ctx.company_id,
+        )
+
+        return query.first()
 
     def get_chatbots(self, project_name: str = 'mindsdb') -> List[db.ChatBots]:
         '''
@@ -52,14 +53,20 @@ class ChatBotController:
         Returns:
             all_bots (List[db.ChatBots]): List of database chatbot object
         '''
-        self._raise_if_on_cloud()
 
         project = self.project_controller.get(name=project_name)
-        all_bots = db.ChatBots.query.filter(
-            db.ChatBots.company_id == ctx.company_id,
-            db.ChatBots.project_id == project.id
-        ).all()
-        return all_bots
+
+        query = db.session.query(
+            db.ChatBots
+        ).join(
+            db.Tasks, db.ChatBots.id == db.Tasks.object_id
+        ).filter(
+            db.ChatBots.project_id == project.id,
+            db.Tasks.object_type == self.OBJECT_TYPE,
+            db.Tasks.company_id == ctx.company_id,
+        )
+
+        return query.all()
 
     def add_chatbot(
             self,
@@ -85,32 +92,38 @@ class ChatBotController:
         Returns:
             bot (db.ChatBots): The created chatbot
         '''
-        self._raise_if_on_cloud()
 
         if project_name is None:
             project_name = 'mindsdb'
         project = self.project_controller.get(name=project_name)
 
-        bot = db.ChatBots.query.filter(
-            db.ChatBots.company_id == ctx.company_id,
-            db.ChatBots.name == name,
-            db.ChatBots.project_id == project.id
-        ).first()
+        bot = self.get_chatbot(name, project_name)
 
         if bot is not None:
             raise Exception(f'Chat bot already exists: {name}')
 
+        # TODO check input: model_name, database_id
+
         bot = db.ChatBots(
-            company_id=ctx.company_id,
             name=name,
             project_id=project.id,
             model_name=model_name,
             database_id=database_id,
-            chat_engine=chat_engine,
-            is_running=is_running,
             params=params,
         )
         db.session.add(bot)
+        db.session.flush()
+
+        task_record = db.Tasks(
+            company_id=ctx.company_id,
+            user_class=ctx.user_class,
+
+            object_type=self.OBJECT_TYPE,
+            object_id=bot.id,
+            active=is_running
+        )
+        db.session.add(task_record)
+
         db.session.commit()
 
         return bot
@@ -141,22 +154,32 @@ class ChatBotController:
         Returns:
             bot (db.ChatBots): The created or updated chatbot
         '''
-        self._raise_if_on_cloud()
 
         existing_chatbot = self.get_chatbot(chatbot_name, project_name=project_name)
         if existing_chatbot is None:
-            return None
+            raise Exception(f'Chat bot not found: {chatbot_name}')
 
-        if name is not None:
+        if name is not None and name != chatbot_name:
+            # check new name
+            bot2 = self.get_chatbot(name, project_name=project_name)
+            if bot2 is not None:
+                raise Exception(f'Chat already exists: {name}')
+
             existing_chatbot.name = name
         if model_name is not None:
+            # TODO check model_name
             existing_chatbot.model_name = model_name
         if database_id is not None:
+            # TODO check database_id
             existing_chatbot.database_id = database_id
-        if chat_engine is not None:
-            existing_chatbot.chat_engine = chat_engine
         if is_running is not None:
-            existing_chatbot.is_running = is_running
+            task = db.Tasks.query.filter(
+                db.Tasks.object_type == self.OBJECT_TYPE,
+                db.Tasks.object_id == existing_chatbot.id,
+                db.Tasks.company_id == ctx.company_id,
+            ).first()
+            if task is not None:
+                task.active = is_running
         if params is not None:
             existing_chatbot.params = params
         db.session.commit()
@@ -172,18 +195,19 @@ class ChatBotController:
             project_name (str): The name of the containing project
         '''
 
-        self._raise_if_on_cloud()
+        bot = self.get_chatbot(chatbot_name, project_name)
+        if bot is None:
+            raise Exception(f"Chat bot doesn't exist: {chatbot_name}")
 
-        project = self.project_controller.get(name=project_name)
-
-        bot = db.ChatBots.query.filter(
-            db.ChatBots.company_id == ctx.company_id,
-            db.ChatBots.name == chatbot_name,
-            db.ChatBots.project_id == project.id
+        task = db.Tasks.query.filter(
+            db.Tasks.object_type == self.OBJECT_TYPE,
+            db.Tasks.object_id == bot.id,
+            db.Tasks.company_id == ctx.company_id,
         ).first()
 
-        if bot is None:
-            raise Exception(f'Chat bot not found: {chatbot_name}')
+        if task is not None:
+            db.session.delete(task)
 
         db.session.delete(bot)
+
         db.session.commit()

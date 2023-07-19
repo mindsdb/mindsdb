@@ -59,8 +59,6 @@ class ChatBotTask:
         else:
             self.bot_executor_cls = MultiModeBotExecutor
 
-        self.model_manager = ...
-
         self.chat_pooling.run(stop_event)
 
     def on_message(self, chat_memory, message: ChatBotMessage):

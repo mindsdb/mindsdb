@@ -298,14 +298,9 @@ class ChatBots(Base):
     project_id = Column(Integer, nullable=False)
 
     model_name = Column(String, nullable=False)
-    # If database_id is set we use an API Handler to poll chat messages.
     database_id = Column(Integer)
-    # If chat_engine is set we use a RealtimeChatHandler to subscribe to chat messages.
-    # TODO(tmichaeldb): Consolidate existing polling logic and realtime chat logic together.
-    # chat_engine = Column(String)
     params = Column(JSON)
 
-    # is_running = Column(Boolean, default=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
 

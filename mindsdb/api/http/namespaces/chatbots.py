@@ -71,6 +71,7 @@ class ChatBotsResource(Resource):
         session_controller = SessionController()
 
         # Chatbot can't already exist.
+        # TODO all checks should be inside of controller
         try:
             existing_chatbot = chatbot_controller.get_chatbot(name, project_name=project_name)
             if existing_chatbot is not None:

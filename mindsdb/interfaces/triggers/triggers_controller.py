@@ -60,7 +60,7 @@ class TriggersController:
             query_str=query_str,
         )
         db.session.add(record)
-        db.session.commit()
+        db.session.flush()
 
         task_record = db.Tasks(
             company_id=ctx.company_id,

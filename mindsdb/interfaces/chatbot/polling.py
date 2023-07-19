@@ -1,5 +1,3 @@
-from threading import Event
-
 import time
 
 from mindsdb_sql.parser.ast import Identifier, Select, Insert

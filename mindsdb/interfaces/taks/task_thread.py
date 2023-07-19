@@ -1,9 +1,11 @@
-
+import traceback
 import threading
+
 from mindsdb.utilities.context import context as ctx
 
 from mindsdb.interfaces.triggers.trigger_task import TriggerTask
 from mindsdb.interfaces.chatbot.chatbot_task import ChatBotTask
+from mindsdb.utilities import log
 
 
 class TaskThread(threading.Thread):
@@ -35,6 +37,7 @@ class TaskThread(threading.Thread):
                 bot.run(self._stop_event)
 
         except Exception:
+            log.logger.error(traceback.format_exc())
             pass
 
     def stop(self):

@@ -7,9 +7,10 @@ from chromadb import API
 from chromadb.config import Settings
 from integrations.handlers.chromadb_handler.settings import DEFAULT_EMBEDDINGS_MODEL
 from langchain.vectorstores import Chroma
-from mindsdb_sql import ASTNode, Constant, CreateTable, Insert, Select
+from mindsdb_sql import ASTNode, Constant, CreateTable, Insert, Select, Star
 
 from mindsdb.integrations.handlers.chromadb_handler.helpers import (
+    documents_to_df,
     extract_collection_name,
     load_embeddings_model,
     split_documents,
@@ -134,12 +135,12 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
 
         where = {}
         if query.where.op == "and":
+            # todo fix 'and' operator
 
             for arg in query.where.args:
                 if arg.op == "=":
-                    # todo add support for in operator
-                    # todo add support for > and < operators
-                    # todo fix and operator
+                    # todo add support for 'IN' operator
+                    # todo add support for '>' and '<' operators - maybe not essential
 
                     chroma_query = (
                         query.where.args[1].value
@@ -160,14 +161,14 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
 
         elif query.where.op == "=":
             chroma_query = (
-                {"$contains": query.where.args[1].value}
+                query.where.args[1].value
                 if isinstance(query.where.args[1], Constant)
-                else {"$contains": query.where.args[1].parts[-1]}
+                else query.where.args[1].parts[-1]
             )
 
             # filters on column name
             where["where"] = {"column": query.where.args[0].parts[-1]}
-            where["where_document"] = chroma_query
+            where["query_text"] = chroma_query
             # if user using "search_query" in where clause, then we need to use the search_query
             if where["where"]["column"] == "search_query":
                 # remove the where key as we are not filtering using column name in metadata
@@ -180,34 +181,45 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
 
         return where
 
-    def get_collection(self, query: ASTNode) -> Response:
+    def query_collection(self, query: ASTNode) -> Response:
         """
         Run a select query on the ChromaDB database, filter collection (if where clause)
         and return result. NB Limit will define the number of documents returned, not the number of rows.
         """
 
         collection_name = query.from_table.parts[-1]
-        if query.targets:
-            if query.targets[0].op == "count":
-                Response(
-                    resp_type=RESPONSE_TYPE.ERROR, error_message="Count not supported"
+        self._collection = self._client.get_collection(collection_name)
+
+        if hasattr(query.targets[0], "op") and query.targets[0].op == "count":
+
+            # if count is used, return the count of the collection
+            if not isinstance(query.targets[0].args[0], Star):
+                # if count is not using '*' argument, raise error
+                return Response(
+                    resp_type=RESPONSE_TYPE.ERROR,
+                    error_message="Count only supports '*' argument",
                 )
 
-        if query.where:
-            # if there is a where clause, parse it to mongodb query syntax
-            where = self.filter_query(query)
+            collection_data = self._collection.count()
+            result = pd.DataFrame(columns=["count"], data=[[collection_data]])
+
         else:
-            where = {}
 
-        collection_data = self._client.get_collection(collection_name).get(
-            where=where.get("where"),
-            where_document=where.get("where_document"),
-            include=["documents", "metadatas"],
-        )
-
-        result = pd.DataFrame(
-            columns=["ids", "documents", "metadatas"], data=collection_data
-        )
+            if query.where:
+                # if there is a where clause, parse it to Chromadb query syntax
+                where = self.filter_query(query)
+                collection_data = self.similarity_search(
+                    filter=where.get(
+                        "where"
+                    ),  # filters on metadata, for now only column name
+                    query=where.get("query_text"),
+                )
+                result = documents_to_df(collection_data)
+            else:
+                collection_data = self._collection.get()
+                result = pd.DataFrame(collection_data)[
+                    ["ids", "documents", "metadatas"]
+                ]
 
         if query.limit:
             # if there is a limit clause, limit the result.
@@ -219,7 +231,6 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
         """
         Run a create table query on the ChromaDB database.
         """
-        # todo add support for adding data in the insert statement
         collection_name = query.name.parts[-1]
         self._client.create_collection(collection_name)
 
@@ -253,7 +264,7 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
             self.connect()
 
             if isinstance(query, Select):
-                return self.get_collection(query)
+                return self.query_collection(query)
 
             elif isinstance(query, CreateTable):
                 return self.run_create_table(query)
@@ -277,11 +288,13 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
         """
         Execute a native query on the ChromaDB database.
         """
+
+        # todo fix this
         try:
             self.connect()
             # parse query and extract collection name and any conditions
             collection_name = extract_collection_name(query)
-            result = self._client.get_collection(collection_name)
+            self._collection = self._client.get_collection(collection_name)
 
         except Exception as e:
             log.logger.error(
@@ -291,11 +304,6 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
                 resp_type=RESPONSE_TYPE.ERROR,
                 error_message=f'Error executing native query on ChromaDB client {self._connection_data["chroma_server_host"]}, {e}!',
             )
-
-        return Response(
-            resp_type=RESPONSE_TYPE.TABLE,
-            data_frame=result,
-        )
 
     def get_tables(self) -> Response:
         """Get the list of indexes/collections in the vectorDB.

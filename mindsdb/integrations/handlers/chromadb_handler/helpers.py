@@ -37,6 +37,22 @@ def extract_collection_name(sql_query):
         return None, None
 
 
+def get_metadata_filter(metadata_filter: str):
+    """convert metadata filter string to dict"""
+    dict_from_string = {}
+
+    for item in metadata_filter.split(","):
+        if ":" in item:
+            key, value = item.split(":")
+            dict_from_string[key] = value
+        else:
+            key = item
+            value = True
+            dict_from_string[key] = value
+
+    return dict_from_string
+
+
 # Todo move all below classes methods to dataprep ML
 class DfLoader(DataFrameLoader):
 

@@ -22,8 +22,8 @@ class TriggersController:
         session = SessionController()
 
         # check exists
-        all_triggers = self.get_list(project_name)
-        if any([i for i in all_triggers if i['name'] == name]):
+        trigger = self.get_trigger_record(name, project_name)
+        if trigger is not None:
             raise Exception(f'Trigger already exists: {name}')
 
         # check table
@@ -74,21 +74,15 @@ class TriggersController:
 
     def delete(self, name, project_name):
         # check exists
-        all_triggers = self.get_list(project_name)
-        if not any([i for i in all_triggers if i['name'] == name]):
+
+        trigger = self.get_trigger_record(name, project_name)
+        if trigger is None:
             raise Exception(f"Trigger doesn't exist: {name}")
-
-        project_controller = ProjectController()
-        project = project_controller.get(name=project_name)
-
-        trigger = db.Triggers.query.filter(
-            db.Triggers.name == name,
-            db.Triggers.project_id == project.id
-        ).first()
 
         task = db.Tasks.query.filter(
             db.Tasks.object_type == self.OBJECT_TYPE,
-            db.Tasks.object_id == trigger.id
+            db.Tasks.object_id == trigger.id,
+            db.Tasks.company_id == ctx.company_id,
         ).first()
 
         if task is not None:
@@ -97,6 +91,22 @@ class TriggersController:
         db.session.delete(trigger)
 
         db.session.commit()
+
+    def get_trigger_record(self, name, project_name):
+        project_controller = ProjectController()
+        project = project_controller.get(name=project_name)
+
+        query = db.session.query(
+            db.Triggers
+        ).join(
+            db.Tasks, db.Triggers.id == db.Tasks.object_id
+        ).filter(
+            db.Triggers.project_id == project.id,
+            db.Triggers.name == name,
+            db.Tasks.object_type == self.OBJECT_TYPE,
+            db.Tasks.company_id == ctx.company_id,
+        )
+        return query.first()
 
     def get_list(self, project_name=None):
         from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController

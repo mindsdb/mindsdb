@@ -1,17 +1,17 @@
 # Webz Handler
 
-This handler integrates with the [Webz API](https://docs.webz.io/reference#1) to make 
+This handler integrates with the [Webz API](https://docs.webz.io/reference#1) to make
 webz data available to use for model training, predictions and automations.
 
 
 
 ## Connect to the Webz API
-The first step is to create a database with the new `webz` engine 
+The first step is to create a database with the new `webz` engine
 by passing in the required `token` parameter:
 
 ```
 CREATE DATABASE webz_datasource
-WITH 
+WITH
   ENGINE = 'webz',
   PARAMETERS = {
     "token": "<webz active API key>"
@@ -20,7 +20,7 @@ WITH
 
 ## Querying news articles, blogs entries or open discussions
 
-With the previous established connection, you can for instance, 
+With the previous established connection, you can for instance,
 query the 5 most relevant news articles, in english that contain
 the text AI in the title
 

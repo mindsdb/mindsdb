@@ -10,7 +10,6 @@ from mindsdb.integrations.handlers.webz_handler.webz_tables import (
     WebzReviewsTable,
 )
 
-
 COLUMNS_POST = [
     "thread__uuid",
     "thread__url",

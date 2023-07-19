@@ -1,23 +1,21 @@
 import os
 import time
-import pandas as pd
-from typing import Dict, Any
+from typing import Any, Dict
 
-from dotty_dict import dotty
+import pandas as pd
 import webzio
+from dotty_dict import dotty
+from mindsdb_sql import parse_sql
 
 from mindsdb.integrations.handlers.webz_handler.webz_tables import (
     WebzPostsTable,
     WebzReviewsTable,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
-from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-)
+from mindsdb.integrations.libs.response import HandlerResponse as Response
+from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
-from mindsdb_sql import parse_sql
 
 
 class WebzHandler(APIHandler):

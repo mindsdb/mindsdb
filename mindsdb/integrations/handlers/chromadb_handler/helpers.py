@@ -37,6 +37,7 @@ def extract_collection_name(sql_query):
         return None, None
 
 
+# Todo move all below classes methods to dataprep ML
 class DfLoader(DataFrameLoader):
 
     """
@@ -117,3 +118,12 @@ def load_embeddings_model(embeddings_model_name):
             f"The {embeddings_model_name}  is not supported, please select a valid option from Hugging Face Hub!"
         )
     return embedding_model
+
+
+def documents_to_df(documents: list):
+    """Converts a list of documents to a dataframe"""
+    df = pd.DataFrame()
+    df["page_content"] = [document.page_content for document in documents]
+    df["metadata"] = [document.metadata for document in documents]
+
+    return df

@@ -287,7 +287,9 @@ Here after adjusting the model, there are no significant changes to the predicti
 
 All OpenAI models belong to the group of Large Language Models (LLMs). By definition, these are pre-trained on large amounts of data. However, it is possible to fine-tune these models with a task-specific dataset for a defined use case.
 
+<Tip>
 OpenAI supports fine-tuning of some of its models, including `davinci`, `curie`, `babbage`, and `ada` ([more details here](https://platform.openai.com/docs/guides/fine-tuning)). And with MindsDB, you can easily fine-tune an OpenAI model making it more applicable to your specific use case.
+</Tip>
 
 Let's create a model to answer questions about MindsDB's custom SQL syntax.
 
@@ -394,6 +396,6 @@ On execution, we get:
 +---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
 | prompt                                                                                            | completion                                                                                           |
 +---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
-| What is the SQL syntax to join input data with predictions from a MindsDB machine learning model? | todo |
+| What is the SQL syntax to join input data with predictions from a MindsDB machine learning model? | SELECT * FROM mindsdb.models.my_model JOIN mindsdb.input_data_name;                                  |
 +---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
 ```

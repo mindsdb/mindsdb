@@ -328,30 +328,32 @@ On execution, we get:
 
 All OpenAI models belong to the group of Large Language Models (LLMs). By definition, these are pre-trained on large amounts of data. However, it is possible to fine-tune these models with a task-specific dataset for a defined use case.
 
+<Tip>
 OpenAI supports fine-tuning of some of its models, including `davinci`, `curie`, `babbage`, and `ada` ([more details here](https://platform.openai.com/docs/guides/fine-tuning)). And with MindsDB, you can easily fine-tune an OpenAI model making it more applicable to your specific use case.
+</Tip>
 
 Let's create a model to answer questions about MindsDB's custom SQL syntax.
 
 ```sql
-CREATE MODEL openai_ada
+CREATE MODEL openai_davinci
 PREDICT completion
 USING
     engine = 'openai',
-    model_name = 'ada',
+    model_name = 'davinci',
     prompt_template = 'Return a valid SQL string for the following question about MindsDB in-database machine learning: {{prompt}}';
 ```
 
 You can check model status with this command:
 
 ```sql
-DESCRIBE openai_ada;
+DESCRIBE openai_davinci;
 ```
 
 Once the status is complete, we can query for predictions:
 
 ```sql
 SELECT prompt, completion
-FROM openai_ada as m
+FROM openai_davinci as m
 WHERE prompt = 'What is the SQL syntax to join input data with predictions from a MindsDB machine learning model?'
 USING max_tokens=400;
 ```
@@ -365,9 +367,6 @@ On execution, we get:
 | What is the SQL syntax to join input data with predictions from a MindsDB machine learning model? | The SQL syntax is: SELECT * FROM input_data INNER JOIN predictions ON input_data.id = predictions.id |
 +---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
 ```
-The following SQL query is a valid SQL query for the following question about MindsDB in-database machine learning: What is the SQL syntax to join input data with predictions from a MindsDB machine learning model?
-
-
 
 If you followed one of the MindsDB tutorials before, you'll see that the syntax provided by the model is not exactly as expected.
 
@@ -410,7 +409,7 @@ And here is its content:
 This is how you can fine-tune an OpenAI model:
 
 ```sql
-FINETUNE openai_ada
+FINETUNE openai_davinci
 FROM files
     (SELECT prompt, completion FROM openai_learninghub_ft);
 ```
@@ -420,14 +419,14 @@ The [`FINETUNE`](/sql/api/finetune) command creates a new version of the `openai
 ```sql
 SELECT *
 FROM models_versions
-WHERE name = 'openai_ada';
+WHERE name = 'openai_davinci';
 ```
 
 Once the new version status is complete and active, we can query the model again, expecting a more accurate output.
 
 ```sql
 SELECT prompt, completion
-FROM openai_ada as m
+FROM openai_davinci as m
 WHERE prompt = 'What is the SQL syntax to join input data with predictions from a MindsDB machine learning model?'
 USING max_tokens=400;
 ```
@@ -438,6 +437,6 @@ On execution, we get:
 +---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
 | prompt                                                                                            | completion                                                                                           |
 +---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
-| What is the SQL syntax to join input data with predictions from a MindsDB machine learning model? | todo |
+| What is the SQL syntax to join input data with predictions from a MindsDB machine learning model? | SELECT * FROM mindsdb.models.my_model JOIN mindsdb.input_data_name;                                  |
 +---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
 ```

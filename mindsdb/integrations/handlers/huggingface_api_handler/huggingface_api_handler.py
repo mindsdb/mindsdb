@@ -1,9 +1,12 @@
+import json
 import os
 from typing import Optional, Dict
 
 import pandas as pd
 
 from huggingface_hub import HfApi
+from huggingface_hub import hf_hub_download
+
 from hugging_py_face import NLP, ComputerVision, AudioProcessing, get_in_df_supported_tasks
 
 from mindsdb.utilities.config import Config
@@ -22,6 +25,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
     @staticmethod
     def create_validation(target, args=None, **kwargs):
         args = args['using']
+
         if 'input_column' not in args:
             raise InsufficientParametersException('input_column has to be specified')
 
@@ -43,6 +47,10 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
         if args['task'] not in get_in_df_supported_tasks():
             raise UnsupportedTaskException(f'The task {args["task"]} is not supported by the Hugging Face Inference API engine.')
 
+        if args['task'] == 'zero-shot-classification':
+            if 'candidate_labels' not in args:
+                raise Exception('"candidate_labels" is required for zero-shot-classification')
+
         if args['task'] == 'sentence-similarity':
             if 'input_column2' not in args:
                 raise InsufficientParametersException('input_column2 has to be specified')
@@ -51,8 +59,49 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
         if 'using' not in args:
             raise InsufficientParametersException("Hugging Face Inference engine requires a USING clause! Refer to its documentation for more details.")
 
+        # check api key
+        self._get_huggingface_api_key(args)
+
         args = args['using']
         args['target'] = target
+
+        if 'options' not in args:
+            args['options'] = {}
+
+        if 'parameters' not in args:
+            args['parameters'] = {}
+
+        if args['model_name'] is not None:
+            # config.json
+            config = {}
+            try:
+                config_path = hf_hub_download(args['model_name'], 'config.json')
+                config = json.load(open(config_path))
+            except Exception:
+                pass
+
+            if 'max_length' in args:
+                args['options']['max_length'] = args['max_length']
+            elif 'max_position_embeddings' in config:
+                args['options']['max_length'] = config['max_position_embeddings']
+            elif 'max_length' in config:
+                args['options']['max_length'] = config['max_length']
+
+            labels_default = config.get('id2label', {})
+            labels_map = {}
+            if 'labels' in args:
+                for num, value in labels_default.items():
+                    if num.isdigit():
+                        num = int(num)
+                        labels_map[value] = args['labels'][num]
+            args['labels_map'] = labels_map
+
+        # for summarization
+        if 'min_output_length' in args:
+            args['options']['min_output_length'] = args['min_output_length']
+
+        if 'max_output_length' in args:
+            args['options']['max_output_length'] = args['max_output_length']
 
         self.model_storage.json_set('args', args)
 
@@ -74,6 +123,9 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
                 options,
                 model_name,
             )
+            labels_map = args.get('labels_map')
+
+            result_df['predictions'] = result_df['predictions'].apply(lambda x: labels_map.get(x, x))
 
         elif args['task'] == 'fill-mask':
             nlp = NLP(api_key, endpoint)

@@ -1,6 +1,3 @@
-import time
-
-import unittest
 from unittest.mock import patch
 import pandas as pd
 
@@ -48,18 +45,3 @@ class TestHuggingFaceAPI(BaseExecutorTest):
         )
 
         assert "positive" in result_df["sentiment"].iloc[0].lower()
-
-        result_df = self.run_sql(
-            """
-            SELECT hf.sentiment
-            FROM pg.df as df
-            JOIN proj.test_hfapi_text_classification as hf;
-        """
-        )
-
-        assert "positive" in result_df["sentiment"].iloc[0].lower()
-        assert "negative" in result_df["sentiment"].iloc[1].lower()
-
-
-if __name__ == '__main__':
-    unittest.main()

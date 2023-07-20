@@ -131,15 +131,12 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
         Returns:
             Dict: filter for collection.
         """
-        # todo add support for other operators
-        # todo add support for WHERE IN
 
         where = {}
         if query.where.op == "and":
             for arg in query.where.args:
                 if arg.op == "=":
-                    # todo add support for 'IN' operator - not essential
-                    # todo add support for '>' and '<' operators - not essential
+
                     if arg.args[0].parts[-1] == "meta_data_filter":
                         # filters on metadata
                         where["meta_data_filter"] = get_metadata_filter(
@@ -154,14 +151,13 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
                             f"where clause parameter {arg.args[0].parts[-1]} is not supported, "
                             f"only 'meta_data_filter' and 'search_query' are supported"
                         )
-
                 else:
                     raise NotImplementedError(
                         f"Unsupported where clause {arg.op} operator, only '=' is supported"
                     )
 
         elif query.where.op == "=":
-
+            # requires separate handling as the where clause is not a list when single condition
             if query.where.args[0].parts[-1] == "meta_data_filter":
                 # filters on metadata
                 where["meta_data_filter"] = get_metadata_filter(

@@ -21,11 +21,14 @@ jobs:
       uses: actions/setup-python@v4.7.0
       with:
         python-version: 3.9
-    - id: changed-files
-      uses: tj-actions/changed-files@v37
-    - uses: pre-commit/action@v3.0.0
-      with:
-        extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }}
+    - name: Install flake8
+      run: |
+        pip install flake8==5.0.4 pycodestyle==2.9.1
+      shell: bash
+    - name: Static code checking
+      run: |
+        python3 -m flake8
+      shell: bash
   matrix_prep:
     needs: code_checking
     runs-on: ubuntu-latest

@@ -292,7 +292,7 @@ OpenAI supports fine-tuning of some of its models, including `davinci`, `curie`,
 Let's create a model to answer questions about MindsDB's custom SQL syntax.
 
 ```sql
-CREATE MODEL mindsdb.openai_davinci
+CREATE MODEL openai_davinci
 PREDICT completion
 USING
     engine = 'openai',
@@ -310,7 +310,7 @@ Once the status is complete, we can query for predictions:
 
 ```sql
 SELECT prompt, completion
-FROM mindsdb.openai_davinci as m
+FROM openai_davinci as m
 WHERE prompt = 'What is the SQL syntax to join input data with predictions from a MindsDB machine learning model?'
 USING max_tokens=400;
 ```
@@ -366,7 +366,7 @@ And here is its content:
 This is how you can fine-tune an OpenAI model:
 
 ```sql
-FINETUNE mindsdb.openai_davinci
+FINETUNE openai_davinci
 FROM files
     (SELECT prompt, completion FROM openai_learninghub_ft);
 ```
@@ -383,7 +383,7 @@ Once the new version status is complete and active, we can query the model again
 
 ```sql
 SELECT prompt, completion
-FROM mindsdb.openai_davinci as m
+FROM openai_davinci as m
 WHERE prompt = 'What is the SQL syntax to join input data with predictions from a MindsDB machine learning model?'
 USING max_tokens=400;
 ```

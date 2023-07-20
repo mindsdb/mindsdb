@@ -186,6 +186,17 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
                 model_name
             )
 
+        elif args['task'] == 'translation':
+            nlp = NLP(api_key, endpoint)
+            result_df = nlp.translation_in_df(
+                df,
+                input_column,
+                args['lang_input'],
+                args['lang_output'],
+                options,
+                model_name
+            )
+
         elif args['task'] == 'image-classification':
             cp = ComputerVision(api_key, endpoint)
             result_df = cp.image_classification_in_df(

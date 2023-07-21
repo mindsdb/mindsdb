@@ -48,7 +48,7 @@ def get_api_key(
 
     if strict:
         raise Exception(
-            f'Missing API key "api_key". Either re-create this ML_ENGINE specifying the `api_key` parameter,\
+            'Missing API key "api_key". Either re-create this ML_ENGINE specifying the `api_key` parameter,\
             or re-create this model and pass the API key with `USING` syntax.'
         )  # noqa
     return None

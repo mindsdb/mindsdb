@@ -157,7 +157,7 @@ class LangChainHandler(OpenAIHandler):
 
         # system prompt
         prompt = args['prompt']
-        if 'prompt' in pred_args:
+        if 'prompt' in pred_args and pred_args['prompt'] is not None:
             prompt = pred_args['prompt']
         if 'context' in pred_args:
             prompt += '\n\n' + 'Useful information:\n' + pred_args['context'] + '\n'
@@ -168,10 +168,7 @@ class LangChainHandler(OpenAIHandler):
             question = row[args['user_column']]
             answer = row[args['assistant_column']]
 
-            if question:
-                memory.chat_memory.add_user_message(question)
-            if answer:
-                memory.chat_memory.add_ai_message(answer)
+            memory.save_context({"input": question}, {"output": answer})
 
         # use last message as prompt, remove other questions
         df.iloc[:-1, df.columns.get_loc('question')] = ''
@@ -325,7 +322,8 @@ class LangChainHandler(OpenAIHandler):
             try:
                 ast_query = parse_sql(query.strip('`'), dialect='mindsdb')
                 ret = executor.execute_command(ast_query)
-
+                if ret.data is None and ret.error_code is None:
+                    return ''
                 data = ret.data  # list of lists
                 data = '\n'.join([  # rows
                     '\t'.join(      # columns

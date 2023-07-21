@@ -8,10 +8,11 @@ from mindsdb.utilities.config import Config
 
 
 def get_api_key(
-        api_name: str,
-        create_args: Dict[str, str],
-        engine_storage: HandlerStorage,
-        strict: bool = True):
+    api_name: str,
+    create_args: Dict[str, str],
+    engine_storage: HandlerStorage,
+    strict: bool = True,
+):
     """Gets the API key needed to use an ML Handler.
 
     Args:
@@ -35,7 +36,7 @@ def get_api_key(
     # 2
     connection_args = engine_storage.get_connection_args()
     if "api_key" in connection_args:
-        return connection_args['api_key']
+        return connection_args["api_key"]
     # 3
     api_key = os.getenv(f"{api_name.upper()}_API_KEY")
     if api_key is not None:

@@ -1,7 +1,6 @@
 ## QA Testing LlamaIndex
 
-Testing Llamandex ML framework on Cloud with 3 different webpages.
-
+Testing Llamandex ML framework on Cloud with 3 different webpages. The goal is to create a QA model that can subtract answers from a webpage.
 ### Test 1 with Blackrock's webpage
 
 **1. Create ML Engine for LlamaIndex**
@@ -402,9 +401,14 @@ JOIN mindsdb.global_investment_qa as b;`
 
 `error in apply predictor step: [llama_index/global_investment_qa]: [Errno 2] No such file or directory: '/home/ubuntu/.local/share/mindsdb/var/content/predictor/predictor_689_24621/docstore.json'`
 
-### Full Conclusion:
+### Full Conclusion on Results:
 - Models with LlamaIndex engines most of the time do not produce answers from information that is within a drop down on first execution, this is an issue as most information these days are categorized and put in drop downs to either a title or question. 
 - Queries have to be executed multpiple times as it produces error messsages before an answer is provided,some queries only provides error messages.
-- The 2 common error messages are `[llama_index/global_investment_qa]: [Errno 2] No such file or directory: '/home/ubuntu/.local/share/mindsdb/var/content/predictor/predictor_689_24621/docstore.json'` and `[llama_index/global_investment_qa]: RetryError[<Future at 0x7f2af033d820 state=finished raised RateLimitError>]`, or the answer column will produce a message `Answer: It is not possible to answer this question without prior knowledge.`. 
+- The 2 common error messages are `[llama_index/global_investment_qa]: [Errno 2] No such file or directory: '/home/ubuntu/.local/share/mindsdb/var/content/predictor/predictor_689_24621/docstore.json'` and `[llama_index/global_investment_qa]: RetryError[<Future at 0x7f2af033d820 state=finished raised RateLimitError>]`, or the answer column will produce a message `Answer: It is not possible to answer this question without prior knowledge.`
 - After executing multiple times, the answer is provided. However, if you run the SELECT statement that was successfull in providing an answer and run it again, it will provide an error message. 
 - None of the batch predictions succesfully executed.
+
+### Bugs
+1. [LlamaIndex - Unable to run batch predictions.](https://github.com/mindsdb/mindsdb/issues/6907)
+2. [LlamaIndex- Inconsistant error when running SELECT statments](https://github.com/mindsdb/mindsdb/issues/6906)
+3. [LlamaIndex framework- DESCRIBE model blank error](https://github.com/mindsdb/mindsdb/issues/6905)

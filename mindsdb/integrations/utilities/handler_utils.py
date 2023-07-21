@@ -30,23 +30,25 @@ def get_api_key(
         4. api_key setting in config.json
     """
     # 1
-    if 'api_key' in create_args:
+    if "api_key" in create_args:
         return create_args['api_key']
     # 2
     connection_args = engine_storage.get_connection_args()
-    if 'api_key' in connection_args:
+    if "api_key" in connection_args:
         return connection_args['api_key']
     # 3
-    api_key = os.getenv(f'{api_name.upper()}_API_KEY')
+    api_key = os.getenv(f"{api_name.upper()}_API_KEY")
     if api_key is not None:
         return api_key
     # 4
     config = Config()
     api_cfg = config.get(api_name, {})
-    if 'api_key' in api_cfg:
-        return api_cfg['api_key']
+    if "api_key" in api_cfg:
+        return api_cfg["api_key"]
 
     if strict:
-        raise Exception(f'Missing API key "api_key". Either re-create this ML_ENGINE specifying the `api_key` parameter,\
-            or re-create this model and pass the API key with `USING` syntax.')  # noqa
+        raise Exception(
+            f'Missing API key "api_key". Either re-create this ML_ENGINE specifying the `api_key` parameter,\
+            or re-create this model and pass the API key with `USING` syntax.'
+        )  # noqa
     return None

@@ -2,8 +2,8 @@ import time
 
 from mindsdb_sql.parser.ast import Identifier, Select, Insert
 
-from collections import defaultdict
 from mindsdb.utilities import log
+from mindsdb.utilities.context import context as ctx
 
 from .types import ChatBotMessage, BotException
 
@@ -61,7 +61,7 @@ class MessageCountPolling(BasePolling):
 
     def get_last_message(self, chat_memory):
         # retrive from history
-        history = chat_memory.get_history(cached=False)
+        history = chat_memory.get_history()
         last_message = history[-1]
         if last_message.user == self.chat_task.bot_params['bot_username']:
             # the last message is from bot
@@ -115,7 +115,12 @@ class RealtimePolling(BasePolling):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # call back can be without context
+        self._ctx_dump = ctx.dump()
+
     def _callback(self, row, key):
+        ctx.load(self._ctx_dump)
+
         row.update(key)
 
         t_params = self.params['chat_table']
@@ -125,7 +130,7 @@ class RealtimePolling(BasePolling):
             row[t_params['text_col']],
             # In Slack direct messages are treated as channels themselves.
             row[t_params['username_col']],
-            row['chat_id_col']
+            row[t_params['chat_id_col']]
         )
 
         chat_id = row[t_params['chat_id_col']]
@@ -133,7 +138,7 @@ class RealtimePolling(BasePolling):
         chat_memory = self.chat_task.memory.get_chat(chat_id)
         self.chat_task.on_message(chat_memory, message)
 
-    def start(self, stop_event):
+    def run(self, stop_event):
         t_params = self.params['chat_table']
         self.chat_task.chat_handler.subscribe(stop_event, self._callback, t_params['name'])
 

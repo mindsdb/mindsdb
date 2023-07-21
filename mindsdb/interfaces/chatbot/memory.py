@@ -153,17 +153,18 @@ class DBMemory(BaseMemory):
         chat_bot_id = self.chat_task.bot_record.id
         query = db.ChatBotsHistory.query\
             .filter(
-                db.ChatBotsHistory.chat_bot_id == chat_bot_id
+                db.ChatBotsHistory.chat_bot_id == chat_bot_id,
+                db.ChatBotsHistory.destination == chat_id
             )\
             .order_by(db.ChatBotsHistory.sent_at)\
-            .last(self.MAX_DEPTH)
+            .limit(self.MAX_DEPTH)
 
         result = [
             ChatBotMessage(
                 rec.type,
                 rec.text,
                 rec.user,
-                rec.sent_at,
+                sent_at=rec.sent_at,
             )
             for rec in query
         ]
@@ -178,8 +179,12 @@ class ChatMemory:
         self.memory = memory
         self.chat_id = chat_id
 
+        self.cached = False
+
     def get_history(self, cached=True):
-        return self.memory.get_chat_history(self.chat_id, cached=cached)
+        result = self.memory.get_chat_history(self.chat_id, cached=cached and self.cached)
+        self.cached = True
+        return result
 
     def add_to_history(self, message):
         self.memory.add_to_history(self.chat_id, message)

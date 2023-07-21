@@ -66,8 +66,6 @@ class ChatBotTask:
         # TODO move it to realtime pooling
         chat_memory.add_to_history(message)
 
-        history = chat_memory.get_history(cached=False)
-
         # process
         bot_executor = self.bot_executor_cls(self, chat_memory)
         response_text = bot_executor.process()

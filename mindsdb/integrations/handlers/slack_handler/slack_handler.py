@@ -154,7 +154,7 @@ class SlackChannelsTable(APITable):
             if target.alias:
                 result.rename(columns={target.parts[-1]: str(target.alias)}, inplace=True)
 
-        return result
+        return result.rename(columns={'messages': 'text'})
         
     def get_columns(self):
         """
@@ -191,14 +191,14 @@ class SlackChannelsTable(APITable):
             params = dict(zip(columns, row))
 
             # check if required parameters are provided
-            if 'channel' not in params or 'message' not in params:
-                raise Exception("To insert data into Slack, you need to provide the 'channel' and 'message' parameters.")
+            if 'channel' not in params or 'text' not in params:
+                raise Exception("To insert data into Slack, you need to provide the 'channel' and 'text' parameters.")
 
             # post message to Slack channel
             try:
                 response = self.client.chat_postMessage(
                     channel=params['channel'],
-                    text=params['message']
+                    text=params['text']
                 )
             except SlackApiError as e:
                 raise Exception(f"Error posting message to Slack channel '{params['channel']}': {e.response['error']}")
@@ -222,15 +222,15 @@ class SlackChannelsTable(APITable):
             params = dict(zip(columns, row))
 
         # check if required parameters are provided
-        if 'channel' not in params or 'ts' not in params or 'message' not in params:
-            raise Exception("To update a message in Slack, you need to provide the 'channel', 'ts', and 'message' parameters.")
+        if 'channel' not in params or 'ts' not in params or 'text' not in params:
+            raise Exception("To update a message in Slack, you need to provide the 'channel', 'ts', and 'text' parameters.")
 
         # update message in Slack channel
         try:
             response = self.client.chat_update(
                 channel=params['channel'],
                 ts=params['ts'],
-                text=params['message']
+                text=params['text']
             )
         except SlackApiError as e:
             raise Exception(f"Error updating message in Slack channel '{params['channel']}' with timestamp '{params['ts']}': {e.response['error']}")
@@ -279,7 +279,7 @@ class SlackHandler(APIChatHandler):
         args = kwargs.get('connection_data', {})
         self.connection_args = {}
         handler_config = Config().get('slack_handler', {})
-        for k in ['token']:
+        for k in ['token', 'app_token']:
             if k in args:
                 self.connection_args[k] = args[k]
             elif f'SLACK_{k.upper()}' in os.environ:
@@ -314,7 +314,7 @@ class SlackHandler(APIChatHandler):
         # TODO
         api = self.connect()
         resp = api.users_profile_get()
-        return resp['profile']['display_name']
+        return resp.data['profile']['bot_id']
 
     def subscribe(self, stop_event, callback, table_name, **kwargs):
         if table_name != 'channels':
@@ -322,7 +322,7 @@ class SlackHandler(APIChatHandler):
 
         self._socket_mode_client = SocketModeClient(
             # This app-level token will be used only for establishing a connection
-            app_token=self.connection_args['api_token'],  # xapp-A111-222-xyz
+            app_token=self.connection_args['app_token'],  # xapp-A111-222-xyz
             # You will be using this WebClient for performing Web API calls in listeners
             web_client=WebClient(token=self.connection_args['token'])  # xoxb-111-222-xyz
         )
@@ -353,7 +353,7 @@ class SlackHandler(APIChatHandler):
             }
             row = {
                 'text': payload_event['text'],
-                'user': payload_event['channel'] # TODO ?,
+                'user': payload_event['user'],
             }
 
             callback(row, key)
@@ -384,7 +384,7 @@ class SlackHandler(APIChatHandler):
         """
         Creates a WebClient object to connect to the Slack API token stored in the connection_args attribute.
         """
-        # TODO check connection_args['api_token'] too
+        # TODO check connection_args['app_token'] too
 
         client = WebClient(token=self.connection_args['token'])
         return client

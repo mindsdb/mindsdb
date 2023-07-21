@@ -6,11 +6,12 @@ from mindsdb.utilities.config import Config
 
 """Contains utilities to be used by handlers."""
 
+
 def get_api_key(
-    api_name: str,
-    create_args: Dict[str, str],
-    engine_storage: HandlerStorage,
-    strict: bool=True):
+        api_name: str,
+        create_args: Dict[str, str],
+        engine_storage: HandlerStorage,
+        strict: bool = True):
     """Gets the API key needed to use an ML Handler.
 
     Args:
@@ -18,7 +19,7 @@ def get_api_key(
         create_args (Dict[str, str]): Args user passed to the created model with USING keyword
         engine_storage (HandlerStorage): Engine storage for the ML handler
         strict (bool): Whether or not to require the API key
-    
+
     Returns:
         api_key (str): The API key
 

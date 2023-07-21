@@ -36,9 +36,9 @@ class InformationSchemaDataNode(DataNode):
         # MindsDB specific:
         'MODELS': ['NAME', 'ENGINE', 'PROJECT', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'CURRENT_TRAINING_PHASE', 'TOTAL_TRAINING_PHASES', 'TRAINING_PHASE_NAME', 'TAG', 'CREATED_AT', 'TRAINING_TIME'],
         'MODELS_VERSIONS': ['NAME', 'ENGINE', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG', 'CREATED_AT', 'TRAINING_TIME'],
-        'DATABASES': ['NAME', 'TYPE', 'ENGINE'],
+        'DATABASES': ['NAME', 'TYPE', 'ENGINE', 'CONNECTION_DATA'],
         'ML_ENGINES': ['NAME', 'HANDLER', 'CONNECTION_DATA'],
-        'HANDLERS': ['NAME', 'TITLE', 'DESCRIPTION', 'VERSION', 'CONNECTION_ARGS', 'IMPORT_SUCCESS', 'IMPORT_ERROR'],
+        'HANDLERS': ['NAME', 'TYPE', 'TITLE', 'DESCRIPTION', 'VERSION', 'CONNECTION_ARGS', 'IMPORT_SUCCESS', 'IMPORT_ERROR'],
         'JOBS': ['NAME', 'PROJECT', 'START_AT', 'END_AT', 'NEXT_RUN_AT', 'SCHEDULE_STR', 'QUERY'],
         'TRIGGERS': ['NAME', 'PROJECT', 'DATABASE', 'TABLE', 'QUERY', 'LAST_ERROR'],
         'JOBS_HISTORY': ['NAME', 'PROJECT', 'RUN_START', 'RUN_END', 'ERROR', 'QUERY']
@@ -159,20 +159,16 @@ class InformationSchemaDataNode(DataNode):
         columns = self.information_schema['HANDLERS']
 
         handlers = self.integration_controller.get_handlers_import_status()
-        ml_handlers = {
-            key: val for key, val in handlers.items()
-            if val.get('type') == 'ml'
-        }
 
         data = []
-        for _key, val in ml_handlers.items():
+        for _key, val in handlers.items():
             connection_args = val.get('connection_args')
             if connection_args is not None:
                 connection_args = str(dict(connection_args))
             import_success = val.get('import', {}).get('success')
             import_error = val.get('import', {}).get('error_message')
             data.append([
-                val['name'], val.get('title'), val.get('description'), val.get('version'),
+                val['name'], val.get('type'), val.get('title'), val.get('description'), val.get('version'),
                 connection_args, import_success, import_error
             ])
 
@@ -349,7 +345,7 @@ class InformationSchemaDataNode(DataNode):
 
         project = self.database_controller.get_list()
         data = [
-            [x['name'], x['type'], x['engine']]
+            [x['name'], x['type'], x['engine'], str(x.get('connection_data'))]
             for x in project
         ]
 

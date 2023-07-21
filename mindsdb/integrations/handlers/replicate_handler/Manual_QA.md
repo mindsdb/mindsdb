@@ -42,7 +42,7 @@ DESCRIBE PREDICTOR mindsdb.aiforever.features;
 
 ```sql
 SELECT * FROM aiforever
-WHERE prompt="Ancient Indian warrior  on a battlefield, wearing full battle gear and turban, facing the camera, finely detailed outfit and weapon, intricate design and details, ultra-detailed, highest detail quality, ultra-realistic, photography lighting, reflection mapping, photorealistic, cinematic, cinematic noise, movie quality rendering, octane rendering, sharp focus, 8k, depth of field, real shadow, rtx ray tracing lighting"
+WHERE prompt="Ancient Indian warrior  on a battlefield, wearing full battle gear and turban,strong determined attitude,wizard look, finely detailed outfit and weapon, intricate design and details, ultra-detailed, highest detail quality, ultra-realistic, photography lighting, reflection mapping, photorealistic, cinematic, cinematic noise, movie quality rendering, octane rendering, sharp focus, 8k, depth of field, real shadow, rtx ray tracing lighting,"
 USING
 scheduler='plms_sampler',
 width=1024,
@@ -53,10 +53,12 @@ height=1024;
 +---------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | url                                                                                         | prompt                                                                                                                                                                                                                                                                                                                                                                                                                              |
 +---------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| https://replicate.delivery/pbxt/sToiQh3wQj7pHtURYt1n3k2JdB2mb4ueR265xP4MujhfnJGRA/out_0.png | Ancient Indian warrior  on a battlefield, wearing full battle gear and turban, facing the camera, finely detailed outfit and weapon, intricate design and details, ultra-detailed, highest detail quality, ultra-realistic, photography lighting, reflection mapping, photorealistic, cinematic, cinematic noise, movie quality rendering, octane rendering, sharp focus, 8k, depth of field, real shadow, rtx ray tracing lighting |
+| https://replicate.delivery/pbxt/sToiQh3wQj7pHtURYt1n3k2JdB2mb4ueR265xP4MujhfnJGRA/out_0.png | Ancient Indian warrior  on a battlefield, wearing full battle gear and turban,strong determined attitude,wizard look, finely detailed outfit and weapon, intricate design and details, ultra-detailed, highest detail quality, ultra-realistic, photography lighting, reflection mapping, photorealistic, cinematic, cinematic noise, movie quality rendering, octane rendering, sharp focus, 8k, depth of field, real shadow, rtx ray tracing lighting, |
 +---------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
-![Generate Image](https://replicate.delivery/pbxt/x0S6DH0RiValG1wGWNp0Zrmuj8IeeO3OaUVNco5RMqxeATMiA/out_0.png)
+
+# TODO
+![Generate Image](./assets/warrior.png)
 
 ### Results
 

@@ -76,7 +76,7 @@ OUTPUT
 | https://replicate.delivery/pbxt/ffOCXeL4fa5yekAL4ybfFiJBbqENSEjhSLpA2zp1ElsBxxhSE/tortoise.mp3 | This is breaking news that first human are landed on mars and they find something very unusal their ehich is not yet out, by the way this is future  |
 +------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
-If above predicted url don't work , then use [this](http://sndup.net/gwrt)
+If above predicted url don't work , then use [this](./assets/cloned_audio.mp3)
 
 ## Audio Generation 
 
@@ -97,7 +97,7 @@ USING
 +---------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
-Above predicted url will work , therfore use [this](https://sndup.net/smy3/).
+Above predicted url will work , therfore use [this](./assets/generated_audio.wav).
 
 This is just an one model used in this example there are more with vast variation and usescases.
 Also there is no limit to imagination, how can you use this.

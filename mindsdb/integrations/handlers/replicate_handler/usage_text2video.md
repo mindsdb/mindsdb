@@ -72,8 +72,8 @@ USING
 | https://replicate.delivery/pbxt/gSgRjNlxIgJWBB8KeebKeRmBjZx0wqX7JC41U0pvIfPCYVzEB/out.mp4 | a human and animals are friends by Asher Brown Durand, trending on Artstation |
 +---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------+
 ```
-
-Checkout generated video [here](https://www.pexels.com/video/ai-generated-video-17489162/) as above link will not work, reason is given below.
+# TODO 
+Checkout generated video [here](./assets/animals.mp4) as above link will not work, reason is given below.
 
 - IMPORTANT NOTE: PREDICTED **URL** will only work for **24 hours** after prediction.
 

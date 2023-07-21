@@ -27,9 +27,14 @@ DESCRIBE PREDICTOR mindsdb.aiforever.features;
 ```sql 
 SELECT *
 FROM aiforever
-WHERE prompt='Great warrior Arjun from Mahabharata with his bow and arrow , 4k quality'
+WHERE prompt='Groot strong determined attitude, intricate design and details, ultra-detailed, highest detail quality, ultra-realistic, photography lighting, reflection mapping, photorealistic, cinematic, cinematic noise, movie quality rendering, octane rendering, sharp focus, 8k, depth of field, real shadow, rtx ray tracing lighting,'
+USING
+scheduler='plms_sampler',
+width=1024,
+height=1024;
 ```
 
 ### OUTPUT 
-![GENERATED_IMAGES](https://replicate.delivery/pbxt/K9dMTBWgQg6cMB7Ekeo88PKAQG5N5lXIx0sVNdv4uf8ztJGRA/out_0.png)
+# TODO
+![GENERATED_IMAGES](./assets/groot.png)
 

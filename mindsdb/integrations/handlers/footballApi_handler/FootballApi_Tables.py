@@ -6,7 +6,7 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 
 
 class FootballApiTable(APITable):
-    def select(self, query: ast.Select) -> pd.Dataframe:
+    def select(self, query: ast.Select) -> pd.DataFrame:
         """Pulls data from the Football API
 
                 Parameters
@@ -30,24 +30,24 @@ class FootballApiTable(APITable):
             if a_where[1] == "league":
                 if a_where[0] != "=":
                     raise ValueError("Unsupported where operation for state")
-                player_params["league"] = a_where[2]
+                player_params["league"] = int(a_where[2])
                 continue
 
             if a_where[1] == "season":
                 if a_where[0] != "=":
                     raise ValueError("Unsupported where operation for labels")
-                player_params["season"] = a_where[2].split(",")
+                player_params["season"] = int(a_where[2])
                 continue
 
             if a_where[1] in "team":
                 if a_where[0] != "=":
                     raise ValueError(f"Unsupported where operation for {a_where[1]}")
-                player_params["team"] = a_where[2]
+                player_params["team"] = int(a_where[2])
 
             if a_where[1] in "id":
                 if a_where[0] != "=":
                     raise ValueError(f"Unsupported where operation for {a_where[1]}")
-                player_params["id"] = a_where[2]
+                player_params["id"] = int(a_where[2])
 
             if a_where[1] in "search":
                 if a_where[0] != "=":
@@ -57,7 +57,7 @@ class FootballApiTable(APITable):
             if a_where[1] in "page":
                 if a_where[0] != "=":
                     raise ValueError(f"Unsupported where operation for {a_where[1]}")
-                player_params["page"] = a_where[2]
+                player_params["page"] = int(a_where[2])
             else:
                 raise ValueError(f"Unsupported where argument {a_where[1]}")
 

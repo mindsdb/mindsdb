@@ -10,10 +10,10 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = "FootballApi"
-name = "footballApi"
+title = 'FootballApi'
+name = 'footballapi'
 type = HANDLER_TYPE.DATA
-icon_path = "icon.svg"
+icon_path = 'icon.svg'
 
 __all__ = [
     "Handler",

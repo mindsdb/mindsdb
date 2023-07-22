@@ -103,9 +103,9 @@ class FootballApiHandler(APIHandler):
                 flattened_dict[new_key] = value
         return flattened_dict
 
-    def _get_players(self, **params) -> pd.Dataframe:
+    def _get_players(self, **params) -> pd.DataFrame:
         client = self.connect()
-        league = params.get('league', None),
+        league = params.get('league', None)
         season = params.get('season', None)
         team = params.get('team', None)
         id = params.get('id', None)

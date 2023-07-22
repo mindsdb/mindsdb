@@ -3,7 +3,7 @@
 > **Please submit your PR in the following format after the underline below `Results` section.
 > Don't forget to add an underline after adding your changes i.e., at the end of your `Results` section.**
 
-## Testing SurrealDB Handler with [Dataset Name](URL to the Dataset)
+## Testing SurrealDB Handler
 
 **1. Testing CREATE DATABASE**
 

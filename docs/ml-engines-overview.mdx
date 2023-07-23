@@ -1,0 +1,82 @@
+---
+title: ML Engines
+sidebarTitle: Overview
+---
+
+MindsDB offers a wide range of AI engines used to create models and incorporate them in the data landscape as virtual tables. MinsdDB abstracts AI models as virtual tables, or Generative AI Tables, that can generate data from the underlying model upon being queried.
+
+<Tip>
+MindsDB provides over 10 ML handlers to connect the available ML frameworks.
+
+If you don't find an ML framework of your interest, you can [request a feature here](https://github.com/mindsdb/mindsdb/issues/new?assignees=&labels=enhancement&projects=&template=feature_request_v2.yaml) or build an ML handler following [this instruction](/contribute/ml-handlers).
+</Tip>
+
+This section contains instructions on how to create models in MindsDB, utilizing different ML frameworks.
+
+### Large Language Models
+
+<CardGroup cols={4}>
+
+    <Card title="OpenAI" icon="link" href="custom-model/openai"></Card>
+    <Card title="Hugging Face" icon="link" href="custom-model/huggingface"></Card>
+    <Card title="LangChain" icon="link" href="custom-model/langchain"></Card>
+
+</CardGroup>
+
+### Bring Your Own Models
+
+<CardGroup cols={4}>
+
+    <Card title="BYOM" icon="link" href="custom-model/byom"></Card>
+    <Card title="Ray Serve" icon="link" href="custom-model/ray-serve"></Card>
+    <Card title="MLflow" icon="link" href="custom-model/mlflow"></Card>
+
+</CardGroup>
+
+### AutoML
+
+<CardGroup cols={4}>
+
+    <Card title="Lightwood" icon="link" href="ml-engines/automl/lightwood"></Card>
+
+</CardGroup>
+
+### Time Series Models
+
+<CardGroup cols={4}>
+
+    <Card title="StatsForecast" icon="link" href="nixtla/statsforecast"></Card>
+
+</CardGroup>
+
+<br></br>
+
+<Info>
+Here is how you can query for all the available ML handlers used to create AI engines.
+
+  ```sql
+  SELECT *
+  FROM information_schema.handlers
+  WHERE type = 'ml';
+  ```
+
+  Or, alternatively:
+
+  ```sql
+  SHOW HANDLERS
+  WHERE type = 'ml';
+  ```
+
+And here is how you can query for all the created AI engines:
+
+  ```sql
+  SELECT *
+  FROM information_schema.ml_engines;
+  ```
+
+  Or, alternatively:
+
+  ```sql
+  SHOW ML_ENGINES;
+  ```
+</Info>

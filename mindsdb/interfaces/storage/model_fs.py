@@ -111,7 +111,11 @@ class ModelStorage:
 
     def delete(self):
         self.fileStorage.delete()
-        # TODO delete json
+        json_storage = get_json_storage(
+            resource_id=self.predictor_id,
+            resource_group=RESOURCE_GROUP.PREDICTOR
+        )
+        json_storage.clean()
 
 
 class HandlerStorage:

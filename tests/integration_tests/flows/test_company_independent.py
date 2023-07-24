@@ -263,7 +263,8 @@ class TestCompanyIndependent:
                     'jobs',
                     'jobs_history',
                     'models',
-                    'models_versions'
+                    'models_versions',
+                    'triggers'
                 }
             )
         # endregion
@@ -325,6 +326,7 @@ class TestCompanyIndependent:
                     'jobs_history',
                     'models',
                     'models_versions',
+                    'triggers',
                     f'test_view_{char}'
                 }
             )
@@ -349,7 +351,8 @@ class TestCompanyIndependent:
                     'jobs',
                     'jobs_history',
                     'models',
-                    'models_versions'
+                    'models_versions',
+                    'triggers'
                 }
             )
 
@@ -425,6 +428,7 @@ class TestCompanyIndependent:
             'jobs_history',
             'models',
             'models_versions',
+            'triggers',
             'test_mon_p_a',
             'model_a'
         })
@@ -434,5 +438,6 @@ class TestCompanyIndependent:
             'jobs_history',
             'models',
             'models_versions',
+            'triggers',
             'model_b'
         })

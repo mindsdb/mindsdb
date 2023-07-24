@@ -28,7 +28,7 @@ The required arguments to establish a connection are,
 
 In order to make use of this handler and connect to the Google Cloud SQL instance, you need to create a datasource with the following syntax:
 
-~~~~sql
+```sql
 CREATE DATABASE cloud_sql_mysql_datasource
 WITH ENGINE = 'cloud_sql',
 PARAMETERS = {
@@ -39,7 +39,7 @@ PARAMETERS = {
     "password": "password",
     "database": "example_db"
 };
-~~~~
+```
 To successfully connect to the Google Cloud SQL instance you have to make sure that the IP address of the machine you are using to connect is added to the authorized networks of the Google Cloud SQL instance. You can do this by following the steps below:
 
 1. Go to the [Cloud SQL Instances](https://console.cloud.google.com/sql/instances) page.

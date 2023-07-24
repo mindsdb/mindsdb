@@ -1,19 +1,16 @@
 import email_helpers
-from collections import defaultdict
-
-import pandas as pd
 
 from mindsdb.utilities import log
 
-from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
+from mindsdb.integrations.libs.api_handler import APIHandler
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-    RESPONSE_TYPE
 )
 
 from email_tables import EmailsTable
+
+from mindsdb_sql import parse_sql
 
 
 class EmailHandler(APIHandler):
@@ -30,15 +27,11 @@ class EmailHandler(APIHandler):
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
 
-        args = kwargs.get('connection_data', {})
+        connection_data = kwargs.get("connection_data", {})
+        self.connection_data = connection_data
+        self.kwargs = kwargs
 
-        self.connection_args = {}
-        for k in ['email', 'smtp_server', 'smtp_port', 'imap_server',
-                  'username', 'password']:
-            if k in args:
-                self.connection_args[k] = args[k]
-
-        self.api = None
+        self.connection = None
         self.is_connected = False
 
         emails = EmailsTable(self)
@@ -48,24 +41,24 @@ class EmailHandler(APIHandler):
         """Authenticate with the email servers using credentials."""
 
         if self.is_connected is True:
-            return self.api
+            return self.connection
 
         try:
-            self.api = email_helpers.EmailClient(**self.connection_args)
+            self.connection = email_helpers.EmailClient(**self.connection_data)
         except Exception as e:
             log.logger.error(f'Error connecting to email api: {e}!')
             raise e
 
         self.is_connected = True
-        return self.api
+        return self.connection
 
     def check_connection(self) -> StatusResponse:
 
         response = StatusResponse(False)
 
         try:
-            api = self.connect()
-            api.get_user(id=1)
+            connection = self.connect()
+            # TODO: check connection
 
             response.success = True
 
@@ -78,38 +71,17 @@ class EmailHandler(APIHandler):
 
         return response
 
-    def native_query(self, query_string: str = None):
-        method_name, params = FuncParser().from_string(query_string)
-
-        df = self.call_email_api(method_name, params)
-
-        return Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=df
-        )
-
-    def call_email_api(self, method_name:str = None, params:dict = None):
-
-        # method > table > columns
-        expansions_map = {
-            'search_recent_tweets': {
-                'users': ['author_id', 'in_reply_to_user_id'],
-            },
-            'search_all_tweets': {
-                'users': ['author_id'],
-            },
-        }
-
-        self.connect()
-        method = getattr(self.api.imap_server, method_name)
-
-        # pagination handle
-
-        includes = defaultdict(list)
-
-        resp, items = resp = method(**params)
-
-        df = pd.DataFrame(items)
-
-        return df
+    def native_query(self, query: str) -> StatusResponse:
+        """Receive and process a raw query.
+        Parameters
+        ----------
+        query : str
+            query in a native format
+        Returns
+        -------
+        StatusResponse
+            Request status
+        """
+        ast = parse_sql(query, dialect="mindsdb")
+        return self.query(ast)
 

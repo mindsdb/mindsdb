@@ -83,7 +83,7 @@ class ModelController():
         full_model_data = self.get_model_data(name=name, predictor_record=predictor_record, ml_handler_name=ml_handler_name)
         reduced_model_data = {}
         for k in ['id', 'name', 'version', 'is_active', 'predict', 'status',
-                  'current_phase', 'accuracy', 'data_source', 'update', 'active',
+                  'problem_definition', 'current_phase', 'accuracy', 'data_source', 'update', 'active',
                   'mindsdb_version', 'error', 'created_at', 'fetch_data_query']:
             reduced_model_data[k] = full_model_data.get(k, None)
 

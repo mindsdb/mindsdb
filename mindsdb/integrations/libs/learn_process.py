@@ -129,6 +129,7 @@ def learn_process(class_path, engine, context_dump, integration_id,
             print(traceback.format_exc())
             error_message = format_exception_error(e)
 
+            predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
             predictor_record.data = {"error": error_message}
             predictor_record.status = PREDICTOR_STATUS.ERROR
             db.session.commit()

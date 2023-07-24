@@ -1,13 +1,11 @@
-# Surrealdb Handler
+---
+title: SurrealDB
+sidebarTitle: SurrealDB
+---
 
-This is the implementation of the Surrealdb handler for MindsDB.
+This is the implementation of the SurrealDB data handler for MindsDB.
 
-## Surrealdb
-
-SurrealDB is an innovative NewSQL cloud database, suitable for serverless applications,
-jamstack applications, single-page applications, and traditional applications.
-It is unmatched in its versatility and financial value, with the ability for deployment on cloud,
-on-premise, embedded, and edge computing environments.
+[SurrealDB](https://surrealdb.com/) is an innovative NewSQL cloud database, suitable for serverless applications, jamstack applications, single-page applications, and traditional applications.
 
 ## Implementation
 
@@ -21,6 +19,10 @@ The required arguments to establish a connection are:
 * `password`: the password to authenticate the user
 * `database`: database name to be connected
 * `namespace`: namespace name to be connected
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/surrealdb_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
 
 ## Usage
 
@@ -46,41 +48,16 @@ CREATE dev SET name='again', status='founder';
 
 This will create a table named `dev` with column `name` and `status`.
 
-(If you want to use SurrealDB in public cloud editor, feel free to skip the following steps.)
+## Testing SurrealDB
 
-## Testing SurrealDB in the local environment
-
-Use the following query to create a SurrealDB database in the MindsDB environment.
-
-```sql
-CREATE DATABASE exampledb
-WITH ENGINE = 'surrealdb',
-PARAMETERS = {
-  "host": "localhost",
-  "port": "8000",
-  "user": "root",
-  "password": "root",
-  "database": "testdb",
-  "namespace": "testns"
-};
-```
-
-Now, you can use this established connection to query your database tables as follows:
-
-```sql
-SELECT * FROM exampledb.dev;
-```
-
-## Testing SurrealDB in the public cloud environment
-
-To establish a connection with our SurrealDB server which is running locally to the public cloud instance is not that simple. We are going to use `ngrok tunneling` to connect cloud instance to the local SurrealDB server. You can follow this [guide](https://docs.mindsdb.com/sql/create/database#making-your-local-database-available-to-mindsdb) for that.
+To establish a connection with our SurrealDB server which is running locally with the public cloud instance. We are going to use `ngrok tunneling` to connect cloud instance to the local SurrealDB server. You can follow this [guide](https://docs.mindsdb.com/sql/create/database#making-your-local-database-available-to-mindsdb) for that.
 
 In our case with `ngrok` we will use:
 ```
 ngrok tcp 8000
 ```
 
-From there, it generated a forwarding dns for me which is:
+From there, it generated a forwarding dns which looks like this:
 ```
 tcp://6.tcp.ngrok.io:17141 -> localhost:8000
 ```

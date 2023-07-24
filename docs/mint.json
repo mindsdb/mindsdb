@@ -185,6 +185,7 @@
             "data-integrations/sqlite",
             "data-integrations/starrocks",
             "data-integrations/supabase",
+            "data-integrations/surrealdb",
             "data-integrations/tdengine",
             "data-integrations/teradata",
             "data-integrations/tidb",

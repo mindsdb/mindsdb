@@ -192,6 +192,7 @@ class JobsController:
         }
         for record in query:
             data.append({
+                'id': record.id,
                 'name': record.name,
                 'project': project_names[record.project_id],
                 'start_at': record.start_at,
@@ -221,10 +222,10 @@ class JobsController:
             data.append({
                 'name': record.Jobs.name,
                 'project': project_names[record.Jobs.project_id],
-                'start_at': record.JobsHistory.start_at,
-                'end_at': record.JobsHistory.end_at,
+                'run_start': record.JobsHistory.start_at,
+                'run_end': record.JobsHistory.end_at,
                 'error': record.JobsHistory.error,
-                'query': record.Jobs.query_str,
+                'query': record.JobsHistory.query_str,
             })
         return data
 
@@ -271,18 +272,37 @@ class JobsExecutor:
     def lock_record(self, record_id):
         # workaround for several concurrent workers on cloud:
         #  create history record before start of task
-
         record = db.Jobs.query.get(record_id)
 
-        history_record = db.JobsHistory(
-            job_id=record.id,
-            start_at=record.next_run_at,
-            company_id=record.company_id
-        )
+        try:
 
-        db.session.add(history_record)
-        db.session.flush()
-        return history_record.id
+            history_record = db.JobsHistory(
+                job_id=record.id,
+                start_at=record.next_run_at,
+                company_id=record.company_id
+            )
+
+            db.session.add(history_record)
+            db.session.commit()
+
+            return history_record.id
+
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except Exception:
+            db.session.rollback()
+
+            # check if it is an old lock
+            history_record = db.JobsHistory.query.filter_by(
+                job_id=record.id,
+                start_at=record.next_run_at,
+                company_id=record.company_id
+            ).first()
+            if history_record.updated_at < dt.datetime.now() - dt.timedelta(seconds=30):
+                db.session.delete(history_record)
+                db.session.commit()
+
+        return None
 
     def execute_task_local(self, record_id, history_id=None):
 
@@ -303,6 +323,9 @@ class JobsExecutor:
             )
             db.session.add(history_record)
             db.session.flush()
+            history_id = history_record.id
+            db.session.commit()
+
         else:
             history_record = db.JobsHistory.query.get(history_id)
 
@@ -310,6 +333,7 @@ class JobsExecutor:
 
         project_controller = ProjectController()
         project = project_controller.get(record.project_id)
+        executed_sql = ''
         for sql in split_sql(record.query_str):
             try:
                 #  fill template variables
@@ -317,14 +341,15 @@ class JobsExecutor:
                     # get previous run date
                     history_prev = db.session.query(db.JobsHistory.start_at)\
                         .filter(db.JobsHistory.job_id == record.id,
-                                db.JobsHistory.id != history_record.id)\
+                                db.JobsHistory.id != history_id)\
                         .order_by(db.JobsHistory.id.desc())\
                         .first()
                     if history_prev is None:
-                        # very old date
-                        value = dt.datetime(1900, 1, 1)
+                        # start date of the job
+                        value = record.created_at
                     else:
-                        value = history_prev.start_at
+                        # fix for twitter: created_at filter must be minimum of 10 seconds prior to the current time
+                        value = history_prev.start_at - dt.timedelta(seconds=60)
                     value = value.strftime("%Y-%m-%d %H:%M:%S")
                     sql = sql.replace('{{PREVIOUS_START_DATETIME}}', value)
 
@@ -344,6 +369,8 @@ class JobsExecutor:
 
                 command_executor = ExecuteCommands(sql_session, executor=None)
 
+                executed_sql += sql + '; '
+
                 ret = command_executor.execute_command(query)
                 if ret.error_code is not None:
                     error = ret.error_message
@@ -362,8 +389,11 @@ class JobsExecutor:
             # stop scheduling
             record.next_run_at = None
 
+        history_record = db.JobsHistory.query.get(history_id)
+
         if error:
             history_record.error = error
         history_record.end_at = dt.datetime.now()
+        history_record.query_str = executed_sql
 
         db.session.commit()

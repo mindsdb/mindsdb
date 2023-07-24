@@ -6,7 +6,9 @@ import codecs
 import traceback
 import tempfile
 from urllib.parse import urlparse
+from pathlib import Path
 
+import magic
 import requests
 import pandas as pd
 from charset_normalizer import from_bytes
@@ -139,35 +141,7 @@ class FileHandler(DatabaseHandler):
         return pd.DataFrame(file_list_data, columns=header), col_map
 
     @staticmethod
-    def _get_data_io(file_path):
-        """
-        This gets a file either url or local file and defines what the format is as well as dialect
-        :param file: file path or url
-        :return: data_io, format, dialect
-        """
-
-        ############
-        # get file as io object
-        ############
-
-        # file_path = self._get_file_path()
-
-        data = BytesIO()
-
-        try:
-            with open(file_path, 'rb') as fp:
-                data = BytesIO(fp.read())
-        except Exception as e:
-            error = 'Could not load file, possible exception : {exception}'.format(exception=e)
-            print(error)
-            raise ValueError(error)
-
-        dialect = None
-
-        ############
-        # check for file type
-        ############
-
+    def is_it_parquet(data: BytesIO) -> bool:
         # Check first and last 4 bytes equal to PAR1.
         # Refer: https://parquet.apache.org/docs/file-format/
         parquet_sig = b'PAR1'
@@ -177,42 +151,83 @@ class FileHandler(DatabaseHandler):
         end_meta = data.read()
         data.seek(0)
         if start_meta == parquet_sig and end_meta == parquet_sig:
-            return data, 'parquet', None
-        else:
-            print("It's not parquet file. Checking for other formats")
+            return True
+        return False
 
-        # try to guess if its an excel file
-        xlsx_sig = b'\x50\x4B\x05\06'
-        # xlsx_sig2 = b'\x50\x4B\x03\x04'
-        xls_sig = b'\x09\x08\x10\x00\x00\x06\x05\x00'
+    @staticmethod
+    def is_it_xlsx(file_path: str) -> bool:
+        file_type = magic.from_file(file_path, mime=True)
+        if file_type in ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel']:
+            return True
+        return False
 
-        # different whence, offset, size for different types
-        excel_meta = [('xls', 0, 512, 8), ('xlsx', 2, -22, 4)]
+    @staticmethod
+    def is_it_json(data_str: StringIO) -> bool:
+        # see if its JSON
+        text = data_str.read(100).strip()
+        data_str.seek(0)
+        if len(text) > 0:
+            # it it looks like a json, then try to parse it
+            if text.startswith('{') or text.startswith('['):
+                try:
+                    json.loads(data_str.read())
+                    return True
+                except Exception:
+                    return False
+                finally:
+                    data_str.seek(0)
+        return False
 
-        for filename, whence, offset, size in excel_meta:
+    @staticmethod
+    def is_it_csv(data_str: StringIO) -> bool:
+        sample = data_str.readline()  # trying to get dialect from header
+        data_str.seek(0)
+        try:
+            csv.Sniffer().sniff(sample)
+            return True
+        except Exception:
+            return False
 
-            try:
-                data.seek(offset, whence)  # Seek to the offset.
-                bytes = data.read(size)  # Capture the specified number of bytes.
-                data.seek(0)
-                codecs.getencoder('hex')(bytes)
+    @staticmethod
+    def _get_data_io(file_path):
+        """
+        @TODO: Use python-magic to simplify the function and detect the file types as the xlsx example
+        This gets a file either url or local file and defines what the format is as well as dialect
+        :param file: file path or url
+        :return: data_io, format, dialect
+        """
 
-                if bytes == xls_sig:
-                    return data, 'xls', dialect
-                elif bytes == xlsx_sig:
-                    return data, 'xlsx', dialect
+        data = BytesIO()
+        data_str = None
+        dialect = None
 
-            except Exception:
-                data.seek(0)
+        try:
+            with open(file_path, 'rb') as fp:
+                data = BytesIO(fp.read())
+        except Exception as e:
+            error = 'Could not load file, possible exception : {exception}'.format(exception=e)
+            print(error)
+            raise ValueError(error)
 
-        # if not excel it can be a json file or a CSV, convert from binary to stringio
+        suffix = Path(file_path).suffix.strip('.').lower()
+        if suffix not in ('csv', 'json', 'xlsx', 'parquet'):
+            if FileHandler.is_it_parquet(data):
+                suffix = 'parquet'
+            elif FileHandler.is_it_xlsx(file_path):
+                suffix = 'xlsx'
+
+        if suffix == 'parquet':
+            return data, 'parquet', dialect
+
+        if suffix == 'xlsx':
+            return data, 'xlsx', dialect
 
         byte_str = data.read()
         # Move it to StringIO
         try:
             # Handle Microsoft's BOM "special" UTF-8 encoding
             if byte_str.startswith(codecs.BOM_UTF8):
-                data = StringIO(byte_str.decode('utf-8-sig'))
+                data_str = StringIO(byte_str.decode('utf-8-sig'))
             else:
                 file_encoding_meta = from_bytes(
                     byte_str[:32 * 1024],
@@ -227,40 +242,34 @@ class FileHandler(DatabaseHandler):
                 else:
                     encoding = 'utf-8'
                     errors = 'replace'
-                data = StringIO(byte_str.decode(encoding, errors))
+                data_str = StringIO(byte_str.decode(encoding, errors))
         except Exception:
             print(traceback.format_exc())
             print('Could not load into string')
 
-        # see if its JSON
-        buffer = data.read(100)
-        data.seek(0)
-        text = buffer.strip()
-        # analyze first n characters
-        if len(text) > 0:
-            text = text.strip()
-            # it it looks like a json, then try to parse it
-            if text.startswith('{') or text.startswith('['):
-                try:
-                    json.loads(data.read())
-                    data.seek(0)
-                    return data, 'json', dialect
-                except Exception:
-                    data.seek(0)
-                    return data, None, dialect
+        if suffix not in ('csv', 'json'):
+            if FileHandler.is_it_json(data_str):
+                suffix = 'json'
+            elif FileHandler.is_it_csv(data_str):
+                suffix = 'csv'
 
-        # lets try to figure out if its a csv
-        try:
-            dialect = FileHandler._get_csv_dialect(data)
-            if dialect:
-                return data, 'csv', dialect
-            return data, None, dialect
-        except Exception:
-            data.seek(0)
-            print('Could not detect format for this file')
-            print(traceback.format_exc())
-            # No file type identified
-            return data, None, dialect
+        if suffix == 'json':
+            return data_str, suffix, dialect
+
+        if suffix == 'csv':
+            try:
+                dialect = FileHandler._get_csv_dialect(data_str)
+                if dialect:
+                    return data_str, 'csv', dialect
+            except Exception:
+                print('Could not detect format for this file')
+                print(traceback.format_exc())
+
+        data_str.seek(0)
+        data.seek(0)
+
+        # No file type identified
+        return data, None, dialect
 
     @staticmethod
     def _get_file_path(path) -> str:
@@ -280,8 +289,14 @@ class FileHandler(DatabaseHandler):
             if isinstance(sample, bytes):
                 sample = sample.decode()
             accepted_csv_delimiters = [',', '\t', ';']
-            dialect = csv.Sniffer().sniff(sample, delimiters=accepted_csv_delimiters)
-            dialect.doublequote = True  # assume that all csvs have " as string escape
+            try:
+                dialect = csv.Sniffer().sniff(sample, delimiters=accepted_csv_delimiters)
+                dialect.doublequote = True  # assume that all csvs have " as string escape
+            except Exception:
+                dialect = csv.reader(sample).dialect
+                if dialect.delimiter not in accepted_csv_delimiters:
+                    raise Exception(f"CSV delimeter '{dialect.delimiter}' is not supported")
+
         except csv.Error:
             dialect = None
         return dialect
@@ -324,7 +339,7 @@ class FileHandler(DatabaseHandler):
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame([
                 {
-                    'Field': x.strip(),
+                    'Field': x['name'].strip() if isinstance(x, dict) else x.strip(),
                     'Type': 'str'
                 } for x in file_meta['columns']
             ])

@@ -1,6 +1,5 @@
 import datetime
 from typing import List
-from copy import deepcopy
 from collections import OrderedDict
 
 import sqlalchemy as sa
@@ -14,6 +13,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.context import context as ctx
+import mindsdb.utilities.profiler as profiler
 
 
 class Project:
@@ -27,8 +27,9 @@ class Project:
         return p
 
     def create(self, name: str):
+        name = name.lower()
         existing_record = db.Project.query.filter(
-            (db.Project.name == name)
+            (sa.func.lower(db.Project.name) == name)
             & (db.Project.company_id == ctx.company_id)
             & (db.Project.deleted_at == sa.null())
         ).first()
@@ -94,6 +95,19 @@ class Project:
             project_name=self.name
         )
 
+    def update_view(self, name: str, query: str):
+        ViewController().update(
+            name,
+            query=query,
+            project_name=self.name
+        )
+
+    def delete_view(self, name: str):
+        ViewController().delete(
+            name,
+            project_name=self.name
+        )
+
     def query_view(self, query: ASTNode) -> ASTNode:
         view_name = query.from_table.parts[-1]
         view_meta = ViewController().get(
@@ -103,52 +117,102 @@ class Project:
         subquery_ast = parse_sql(view_meta['query'], dialect='mindsdb')
         return subquery_ast
 
-    def get_models(self, model_id=None):
-        query = (
+    @staticmethod
+    def _get_model_data(predictor_record, integraion_record):
+        predictor_data = predictor_record.data or {}
+        training_time = None
+        if (
+            predictor_record.training_start_at is not None
+            and predictor_record.training_stop_at is None
+            and predictor_record.status != 'error'
+        ):
+            training_time = round((datetime.datetime.now() - predictor_record.training_start_at).total_seconds(), 3)
+        elif (
+            predictor_record.training_start_at is not None
+            and predictor_record.training_stop_at is not None
+        ):
+            training_time = round((predictor_record.training_stop_at - predictor_record.training_start_at).total_seconds(), 3)
+        predictor_meta = {
+            'type': 'model',
+            'id': predictor_record.id,
+            'engine': integraion_record.engine,
+            'engine_name': integraion_record.name,
+            'active': predictor_record.active,
+            'version': predictor_record.version,
+            'status': predictor_record.status,
+            'accuracy': None,
+            'predict': predictor_record.to_predict[0],
+            'update_status': predictor_record.update_status,
+            'mindsdb_version': predictor_record.mindsdb_version,
+            'error': predictor_data.get('error'),
+            'select_data_query': predictor_record.fetch_data_query,
+            'training_options': predictor_record.learn_args,
+            'deletable': True,
+            'label': predictor_record.label,
+            'current_training_phase': predictor_record.training_phase_current,
+            'total_training_phases': predictor_record.training_phase_total,
+            'training_phase_name': predictor_record.training_phase_name,
+            'training_time': training_time
+        }
+        if predictor_data.get('accuracies', None) is not None:
+            if len(predictor_data['accuracies']) > 0:
+                predictor_meta['accuracy'] = float(np.mean(list(predictor_data['accuracies'].values())))
+        return {
+            'name': predictor_record.name,
+            'metadata': predictor_meta,
+            'created_at': predictor_record.created_at
+        }
+
+    def get_model(self, name: str):
+        record = (
             db.session.query(db.Predictor, db.Integration).filter_by(
                 project_id=self.id,
+                active=True,
+                name=name,
                 deleted_at=sa.null(),
                 company_id=ctx.company_id
             )
             .join(db.Integration, db.Integration.id == db.Predictor.integration_id)
             .order_by(db.Predictor.name, db.Predictor.id)
+            .first()
         )
-        if model_id is not None:
-            query = query.filter(db.Predictor.id == model_id)
+        if record is None:
+            return None
+        return self._get_model_data(record[0], record[1])
+
+    def get_model_by_id(self, model_id: int):
+        record = (
+            db.session.query(db.Predictor, db.Integration).filter_by(
+                project_id=self.id,
+                id=model_id,
+                deleted_at=sa.null(),
+                company_id=ctx.company_id
+            )
+            .join(db.Integration, db.Integration.id == db.Predictor.integration_id)
+            .order_by(db.Predictor.name, db.Predictor.id)
+            .first()
+        )
+        if record is None:
+            return None
+        return self._get_model_data(record[0], record[1])
+
+    def get_models(self, active: bool = True):
+        query = db.session.query(db.Predictor, db.Integration).filter_by(
+            project_id=self.id,
+            deleted_at=sa.null(),
+            company_id=ctx.company_id
+        )
+        if isinstance(active, bool):
+            query = query.filter_by(active=active)
+
+        query = query.join(
+            db.Integration, db.Integration.id == db.Predictor.integration_id
+        ).order_by(db.Predictor.name, db.Predictor.id)
 
         data = []
 
         for predictor_record, integraion_record in query.all():
-            predictor_data = deepcopy(predictor_record.data) or {}
-            predictor_meta = {
-                'type': 'model',
-                'id': predictor_record.id,
-                'engine': integraion_record.engine,
-                'engine_name': integraion_record.name,
-                'active': predictor_record.active,
-                'version': predictor_record.version,
-                'status': predictor_record.status,
-                'accuracy': None,
-                'predict': predictor_record.to_predict[0],
-                'update_status': predictor_record.update_status,
-                'mindsdb_version': predictor_record.mindsdb_version,
-                'error': predictor_data.get('error'),
-                'select_data_query': predictor_record.fetch_data_query,
-                'training_options': predictor_record.learn_args,
-                'deletable': True,
-                'label': predictor_record.label,
-                'current_training_phase': predictor_record.training_phase_current,
-                'total_training_phases': predictor_record.training_phase_total,
-                'training_phase_name': predictor_record.training_phase_name,
-            }
-            if predictor_data is not None and predictor_data.get('accuracies', None) is not None:
-                if len(predictor_data['accuracies']) > 0:
-                    predictor_meta['accuracy'] = float(np.mean(list(predictor_data['accuracies'].values())))
-            data.append({
-                'name': predictor_record.name,
-                'metadata': predictor_meta,
-                'created_at': predictor_record.created_at
-            })
+            data.append(self._get_model_data(predictor_record, integraion_record))
 
         return data
 
@@ -163,6 +227,7 @@ class Project:
         )
         data = [{
             'name': view_record.name,
+            'query': view_record.query,
             'metadata': {
                 'type': 'view',
                 'id': view_record.id,
@@ -172,10 +237,31 @@ class Project:
         ]
         return data
 
+    def get_view(self, name):
+        view_record = db.session.query(db.View).filter_by(
+            project_id=self.id,
+            company_id=ctx.company_id,
+            name=name
+        ).one_or_none()
+        if view_record is None:
+            return view_record
+        return {
+            'name': view_record.name,
+            'query': view_record.query,
+            'metadata': {
+                'type': 'view',
+                'id': view_record.id,
+                'deletable': True
+            }
+        }
+
+    @profiler.profile()
     def get_tables(self):
         data = OrderedDict()
         data['models'] = {'type': 'table', 'deletable': False}
         data['models_versions'] = {'type': 'table', 'deletable': False}
+        data['jobs'] = {'type': 'table', 'deletable': False}
+        data['jobs_history'] = {'type': 'table', 'deletable': False}
 
         models = self.get_models()
         for model in models:
@@ -196,8 +282,14 @@ class Project:
             name=table_name
         ).first()
         columns = []
-        if predictor_record is not None and isinstance(predictor_record.dtype_dict, dict):
-            columns = list(predictor_record.dtype_dict.keys())
+        if predictor_record is not None:
+            if isinstance(predictor_record.dtype_dict, dict):
+                columns = list(predictor_record.dtype_dict.keys())
+            elif predictor_record.to_predict is not None:
+                # no dtype_dict, use target
+                columns = predictor_record.to_predict
+                if not isinstance(columns, list):
+                    columns = [columns]
 
         return columns
 
@@ -232,7 +324,7 @@ class ProjectController:
         else:
             q = q.filter_by(deleted_at=sa.null())
 
-        record = q.one()
+        record = q.first()
 
         return Project.from_record(record)
 

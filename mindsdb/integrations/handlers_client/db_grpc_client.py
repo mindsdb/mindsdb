@@ -3,8 +3,8 @@ import pickle
 import json
 
 import grpc
-from mindsdb.grpc.db import db_pb2_grpc
-from mindsdb.grpc.db import db_pb2, common_pb2
+from mindsdb.microservices_grpc.db import db_pb2_grpc
+from mindsdb.microservices_grpc.db import db_pb2, common_pb2
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

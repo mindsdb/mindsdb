@@ -1,0 +1,100 @@
+---
+Zero-shot Classification with PostgreSQL and MindsDB
+---
+
+## Introduction
+
+In this tutorial, we'll use [one of the Hugging Face models](https://huggingface.co/facebook/bart-large-mnli) to classify movie reviews as positive or negative.
+
+## Data Setup
+
+You can download the [movie review dataset here](https://www.kaggle.com/datasets/lakshmi25npathi/imdb-dataset-of-50k-movie-reviews).
+
+Upload it to your PostgreSQL database.
+
+## Connecting a Database
+
+Connect your PostgreSQL database to MindsDB by running the below command:
+
+```sql
+CREATE DATABASE movie_reviews
+WITH ENGINE = 'postgres',    
+PARAMETERS = {
+	"user": "user_name",        
+	"password": "password",        
+	"host": "localhost",             
+	"port": "5432",
+	"database": "database_name"
+};
+```
+
+Please replace the parameter values, such as host, port, user, password, and database.
+
+Once connected, you can query your data table as below:
+
+```sql
+SELECT *
+FROM movie_reviews.imdb_reviews;
+```
+
+## Training a model
+
+We use the [`CREATE MODEL`](/sql/create/model) statement to bring the Hugging Face models to MindsDB.
+
+```sql
+CREATE MODEL mindsdb.hf_zs_bart
+PREDICT PRED
+USING
+	engine = 'huggingface',
+	task = 'zero-shot-classification',
+	model_name = 'facebook/bart-large-mnli',
+	input_column = 'review',
+	candidate_labels = ['positive','negative'];
+```
+
+Let's check the model status:
+
+```sql
+DESCRIBE hf_zs_bart;
+```
+
+Once the status is complete, we can start making predictions.
+
+## Making predictions
+
+### Making a single prediction
+
+Let's start by making a single prediction:
+
+```sql
+SELECT * 
+FROM mindsdb.hf_zs_bart 
+WHERE review = 'Average movie';
+```
+
+Run it in the MindsDB editor to find out how the model classified this review.
+
+### Making batch predictions
+
+To make batch predictions for all movie reviews from our table, we join the data table with the model.
+
+```sql
+SELECT h.PRED, t.sentiment as actual, h.PRED_explain, t.review
+FROM imdb_ai_table.imdbreviews AS t
+JOIN mindsdb.hf_zs_bart AS h
+LIMIT 5;
+```
+
+The `actual` column is the actual sentiment of the review which is already available in the dataset.
+The `PRED` column is the predicted sentiment value.
+
+Run it in the MindsDB editor to find out the output.
+
+## What's Next?
+
+Want to learn more about MindsDB? Check out these resources:
+
+- [MindsDB](https://mindsdb.com/)
+- [MindsDB Documentation](https://docs.mindsdb.com/)
+- [Slack](https://mindsdb.com/joincommunity)
+- [GitHub](https://github.com/mindsdb/mindsdb/)

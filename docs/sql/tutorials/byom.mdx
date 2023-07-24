@@ -110,7 +110,7 @@ And you can query predictions as usual, either by conditioning on a subset of in
 SELECT * FROM byom_ray_serve WHERE initial_price=3000 AND rental_price=3000;
 ```
 
-Or by `JOINING` to do batch predicions:
+Or by `JOINING` to do batch predictions:
 
 ```sql
 SELECT tb.number_of_rooms, t.rental_price FROM mydb.test_data.home_rentals AS t JOIN mindsdb.byom_ray_serve AS tb WHERE t.rental_price > 5300;

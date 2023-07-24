@@ -26,7 +26,7 @@ def get_string_params(parameters):
     return ', '.join([f'{key} = {json.dumps(val)}' for key, val in parameters.items()])
 
 
-@pytest.mark.usefixtures("mindsdb_app")
+@pytest.mark.usefixtures('mindsdb_app', 'postgres_db')
 class TestCompanyIndependent:
     @classmethod
     def setup_class(cls):
@@ -132,11 +132,11 @@ class TestCompanyIndependent:
                 }
             )
 
-    def test_add_data_db_http(self, postgres_db):
+    def test_add_data_db_http(self):
 
         # region create data db
-        test_integration_data = postgres_db["connection_data"]
-        test_integration_engine = postgres_db['type']
+        test_integration_data = self.postgres_db["connection_data"]
+        test_integration_engine = self.postgres_db['type']
 
         self.sql_via_http(
             f"""
@@ -260,6 +260,8 @@ class TestCompanyIndependent:
             tables = self.get_tables_in('mindsdb', cid)
             self.assert_list(
                 tables, {
+                    'jobs',
+                    'jobs_history',
                     'models',
                     'models_versions'
                 }
@@ -300,7 +302,7 @@ class TestCompanyIndependent:
                 }
             )
 
-    def test_views(self, postgres_db):
+    def test_views(self):
 
         query = """
             CREATE VIEW mindsdb.{}
@@ -319,6 +321,8 @@ class TestCompanyIndependent:
             tables = self.get_tables_in('mindsdb', cid)
             self.assert_list(
                 tables, {
+                    'jobs',
+                    'jobs_history',
                     'models',
                     'models_versions',
                     f'test_view_{char}'
@@ -342,6 +346,8 @@ class TestCompanyIndependent:
             tables = self.get_tables_in('mindsdb', cid)
             self.assert_list(
                 tables, {
+                    'jobs',
+                    'jobs_history',
                     'models',
                     'models_versions'
                 }
@@ -353,7 +359,7 @@ class TestCompanyIndependent:
                 expected_resp_type=RESPONSE_TYPE.ERROR
             )
 
-    def test_model(self, postgres_db):
+    def test_model(self):
         query = """
             CREATE MODEL mindsdb.model_{}
             FROM test_integration_{} (
@@ -379,7 +385,7 @@ class TestCompanyIndependent:
             )
             assert len(response['data']), 1
 
-    def test_6_mongo(self, postgres_db):
+    def test_6_mongo(self):
 
         client_a = MongoClient(host='127.0.0.1', port=int(CONFIG['api']['mongodb']['port']))
         client_a.admin.command({'company_id': CID_A, 'need_response': 1})
@@ -415,6 +421,8 @@ class TestCompanyIndependent:
 
         collections = client_a.mindsdb.list_collection_names()
         self.assert_list(collections, {
+            'jobs',
+            'jobs_history',
             'models',
             'models_versions',
             'test_mon_p_a',
@@ -422,6 +430,8 @@ class TestCompanyIndependent:
         })
         collections = client_b.mindsdb.list_collection_names()
         self.assert_list(collections, {
+            'jobs',
+            'jobs_history',
             'models',
             'models_versions',
             'model_b'

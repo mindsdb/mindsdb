@@ -1,6 +1,6 @@
 ---
-title: Question Answering on MongoDB with MindsDB and OpenAI
-sidebarTitle: MongoDB Question Answering
+title: Question Answering with MindsDB and OpenAI using MQL
+sidebarTitle: Question Answering using MQL
 ---
 
 ## Introduction
@@ -77,6 +77,12 @@ mindsdb> db.models.insertOne({
         })
 ```
 
+<Info>
+**Default Model**
+
+When you create an OpenAI model in MindsDB, it uses the `gpt-3.5-turbo` model by default. But you can use the `gpt-4` model as well by passing it to the `model-name` parameter in the `training_options` clause.
+</Info>
+
 In practice, the `insertOne` method triggers MindsDB to generate an AI collection called `question_answering` that uses the OpenAI integration to predict a field named `answer`. The model is created inside the default `mindsdb` project. In MindsDB, projects are a natural way to keep artifacts, such as models or views, separate according to what predictive task they solve. You can learn more about MindsDB projects [here](/sql/project).
 
 The `training_options` key specifies the parameters that this handler requires.
@@ -112,13 +118,19 @@ mindsdb> db.models.insertOne({
 Alternatively, you can create a MindsDB ML engine that includes the API key, so you don't have to enter it each time. Please note that this command should be executed from MindsDB.
 
 ```sql
-CREATE ML_ENGINE openai
+CREATE ML_ENGINE openai2
 FROM openai
 USING
   api_key = 'YOUR_OPENAI_API_KEY';
 ```
 
+Please note that it is required to provide an OpenAI API key when using MindsDB Pro version.
+
 </Warning>
+
+<Note>
+If you want to use the OpenAI API key provided by MindsDB, please confirm your email. Alternatively, you have the option to utilize your own OpenAI API key by specifying it in the `api_key` parameter.
+</Note>
 
 Once the `insertOne` method has started execution, we can check the status of the creation process with the following query:
 

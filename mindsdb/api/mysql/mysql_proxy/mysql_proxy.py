@@ -76,6 +76,7 @@ from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
 from mindsdb.api.mysql.mysql_proxy.executor import Executor
 from mindsdb.utilities.context import context as ctx
 import mindsdb.utilities.hooks as hooks
+import mindsdb.utilities.profiler as profiler
 
 
 def empty_fn():
@@ -414,6 +415,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
             user_class = self.request.recv(1)
             user_class = struct.unpack('B', user_class)[0]
+            email_confirmed = 1
+            if user_class > 1:
+                email_confirmed = (user_class >> 2) & 1
+            user_class = user_class & 3
 
             database_name_len = self.request.recv(2)
             database_name_len = struct.unpack('H', database_name_len)[0]
@@ -427,7 +432,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 'client_capabilities': client_capabilities,
                 'company_id': company_id,
                 'user_class': user_class,
-                'database': database_name
+                'database': database_name,
+                'email_confirmed': email_confirmed,
             }
 
         return {
@@ -479,6 +485,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             })
         return result
 
+    @profiler.profile()
     def process_query(self, sql):
         executor = Executor(
             session=self.session,
@@ -630,6 +637,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 return
         else:
             ctx.user_class = cloud_connection['user_class']
+            ctx.email_confirmed = cloud_connection['email_confirmed']
             self.client_capabilities = ClentCapabilities(cloud_connection['client_capabilities'])
             self.session.database = cloud_connection['database']
             self.session.username = 'cloud'
@@ -677,7 +685,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     sql = self.decode_utf(p.sql.value)
                     sql = SqlStatementParser.clear_sql(sql)
                     logger.debug(f'COM_QUERY: {sql}')
-                    response = self.process_query(sql)
+                    profiler.set_meta(query=sql, api='mysql', environment=Config().get('environment'))
+                    with profiler.Context('mysql_query_processing'):
+                        response = self.process_query(sql)
                 elif p.type.value == COMMANDS.COM_STMT_PREPARE:
                     sql = self.decode_utf(p.sql.value)
                     self.answer_stmt_prepare(sql)
@@ -791,11 +801,19 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def set_context(self, context):
         if 'db' in context:
             self.session.database = context['db']
+        if 'profiling' in context:
+            self.session.profiling = context['profiling']
+        if 'predictor_cache' in context:
+            self.session.predictor_cache = context['predictor_cache']
 
     def get_context(self, context):
         context = {}
         if self.session.database is not None:
             context['db'] = self.session.database
+        if self.session.profiling is True:
+            context['profiling'] = True
+        if self.session.predictor_cache is False:
+            context['predictor_cache'] = False
 
         return context
 

@@ -1,0 +1,78 @@
+---
+title: How to Persist Predictions
+sidebarTitle: Persisting Predictions
+---
+
+MindsDB provides a range of options for persisting predictions and forecasts. Let's explore all possibilities to save the prediction results.
+
+<Note>
+**Reasons to Save Predictions**
+
+Every time you want to get predictions, you need to query the model, usually joined with an input data table, like this:
+
+```sql
+SELECT input.product_name, input.review, output.sentiment
+FROM mysql_demo_db.amazon_reviews AS input
+JOIN sentiment_classifier AS output;
+```
+
+However, querying the model returns the result set that is not persistent by default. For future use, it is recommended to persist the result set instead of querying the model again with the same data.
+
+MindsDB enables you to save predictions into a view or a table or download as a CSV file.
+</Note>
+
+## Creating a View
+
+After creating the model, you can save the prediction results into a view.
+
+```sql
+CREATE VIEW review_sentiment (
+
+    -- querying for predictions
+    SELECT input.product_name, input.review, output.sentiment
+    FROM mysql_demo_db.amazon_reviews AS input
+    JOIN sentiment_classifier AS output
+    LIMIT 10
+
+);
+```
+
+Now the `review_sentiment` view stores sentiment predictions made for all customer reviews.
+
+<Tip>
+Here is a [comprehensive tutorial](/nlp/sentiment-analysis-inside-mysql-with-openai) on how to predict sentiment of customer reviews using OpenAI.
+</Tip>
+
+## Creating a Table
+
+After creating the model, you can save predictions into a database table.
+
+```sql
+CREATE TABLE local_postgres.question_answers (
+
+    -- querying for predictions
+    SELECT input.article_title, input.question, output.answer
+    FROM mysql_demo_db.questions AS input
+    JOIN question_answering_model AS output
+    LIMIT 10
+
+);
+```
+
+Here, the `local_postgres` database is a PostgreSQL database connected to MindsDB with a user that has the write access.
+
+Now the `question_answers` table stores all prediction results.
+
+<Tip>
+Here is a [comprehensive tutorial](/nlp/question-answering-inside-mysql-with-openai) on how to answer questions using OpenAI.
+</Tip>
+
+## Downloading a CSV File
+
+After executing the `SELECT` statement, you can download the output as a CSV file.
+
+<p align="center">
+  <img src="/assets/faqs_download.csv.png" />
+</p>
+
+Click the `Export` button and choose the `CSV` option.

@@ -1,1 +1,1 @@
-psycopg[binary] >= 1.15.3
+psycopg[binary]

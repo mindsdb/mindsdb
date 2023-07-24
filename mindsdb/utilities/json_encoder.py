@@ -3,10 +3,13 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 import numpy as np
 from flask.json import JSONEncoder
+import pandas as pd
 
 
 class CustomJSONEncoder(JSONEncoder):
     def default(self, obj):
+        if pd.isnull(obj):
+            return None
         if isinstance(obj, timedelta):
             return str(obj)
         if isinstance(obj, datetime):

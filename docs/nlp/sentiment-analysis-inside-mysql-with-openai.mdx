@@ -1,6 +1,6 @@
 ---
-title: Sentiment Analysis on MySQL with MindsDB and OpenAI
-sidebarTitle: MySQL Sentiment Analysis
+title: Sentiment Analysis with MindsDB and OpenAI using SQL
+sidebarTitle: Sentiment Analysis using SQL
 ---
 
 ## Introduction
@@ -63,6 +63,12 @@ USING
                      "{{review}}.":';
 ```
 
+<Info>
+**Default Model**
+
+When you create an OpenAI model in MindsDB, it uses the `gpt-3.5-turbo` model by default. But you can use the `gpt-4` model as well by passing it to the `model-name` parameter in the `USING` clause of the `CREATE MODEL` statement.
+</Info>
+
 In practice, the `CREATE MODEL` statement triggers MindsDB to generate an AI table called `sentiment_classifier_model` that uses the OpenAI integration to predict a column named `sentiment`. The model lives inside the default `mindsdb` project. In MindsDB, projects are a natural way to keep artifacts, such as models or views, separate according to what predictive task they solve. You can learn more about MindsDB projects [here](/sql/project).
 
 The `USING` clause specifies the parameters that this handler requires.
@@ -99,19 +105,24 @@ USING
 Alternatively, you can create a MindsDB ML engine that includes the API key, so you don't have to enter it each time:
 
 ```sql
-CREATE ML_ENGINE openai
+CREATE ML_ENGINE openai2
 FROM openai
 USING
   api_key = 'YOUR_OPENAI_API_KEY';
 ```
 
+Please note that it is required to provide an OpenAI API key when using MindsDB Pro version.
+
 </Warning>
+
+<Note>
+If you want to use the OpenAI API key provided by MindsDB, please confirm your email. Alternatively, you have the option to utilize your own OpenAI API key by specifying it in the `api_key` parameter.
+</Note>
 
 Once the `CREATE MODEL` statement has started execution, we can check the status of the creation process with the following query:
 
 ```sql
-SELECT * FROM models
-WHERE name = 'sentiment_classifier_model';
+DESCRIBE sentiment_classifier_model;
 ```
 
 It may take a while to register as complete depending on the internet connection. Once the creation is complete, the behavior is the same as with any other AI table – you can query it either by specifying synthetic data in the actual query:

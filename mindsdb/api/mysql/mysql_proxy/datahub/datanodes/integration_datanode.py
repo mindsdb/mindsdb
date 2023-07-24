@@ -11,6 +11,11 @@ from mindsdb_sql.parser.ast import Insert, Identifier, CreateTable, TableColumn,
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
+import mindsdb.utilities.profiler as profiler
+
+
+class DBHandlerException(Exception):
+    pass
 
 
 class IntegrationDataNode(DataNode):
@@ -110,28 +115,44 @@ class IntegrationDataNode(DataNode):
                 new_row.append(value)
             formatted_data.append(new_row)
 
+        if len(formatted_data) == 0:
+            # not need to insert
+            return
+
         insert_ast = Insert(
             table=table_name,
             columns=insert_columns,
             values=formatted_data
         )
 
-        result = self.integration_handler.query(insert_ast)
+        try:
+            result = self.integration_handler.query(insert_ast)
+        except Exception as e:
+            msg = f'[{self.ds_type}/{self.integration_name}]: {str(e)}'
+            raise DBHandlerException(msg) from e
+
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(result.error_message)
 
+    @profiler.profile()
     def query(self, query=None, native_query=None, session=None):
-
-        if query is not None:
-            result = self.integration_handler.query(query)
-        else:
-            # try to fetch native query
-            result = self.integration_handler.native_query(native_query)
+        try:
+            if query is not None:
+                result = self.integration_handler.query(query)
+            else:
+                # try to fetch native query
+                result = self.integration_handler.native_query(native_query)
+        except Exception as e:
+            msg = str(e).strip()
+            if msg == '':
+                msg = e.__class__.__name__
+            msg = f'[{self.ds_type}/{self.integration_name}]: {msg}'
+            raise DBHandlerException(msg) from e
 
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(f'Error in {self.integration_name}: {result.error_message}')
         if result.type == RESPONSE_TYPE.OK:
-            return
+            return [], []
 
         df = result.data_frame
         # region clearing df from NaN values

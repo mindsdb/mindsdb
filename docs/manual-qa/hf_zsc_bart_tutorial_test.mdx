@@ -1,0 +1,36 @@
+## Testing: Hugging Face - Zero-Shot Classification Bart Tutorial
+
+Testing CREATE MODEL
+
+```sql
+CREATE MODEL mindsdb.hf_zs_bart
+PREDICT PRED
+USING
+engine = 'huggingface',
+task = 'zero-shot-classification',
+model_name = 'facebook/bart-large-mnli',
+input_column = 'text',
+candidate_labels = ['Books', 'Household', 'Clothing & Accessories', 'Electronics'];
+```
+Status of the model
+
+```sql
+SELECT *
+FROM mindsdb.models
+WHERE name = 'hf_zs_bart';
+
+```
+
+Testing SELECT (making predictions)
+```sql
+SELECT *
+FROM mindsdb.hf_zs_bart
+WHERE text = 'Paper Plane Design Framed Wall Hanging Motivational Office Decor Art Prints';
+
+```
+
+Output:
+
+| PRED | PRED_explain | text |
+| ---- | ------------ | ---- |
+| Household | {"Books":0.18761156499385834,"Clothing & Accessories":0.08688131719827652,"Electronics":0.14785204827785492,"Household":0.5776550769805908} | Paper Plane Design Framed Wall Hanging Motivational Office Decor Art Prints |

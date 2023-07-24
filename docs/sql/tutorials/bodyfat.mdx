@@ -6,7 +6,7 @@ sidebarTitle: Body Fat Percentage
 _Dataset:
 [Body fat prediction](https://www.kaggle.com/fedesoriano/body-fat-prediction-dataset)_
 
-_Communtiy Author: [Contip](https://github.com/contip)_
+_Community Author: [Contip](https://github.com/contip)_
 
 Machine Learning powered data analysis can be performed quickly and efficiently
 by MindsDB to enable individuals to make accurate predictions for certain
@@ -21,7 +21,7 @@ several body part measurement criteria.
 
 Before you start make sure that you've:
 
-- Visted [Getting Started Guide](/info)
+- Visited [Getting Started Guide](/info)
 - Visited [Getting Started with Cloud](/setup/cloud)
 - Downloaded the dataset. The dataset being used for this tutorial. Get it from
   [Kaggle](https://www.kaggle.com/fedesoriano/body-fat-prediction-dataset).
@@ -175,13 +175,13 @@ This should return output similar to:
 
 As you can see, with around 99% confidence, MindsDB predicted the body fat
 percentage for this individual at 8.97%. You can at this point feel free to
-alter the prospective individual's bodypart measurement parameters and make
+alter the prospective individual's body part measurement parameters and make
 additional prediction queries if you'd like.
 
 ### Making Batch Predictions using the JOIN syntax
 
 The above example showed how to make predictions for a single individual's
-bodyfat, but what if you had a table of bodypart measurements for a number of
+body fat, but what if you had a table of body part measurements for a number of
 individuals, and wanted to make predictions for them all? This is possible using
 the [JOIN command](/sql/api/join/), which allows for the
 combining of rows from a database table and the prediction model table on a
@@ -215,7 +215,7 @@ This should return an output table similar to the following:
 ![join](/assets/sql/tutorials/bodyfat/join.png)
 
 As you can see, a prediction has been generated for each row in the input table.
-Additionally, our predicted bodyfat percentages align closely with the original
+Additionally, our predicted body fat percentages align closely with the original
 values! Note that even though we chose only to display the Age, Density, Weight,
 Height, Neck, Chest, Abdomen, and Hip measurements in this example, the
 predicted_BodyFat field was determined by taking into consideration all of the
@@ -230,7 +230,7 @@ You are now done with the tutorial! 🎉
 Please feel free to try it yourself. Sign up for a
 [free MindsDB account](https://cloud.mindsdb.com) to get up and running in 5
 minutes, and if you need any help, feel free to ask in
-[Slack](https://join.slack.com/t/mindsdbcommunity/shared_invite/zt-o8mrmx3l-5ai~5H66s6wlxFfBMVI6wQ)
+[Slack](https://mindsdb.com/joincommunity)
 or [Github](https://github.com/mindsdb/mindsdb/discussions).
 
 For more tutorials like this check out

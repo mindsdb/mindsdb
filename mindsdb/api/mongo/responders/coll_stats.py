@@ -49,7 +49,7 @@ class Responce(Responder):
                 parts=ident_parts
             ))
 
-            data = run_sql_command(mindsdb_env, ast_query)
+            data = run_sql_command(request_env, ast_query)
             res = {
                 'data': data
             }

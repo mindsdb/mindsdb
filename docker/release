@@ -1,4 +1,4 @@
-FROM docker.io/pytorch/pytorch:1.9.1-cuda11.1-cudnn8-runtime
+FROM docker.io/pytorch/pytorch:1.13.0-cuda11.6-cudnn8-runtime
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
@@ -9,14 +9,15 @@ ENV PYTHONUNBUFFERED=1
 RUN apt update && apt install -y build-essential
 
 # db2 requirement
-RUN apt install -y libxml2 || true
+RUN apt install -y libxml2 libmagic1 libkrb5-dev || true
 
-RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==22.1.2 && \
+RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==23.1.2 && \
     pip install --prefer-binary --no-cache-dir wheel==0.37.1 && \
     pip install --prefer-binary --no-cache-dir \
         cassandra-driver \
         mysql-connector-python \
         pymssql>=2.1.4 \
+        psycopg2-binary \
         psycopg[binary]>=1.15.3 \
         pymongo certifi \
         snowflake-connector-python>=2.7.6 \
@@ -42,39 +43,47 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==22.1.2 &
     pip install --prefer-binary --no-cache-dir \
         trino~=0.313.0 requests-kerberos==0.12.0 || true && \
     pip install --prefer-binary --no-cache-dir \
-        google-cloud-bigquery db-dtypes sqlalchemy-bigquery || true \
+        google-cloud-bigquery db-dtypes sqlalchemy-bigquery || true && \
     pip install --prefer-binary --no-cache-dir \
-        boto3 || true \
+        boto3 || true && \
     pip install --prefer-binary --no-cache-dir \
-        vertica-python sqlalchemy-vertica-python || true \
+        vertica-python sqlalchemy-vertica-python || true && \
     pip install --prefer-binary --no-cache-dir \
-        crate[sqlalchemy] || true \
+        crate[sqlalchemy] || true && \
     pip install --prefer-binary --no-cache-dir \
-        pinotdb || true \
+        pinotdb || true && \
     pip install --prefer-binary --no-cache-dir \
-        sqlalchemy-solr || true \
+        sqlalchemy-solr || true && \
     pip install --prefer-binary --no-cache-dir \
-        taospy || true \
+        taospy || true && \
     pip install --prefer-binary --no-cache-dir \
-        impyla || true \
+        impyla || true && \
     pip install --prefer-binary --no-cache-dir \
-        pymonetdb sqlalchemy-monetdb || true \
+        pymonetdb sqlalchemy-monetdb || true && \
     pip install --prefer-binary --no-cache-dir \
-        IfxPy sqlalchemy-informix || true \
+        salesforce-merlion || true && \
     pip install --prefer-binary --no-cache-dir \
-        salesforce-merlion || true \
+        pydruid || true && \
     pip install --prefer-binary --no-cache-dir \
-        pydruid || true \
+        sqlalchemy-hana hdbcli || true && \
     pip install --prefer-binary --no-cache-dir \
-        sqlalchemy-hana hdbcli || true \
+        elasticsearch elasticsearch-dbapi || true && \
     pip install --prefer-binary --no-cache-dir \
-        elasticsearch elasticsearch-dbapi || true \
+        pymysql || true && \
     pip install --prefer-binary --no-cache-dir \
-        pymysql || true \
+        teradatasql teradatasqlalchemy || true && \
     pip install --prefer-binary --no-cache-dir \
-        teradatasql teradatasqlalchemy || true \
-    pip install --prefer-binary --no-cache-dir \
-        sqlalchemy-sqlany sqlanydb || true
+        sqlalchemy-sqlany sqlanydb || true && \
+    pip install --prefer-binary --no-cache-dir openai==0.27.0 || true && \
+    pip install --prefer-binary --no-cache-dir tiktoken==0.3.0 || true && \
+    pip install --prefer-binary --no-cache-dir tweepy || true && \
+    pip install --prefer-binary --no-cache-dir slack_sdk || true \
+    pip install --no-cache-dir 'neuralforecast>=1.4.0, <1.5.0' 'hierarchicalforecast<1.0' 'hyperopt<1.0' || true && \
+    pip install --prefer-binary --no-cache-dir 'statsforecast>=1.4.0, <2.0' || true && \
+    pip install --no-cache-dir google-api-python-client google-auth-httplib2 google-auth-oauthlib || true && \
+    pip install --no-cache-dir 'llama-index==0.6.11' || true && \
+    pip install --no-cache-dir 'wikipedia==1.4.0' 'langchain==0.0.146' || true && \
+    pip install --prefer-binary --no-cache-dir hugging_py_face || true 
 
 ARG VERSION=
 RUN pip install --no-cache-dir mindsdb${VERSION:+"==$VERSION"}

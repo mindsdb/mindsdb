@@ -143,6 +143,7 @@ class BaseMLEngine:
         """
         self.model_storage = model_storage
         self.engine_storage = engine_storage
+        self.generative = False  # if True, the target column name does not have to be specified at creation time
 
         if kwargs.get('base_model_storage'):
             self.base_model_storage = kwargs['base_model_storage']  # available when updating a model
@@ -169,11 +170,11 @@ class BaseMLEngine:
         """
         raise NotImplementedError
 
-    def update(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """
         Optional.
 
-        Used to update/fine-tune/adjust a pre-existing model without resetting its internal state (e.g. weights).
+        Used to fine-tune a pre-existing model without resetting its internal state (e.g. weights).
 
         Availability will depend on underlying integration support, as not all ML models can be partially updated.
         """

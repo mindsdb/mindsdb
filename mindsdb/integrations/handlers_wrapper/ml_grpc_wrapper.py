@@ -4,8 +4,8 @@ import traceback
 from concurrent import futures
 
 import grpc
-from mindsdb.grpc.ml import ml_pb2_grpc
-from mindsdb.grpc.ml import ml_pb2, common_pb2
+from mindsdb.microservices_grpc.ml import ml_pb2_grpc
+from mindsdb.microservices_grpc.ml import ml_pb2, common_pb2
 
 from mindsdb.interfaces.storage.fs import (
     FileStorage,
@@ -17,7 +17,7 @@ from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE,
 )
-from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.integrations.libs.handler_helpers import get_handler
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.log import get_log
@@ -45,7 +45,7 @@ class MLServiceServicer(ml_pb2_grpc.MLServiceServicer):
         server.wait_for_termination()
 
     def _get_handler_controller(self):
-        return IntegrationController()
+        return integration_controller
 
     def _get_file_storage(self, integration_id):
         fs_store = FileStorage(

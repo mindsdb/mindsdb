@@ -14,7 +14,6 @@ from dateutil.tz import tzlocal
 from mindsdb.utilities import log
 from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.utilities.log_controller import get_logs
-from mindsdb.interfaces.stream.stream import StreamController
 from mindsdb.utilities.config import Config
 from mindsdb.api.http.utils import http_error
 
@@ -130,8 +129,10 @@ class Integration(Resource):
         if is_test:
             del params['test']
 
+            handler_type = params.pop('type', None)
+            params.pop('publish', None)
             handler = ca.integration_controller.create_tmp_handler(
-                handler_type=params.get('type'),
+                handler_type=handler_type,
                 connection_data=params
             )
             status = handler.check_connection()
@@ -147,12 +148,9 @@ class Integration(Resource):
             engine = params['type']
             if engine is not None:
                 del params['type']
+            params.pop('publish', False)
             ca.integration_controller.add(name, engine, params)
 
-            if is_test is False and params.get('publish', False) is True:
-                stream_controller = StreamController()
-                if engine in stream_controller.known_dbs and params.get('publish', False) is True:
-                    stream_controller.setup(name)
         except Exception as e:
             log.logger.error(str(e))
             if temp_dir is not None:
@@ -192,9 +190,6 @@ class Integration(Resource):
                 del params['enabled']
             ca.integration_controller.modify(name, params)
 
-            stream_controller = StreamController()
-            if params.get('type') in stream_controller.known_dbs and params.get('publish', False) is True:
-                stream_controller.setup(name)
         except Exception as e:
             log.logger.error(str(e))
             abort(500, f'Error during integration modifycation: {str(e)}')

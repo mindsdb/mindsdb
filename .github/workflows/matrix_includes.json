@@ -1,17 +1,17 @@
 [
     {
       "runs_on": "ubuntu-latest",
-      "python-version": 3.7,
-      "runOn": "always"
-    },
-    {
-      "runs_on": "macos-latest",
-      "python-version": 3.8,
-      "runOn": "refs/heads/stable"
+      "python-version": 3.9,
+      "runOnBranch": "refs/heads/staging"
     },
     {
       "runs_on": "ubuntu-latest",
       "python-version": 3.8,
-      "runOn": "always"
+      "runOnBranch": "always"
+    },
+    {
+      "runs_on": "macos-latest",
+      "python-version": 3.8,
+      "runOnBranch": "refs/heads/stable"
     }
 ]

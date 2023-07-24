@@ -2,8 +2,8 @@ import json
 import pickle
 
 import grpc
-from mindsdb.grpc.ml import ml_pb2_grpc
-from mindsdb.grpc.ml import ml_pb2, common_pb2
+from mindsdb.microservices_grpc.ml import ml_pb2_grpc
+from mindsdb.microservices_grpc.ml import ml_pb2, common_pb2
 
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,

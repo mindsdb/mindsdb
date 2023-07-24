@@ -15,9 +15,8 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from .utils.mongodb_render import MongodbRender
-from .utils.mongodb_query import MongoQuery
-from .utils.mongodb_parser import MongodbParser
-
+from mindsdb.api.mongo.utilities.mongodb_query import MongoQuery
+from mindsdb.api.mongo.utilities.mongodb_parser import MongodbParser
 
 class MongoDBHandler(DatabaseHandler):
     """

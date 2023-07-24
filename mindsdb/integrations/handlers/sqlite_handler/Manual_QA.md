@@ -7,31 +7,43 @@
 **1. Testing CREATE DATABASE**
 
 ```
-COMMAND THAT YOU RAN TO CREATE DATABASE.
+CREATE DATABASE wild_fire      --- display name for database.
+WITH ENGINE='sqlite',
+PARAMETERS={
+    "db_file": "mindsdb/integrations/handlers/sqlite_handler/FPA_FOD_20170508.db"               --- this points to the database file that the connection is to be made to
+};
 ```
 
-![CREATE_DATABASE](Image URL of the screenshot)
+![CREATE_DATABASE](db_connection.png)
 
 **2. Testing CREATE PREDICTOR**
 
 ```
-COMMAND THAT YOU RAN TO CREATE PREDICTOR.
+CREATE MODEL 
+  mindsdb.Fire_origin_model_3
+FROM wild_fire
+  (SELECT FIRE_YEAR,LATITUDE,LONGITUDE,DISCOVERY_DATE, STAT_CAUSE_DESCR FROM wild_fire.Fires LIMIT 100000)
+PREDICT STAT_CAUSE_DESCR;
 ```
 
-![CREATE_PREDICTOR](Image URL of the screenshot)
+![CREATE_PREDICTOR](predictor_model.png)
 
 **3. Testing SELECT FROM PREDICTOR**
 
 ```
-COMMAND THAT YOU RAN TO DO A SELECT FROM.
+SELECT * 
+FROM mindsdb.models
+WHERE name='fire_origin_model_3';
 ```
 
-![SELECT_FROM](Image URL of the screenshot)
+![SELECT_FROM](prediction_result.png)
 
 ### Results
+```
+SELECT * 
+FROM mindsdb.models
+WHERE name='fire_origin_model_3';
+```
+![DROP_MODEL](model_drop.png)
 
-Drop a remark based on your observation.
-- [ ] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
-- [ ] There's a Bug 🪲 [Issue Title](URL To the Issue you created) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
-
----
+- [x] Works Great 💚 (This means that all the steps were executed successfully and the expected outputs were returned.)

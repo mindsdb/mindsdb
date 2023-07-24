@@ -4,8 +4,8 @@ import traceback
 from concurrent import futures
 
 import grpc
-from mindsdb.grpc.executor import executor_pb2_grpc
-from mindsdb.grpc.executor import executor_pb2
+from mindsdb.microservices_grpc.executor import executor_pb2_grpc
+from mindsdb.microservices_grpc.executor import executor_pb2
 
 from mindsdb.utilities.context import context as ctx
 from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor

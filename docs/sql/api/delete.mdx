@@ -1,0 +1,33 @@
+---
+title: DELETE Statement
+sidebarTitle: DELETE
+---
+
+## Description
+
+The `DELETE` statement removes rows that fulfill the `WHERE` clause criteria.
+
+## Syntax
+
+Here is the syntax:
+
+```sql
+DELETE FROM integration_name.table_name
+WHERE column_name = column_value_to_be_removed;
+```
+
+This statement removes all rows from the `table_name` table (that belongs to the `integration_name` integration) wherever the `column_name` column value is equal to `column_value_to_be_removed`.
+
+And here is another way to filter the rows using a subquery:
+
+```sql
+DELETE FROM integration_name.table_name
+WHERE column_name IN
+                    (
+                        SELECT column_value_to_be_removed
+                        FROM some_integration.some_table
+                        WHERE some_column = some_value
+                    );
+```
+
+This statement removes all rows from the `table_name` table (that belongs to the `integration_name` integration) wherever the `column_name` column value is equal to one of the values returned by the subquery.

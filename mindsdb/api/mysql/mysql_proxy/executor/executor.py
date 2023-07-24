@@ -8,13 +8,12 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
     logger,
 )
-
-
+import mindsdb.utilities.profiler as profiler
 from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
 
 
 class Executor:
-    """This class stores initial and intermediatea params
+    """This class stores initial and intermediate params
     between different steps of query execution. And it is also
     creates a separate instance of ExecuteCommands to execute the current
     query step.
@@ -104,6 +103,7 @@ class Executor:
         # execute query
         self.do_execute()
 
+    @profiler.profile()
     def query_execute(self, sql):
         logger.info("%s.query_execute: sql - %s", self.__class__.__name__, sql)
         resp = self.execute_external(sql)
@@ -180,6 +180,7 @@ class Executor:
             self.data = data
             return True
 
+    @profiler.profile()
     def parse(self, sql):
         logger.info("%s.parse: sql - %s", self.__class__.__name__, sql)
         self.sql = sql
@@ -202,6 +203,7 @@ class Executor:
                 # == a place for workarounds ==
                 # or run sql in integration without parsing
 
+    @profiler.profile()
     def do_execute(self):
         # it can be already run at prepare state
         logger.info("%s.do_execute", self.__class__.__name__)

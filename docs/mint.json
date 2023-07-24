@@ -11,17 +11,13 @@
     "light": "#55D799",
     "dark": "#117866"
   },
-  "openApi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
+  "feedback": {
+    "suggestEdit": true,
+    "raiseIssue": true
+  },
+  "openapi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
   "api": {
-    "baseUrl": [
-      "https://alpha.mindsdb.com",
-      "https://cloud.mindsdb.com",
-      "https://127.0.0.1"
-    ],
-    "auth": {
-      "method": "key",
-      "name": "X-API-KEY"
-    }
+    "baseUrl": "http://127.0.0.1:47334"
   },
   "topbarLinks": [
     {
@@ -43,190 +39,328 @@
       "name": "GitHub",
       "icon": "github",
       "url": "https://github.com/mindsdb/mindsdb"
+    },
+    {
+      "name": "What's New",
+      "icon": "rocket-launch",
+      "url": "https://mindsdb.com/blog-categories/product-updates"
     }
   ],
   "navigation": [
     {
-      "group": "Guides",
+      "group": "Quickstart",
+      "pages": [
+        "what-is-mindsdb",
+        "quickstart",
+        "mindsdb-gui",
+        {
+          "group": "Learn More",
+          "pages": [
+            "sql/table-structure",
+            "sql/project",
+            "model-types",
+            "sql/native-queries",
+            "sql/data-insights",
+            "sql/feature-importance",
+            "sql/feature-eng",
+            "mindsdb-handlers"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "Deployment",
       "pages": [
         {
-          "group": "Quickstart",
+          "group": "Deployment Options",
           "pages": [
-            "what-is-mindsdb",
-            "quickstart"
-          ]
-        },
-        {
-          "group": "Running MindsDB",
-          "pages": [
-            "setup/cloud",
+            {
+              "group": "MindsDB Cloud",
+              "pages": [
+                "setup/cloud",
+                "setup/cloud-starter",
+                "setup/cloud-pro"
+              ]
+            },
             {
               "group": "Self-Hosted",
               "pages": [
                 "setup/self-hosted/docker",
-                {
-                  "group": "Via pip",
-                  "pages": [
-                    "setup/self-hosted/pip/windows",
-                    "setup/self-hosted/pip/linux",
-                    "setup/self-hosted/pip/macos",
-                    "setup/self-hosted/pip/source"
-                  ]
-                },
-                "setup/digital-ocean",
-                "setup/gcp",
-                "setup/vultr",
-                "setup/civo"
+                "setup/self-hosted/pip/windows",
+                "setup/self-hosted/pip/linux",
+                "setup/self-hosted/pip/macos",
+                "setup/self-hosted/pip/source"
               ]
             },
             {
-              "group": "Configuration Options",
+              "group": "External Cloud Services",
               "pages": [
-                "setup/custom-config",
-                "setup/environment-vars"
+                "setup/gcp"
               ]
             },
-            "setup/community-deploys-mindsdb"
+            {
+              "group": "Other",
+              "pages": [
+                "connect/dbt"
+              ]
+            }
           ]
         },
         {
-          "group": "Using MindsDB via SQL API",
+          "group": "Configuration Options",
+          "pages": [
+            "setup/custom-config",
+            "setup/environment-vars"
+          ]
+        },
+        "setup/community-deploys-mindsdb"
+      ]
+    },
+    {
+      "group": "Data Sources",
+      "pages": [
+        "data-sources-overview",
+        {
+          "group": "Applications",
+          "pages": [
+            "app-integrations/github",
+            "app-integrations/gmail",
+            "app-integrations/google-calendar",
+            "app-integrations/twitter"
+          ]
+        },
+        {
+          "group": "Databases",
+          "pages": [
+            "data-integrations/all-data-integrations",
+            "data-integrations/airtable",
+            "data-integrations/amazon-aurora",
+            "data-integrations/amazon-dynamodb",
+            "data-integrations/amazon-redshift",
+            "data-integrations/amazon-s3",
+            "data-integrations/apache-cassandra",
+            "data-integrations/apache-druid",
+            "data-integrations/apache-hive",
+            "data-integrations/apache-impala",
+            "data-integrations/apache-pinot",
+            "data-integrations/apache-solr",
+            "data-integrations/ckan",
+            "data-integrations/clickhouse",
+            "data-integrations/cloud-spanner",
+            "data-integrations/cockroachdb",
+            "data-integrations/couchbase",
+            "data-integrations/cratedb",
+            "data-integrations/d0lt",
+            "data-integrations/databend",
+            "data-integrations/databricks",
+            "data-integrations/datastax",
+            "data-integrations/duckdb",
+            "data-integrations/edgelessdb",
+            "data-integrations/elasticsearch",
+            "data-integrations/firebird",
+            "data-integrations/google-bigquery",
+            "data-integrations/google-sheets",
+            "data-integrations/ibm-db2",
+            "data-integrations/ibm-informix",
+            "data-integrations/influxdb",
+            "data-integrations/mariadb",
+            "data-integrations/matrixone",
+            "data-integrations/microsoft-access",
+            "data-integrations/microsoft-sql-server",
+            "data-integrations/monetdb",
+            "data-integrations/mongodb",
+            "data-integrations/mysql",
+            "data-integrations/oceanbase",
+            "data-integrations/opengauss",
+            "data-integrations/oracle",
+            "data-integrations/orioledb",
+            "data-integrations/planetscale",
+            "data-integrations/postgresql",
+            "data-integrations/questdb",
+            "data-integrations/sap-hana",
+            "data-integrations/sap-sql-anywhere",
+            "data-integrations/scylladb",
+            "data-integrations/singlestore",
+            "data-integrations/snowflake",
+            "data-integrations/sqlite",
+            "data-integrations/starrocks",
+            "data-integrations/supabase",
+            "data-integrations/surrealdb",
+            "data-integrations/tdengine",
+            "data-integrations/teradata",
+            "data-integrations/tidb",
+            "data-integrations/timescaledb",
+            "data-integrations/trino",
+            "data-integrations/vertica",
+            "data-integrations/vitess",
+            "data-integrations/yugabytedb"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "ML Engines",
+      "pages": [
+        "ml-engines-overview",
+        {
+          "group": "Large Language Models",
+          "pages": [
+            "custom-model/openai",
+            "custom-model/huggingface",
+            "custom-model/langchain"
+          ]
+        },
+        {
+          "group": "Bring Your Own Models",
+          "pages": [
+            "custom-model/byom",
+            "custom-model/ray-serve",
+            "custom-model/mlflow"
+          ]
+        },
+        {
+          "group": "AutoML",
+          "pages": [
+            "ml-engines/automl/lightwood"
+          ]
+        },
+        {
+          "group": "Time Series Models",
+          "pages": [
+            "nixtla/statsforecast"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "MindsDB SQL",
+      "pages": [
+        "mindsdb-sql-overview",
+        {
+          "group": "Connect to MindsDB",
+          "pages": [
+            "connect/mindsdb_editor",
+            "connect/postgres-client",
+            "connect/mysql-client",
+            "connect/dbeaver",
+            "connect/connect-mariadb-skysql",
+            "connect/sql-alchemy",
+            "connect/deepnote",
+            "connect/metabase",
+            "connect/tableau",
+            "connect/jupysql"
+          ]
+        },
+        {
+          "group": "SQL Commands",
           "pages": [
             {
-              "group": "Connect to MindsDB",
+              "group": "Databases",
               "pages": [
-                "connect/mindsdb_editor",
-                {
-                  "group": "Other SQL Clients",
-                  "pages": [
-                    "connect/dbeaver",
-                    "connect/connect-mariadb-skysql",
-                    "connect/mysql-client",
-                    "connect/sql-alchemy"
-                  ]
-                },
-                {
-                  "group": "BI Tools and Notebooks",
-                  "pages": [
-                    "connect/deepnote",
-                    "connect/metabase",
-                    "connect/tableau",
-                    "connect/jupysql"
-                  ]
-                }
+                "sql/create/database",
+                "sql/drop/database",
+                "sql/api/use"
               ]
             },
             {
-              "group": "Machine Learning Examples",
+              "group": "Projects",
               "pages": [
-                "ml-types",
-                {
-                  "group": "NLP",
-                  "pages": [
-                    "nlp/nlp-mindsdb-hf",
-                    "nlp/nlp-mindsdb-openai"
-                  ]
-                },
-                {
-                  "group": "Time Series",
-                  "pages": [
-                    "sql/tutorials/eeg-forecasting"
-                  ]
-                },
-                {
-                  "group": "Classification",
-                  "pages": [
-                    "sql/tutorials/customer-churn"
-                  ]
-                },
-                {
-                  "group": "Regression",
-                  "pages": [
-                    "sql/tutorials/home-rentals",
-                    "sql/tutorials/regression-community"
-                  ]
-                }
+                "sql/create/project",
+                "sql/drop/project"
               ]
             },
             {
-              "group": "SQL Commands",
+              "group": "Models",
               "pages": [
-                {
-                  "group": "CREATE",
-                  "pages": [
-                    "sql/create/databases",
-                    "sql/create/predictor",
-                    "sql/create/table",
-                    "sql/create/view",
-                    "sql/create/ml-engine",
-                    "sql/create/jobs"
-                  ]
-                },
-                "sql/api/update",
-                "sql/api/insert",
+                "sql/create/ml-engine",
+                "sql/drop/ml-engine",
+                "sql/create/model",
+                "sql/drop/model",
+                "sql/api/join",
                 "sql/api/describe",
                 "sql/api/retrain",
-                "sql/api/manage-models-versions",
-                "sql/api/drop",
+                "sql/api/finetune",
+                "sql/api/manage-models-versions"
+              ]
+            },
+            {
+              "group": "Views",
+              "pages": [
+                "sql/create/view",
+                "sql/drop/view"
+              ]
+            },
+            {
+              "group": "Tables",
+              "pages": [
+                "sql/create/table",
+                "sql/drop/table",
                 "sql/api/select",
-                "sql/api/select-files",
-                {
-                  "group": "JOIN",
-                  "pages": [
-                    "sql/api/join",
-                    "sql/api/join-on"
-                  ]
-                },
-                "sql/api/use",
-                "sql/api/adjust"
-              ]
-            }
-          ]
-        },
-        {
-          "group": "Using MindsDB via Mongo API",
-          "pages": [
-            {
-              "group": "Connect to MindsDB",
-              "pages": [
-                "connect/mongo-compass",
-                "connect/mongo-shell"
+                "sql/api/update",
+                "sql/api/insert",
+                "sql/api/join-on",
+                "sql/api/delete"
               ]
             },
             {
-              "group": "Machine Learning Examples",
+              "group": "Files",
               "pages": [
-                "ml-types",
-                "using-mongo-api/nlp",
-                "using-mongo-api/timeseries",
-                "using-mongo-api/classification",
-                "using-mongo-api/regression"
+                "sql/create/file",
+                "sql/drop/file",
+                "sql/api/select-files"
               ]
             },
             {
-              "group": "Mongo Commands",
+              "group": "Jobs",
               "pages": [
-                "mongo/collection-structure",
-                {
-                  "group": "Insert()",
-                  "pages": [
-                    "mongo/database",
-                    "mongo/insert"
-                  ]
-                },
-                "mongo/stats",
-                "mongo/find",
-                "mongo/delete"
+                "sql/create/jobs",
+                "sql/drop/jobs"
               ]
             }
           ]
-        },
-        "connect/dbt",
-        "connect/kafka",
+        }
+      ]
+    },
+    {
+      "group": "MindsDB Mongo-QL",
+      "pages": [
+        "mindsdb-mongo-ql-overview",
         {
-          "group": "Using MindsDB via REST API",
+          "group": "Connect to MindsDB",
           "pages": [
-            "rest/disclaimer",
+            "connect/mongo-compass",
+            "connect/mongo-shell"
+          ]
+        },
+        {
+          "group": "Mongo-QL Commands",
+          "pages": [
+            "mongo/collection-structure",
+            "mongo/ml_engine",
+            "mongo/database",
+            "mongo/insert",
+            "mongo/stats",
+            "mongo/find",
+            "mongo/delete"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "SDKs",
+      "pages": [
+        "sdk/javascript-sdk",
+        "sdk/python-sdk"
+      ]
+    },
+    {
+      "group": "REST API",
+      "pages": [
+        "rest/disclaimer",
+        "rest/usage",
+        {
+          "group": "Endpoints",
+          "pages": [
             "rest/sql",
             {
               "group": "Databases",
@@ -241,175 +375,122 @@
             {
               "group": "Projects",
               "pages": [
-                "rest/projects/get-projects"
+                "rest/projects/get-projects",
+                "rest/projects/get-project"
               ]
             },
             {
               "group": "Models",
               "pages": [
-                "rest/models/train-model",
-                "rest/models/list-model",
                 "rest/models/list-models",
-                "rest/models/describe-model",
+                "rest/models/list-model",
+                "rest/models/train-model",
                 "rest/models/query-model",
-                "rest/models/delete-model",
-                "rest/models/retrain-model"
+                "rest/models/describe-model",
+                "rest/models/delete-model"
               ]
             },
             {
               "group": "Views",
               "pages": [
-                "rest/views/create-view",
-                "rest/views/list-view",
                 "rest/views/list-views",
+                "rest/views/list-view",
+                "rest/views/create-view",
                 "rest/views/delete-views"
               ]
             },
             {
               "group": "Tables",
               "pages": [
-                "rest/tables/create-table",
+                "rest/tables/list-tables",
                 "rest/tables/list-table",
+                "rest/tables/create-table",
                 "rest/tables/delete-table"
               ]
             }
           ]
-        },
-        {
-          "group": "More from MindsDB",
-          "pages": [
-            "mindsdb-handlers",
-            "sql/data-insights",
-            "sql/feature-importance",
-            "sql/feature-eng",
-            "sql/create/file",
-            "model-types",
-            "sql/table-structure",
-            "sql/native-queries",
-            "sql/project"
-          ]
-        },
-        {
-          "group": "Data Integrations",
-          "pages": [
-            "data-integrations/all-data-integrations",
-            "data-integrations/amazon-redshift",
-            "data-integrations/db2",
-            "data-integrations/cratedb",
-            "data-integrations/cockroachdb",
-            "data-integrations/ckan",
-            "data-integrations/databend"
-          ]
-        },
-        {
-          "group": "ML Engines",
-          "pages": [
-            {
-              "group": "AutoML",
-              "pages": [
-                "ml-engines/automl/lightwood",
-                "ml-engines/automl/ludwig",
-                "ml-engines/automl/xgboost"
-              ]
-            },
-            {
-              "group": "NLP",
-              "pages": [
-                "custom-model/huggingface",
-                "custom-model/openai"
-              ]
-            },
-            {
-              "group": "Bring Your Own Models",
-              "pages": [
-                "custom-model/ray-serve",
-                "custom-model/mlflow"
-              ]
-            }
-          ]
-        },
-        {
-          "group": "Tutorials",
-          "pages": [
-            {
-              "group": "NLP",
-              "pages": [
-                "nlp/nlp-extended-examples",
-                {
-                  "group": "NLP Examples with OpenAI",
-                  "pages": [
-                    "nlp/sentiment-analysis-inside-mysql-with-openai",
-                    "nlp/question-answering-inside-mysql-with-openai",
-                    "nlp/text-summarization-inside-mysql-with-openai",
-                    "nlp/sentiment-analysis-inside-mongodb-with-openai",
-                    "nlp/question-answering-inside-mongodb-with-openai",
-                    "nlp/text-summarization-inside-mongodb-with-openai",
-                    "nlp/json-from-text"
-                  ]
-                }
-              ]
-            },
-            {
-              "group": "Time Series",
-              "pages": [
-                "sql/tutorials/house-sales-forecasting",
-                "sql/tutorials/eeg-forecasting",
-                "sql/tutorials/time-series-community"
-              ]
-            },
-            {
-              "group": "Classification",
-              "pages": [
-                "sql/tutorials/customer-churn"
-              ]
-            },
-            {
-              "group": "Regression",
-              "pages": [
-                "sql/tutorials/home-rentals"
-              ]
-            },
-            "tutorials"
-          ]
-        },
-        {
-          "group": "Contributing Guide",
-          "pages": [
-            "contribute",
-            "contribute/issue-labels",
-            "contribute/install",
-            "contribute/issues",
-            "contribute/data-integration-page",
-            "contribute/data-handlers",
-            "contribute/ml-handlers",
-            "contribute/docs",
-            "docs-rules",
-            "contribute/tests",
-            "contribute/tutorials",
-            "community"
-          ]
         }
+      ]
+    },  
+    {
+      "group": "Use Cases",
+      "pages": [
+        {
+          "group": "Large Language Models",
+          "pages": [
+            "sql/tutorials/twitter-chatbot",
+            "sql/tutorials/image-generator"
+          ]
+        },
+        {
+          "group": "Natural Language Processing",
+          "pages": [
+            "nlp/what-is-nlp",
+            "nlp/nlp-mindsdb-hf",
+            "nlp/nlp-mindsdb-openai",
+            {
+              "group": "NLP Examples with OpenAI",
+              "pages": [
+                "nlp/sentiment-analysis-inside-mysql-with-openai",
+                "nlp/question-answering-inside-mysql-with-openai",
+                "nlp/text-summarization-inside-mysql-with-openai",
+                "nlp/sentiment-analysis-inside-mongodb-with-openai",
+                "nlp/question-answering-inside-mongodb-with-openai",
+                "nlp/text-summarization-inside-mongodb-with-openai",
+                "nlp/json-from-text"
+              ]
+            },
+            "nlp/nlp-extended-examples"
+          ]
+        },
+        {
+          "group": "Time Series",
+          "pages": [
+            "sql/tutorials/house-sales-forecasting",
+            "nixtla/house-sales-statsforecast",
+            "sql/tutorials/eeg-forecasting",
+            "sql/tutorials/time-series-community"
+          ]
+        },
+        {
+          "group": "Classification",
+          "pages": [
+            "sql/tutorials/customer-churn",
+            "sql/tutorials/classification-community"
+          ]
+        },
+        {
+          "group": "Regression",
+          "pages": [
+            "sql/tutorials/home-rentals",
+            "sql/tutorials/regression-community"
+          ]
+        },
+        "tutorials"
       ]
     },
     {
-      "group": "Natural Language Processing (NLP)",
+      "group": "Contribute",
       "pages": [
-        "nlp/what-is-nlp",
-        "nlp/nlp-mindsdb-hf",
-        "nlp/nlp-mindsdb-openai",
-        {
-          "group": "NLP Examples with OpenAI",
-          "pages": [
-            "nlp/sentiment-analysis-inside-mysql-with-openai",
-            "nlp/question-answering-inside-mysql-with-openai",
-            "nlp/text-summarization-inside-mysql-with-openai",
-            "nlp/sentiment-analysis-inside-mongodb-with-openai",
-            "nlp/question-answering-inside-mongodb-with-openai",
-            "nlp/text-summarization-inside-mongodb-with-openai",
-            "nlp/json-from-text"
-          ]
-        },
-        "nlp/nlp-extended-examples"
+        "contribute",
+        "contribute/issues",
+        "contribute/issue-labels",
+        "contribute/install",
+        "contribute/data-handlers",
+        "contribute/ml-handlers",
+        "contribute/app-handlers",
+        "contribute/tests",
+        "contribute/tutorials",
+        "contribute/docs",
+        "docs-rules",
+        "community"
+      ]
+    },
+    {
+      "group": "FAQs",
+      "pages": [
+        "faqs/whitelist-ips",
+        "faqs/persist-predictions"
       ]
     }
   ],

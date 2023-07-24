@@ -3,21 +3,27 @@ title: Supported Integrations
 sidebarTitle: Supported Integrations
 ---
 
-The list of databases supported by MindsDB keeps growing. Here are the currently
-supported integrations:
+The list of databases supported by MindsDB keeps growing. Here are the currently supported integrations:
 
 <p align="center">
   <img src="/assets/supported_integrations.png" />
 </p>
 
-You can find particular
-[databases' handler files here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers)
-to see their connection arguments. For example, to see the latest updates to the
-Oracle handler, check
-[Oracle's `readme.md` file here](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/oracle_handler/README.md).
+You can find particular [databases' handler files here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers) to see their connection arguments. For example, to see the latest updates to the Oracle handler, check [Oracle's `readme.md` file here](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/oracle_handler/README.md).
 
-Let's look at sample codes showing how to connect to each of the supported
-integrations.
+Let's look at sample codes showing how to connect to each of the supported integrations.
+
+<Tip>
+**From Our Community**
+
+Check out the video guides created by our community:
+
+- Video guide on [Connect Postgres Database to MindsDB](https://youtu.be/jbH5fsviAgE) by
+  [@akhilcoder](https://twitter.com/akhilcoder)
+
+- Video guide on [Setting up data sources with mindsDB](https://www.youtube.com/watch?v=kRrMjUVnib0)
+  by [Syed Zubeen](https://github.com/syedzubeen)
+</Tip>
 
 ## Airtable
 
@@ -45,6 +51,41 @@ integrations.
     ```
     </Tab>
 </Tabs>
+
+<Info>
+Check out the Airtable data handler details [here](/data-integrations/airtable).
+</Info>
+
+## Amazon DynamoDB
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE dynamodb_datasource       --- display name for the database
+    WITH ENGINE = 'dynamodb',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "aws_access_key_id": " ",               --- the AWS access key
+      "aws_secret_access_key": " ",           --- the AWS secret access key
+      "region_name": " "                      --- the AWS region
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE dynamodb_datasource
+    WITH ENGINE = 'dynamodb',
+    PARAMETERS = {
+      "aws_access_key_id": "PCAQ2LJDOSWLNSQKOCPW",
+      "aws_secret_access_key": "U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i",
+      "region_name": "us-east-1"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Amazon DynamoDB data handler details [here](/data-integrations/amazon-dynamodb).
+</Info>
 
 ## Amazon Redshift
 
@@ -77,34 +118,48 @@ integrations.
     </Tab>
 </Tabs>
 
-## AWS DynamoDB
+<Info>
+Check out the Amazon Redshift data handler details [here](/data-integrations/amazon-redshift).
+</Info>
+
+## Amazon S3
 
 <Tabs>
     <Tab title="Template">
     ```sql
-    CREATE DATABASE dynamodb_datasource       --- display name for the database
-    WITH ENGINE = 'dynamodb',                 --- name of the MindsDB handler
+    CREATE DATABASE amazons3_datasource     --- display name for the database
+    WITH ENGINE = 's3',                     --- name of the MindsDB handler
     PARAMETERS = {
-      "aws_access_key_id": " ",               --- the AWS access key
-      "aws_secret_access_key": " ",           --- the AWS secret access key
-      "region_name": " "                      --- the AWS region
+      "aws_access_key_id": " ",             --- the AWS access key
+      "aws_secret_access_key": " ",         --- the AWS secret access key
+      "region_name": " ",                   --- the AWS region
+      "bucket": " ",                        --- name of the S3 bucket
+      "key": " ",                           --- key of the object to be queried
+      "input_serialization": " "            --- format of the data to be queried
     };
     ```
     </Tab>
     <Tab title="Example">
     ```sql
-    CREATE DATABASE dynamodb_datasource
-    WITH ENGINE = 'dynamodb',
+    CREATE DATABASE amazons3_datasource
+    WITH ENGINE = 's3',
     PARAMETERS = {
-      "aws_access_key_id": "PCAQ2LJDOSWLNSQKOCPW",
-      "aws_secret_access_key": "U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i",
-      "region_name": "us-east-1"
+        "aws_access_key_id": "PCAQ2LJDOSWLNSQKOCPW",
+        "aws_secret_access_key": "U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i",
+        "region_name": "us-east-1",
+        "bucket": "mindsdb-bucket",
+        "key": "iris.csv",
+        "input_serialization": "{'CSV': {'FileHeaderInfo': 'NONE'}}"
     };
     ```
     </Tab>
 </Tabs>
 
-## Cassandra
+<Info>
+Check out the Amazon S3 data handler details [here](/data-integrations/amazon-s3).
+</Info>
+
+## Apache Cassandra
 
 <Tabs>
     <Tab title="Template">
@@ -140,6 +195,194 @@ integrations.
     </Tab>
 </Tabs>
 
+<Info>
+Check out the Apache Cassandra data handler details [here](/data-integrations/apache-cassandra).
+</Info>
+
+## Apache Druid
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE druid_datasource        --- display name for the database
+    WITH ENGINE = 'druid',                  --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                          --- host name or IP address of Apache Druid
+      "port": ,                             --- port where Apache Druid runs
+      "user": " ",                          --- optional, user to authenticate with Apache Druid
+      "password": " ",                      --- optional, password used to authenticate with Apache Druid
+      "path": " ",                          --- query path
+      "scheme": " "                         --- the URI scheme (defaults to `http` if left blank)
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE druid_datasource
+    WITH ENGINE = 'druid',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 8888,
+      "path": "/druid/v2/sql/",
+      "scheme": "http"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Apache Druid data handler details [here](/data-integrations/apache-druid).
+</Info>
+
+## Apache Hive
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE hive_datasource   --- display name for the database
+    WITH ENGINE = 'hive',             --- name of the MindsDB handler
+    PARAMETERS = {
+      "user": " ",                    --- database user
+      "password": " ",                --- database password
+      "host": " ",                    --- host name or IP address
+      "port": ,                       --- port used to make TCP/IP connection
+      "database": " ",                --- database name
+      "auth": " "                     --- defaults to CUSTOM if not provided; check for options here: https://pypi.org/project/PyHive/
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE hive_datasource
+    WITH ENGINE = 'hive',
+    PARAMETERS = {
+      "user": "hive",
+      "password": "password",
+      "host": "127.0.0.1",
+      "port": 10000,
+      "database": "hive_db",
+      "auth": "CUSTOM"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Apache Hive data handler details [here](/data-integrations/apache-hive).
+</Info>
+
+## Apache Impala
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE impala_datasource      --- display name for the database
+    WITH ENGINE = 'impala',                --- name of the MindsDB handler
+    PARAMETERS = {
+      "user": " ",                         --- database user
+      "password": " ",                     --- database password
+      "host": " ",                         --- host name or IP address
+      "port": ,                            --- port used to make TCP/IP connection
+      "database": " "                      --- database name
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE impala_datasource
+    WITH ENGINE = 'impala',
+    PARAMETERS = {
+      "user": "impala_user",
+      "password": "password",
+      "host": "127.0.0.1",
+      "port": 21050,
+      "database": "impala_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Apache Impala data handler details [here](/data-integrations/apache-impala).
+</Info>
+
+## Apache Pinot
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE pinot_datasource        --- display name for the database
+    WITH ENGINE = 'pinot',                  --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                          --- host name or IP address of the Apache Pinot cluster
+      "broker_port": ,                      --- port where the broker of the Apache Pinot cluster runs
+      "controller_port": ,                  --- port where the controller of the Apache Pinot cluster runs
+      "path": " ",                          --- query path
+      "scheme": " ",                        --- scheme (defaults to `http` if left blank)
+      "username": " ",                      --- optional, user
+      "password": " ",                      --- optional, password
+      "verify_ssl": " "                     --- optional, verify SSL
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE pinot_datasource
+    WITH ENGINE = 'pinot',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "broker_port": 8000,
+      "controller_port": 9000,
+      "path": "/query/sql",
+      "scheme": "http"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Apache Pinot data handler details [here](/data-integrations/apache-pinot).
+</Info>
+
+## Apache Solr
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE solr_datasource   --- display name for the database
+    WITH ENGINE = 'solr',             --- name of the MindsDB handler
+    PARAMETERS = {
+      "username": " ",                --- optional, username used to authenticate with the Solr server
+      "password": " ",                --- optional, password used to authenticate with the Solr server
+      "host": " ",                    --- host name or IP address of the Solr serve
+      "port": ,                       --- port number of the Solr server
+      "server_path": " ",             --- defaults to `solr` if left blank
+      "collection": " ",              --- Solr Collection name
+      "use_ssl": " "                  --- defaults to `false` if left blank; refer to https://pypi.org/project/sqlalchemy-solr/
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE solr_datasource
+    WITH ENGINE = 'solr',
+    PARAMETERS = {
+      "username": "solr_user",
+      "password": "password",
+      "host": "127.0.0.1",
+      "port": 8981,
+      "server_path": "solr",
+      "collection": "collection_name",
+      "use_ssl": "false"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Apache Solr data handler details [here](/data-integrations/apache-solr).
+</Info>
+
 ## Ckan
 
 <Tabs>
@@ -164,6 +407,10 @@ integrations.
     ```
     </Tab>
 </Tabs>
+
+<Info>
+Check out the Ckan data handler details [here](/data-integrations/ckan).
+</Info>
 
 ## ClickHouse
 
@@ -197,6 +444,10 @@ integrations.
     </Tab>
 </Tabs>
 
+<Info>
+Check out the ClickHouse data handler details [here](/data-integrations/clickhouse).
+</Info>
+
 ## Cloud Spanner
 
 <Tabs>
@@ -226,7 +477,11 @@ integrations.
     </Tab>
 </Tabs>
 
-## Cockroach Labs
+<Info>
+Check out the Cloud Spanner data handler details [here](/data-integrations/cloud-spanner).
+</Info>
+
+## CockroachDB
 
 <Tabs>
     <Tab title="Template">
@@ -258,6 +513,10 @@ integrations.
     </Tab>
 </Tabs>
 
+<Info>
+Check out the CockroachDB data handler details [here](/data-integrations/cockroachdb).
+</Info>
+
 ## Couchbase
 
 <Tabs>
@@ -287,6 +546,10 @@ integrations.
     ```
     </Tab>
 </Tabs>
+
+<Info>
+Check out the Couchbase data handler details [here](/data-integrations/couchbase).
+</Info>
 
 ## CrateDB
 
@@ -318,6 +581,10 @@ integrations.
     ```
     </Tab>
 </Tabs>
+
+<Info>
+Check out the CrateDB data handler details [here](/data-integrations/cratedb).
+</Info>
 
 ## D0lt
 
@@ -360,6 +627,10 @@ integrations.
     </Tab>
 </Tabs>
 
+<Info>
+Check out the D0lt data handler details [here](/data-integrations/d0lt).
+</Info>
+
 ## Databend
 
 <Tabs>
@@ -393,6 +664,10 @@ integrations.
     </Tab>
 </Tabs>
 
+<Info>
+Check out the Databend data handler details [here](/data-integrations/databend).
+</Info>
+
 ## Databricks
 
 <Tabs>
@@ -425,7 +700,11 @@ integrations.
     </Tab>
 </Tabs>
 
-## Datastax
+<Info>
+Check out the Databricks data handler details [here](/data-integrations/databricks).
+</Info>
+
+## DataStax
 
 <Tabs>
     <Tab title="Template">
@@ -462,7 +741,198 @@ integrations.
     </Tab>
 </Tabs>
 
-## DB2
+<Info>
+Check out the DataStax data handler details [here](/data-integrations/datastax).
+</Info>
+
+## DuckDB
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE duckdb_datasource       --- display name for the database
+    WITH ENGINE = 'duckdb',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "database": " ",                      --- database file name
+      "read_only":                          --- flag used to set the connection to read-only mode
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE duckdb_datasource
+    WITH ENGINE = 'duckdb',
+    PARAMETERS = {
+      "database": "db.duckdb",
+      "read_only": False
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the DuckDB data handler details [here](/data-integrations/duckdb).
+</Info>
+
+## Elasticsearch
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE elastic_datasource      --- display name for the database
+    WITH ENGINE = 'elasticsearch',          --- name of the MindsDB handler
+    PARAMETERS = {
+      "hosts": " ",                         --- one or more host names or IP addresses of the Elasticsearch server
+      "username": " ",                      --- optional, username to authenticate with the Elasticsearch server
+      "password": " ",                      --- optional, password used to authenticate with the Elasticsearch server
+      "cloud_id": " "                       --- optional, unique ID of your hosted Elasticsearch cluster (must be provided when "hosts" is left blank)
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE elastic_datasource
+    WITH ENGINE = 'elasticsearch',
+    PARAMETERS = {
+      "hosts": "localhost:9200"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Elasticsearch data handler details [here](/data-integrations/elasticsearch).
+</Info>
+
+## Firebird
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE firebird_datasource         --- display name for the database
+    WITH ENGINE = 'firebird',                   --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                              --- host name or IP address of the Firebird server
+      "database": " ",                          --- database name
+      "user": " ",                              --- user to authenticate with the Firebird server
+      "password": " "                           --- password used to authenticate with the Firebird server
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE firebird_datasource
+    WITH ENGINE = 'firebird',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "database": "test",
+      "user": "firebird",
+      "password": "password"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Firebird data handler details [here](/data-integrations/firebird).
+</Info>
+
+## Google BigQuery
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE bigquery_datasource       --- display name for the database
+    WITH ENGINE = 'bigquery',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "project_id": " ",                      --- globally unique project identifier
+      "dataset": " ",                         --- default dataset
+      "service_account_keys": " ",            --- service account keys file
+      "service_account_json": {...}           --- it is an alternative to using 'service_account_keys'
+    };
+    ```
+    </Tab>
+    <Tab title="Example for Self-Hosted MindsDB">
+    ```sql
+    CREATE DATABASE bigquery_datasource
+    WITH ENGINE = 'bigquery',
+    PARAMETERS = {
+      "project_id": "badger-345908",
+      "service_account_keys": "/home/Downloads/badger-345908.json"
+    };
+    ```
+    </Tab>
+    <Tab title="Example for MindsDB Cloud">
+    ```sql
+    CREATE DATABASE bigquery_datasource
+    WITH ENGINE = 'bigquery',
+    PARAMETERS = {
+      "project_id": "badger-345908",
+      "service_account_keys": {
+        "url": "https://url/badger-345908.json"
+      }
+    };
+    ```
+    </Tab>
+    <Tab title="Example without JSON File">
+    ```sql
+    CREATE DATABASE bq
+    WITH
+      ENGINE = 'bigquery',
+      PARAMETERS =  {
+        "project_id": "bgtest-1111",
+        "dataset": "mydataset",
+        "service_account_json": {
+          "type": "service_account",
+          "project_id": "bgtest-1111",
+          "private_key_id": "aaaaaaaaaa",
+          "private_key": "---------BIG STRING WITH KEY-------\n",
+          "client_email": "testbigquery@bgtest-11111.iam.gserviceaccount.com",
+          "client_id": "1111111111111",
+          "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+          "token_uri": "https://oauth2.googleapis.com/token",
+          "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/testbigquery%40bgtest-11111.iam.gserviceaccount.com"
+          }
+        };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Google BigQuery data handler details [here](/data-integrations/google-bigquery).
+</Info>
+
+## Google Sheets
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE sheets_datasource       --- display name for the database
+    WITH ENGINE = 'sheets',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "spreadsheet_id": " ",                --- unique ID of the Google Sheet
+      "sheet_name": " "                     --- name of the Google Sheet
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE sheets_datasource
+    WITH ENGINE = 'sheets',
+    PARAMETERS = {
+      "spreadsheet_id": "abc1234567",       --- located in the URL: https://docs.google.com/spreadsheets/d/abc1234567/edit#gid=0
+      "sheet_name": "Invoice"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Google Sheets data handler details [here](/data-integrations/google-sheets).
+</Info>
+
+## IBM Db2
 
 <Tabs>
     <Tab title="Template">
@@ -495,248 +965,11 @@ integrations.
     </Tab>
 </Tabs>
 
-## Druid
+<Info>
+Check out the IBM Db2 data handler details [here](/data-integrations/ibm-db2).
+</Info>
 
-<Tabs>
-    <Tab title="Template">
-    ```sql
-    CREATE DATABASE druid_datasource        --- display name for the database
-    WITH ENGINE = 'druid',                  --- name of the MindsDB handler
-    PARAMETERS = {
-      "host": " ",                          --- host name or IP address of Apache Druid
-      "port": ,                             --- port where Apache Druid runs
-      "user": " ",                          --- optional, user to authenticate with Apache Druid
-      "password": " ",                      --- optional, password used to authenticate with Apache Druid
-      "path": " ",                          --- query path
-      "scheme": " "                         --- the URI scheme (defaults to `http` if left blank)
-    };
-    ```
-    </Tab>
-    <Tab title="Example">
-    ```sql
-    CREATE DATABASE druid_datasource
-    WITH ENGINE = 'druid',
-    PARAMETERS = {
-      "host": "127.0.0.1",
-      "port": 8888,
-      "path": "/druid/v2/sql/",
-      "scheme": "http"
-    };
-    ```
-    </Tab>
-</Tabs>
-
-## DuckDB
-
-<Tabs>
-    <Tab title="Template">
-    ```sql
-    CREATE DATABASE duckdb_datasource       --- display name for the database
-    WITH ENGINE = 'duckdb',                 --- name of the MindsDB handler
-    PARAMETERS = {
-      "database": " ",                      --- database file name
-      "read_only":                          --- flag used to set the connection to read-only mode
-    };
-    ```
-    </Tab>
-    <Tab title="Example">
-    ```sql
-    CREATE DATABASE duckdb_datasource
-    WITH ENGINE = 'duckdb',
-    PARAMETERS = {
-      "database": "db.duckdb",
-      "read_only": False
-    };
-    ```
-    </Tab>
-</Tabs>
-
-## Elastic Search
-
-<Tabs>
-    <Tab title="Template">
-    ```sql
-    CREATE DATABASE elastic_datasource      --- display name for the database
-    WITH ENGINE = 'elasticsearch',          --- name of the MindsDB handler
-    PARAMETERS = {
-      "hosts": " ",                         --- one or more host names or IP addresses of the Elasticsearch server
-      "username": " ",                      --- optional, username to authenticate with the Elasticsearch server
-      "password": " ",                      --- optional, password used to authenticate with the Elasticsearch server
-      "cloud_id": " "                       --- optional, unique ID of your hosted Elasticsearch cluster (must be provided when "hosts" is left blank)
-    };
-    ```
-    </Tab>
-    <Tab title="Example">
-    ```sql
-    CREATE DATABASE elastic_datasource
-    WITH ENGINE = 'elasticsearch',
-    PARAMETERS = {
-      "hosts": "localhost:9200"
-    };
-    ```
-    </Tab>
-</Tabs>
-
-## Firebird
-
-<Tabs>
-    <Tab title="Template">
-    ```sql
-    CREATE DATABASE firebird_datasource         --- display name for the database
-    WITH ENGINE = 'firebird',                   --- name of the MindsDB handler
-    PARAMETERS = {
-      "host": " ",                              --- host name or IP address of the Firebird server
-      "database": " ",                          --- database name
-      "user": " ",                              --- user to authenticate with the Firebird server
-      "password": " "                           --- password used to authenticate with the Firebird server
-    };
-    ```
-    </Tab>
-    <Tab title="Example">
-    ```sql
-    CREATE DATABASE firebird_datasource
-    WITH ENGINE = 'firebird',
-    PARAMETERS = {
-      "host": "127.0.0.1",
-      "database": "test",
-      "user": "firebird",
-      "password": "password"
-    };
-    ```
-    </Tab>
-</Tabs>
-
-## Google BigQuery
-
-<Tabs>
-    <Tab title="Template">
-    ```sql
-    CREATE DATABASE bigquery_datasource       --- display name for the database
-    WITH ENGINE = 'bigquery',                 --- name of the MindsDB handler
-    PARAMETERS = {
-      "project_id": " ",                      --- globally unique project identifier
-      "service_account_keys": {               --- service account keys file
-        "path": " "                               --- either "path" or "url"
-      }
-    };
-    ```
-    </Tab>
-    <Tab title="Example for Self-Hosted MindsDB">
-    ```sql
-    CREATE DATABASE bigquery_datasource
-    WITH ENGINE = 'bigquery',
-    PARAMETERS = {
-      "project_id": "badger-345908",
-      "service_account_keys": {
-        "path": "/home/Downloads/badger-345908.json"
-      }
-    };
-    ```
-    </Tab>
-    <Tab title="Example for MindsDB Cloud">
-    ```sql
-    CREATE DATABASE bigquery_datasource
-    WITH ENGINE = 'bigquery',
-    PARAMETERS = {
-      "project_id": "badger-345908",
-      "service_account_keys": {
-        "url": "https://url/badger-345908.json"
-      }
-    };
-    ```
-    </Tab>
-</Tabs>
-
-## Google Sheets
-
-<Tabs>
-    <Tab title="Template">
-    ```sql
-    CREATE DATABASE sheets_datasource       --- display name for the database
-    WITH ENGINE = 'sheets',                 --- name of the MindsDB handler
-    PARAMETERS = {
-      "spreadsheet_id": " ",                --- unique ID of the Google Sheet
-      "sheet_name": " "                     --- name of the Google Sheet
-    };
-    ```
-    </Tab>
-    <Tab title="Example">
-    ```sql
-    CREATE DATABASE sheets_datasource
-    WITH ENGINE = 'sheets',
-    PARAMETERS = {
-      "spreadsheet_id": "abc1234567",       --- located in the URL: https://docs.google.com/spreadsheets/d/abc1234567/edit#gid=0
-      "sheet_name": "Invoice"
-    };
-    ```
-    </Tab>
-</Tabs>
-
-## Hive
-
-<Tabs>
-    <Tab title="Template">
-    ```sql
-    CREATE DATABASE hive_datasource   --- display name for the database
-    WITH ENGINE = 'hive',             --- name of the MindsDB handler
-    PARAMETERS = {
-      "user": " ",                    --- database user
-      "password": " ",                --- database password
-      "host": " ",                    --- host name or IP address
-      "port": ,                       --- port used to make TCP/IP connection
-      "database": " ",                --- database name
-      "auth": " "                     --- defaults to CUSTOM if not provided; check for options here: https://pypi.org/project/PyHive/
-    };
-    ```
-    </Tab>
-    <Tab title="Example">
-    ```sql
-    CREATE DATABASE hive_datasource
-    WITH ENGINE = 'hive',
-    PARAMETERS = {
-      "user": "hive",
-      "password": "password",
-      "host": "127.0.0.1",
-      "port": 10000,
-      "database": "hive_db",
-      "auth": "CUSTOM"
-    };
-    ```
-    </Tab>
-</Tabs>
-
-## Impala
-
-<Tabs>
-    <Tab title="Template">
-    ```sql
-    CREATE DATABASE impala_datasource      --- display name for the database
-    WITH ENGINE = 'impala',                --- name of the MindsDB handler
-    PARAMETERS = {
-      "user": " ",                         --- database user
-      "password": " ",                     --- database password
-      "host": " ",                         --- host name or IP address
-      "port": ,                            --- port used to make TCP/IP connection
-      "database": " "                      --- database name
-    };
-    ```
-    </Tab>
-    <Tab title="Example">
-    ```sql
-    CREATE DATABASE impala_datasource
-    WITH ENGINE = 'impala',
-    PARAMETERS = {
-      "user": "impala_user",
-      "password": "password",
-      "host": "127.0.0.1",
-      "port": 21050,
-      "database": "impala_db"
-    };
-    ```
-    </Tab>
-</Tabs>
-
-## Informix
+## IBM Informix
 
 <Tabs>
     <Tab title="Template">
@@ -772,6 +1005,10 @@ integrations.
     ```
     </Tab>
 </Tabs>
+
+<Info>
+Check out the IBM Informix data handler details [here](/data-integrations/ibm-informix).
+</Info>
 
 ## MariaDB
 
@@ -814,6 +1051,10 @@ integrations.
     </Tab>
 </Tabs>
 
+<Info>
+Check out the MariaDB data handler details [here](/data-integrations/mariadb).
+</Info>
+
 ## MariaDB SkySQL
 
 <Tabs>
@@ -852,9 +1093,11 @@ integrations.
     </Tab>
 </Tabs>
 
+<Info>
 For more information on how to connect MariaDB SkySQL and MindsDB, visit our [doc page here](/connect/connect-mariadb-skysql/).
+</Info>
 
-## Matrix One
+## MatrixOne
 
 <Tabs>
     <Tab title="Template">
@@ -895,6 +1138,10 @@ For more information on how to connect MariaDB SkySQL and MindsDB, visit our [do
     </Tab>
 </Tabs>
 
+<Info>
+Check out the MatrixOne data handler details [here](/data-integrations/matrixone).
+</Info>
+
 ## Microsoft Access
 
 <Tabs>
@@ -917,6 +1164,10 @@ For more information on how to connect MariaDB SkySQL and MindsDB, visit our [do
     ```
     </Tab>
 </Tabs>
+
+<Info>
+Check out the Microsoft Access data handler details [here](/data-integrations/microsoft-access).
+</Info>
 
 ## Microsoft SQL Server
 
@@ -948,6 +1199,10 @@ For more information on how to connect MariaDB SkySQL and MindsDB, visit our [do
     ```
     </Tab>
 </Tabs>
+
+<Info>
+Check out the Microsoft SQL Server data handler details [here](/data-integrations/microsoft-sql-server).
+</Info>
 
 ## MonetDB
 
@@ -982,17 +1237,20 @@ For more information on how to connect MariaDB SkySQL and MindsDB, visit our [do
     </Tab>
 </Tabs>
 
+<Info>
+Check out the MonetDB data handler details [here](/data-integrations/monetdb).
+</Info>
+
 ## MongoDB
 
 <Warning>
 
-**For this connection, we strongly suggest using the Mongo API instead of the SQL API**
+**For this connection, we recommend to use the Mongo API instead of the SQL API**
 
 MindsDB has a dedicated [Mongo API](/mongo/collection-structure/) that allows you to use the full power of the MindsDB platform.
-Using the Mongo API will feel more natural for MongoDB users and allow you to use all the features of MindsDB.
+Using the Mongo API feels more natural for MongoDB users and allows you to use all the features of MindsDB.
 
-You can find the instructions on how to connect MindsDB to [MongoDB Compass here](/connect/mongo-compass)
-or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API documentation](/mongo/collection-structure/) for further details.
+You can find the instructions on how to connect MindsDB to [MongoDB Compass](/connect/mongo-compass) or [MongoDB Shell](/connect/mongo-shell) and proceed with the [Mongo API documentation](/mongo/collection-structure/) for further details.
 
 </Warning>
 
@@ -1024,6 +1282,10 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     ```
     </Tab>
 </Tabs>
+
+<Info>
+Check out the MongoDB data handler details [here](/data-integrations/mongodb).
+</Info>
 
 ## MySQL
 
@@ -1066,6 +1328,10 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
+<Info>
+Check out the MySQL data handler details [here](/data-integrations/mysql).
+</Info>
+
 ## OceanBase
 
 <Tabs>
@@ -1096,6 +1362,10 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     ```
     </Tab>
 </Tabs>
+
+<Info>
+Check out the OceanBase data handler details [here](/data-integrations/oceanbase).
+</Info>
 
 ## OpenGauss
 
@@ -1128,6 +1398,10 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
+<Info>
+Check out the OpenGauss data handler details [here](/data-integrations/opengauss).
+</Info>
+
 ## Oracle
 
 <Tabs>
@@ -1158,6 +1432,10 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     ```
     </Tab>
 </Tabs>
+
+<Info>
+Check out the Oracle data handler details [here](/data-integrations/oracle).
+</Info>
 
 ## OrioleDB
 
@@ -1192,39 +1470,9 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-## Pinot
-
-<Tabs>
-    <Tab title="Template">
-    ```sql
-    CREATE DATABASE pinot_datasource        --- display name for the database
-    WITH ENGINE = 'pinot',                  --- name of the MindsDB handler
-    PARAMETERS = {
-      "host": " ",                          --- host name or IP address of the Apache Pinot cluster
-      "broker_port": ,                      --- port where the broker of the Apache Pinot cluster runs
-      "controller_port": ,                  --- port where the controller of the Apache Pinot cluster runs
-      "path": " ",                          --- query path
-      "scheme": " ",                        --- scheme (defaults to `http` if left blank)
-      "username": " ",                      --- optional, user
-      "password": " ",                      --- optional, password
-      "verify_ssl": " "                     --- optional, verify SSL
-    };
-    ```
-    </Tab>
-    <Tab title="Example">
-    ```sql
-    CREATE DATABASE pinot_datasource
-    WITH ENGINE = 'pinot',
-    PARAMETERS = {
-      "host": "127.0.0.1",
-      "broker_port": 8000,
-      "controller_port": 9000,
-      "path": "/query/sql",
-      "scheme": "http"
-    };
-    ```
-    </Tab>
-</Tabs>
+<Info>
+Check out the OrioleDB data handler details [here](/data-integrations/orioledb).
+</Info>
 
 ## PlanetScale
 
@@ -1257,6 +1505,10 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
+<Info>
+Check out the PlanetScale data handler details [here](/data-integrations/planetscale).
+</Info>
+
 ## PostgreSQL
 
 <Tabs>
@@ -1287,6 +1539,10 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     ```
     </Tab>
 </Tabs>
+
+<Info>
+Check out the PostgreSQL data handler details [here](/data-integrations/postgresql).
+</Info>
 
 ## QuestDB
 
@@ -1320,38 +1576,9 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-## S3
-
-<Tabs>
-    <Tab title="Template">
-    ```sql
-    CREATE DATABASE amazons3_datasource     --- display name for the database
-    WITH ENGINE = 's3',                     --- name of the MindsDB handler
-    PARAMETERS = {
-      "aws_access_key_id": " ",             --- the AWS access key
-      "aws_secret_access_key": " ",         --- the AWS secret access key
-      "region_name": " ",                   --- the AWS region
-      "bucket": " ",                        --- name of the S3 bucket
-      "key": " ",                           --- key of the object to be queried
-      "input_serialization": " "            --- format of the data to be queried
-    };
-    ```
-    </Tab>
-    <Tab title="Example">
-    ```sql
-    CREATE DATABASE amazons3_datasource
-    WITH ENGINE = 's3',
-    PARAMETERS = {
-        "aws_access_key_id": "PCAQ2LJDOSWLNSQKOCPW",
-        "aws_secret_access_key": "U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i",
-        "region_name": "us-east-1",
-        "bucket": "mindsdb-bucket",
-        "key": "iris.csv",
-        "input_serialization": "{'CSV': {'FileHeaderInfo': 'NONE'}}"
-    };
-    ```
-    </Tab>
-</Tabs>
+<Info>
+Check out the QuestDB data handler details [here](/data-integrations/questdb).
+</Info>
 
 ## SAP HANA
 
@@ -1386,7 +1613,11 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-## Scylla
+<Info>
+Check out the SAP HANA data handler details [here](/data-integrations/sap-hana).
+</Info>
+
+## ScyllaDB
 
 <Tabs>
     <Tab title="Template">
@@ -1424,6 +1655,10 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     ```
     </Tab>
 </Tabs>
+
+<Info>
+Check out the ScyllaDB data handler details [here](/data-integrations/scylladb).
+</Info>
 
 ## SingleStore
 
@@ -1466,6 +1701,10 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
+<Info>
+Check out the SingleStore data handler details [here](/data-integrations/singlestore).
+</Info>
+
 ## Snowflake
 
 <Tabs>
@@ -1505,40 +1744,9 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-## Solr
-
-<Tabs>
-    <Tab title="Template">
-    ```sql
-    CREATE DATABASE solr_datasource   --- display name for the database
-    WITH ENGINE = 'solr',             --- name of the MindsDB handler
-    PARAMETERS = {
-      "username": " ",                --- optional, username used to authenticate with the Solr server
-      "password": " ",                --- optional, password used to authenticate with the Solr server
-      "host": " ",                    --- host name or IP address of the Solr serve
-      "port": ,                       --- port number of the Solr server
-      "server_path": " ",             --- defaults to `solr` if left blank
-      "collection": " ",              --- Solr Collection name
-      "use_ssl": " "                  --- defaults to `false` if left blank; refer to https://pypi.org/project/sqlalchemy-solr/
-    };
-    ```
-    </Tab>
-    <Tab title="Example">
-    ```sql
-    CREATE DATABASE solr_datasource
-    WITH ENGINE = 'solr',
-    PARAMETERS = {
-      "username": "solr_user",
-      "password": "password",
-      "host": "127.0.0.1",
-      "port": 8981,
-      "server_path": "solr",
-      "collection": "collection_name",
-      "use_ssl": "false"
-    };
-    ```
-    </Tab>
-</Tabs>
+<Info>
+Check out the Snowflake data handler details [here](/data-integrations/snowflake).
+</Info>
 
 ## SQL Anywhere
 
@@ -1573,6 +1781,10 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
+<Info>
+Check out the SQL Anywhere data handler details [here](/data-integrations/sql-anywhere).
+</Info>
+
 ## SQLite
 
 <Tabs>
@@ -1595,6 +1807,10 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     ```
     </Tab>
 </Tabs>
+
+<Info>
+Check out the SQLite data handler details [here](/data-integrations/sqlite).
+</Info>
 
 ## StarRocks
 
@@ -1627,6 +1843,10 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
+<Info>
+Check out the StarRocks data handler details [here](/data-integrations/starrocks).
+</Info>
+
 ## Supabase
 
 <Tabs>
@@ -1658,7 +1878,11 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-## TDEngine
+<Info>
+Check out the Supabase data handler details [here](/data-integrations/supabase).
+</Info>
+
+## TDengine
 
 <Tabs>
     <Tab title="Template">
@@ -1688,6 +1912,10 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     ```
     </Tab>
 </Tabs>
+
+<Info>
+Check out the TDengine data handler details [here](/data-integrations/tdengine).
+</Info>
 
 ## Teradata
 
@@ -1720,6 +1948,10 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
+<Info>
+Check out the Teradata data handler details [here](/data-integrations/teradata).
+</Info>
+
 ## TiDB
 
 <Tabs>
@@ -1751,7 +1983,11 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-## Timescaledb
+<Info>
+Check out the TiDB data handler details [here](/data-integrations/tidb).
+</Info>
+
+## TimescaleDB
 
 <Tabs>
     <Tab title="Template">
@@ -1781,6 +2017,10 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     ```
     </Tab>
 </Tabs>
+
+<Info>
+Check out the TimescaleDB data handler details [here](/data-integrations/timescaledb).
+</Info>
 
 ## Trino
 
@@ -1836,6 +2076,10 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
+<Info>
+Check out the Trino data handler details [here](/data-integrations/trino).
+</Info>
+
 ## Vertica
 
 <Tabs>
@@ -1869,6 +2113,10 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
+<Info>
+Check out the Vertica data handler details [here](/data-integrations/vertica).
+</Info>
+
 ## Vitess
 
 <Tabs>
@@ -1900,7 +2148,11 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
     </Tab>
 </Tabs>
 
-## Yugabyte
+<Info>
+Check out the Vitess data handler details [here](/data-integrations/vitess).
+</Info>
+
+## YugabyteDB
 
 <Tabs>
     <Tab title="Template">
@@ -1913,6 +2165,7 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
       "host": " ",                            --- host name or IP address
       "port": ,                               --- port used to make TCP/IP connection
       "database": " "                         --- database name
+      "schema": " "                           --- schema name, if multiple schemas then comma seperated
     };
     ```
     </Tab>
@@ -1925,8 +2178,13 @@ or [MongoDB Shell here](/connect/mongo-shell) and proceed with the [Mongo API do
       "password": "password",
       "host": "127.0.0.1",
       "port": 5433,
-      "database": "yugabyte_db"
+      "database": "yugabyte_db",
+      "schema":"cd"
     };
     ```
     </Tab>
 </Tabs>
+
+<Info>
+Check out the YugabyteDB data handler details [here](/data-integrations/yugabytedb).
+</Info>

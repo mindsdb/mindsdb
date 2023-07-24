@@ -11,7 +11,7 @@ class Responce(Responder):
     def result(self, query, request_env, mindsdb_env, session):
 
         ast_query = Show(category='databases')
-        data = run_sql_command(mindsdb_env, ast_query)
+        data = run_sql_command(request_env, ast_query)
 
         databases = [
             {

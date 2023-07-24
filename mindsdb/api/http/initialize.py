@@ -1,32 +1,50 @@
-import os
-import shutil
-import threading
-import webbrowser
-import traceback
-import tempfile
-import mimetypes
 import datetime
+import mimetypes
+import os
 import secrets
-from pathlib import Path
-from zipfile import ZipFile
+import threading
+import traceback
+import webbrowser
 from distutils.version import LooseVersion
+from pathlib import Path
 
-# import concurrent.futures
 import requests
-from flask import Flask, url_for, make_response
+from flask import Flask, url_for, make_response, request, send_from_directory
 from flask.json import dumps
+from flask_compress import Compress
 from flask_restx import Api
+from werkzeug.exceptions import HTTPException
 
 from mindsdb.__about__ import __version__ as mindsdb_version
-from mindsdb.interfaces.database.integrations import IntegrationController
-from mindsdb.interfaces.file.file_controller import FileController
+from mindsdb.api.http.gui import update_static
+from mindsdb.api.http.utils import http_error
+from mindsdb.api.http.namespaces.analysis import ns_conf as analysis_ns
+from mindsdb.api.http.namespaces.auth import ns_conf as auth_ns
+from mindsdb.api.http.namespaces.chatbots import ns_conf as chatbots_ns
+from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
+from mindsdb.api.http.namespaces.databases import ns_conf as databases_ns
+from mindsdb.api.http.namespaces.default import ns_conf as default_ns, check_auth
+from mindsdb.api.http.namespaces.file import ns_conf as file_ns
+from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
+from mindsdb.api.http.namespaces.models import ns_conf as models_ns
+from mindsdb.api.http.namespaces.projects import ns_conf as projects_ns
+from mindsdb.api.http.namespaces.sql import ns_conf as sql_ns
+from mindsdb.api.http.namespaces.tab import ns_conf as tab_ns
+from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
+from mindsdb.api.http.namespaces.views import ns_conf as views_ns
+from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
+from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
+from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.database.database import DatabaseController
+from mindsdb.interfaces.file.file_controller import FileController
+from mindsdb.interfaces.storage import db
+from mindsdb.utilities import log
+from mindsdb.utilities.config import Config
+from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.json_encoder import CustomJSONEncoder
+from mindsdb.utilities.log import get_log
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
-from mindsdb.utilities.config import Config
-from mindsdb.utilities.log import get_log
-from mindsdb.interfaces.storage import db
-from mindsdb.utilities.json_encoder import CustomJSONEncoder
 
 
 class Swagger_Api(Api):
@@ -121,58 +139,6 @@ def get_current_gui_version() -> LooseVersion:
     return current_gui_lv
 
 
-def download_gui(destignation, version):
-    if isinstance(destignation, str):
-        destignation = Path(destignation)
-    logger = get_log('http')
-    dist_zip_path = str(destignation.joinpath('dist.zip'))
-    bucket = "https://mindsdb-web-builds.s3.amazonaws.com/"
-
-    resources = [{
-        'url': bucket + 'dist-V' + version + '.zip',
-        'path': dist_zip_path
-    }]
-
-    def get_resources(resource):
-        response = requests.get(resource['url'])
-        if response.status_code != requests.status_codes.codes.ok:
-            raise Exception(f"Error {response.status_code} GET {resource['url']}")
-        open(resource['path'], 'wb').write(response.content)
-    try:
-        for r in resources:
-            get_resources(r)
-    except Exception as e:
-        logger.error(f'Error during downloading files from s3: {e}')
-        return False
-
-    static_folder = destignation
-    static_folder.mkdir(mode=0o777, exist_ok=True, parents=True)
-    ZipFile(dist_zip_path).extractall(static_folder)
-
-    if static_folder.joinpath('dist').is_dir():
-        shutil.move(str(destignation.joinpath('dist').joinpath('index.html')), static_folder)
-        shutil.move(str(destignation.joinpath('dist').joinpath('assets')), static_folder)
-        shutil.rmtree(destignation.joinpath('dist'))
-
-    os.remove(dist_zip_path)
-
-    version_txt_path = destignation.joinpath('version.txt')
-    with open(version_txt_path, 'wt') as f:
-        f.write(version)
-
-    return True
-
-    '''
-    # to make downloading faster download each resource in a separate thread
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        future_to_url = {executor.submit(get_resources, r): r for r in resources}
-        for future in concurrent.futures.as_completed(future_to_url):
-            res = future.result()
-            if res is not None:
-                raise res
-    '''
-
-
 def initialize_static():
     config = Config()
     last_gui_version_lv = get_last_compatible_gui_version()
@@ -201,32 +167,124 @@ def initialize_static():
     return success
 
 
-def update_static(gui_version_lv):
-    ''' Update Scout files basing on compatible-config.json content.
-        Files will be downloaded and updated if new version of GUI > current.
-        Current GUI version stored in static/version.txt.
-    '''
-    config = Config()
-    logger = get_log('http')
-    static_path = Path(config['paths']['static'])
+def initialize_app(config, no_studio, with_nlp):
+    static_root = config['paths']['static']
+    gui_exists = Path(static_root).joinpath('index.html').is_file()
+    init_static_thread = None
+    if (
+        no_studio is False
+        and (
+            config['gui']['autoupdate'] is True
+            or gui_exists is False
+        )
+    ):
+        init_static_thread = threading.Thread(target=initialize_static)
+        init_static_thread.start()
 
-    logger.info(f'New version of GUI available ({gui_version_lv.vstring}). Downloading...')
+    app, api = initialize_flask(config, init_static_thread, no_studio)
+    Compress(app)
+    initialize_interfaces(app)
 
-    temp_dir = tempfile.mkdtemp(prefix='mindsdb_gui_files_')
-    success = download_gui(temp_dir, gui_version_lv.vstring)
-    if success is False:
-        shutil.rmtree(temp_dir)
-        return False
+    if os.path.isabs(static_root) is False:
+        static_root = os.path.join(os.getcwd(), static_root)
+    static_root = Path(static_root)
 
-    temp_dir_for_rm = tempfile.mkdtemp(prefix='mindsdb_gui_files_')
-    shutil.rmtree(temp_dir_for_rm)
-    shutil.copytree(str(static_path), temp_dir_for_rm)
-    shutil.rmtree(str(static_path))
-    shutil.copytree(temp_dir, str(static_path))
-    shutil.rmtree(temp_dir_for_rm)
+    @app.route('/', defaults={'path': ''}, methods=['GET'])
+    @app.route('/<path:path>', methods=['GET'])
+    def root_index(path):
+        if path.startswith('api/'):
+            return {'message': 'wrong query'}, 400
+        if static_root.joinpath(path).is_file():
+            return send_from_directory(static_root, path)
+        else:
+            return send_from_directory(static_root, 'index.html')
 
-    logger.info(f'GUI version updated to {gui_version_lv.vstring}')
-    return True
+    protected_namespaces = [
+        tab_ns,
+        utils_ns,
+        conf_ns,
+        file_ns,
+        sql_ns,
+        analysis_ns,
+        handlers_ns,
+        tree_ns,
+        projects_ns,
+        databases_ns,
+        views_ns,
+        models_ns,
+        chatbots_ns
+    ]
+    if with_nlp:
+        protected_namespaces.append(nlp_ns)
+
+    for ns in protected_namespaces:
+        api.add_namespace(ns)
+    api.add_namespace(default_ns)
+    api.add_namespace(auth_ns)
+
+    @api.errorhandler(Exception)
+    def handle_exception(e):
+        log.get_log('http').error(f'http exception: {e}')
+        # pass through HTTP errors
+        if isinstance(e, HTTPException):
+            return {'message': str(e)}, e.code, e.get_response().headers
+        name = getattr(type(e), '__name__') or 'Unknown error'
+        return {'message': f'{name}: {str(e)}'}, 500
+
+    @app.teardown_appcontext
+    def remove_session(*args, **kwargs):
+        db.session.remove()
+
+    @app.before_request
+    def before_request():
+        ctx.set_default()
+        config = Config()
+
+        # region routes where auth is required
+        if (
+            config['auth']['http_auth_enabled'] is True
+            and any(request.path.startswith(f'/api{ns.path}') for ns in protected_namespaces)
+            and check_auth() is False
+        ):
+            return http_error(
+                403, 'Forbidden',
+                'Authorization is required to complete the request'
+            )
+        # endregion
+
+        company_id = request.headers.get('company-id')
+        user_class = request.headers.get('user-class')
+
+        try:
+            email_confirmed = int(request.headers.get('email-confirmed', 1))
+        except ValueError:
+            email_confirmed = 1
+
+        if company_id is not None:
+            try:
+                company_id = int(company_id)
+            except Exception as e:
+                log.get_log('http').error(f'Cloud not parse company id: {company_id} | exception: {e}')
+                company_id = None
+
+        if user_class is not None:
+            try:
+                user_class = int(user_class)
+            except Exception as e:
+                log.get_log('http').error(f'Cloud not parse user_class: {user_class} | exception: {e}')
+                user_class = 0
+        else:
+            user_class = 0
+
+        ctx.company_id = company_id
+        ctx.user_class = user_class
+        ctx.email_confirmed = email_confirmed
+
+    # Wait for static initialization.
+    if not no_studio and init_static_thread is not None:
+        init_static_thread.join()
+
+    return app
 
 
 def initialize_flask(config, init_static_thread, no_studio):
@@ -294,7 +352,7 @@ def initialize_flask(config, init_static_thread, no_studio):
 
 
 def initialize_interfaces(app):
-    app.integration_controller = IntegrationController()
+    app.integration_controller = integration_controller
     app.database_controller = DatabaseController()
     app.file_controller = FileController()
     config = Config()

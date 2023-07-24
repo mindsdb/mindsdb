@@ -50,7 +50,10 @@ class LangChainHandler(BaseMLEngine):
         self.generative = True
         self.stops = []
         self.default_mode = 'default'  # can also be 'conversational' or 'conversational-full'
-        self.supported_modes = ['default', 'conversational', 'conversational-full', 'image']
+        self.engine_to_supported_modes = {
+            'openai': ['default', 'conversational', 'conversational-full', 'image'],
+            'anthropic': ['default', 'conversational', 'conversational-full']
+        }
         self.default_model = _DEFAULT_MODEL
         self.default_max_tokens = _DEFAULT_MAX_TOKENS
         self.default_agent_model = _DEFAULT_AGENT_MODEL
@@ -88,8 +91,12 @@ class LangChainHandler(BaseMLEngine):
 
         if not args.get('mode'):
             args['mode'] = self.default_mode
-        elif args['mode'] not in self.supported_modes:
-            raise Exception(f"Invalid operation mode. Please use one of {self.supported_modes}")
+
+        supported_modes = self.engine_to_supported_modes['openai']
+        if args['model_name'] in _ANTHROPIC_CHAT_MODELS:
+            supported_modes = self.engine_to_supported_modes['anthropic']
+        if args['mode'] not in supported_modes:
+            raise Exception(f"Invalid operation mode. Please use one of {supported_modes}")
 
         self.model_storage.json_set('args', args)
 

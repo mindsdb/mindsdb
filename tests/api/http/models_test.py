@@ -73,7 +73,7 @@ def test_train_model(client):
         'predict': 'rental_price',
         'status': 'generating',
         'version': 1,
-        'learn_args': "{'target': 'rental_price'}"
+        'problem_definition': "{'target': 'rental_price'}"
     }
 
     assert created_model == expected_model

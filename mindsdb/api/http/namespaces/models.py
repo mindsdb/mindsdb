@@ -103,7 +103,7 @@ class ModelsList(Resource):
                 'mindsdb_version': model_df.at[0, 'MINDSDB_VERSION'],
                 'error': model_df.at[0, 'ERROR'],
                 'fetch_data_query': model_df.at[0, 'SELECT_DATA_QUERY'],
-                'learn_args': model_df.at[0, 'TRAINING_OPTIONS']
+                'problem_definition': model_df.at[0, 'TRAINING_OPTIONS']
             }, HTTPStatus.CREATED
         except Exception as e:
             return http_error(

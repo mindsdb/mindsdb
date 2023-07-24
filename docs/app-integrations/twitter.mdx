@@ -113,6 +113,10 @@ AND created_at > '2023-02-16'
 LIMIT 20;
 ```
 
+<Warning>
+Please note that we can see only recent tweets from the past seven days. The `created_at` column condition is skipped if the provided date is earlier than seven days.
+</Warning>
+
 Alternatively, you can use a Twitter native query, as below:
 
 ```sql

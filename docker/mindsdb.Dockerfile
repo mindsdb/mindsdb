@@ -14,9 +14,11 @@ WORKDIR /
 
 COPY . /mindsdb/
 WORKDIR /mindsdb
-RUN pip install ".[grpc]" ".[telemetry]"
+# RUN pip install ".[grpc]" ".[telemetry]"
 
 RUN pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
+RUN python3 -c 'import nltk; nltk.download("punkt");'
+RUN pip install neuralforecast
 # COPY ./mindsdb /mindsdb/mindsdb
 
 ENV PYTHONPATH "/mindsdb"

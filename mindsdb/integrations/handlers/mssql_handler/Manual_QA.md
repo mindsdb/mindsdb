@@ -52,3 +52,49 @@ Works great! I thought Azure databases might cause issues (works better than DBe
 
 
 ---
+
+## Testing MsSQL Handler with [MS SQL Example Data](https://docs.mindsdb.com/data-integrations/microsoft-sql-server)
+
+**1. Testing CREATE DATABASE**
+
+```
+CREATE DATABASE mssql_datasource
+WITH
+    engine = 'mssql',
+    parameters = {
+      "host": "127.0.0.1",
+      "port": 1433,
+      "database": "master",
+      "user": "sa",
+      "password": "password"
+    };
+
+```
+
+![CREATE_DATABASE](./Test_Images_HimanshuB/CREATE_DATABASE.png)
+![CHECK_QUERY](./Test_Images_HimanshuB/QUERY_DATABASE.png)
+
+
+**2. Testing CREATE PREDICTOR**
+
+```
+Was not being performed due to above errors.
+```
+
+**3. Testing SELECT FROM PREDICTOR**
+
+```
+Was not being performed due to above errors.
+```
+### Results
+
+Drop a remark based on your observation.
+- [X] There's a Bug 🪲 [N/A](N/A) (Not created)
+
+Does not work for me! Failing for the example test case, maybe I am missing some crucial steps in testing so feedback is whole-heartdily welcomed!Do link on some useful resources to read from as well!
+
+Thanks.
+
+## Note
+
+I know it is a bad practice to create a seprate folder named `Test_Images_HimanshuB`folder, which must be deleted, so let me know if I need to upload my images somewhere in cloud before adding the link to the codebase.

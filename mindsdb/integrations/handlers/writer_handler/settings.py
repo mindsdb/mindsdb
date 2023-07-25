@@ -22,6 +22,7 @@ USER_DEFINED_MODEL_PARAMS = (
     "verbose",
     "writer_org_id",
     "writer_api_key",
+    "base_url",
 )
 
 
@@ -30,6 +31,7 @@ class ModelParameters(BaseModel):
 
     writer_api_key: str = None
     writer_org_id: str = None
+    base_url: str = None
     model_id: str = "palmyra-x"
     callbacks: List[StreamingStdOutCallbackHandler] = [StreamingStdOutCallbackHandler()]
     max_tokens: int = 1024
@@ -60,11 +62,18 @@ class DfLoader(DataFrameLoader):
         for n_row, frame in self._data_frame[self._page_content_column].iteritems():
             if pd.notnull(frame):
                 # ignore rows with None values
+                column_name = self._page_content_column
+
+                document_contents = frame
 
                 documents.append(
                     Document(
-                        page_content=frame,
-                        metadata={"source": "dataframe", "row": n_row},
+                        page_content=document_contents,
+                        metadata={
+                            "source": "dataframe",
+                            "row": n_row,
+                            "column": column_name,
+                        },
                     )
                 )
         return documents

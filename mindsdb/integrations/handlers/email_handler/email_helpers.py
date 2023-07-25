@@ -75,9 +75,5 @@ class EmailClient:
         return pd.DataFrame(ret)
 
 
-if __name__ == "__main__":
-    email_client = EmailClient()
-
-
 
 

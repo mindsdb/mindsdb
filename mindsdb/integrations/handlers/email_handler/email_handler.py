@@ -1,5 +1,3 @@
-import email_helpers
-
 from mindsdb.utilities import log
 
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -7,10 +5,10 @@ from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
-
-from email_tables import EmailsTable
-
 from mindsdb_sql import parse_sql
+
+from mindsdb.integrations.handlers.email_handler.email_tables import EmailsTable
+from mindsdb.integrations.handlers.email_handler.email_helpers import EmailClient
 
 
 class EmailHandler(APIHandler):
@@ -44,7 +42,7 @@ class EmailHandler(APIHandler):
             return self.connection
 
         try:
-            self.connection = email_helpers.EmailClient(**self.connection_data)
+            self.connection = EmailClient(**self.connection_data)
         except Exception as e:
             log.logger.error(f'Error connecting to email api: {e}!')
             raise e

@@ -28,7 +28,7 @@ class SqlServerHandler(DatabaseHandler):
         self.connection_args = kwargs
         self.connection_data = self.connection_args.get('connection_data')
         self.dialect = 'mssql'
-        self.database = kwargs.get('database')
+        self.database = self.connection_data.get('database')
 
         self.connection = None
         self.is_connected = False

@@ -83,12 +83,12 @@ DELETE FROM mindsdb_slack.channels
 WHERE channel = "<channel-name>" AND ts = "1688863707.197229";
 ~~~~
 
-Selects only 10 latest messages
+Selects only 10 created after the specified timestamp
 
 ~~~~sql
 SELECT *
 FROM mindsdb_slack.channels
-WHERE channel="<channel-name>"
+WHERE channel="<channel-name>" AND message_created_at > '2023-07-25 00:13:07'
 LIMIT 10;
 ~~~~
 
@@ -172,13 +172,13 @@ CREATE JOB mindsdb.gpt4_slack_job AS (
     r.response as message
   FROM mindsdb_slack.channels as t
   JOIN mindsdb.slack_response_model as r
-  WHERE t.channel = '<channel-name>'
-  LIMIT 10;
+  WHERE t.channel = '<channel-name>' AND message_created_at > '2023-07-11 04:57:44'
+  LIMIT 3;
 )
-EVERY hour;
+EVERY minute;
 ~~~~
 
-Every minute, our model is going to look for the questions, and the model will generate the response and send the message to the channel. Model can send only two messages every minute.
+Every minute, our model is going to look for the questions, and the model will generate the response and send the message to the channel. Model can send only three messages every minute.
 
 ## What's Next?
 

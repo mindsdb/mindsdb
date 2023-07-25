@@ -1,5 +1,5 @@
 import os
-import datetime as datetime
+from datetime import datetime as datetime, timezone
 import ast
 from typing import List
 import pandas as pd
@@ -41,6 +41,10 @@ class SlackChannelsTable(APITable):
         Returns:
             conversation_history
         """
+        # override the default function
+        def parse_utc_date(date_str):
+            date_obj = datetime.fromisoformat(date_str).replace(tzinfo=timezone.utc)
+            return date_obj.strftime('%Y-%m-%d %H:%M:%S')
 
         # Get the channels list and ids
         channels = self.client.conversations_list(types="public_channel,private_channel")['channels']
@@ -66,6 +70,15 @@ class SlackChannelsTable(APITable):
                     params['limit'] = int(arg2)
                 else:
                     raise NotImplementedError(f'Unknown op: {op}')
+                
+            elif arg1 == 'message_created_at':
+                date = parse_utc_date(arg2)
+                if op == '>':
+                    params['start_time'] = date
+                elif op == '<':
+                    params['end_time'] = date
+                else:
+                    raise NotImplementedError
 
             else:
                 filters.append([op, arg1, arg2])
@@ -125,15 +138,54 @@ class SlackChannelsTable(APITable):
         columns = [target.parts[-1].lower() for target in query.targets if isinstance(target, ast.Identifier)]
         result = result[columns]
 
-        # Append the history to the response
+        # Append the history, timestamp, datetime to the response
         response_history = []
         response_ts = []
-        for message in conversation_history:
-            response_history.append(message['text'])
-            timestamp = message['ts']
-            response_ts.append(timestamp)
+        response_datetime = []
+        response_datetime_timestamp = []
+        
+        # if we have 'message_created_at' attribute, then execute this
+        if 'start_time' in params or 'end_time' in params:
+            # for every message convert ts to str and ts to DateTime object and message to the response object
+            for message in conversation_history:
+                timestamp = message['ts']
+                float_ts = float(message['ts'])
+                datetime_ts = datetime.fromtimestamp(float_ts, tz=timezone.utc)
+                datetime_ts = datetime_ts.strftime('%Y-%m-%d %H:%M:%S')
+                response_datetime.append(datetime_ts)
+                response_ts.append(timestamp)
+                
+                # if '>' operator store message in response_datetime_timestamp
+                if 'start_time' in params and datetime_ts > params['start_time']:
+                    response_datetime_timestamp.append(message['text'])
+                # if '<' operator store message in response_datetime_timestamp
+                elif 'end_time' in params and datetime_ts < params['end_time']:
+                    response_datetime_timestamp.append(message['text'])
+                # else store it in response_history
+                else:
+                    response_history.append(message['text'])
+                    
+        # else parse message and return as a response object
+        else:
+            # for every message convert ts to str and ts to DateTime object and message to the response object
+            for message in conversation_history:
+                timestamp = message['ts']
+                float_ts = float(message['ts'])
+                datetime_ts = datetime.fromtimestamp(float_ts, tz=timezone.utc)
+                datetime_ts = datetime_ts.strftime('%Y-%m-%d %H:%M:%S')
+                response_datetime.append(datetime_ts)
+                response_ts.append(timestamp)
+                response_history.append(message['text'])
+                           
         result['channel'] = channel_name
-        result['messages'] = response_history
+        # convert response_datetime_timestamp to Dataframe object in order to return
+        if 'start_time' in params or 'end_time' in params:
+            filtered_df = pd.DataFrame(response_datetime_timestamp, columns=result.columns)
+            result['messages'] = filtered_df
+        else:
+            result['messages'] = response_history
+        
+        result['message_created_at'] = response_datetime
         result['ts'] = response_ts
         
         # Sort the data based on order_by_conditions
@@ -151,7 +203,9 @@ class SlackChannelsTable(APITable):
         for target in query.targets:
             if target.alias:
                 result.rename(columns={target.parts[-1]: str(target.alias)}, inplace=True)
-
+        
+        # Remove null rows from the result
+        result = result[result['messages'].notnull()]
         return result
         
     def get_columns(self):
@@ -162,6 +216,7 @@ class SlackChannelsTable(APITable):
         return [
             'ts',
             'text',
+            'message_created_at',
             'user',
             'channel',
             'reactions',

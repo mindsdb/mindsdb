@@ -68,12 +68,12 @@ Please change the `slack-bot-token` with the token mentioned in `Bot User OAuth 
 
 This query will create a database called `mindsdb_slack` and `channels` table automatically.
 
-Here is how to retrieve the 10 latest messages from the channel:
+Here is how to retrieve the 10 messages after specific timestamp:
 
 ```sql
 SELECT *
 FROM mindsdb_slack.channels
-WHERE channel="<channel-name>"
+WHERE channel="<channel-name>" AND message_created_at > '2023-07-25 00:13:07'
 LIMIT 10;
 ```
 
@@ -252,7 +252,7 @@ CREATE JOB mindsdb.gpt4_slack_job AS (
     r.response as message
   FROM mindsdb_slack.channels as t
   JOIN mindsdb.whizfizz_model as r
-  WHERE t.channel = '<channel-name>'
+  WHERE t.channel = '<channel-name>' AND message_created_at > '2023-07-11 04:57:44'
   LIMIT 10;
 )
 EVERY hour;

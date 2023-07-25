@@ -88,6 +88,7 @@ class WarmProcess:
                 initargs (tuple): the same as ProcessPoolExecutor initargs
         """
         self.pool = ProcessPoolExecutor(1, initializer=initializer, initargs=initargs)
+        self._markers = set()
         # region bacause of ProcessPoolExecutor does not start new process
         # untill it get a task, we need manually run dummy task to force init.
         self.task = self.pool.submit(dummy_task)
@@ -116,6 +117,28 @@ class WarmProcess:
             return True
         return False
 
+    def add_marker(self, marker: tuple):
+        """ remember that that process processed task for that model
+
+            Args:
+                marker (tuple): identifier of model
+        """
+        if marker is not None:
+            self._markers.add(marker)
+
+    def has_marker(self, marker: tuple) -> bool:
+        """ check if that process processed task for model
+
+            Args:
+                marker (tuple): identifier of model
+
+            Returns:
+                bool
+        """
+        if marker is None:
+            return False
+        return marker in self._markers
+
     def apply_async(self, func: Callable, *args: tuple, **kwargs: dict) -> Future:
         """ Run new task
 
@@ -133,6 +156,11 @@ class WarmProcess:
             func, *args, **kwargs
         )
         return self.task
+
+
+def warm_function(func, context: str, *args, **kwargs):
+    ctx.load(context)
+    return func(*args, **kwargs)
 
 
 class ProcessCache:
@@ -191,12 +219,13 @@ class ProcessCache:
                         ]
                     }
 
-    def apply_async(self, handler: object, func: Callable, *args, **kwargs) -> Future:
+    def apply_async(self, handler: object, func: Callable, model_marker: tuple = None, *args, **kwargs) -> Future:
         """ run new task. If possible - do it in existing process, if not - start new one.
 
             Args:
                 handler (object): handler class
                 func (Callable): function to run
+                model_marker (tuple): if any of processes processed task with same marker - new task will be sent to it
                 args (tuple): args to be passed to function
                 kwargs (dict): kwargs to be passed to function
 
@@ -212,14 +241,30 @@ class ProcessCache:
                     'processes': [warm_process]
                 }
             else:
-                for warm_process in self.cache[handler_name]['processes']:
-                    if warm_process.ready():
-                        break
-                else:
+                warm_process = None
+                if model_marker is not None:
+                    try:
+                        warm_process = next(
+                            p for p in self.cache[handler_name]['processes']
+                            if p.ready() and p.has_marker(model_marker)
+                        )
+                    except StopIteration:
+                        pass
+                if warm_process is None:
+                    try:
+                        warm_process = next(
+                            p for p in self.cache[handler_name]['processes']
+                            if p.ready()
+                        )
+                    except StopIteration:
+                        pass
+                if warm_process is None:
                     warm_process = WarmProcess(init_ml_handler, (handler.__module__,))
                     self.cache[handler_name]['processes'].append(warm_process)
-            task = warm_process.apply_async(func, *args, **kwargs)
+
+            task = warm_process.apply_async(warm_function, func, ctx.dump(), *args, **kwargs)
             self.cache[handler_name]['last_usage_at'] = time.time()
+            warm_process.add_marker(model_marker)
         return task
 
     def _clean(self) -> None:
@@ -411,9 +456,9 @@ class BaseMLEngineExec:
         task = process_cache.apply_async(
             self.handler_class,
             learn_process,
+            (ctx.company_id, predictor_record.id),
             class_path,
             self.engine,
-            ctx.dump(),
             self.integration_id,
             predictor_record.id,
             problem_definition,
@@ -482,7 +527,14 @@ class BaseMLEngineExec:
             args['executor'] = command_executor
 
         try:
-            predictions = ml_handler.predict(df, args)
+            task = process_cache.apply_async(
+                handler=self.handler_class,
+                func=ml_handler.predict,
+                model_marker=(ctx.company_id, predictor_record.id),
+                df=df,
+                args=args
+            )
+            predictions = task.result()
         except Exception as e:
             msg = str(e).strip()
             if msg == '':
@@ -576,9 +628,9 @@ class BaseMLEngineExec:
             task = process_cache.apply_async(
                 self.handler_class,
                 learn_process,
+                (ctx.company_id, predictor_record.id),
                 class_path,
                 self.engine,
-                ctx.dump(),
                 self.integration_id,
                 predictor_record.id,
                 predictor_record.learn_args,

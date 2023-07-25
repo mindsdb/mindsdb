@@ -131,7 +131,6 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
         Returns:
             Dict: filter for collection.
         """
-
         where = {}
         if query.where.op == "and":
             for arg in query.where.args:

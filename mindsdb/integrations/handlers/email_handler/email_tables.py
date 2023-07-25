@@ -5,121 +5,102 @@ import pytz
 import pandas as pd
 
 from mindsdb_sql.parser import ast
-from mindsdb_sql.planner.utils import query_traversal
 
-from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
+from mindsdb.integrations.libs.api_handler import APITable
 
-from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response
-)
-
-
-def extract_conditions(binary_op):
-    conditions = []
-
-    def _extract_conditions(node, **kwargs):
-        if isinstance(node, ast.BinaryOperation):
-            op = node.op.lower()
-            if op == 'and':
-                return
-            elif op == 'or':
-                raise NotImplementedError
-            elif not isinstance(node.args[0], ast.Identifier) or not isinstance(node.args[1], ast.Constant):
-                raise NotImplementedError
-            conditions.append([op, node.args[0].parts[-1], node.args[1].value])
-
-    query_traversal(binary_op, _extract_conditions)
-    return conditions
-
-
-def parse_date(date_str):
-    if isinstance(date_str, dt.datetime):
-        return date_str
-    date_formats = ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d']
-    date = None
-    for date_format in date_formats:
-        try:
-            date = dt.datetime.strptime(date_str, date_format)
-        except ValueError:
-            pass
-    if date is None:
-        raise ValueError(f"Can't parse date: {date_str}")
-    date = date.astimezone(pytz.utc)
-    return date
+from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 
 
 class EmailsTable(APITable):
+    """The Emails Table implementation"""
 
-    def select(self, query: ast.Select) -> Response:
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Pulls email data.
 
-        conditions = extract_conditions(query.where)
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
 
-        params = {}
-        for op, arg1, arg2 in conditions:
-            if arg1 == 'created_at':
-                date = parse_date(arg2)
-                if op == '>':
-                    params['since_date'] = date
-                elif op == '<':
-                    params['until_date'] = date
-                else:
-                    raise NotImplementedError
-                continue
-            elif arg1 == 'id':
+        Returns
+        -------
+        pd.DataFrame
+            Emails matching the query
 
-                if op == '>':
-                    params['since_emailid'] = arg2
-                else:
-                    raise NotImplementedError
-                continue
-            if op == '=' and arg1 in ['mailbox', 'subject', 'to', 'from']:
-                raise NotImplementedError
-            mailbox, subject, to, from_, since_emailid = None
-            params[arg1] = arg2
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
 
-        if query.limit is not None:
-            params['max_results'] = query.limit.value
-
-        params['expansions'] = ['author_id', 'in_reply_to_user_id']
-        params['tweet_fields'] = ['created_at']
-        params['user_fields'] = ['name', 'username']
-
-        if 'query' not in params:
-            # search not works without query, use 'mindsdb'
-            params['query'] = 'mindsdb'
-
-        result = self.handler.call_twitter_api(
-            method_name='search_recent_tweets',
-            params=params
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'emails',
+            self.get_columns()
         )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        # filter targets
-        columns = []
-        for target in query.targets:
-            if isinstance(target, ast.Star):
-                columns = []
-                break
-            elif isinstance(target, ast.Identifier):
-                columns.append(target.parts[-1])
+        search_params = {}
+        for op, arg1, arg2 in where_conditions:
+            if arg1 == 'created_at':
+                date = self.parse_date(arg2)
+                if op == '>':
+                    search_params['since_date'] = date
+                elif op == '<':
+                    search_params['until_date'] = date
+                else:
+                    raise NotImplementedError("Only > and < operators are supported for created_at column.")
+                continue
+
+            # TODO: what exactly is the since_emailid? Is it the id of the email?
+            elif arg1 == 'id':
+                if op == '>':
+                    search_params['since_emailid'] = arg2
+                else:
+                    raise NotImplementedError("Only > operator is supported for id column.")
+                continue
+
+            # TODO: these arguments should only be supported with the = operator, right?
+            elif arg1 in ['mailbox', 'subject', 'to', 'from']:
+                if op != '=':
+                    raise NotImplementedError("Only = operator is supported for mailbox, subject, to and from columns.")
+                else:
+                    if arg1 == 'from':
+                        search_params['from_'] = arg2
+                    else:
+                        search_params[arg1] = arg2
+
             else:
-                raise NotImplementedError
+                raise NotImplementedError(f"Unsupported column: {arg1}.")
 
-        if len(columns) == 0:
-            columns = self.get_columns()
-        if len(result) == 0:
-            result = pd.DataFrame([], columns=columns)
-        else:
-            # add absent columns
-            for col in set(columns) & set(result.columns) ^ set(columns):
-                result[col] = None
-        return result
+        connection = self.handler.connect()
+        emails_df = connection.search_email(**search_params)
+
+        select_statement_executor = SELECTQueryExecutor(
+            emails_df,
+            selected_columns,
+            [],
+            order_by_conditions
+        )
+        emails_df = select_statement_executor.execute_query()
+
+        return emails_df
 
     def get_columns(self):
         return ['id', 'created_at', 'to', 'from', 'subject', 'body']
 
-    def insert(self, query: ast.Insert):
-        # https://docs.tweepy.org/en/stable/client.html#tweepy.Client.create_tweet
-        columns = [col.name for col in query.columns]
-        for row in query.values:
-            params = dict(zip(columns, row))
-            self.handler.('create_tweet', params)
+    @staticmethod
+    def parse_date(date_str):
+        if isinstance(date_str, dt.datetime):
+            return date_str
+        date_formats = ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d']
+        date = None
+        for date_format in date_formats:
+            try:
+                date = dt.datetime.strptime(date_str, date_format)
+            except ValueError:
+                pass
+        if date is None:
+            raise ValueError(f"Can't parse date: {date_str}")
+        date = date.astimezone(pytz.utc)
+        return date

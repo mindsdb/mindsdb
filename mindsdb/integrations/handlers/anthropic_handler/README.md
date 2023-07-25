@@ -2,9 +2,9 @@
 The Anthropic ML handler integrates Anthropic LLMs with MindsDB. You can use it to generate text completions with the popular Claude LLM family for your existing text data.
 
 # Anthropic
-Anthropic is an AI safety and research company. Claude is their assistant model.The package used is the Anthropic Python SDK.More information about this Python client can be found (here)[https://github.com/anthropics/anthropic-sdk-python].
+Anthropic is an AI safety and research company. Claude is their assistant model.The package used is the Anthropic Python SDK.More information about this Python client can be found [here](https://github.com/anthropics/anthropic-sdk-python).
 
-*Note:* For more information on evaluation terms, read (here) [https://docs.anthropic.com/claude/reference/getting-started-with-the-api#evaluation--going-live-with-the-api]
+*Note:* For more information on evaluation terms, read [here](https://docs.anthropic.com/claude/reference/getting-started-with-the-api#evaluation--going-live-with-the-api)
 
 
 # Example Usage

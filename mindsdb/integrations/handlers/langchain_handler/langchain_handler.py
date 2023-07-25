@@ -8,30 +8,33 @@ import pandas as pd
 from langchain.schema import SystemMessage
 from langchain.agents import AgentType
 from langchain.llms import OpenAI
-from langchain.chat_models import ChatOpenAI  # GPT-4 fails to follow the output langchain requires, avoid using for now
+from langchain.chat_models import ChatAnthropic, ChatOpenAI  # GPT-4 fails to follow the output langchain requires, avoid using for now
 from langchain.agents import initialize_agent, load_tools, Tool, create_sql_agent
 from langchain.prompts import PromptTemplate
 from langchain.utilities import GoogleSerperAPIWrapper
 from langchain.agents.agent_toolkits import SQLDatabaseToolkit
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
 
-from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler, CHAT_MODELS
+from mindsdb.integrations.handlers.openai_handler.openai_handler import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
+from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb_sql import parse_sql, Insert
 
 
-_DEFAULT_MODEL = 'gpt-3.5-turbo'  # TODO: enable other LLM backends (AI21, Anthropic, etc.)
+_DEFAULT_MODEL = 'gpt-3.5-turbo'
 _DEFAULT_MAX_TOKENS = 2048  # requires more than vanilla OpenAI due to ongoing summarization and 3rd party input
 _DEFAULT_AGENT_MODEL = 'zero-shot-react-description'
 _DEFAULT_AGENT_TOOLS = ['python_repl', 'wikipedia']  # these require no additional arguments
+_ANTHROPIC_CHAT_MODELS = {'claude-2', 'claude-instant-1'}
+_PARSING_ERROR_PREFIX = 'Could not parse LLM output: `'
 
-
-class LangChainHandler(OpenAIHandler):
+class LangChainHandler(BaseMLEngine):
     """
     This is a MindsDB integration for the LangChain library, which provides a unified interface for interacting with
     various large language models (LLMs).
 
-    Currently, this integration supports exposing OpenAI's LLMs with normal text completion support. They are then
+    Currently, this integration supports exposing OpenAI and Anthrophic's LLMs with normal text completion support. They are then
     wrapped in a zero shot react description agent that offers a few third party tools out of the box, with support
     for additional ones if an API key is provided. Ongoing memory is also provided.
 
@@ -39,9 +42,6 @@ class LangChainHandler(OpenAIHandler):
         - wikipedia
         - python_repl
         - serper.dev search
-
-    This integration inherits from the OpenAI engine, so it shares a lot of the requirements, features (e.g. prompt
-    templating) and limitations.
     """
     name = 'langchain'
 
@@ -49,6 +49,11 @@ class LangChainHandler(OpenAIHandler):
         super().__init__(*args, **kwargs)
         self.generative = True
         self.stops = []
+        self.default_mode = 'default'  # can also be 'conversational' or 'conversational-full'
+        self.engine_to_supported_modes = {
+            'openai': ['default', 'conversational', 'conversational-full', 'image'],
+            'anthropic': ['default', 'conversational', 'conversational-full']
+        }
         self.default_model = _DEFAULT_MODEL
         self.default_max_tokens = _DEFAULT_MAX_TOKENS
         self.default_agent_model = _DEFAULT_AGENT_MODEL
@@ -74,7 +79,26 @@ class LangChainHandler(OpenAIHandler):
     def create(self, target, args=None, **kwargs):
         self.write_privileges = args.get('using', {}).get('writer', self.write_privileges)
         self.default_agent_tools = args.get('tools', self.default_agent_tools)
-        super().create(target, args, **kwargs)
+
+        args = args['using']
+        args['target'] = target
+        
+        available_models = {*OPEN_AI_CHAT_MODELS, *_ANTHROPIC_CHAT_MODELS}
+        if not args.get('model_name'):
+            args['model_name'] = self.default_model
+        elif args['model_name'] not in available_models:
+            raise Exception(f"Invalid model name. Please use one of {available_models}")
+
+        if not args.get('mode'):
+            args['mode'] = self.default_mode
+
+        supported_modes = self.engine_to_supported_modes['openai']
+        if args['model_name'] in _ANTHROPIC_CHAT_MODELS:
+            supported_modes = self.engine_to_supported_modes['anthropic']
+        if args['mode'] not in supported_modes:
+            raise Exception(f"Invalid operation mode. Please use one of {supported_modes}")
+
+        self.model_storage.json_set('args', args)
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -122,42 +146,72 @@ class LangChainHandler(OpenAIHandler):
         agent, df = getattr(self, agent_creation_method)(df, args, pred_args)
         return self.run_agent(df, agent, args, pred_args)
 
+    def _get_chat_model_params(self, args, pred_args):
+        model_name = args.get('model_name', self.default_model)
+        # Params shared by all models.
+        temperature = min(1.0, max(0.0, args.get('temperature', 0.0)))
+        max_tokens = pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens))
+        top_p = pred_args.get('top_p', None)
+        timeout = pred_args.get('request_timeout', None)
+        serper_api_key = self._get_serper_api_key(args, strict=False)
+        model_kwargs = {}
+        if model_name in _ANTHROPIC_CHAT_MODELS:
+            model_kwargs['model'] = model_name
+            model_kwargs['temperature'] = temperature
+            model_kwargs['max_tokens_to_sample'] = max_tokens
+            model_kwargs['top_p'] = top_p
+            model_kwargs['timeout'] = timeout
+            model_kwargs['stop_sequences'] = pred_args.get('stop_sequences', None)
+            model_kwargs['serper_api_key'] = serper_api_key
+            model_kwargs['anthropic_api_key'] = get_api_key('anthropic', args, self.engine_storage)
+        else:
+            # OpenAI
+            model_kwargs['model_name'] = model_name
+            model_kwargs['temperature'] = temperature
+            model_kwargs['max_tokens'] = max_tokens
+            model_kwargs['top_p'] = top_p
+            model_kwargs['request_timeout'] = timeout
+            model_kwargs['serper_api_key'] = serper_api_key
+            model_kwargs['frequency_penalty'] = pred_args.get('frequency_penalty', None)
+            model_kwargs['presence_penalty'] = pred_args.get('presence_penalty', None)
+            model_kwargs['n'] = pred_args.get('n', None)
+            model_kwargs['best_of'] = pred_args.get('best_of', None)
+            model_kwargs['logit_bias'] = pred_args.get('logit_bias', None)
+            model_kwargs['openai_api_key'] = get_api_key('openai', args, self.engine_storage)
+
+        model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
+        return model_kwargs
+
+    def _create_chat_model(self, args, pred_args):
+        model_kwargs = self._get_chat_model_params(args, pred_args)
+        model_name = args.get('model_name', self.default_model)
+
+        if model_name in _ANTHROPIC_CHAT_MODELS:
+            return ChatAnthropic(**model_kwargs)
+        elif model_name in OPEN_AI_CHAT_MODELS:
+            return ChatOpenAI(**model_kwargs)
+        else:
+            return OpenAI(**model_kwargs)
+
+
     def conversational_completion(self, df, args=None, pred_args=None):
         pred_args = pred_args if pred_args else {}
 
-        # api argument validation
-        model_name = args.get('model_name', self.default_model)
-
-        model_kwargs = {
-            'model_name': model_name,
-            'temperature': min(1.0, max(0.0, args.get('temperature', 0.0))),
-            'max_tokens': pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens)),
-            'top_p': pred_args.get('top_p', None),
-            'frequency_penalty': pred_args.get('frequency_penalty', None),
-            'presence_penalty': pred_args.get('presence_penalty', None),
-            'n': pred_args.get('n', None),
-            'best_of': pred_args.get('best_of', None),
-            'request_timeout': pred_args.get('request_timeout', None),
-            'logit_bias': pred_args.get('logit_bias', None),
-            'openai_api_key': self._get_openai_api_key(args, strict=True),
-            'serper_api_key': self._get_serper_api_key(args, strict=False),
-        }
-        model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
-
         # langchain tool setup
+        model_kwargs = self._get_chat_model_params(args, pred_args)
         tools = self._setup_tools(model_kwargs, pred_args, args['executor'])
 
-        llm = ChatOpenAI(**model_kwargs)
-
+        max_tokens = pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens))
+        llm = self._create_chat_model(args, pred_args)
         memory = ConversationSummaryBufferMemory(llm=llm,
-                                                 max_token_limit=model_kwargs.get('max_tokens', None),
+                                                 max_token_limit=max_tokens,
                                                  memory_key="chat_history")
 
         # fill memory
 
         # system prompt
         prompt = args['prompt']
-        if 'prompt' in pred_args:
+        if 'prompt' in pred_args and pred_args['prompt'] is not None:
             prompt = pred_args['prompt']
         if 'context' in pred_args:
             prompt += '\n\n' + 'Useful information:\n' + pred_args['context'] + '\n'
@@ -168,10 +222,7 @@ class LangChainHandler(OpenAIHandler):
             question = row[args['user_column']]
             answer = row[args['assistant_column']]
 
-            if question:
-                memory.chat_memory.add_user_message(question)
-            if answer:
-                memory.chat_memory.add_ai_message(answer)
+            memory.save_context({"input": question}, {"output": answer})
 
         # use last message as prompt, remove other questions
         df.iloc[:-1, df.columns.get_loc('question')] = ''
@@ -184,7 +235,7 @@ class LangChainHandler(OpenAIHandler):
             agent=agent_name,
             max_iterations=pred_args.get('max_iterations', 3),
             verbose=pred_args.get('verbose', args.get('verbose', False)),
-            handle_parsing_errors=True,
+            handle_parsing_errors=False,
         )
 
         # setup model description
@@ -212,37 +263,17 @@ class LangChainHandler(OpenAIHandler):
             - python.langchain.com/en/latest/modules/agents/agents/custom_agent.html
         """
         pred_args = pred_args if pred_args else {}
-
-        # api argument validation
-        model_name = pred_args.get('model_name', args.get('model_name', self.default_model))
-        agent_name = pred_args.get('agent_name', args.get('agent_name', self.default_agent_model))
-
-        model_kwargs = {
-            'model_name': model_name,
-            'temperature': min(1.0, max(0.0, pred_args.get('temperature', args.get('temperature', 0.0)))),
-            'max_tokens': pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens)),
-            'top_p': pred_args.get('top_p', None),
-            'frequency_penalty': pred_args.get('frequency_penalty', None),
-            'presence_penalty': pred_args.get('presence_penalty', None),
-            'n': pred_args.get('n', None),
-            'best_of': pred_args.get('best_of', None),
-            'request_timeout': pred_args.get('request_timeout', None),
-            'logit_bias': pred_args.get('logit_bias', None),
-            'openai_api_key': self._get_openai_api_key(args, strict=True),
-            'serper_api_key': self._get_serper_api_key(args, strict=False),
-        }
-        model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
+        pred_args['tools'] = args.get('tools') if 'tools' not in pred_args else pred_args.get('tools', [])
 
         # langchain tool setup
-        pred_args['tools'] = args.get('tools') if 'tools' not in pred_args else pred_args.get('tools', [])
+        model_kwargs = self._get_chat_model_params(args, pred_args)
         tools = self._setup_tools(model_kwargs, pred_args, args['executor'])
 
         # langchain agent setup
-        if model_kwargs['model_name'] in CHAT_MODELS:
-            llm = ChatOpenAI(**model_kwargs)
-        else:
-            llm = OpenAI(**model_kwargs)
-        memory = ConversationSummaryBufferMemory(llm=llm, max_token_limit=model_kwargs.get('max_tokens', None))
+        llm = self._create_chat_model(args, pred_args)
+        max_tokens = pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens))
+        memory = ConversationSummaryBufferMemory(llm=llm, max_token_limit=max_tokens)
+        agent_name = pred_args.get('agent_name', args.get('agent_name', self.default_agent_model))
         agent = initialize_agent(
             tools,
             llm,
@@ -250,7 +281,7 @@ class LangChainHandler(OpenAIHandler):
             agent=agent_name,
             max_iterations=pred_args.get('max_iterations', 3),
             verbose=pred_args.get('verbose', args.get('verbose', False)),
-            handle_parsing_errors=True,
+            handle_parsing_errors=False,
         )
 
         # setup model description
@@ -305,6 +336,20 @@ class LangChainHandler(OpenAIHandler):
                     continue
                 try:
                     completions.append(agent.run(prompt))
+                except ValueError as e:
+                    # Handle parsing errors ourselves instead of using handle_parsing_errors=True in initialize_agent.
+                    response = str(e)
+                    if not response.startswith(_PARSING_ERROR_PREFIX):
+                        completions.append(f'agent failed with error:\n{str(e)[:50]}...')
+                    else:
+                        # By far the most common error is a Langchain parsing error. Some OpenAI models
+                        # always output a response formatted correctly. Anthropic, and others, sometimes just output
+                        # the answer as text (when not using tools), even when prompted to output in a specific format.
+                        # As a somewhat dirty workaround, we accept the output formatted incorrectly and use it as a response.
+                        #
+                        # Ideally, in the future, we would write a parser that is more robust and flexible than the one Langchain uses.
+                        response = response.removeprefix(_PARSING_ERROR_PREFIX).removesuffix('`')
+                        completions.append(response)
                 except Exception as e:
                     completions.append(f'agent failed with error:\n{str(e)[:50]}...')
             return [c for c in completions]
@@ -325,7 +370,8 @@ class LangChainHandler(OpenAIHandler):
             try:
                 ast_query = parse_sql(query.strip('`'), dialect='mindsdb')
                 ret = executor.execute_command(ast_query)
-
+                if ret.data is None and ret.error_code is None:
+                    return ''
                 data = ret.data  # list of lists
                 data = '\n'.join([  # rows
                     '\t'.join(      # columns
@@ -461,7 +507,7 @@ class LangChainHandler(OpenAIHandler):
         db = MindsDBSQL(engine=args['executor'], metadata=args['executor'].session.integration_controller)
         toolkit = SQLDatabaseToolkit(db=db)
         model_name = args.get('model_name', self.default_model)
-        llm = OpenAI(temperature=0) if model_name not in CHAT_MODELS else ChatOpenAI(temperature=0)
+        llm = OpenAI(temperature=0) if model_name not in OPEN_AI_CHAT_MODELS else ChatOpenAI(temperature=0)
         agent = create_sql_agent(
             llm=llm,
             toolkit=toolkit,

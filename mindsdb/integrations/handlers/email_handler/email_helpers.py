@@ -56,7 +56,10 @@ class EmailClient:
         items = items[0].split()
         for emailid in items[::-1]:
             resp, data = self.imap_server.uid('fetch', emailid, "(BODY[HEADER.FIELDS (SUBJECT TO FROM DATE)])")
-            raw_email = data[0][1].decode("utf-8")
+            try:
+                raw_email = data[0][1].decode("utf-8")
+            except UnicodeDecodeError:
+                ValueError(f"Could not decode email with id {emailid}")
             email_message = email.message_from_string(raw_email)
 
             email_line = {}

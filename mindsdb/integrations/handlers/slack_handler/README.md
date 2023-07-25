@@ -172,7 +172,7 @@ CREATE JOB mindsdb.gpt4_slack_job AS (
     r.response as message
   FROM mindsdb_slack.channels as t
   JOIN mindsdb.slack_response_model as r
-  WHERE t.channel = '<channel-name>' AND t.created_at > "{{PREVIOUS_START_DATETIME}}"
+  WHERE t.channel = '<channel-name>' AND t.message_created_at > "2023-07-25 05:22:00" AND t.message_created_at > "{{PREVIOUS_START_DATETIME}}"
   LIMIT 3;
 )
 EVERY minute;

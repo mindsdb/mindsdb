@@ -9,13 +9,14 @@ from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
+from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilities import INSERTQueryParser
 
 
 class EmailsTable(APITable):
     """The Emails Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
-        """Pulls email data.
+        """Pulls email data from the connected account.
 
         Parameters
         ----------
@@ -85,6 +86,37 @@ class EmailsTable(APITable):
         emails_df = select_statement_executor.execute_query()
 
         return emails_df
+
+    def insert(self, query: ast.Insert) -> None:
+        """Sends emails through the connected account.
+
+        Parameters
+        ----------
+        query : ast.Insert
+           Given SQL INSERT query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        insert_statement_parser = INSERTQueryParser(
+            query,
+            supported_columns=['to', 'subject', 'body'],
+            mandatory_columns=['to', 'subject', 'body'],
+            all_mandatory=True
+        )
+        email_data = insert_statement_parser.parse_query()
+
+        for email in email_data:
+            connection = self.handler.connect()
+            to_addr = email['to']
+            del email['to']
+            connection.send_email(to_addr, **email)
 
     def get_columns(self):
         return ['id', 'created_at', 'to', 'from', 'subject', 'body']

@@ -72,7 +72,7 @@ class MongoDBHandler(DatabaseHandler):
         self.connection = connection
         return self.connection
 
-    def subscribe(self, stop_event, callback, table_name, **kwargs):
+    def subscribe(self, stop_event, callback, table_name, columns=None, **kwargs):
         con = self.connect()
         cur = con[self.database][table_name].watch()
         while True:
@@ -86,9 +86,23 @@ class MongoDBHandler(DatabaseHandler):
                 continue
             _id = res['documentKey']['_id']
             if res['operationType'] == 'insert':
+                if columns is not None:
+                    updated_columns = set(res['fullDocument'].keys())
+                    if not set(columns) & set(updated_columns):
+                        # do nothing
+                        return
+
                 callback(row=res['fullDocument'], key={'_id': _id})
             if res['operationType'] == 'update':
-                callback(row=res['updateDescription']['updatedFields'], key={'_id': _id})
+                if columns is not None:
+                    updated_columns = set(res['updateDescription']['updatedFields'].keys())
+                    if not set(columns) & set(updated_columns):
+                        # do nothing
+                        return
+
+                # get all document
+                full_doc = con[self.database][table_name].find_one(res['documentKey'])
+                callback(row=full_doc, key={'_id': _id})
 
     def disconnect(self):
         if self.is_connected is False:

@@ -626,7 +626,7 @@ class ExecuteCommands:
         trigger_name = statement.name.parts[-1]
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
 
-        triggers_controller.add(trigger_name, project_name, statement.table, statement.query_str)
+        triggers_controller.add(trigger_name, project_name, statement.table, statement.query_str, statement.columns)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_trigger(self, statement):

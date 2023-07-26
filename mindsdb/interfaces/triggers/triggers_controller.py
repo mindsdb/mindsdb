@@ -10,7 +10,7 @@ from mindsdb.utilities.context import context as ctx
 class TriggersController:
     OBJECT_TYPE = 'trigger'
 
-    def add(self, name, project_name, table, query_str):
+    def add(self, name, project_name, table, query_str, columns=None):
         name = name.lower()
 
         if project_name is None:
@@ -44,6 +44,11 @@ class TriggersController:
         if table_name not in tables:
             raise Exception(f'Table {table_name} not found in {db_name}')
 
+        columns_str = None
+        if columns is not None and len(columns) > 0:
+            # join to string with delimiter
+            columns_str = '|'.join([col.parts[-1] for col in columns])
+
         # check sql
         try:
             parse_sql(query_str, dialect='mindsdb')
@@ -58,6 +63,7 @@ class TriggersController:
             database_id=db_integration['id'],
             table_name=table_name,
             query_str=query_str,
+            columns=columns_str
         )
         db.session.add(record)
         db.session.commit()

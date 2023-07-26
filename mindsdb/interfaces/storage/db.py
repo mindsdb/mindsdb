@@ -346,6 +346,7 @@ class Triggers(Base):
     database_id = Column(Integer)
     table_name = Column(String, nullable=False)
     query_str = Column(String, nullable=False)
+    columns = Column(String, nullable=False)  # list of columns separated by delimiter
 
     last_error = Column(String)
     created_at = Column(DateTime, default=datetime.datetime.now)

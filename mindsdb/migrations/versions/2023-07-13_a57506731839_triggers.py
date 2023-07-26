@@ -37,6 +37,7 @@ def upgrade():
         sa.Column('project_id', sa.Integer(), nullable=False),
         sa.Column('database_id', sa.Integer(), nullable=True),
         sa.Column('table_name', sa.String(), nullable=False),
+        sa.Column('columns', sa.String(), nullable=False),
         sa.Column('query_str', sa.String(), nullable=False),
         sa.Column('last_error', sa.String(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=True),

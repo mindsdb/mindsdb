@@ -51,8 +51,6 @@ from mindsdb.integrations.libs.learn_process import learn_process, predict_proce
 from mindsdb.utilities.functions import mark_process
 import mindsdb.utilities.profiler as profiler
 
-from .ml_handler_proc import MLHandlerWrapper, MLHandlerPersistWrapper
-
 import torch.multiprocessing as mp
 mp_ctx = mp.get_context('spawn')
 
@@ -64,7 +62,7 @@ class MLEngineException(Exception):
 def init_ml_handler(module_path):
     import importlib  # noqa
 
-    from mindsdb.integrations.libs.learn_process import learn_process  # noqa
+    from mindsdb.integrations.libs.learn_process import learn_process, predict_process  # noqa
 
     importlib.import_module(module_path)
 
@@ -326,32 +324,14 @@ class BaseMLEngineExec:
 
         integration_id = self.integration_id
 
-        class_path = [self.handler_class.__module__, self.handler_class.__name__]
+        handlerStorage = HandlerStorage(integration_id)
+        modelStorage = ModelStorage(predictor_id)
 
-        if self.execution_method == 'subprocess':
-            handler = MLHandlerWrapper()
-
-            handler.init_handler(class_path, integration_id, predictor_id, ctx.dump())
-            return handler
-
-        elif self.execution_method == 'subprocess_keep':
-            handler = MLHandlerPersistWrapper()
-
-            handler.init_handler(class_path, integration_id, predictor_id, ctx.dump())
-            return handler
-
-        elif self.execution_method == 'remote':
-            raise NotImplementedError()
-
-        else:
-            handlerStorage = HandlerStorage(integration_id)
-            modelStorage = ModelStorage(predictor_id)
-
-            ml_handler = self.handler_class(
-                engine_storage=handlerStorage,
-                model_storage=modelStorage,
-            )
-            return ml_handler
+        ml_handler = self.handler_class(
+            engine_storage=handlerStorage,
+            model_storage=modelStorage,
+        )
+        return ml_handler
 
     def get_tables(self) -> Response:
         """ Returns all models currently registered that belong to the ML engine."""

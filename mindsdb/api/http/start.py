@@ -29,7 +29,9 @@ def start(verbose, no_studio, with_nlp):
     host = config['api']['http']['host']
 
     process_cache.init({
-        integration_controller.handler_modules['lightwood'].Handler: 4 if is_cloud else 1
+        integration_controller.handler_modules['lightwood'].Handler: 4 if is_cloud else 1,
+        integration_controller.handler_modules['huggingface'].Handler: 1 if is_cloud else 0,
+        integration_controller.handler_modules['openai'].Handler: 1 if is_cloud else 0
     })
 
     if server.lower() == 'waitress':

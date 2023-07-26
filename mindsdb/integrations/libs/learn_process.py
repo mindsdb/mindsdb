@@ -2,25 +2,27 @@ import importlib
 import traceback
 import datetime as dt
 
+from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Identifier, Select, Star, NativeQuery
 
-from mindsdb.utilities.functions import mark_process
-from mindsdb.utilities.context import context as ctx
 import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 from mindsdb.integrations.utilities.sql_utils import make_sql_session
-from mindsdb_sql import parse_sql
 from mindsdb.integrations.handlers_client.ml_client_factory import MLClientFactory
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.integrations.utilities.utils import format_exception_error
 import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.functions import mark_process
+from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.config import Config
 
 
 @mark_process(name='learn')
 def predict_process(predictor_record, ml_engine_name, handler_class, integration_id, df, args):
+    db.init()
+
     handlerStorage = HandlerStorage(integration_id)
     modelStorage = ModelStorage(predictor_record.id)
 

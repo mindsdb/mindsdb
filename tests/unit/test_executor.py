@@ -996,9 +996,9 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
 
         # check predictor call
         # input = one row whit a==2
-        df_in = self.mock_predict.call_args[0][0]
-        assert df_in.shape[0] == 1
-        assert df_in.a[0] == 2
+        data_in = self.mock_predict.call_args[0][1]
+        assert len(data_in) == 1
+        assert data_in[0]['a'] == 2
 
         # check prediction
         assert ret.data[0][0] == predicted_value
@@ -1063,7 +1063,7 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
         assert mock_handler().native_query.call_args[0][0] == 'select * from tasks'
 
         # input to predictor all 9 rows
-        when_data = self.mock_predict.call_args[0][0]
+        when_data = self.mock_predict.call_args[0][1]
         assert len(when_data) == 9
 
         # all group values in input

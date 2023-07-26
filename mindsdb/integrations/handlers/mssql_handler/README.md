@@ -1,9 +1,8 @@
----
-title: Microsoft SQL Server
-sidebarTitle: Microsoft SQL Server
----
+# Microsoft SQL Server Handler
 
 This is the implementation of the Microsoft SQL Server data handler for MindsDB.
+
+## Microsoft SQL Server
 
 [Microsoft SQL Server](https://www.microsoft.com/en-us/sql-server) is a relational database management system developed by Microsoft. As a database server, it stores and retrieves data as requested by other software applications, which may run either on the same computer or on another computer across a network.
 
@@ -19,9 +18,7 @@ The required arguments to establish a connection are as follows:
 * `user` is the database user.
 * `password` is the database password.
 
-<Tip>
 If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/mssql_handler) and run this command:   `pip install -r requirements.txt`.
-</Tip>
 
 ## Installation
 
@@ -35,6 +32,7 @@ With this, we will get the Microsoft SQL Server docker image. Now, to run this d
 ```
 sudo docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=admin5678@" \
    -p 1433:1433 --name test --hostname mssql \
+   -d \
    mcr.microsoft.com/mssql/server:2022-latest
 ```
 
@@ -57,9 +55,7 @@ We can login by passing the Server, Username, and Password:
 /opt/mssql-tools/bin/sqlcmd -S mssql -U SA
 ```
 
-<Note>
 It will then prompt for the password which you have created. If successful, you should get to a sqlcmd command prompt: 1>.
-</Note>
 
 We have successfully created the local running database server.
 
@@ -72,9 +68,7 @@ CREATE DATABASE TestDB
 USE TestDB;
 ```
 
-<Tip>
 You won't see any output after writing these queries. Because, they don't run immediately. If you want to execute these, write `GO` in the next line to execute all the previous commands.
-</Tip>
 
 ```sql
 CREATE TABLE Inventory (id INT, name NVARCHAR(50), quantity INT);

@@ -22,7 +22,7 @@ If you installed MindsDB locally via pip, you need to install all handler depend
 
 ## Installation
 
-I am going to first install Microsoft SQL Server locally using docker, please follow along:
+We are going to first install Microsoft SQL Server locally using docker, please follow along:
 ```
 sudo docker pull mcr.microsoft.com/mssql/server:2022-latest
 ```
@@ -96,12 +96,12 @@ In our case we will write:
 ngrok tcp 1433
 ```
 
-The forwarding ports which I got are:
+Suppose the forwarding ports are:
 ```
 tcp://0.tcp.ngrok.io:10985 -> localhost:1433
 ```
 
-Now, we can use this to create DATABASE using MindsDB
+So, we can use this to create DATABASE using MindsDB
 
 ```sql
 CREATE DATABASE mssql_datasource

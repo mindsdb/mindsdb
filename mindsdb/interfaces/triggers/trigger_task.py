@@ -45,7 +45,15 @@ class TriggerTask:
         # subscribe
         database = session.integration_controller.get_by_id(trigger.database_id)
         data_handler = session.integration_controller.get_handler(database['name'])
-        data_handler.subscribe(stop_event, self._callback, trigger.table_name)
+
+        columns = trigger.columns
+        if columns is not None:
+            if columns == '':
+                columns = None
+            else:
+                columns = columns.split('|')
+
+        data_handler.subscribe(stop_event, self._callback, trigger.table_name, columns)
 
     def _callback(self, row, key):
         log.logger.debug(f'trigger call: {row}, {key}')

@@ -20,6 +20,38 @@ from mindsdb.utilities.config import Config
 
 
 @mark_process(name='learn')
+def predict_process(predictor_record, ml_engine_name, handler_class, integration_id, df, args):
+    handlerStorage = HandlerStorage(integration_id)
+    modelStorage = ModelStorage(predictor_record.id)
+
+    ml_handler = handler_class(
+        engine_storage=handlerStorage,
+        model_storage=modelStorage,
+    )
+
+    if ml_engine_name == 'LightwoodHandler':
+        args['code'] = predictor_record.code
+        args['target'] = predictor_record.to_predict[0]
+        args['dtype_dict'] = predictor_record.dtype_dict
+        args['learn_args'] = predictor_record.learn_args
+
+    if ml_engine_name in ('LangChainHandler',):
+        from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
+        from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+
+        sql_session = SessionController()
+        sql_session.database = 'mindsdb'
+
+        command_executor = ExecuteCommands(sql_session, executor=None)
+
+        args['executor'] = command_executor
+
+    predictions = ml_handler.predict(df, args)
+    ml_handler.close()
+    return predictions
+
+
+@mark_process(name='learn')
 def learn_process(class_path, engine, integration_id,
                   predictor_id, problem_definition, set_active,
                   base_predictor_id=None, training_data_df=None,

@@ -47,7 +47,7 @@ from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 from mindsdb.utilities.context import context as ctx
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.integrations.handlers_client.ml_client_factory import MLClientFactory
-from mindsdb.integrations.libs.learn_process import learn_process
+from mindsdb.integrations.libs.learn_process import learn_process, predict_process
 from mindsdb.utilities.functions import mark_process
 import mindsdb.utilities.profiler as profiler
 
@@ -501,36 +501,20 @@ class BaseMLEngineExec:
         if predictor_record.status != PREDICTOR_STATUS.COMPLETE:
             raise Exception("Error: model creation not completed")
 
-        ml_handler = self._get_ml_handler(predictor_record.id)
-
         args = {
             'pred_format': pred_format,
             'predict_params': {} if params is None else params
         }
-        # FIXME
-        # if self.handler_class.__name__ == 'LightwoodHandler':
-        if self.handler_class.__name__ == 'LightwoodHandler':
-            args['code'] = predictor_record.code
-            args['target'] = predictor_record.to_predict[0]
-            args['dtype_dict'] = predictor_record.dtype_dict
-            args['learn_args'] = predictor_record.learn_args
-
-        if self.handler_class.__name__ in ('LangChainHandler',):
-            from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
-            from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
-
-            sql_session = SessionController()
-            sql_session.database = 'mindsdb'
-
-            command_executor = ExecuteCommands(sql_session, executor=None)
-
-            args['executor'] = command_executor
 
         try:
             task = process_cache.apply_async(
                 handler=self.handler_class,
-                func=ml_handler.predict,
+                func=predict_process,
                 model_marker=(ctx.company_id, predictor_record.id),
+                predictor_record=predictor_record,
+                integration_id=self.integration_id,
+                handler_class=self.handler_class,
+                ml_engine_name=self.handler_class.__name__,
                 df=df,
                 args=args
             )
@@ -541,8 +525,6 @@ class BaseMLEngineExec:
                 msg = e.__class__.__name__
             msg = f'[{self.name}/{model_name}]: {msg}'
             raise MLEngineException(msg) from e
-
-        ml_handler.close()
 
         # mdb indexes
         if '__mindsdb_row_id' not in predictions.columns and '__mindsdb_row_id' in df.columns:

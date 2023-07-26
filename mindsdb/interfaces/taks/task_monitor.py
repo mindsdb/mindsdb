@@ -57,21 +57,21 @@ class TaskMonitor:
             if task.id not in self._active_tasks:
                 self.start_task(task)
 
-        # Check old tasks to stop
-        active_tasks = list(self._active_tasks.keys())
-        for task_id in active_tasks:
-            if task_id not in allowed_tasks:
-                self.stop_task(task_id)
-
-        # check dead tasks
+        # Check active tasks
         active_tasks = list(self._active_tasks.items())
         for task_id, task in active_tasks:
-            if not task.is_alive():
+
+            if task_id not in allowed_tasks:
+                # old task
                 self.stop_task(task_id)
 
-        # set alive time to running tasks
-        for task_id in self._active_tasks.keys():
-            self._set_alive(task_id)
+            elif not task.is_alive():
+                # dead task
+                self.stop_task(task_id)
+
+            else:
+                # set alive time of running tasks
+                self._set_alive(task_id)
 
     def _lock_task(self, task):
         run_by = f'{socket.gethostname()} {os.getpid()}'
@@ -97,8 +97,9 @@ class TaskMonitor:
         return True
 
     def _set_alive(self, task_id):
+        db_date = db.session.query(sa.func.current_timestamp()).first()[0]
         task = db.Tasks.query.get(task_id)
-        task.alive_time = dt.datetime.now()
+        task.alive_time = db_date
         db.session.commit()
 
     def _unlock_task(self, task_id):

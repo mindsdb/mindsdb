@@ -7,7 +7,7 @@ Replicate is a platform and tool that aims to make it easier to work with machin
 
 
 ## Implementation
-This handler was implemented using the `replicate` library that is provided by Amazon Web Services.
+This handler was implemented using the `replicate` library that is provided by Replicate.
 
 The required arguments to establish a connection are,
 - 

@@ -69,6 +69,21 @@ class TestOpenAI(BaseExecutorTest):
         with pytest.raises(Exception):
             self.wait_predictor("proj", "test_openai_nonexistant_model")
 
+    def test_unknown_arguments(self):
+        self.run_sql("create database proj")
+        with pytest.raises(Exception):
+            self.run_sql(
+                f"""
+                create model proj.test_openai_unknown_arguments
+                predict answer
+                using
+                    engine='openai',
+                    question_column='question',
+                    openai_api_key='{OPEN_AI_API_KEY}',
+                    model='unknown_argument';  --- this is a wrong argument name
+            """
+            )
+
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_qa_no_context(self, mock_handler):
         # create project
@@ -205,11 +220,11 @@ class TestOpenAI(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_bulk_normal_completion(self, mock_handler):
-        """ Tests normal completions (e.g. text-davinci-003) with bulk joins that are larger than the max batch_size """
+        """Tests normal completions (e.g. text-davinci-003) with bulk joins that are larger than the max batch_size"""
         # create project
         self.run_sql("create database proj")
-        handler_instance = OpenAIHandler()
-        N = 1 + handler_instance.max_batch_size  # get N larger than default batch size
+        max_batch_size = 10
+        N = 1 + max_batch_size  # get N larger than default batch size
         df = pd.DataFrame.from_dict({"input": ["I feel happy!"] * N})
         self.set_handler(mock_handler, name="pg", tables={"df": df})
         self.run_sql(
@@ -222,13 +237,13 @@ class TestOpenAI(BaseExecutorTest):
              openai_api_key='{OPEN_AI_API_KEY}';
         """  # noqa
         )
-        self.wait_predictor("proj", "test_openai_prompt_template")
+        self.wait_predictor("proj", "test_openai_bulk_normal_completion")
 
         result_df = self.run_sql(
             """
             SELECT p.completion
             FROM pg.df as t
-            JOIN proj.test_openai_prompt_template as p;
+            JOIN proj.test_openai_bulk_normal_completion as p;
         """
         )
 

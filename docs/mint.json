@@ -418,6 +418,7 @@
         {
           "group": "Large Language Models",
           "pages": [
+            "sql/tutorials/slack-chatbot",
             "sql/tutorials/twitter-chatbot",
             "sql/tutorials/image-generator"
           ]

@@ -44,24 +44,40 @@ class ReplicateHandler(BaseMLEngine):
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         """Using replicate makes the prediction according to your parameters
+        
+        Args:
+            df (pd.DataFrame): The input DataFrame containing data to predict.
+            args (Optional[Dict]): Additional arguments for prediction parameters.
+        
+        Returns:
+            pd.DataFrame: The DataFrame containing the predicted results.
         """
-        def get_data(conditions):
-            output = replicate.run(
-                f"{args['model_name']}:{args['version']}",
-                input={**conditions[1].to_dict(), **pred_args})  # unpacking parameters inputted
 
-            if isinstance(output, types.GeneratorType) and args.get('model_type') == 'LLM':
-                output = [''.join(list(output))]      # If model_type is LLM make stream as string
-            elif isinstance(output, types.GeneratorType):
-                output = [list(output)[-1]]         # Getting final url if output is generator of frames url
-            elif isinstance(output, list) and len(output) > 1:
-                output = [output[-1]]             # returns generated image for controlNet models as it outputs filter and generated image
-            return output
-
+        # Extracting prediction parameters from input arguments
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
         model_name, version, target_col = args['model_name'], args['version'], args['target']
-        # raising Exception if wrong parameters is given
+
+        # Check if '__mindsdb_row_id' column exists and drop it if present
+        if '__mindsdb_row_id' in df.columns:
+            df.drop(columns=['__mindsdb_row_id'], inplace=True)
+
+        def get_data(conditions):
+            # Run prediction using MindsDB's replicate library
+            output = replicate.run(
+                f"{args['model_name']}:{args['version']}",
+                input={**conditions.to_dict(), **pred_args}         # Unpacking parameters inputted
+            ) 
+            # Process output based on the model type
+            if isinstance(output, types.GeneratorType) and args.get('model_type') == 'LLM':
+                output = ''.join(list(output))  # If model_type is LLM, make the stream a string
+            elif isinstance(output, types.GeneratorType):
+                output = list(output)[-1]  # Getting the final URL if output is a generator of frames URL
+            elif isinstance(output, list) and len(output) > 0:
+                output = output[-1]  # Returns generated image for controlNet models as it outputs filter and generated image
+            return output
+
+        # Check if any wrong parameters are given and raise an exception if necessary
         params_names = set(df.columns) | set(pred_args)
         available_params = self._get_schema(only_keys=True)
         wrong_params = []
@@ -74,13 +90,14 @@ class ReplicateHandler(BaseMLEngine):
 Use DESCRIBE PREDICTOR mindsdb.<model_name>.features; to know about available parameters. OR 
 Visit https://replicate.com/{model_name}/versions/{version} to check parameters.""")
 
+        # Set the Replicate API token for communication with the server
         replicate.default_client.api_token = self._get_replicate_api_key(args)
 
-        rows = df.iterrows()      # Generator is returned
-        rows_arr = list(rows)      # Generator converted to list have tuple consisting (index, row(pandas.Series))
-        data = map(get_data, rows_arr)  # using get_data function to get data according to inputted parameters
+        # Run prediction on the DataFrame rows and format the results into a DataFrame
+        data = df.apply(get_data, axis=1)
         data = pd.DataFrame(data)
         data.columns = [target_col]
+
         return data
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:

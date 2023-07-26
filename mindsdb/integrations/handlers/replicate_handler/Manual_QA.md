@@ -7,7 +7,7 @@
 **1. CREATE MODEL**
 
 ```sql
-CREATE MODEL stability
+CREATE MODEL aiforever
 PREDICT url
 USING
     engine = 'replicate',

@@ -23,102 +23,20 @@ The required arguments to establish a connection are as follows:
 If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/mssql_handler) and run this command:   `pip install -r requirements.txt`.
 </Tip>
 
-## Installation
-
-I am going to first install Microsoft SQL Server locally using docker, please follow along:
-```
-sudo docker pull mcr.microsoft.com/mssql/server:2022-latest
-```
-
-With this, we will get the Microsoft SQL Server docker image. Now, to run this docker image, we will use:
-
-```
-sudo docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=admin5678@" \
-   -p 1433:1433 --name test --hostname mssql \
-   mcr.microsoft.com/mssql/server:2022-latest
-```
-
-Here we have given following values:
-- `password`: 'admin5678@'
-- `port`: '1433'
-- `username`: 'test'
-- `hostname`: 'mssql'
-
-We have our Microsoft SQL Server running, now open your terminal and give following commands:
-
-```
-sudo docker exec -it test "bash"
-```
-
-This command will let us get in the running container, from there we will login with our credentials and create DB Tables.
-
-We can login by passing the Server, Username, and Password:
-```
-/opt/mssql-tools/bin/sqlcmd -S mssql -U SA
-```
-
-<Note>
-It will then prompt for the password which you have created. If successful, you should get to a sqlcmd command prompt: 1>.
-</Note>
-
-We have successfully created the local running database server.
-
-Let's create a database and a table with few columns.
-```sql
-CREATE DATABASE TestDB
-```
-
-```sql
-USE TestDB;
-```
-
-<Tip>
-You won't see any output after writing these queries. Because, they don't run immediately. If you want to execute these, write `GO` in the next line to execute all the previous commands.
-</Tip>
-
-```sql
-CREATE TABLE Inventory (id INT, name NVARCHAR(50), quantity INT);
-```
-
-```sql
-INSERT INTO Inventory VALUES (1, 'banana', 150); 
-INSERT INTO Inventory VALUES (2, 'orange', 154);
-```
-
-```sql
-SELECT * FROM Inventory;
-```
-
-```sql
-GO
-```
-
 ## Usage
 
-In order to make use of this handler with SQL Server running locally with MindsDB, we have to use `ngrok tunneling`, please follow this [guide](https://docs.mindsdb.com/sql/create/database#making-your-local-database-available-to-mindsdb) to achieve that:
-
-In our case we will write:
-```
-ngrok tcp 1433
-```
-
-The forwarding ports which I got are:
-```
-tcp://0.tcp.ngrok.io:10985 -> localhost:1433
-```
-
-Now, we can use this to create DATABASE using MindsDB
+In order to make use of this handler and connect to the SQL Server database in MindsDB, the following syntax can be used:
 
 ```sql
 CREATE DATABASE mssql_datasource
 WITH
     engine = 'mssql',
     parameters = {
-      "host": "0.tcp.ngrok.io",
-      "port": 10985,
-      "database": "TestDB",
-      "user": "SA",
-      "password": "admin5678@"
+      "host": "127.0.0.1",
+      "port": 1433,
+      "database": "master",
+      "user": "sa",
+      "password": "password"
     };
 ```
 
@@ -126,5 +44,5 @@ You can use this established connection to query your table as follows:
 
 ```sql
 SELECT *
-FROM mssql_datasource.Inventory;
+FROM mssql_datasource.example_tbl;
 ```

@@ -9,7 +9,6 @@ from mindsdb_sql import parse_sql
 
 from tests.unit.executor_test_base import BaseExecutorTest
 
-from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
 
 OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
 os.environ["OPENAI_API_KEY"] = OPEN_AI_API_KEY

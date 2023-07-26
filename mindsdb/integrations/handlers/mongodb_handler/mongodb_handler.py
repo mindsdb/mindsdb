@@ -23,6 +23,7 @@ class MongoDBHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the MongoDB statements.
     """
+    _SUBSCRIBE_SLEEP_INTERVAL = 0.5
 
     name = 'mongodb'
 
@@ -82,7 +83,7 @@ class MongoDBHandler(DatabaseHandler):
 
             res = cur.try_next()
             if res is None:
-                time.sleep(0.5)
+                time.sleep(self._SUBSCRIBE_SLEEP_INTERVAL)
                 continue
             _id = res['documentKey']['_id']
             if res['operationType'] == 'insert':

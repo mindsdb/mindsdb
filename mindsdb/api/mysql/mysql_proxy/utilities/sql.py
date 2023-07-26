@@ -90,7 +90,7 @@ def query_df(df, query, session=None):
         query_str = render.get_string(query_ast, with_failback=True)
 
     # workaround to prevent duckdb.TypeMismatchException
-    if len(df) > 0 and table_name.lower() in ('models', 'predictors'):
+    if len(df) > 0 and table_name.lower() in ('models', 'predictors', 'models_versions'):
         if 'TRAINING_OPTIONS' in df.columns:
             df = df.astype({'TRAINING_OPTIONS': 'string'})
 

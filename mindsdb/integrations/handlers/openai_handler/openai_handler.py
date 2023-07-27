@@ -16,12 +16,12 @@ import pandas as pd
 
 from mindsdb.utilities.hooks import before_openai_query, after_openai_query
 from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff, \
     truncate_msgs_for_token_limit
+from mindsdb.integrations.utilities.handler_utils import get_api_key
 
-CHAT_MODELS = ('gpt-3.5-turbo', 'gpt-3.5-turbo-0301', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-4-32k-0314')
+CHAT_MODELS = ('gpt-3.5-turbo', 'gpt-3.5-turbo-16k', 'gpt-4', 'gpt-4-32k')
 
 
 class OpenAIHandler(BaseMLEngine):
@@ -69,7 +69,8 @@ class OpenAIHandler(BaseMLEngine):
         args = args['using']
 
         args['target'] = target
-        available_models = [m.openai_id for m in openai.Model.list(api_key=self._get_openai_api_key(args)).data]
+        api_key = get_api_key('openai', args, self.engine_storage)
+        available_models = [m.openai_id for m in openai.Model.list(api_key=api_key).data]
         if not args.get('model_name'):
             args['model_name'] = self.default_model
         elif args['model_name'] not in available_models:
@@ -82,34 +83,6 @@ class OpenAIHandler(BaseMLEngine):
 
         self.model_storage.json_set('args', args)
 
-    def _get_openai_api_key(self, args, strict=True):
-        """ 
-        API_KEY preference order:
-            1. provided at model creation
-            2. provided at engine creation
-            3. OPENAI_API_KEY env variable
-            4. openai.api_key setting in config.json
-        """  # noqa
-        # 1
-        if 'api_key' in args:
-            return args['api_key']
-        # 2
-        connection_args = self.engine_storage.get_connection_args()
-        if 'api_key' in connection_args:
-            return connection_args['api_key']
-        # 3
-        api_key = os.getenv('OPENAI_API_KEY')
-        if api_key is not None:
-            return api_key
-        # 4
-        config = Config()
-        openai_cfg = config.get('openai', {})
-        if 'api_key' in openai_cfg:
-            return openai_cfg['api_key']
-
-        if strict:
-            raise Exception(f'Missing API key "api_key". Either re-create this ML_ENGINE specifying the `api_key` parameter,\
-                 or re-create this model and pass the API key with `USING` syntax.')  # noqa
 
     def predict(self, df, args=None):
         """
@@ -246,7 +219,7 @@ class OpenAIHandler(BaseMLEngine):
         # remove prompts without signal from completion queue
         prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
 
-        api_key = self._get_openai_api_key(args)
+        api_key = get_api_key('openai', args, self.engine_storage)
         api_args = {k: v for k, v in api_args.items() if v is not None}  # filter out non-specified api args
         completion = self._completion(model_name, prompts, api_key, api_args, args, df)
 
@@ -484,7 +457,7 @@ class OpenAIHandler(BaseMLEngine):
         if attribute == 'args':
             return pd.DataFrame(args.items(), columns=['key', 'value'])
         elif attribute == 'metadata':
-            api_key = self._get_openai_api_key(args)
+            api_key = get_api_key('openai', args, self.engine_storage)
             model_name = args.get('model_name', self.default_model)
             meta = openai.Model.retrieve(model_name, api_key=api_key)
             return pd.DataFrame(meta.items(), columns=['key', 'value'])
@@ -522,7 +495,7 @@ class OpenAIHandler(BaseMLEngine):
         if prev_model_name not in self.supported_ft_models:
             raise Exception(f"This model cannot be finetuned. Supported base models are {self.supported_ft_models}")
 
-        openai.api_key = self._get_openai_api_key(args)
+        openai.api_key = get_api_key('openai', args, self.engine_storage)
         finetune_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
         temp_storage_path = tempfile.mkdtemp()

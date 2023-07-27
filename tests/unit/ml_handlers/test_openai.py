@@ -8,6 +8,7 @@ import pandas as pd
 from mindsdb_sql import parse_sql
 
 from tests.unit.executor_test_base import BaseExecutorTest
+from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
 
 
 OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
@@ -79,7 +80,7 @@ class TestOpenAI(BaseExecutorTest):
                     engine='openai',
                     question_column='question',
                     openai_api_key='{OPEN_AI_API_KEY}',
-                    model='unknown_argument';  --- this is a wrong argument name
+                    evidently_wrong_argument='wrong value';  --- this is a wrong argument name
             """
             )
 
@@ -222,8 +223,11 @@ class TestOpenAI(BaseExecutorTest):
         """Tests normal completions (e.g. text-davinci-003) with bulk joins that are larger than the max batch_size"""
         # create project
         self.run_sql("create database proj")
-        max_batch_size = 10
-        N = 1 + max_batch_size  # get N larger than default batch size
+        handler = OpenAIHandler(
+            model_storage=None,  # the storage does not matter for this test
+            engine_storage=None,
+        )
+        N = 1 + handler.max_batch_size  # get N larger than default batch size
         df = pd.DataFrame.from_dict({"input": ["I feel happy!"] * N})
         self.set_handler(mock_handler, name="pg", tables={"df": df})
         self.run_sql(

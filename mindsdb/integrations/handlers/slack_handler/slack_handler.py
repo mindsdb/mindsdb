@@ -473,22 +473,6 @@ class SlackHandler(APIChatHandler):
 
         stop_event.wait()
 
-    # def realtime_send(self, message: ChatBotMessage):
-    #     """
-    #            Sends a Slack message.
-    #
-    #            Parameters: message (ChatBotMessage): The message to send
-    #
-    #            Returns: response (ChatBotResponse): Response indicating whether the message was sent successfully
-    #            """
-    #     if message.type != ChatBotMessage.Type.DIRECT:
-    #         raise NotImplementedError('Only sending direct messages is supported by RealtimeSlackChatHandler')
-    #     response = self._socket_mode_client.web_client.chat_postMessage(
-    #         channel=message.destination,
-    #         text=message.text
-    #     )
-    #
-    #     response.validate()
 
     def create_connection(self):
         """

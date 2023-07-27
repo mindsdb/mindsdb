@@ -185,6 +185,7 @@
             "data-integrations/sqlite",
             "data-integrations/starrocks",
             "data-integrations/supabase",
+            "data-integrations/surrealdb",
             "data-integrations/tdengine",
             "data-integrations/teradata",
             "data-integrations/tidb",
@@ -417,6 +418,7 @@
         {
           "group": "Large Language Models",
           "pages": [
+            "sql/tutorials/slack-chatbot",
             "sql/tutorials/twitter-chatbot",
             "sql/tutorials/image-generator"
           ]

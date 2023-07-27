@@ -35,7 +35,7 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
 
         self._connection_data = kwargs.get("connection_data")
 
-        self._client_config = self._client_config = {
+        self._client_config = {
             "chroma_api_impl": self._connection_data.get("chroma_api_impl"),
             "chroma_server_host": self._connection_data.get("chroma_server_host"),
             "chroma_server_http_port": self._connection_data.get(

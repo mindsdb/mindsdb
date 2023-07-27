@@ -312,8 +312,18 @@ class HuggingFaceHandler(BaseMLEngine):
         task = args['task']
 
         # rename columns to properly finetune, depends on use case
-        if task == 'text-classification':
+        if task in ('text-classification',  'zero-shot-classification'):
             df.rename(columns={args['target']: 'labels', args['input_column']: 'text'}, inplace=True)
+        elif task == 'translation':
+            pass
+        elif task == 'summarization':
+            pass
+        elif task == 'fill-mask':
+            pass
+        elif task == 'text2text-generation':
+            pass
+        else:
+            raise Exception(f'Unsupported task: {task}')
 
         tokenizer_from = args.get('tokenizer_from', 'bert-base-cased')
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_from)  # TODO: load from pre-trained model folder
@@ -323,7 +333,7 @@ class HuggingFaceHandler(BaseMLEngine):
         train_ds = ds['train']
         eval_ds = ds['test']
 
-        if task == 'text-classification':
+        if task in ('text-classification', 'zero-shot-classification'):
             n_labels = len(args['labels_map'])
             assert n_labels == df['labels'].nunique(), f'Label mismatch! Ensure labels match what the model was originally trained on. Found {df["labels"].nunique()} classes, expected {n_labels}.'  # noqa
             model = AutoModelForSequenceClassification.from_pretrained(base_model_name, num_labels=n_labels)

@@ -12,6 +12,7 @@ from typing import Callable, Dict
 from mindsdb.integrations.libs.realtime_chat_handler import RealtimeChatHandler
 from mindsdb.interfaces.chatbot.chatbot_message import ChatBotMessage
 from mindsdb.interfaces.chatbot.chatbot_response import ChatBotResponse
+from mindsdb.interfaces.chatbot.chatbot_alerter import ChatbotAlerter
 
 class RealtimeSlackChatHandler(RealtimeChatHandler):
     """Implements RealtimeChatHandler interface for sending/receiving Slack messages."""
@@ -87,27 +88,24 @@ class RealtimeSlackChatHandler(RealtimeChatHandler):
             response.validate()
             return ChatBotResponse(message.text)
         except SlackApiError as e:
-            slack_message = {
-                'text': f"@here :robot_face: : Oh! there is an inconvenience, the chatbot can't send messages ",
-                'attachments': [
+            ChatbotAlerter.send_slack_alert(
+                'https://hooks.slack.com/services/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',
+                "@here :robot_face: : Oh! there is an inconvenience, the chatbot can't send messages",
+                [
                     {
-                    'color': '#C80001',
-                    'fields': [
+                    "color": "#C80001",
+                    "fields": [
                         {
-                            'title': 'Destination',
-                            'value': message.destination
+                            "title": "Destination",
+                            "value": message.destination
                         },
                         {
-                            'title': 'Message',
-                            'value': message.text
+                            "title": "Message",
+                            "value": message.text
                         },
                     ],
                     }
                 ]
-            }
-            # TODO: Replace hooks url
-            requests.post(
-                'https://hooks.slack.com/services/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', 
-                json= slack_message
             )
+
             return ChatBotResponse(message.text, error=str(e))

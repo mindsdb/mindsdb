@@ -3,7 +3,7 @@ import threading
 from mindsdb.utilities import log
 from mindsdb.interfaces.chatbot.realtime_chatbot_task import RealtimeChatBotTask
 from mindsdb.interfaces.chatbot.realtime_chat_handler_factory import RealtimeChatHandlerFactory
-
+from mindsdb.interfaces.chatbot.chatbot_alerter import ChatbotAlerter
 
 class RealtimeChatBotThread(threading.Thread):
     """A thread for a realtime chatbot to operate."""
@@ -23,6 +23,11 @@ class RealtimeChatBotThread(threading.Thread):
         try:
             self._chatbot_task.run()
         except Exception as e:
+            ChatbotAlerter.send_slack_alert(
+            'https://hooks.slack.com/services/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',
+            "@here :robot_face: : The chatbot is unable to establish a connection",
+            )
+
             log.logger.error(e)
 
     def stop(self):

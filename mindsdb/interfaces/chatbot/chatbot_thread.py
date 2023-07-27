@@ -7,6 +7,7 @@ from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 from mindsdb.utilities.context import context as ctx
 from mindsdb.interfaces.chatbot.chatbot_task import ChatBotTask
+from mindsdb.interfaces.chatbot.chatbot_alerter import ChatbotAlerter
 
 
 class ChatBotThread(threading.Thread):
@@ -43,13 +44,11 @@ class ChatBotThread(threading.Thread):
             try:
                 task.run()
             except Exception as e:
-                # TODO: Replace hooks url
-                requests.post(
-                    'https://hooks.slack.com/services/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',
-                    json= {
-                        'text': f"@here :robot_face: :  The chatbot is unable to stablish connection",
-                    }
+                ChatbotAlerter.send_slack_alert(
+                'https://hooks.slack.com/services/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',
+                "@here :robot_face: : The chatbot is unable to establish a connection",
                 )
+
                 log.logger.error(e)
 
             if self._to_stop:

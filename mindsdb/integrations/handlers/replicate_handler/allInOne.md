@@ -281,12 +281,11 @@ USING
 +--------------------------------------------------------------+----------------------------------------+
 | output                                                       | prompt                                 |
 +--------------------------------------------------------------+----------------------------------------+
-| Opensource software, oh how we love thee                     | Write a humorous poem on Open Source |  
+| Opensource software, oh how we love thee                     | Write a humorous poem on Open Source   |  
 | With bugs and glitches, oh so free                           |                                        |  
 | You bring us laughter and joy each day                       |                                        |  
-| And we'll never have to pay                                  |                                       
-
- |  
+| And we'll never have to pay                                  |                                        |
+|                                                              |                                        |  
 |                                                              |                                        |  
 | The licence is open, the code is there                       |                                        |  
 | For all to see and share in cheer                            |                                        |  
@@ -363,6 +362,11 @@ WHERE prompt='Great warrior Arjun from Mahabharata, looking at camera, cinematic
 ### OUTPUT
 ![GENERATE_IMAGE](./assets/Arjuna.png)
 
+
+- IMPORTANT NOTE: PREDICTED **URL** will only work for **24 hours** after prediction.
+
+> Note: Replicate provides only a few free predictions, so choose your predictions wisely. Don't let the machines have all the fun, save some for yourself! 😉
+
 </details>
 
 
@@ -434,10 +438,8 @@ You can watch the generated video [here](./assets/animals.mp4) as the provided l
 
  be temporary and may not work.
 This concludes the query for video generation using the MindsDB model. If you have any more questions or need further assistance, feel free to ask!
+</details>
 
-This concludes the query for image generation using the MindsDB model. Please note that the predicted URL will only work for 24 hours after the prediction. If you have any more questions or need further assistance, feel free to ask!
+This is just few model used in above example there are more with vast variations and use cases. Also, there is no limit to imagination on how you can use this.
 
-
-This is just one model used in this example; there are more with vast variations and use cases. Also, there is no limit to imagination on how you can use this.
-
-> Note: Replicate provides only a few free predictions, so choose your predictions wisely. Don't let the machines have all the fun, save some for yourself! 😉
+> **Note**: Replicate provides only a few free predictions, so choose your predictions wisely. Don't let the machines have all the fun, save some for yourself! 😉

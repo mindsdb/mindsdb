@@ -398,6 +398,7 @@
                 "rest/views/list-views",
                 "rest/views/list-view",
                 "rest/views/create-view",
+                "rest/views/update-view",
                 "rest/views/delete-views"
               ]
             },

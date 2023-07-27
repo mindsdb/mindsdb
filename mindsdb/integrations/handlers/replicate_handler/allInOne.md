@@ -441,6 +441,3 @@ This concludes the query for image generation using the MindsDB model. Please no
 This is just one model used in this example; there are more with vast variations and use cases. Also, there is no limit to imagination on how you can use this.
 
 > Note: Replicate provides only a few free predictions, so choose your predictions wisely. Don't let the machines have all the fun, save some for yourself! 😉
-
-
-Now, the nested `<details>` tags should display correctly. Let me know if there's anything else I can help you with!

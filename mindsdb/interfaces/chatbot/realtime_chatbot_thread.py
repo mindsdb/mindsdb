@@ -32,7 +32,7 @@ class RealtimeChatBotThread(threading.Thread):
                     "color": "#C80001",
                     "fields": [
                         {
-                            "title": "chatbot id",
+                            "title": "Chatbot id",
                             "value": self._bot_record.id
                         }
                     ],

@@ -1,6 +1,7 @@
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.chatbot.chatbot_message import ChatBotMessage
+from mindsdb.interfaces.chatbot.chatbot_alerter import ChatbotAlerter
 from mindsdb.utilities.context import context as ctx
 
 
@@ -88,7 +89,33 @@ class RealtimeChatBotTask:
                 destination=message.user,
             )
             if response.error:
+                ChatbotAlerter.send_slack_alert(
+                    self,
+                    'https://hooks.slack.com/services/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',
+                    "@here :robot_face: : Oh! there is an inconvenience, the chatbot can't send messages",
+                    [
+                        {
+                        "color": "#C80001",
+                        "fields": [
+                            {
+                                "title": "Chatbot id",
+                                "value": self._bot_record.id
+                            },
+                             {
+                                "title": "Destination",
+                                "value": message.user
+                            },
+                            {
+                                "title": "Message",
+                                "value": response_text
+                            }
+                        ],
+                        }
+                    ]
+                )
+
                 reply_history.error = response.error
+
             db.session.add(reply_history)
             db.session.commit()
             return

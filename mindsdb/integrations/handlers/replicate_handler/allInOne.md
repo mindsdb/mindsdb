@@ -440,6 +440,7 @@ You can watch the generated video [here](./assets/animals.mp4) as the provided l
 This concludes the query for video generation using the MindsDB model. If you have any more questions or need further assistance, feel free to ask!
 </details>
 
-This is just few model used in above example there are more with vast variations and use cases. Also, there is no limit to imagination on how you can use this.
+
+- This is just few model used in above examples there are more with vast variations and use cases. Also, there is no limit to imagination on how you can use this.
 
 > **Note**: Replicate provides only a few free predictions, so choose your predictions wisely. Don't let the machines have all the fun, save some for yourself! 😉

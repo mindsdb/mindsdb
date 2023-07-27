@@ -1,41 +1,89 @@
-# Build your own email AI agent
+# Email Handler
 
-You can start by creating a database as follows
+Email handler for MindsDB provides interfaces to connect to email services via APIs and pull data into MindsDB. It is also possible to send emails from MindsDB using this handler.
 
-```
-CREATE DATABASE my_gmail
-USING 
-    engine="email_handler"
-    email="someemail@gmail.com"
-    password="somepassword if gmail use app password"
-    imap_server="imap.gmail.com"
-    smtp_server="smtp.gmail.com"
-    smtp_port="587"
-```
+---
 
-now we can query emails as tables:
+## Table of Contents
 
-```
-SELECT id, from, to, subject, body FROM my_gmail.emails WHERE folder = 'inbox' AND date > 'some date' 
-```
+- [Email Handler](#github-handler)
+  - [Table of Contents](#table-of-contents)
+  - [Email Handler Implementation](#sendinblue-handler-implementation)
+  - [Email Handler Initialization](#sendinblue-handler-initialization)
+  - [Implemented Features](#implemented-features)
+  - [TODO](#todo)
+  - [Example Usage](#example-usage)
 
-You can create a GPT model to manage responses
+---
 
-```
-CREATE MODEL mindsdb.gpt3_model
-PREDICT generated_answer
-USING
-  ENGINE='openai',
-  max_tokens = 200
-```
+## Email Handler Implementation
 
-You could write and respond to emails, for example using gpt to generate a response:
+This handler was implemented using the standard Python libraries: email, imaplib and smtplib.
 
-```
-INSERT INTO my_gmail.emails (reply_to_id, to, body) 
-SELECT e.id AS reply_to_id, 'all', m.generated_answer AS body
-FROM mailbox.emails e JOIN mindsdb.gpt3_model m
-WHERE 
-     m.prompt = "if message doesn't feel like a request for a meeting, return word [PASS] Otherwise, Write a thank you email response asking for the reason they would like to meet, unless the message already contains a reason and the reason is about an issue with the mindsdb product or questions about how to use mindsdb in production, then invite them to schedule a calendly http://someurl, try to address it to the person's name if you can extract name from {{e.from}}"
-     AND m.generated_aswer != 'PASS';
-```
+## Email Handler Initialization
+
+The Email handler is initialized with the following required parameters:
+
+- `email`: a required email address to use for authentication.
+- `password`: a required password to use for authentication.
+
+To use the handler on a Gmail account, the password must be an [app password](https://support.google.com/accounts/answer/185833?hl=en).
+
+Additionally, the following optional parameters can be passed:
+
+- `smtp_server`: SMTP server to use for sending emails. Defaults to `smtp.gmail.com`.
+- `smtp_port`: SMTP port to use for sending emails. Defaults to `587`.
+- `imap_server`: IMAP server to use for receiving emails. Defaults to `imap.gmail.com`.
+
+At the moment, the handler has only been tested with Gmail accounts.
+
+## Implemented Features
+
+- [x] Emails Table for a email account
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
+  - [x] Support INSERT: send emails
+    - [x] Support to, subject and body columns
+
+## TODO
+
+- [ ] Test the handler for other email providers like Outlook, Yahoo, etc.
+
+## Example Usage
+
+The first step is to create a database with the new `email` engine by passing in the required `email` and `password` parameters:
+
+~~~~sql
+CREATE DATABASE email_datasource
+WITH ENGINE = 'email',
+PARAMETERS = {
+  "email": "youremail@gmail.com",
+  "password": "yourpassword"
+};
+~~~~
+
+Use the established connection to query your emails:
+
+~~~~sql
+SELECT * FROM email_datasource.emails
+~~~~
+
+Run more advanced queries:
+
+~~~~sql
+SELECT  to, subject, body
+FROM email_datasource.emails
+WHERE subject = 'MindsDB'
+ORDER BY id
+LIMIT 5
+~~~~
+
+Send emails:
+
+~~~~sql
+INSERT INTO email_datasource.emails(to, subject, body)
+VALUES ("toemail@gmail.com", "MindsDB", "Hello from MindsDB!")
+~~~~

@@ -478,7 +478,6 @@ class SlackHandler(APIChatHandler):
         """
         Creates a WebClient object to connect to the Slack API token stored in the connection_args attribute.
         """
-        # TODO check connection_args['app_token'] too
 
         client = WebClient(token=self.connection_args['token'])
         return client
@@ -504,6 +503,15 @@ class SlackHandler(APIChatHandler):
 
             # Call API method to check the connection
             api.auth_test()
+
+            # check app_token
+            if 'app_token' in self.connection_args:
+                socket_client = SocketModeClient(
+                    app_token=self.connection_args['app_token'],
+                    web_client=api
+                )
+                socket_client.connect()
+                socket_client.disconnect()
             
             response.success = True
         except SlackApiError as e:

@@ -312,7 +312,6 @@ class ChatBots(Base):
             'model_name': self.model_name,
             'chat_engine': self.chat_engine,
             'params': self.params,
-            # 'is_running': self.is_running,
             'created_at': self.created_at
         }
 

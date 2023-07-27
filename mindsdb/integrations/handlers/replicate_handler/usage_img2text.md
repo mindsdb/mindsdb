@@ -47,6 +47,8 @@ DESCRIBE PREDICTOR mindsdb.blip.features;
 +----------+------------------+-----------------------------------------------------------------------+--------+
 ```
 
+## Visual Question Answering
+
 Now, you can use the established connection to query your ML Model as follows:
 ```sql
 SELECT *
@@ -56,7 +58,7 @@ AND question="Is there lion in image?"
 USING 
 task="visual_question_answering";
 ```
-OUTPUT
+### OUTPUT
 ```sql
 +------------+--------------------------------------------------------------+-------------------------+
 | text        | image                                                        | question                |
@@ -65,7 +67,7 @@ OUTPUT
 +------------+--------------------------------------------------------------+-------------------------+
 ```
 
-Image Captioning 
+## Image Captioning 
 
 ```sql
 SELECT *
@@ -73,7 +75,7 @@ FROM mindsdb.blip
 WHERE image="https://images.unsplash.com/photo-1686847266385-a32745169de4"
 ```
 
-OUTPUT
+### OUTPUT
 ```sql
 +---------------------------------------------------+--------------------------------------------------------------+
 | text                                               | image                                                        |

@@ -12,9 +12,9 @@ jobs:
     name: Learning Hub Acceptance Tests
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3.5.3
     - name: Set up Python 3.8
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4.7.0
       with:
         python-version: 3.8
     - name: Install dependencies
@@ -31,6 +31,15 @@ jobs:
         mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
     - name: Run Learning Hub Tests
       run: |
+          echo -e "\n===============MySQL Handler===============\n"
+          pytest -svx tests/handler_tests/test_mysql_handler.py
+
+          echo -e "\n===============PostgreSQL Handler===============\n"
+          pytest -svx tests/handler_tests/test_postgres_handler.py
+
+          echo -e "\n===============MariaDB Handler===============\n"
+          pytest -svx tests/handler_tests/test_mariadb_handler.py
+
           echo -e "\n===============Home Rental Home Prices===============\n"
           pytest -vx tests/integration_tests/flows/test_home_rental_prices_tutorial.py
 
@@ -52,9 +61,9 @@ jobs:
     name: Microservice Mode Tests
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3.5.3
     - name: Set up Python 3.8
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4.7.0
       with:
         python-version: 3.8
     - name: Install dependencies

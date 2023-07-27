@@ -3,44 +3,46 @@ title: QuestDB
 sidebarTitle: QuestDB
 ---
 
-## QuestDB
+This is the implementation of the QuestDB data handler for MindsDB.
 
-This is the implementation of the QuestDB data integration for MindsDB.
+[QuestDB](https://questdb.io/) is a columnar time-series database with high performance ingestion and SQL analytics. It is open-source and available on the cloud.
 
 ## Implementation
 
-This handler is implemented using the `psycopg` library. Please install it before using this handler `version >= 1.15.3`:
+This handler is implemented by extending the PostgreSQL data handler.
 
-```bash
-pip install psycopg
-```
+The required arguments to establish a connection are as follows:
 
-The required arguments to establish a connection are,
-
-- `host`: the host name or IP address
-- `port`: the TCP/IP port number
-- `user`: the database username
-- `password`: the password to authenticate the user
-- `database`: the database name
-
+* `user` is the database user.
+* `password` is the database password.
+* `host` is the host name, IP address, or URL.
+* `port` is the port used to make TCP/IP connection.
+* `database` is the database name.
+* `public` stores a value of `True` or `False`. Defaults to `True` if left blank.
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/questdb_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
 ## Usage
 
-The following syntax can be used, in order to connect to the QuestDB:
+In order to make use of this handler and connect to the QuestDB server in MindsDB, the following syntax can be used:
 
 ```sql
-CREATE DATABASE quest_datasource   --- display name for the database
-WITH ENGINE = 'questdb',           --- name of the MindsDB handler
-PARAMETERS = {
-  "host": "127.0.0.1",             --- host name or IP address
-  "port": "8812",                  --- port used to make TCP/IP connection
-  "user": "admin",                 --- database user
-  "password": "quest",             --- database password
-  "database": "databse_name",      --- database name
-};
+CREATE DATABASE questdb_datasource
+WITH
+  ENGINE = 'questdb',
+  PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": 8812,
+    "database": "qdb",
+    "user": "admin",
+    "password": "password"
+  };
 ```
 
-Now, you can use this established connection to query your database as follows:
+You can use this established connection to query your table as follows:
 
 ```sql
-SELECT * FROM quest_datasource.my_table
+SELECT *
+FROM questdb_datasource.demo_table
+LIMIT 10;
 ```

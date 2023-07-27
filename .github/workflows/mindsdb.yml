@@ -13,16 +13,33 @@ on:
       - 'README.md'
 
 jobs:
+  code_checking:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3.5.3
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v4.7.0
+      with:
+        python-version: 3.9
+    - name: Install flake8
+      run: |
+        pip install flake8==5.0.4 pycodestyle==2.9.1
+      shell: bash
+    - name: Static code checking
+      run: |
+        python3 -m flake8
+      shell: bash
   matrix_prep:
+    needs: code_checking
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.5.3
       - id: set-matrix
-        uses: JoshuaTheMiller/conditional-build-matrix@0.0.1
+        uses: JoshuaTheMiller/conditional-build-matrix@v1.0.1
         with:
-          filter: '[?runOn==`${{ github.ref }}` || runOn==`always`]'
+          filter: '[?runOnBranch==`${{ github.ref }}` || runOnBranch==`always`]'
   test:
     needs: matrix_prep
     strategy:
@@ -31,9 +48,9 @@ jobs:
     runs-on: ${{ matrix.runs_on }}
     if: github.ref_type == 'branch'
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3.5.3
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4.7.0
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -48,14 +65,6 @@ jobs:
       env:
         ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
         mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
-    - name: Install dependencies Windows
-      run: |
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          pip install torch==1.7.0+cpu torchvision==0.8.1+cpu -f https://download.pytorch.org/whl/torch_stable.html;
-        fi
-      shell: bash
-      env:
-        CHECK_FOR_UPDATES: False
     - name: Install staging mdb libraries if it's not mindsdb/stable
       if: ${{ github.ref != 'refs/heads/stable' }}
       run: |
@@ -65,7 +74,6 @@ jobs:
           pip install gluonts==0.11.4  # temp fix until next lightwood release (>23.1.2.1)
     - name: Run integration api and flow tests
       run: |
-        python3 -m flake8
 
         if [ "$RUNNER_OS" == "Linux" ]; then
           # Unit tests
@@ -73,14 +81,14 @@ jobs:
           cat mindsdb/interfaces/storage/db.py | grep integration
 
           env PYTHONPATH=./ pytest tests/unit/test_executor.py
-        
-          # need fix in LW. not working yet 
+
+          # need fix in LW. not working yet
           env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
-          
+
           # env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_lightwood.py
 
           env PYTHONPATH=./ pytest tests/unit/test_predictor_params.py
-        
+
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
 
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
@@ -90,15 +98,6 @@ jobs:
           # it is too early for such tests
           # env PYTHONPATH=./ pytest tests/unit/test_interfaces_consistency.py
 
-          echo -e "\n===============MySQL Handler===============\n"
-          pytest -svx tests/handler_tests/test_mysql_handler.py
-
-          echo -e "\n===============PostgreSQL Handler===============\n"
-          pytest -svx tests/handler_tests/test_postgres_handler.py
-
-          echo -e "\n===============MariaDB Handler===============\n"
-          pytest -svx tests/handler_tests/test_mariadb_handler.py
-
           # MySQL API
           echo -e "\n===============test MySQL API===============\n"
           pytest -vx tests/integration_tests/flows/test_mysql_api.py
@@ -107,40 +106,20 @@ jobs:
           echo -e "\n===============test MySQL binary API===============\n"
           pytest -vx -k 'not TestMySqlApi' tests/integration_tests/flows/test_mysql_bin_api.py
 
+          # echo -e "\n===============TS predictions===============\n"
+          pytest -svx tests/integration_tests/flows/test_ts_predictions.py
+
           # HTTP
           echo -e "\n===============test HTTP===============\n"
           pytest -vx tests/integration_tests/flows/test_http.py
-          #
+
           # Company independent
           echo -e "\n===============test company independent===============\n"
           pytest -vx tests/integration_tests/flows/test_company_independent.py
-
-          # mkdir -p ~/.ssh/
-          # echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
-          # sudo chmod 600 ~/.ssh/db_machine
-          # echo "$DB_MACHINE_MS_KEY" > ~/.ssh/db_machine_ms
-          # sudo chmod 600 ~/.ssh/db_machine_ms
-          # echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
-          # sudo chmod 644 ~/.mindsdb_credentials.json
-
-          # export USE_EXTERNAL_DB_SERVER="1"
-
-
-          # # Kafka Stream
-          # echo -e "\n===============\ntest Kafka Stream\n===============\n"
-          # python tests/integration_tests/flows/test_kafka.py
-
-          # # Redis Stream
-          # echo -e "\n===============\ntest Redis Stream\n===============\n"
-          # python tests/integration_tests/flows/test_redis.py
-        
         fi
       shell: bash
       env:
         CHECK_FOR_UPDATES: False
-          # DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}
-          # DB_MACHINE_MS_KEY: ${{secrets.DB_MACHINE_MS_KEY}}
-          # DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
 
@@ -149,9 +128,9 @@ jobs:
     needs: test
     if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3.5.3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4.7.0
       with:
         python-version: '3.7'
     - name: Install dependencies
@@ -176,9 +155,9 @@ jobs:
     needs: test
     if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3.5.3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4.7.0
       with:
         python-version: '3.7'
     - name: Create version files
@@ -196,4 +175,3 @@ jobs:
         AWS_REGION: 'us-west-2'
         SOURCE_DIR: 'distributions/ver/dist'
         DEST_DIR: 'mindsdb-installer/ver'
-

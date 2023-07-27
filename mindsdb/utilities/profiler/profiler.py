@@ -31,6 +31,8 @@ def start_node(tag: str):
     profiling = ctx.profiling
     new_node = {
         'start_at': time.perf_counter(),
+        'start_at_thread': time.thread_time(),
+        'start_at_process': time.process_time(),
         'stop_at': None,
         'name': tag,
         'children': []
@@ -57,6 +59,8 @@ def stop_current_node():
         return
     current_node = _get_current_node(profiling)
     current_node['stop_at'] = time.perf_counter()
+    current_node['stop_at_thread'] = time.thread_time()
+    current_node['stop_at_process'] = time.process_time()
     if len(profiling['pointer']) > 0:
         profiling['pointer'] = profiling['pointer'][:-1]
     else:
@@ -127,7 +131,10 @@ def profile(tag: str = None):
     def decorator(function):
         @wraps(function)
         def wrapper(*args, **kwargs):
-            with Context(tag or f'{function.__name__}|{function.__module__}'):
+            if profiling_enabled() is True:
+                with Context(tag or f'{function.__name__}|{function.__module__}'):
+                    result = function(*args, **kwargs)
+            else:
                 result = function(*args, **kwargs)
             return result
         return wrapper

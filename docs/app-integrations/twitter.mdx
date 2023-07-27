@@ -9,6 +9,10 @@ In this section, we present how to integrate a Twitter account with MindsDB.
 
 To connect a Twitter account to MindsDB, you need a Twitter developer account.
 
+<Tip>
+We recommend you use the [Elevated access](https://developer.twitter.com/en/support/twitter-api/developer-account) allowing you to pull 2m tweets and to avoid _parameters or authentication issue_ error you might get sometimes. You can check [this step-by-step guide](https://medium.com/@skillcate/set-up-twitter-api-to-pull-2m-tweets-month-44d004c6f7ce) describing how to apply for the Elevated access.
+</Tip>
+
 If you don't already have a Twitter developer account, follow the steps in the video below to apply for one.
 
 <Accordion title="How to Apply for a Twitter Developer Account" icon="twitter" iconType="thin">
@@ -91,6 +95,10 @@ WITH
     };
 ```
 
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/twitter_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
 ## Usage
 
 The `my_twitter` database contains a table called `tweets` by default.
@@ -104,6 +112,10 @@ WHERE query = '(mindsdb OR #mindsdb) -is:retweet -is:reply'
 AND created_at > '2023-02-16' 
 LIMIT 20;
 ```
+
+<Warning>
+Please note that we can see only recent tweets from the past seven days. The `created_at` column condition is skipped if the provided date is earlier than seven days.
+</Warning>
 
 Alternatively, you can use a Twitter native query, as below:
 
@@ -129,6 +141,10 @@ VALUES
     (1626198053446369280, 'MindsDB is great! now its super simple to build ML powered apps'),
     (1626198053446369280, 'Holy!! MindsDB is the best thing they have invented for developers doing ML');
 ```
+
+<Info>
+For more information about available actions and development plans, visit [this page](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/twitter_handler/README.md).
+</Info>
 
 <Tip>
 **What's next?**

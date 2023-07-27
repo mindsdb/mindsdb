@@ -12,6 +12,11 @@ Neuralforecast uses fast and accurate deep learning methods.
 These can make accurate forecasts, with little domain knowledge about the problem requires, as they will automatically assign appropriate weights to exogenous variables.
 The ideal use case is forecasting complex time series, such as predicting high-frequency energy prices over the course of each day.
 
+This handler will also be useful when data has a hierarchical structure (for example: you have a series for each region in a certain country).
+Users can supply an optional argument to perform hierarchical reconciliation during forecasting with Nixtla's HierarchicalForecast package.
+Reconciliation may improve forecast accuracy, by accounting for the hierarchical structure in the data.
+You can learn more about this package at https://nixtla.github.io/hierarchicalforecast/
+
 Do not use this integration for non time-series data.
 
 Do not use this integration for short time-series, as they won't have enough data to prevent overfitting.

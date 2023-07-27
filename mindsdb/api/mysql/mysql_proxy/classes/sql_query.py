@@ -12,6 +12,7 @@ import copy
 import re
 import hashlib
 import datetime as dt
+from collections import defaultdict
 
 import dateinfer
 import duckdb
@@ -34,7 +35,7 @@ from mindsdb_sql.parser.ast import (
     Latest,
     BetweenOperation,
     Parameter,
-    Tuple
+    Tuple,
 )
 from mindsdb_sql.planner.steps import (
     ApplyTimeseriesPredictorStep,
@@ -55,6 +56,7 @@ from mindsdb_sql.planner.steps import (
     JoinStep,
     GroupByStep,
     SubSelectStep,
+    DeleteStep,
 )
 
 from mindsdb_sql.exceptions import PlanningException
@@ -69,7 +71,6 @@ from mindsdb.interfaces.model.functions import (
     get_predictor_project
 )
 from mindsdb.api.mysql.mysql_proxy.utilities import (
-    SqlApiException,
     ErKeyColumnDoesNotExist,
     ErNotSupportedYet,
     SqlApiUnknownError,
@@ -78,6 +79,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
 )
 from mindsdb.utilities.cache import get_cache, json_checksum
 import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.fs import create_process_mark, delete_process_mark
 
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
@@ -105,6 +107,12 @@ def get_table_alias(table_obj, default_db_name):
         else:
             name = table_obj.alias.parts[0]
         name = (default_db_name, name)
+    elif isinstance(table_obj, Join):
+        # get from first table
+        return get_table_alias(table_obj.left, default_db_name)
+    else:
+        # unknown yet object
+        return default_db_name, 't', 't'
 
     if table_obj.alias is not None:
         name = name + ('.'.join(table_obj.alias.parts),)
@@ -256,14 +264,25 @@ class ResultSet:
             ))
         return self
 
-    def from_df_cols(self, df, col_names):
+    def from_df_cols(self, df, col_names, strict=True):
+        # find column by alias
+        alias_idx = {}
+        for col in col_names.values():
+            if col.alias is not None:
+                alias_idx[col.alias] = col
 
         resp_dict = df.to_dict(orient='split')
 
         self._records = resp_dict['data']
 
         for col in resp_dict['columns']:
-            self._columns.append(col_names[col])
+            if col in col_names or strict:
+                column = col_names[col]
+            elif col in alias_idx:
+                column = alias_idx[col]
+            else:
+                column = Column(col)
+            self._columns.append(column)
         return self
 
     def to_df(self):
@@ -446,8 +465,7 @@ class SQLQuery():
 
     @profiler.profile()
     def create_planner(self):
-        databases_names = self.session.database_controller.get_list()
-        databases_names = [x['name'] for x in databases_names]
+        databases = self.session.database_controller.get_list()
 
         predictor_metadata = []
         predictors_records = get_model_records()
@@ -507,7 +525,7 @@ class SQLQuery():
         self.predictor_metadata = predictor_metadata
         self.planner = query_planner.QueryPlanner(
             self.query,
-            integrations=databases_names,
+            integrations=databases,
             predictor_metadata=predictor_metadata,
             default_namespace=database
         )
@@ -650,14 +668,25 @@ class SQLQuery():
             return
 
         steps_data = []
+        process_mark = None
         try:
-            for step in self.planner.execute_steps(params):
+            steps = list(self.planner.execute_steps(params))
+            steps_classes = (x.__class__ for x in steps)
+            predict_steps = (ApplyPredictorRowStep, ApplyPredictorStep, ApplyTimeseriesPredictorStep)
+            if any(s in predict_steps for s in steps_classes):
+                process_mark = create_process_mark('predict')
+            for step in steps:
                 with profiler.Context(f'step: {step.__class__.__name__}'):
                     data = self.execute_step(step, steps_data)
                 step.set_result(data)
                 steps_data.append(data)
         except PlanningException as e:
             raise ErLogicError(e)
+        except Exception as e:
+            raise e
+        finally:
+            if process_mark is not None:
+                delete_process_mark('predict', process_mark)
 
         # save updated query
         self.query = self.planner.query
@@ -843,6 +872,7 @@ class SQLQuery():
                 version=version,
                 params=step.params,
             )
+
             columns_dtypes = dict(predictions.dtypes)
             predictions = predictions.to_dict(orient='records')
 
@@ -878,6 +908,8 @@ class SQLQuery():
                 # set row_id
                 data = steps_data[step.dataframe.step_num]
 
+                params = step.params or {}
+
                 for table in data.get_tables():
                     row_id_col = Column(
                         name='__mindsdb_row_id',
@@ -911,6 +943,7 @@ class SQLQuery():
                         _mdb_forecast_offset = 0
                     else:
                         # normal mode -- emit a forecast ($HORIZON data points on each) for each provided timestamp
+                        params['force_ts_infer'] = True
                         _mdb_forecast_offset = None
                     for row in where_data:
                         if '__mdb_forecast_offset' not in row:
@@ -938,9 +971,12 @@ class SQLQuery():
                 else:
                     predictor_id = predictor_metadata['id']
                     key = f'{predictor_name}_{predictor_id}_{json_checksum(where_data)}'
-                    predictor_cache = get_cache('predict')
 
-                    data = predictor_cache.get(key)
+                    if self.session.predictor_cache is False:
+                        data = None
+                    else:
+                        predictor_cache = get_cache('predict')
+                        data = predictor_cache.get(key)
 
                     if data is None:
                         version = None
@@ -950,16 +986,15 @@ class SQLQuery():
                             model_name=predictor_name,
                             data=where_data,
                             version=version,
-                            params=step.params,
+                            params=params
                         )
                         data = predictions.to_dict(orient='records')
                         columns_dtypes = dict(predictions.dtypes)
 
-                        if data is not None and isinstance(data, list):
+                        if data is not None and isinstance(data, list) and self.session.predictor_cache is not False:
                             predictor_cache.set(key, data)
                     else:
                         columns_dtypes = {}
-
                     if len(data) > 0:
                         cols = list(data[0].keys())
                         for col in cols:
@@ -970,11 +1005,9 @@ class SQLQuery():
                                 database=table_name[0],
                                 type=columns_dtypes.get(col)
                             ))
-
                     # apply filter
                     if is_timeseries:
                         data = self.apply_ts_filter(data, where_data, step, predictor_metadata)
-
                     result.add_records(data)
 
                 data = result
@@ -1111,71 +1144,70 @@ class SQLQuery():
             except Exception as e:
                 raise SqlApiUnknownError(f'error in limit offset step: {e}') from e
         elif type(step) == ProjectStep:
-            try:
-                rs_in = steps_data[step.dataframe.step_num]
+            result_set = steps_data[step.dataframe.step_num]
 
-                rs_out = ResultSet(length=rs_in.length())
+            df, col_names = result_set.to_df_cols()
+            col_idx = {}
+            tbl_idx = defaultdict(list)
+            for name, col in col_names.items():
+                col_idx[col.alias] = name
+                col_idx[(col.table_alias, col.alias)] = name
+                # add to tables
+                tbl_idx[col.table_name].append(name)
+                if col.table_name != col.table_alias:
+                    tbl_idx[col.table_alias].append(name)
 
-                for column_identifier in step.columns:
-                    if type(column_identifier) == Star:
-                        for column in rs_in.columns:
-                            rs_in.copy_column_to(column, rs_out)
-
-                    elif type(column_identifier) == Identifier:
-
-                        column_name_parts = column_identifier.parts
-                        column_alias = column_identifier.parts[-1] if column_identifier.alias is None else '.'.join(
-                            column_identifier.alias.parts)
-
-                        if len(column_name_parts) > 2:
-                            raise ErSqlWrongArguments(
-                                f'Column name must contain no more than 2 parts. Got name: {column_identifier}')
-                        elif len(column_name_parts) == 1:
-                            column_name = column_name_parts[0]
-
-                            col_list = rs_in.find_columns(column_name)
-                            if len(col_list) == 0:
-                                raise SqlApiException(f'Can not find appropriate table for column {column_name}')
-                            elif len(col_list) > 1 and not step.ignore_doubles:
-                                raise ErLogicError(f'Found multiple appropriate tables for column {column_name}')
-
-                            col_added = rs_in.copy_column_to(col_list[0], rs_out)
-                            col_added.alias = column_alias
-
-                        elif len(column_name_parts) == 2:
-                            table_name_or_alias = column_name_parts[0]
-                            column_name = column_name_parts[1]
-
-                            # support select table.*
-                            if isinstance(column_name, Star):
-                                # add all by table
-                                for col in rs_in.find_columns(table_alias=table_name_or_alias):
-                                    rs_in.copy_column_to(col, rs_out)
-                            else:
-                                col_list = rs_in.find_columns(column_name, table_alias=table_name_or_alias)
-                                if len(col_list) == 0:
-                                    if rs_in.length() > 0:
-                                        raise SqlApiException(f'Can not find appropriate table for column {table_name_or_alias}.{column_name}')
-                                    else:
-                                        # FIXME: made up column if resultSet is empty
-                                        # columns from predictor may not exist if predictor wasn't called
-                                        col = Column(name=table_name_or_alias, table_name=table_name_or_alias)
-                                        col_list = [col]
-                                        rs_in.add_column(col)
-
-                                col_added = rs_in.copy_column_to(col_list[0], rs_out)
-                                col_added.alias = column_alias
+            # analyze condition and change name of columns
+            def check_fields(node, is_table=None, **kwargs):
+                if is_table:
+                    raise ErNotSupportedYet('Subqueries is not supported in WHERE')
+                if isinstance(node, Identifier):
+                    # only column name
+                    col_name = node.parts[-1]
+                    if isinstance(col_name, Star):
+                        if len(node.parts) == 1:
+                            # left as is
+                            return
                         else:
-                            raise ErSqlWrongArguments('Undefined column name')
+                            # replace with all columns from table
+                            table_name = node.parts[-2]
+                            return [
+                                Identifier(parts=[col])
+                                for col in tbl_idx.get(table_name, [])
+                            ]
 
+                    if len(node.parts) == 1:
+                        key = col_name
                     else:
-                        raise ErKeyColumnDoesNotExist(f'Unknown column type: {column_identifier}')
+                        table_name = node.parts[-2]
+                        key = (table_name, col_name)
 
-                data = rs_out
-            except Exception as e:
-                if isinstance(e, SqlApiException):
-                    raise e
-                raise SqlApiUnknownError(f'error on project step: {e} ') from e
+                    if key not in col_idx:
+                        raise ErKeyColumnDoesNotExist(f'Table not found for column: {key}')
+
+                    new_name = col_idx[key]
+                    return Identifier(parts=[new_name], alias=node.alias)
+
+            query = Select(
+                targets=step.columns,
+                from_table=Identifier('df_table')
+            )
+
+            targets0 = query_traversal(query.targets, check_fields)
+            targets = []
+            for target in targets0:
+                if isinstance(target, list):
+                    targets.extend(target)
+                else:
+                    targets.append(target)
+            query.targets = targets
+
+            res = query_df(df, query)
+
+            result_set2 = ResultSet().from_df_cols(res, col_names, strict=False)
+
+            data = result_set2
+
         elif type(step) == GroupByStep:
             # used only in join of two regular tables
             step_data = steps_data[step.dataframe.step_num]
@@ -1285,22 +1317,39 @@ class SQLQuery():
             )
             data = ResultSet()
         elif type(step) == UpdateToTable:
+            data = ResultSet()
 
-            result = step.dataframe.result_data
             integration_name = step.table.parts[0]
             table_name_parts = step.table.parts[1:]
 
             dn = self.datahub.get(integration_name)
 
+            # make command
+            update_query = Update(
+                table=Identifier(parts=table_name_parts),
+                update_columns=step.update_command.update_columns,
+                where=step.update_command.where
+            )
+
+            result = step.dataframe
+            if result is None:
+                # run as is
+                dn.query(query=update_query, session=self.session)
+                return data
+
+            result_data = result.result_data
+
             # link nodes with parameters for fast replacing with values
-            input_table_alias = step.update_command.from_select_alias.parts[0]
+            input_table_alias = step.update_command.from_select_alias
+            if input_table_alias is None:
+                raise ErSqlWrongArguments('Subselect in update requires alias')
 
             params_map_index = []
 
             def prepare_map_index(node, is_table, **kwargs):
                 if isinstance(node, Identifier) and not is_table:
                     # is input table field
-                    if node.parts[0] == input_table_alias:
+                    if node.parts[0] == input_table_alias.parts[0]:
                         node2 = Constant(None)
                         param_name = node.parts[-1]
                         params_map_index.append([param_name, node2])
@@ -1310,24 +1359,18 @@ class SQLQuery():
                         # remove updated table alias
                         node.parts = node.parts[1:]
 
-            # make command
-            update_query = Update(
-                table=Identifier(parts=table_name_parts),
-                update_columns=step.update_command.update_columns,
-                where=step.update_command.where
-            )
             # do mapping
             query_traversal(update_query, prepare_map_index)
 
             # check all params is input data:
-            data_header = [col.alias for col in result.columns]
+            data_header = [col.alias for col in result_data.columns]
 
             for param_name, _ in params_map_index:
                 if param_name not in data_header:
                     raise ErSqlWrongArguments(f'Field {param_name} not found in input data. Input fields: {data_header}')
 
             # perform update
-            for row in result.get_records():
+            for row in result_data.get_records():
                 # run update from every row from input data
 
                 # fill params:
@@ -1335,8 +1378,32 @@ class SQLQuery():
                     param.value = row[param_name]
 
                 dn.query(query=update_query, session=self.session)
+        elif type(step) == DeleteStep:
+
+            integration_name = step.table.parts[0]
+            table_name_parts = step.table.parts[1:]
+
+            dn = self.datahub.get(integration_name)
+
+            # make command
+            query = Delete(
+                table=Identifier(parts=table_name_parts),
+                where=copy.deepcopy(step.where),
+            )
+
+            # fill params
+            def fill_params(node, **kwargs):
+                if isinstance(node, Parameter):
+                    rs = steps_data[node.value.step_num]
+                    items = [Constant(i[0]) for i in rs.get_records_raw()]
+                    return Tuple(items)
+
+            query_traversal(query.where, fill_params)
+
+            dn.query(query=query, session=self.session)
 
             data = ResultSet()
+
         else:
             raise ErLogicError(F'Unknown planner step: {step}')
         return data
@@ -1367,6 +1434,7 @@ class SQLQuery():
             for date_format, pattern in (
                 ('%Y-%m-%d', r'[\d]{4}-[\d]{2}-[\d]{2}'),
                 ('%Y-%m-%d %H:%M:%S', r'[\d]{4}-[\d]{2}-[\d]{2} [\d]{2}:[\d]{2}:[\d]{2}'),
+                # ('%Y-%m-%d %H:%M:%S%z', r'[\d]{4}-[\d]{2}-[\d]{2} [\d]{2}:[\d]{2}:[\d]{2}\+[\d]{2}:[\d]{2}'),
                 # ('%Y', '[\d]{4}')
             ):
                 if re.match(pattern, samples[0]):

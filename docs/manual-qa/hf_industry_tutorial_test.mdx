@@ -1,0 +1,24 @@
+## Testing: Hugging Face - Industry Tutorial
+
+1. Testing Create Model
+
+```sql
+CREATE MODEL mindsdb.hf_industry
+PREDICT PRED
+USING
+engine = 'huggingface',
+task = 'text-classification',
+model_name = 'sampathkethineedi/industry-classification',
+input_column = 'text';
+```
+![Create Model](https://cdn.discordapp.com/attachments/1047962212607737938/1106606105964064879/image.png)
+
+2. Testing Select(Make Predictions)
+
+```sql
+SELECT *
+FROM mindsdb.hf_industry
+WHERE text = 'Low latency is one of our best cloud features';
+```
+
+![Create Model](https://cdn.discordapp.com/attachments/1047962212607737938/1106612091995046079/image.png)

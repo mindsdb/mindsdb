@@ -1,0 +1,50 @@
+---
+title: InfluxDB
+sidebarTitle: InfluxDB
+---
+
+This is the implementation of the InfluxDB data handler for MindsDB.
+
+[InfluxDB](https://www.influxdata.com/) is a time series database that can be used to collect data and monitor the system and devices, especially Edge devices.
+
+## Implementation
+
+The required arguments to establish a connection are as follows:
+
+* `influxdb_url` is the hosted URL of InfluxDB Cloud.
+* `influxdb_token` is the authentication token for the hosted InfluxDB Cloud instance.
+* `influxdb_db_name` is the database name of the InfluxDB Cloud instance.
+* `influxdb_table_name` is the table name of the InfluxDB Cloud instance.
+
+<Tip>
+Please follow [this link](https://docs.influxdata.com/influxdb/cloud/security/tokens/create-token/#create-a-token-in-the-influxdb-ui) to generate token for accessing InfluxDB API.
+</Tip>
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/influxdb_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the InfluxDB database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE influxdb_source
+WITH
+    ENGINE = 'influxdb',
+    PARAMETERS = {
+        "influxdb_url": "<influxdb-hosted-url>",
+        "influxdb_token": "<api-key-token",
+        "influxdb_db_name": "<database-name>",
+        "influxdb_table_name": "<table-name>"
+    };
+```
+
+You can use this established connection to query your table as follows.
+
+```sql
+SELECT name, time, sensor_id, temperature
+FROM influxdb_source.tables
+ORDER BY temperature DESC
+LIMIT 65;
+```

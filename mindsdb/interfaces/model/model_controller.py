@@ -4,6 +4,7 @@ import json
 import base64
 import datetime as dt
 from copy import deepcopy
+from multiprocessing.pool import ThreadPool
 
 import pandas as pd
 from dateutil.parser import parse as parse_datetime
@@ -23,8 +24,19 @@ from mindsdb.interfaces.model.functions import (
 from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.interfaces.storage.model_fs import ModelStorage
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.functions import resolve_model_identifier
+import mindsdb.utilities.profiler as profiler
 
 IS_PY36 = sys.version_info[1] <= 6
+
+
+def delete_model_storage(model_id, ctx_dump):
+    try:
+        ctx.load(ctx_dump)
+        modelStorage = ModelStorage(model_id)
+        modelStorage.delete()
+    except Exception as e:
+        print(f'Something went wrong during deleting storage of model {model_id}: {e}')
 
 
 class ModelController():
@@ -67,9 +79,38 @@ class ModelController():
                 data['accuracy'] = float(np.mean(list(data['accuracies'].values())))
         return data
 
-    def describe_model(self, session,  project_name, model_name, attribute):
+    def get_reduced_model_data(self, name: str = None, predictor_record=None, ml_handler_name='lightwood') -> dict:
+        full_model_data = self.get_model_data(name=name, predictor_record=predictor_record, ml_handler_name=ml_handler_name)
+        reduced_model_data = {}
+        for k in ['id', 'name', 'version', 'is_active', 'predict', 'status',
+                  'problem_definition', 'current_phase', 'accuracy', 'data_source', 'update', 'active',
+                  'mindsdb_version', 'error', 'created_at', 'fetch_data_query']:
+            reduced_model_data[k] = full_model_data.get(k, None)
+
+        reduced_model_data['training_time'] = None
+        if full_model_data.get('training_start_at') is not None:
+            if full_model_data.get('training_stop_at') is not None:
+                reduced_model_data['training_time'] = (
+                    full_model_data.get('training_stop_at')
+                    - full_model_data.get('training_start_at')
+                )
+            elif full_model_data.get('status') == 'training':
+                reduced_model_data['training_time'] = (
+                    dt.datetime.now()
+                    - full_model_data.get('training_start_at')
+                )
+            if reduced_model_data['training_time'] is not None:
+                reduced_model_data['training_time'] = (
+                    reduced_model_data['training_time']
+                    - dt.timedelta(microseconds=reduced_model_data['training_time'].microseconds)
+                )
+
+        return reduced_model_data
+
+    def describe_model(self, session, project_name, model_name, attribute, version=None):
         model_record = get_model_record(
             name=model_name,
+            version=version,
             project_name=project_name,
             except_absent=True
         )
@@ -100,42 +141,27 @@ class ModelController():
         else:
             return df
 
+    def get_model(self, name, version=None, ml_handler_name=None, project_name=None):
+        show_active = True if version is None else None
+        model_record = get_model_record(
+            active=show_active,
+            version=version,
+            name=name,
+            ml_handler_name=ml_handler_name,
+            project_name=project_name)
+        return self.get_reduced_model_data(predictor_record=model_record)
+
     def get_models(self, with_versions=False, ml_handler_name=None, integration_id=None,
                    project_name=None):
         models = []
         show_active = True if with_versions is False else None
-        for predictor_record in get_model_records(active=show_active, ml_handler_name=ml_handler_name,
-                                                  integration_id=integration_id, project_name=project_name):
-            model_data = self.get_model_data(predictor_record=predictor_record)
-            reduced_model_data = {}
-
-            for k in ['id', 'name', 'version', 'is_active', 'predict', 'status',
-                      'current_phase', 'accuracy', 'data_source', 'update', 'active',
-                      'mindsdb_version', 'error', 'created_at', 'fetch_data_query']:
-                reduced_model_data[k] = model_data.get(k, None)
-
-            reduced_model_data['training_time'] = None
-            if model_data.get('training_start_at') is not None:
-                if model_data.get('training_stop_at') is not None:
-                    reduced_model_data['training_time'] = (
-                        model_data.get('training_stop_at')
-                        - model_data.get('training_start_at')
-                    )
-                elif model_data.get('status') == 'training':
-                    reduced_model_data['training_time'] = (
-                        dt.datetime.now()
-                        - model_data.get('training_start_at')
-                    )
-                if reduced_model_data['training_time'] is not None:
-                    reduced_model_data['training_time'] = (
-                        reduced_model_data['training_time']
-                        - dt.timedelta(microseconds=reduced_model_data['training_time'].microseconds)
-                    )
-
-            models.append(reduced_model_data)
+        for model_record in get_model_records(active=show_active, ml_handler_name=ml_handler_name,
+                                              integration_id=integration_id, project_name=project_name):
+            model_data = self.get_reduced_model_data(predictor_record=model_record)
+            models.append(model_data)
         return models
 
-    def delete_model(self, model_name: str, project_name: str = 'mindsdb'):
+    def delete_model(self, model_name: str, project_name: str = 'mindsdb', version=None):
         from mindsdb.interfaces.database.database import DatabaseController
 
         project_record = db.Project.query.filter(
@@ -150,11 +176,19 @@ class ModelController():
 
         project = database_controller.get_project(project_name)
 
-        predictors_records = get_model_records(
-            name=model_name,
-            project_id=project.id,
-            active=None,
-        )
+        if version is None:
+            # Delete latest version
+            predictors_records = get_model_records(
+                name=model_name,
+                project_id=project.id,
+                active=None,
+            )
+        else:
+            predictors_records = get_model_records(
+                name=model_name,
+                project_id=project.id,
+                version=version,
+            )
         if len(predictors_records) == 0:
             raise Exception(f"Model '{model_name}' does not exist")
 
@@ -174,9 +208,17 @@ class ModelController():
                 predictor_record.deleted_at = dt.datetime.now()
             else:
                 db.session.delete(predictor_record)
-            modelStorage = ModelStorage(predictor_record.id)
-            modelStorage.delete()
         db.session.commit()
+
+        # region delete storages
+        if len(predictors_records) > 1:
+            ctx_dump = ctx.dump()
+            with ThreadPool(min(len(predictors_records), 100)) as pool:
+                pool.starmap(delete_model_storage, [(record.id, ctx_dump) for record in predictors_records])
+        else:
+            modelStorage = ModelStorage(predictors_records[0].id)
+            modelStorage.delete()
+        # endregion
 
     def rename_model(self, old_name, new_name):
         model_record = get_model_record(name=new_name)
@@ -195,7 +237,7 @@ class ModelController():
         local_predictor_savefile = os.path.join(self.fs_store.folder_path, fs_name)
         predictor_binary = open(local_predictor_savefile, 'rb').read()
 
-        # Serialize a predictor record into a dictionary 
+        # Serialize a predictor record into a dictionary
         # move into the Predictor db class itself if we use it again somewhere
         json_storage = get_json_storage(
             resource_id=predictor_record.id
@@ -354,8 +396,6 @@ class ModelController():
         if base_predictor_record is None:
             raise Exception(f"Error: model '{model_name}' does not exist")
 
-        params['version'] = self._get_retrain_finetune_version(model_name, params['project_name'], base_predictor_record)
-
         if params['data_integration_ref'] is None:
             params['data_integration_ref'] = base_predictor_record.data_integration_ref
         if params['fetch_data_query'] is None:
@@ -371,29 +411,17 @@ class ModelController():
 
         return self.get_model_info(predictor_record)
 
-    @staticmethod
-    def _get_retrain_finetune_version(model_name, project_name, base_predictor_record):
-        if base_predictor_record is None:
-            raise Exception(f"Error: model '{model_name}' does not exist")
-
-        # get max current version
-        models = get_model_records(
-            name=model_name,
-            project_name=project_name,
-            deleted_at=None,
-            active=None,
-        )
-        last_version = 1
-        for m in models:
-            if m.version is not None:
-                last_version = max(last_version, m.version)
-
-        return last_version + 1
-
     def prepare_finetune_statement(self, statement, database_controller):
-        project_name = statement.name.parts[0].lower()
-        model_name = statement.name.parts[1].lower()
+        project_name, model_name, model_version = resolve_model_identifier(statement.name)
+        if project_name is None:
+            project_name = 'mindsdb'
         data_integration_ref, fetch_data_query = self._get_data_integration_ref(statement, database_controller)
+
+        set_active = True
+        if statement.using is not None:
+            set_active = statement.using.pop('active', True)
+            if set_active in ('0', 0, None):
+                set_active = False
 
         label = None
         args = {}
@@ -406,9 +434,9 @@ class ModelController():
         base_predictor_record = get_model_record(
             name=model_name,
             project_name=project_name,
-            active=True
+            version=model_version,
+            active=True if model_version is None else None
         )
-        version = self._get_retrain_finetune_version(model_name, project_name, base_predictor_record)
 
         if data_integration_ref is None:
             data_integration_ref = base_predictor_record.data_integration_ref
@@ -420,28 +448,20 @@ class ModelController():
             project_name=project_name,
             data_integration_ref=data_integration_ref,
             fetch_data_query=fetch_data_query,
-            version=version,
+            base_model_version=model_version,
             args=args,
             join_learn_process=join_learn_process,
-            label=label
+            label=label,
+            set_active=set_active
         )
 
+    @profiler.profile()
     def finetune_model(self, statement, ml_handler):
-        # active setting
-        set_active = True
-        if statement.using is not None:
-            set_active = statement.using.pop('active', True)
-            if set_active in ('0', 0, None):
-                set_active = False
-
         params = self.prepare_finetune_statement(statement, ml_handler.database_controller)
-
-        params['set_active'] = set_active
         predictor_record = ml_handler.update(**params)
         return self.get_model_info(predictor_record)
 
     def get_model_info(self, predictor_record):
-
         from mindsdb.interfaces.database.projects import ProjectController
         projects_controller = ProjectController()
         project = projects_controller.get(id=predictor_record.project_id)
@@ -450,7 +470,7 @@ class ModelController():
                    'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG']
 
         project_name = project.name
-        model = project.get_models(model_id=predictor_record.id)[0]
+        model = project.get_model_by_id(model_id=predictor_record.id)
         table_name = model['name']
         table_meta = model['metadata']
         record = [
@@ -483,7 +503,8 @@ class ModelController():
         model_record = get_model_record(
             name=model['NAME'],
             project_name=model['PROJECT'],
-            version=model['VERSION']
+            version=model['VERSION'],
+            active=None
         )
 
         model_record.active = True
@@ -509,7 +530,8 @@ class ModelController():
             model_record = get_model_record(
                 name=model['NAME'],
                 project_name=model['PROJECT'],
-                version=model['VERSION']
+                version=model['VERSION'],
+                active=None
             )
             if model_record.active:
                 raise Exception(f"Can't remove active version: f{model['PROJECT']}.{model['NAME']}.{model['VERSION']}")
@@ -523,4 +545,3 @@ class ModelController():
             modelStorage.delete()
 
         db.session.commit()
-

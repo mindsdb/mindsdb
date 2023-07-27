@@ -3,47 +3,11 @@ title: Setup for Windows via pip
 sidebarTitle: pip on Windows
 ---
 
-## Before You Start
+<Tip>
+To successfully install MindsDB, use **Python 64-bit version**. Also, make sure that **Python >= 3.8** and **pip >= 20.3**.
+</Tip>
 
-There are some points that you should consider before jumping into the
-installation. Please have a look at them below.
-
-### Pip and Python Versions
-
-We suggest using **Python 3.7.x, 3.8.x, or 3.9.x versions** for now.
-
-To successfully install MindsDB, use **Python 64-bit version**. Also, make sure
-that **Python >= 3.7** and **pip >= 20.3**. You can check the pip and python
-versions by running the `pip --version` and
-`python --version` commands.
-
-Please note that depending on your environment and installed pip and python
-packages, you might have to use **pip3** instead of **pip** or **python3.x**
-instead of **py**. For example, `pip3 install mindsdb` instead of
-`pip install mindsdb`.
-
-### How to Avoid Dependency Issues
-
-Install MindsDB in a virtual environment using **pip** to avoid dependency
-issues.
-
-Or you could try to install MindsDB with
-[Anaconda](https://www.anaconda.com/products/individual) and run the
-installation from the **Anaconda prompt**.
-
-In addition, for Windows systems with default languages other than English, your system 
-might not have UTF-8 as the default encoding standard, which will cause encoding errors 
-when installing dependencies. To solve this issue, go to 
-`Control Panel` > `Clock and Region` > `Region` > `Administrative tab` > 
-`Change system locale button` and enable `Beta: Use Unicode UTF-8 for worldwide language support`.
-
-### Installing torch or torchvision
-
-If the installation fails when installing **torch** or **torchvision**, try to
-install them manually by following the instructions on their
-[official website](https://pytorch.org/get-started/locally/).
-
-## Using the Python [`venv`](https://docs.python.org/3/library/venv.html) Module
+## Installation using the Python [`venv`](https://docs.python.org/3/library/venv.html) Module
 
 1. Create a new virtual environment called `mindsdb`:
 
@@ -99,13 +63,13 @@ install them manually by following the instructions on their
    python -m mindsdb
    ```
 
-By default, MindsDB will always start the `http` and `mysqul` APIs. If you want to use Mongo API, you will need to provide that as a parameter to `--api`. You can do it as following:
+By default, MindsDB will always start the `http` and `mysql` APIs. If you want to use Mongo API, you will need to provide that as a parameter to `--api`. You can do it as following:
 
    ```bash
    python -m mindsdb --api=http,mongodb,mysql
    ```
 
-## Using Anaconda
+## Installation using Anaconda
 
 Here, you need either [Anaconda](https://www.anaconda.com/products/individual)
 or [Conda](https://conda.io/projects/conda/en/latest/index.html) installed on
@@ -159,6 +123,51 @@ your machine.
    ...
    ```
 
+## Troubleshooting
+
+### Pip and Python Versions
+
+We suggest using **Python 3.8.x or 3.9.x versions** for now.
+
+To successfully install MindsDB, use **Python 64-bit version**. Also, make sure
+that **Python >= 3.8** and **pip >= 20.3**. You can check the pip and python
+versions by running the `pip --version` and
+`python --version` commands.
+
+Please note that depending on your environment and installed pip and python
+packages, you might have to use **pip3** instead of **pip** or **python3.x**
+instead of **py**. For example, `pip3 install mindsdb` instead of
+`pip install mindsdb`.
+
+### How to Avoid Dependency Issues
+
+Install MindsDB in a virtual environment using **pip** to avoid dependency
+issues.
+
+Or you could try to install MindsDB with
+[Anaconda](https://www.anaconda.com/products/individual) and run the
+installation from the **Anaconda prompt**.
+
+In addition, for Windows systems with default languages other than English, your system 
+might not have UTF-8 as the default encoding standard, which will cause encoding errors 
+when installing dependencies. To solve this issue, go to 
+`Control Panel` > `Clock and Region` > `Region` > `Administrative tab` > 
+`Change system locale button` and enable `Beta: Use Unicode UTF-8 for worldwide language support`.
+
+### Installing torch or torchvision
+
+If the installation fails when installing **torch** or **torchvision**, try to
+install them manually by following the instructions on their
+[official website](https://pytorch.org/get-started/locally/).
+
+### How to Overcome `ImportError: failed to find libmagic`
+
+If you get the `ImportError: failed to find libmagic` error, you should install the `libmagic` manually by running the command below:
+
+```bash
+pip install python-magic-bin
+```
+
 ## Further Issues?
 
 You can try to replicate your issue using the
@@ -168,7 +177,10 @@ Also, please create an issue with detailed description in the
 [MindsDB GitHub repository](https://github.com/mindsdb/mindsdb/issues) so we can
 help you. Usually, we review issues and respond within a few hours.
 
-<Tip>
-  **What's next?** We recommend you follow one of our tutorials or learn more
-  about the [MindsDB Database](/sql/table-structure/).
-</Tip>
+## What's Next
+
+Now that you installed and started MindsDB locally in your Docker container, go ahead and find out how to create and train a model using the [`CREATE MODEL`](/sql/create/model) statement. In the **MindsDB SQL** section, you'll find a comprehensive overview of the SQL syntax offered by MindsDB. We also provide Mongo-QL syntax documented in the **MindsDB Mongo-QL** section.
+
+You can connect MindsDB to different clients, including [PostgreSQL CLI](/connect/postgres-client) and [MySQL CLI](/connect/mysql-client).
+
+Check out the **Use Cases** section to follow tutorials that cover Large Language Models, Natural Language Processing, Time Series, Classification, and Regression models.

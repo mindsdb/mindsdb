@@ -8,27 +8,27 @@ import psutil
 import asyncio
 import secrets
 import traceback
+import threading
 from packaging import version
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
+from mindsdb.api.postgres.start import start as start_postgres
+from mindsdb.interfaces.chatbot.chatbot_monitor import start as start_chatbot
 from mindsdb.interfaces.jobs.scheduler import start as start_scheduler
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
 from mindsdb.utilities import log
-from mindsdb.interfaces.stream.stream import StreamController
-from mindsdb.interfaces.stream.utilities import STOP_THREADS_EVENT
-from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.interfaces.database.integrations import integration_controller
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
-from mindsdb.utilities.fs import create_dirs_recursive
+from mindsdb.utilities.fs import create_dirs_recursive, clean_process_marks, clean_unlinked_process_marks
 from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
-
 
 import torch.multiprocessing as mp
 try:
@@ -36,17 +36,12 @@ try:
 except RuntimeError:
     log.logger.info('Torch multiprocessing context already set, ignoring...')
 
-# is_ray_worker = False
-# if sys.argv[0].endswith('ray/workers/default_worker.py'):
-#     is_ray_worker = True
-#
-# is_alembic = os.path.basename(sys.argv[0]).split('.')[0] == 'alembic'
-# is_pytest = os.path.basename(sys.argv[0]).split('.')[0] == 'pytest'
-#
-# if not is_ray_worker:
+
+_stop_event = threading.Event()
 
 
 def close_api_gracefully(apis):
+    _stop_event.set()
     try:
         for api in apis.values():
             process = api['process']
@@ -66,8 +61,14 @@ def close_api_gracefully(apis):
         pass
 
 
+def do_clean_process_marks():
+    while _stop_event.wait(timeout=5) is False:
+        clean_unlinked_process_marks()
+
+
 if __name__ == '__main__':
     # ----------------  __init__.py section ------------------
+    clean_process_marks()
     ctx.set_default()
     args = args_parse()
 
@@ -167,7 +168,6 @@ if __name__ == '__main__':
         # Figure this one out later
         pass
 
-    integration_controller = IntegrationController()
     if args.install_handlers is not None:
         handlers_list = [s.strip() for s in args.install_handlers.split(',')]
         # import_meta = handler_meta.get('import', {})
@@ -196,6 +196,9 @@ if __name__ == '__main__':
         if import_meta.get('success', False) is not True:
             print(f"Dependencies for the handler '{handler_name}' are not installed by default.\n",
                   f'If you want to use "{handler_name}" please install "{dependencies}"')
+
+    # from mindsdb.utilities.fs import get_marked_processes_and_threads
+    # marks = get_marked_processes_and_threads()
 
     if not is_cloud:
         # region creating permanent integrations
@@ -249,15 +252,6 @@ if __name__ == '__main__':
             except Exception as e:
                 log.logger.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
 
-        stream_controller = StreamController()
-        for integration_name, integration_meta in integration_controller.get_all(sensitive_info=True).items():
-            if (
-                integration_meta.get('type') in stream_controller.known_dbs
-                and integration_meta.get('publish', False) is True
-            ):
-                print(f"Setting up stream: {integration_name}")
-                stream_controller.setup(integration_name)
-        del stream_controller
     # @TODO Backwards compatibility for tests, remove later
 
     if args.api is None:
@@ -282,11 +276,20 @@ if __name__ == '__main__':
         'http': start_http,
         'mysql': start_mysql,
         'mongodb': start_mongo,
+        'postgres': start_postgres,
         'jobs': start_scheduler,
+        'chatbot': start_chatbot
     }
 
     if config.get('jobs', {}).get('disable') is not True:
         apis['jobs'] = {
+            'process': None,
+            'started': False
+        }
+
+    # disabled on cloud
+    if config.get('chatbot', {}).get('disable') is not True and not is_cloud:
+        apis['chatbot'] = {
             'process': None,
             'started': False
         }
@@ -331,14 +334,25 @@ if __name__ == '__main__':
             else:
                 log.logger.error(f"ERROR: {api_name} API cant start on {port}")
 
-    ioloop = asyncio.get_event_loop()
-    ioloop.run_until_complete(wait_apis_start())
-    ioloop.close()
+    async def join_process(process, name):
+        try:
+            process.join()
+        except KeyboardInterrupt:
+            print('Got keyboard interrupt, stopping APIs')
+            close_api_gracefully(apis)
+        finally:
+            print(f'{name} API: stopped')
 
-    try:
-        for api_data in apis.values():
-            api_data['process'].join()
-    except KeyboardInterrupt:
-        print('Stopping stream integrations...')
-        STOP_THREADS_EVENT.set()
-        print('Closing app...')
+    async def gather_apis():
+        await asyncio.gather(
+            *[join_process(api_data['process'], api_name) for api_name, api_data in apis.items()],
+            return_exceptions=False
+        )
+
+    ioloop = asyncio.new_event_loop()
+    ioloop.run_until_complete(wait_apis_start())
+
+    threading.Thread(target=do_clean_process_marks).start()
+
+    ioloop.run_until_complete(gather_apis())
+    ioloop.close()

@@ -105,6 +105,15 @@ class DatabaseHandler(BaseHandler):
         super().__init__(name)
 
 
+class VectorStoreHandler(BaseHandler):
+    """
+    Base class for handlers associated to vector databases.
+    """
+
+    def __init__(self, name: str):
+        super().__init__(name)
+
+
 class PredictiveHandler(BaseHandler):
     """
     DEPRECATED. Please refer to BaseMLEngine for integrations with machine learning frameworks.
@@ -143,6 +152,7 @@ class BaseMLEngine:
         """
         self.model_storage = model_storage
         self.engine_storage = engine_storage
+        self.generative = False  # if True, the target column name does not have to be specified at creation time
 
         if kwargs.get('base_model_storage'):
             self.base_model_storage = kwargs['base_model_storage']  # available when updating a model

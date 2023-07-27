@@ -20,18 +20,21 @@ from mindsdb.api.http.gui import update_static
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.analysis import ns_conf as analysis_ns
 from mindsdb.api.http.namespaces.auth import ns_conf as auth_ns
+from mindsdb.api.http.namespaces.chatbots import ns_conf as chatbots_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
+from mindsdb.api.http.namespaces.databases import ns_conf as databases_ns
 from mindsdb.api.http.namespaces.default import ns_conf as default_ns, check_auth
 from mindsdb.api.http.namespaces.file import ns_conf as file_ns
 from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
+from mindsdb.api.http.namespaces.models import ns_conf as models_ns
 from mindsdb.api.http.namespaces.projects import ns_conf as projects_ns
 from mindsdb.api.http.namespaces.sql import ns_conf as sql_ns
-from mindsdb.api.http.namespaces.stream import ns_conf as stream_ns
 from mindsdb.api.http.namespaces.tab import ns_conf as tab_ns
 from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
+from mindsdb.api.http.namespaces.views import ns_conf as views_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
 from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
-from mindsdb.interfaces.database.integrations import IntegrationController
+from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.interfaces.storage import db
@@ -198,7 +201,6 @@ def initialize_app(config, no_studio, with_nlp):
 
     protected_namespaces = [
         tab_ns,
-        stream_ns,
         utils_ns,
         conf_ns,
         file_ns,
@@ -206,7 +208,11 @@ def initialize_app(config, no_studio, with_nlp):
         analysis_ns,
         handlers_ns,
         tree_ns,
-        projects_ns
+        projects_ns,
+        databases_ns,
+        views_ns,
+        models_ns,
+        chatbots_ns
     ]
     if with_nlp:
         protected_namespaces.append(nlp_ns)
@@ -227,7 +233,7 @@ def initialize_app(config, no_studio, with_nlp):
 
     @app.teardown_appcontext
     def remove_session(*args, **kwargs):
-        db.session.close()
+        db.session.remove()
 
     @app.before_request
     def before_request():
@@ -249,6 +255,11 @@ def initialize_app(config, no_studio, with_nlp):
         company_id = request.headers.get('company-id')
         user_class = request.headers.get('user-class')
 
+        try:
+            email_confirmed = int(request.headers.get('email-confirmed', 1))
+        except ValueError:
+            email_confirmed = 1
+
         if company_id is not None:
             try:
                 company_id = int(company_id)
@@ -267,6 +278,7 @@ def initialize_app(config, no_studio, with_nlp):
 
         ctx.company_id = company_id
         ctx.user_class = user_class
+        ctx.email_confirmed = email_confirmed
 
     # Wait for static initialization.
     if not no_studio and init_static_thread is not None:
@@ -340,7 +352,7 @@ def initialize_flask(config, init_static_thread, no_studio):
 
 
 def initialize_interfaces(app):
-    app.integration_controller = IntegrationController()
+    app.integration_controller = integration_controller
     app.database_controller = DatabaseController()
     app.file_controller = FileController()
     config = Config()

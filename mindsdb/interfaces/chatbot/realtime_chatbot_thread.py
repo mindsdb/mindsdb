@@ -21,11 +21,23 @@ class RealtimeChatBotThread(threading.Thread):
             bot_record=self._bot_record)
 
         try:
-            self._chatbot_task.run()
+            self._chatbot_task.run() 
         except Exception as e:
             ChatbotAlerter.send_slack_alert(
-            'https://hooks.slack.com/services/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',
-            "@here :robot_face: : The chatbot is unable to establish a connection",
+                self,
+                'https://hooks.slack.com/services/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',
+                "@here :robot_face: : The chatbot is unable to establish a connection",
+                [
+                    {
+                    "color": "#C80001",
+                    "fields": [
+                        {
+                            "title": "chatbot id",
+                            "value": self._bot_record.id
+                        }
+                    ],
+                    }
+                ]
             )
 
             log.logger.error(e)

@@ -86,10 +86,12 @@ class RealtimeSlackChatHandler(RealtimeChatHandler):
         )
         try:
             response.validate()
+
             return ChatBotResponse(message.text)
         except SlackApiError as e:
             ChatbotAlerter.send_slack_alert(
-                'https://hooks.slack.com/services/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',
+                self,
+                'https://hooks.slack.com/services/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',
                 "@here :robot_face: : Oh! there is an inconvenience, the chatbot can't send messages",
                 [
                     {

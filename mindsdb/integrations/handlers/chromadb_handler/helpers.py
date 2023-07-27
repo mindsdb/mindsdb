@@ -1,50 +1,59 @@
+import re
 from functools import lru_cache
 from typing import List, Union
 
 import pandas as pd
 import torch
-from chromadb import Settings
-from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
-from langchain.docstore.document import Document
 from langchain.document_loaders import DataFrameLoader
 from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.vectorstores import Chroma
-from pydantic import BaseModel
+from langchain.schema import Document
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-DEFAULT_EMBEDDINGS_MODEL = "sentence-transformers/all-mpnet-base-v2"
-USER_DEFINED_MODEL_PARAMS = (
-    "model_name",
-    "max_tokens",
-    "temperature",
-    "top_p",
-    "stop",
-    "best_of",
-    "verbose",
-    "writer_org_id",
-    "writer_api_key",
-    "base_url",
-)
+from mindsdb.utilities import log
 
 
-class ModelParameters(BaseModel):
-    """Model parameters for the Writer LLM API interface"""
+def extract_collection_name(sql_query):
+    # Regular expression pattern to match the collection name from the FROM clause
+    pattern = r"FROM\s+\w+\.(\w+)"
 
-    writer_api_key: str = None
-    writer_org_id: str = None
-    base_url: str = None
-    model_id: str = "palmyra-x"
-    callbacks: List[StreamingStdOutCallbackHandler] = [StreamingStdOutCallbackHandler()]
-    max_tokens: int = 1024
-    temperature: float = 0.0
-    top_p: float = 1
-    stop: List[str] = []
-    best_of: int = 5
-    verbose: bool = False
+    # Find the table name using regular expression
+    match = re.search(pattern, sql_query, re.IGNORECASE)
 
-    class Config:
-        arbitrary_types_allowed = True
+    # If match found then extract the table name
+
+    if match:
+        table_name = match.group(1)
+        where_condition = None
+
+        # Regular expression pattern to match the where condition from the WHERE clause
+        pattern = r"WHERE\s+(.*)"
+        # Find the where condition using regular expression
+        match = re.search(pattern, sql_query, re.IGNORECASE)
+        if match:
+            where_condition = match.group(1)
+
+        return table_name, where_condition
+    else:
+        return None, None
 
 
+def get_metadata_filter(metadata_filter: str):
+    """convert metadata filter string to dict"""
+    dict_from_string = {}
+
+    for item in metadata_filter.split(","):
+        if ":" in item:
+            key, value = item.split(":")
+            dict_from_string[key] = value
+        else:
+            key = item
+            value = True
+            dict_from_string[key] = value
+
+    return dict_from_string
+
+
+# Todo move all below classes methods to dataprep ML
 class DfLoader(DataFrameLoader):
 
     """
@@ -100,6 +109,19 @@ def df_to_documents(
     return documents
 
 
+def split_documents(df, columns):
+    # Load documents and split in chunks
+    log.logger.info(f"Loading documents from input data")
+
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    documents = df_to_documents(df=df, page_content_columns=columns)
+    texts = text_splitter.split_documents(documents)
+    log.logger.info(f"Loaded {len(documents)} documents from input data")
+    log.logger.info(f"Split into {len(texts)} chunks of text (max. 500 tokens each)")
+
+    return texts
+
+
 @lru_cache()
 def load_embeddings_model(embeddings_model_name):
     try:
@@ -114,29 +136,10 @@ def load_embeddings_model(embeddings_model_name):
     return embedding_model
 
 
-def load_chroma(
-    embeddings_model_name, persist_directory, collection_name, chroma_settings
-):
-    return Chroma(
-        collection_name=collection_name,
-        persist_directory=persist_directory,
-        embedding_function=load_embeddings_model(embeddings_model_name),
-        client_settings=chroma_settings,
-    )
+def documents_to_df(documents: list):
+    """Converts a list of documents to a dataframe"""
+    df = pd.DataFrame()
+    df["page_content"] = [document.page_content for document in documents]
+    df["metadata"] = [document.metadata for document in documents]
 
-
-def get_chroma_settings(persist_directory):
-    return Settings(
-        chroma_db_impl="duckdb+parquet",
-        persist_directory=persist_directory,
-        anonymized_telemetry=False,
-    )
-
-
-def get_retriever(embeddings_model_name, persist_directory, collection_name):
-    chroma_settings = get_chroma_settings(persist_directory)
-    db = load_chroma(
-        embeddings_model_name, persist_directory, collection_name, chroma_settings
-    )
-    retriever = db.as_retriever()
-    return retriever
+    return df

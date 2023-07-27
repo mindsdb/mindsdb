@@ -126,7 +126,8 @@
             "app-integrations/github",
             "app-integrations/gmail",
             "app-integrations/google-calendar",
-            "app-integrations/twitter"
+            "app-integrations/twitter",
+            "app-integrations/youtube"
           ]
         },
         {
@@ -159,6 +160,7 @@
             "data-integrations/elasticsearch",
             "data-integrations/firebird",
             "data-integrations/google-bigquery",
+            "data-integrations/google-cloud-sql",
             "data-integrations/google-sheets",
             "data-integrations/ibm-db2",
             "data-integrations/ibm-informix",
@@ -418,6 +420,7 @@
         {
           "group": "Large Language Models",
           "pages": [
+            "sql/tutorials/slack-chatbot",
             "sql/tutorials/twitter-chatbot",
             "sql/tutorials/image-generator"
           ]

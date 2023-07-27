@@ -233,7 +233,7 @@ def initialize_app(config, no_studio, with_nlp):
 
     @app.teardown_appcontext
     def remove_session(*args, **kwargs):
-        db.session.close()
+        db.session.remove()
 
     @app.before_request
     def before_request():

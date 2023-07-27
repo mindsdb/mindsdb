@@ -66,7 +66,7 @@ class DremioHandler(DatabaseHandler):
 
         data = '{' + f'"userName": "{self.connection_data["username"]}","password": "{self.connection_data["password"]}"' + '}'
 
-        response = requests.post(self.base_url + '/apiv2/login', headers=headers, data=data, verify=False)
+        response = requests.post(self.base_url + '/apiv2/login', headers=headers, data=data)
 
         return {
             'Authorization': '_dremio' + response.json()['token'],

@@ -26,6 +26,10 @@ There are some optional arguments as follows:
 * `schema` is the schema name.
 * `with` defines default WITH-clause (properties) for ALL tables. This parameter is experimental and might be changed or removed in future release.
 
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/trino_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
 ## Usage
 
 In order to make use of this handler and connect to the Trino database in MindsDB, the following syntax can be used:

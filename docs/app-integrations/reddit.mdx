@@ -26,6 +26,10 @@ Here is how to get your Reddit credentials:
 4. Now you should be able to see the personal user script, secret, and name of your app. Store those as environment variables: `CLIENT_ID`, `CLIENT_SECRET`, and `USER_AGENT`, respecitvely.
 </Tip>
 
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/reddit_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
 ## Usage
 
 In order to make use of this handler and connect the Reddit app to MindsDB, the following syntax can be used:
@@ -60,3 +64,7 @@ SELECT *
 FROM my_reddit.comment
 WHERE submission_id = '12gls93'
 ```
+
+<Info>
+For more information about available actions and development plans, visit [this page](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/reddit_handler/README.md).
+</Info>

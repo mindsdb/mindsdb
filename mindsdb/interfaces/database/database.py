@@ -52,6 +52,7 @@ class DatabaseController:
                     'id': value.get('id'),
                     'engine': value.get('engine'),
                     'class_type': value.get('class_type'),
+                    'connection_data': value.get('connection_data'),
                 })
 
         if filter_type is not None:

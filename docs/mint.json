@@ -159,6 +159,7 @@
             "data-integrations/elasticsearch",
             "data-integrations/firebird",
             "data-integrations/google-bigquery",
+            "data-integrations/google-cloud-sql",
             "data-integrations/google-sheets",
             "data-integrations/ibm-db2",
             "data-integrations/ibm-informix",

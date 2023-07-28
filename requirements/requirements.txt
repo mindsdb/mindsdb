@@ -38,3 +38,6 @@ python-magic >= 0.4.27
 openpyxl >= 3.1.1
 dill == 0.3.6
 slack_sdk
+pgvector==0.2.0
+chromadb==0.4.3
+langchain==0.0.246

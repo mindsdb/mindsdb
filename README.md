@@ -88,7 +88,7 @@ docker pull mindsdb/mindsdb
     2. or pick from a variety of state-of-the-art engines for classic machine Learning use cases (regression, classification, or time-series tasks);
     3. or [IMPORT](https://docs.mindsdb.com/custom-model/byom) custom model built with any ML framework to automatically deploy as [AI Tables](https://www.youtube.com/watch?v=tnB4Y9T1E2k).
 3. Query models using [SELECT](https://docs.mindsdb.com/sql/api/select) statements, [API](https://docs.mindsdb.com/rest/usage) calls, or [JOIN](https://docs.mindsdb.com/sql/api/join) commands to make predictions for thousands or millions of data points simultaneously.
-4  Experiment with your models and [Fine-Tune](https://docs.mindsdb.com/sql/api/finetune) them to achieve the best results.
+4.  Experiment with your models and [Fine-Tune](https://docs.mindsdb.com/sql/api/finetune) them to achieve the best results.
 5. Automate your workflows with [JOBs](https://docs.mindsdb.com/sql/create/jobs). 
 
 Follow the [quickstart guide](https://docs.mindsdb.com/quickstart?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) with sample data to get on-boarded as fast as possible.

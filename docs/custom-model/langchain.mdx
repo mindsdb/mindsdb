@@ -17,6 +17,15 @@ USING
     prompt_template = 'Answer the users input in a helpful way: {{input}}';
 ```
 
+<Tip>
+Before using the LangChain engine, you need to create it based on the handler available in MindsDB:
+
+```sql
+CREATE ML_ENGINE langchain
+FROM langchain;
+```
+</Tip>
+
 Here, we create the `tool_based_agent` model using the LangChain engine, as defined in the `engine` parameter. This model answers users' questions in a helpful way, as defined in the `prompt_template` parameter, which specifies `input` as the input column when calling the model. `Agents` and `Tools` are some of the main abstractions that LangChain offers. You can read more about them in the LangChain documentation ([[1]](https://python.langchain.com/en/latest/modules/agents/getting_started.html), [[2]](https://python.langchain.com/en/latest/modules/agents/tools.html)).
 
 There are three different tools utilized by this agent:

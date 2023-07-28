@@ -327,7 +327,7 @@ class HuggingFaceHandler(BaseMLEngine):
         except Exception as e:
             log.logger.debug(f'Finetune failed with error: {str(e)}')
 
-    # TODO: move these into a new method
+    # TODO: move these into a new file
     def _finetune_cls(self, df, args):
         df = df.rename(columns={args['target']: 'labels', args['input_column']: 'text'})
         tokenizer_from = args.get('using', {}).get('tokenizer_from', args['model_name'])
@@ -370,31 +370,42 @@ class HuggingFaceHandler(BaseMLEngine):
 
         return tokenizer, trainer
 
+    # TODO: merge with summarization?
     def _finetune_translate(self, df, args):
-        raise Exception("Finetuning translation models is not yet supported.")
-
-        # TODO finish this method
-        df = df.rename(columns={args['target']: 'labels', args['input_column']: 'text'})
+        config = AutoConfig.from_pretrained(args['model_name'])
+        df = df.rename(columns={args['target']: 'translation', args['input_column']: 'text'})
         tokenizer_from = args.get('using', {}).get('tokenizer_from', args['model_name'])
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_from)
         dataset = Dataset.from_pandas(df)
 
-        def _tokenize_translate_fn(examples, prefix=''):
-            inputs = [prefix + example for example in examples["text"]]
-            return tokenizer(inputs, padding="max_length", truncation=True)
+        def _tokenize_translate_fn(examples):
+            source_lang = args["lang_input"]
+            target_lang = args["lang_output"]
+            max_target_length = config.task_specific_params['summarization']['max_length']
+            prefix = f'translate {source_lang} to {target_lang}: '
+            inputs = [prefix + ex for ex in examples["text"]]
+            targets = [ex for ex in examples["translation"]]
+            model_inputs = tokenizer(inputs, max_length=config.n_positions, truncation=True)
+
+            # Setup the tokenizer for targets
+            with tokenizer.as_target_tokenizer():
+                labels = tokenizer(targets, max_length=max_target_length, truncation=True)
+
+            model_inputs["labels"] = labels["input_ids"]
+            return model_inputs
 
         tokenized_datasets = dataset.map(_tokenize_translate_fn, batched=True)
         ds = tokenized_datasets.shuffle(seed=42).train_test_split(test_size=args.get('eval_size', 0.1))
         train_ds = ds['train']
         eval_ds = ds['test']
-
         ft_args = args.get('using', {}).get('trainer_args', {})
         ft_args['output_dir'] = self.model_storage.folder_get(args['model_name'])
         ft_args['predict_with_generate'] = True
-        config = AutoConfig.from_pretrained(args['model_name'])
+
         model = AutoModelForSeq2SeqLM.from_pretrained(args['model_name'], config=config)
         metric = evaluate.load("sacrebleu")
         training_args = Seq2SeqTrainingArguments(**ft_args)
+        data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
 
         def _compute_metrics(eval_pred):
             logits, labels = eval_pred
@@ -407,6 +418,7 @@ class HuggingFaceHandler(BaseMLEngine):
             args=training_args,
             train_dataset=train_ds,
             eval_dataset=eval_ds,
+            data_collator=data_collator,
             compute_metrics=_compute_metrics,
         )
 

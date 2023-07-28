@@ -1,5 +1,6 @@
 from typing import Optional, Dict
 
+import nltk
 import numpy as np
 import pandas as pd
 import evaluate
@@ -8,7 +9,7 @@ from datasets import Dataset
 from huggingface_hub import HfApi
 from transformers import AutoTokenizer, AutoConfig
 from transformers import Trainer, TrainingArguments, Seq2SeqTrainingArguments
-from transformers import AutoModelForSequenceClassification, AutoModelForSeq2SeqLM
+from transformers import AutoModelForSequenceClassification, AutoModelForSeq2SeqLM, DataCollatorForSeq2Seq
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -316,7 +317,7 @@ class HuggingFaceHandler(BaseMLEngine):
 
         try:
             trainer.train()
-            trainer.save_model(model_folder)  # TODO: save entire pipeline instead  # https://huggingface.co/docs/transformers/main_classes/pipelines#transformers.Pipeline.save_pretrained
+            trainer.save_model(model_folder)  # TODO: save entire pipeline instead https://huggingface.co/docs/transformers/main_classes/pipelines#transformers.Pipeline.save_pretrained
             tokenizer.save_pretrained(model_folder)
 
             # persist changes
@@ -326,6 +327,7 @@ class HuggingFaceHandler(BaseMLEngine):
         except Exception as e:
             log.logger.debug(f'Finetune failed with error: {str(e)}')
 
+    # TODO: move these into a new method
     def _finetune_cls(self, df, args):
         df = df.rename(columns={args['target']: 'labels', args['input_column']: 'text'})
         tokenizer_from = args.get('using', {}).get('tokenizer_from', args['model_name'])
@@ -369,6 +371,9 @@ class HuggingFaceHandler(BaseMLEngine):
         return tokenizer, trainer
 
     def _finetune_translate(self, df, args):
+        raise Exception("Finetuning translation models is not yet supported.")
+
+        # TODO finish this method
         df = df.rename(columns={args['target']: 'labels', args['input_column']: 'text'})
         tokenizer_from = args.get('using', {}).get('tokenizer_from', args['model_name'])
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_from)
@@ -407,8 +412,64 @@ class HuggingFaceHandler(BaseMLEngine):
 
         return tokenizer, trainer
 
-    def _finetune_summarization(self, df):
-        return  # tokenizer, trainer
+    def _finetune_summarization(self, df, args):
+        df = df.rename(columns={args['target']: 'summary', args['input_column']: 'text'})
+        tokenizer_from = args.get('using', {}).get('tokenizer_from', args['model_name'])
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_from)
+        dataset = Dataset.from_pandas(df)
+        config = AutoConfig.from_pretrained(args['model_name'])
 
-    def _finetune_fill_mask(self, df):
+        def _tokenize_summarize_fn(examples):
+            prefix = "summarize: " if 't5' in args['model_name'] else ''
+            inputs = [prefix + doc for doc in examples["text"]]
+            model_inputs = tokenizer(inputs, padding='max_length', truncation=True, max_length=config.max_position_embeddings, pad_to_max_length=True)  # noqa
+            labels = tokenizer(text_target=examples["summary"], max_length=config.max_position_embeddings, truncation=True)  # noqa
+            model_inputs["labels"] = labels["input_ids"]
+            return model_inputs
+
+        tokenized_datasets = dataset.map(_tokenize_summarize_fn, batched=True)
+        ds = tokenized_datasets.shuffle(seed=42).train_test_split(test_size=args.get('eval_size', 0.1))
+        train_ds = ds['train']
+        eval_ds = ds['test']
+
+        ft_args = args.get('using', {}).get('trainer_args', {})
+        ft_args['output_dir'] = self.model_storage.folder_get(args['model_name'])
+        ft_args['predict_with_generate'] = True
+
+        model = AutoModelForSeq2SeqLM.from_pretrained(args['model_name'], config=config)
+        metric = evaluate.load("rouge")
+        training_args = Seq2SeqTrainingArguments(**ft_args)
+        data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
+
+        def _compute_metrics(eval_pred):
+            # ref: github.com/huggingface/notebooks/blob/main/examples/summarization.ipynb
+            predictions, labels = eval_pred
+            decoded_preds = tokenizer.batch_decode(predictions, skip_special_tokens=True)
+            decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+
+            # Rogue expects a newline after each sentence
+            decoded_preds = ["\n".join(nltk.sent_tokenize(pred.strip())) for pred in decoded_preds]
+            decoded_labels = ["\n".join(nltk.sent_tokenize(label.strip())) for label in decoded_labels]
+
+            result = metric.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True,
+                                    use_aggregator=True)
+            result = {key: value * 100 for key, value in result.items()}
+            prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in predictions]
+            result["gen_len"] = np.mean(prediction_lens)
+            return {k: round(v, 4) for k, v in result.items()}
+
+        # generate trainer and finetune
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            train_dataset=train_ds,
+            eval_dataset=eval_ds,
+            data_collator=data_collator,
+            compute_metrics=_compute_metrics,
+        )
+
+        return tokenizer, trainer
+
+    def _finetune_fill_mask(self, df, args):
+        raise Exception("Finetuning fill-mask models is not yet supported.")
         return  # tokenizer, trainer

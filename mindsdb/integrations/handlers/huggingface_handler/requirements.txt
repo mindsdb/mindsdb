@@ -10,3 +10,5 @@ tensorflow
 tensorflow-io
 tqdm
 sacrebleu
+rouge-score
+nltk

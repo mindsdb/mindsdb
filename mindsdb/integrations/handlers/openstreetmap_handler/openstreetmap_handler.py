@@ -10,7 +10,8 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
 )
-
+from mindsdb.utilities import log
+from mindsdb_sql import parse_sql
 
 class OpenStreetMapHandler(APIHandler):
     """The OpenStreetMap handler implementation."""
@@ -62,44 +63,29 @@ class OpenStreetMapHandler(APIHandler):
         Returns:
             HandlerStatusResponse
         """
+        response = StatusResponse(False)
+
         try:
-            self.connect()
-            return StatusResponse(status=True)
+            api_session = self.connect()
+            if api_session is not None:
+                response.success = True
         except Exception as e:
-            return StatusResponse(status=False, message=str(e))
+            log.logger.error(f'Error connecting to OpenStreetMap!')
+            response.error_message = str(e)
+
+        self.is_connected = response.success
+
+        return response
+
         
-    def native_query(self, query: Text) -> Response:
+    def native_query(self, query: str) -> Response:
         """Execute a native query on the handler.
 
         Args:
-            query (Text): The query to execute.
+            query (str): The query to execute.
 
         Returns:
             Response: The response from the query.
         """
-        try:
-            self.connect()
-            result = self.connection.query(query)
-            return Response(status=True, data=result)
-        except Exception as e:
-            return Response(status=False, message=str(e))
-        
-    def call_openstreetmap_api(self, method_name:str = None, params:dict = None) -> pd.DataFrame:
-        """Call the OpenStreetMap API.
-
-        Args:
-            method_name (str): The name of the API method to call.
-            params (dict): The parameters to pass to the API method.
-
-        Returns:
-            pd.DataFrame: The response from the API.
-        """
-        if method_name is None:
-            raise ValueError("method_name must be specified.")
-        if params is None:
-            params = {}
-        self.connect()
-        method = getattr(self.connection, method_name)
-        result = method(**params)
-        return pd.DataFrame(result)
-
+        ast = parse_sql(query, dialect="mindsdb")
+        return self.query(ast)

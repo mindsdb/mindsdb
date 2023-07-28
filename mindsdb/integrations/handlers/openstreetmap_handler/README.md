@@ -59,6 +59,9 @@ The OpenStreetMap handler is initialized with the following parameters:
 
 - [ ] Support for more OpenStreetMap tables
 - [ ] Support for more OpenStreetMap queries
+- [ ] Support INSERT, UPDATE and DELETE for Nodes, Ways and Node table
+- [ ] Support INSERT, UPDATE and DELETE for Ways table
+- [ ] Support INSERT, UPDATE and DELETE for Relations table
 
 ## Example Usage
 
@@ -72,80 +75,55 @@ parameters={
 };
 ~~~~
 
+Use the established connection to query your database:
+
+~~~~
+
 ```sql 
-SELECT * FROM nodes LIMIT 10;
+SELECT * FROM openstreetmap_datasource.nodes LIMIT 10;
 ```
 
 ```sql
-SELECT * FROM nodes WHERE id = 1;
+SELECT * FROM openstreetmap_datasource.nodes WHERE id = 1;
 ```
 
 ```sql
-SELECT * FROM nodes ORDER BY id DESC LIMIT 10;
+SELECT * FROM openstreetmap_datasource.nodes ORDER BY id DESC LIMIT 10;
 ```
 
 ```sql
-SELECT id, latitude, longitude FROM nodes LIMIT 10;
+SELECT id, latitude, longitude FROM openstreetmap_datasource.nodes LIMIT 10;
 ```
 
 ```sql
-SELECT * FROM ways LIMIT 10;
+SELECT * FROM openstreetmap_datasource.ways LIMIT 10;
 ```
 
 ```sql
-SELECT * FROM ways WHERE id = 1;
+SELECT * FROM openstreetmap_datasource.ways WHERE id = 1;
 ```
 
 ```sql
-SELECT * FROM ways ORDER BY id DESC LIMIT 10;
+SELECT * FROM openstreetmap_datasource.ways ORDER BY id DESC LIMIT 10;
 ```
 
 ```sql
-SELECT id, nodes, tags FROM ways LIMIT 10;
+SELECT id, nodes, tags FROM openstreetmap_datasource.ways LIMIT 10;
 ```
 
 ```sql
-SELECT * FROM relations LIMIT 10;
+SELECT * FROM openstreetmap_datasource.relations LIMIT 10;
 ```
 
 ```sql
-SELECT * FROM relations WHERE id = 1;
+SELECT * FROM openstreetmap_datasource.relations WHERE id = 1;
 ```
 
 ```sql
-SELECT * FROM relations ORDER BY id DESC LIMIT 10;
+SELECT * FROM openstreetmap_datasource.relations ORDER BY id DESC LIMIT 10;
 ```
 
 ```sql
-SELECT id, members, tags FROM relations LIMIT 10;
+SELECT id, members, tags FROM openstreetmap_datasource.relations LIMIT 10;
 ```
-
-## Example Usage with MindsDB
-
-```python
-from mindsdb import Predictor
-from mindsdb.config import CONFIG
-
-CONFIG['USE_ASYNC'] = False
-
-# We tell mindsDB what we want to learn and from what data
-Predictor(name='openstreetmap', backend='lightwood').learn(
-    from_data="https://raw.githubusercontent.com/mindsdb/main/assets/examples/openstreetmap.csv",
-    to_predict='highway_type'
-)
-
-# use the model to make predictions
-result = Predictor(name='openstreetmap').predict(when={'id': 1})
-
-# you can now print the results
-print(result[0])
-```
-
-## Example Output
-
-```json
-{
-    "highway_type": "residential",
-    "highway_type_confidence": 0.9999999999999999
-}
-```
+    

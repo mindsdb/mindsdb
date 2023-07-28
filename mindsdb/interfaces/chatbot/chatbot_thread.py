@@ -1,21 +1,20 @@
 import threading
 import time
-import requests
 
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 from mindsdb.utilities.context import context as ctx
 from mindsdb.interfaces.chatbot.chatbot_task import ChatBotTask
-from mindsdb.interfaces.chatbot.chatbot_alerter import ChatbotAlerter
 
 
 class ChatBotThread(threading.Thread):
     """A thread for polling style chatbots to operate."""
-    def __init__(self, bot_record):
+    def __init__(self, alerter, bot_record):
         threading.Thread.__init__(self)
         self.bot_record = bot_record
         self._to_stop = False
+        self.alerter= alerter
 
     def run(self):
         # create context and session
@@ -44,9 +43,7 @@ class ChatBotThread(threading.Thread):
             try:
                 task.run()
             except Exception as e:
-                ChatbotAlerter.send_slack_alert(
-                    self,
-                    'https://hooks.slack.com/services/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',
+                self.alerter.send_slack_alert(
                     "@here :robot_face: : The chatbot is unable to establish a connection",
                     [
                         {

@@ -8,7 +8,7 @@ from mindsdb.interfaces.chatbot.chatbot_message import ChatBotMessage
 class RealtimeChatHandlerFactory:
     """Creates a RealtimeChatHandler based on configuration."""
 
-    def create_realtime_chat_handler(self, chat_engine: str, on_message: Callable[[ChatBotMessage], None], params: Dict[str, str]) -> RealtimeChatHandler:
+    def create_realtime_chat_handler(self, alerter, chat_engine: str, on_message: Callable[[ChatBotMessage], None], params: Dict[str, str]) -> RealtimeChatHandler:
         """
         Creates a RealtimeChatHandler from the given chat engine and parameters.
 
@@ -22,6 +22,7 @@ class RealtimeChatHandlerFactory:
         """
         if chat_engine == 'slack':
             return RealtimeSlackChatHandler(
+                alerter,
                 on_message,
                 params
             )

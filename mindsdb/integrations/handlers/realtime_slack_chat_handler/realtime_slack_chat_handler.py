@@ -1,5 +1,3 @@
-import requests
-
 from slack_sdk.web import WebClient
 from slack_sdk.errors import SlackApiError
 from slack_sdk.socket_mode import SocketModeClient
@@ -12,12 +10,11 @@ from typing import Callable, Dict
 from mindsdb.integrations.libs.realtime_chat_handler import RealtimeChatHandler
 from mindsdb.interfaces.chatbot.chatbot_message import ChatBotMessage
 from mindsdb.interfaces.chatbot.chatbot_response import ChatBotResponse
-from mindsdb.interfaces.chatbot.chatbot_alerter import ChatbotAlerter
 
 class RealtimeSlackChatHandler(RealtimeChatHandler):
     """Implements RealtimeChatHandler interface for sending/receiving Slack messages."""
 
-    def __init__(self, on_message: Callable[[ChatBotMessage], None], params: Dict[str, str]):
+    def __init__(self, alerter, on_message: Callable[[ChatBotMessage], None], params: Dict[str, str]):
         super().__init__('SlackChatHandler', on_message)
 
         if 'app_token' not in params or 'web_token' not in params:
@@ -30,6 +27,7 @@ class RealtimeSlackChatHandler(RealtimeChatHandler):
             web_client=WebClient(token=params['web_token'])  # xoxb-111-222-xyz
         )
         self._socket_mode_client.socket_mode_request_listeners.append(self._process_websocket_message)
+        self.alerter = alerter
 
     def _process_websocket_message(self, client: SocketModeClient, request: SocketModeRequest):
         # Acknowledge the request
@@ -89,9 +87,7 @@ class RealtimeSlackChatHandler(RealtimeChatHandler):
 
             return ChatBotResponse(message.text)
         except SlackApiError as e:
-            ChatbotAlerter.send_slack_alert(
-                self,
-                'https://hooks.slack.com/services/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',
+            self.alerter.send_slack_alert(
                 "@here :robot_face: : Oh! there is an inconvenience, the chatbot can't send messages",
                 [
                     {

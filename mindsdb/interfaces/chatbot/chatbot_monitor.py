@@ -7,6 +7,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.chatbot.chatbot_thread import ChatBotThread
 from mindsdb.interfaces.chatbot.realtime_chatbot_thread import RealtimeChatBotThread
+from mindsdb.interfaces.chatbot.chatbot_alerter import ChatbotAlerter
 
 
 class ChatBotMonitor:
@@ -16,6 +17,8 @@ class ChatBotMonitor:
 
     def __init__(self):
         self._active_bots = {}
+        self.webhook_url = 'https://hooks.slack.com/services/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'
+        self.alerter = ChatbotAlerter(self.webhook_url)
 
     def start(self):
         """Starts monitoring chatbots periodically based on database configuration."""
@@ -54,9 +57,9 @@ class ChatBotMonitor:
             if bot_id not in self._active_bots and bot.is_running:
                 # Start new bot if configured to run.
                 if bot.chat_engine is not None:
-                    thread = RealtimeChatBotThread(bot)
+                    thread = RealtimeChatBotThread(self.alerter, bot)
                 elif bot.database_id is not None:
-                    thread = ChatBotThread(bot)
+                    thread = ChatBotThread(self.alerter, bot)
                 else:
                     continue
                 thread.start()

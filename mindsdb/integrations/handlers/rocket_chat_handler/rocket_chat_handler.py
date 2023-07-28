@@ -80,6 +80,7 @@ class RocketChatHandler(APIChatHandler):
                 'chat_id_col': 'room_id',
                 'username_col': 'username',
                 'text_col': 'text',
+                'time_col': 'sent_at',
             }
         }
         return params

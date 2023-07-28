@@ -1,8 +1,10 @@
 Werkzeug==1.0.1
-lightwood >= 23.6.2.0, < 23.6.3.0
+lightwood >= 23.7.1.0, < 23.7.2.0
 markupsafe == 2.0.1
 flask-restx >= 1.0.1, < 2.0.0
 flask >= 1.0, < 2.0
+itsdangerous==2.0.1
+jinja2<3.1.0
 python-multipart >= 0.0.5
 pyparsing == 2.3.1
 cryptography>=35.0

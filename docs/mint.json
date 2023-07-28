@@ -52,6 +52,7 @@
       "pages": [
         "what-is-mindsdb",
         "quickstart",
+        "mindsdb-gui",
         {
           "group": "Learn More",
           "pages": [
@@ -118,13 +119,15 @@
     {
       "group": "Data Sources",
       "pages": [
+        "data-sources-overview",
         {
           "group": "Applications",
           "pages": [
             "app-integrations/github",
             "app-integrations/gmail",
             "app-integrations/google-calendar",
-            "app-integrations/twitter"
+            "app-integrations/twitter",
+            "app-integrations/youtube"
           ]
         },
         {
@@ -153,9 +156,11 @@
             "data-integrations/databricks",
             "data-integrations/datastax",
             "data-integrations/duckdb",
+            "data-integrations/edgelessdb",
             "data-integrations/elasticsearch",
             "data-integrations/firebird",
             "data-integrations/google-bigquery",
+            "data-integrations/google-cloud-sql",
             "data-integrations/google-sheets",
             "data-integrations/ibm-db2",
             "data-integrations/ibm-informix",
@@ -182,6 +187,7 @@
             "data-integrations/sqlite",
             "data-integrations/starrocks",
             "data-integrations/supabase",
+            "data-integrations/surrealdb",
             "data-integrations/tdengine",
             "data-integrations/teradata",
             "data-integrations/tidb",
@@ -197,6 +203,7 @@
     {
       "group": "ML Engines",
       "pages": [
+        "ml-engines-overview",
         {
           "group": "Large Language Models",
           "pages": [
@@ -230,6 +237,7 @@
     {
       "group": "MindsDB SQL",
       "pages": [
+        "mindsdb-sql-overview",
         {
           "group": "Connect to MindsDB",
           "pages": [
@@ -292,7 +300,8 @@
                 "sql/api/select",
                 "sql/api/update",
                 "sql/api/insert",
-                "sql/api/join-on"
+                "sql/api/join-on",
+                "sql/api/delete"
               ]
             },
             {
@@ -317,6 +326,7 @@
     {
       "group": "MindsDB Mongo-QL",
       "pages": [
+        "mindsdb-mongo-ql-overview",
         {
           "group": "Connect to MindsDB",
           "pages": [
@@ -388,6 +398,7 @@
                 "rest/views/list-views",
                 "rest/views/list-view",
                 "rest/views/create-view",
+                "rest/views/update-view",
                 "rest/views/delete-views"
               ]
             },
@@ -410,6 +421,7 @@
         {
           "group": "Large Language Models",
           "pages": [
+            "sql/tutorials/slack-chatbot",
             "sql/tutorials/twitter-chatbot",
             "sql/tutorials/image-generator"
           ]

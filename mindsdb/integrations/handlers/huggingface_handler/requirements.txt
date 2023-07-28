@@ -9,3 +9,4 @@ torch
 tensorflow
 tensorflow-io
 tqdm
+sacrebleu

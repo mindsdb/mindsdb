@@ -1,6 +1,4 @@
 from typing import Optional, Dict
-import shutil
-
 
 import numpy as np
 import pandas as pd
@@ -8,12 +6,11 @@ import evaluate
 import transformers
 from datasets import Dataset
 from huggingface_hub import HfApi
-from transformers import AutoTokenizer
-from transformers import TrainingArguments, Trainer
-from transformers import AutoModelForSequenceClassification
+from transformers import AutoTokenizer, AutoConfig
+from transformers import Trainer, TrainingArguments, Seq2SeqTrainingArguments
+from transformers import AutoModelForSequenceClassification, AutoModelForSeq2SeqLM
 
 from mindsdb.utilities import log
-
 from mindsdb.integrations.libs.base import BaseMLEngine
 
 
@@ -299,72 +296,119 @@ class HuggingFaceHandler(BaseMLEngine):
             return pd.DataFrame(tables, columns=['tables'])
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        def _tokenize_fn(examples):
-            return tokenizer(examples['text'], padding="max_length", truncation=True)
-
-        # finetune_args = args if args else {}
+        finetune_args = args if args else {}
         args = self.base_model_storage.json_get('args')
+        args.update(finetune_args)
+
         model_name = args['model_name']
-        base_model_name = model_name
         model_folder = self.model_storage.folder_get(model_name)
         model_folder_name = model_folder.split('/')[-1]
-
         task = args['task']
 
-        # rename columns to properly finetune, depends on use case
-        if task in ('text-classification',  'zero-shot-classification'):
-            df.rename(columns={args['target']: 'labels', args['input_column']: 'text'}, inplace=True)
-        elif task == 'translation':
-            pass
-        elif task == 'summarization':
-            pass
-        elif task == 'fill-mask':
-            pass
-        elif task == 'text2text-generation':
-            pass
-        else:
-            raise Exception(f'Unsupported task: {task}')
+        fnc_list = {
+            'text-classification': self._finetune_cls,
+            'zero-shot-classification': self._finetune_cls,
+            'translation': self._finetune_translate,
+            'summarization': self._finetune_summarization,
+            'fill-mask': self._finetune_fill_mask,
+        }
+        tokenizer, trainer = fnc_list[task](df, args)
 
-        tokenizer_from = args.get('tokenizer_from', 'bert-base-cased')
-        tokenizer = AutoTokenizer.from_pretrained(tokenizer_from)  # TODO: load from pre-trained model folder
+        try:
+            trainer.train()
+            trainer.save_model(model_folder)  # TODO: save entire pipeline instead  # https://huggingface.co/docs/transformers/main_classes/pipelines#transformers.Pipeline.save_pretrained
+            tokenizer.save_pretrained(model_folder)
+
+            # persist changes
+            self.model_storage.json_set('args', args)
+            self.model_storage.folder_sync(model_folder_name)
+
+        except Exception as e:
+            log.logger.debug(f'Finetune failed with error: {str(e)}')
+
+    def _finetune_cls(self, df, args):
+        df = df.rename(columns={args['target']: 'labels', args['input_column']: 'text'})
+        tokenizer_from = args.get('using', {}).get('tokenizer_from', args['model_name'])
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_from)
         dataset = Dataset.from_pandas(df)
-        tokenized_datasets = dataset.map(_tokenize_fn, batched=True)
+
+        def _tokenize_text_cls_fn(examples):
+            return tokenizer(examples['text'], padding="max_length", truncation=True)
+
+        tokenized_datasets = dataset.map(_tokenize_text_cls_fn, batched=True)
         ds = tokenized_datasets.shuffle(seed=42).train_test_split(test_size=args.get('eval_size', 0.1))
         train_ds = ds['train']
         eval_ds = ds['test']
 
-        if task in ('text-classification', 'zero-shot-classification'):
-            n_labels = len(args['labels_map'])
-            assert n_labels == df['labels'].nunique(), f'Label mismatch! Ensure labels match what the model was originally trained on. Found {df["labels"].nunique()} classes, expected {n_labels}.'  # noqa
-            model = AutoModelForSequenceClassification.from_pretrained(base_model_name, num_labels=n_labels)
-            metric = evaluate.load("accuracy")
+        ft_args = args.get('using', {}).get('trainer_args', {})
+        ft_args['output_dir'] = self.model_storage.folder_get(args['model_name'])
 
-            def _compute_metrics(eval_pred):
-                logits, labels = eval_pred
-                predictions = np.argmax(logits, axis=-1)
-                return metric.compute(predictions=predictions, references=labels)
+        n_labels = len(args['labels_map'])
+        assert n_labels == df[
+            'labels'].nunique(), f'Label mismatch! Ensure labels match what the model was originally trained on. Found {df["labels"].nunique()} classes, expected {n_labels}.'  # noqa
+        # TODO: ideally check that labels are a subset of the original ones, too.
+        config = AutoConfig.from_pretrained(args['model_name'])
+        model = AutoModelForSequenceClassification.from_pretrained(args['model_name'], config=config)
+        metric = evaluate.load("accuracy")
+        training_args = TrainingArguments(**ft_args)
 
-            ft_args = {}
-            training_args = TrainingArguments(
-                output_dir=model_folder,
-                evaluation_strategy="epoch",
-                **ft_args
-            )
+        def _compute_metrics(eval_pred):
+            logits, labels = eval_pred
+            predictions = np.argmax(logits, axis=-1)
+            return metric.compute(predictions=predictions, references=labels)
 
-            trainer = Trainer(
-                model=model,
-                args=training_args,
-                train_dataset=train_ds,
-                eval_dataset=eval_ds,
-                compute_metrics=_compute_metrics,
-            )
+        # generate trainer and finetune
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            train_dataset=train_ds,
+            eval_dataset=eval_ds,
+            compute_metrics=_compute_metrics,
+        )
 
-            try:
-                trainer.train()
-                trainer.save_model(model_folder)  # TODO: save entire pipeline instead  # https://huggingface.co/docs/transformers/main_classes/pipelines#transformers.Pipeline.save_pretrained
-                tokenizer.save_pretrained(model_folder)
-            except Exception as e:
-                log.logger.debug(f'Finetune failed with error: {str(e)}')
+        return tokenizer, trainer
 
-            self.model_storage.json_set('args', args)
-            self.model_storage.folder_sync(model_folder_name)  # persist changes
+    def _finetune_translate(self, df, args):
+        df = df.rename(columns={args['target']: 'labels', args['input_column']: 'text'})
+        tokenizer_from = args.get('using', {}).get('tokenizer_from', args['model_name'])
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_from)
+        dataset = Dataset.from_pandas(df)
+
+        def _tokenize_translate_fn(examples, prefix=''):
+            inputs = [prefix + example for example in examples["text"]]
+            return tokenizer(inputs, padding="max_length", truncation=True)
+
+        tokenized_datasets = dataset.map(_tokenize_translate_fn, batched=True)
+        ds = tokenized_datasets.shuffle(seed=42).train_test_split(test_size=args.get('eval_size', 0.1))
+        train_ds = ds['train']
+        eval_ds = ds['test']
+
+        ft_args = args.get('using', {}).get('trainer_args', {})
+        ft_args['output_dir'] = self.model_storage.folder_get(args['model_name'])
+        ft_args['predict_with_generate'] = True
+        config = AutoConfig.from_pretrained(args['model_name'])
+        model = AutoModelForSeq2SeqLM.from_pretrained(args['model_name'], config=config)
+        metric = evaluate.load("sacrebleu")
+        training_args = Seq2SeqTrainingArguments(**ft_args)
+
+        def _compute_metrics(eval_pred):
+            logits, labels = eval_pred
+            predictions = np.argmax(logits, axis=-1)
+            return metric.compute(predictions=predictions, references=labels)
+
+        # generate trainer and finetune
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            train_dataset=train_ds,
+            eval_dataset=eval_ds,
+            compute_metrics=_compute_metrics,
+        )
+
+        return tokenizer, trainer
+
+    def _finetune_summarization(self, df):
+        return  # tokenizer, trainer
+
+    def _finetune_fill_mask(self, df):
+        return  # tokenizer, trainer

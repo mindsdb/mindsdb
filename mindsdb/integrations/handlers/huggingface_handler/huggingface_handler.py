@@ -325,7 +325,9 @@ class HuggingFaceHandler(BaseMLEngine):
             self.model_storage.folder_sync(model_folder_name)
 
         except Exception as e:
-            log.logger.debug(f'Finetune failed with error: {str(e)}')
+            err_str = f'Finetune failed with error: {str(e)}'
+            log.logger.debug(err_str)
+            raise Exception(err_str)
 
     # TODO: move these into a new file
     def _finetune_cls(self, df, args):
@@ -407,10 +409,28 @@ class HuggingFaceHandler(BaseMLEngine):
         training_args = Seq2SeqTrainingArguments(**ft_args)
         data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
 
-        def _compute_metrics(eval_pred):
-            logits, labels = eval_pred
-            predictions = np.argmax(logits, axis=-1)
-            return metric.compute(predictions=predictions, references=labels)
+        def _postprocess_text(preds, labels):
+            preds = [pred.strip() for pred in preds]
+            labels = [[label.strip()] for label in labels]
+            return preds, labels
+
+        def _compute_metrics(eval_preds):
+            # ref: github.com/huggingface/notebooks/blob/main/examples/translation.ipynb
+            preds, labels = eval_preds
+            if isinstance(preds, tuple):
+                preds = preds[0]
+
+            decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
+            decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+            decoded_preds, decoded_labels = _postprocess_text(decoded_preds, decoded_labels)
+
+            result = metric.compute(predictions=decoded_preds, references=decoded_labels)
+            result = {"bleu": result["score"]}
+
+            prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds]
+            result["gen_len"] = np.mean(prediction_lens)  # todo: remove?
+            result = {k: round(v, 4) for k, v in result.items()}
+            return result
 
         # generate trainer and finetune
         trainer = Trainer(
@@ -467,7 +487,7 @@ class HuggingFaceHandler(BaseMLEngine):
                                     use_aggregator=True)
             result = {key: value * 100 for key, value in result.items()}
             prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in predictions]
-            result["gen_len"] = np.mean(prediction_lens)
+            result["gen_len"] = np.mean(prediction_lens)  # todo: remove?
             return {k: round(v, 4) for k, v in result.items()}
 
         # generate trainer and finetune
@@ -484,4 +504,3 @@ class HuggingFaceHandler(BaseMLEngine):
 
     def _finetune_fill_mask(self, df, args):
         raise Exception("Finetuning fill-mask models is not yet supported.")
-        return  # tokenizer, trainer

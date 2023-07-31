@@ -13,6 +13,11 @@ from transformers import (
     TrainingArguments,
 )
 
+# todo add support for question answering task
+# todo add support for fill mask
+# todo add support for text_generation (causal language model)
+# todo add support for text_2_text generation
+
 
 def _finetune_cls(df, args):
     df = df.rename(columns={args["target"]: "labels", args["input_column"]: "text"})
@@ -34,6 +39,7 @@ def _finetune_cls(df, args):
     ft_args["output_dir"] = args["model_folder"]
 
     n_labels = len(args["labels_map"])
+    # todo replace for prod
     assert (
         n_labels == df["labels"].nunique()
     ), f'Label mismatch! Ensure labels match what the model was originally trained on. Found {df["labels"].nunique()} classes, expected {n_labels}.'  # noqa
@@ -223,4 +229,20 @@ def _finetune_summarization(df, args):
 
 
 def _finetune_fill_mask(df, args):
-    raise Exception("Finetuning fill-mask models is not yet supported.")
+    raise NotImplementedError("Finetuning fill-mask models is not yet supported.")
+
+
+def _finetune_text_generation(df, args):
+    raise NotImplementedError("Finetuning text-generation models is not yet supported.")
+
+
+def _finetune_question_answering(df, args):
+    raise NotImplementedError(
+        "Finetuning question-answering models is not yet supported."
+    )
+
+
+def _finetune_text_2_text_generation(df, args):
+    raise NotImplementedError(
+        "Finetuning text-2-text generation models is not yet supported."
+    )

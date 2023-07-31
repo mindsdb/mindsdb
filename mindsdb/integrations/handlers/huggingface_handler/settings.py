@@ -1,7 +1,9 @@
 from integrations.handlers.huggingface_handler.finetune import (
     _finetune_cls,
     _finetune_fill_mask,
+    _finetune_question_answering,
     _finetune_summarization,
+    _finetune_text_generation,
     _finetune_translate,
 )
 
@@ -20,4 +22,6 @@ FINETUNE_MAP = {
     "translation": _finetune_translate,
     "summarization": _finetune_summarization,
     "fill-mask": _finetune_fill_mask,
+    "text-generation": _finetune_text_generation,
+    "question-answering": _finetune_question_answering,
 }

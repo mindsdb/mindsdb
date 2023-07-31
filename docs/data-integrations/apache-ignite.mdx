@@ -9,6 +9,8 @@ This is the implementation of the Apache Ignite data handler for MindsDB.
 
 ## Implementation
 
+This handler is implemented using the `pyignite` library, the Apache Ignite thin (binary protocol) client for Python.
+
 The required arguments to establish a connection are as follows:
 
 * `host` is the host name or IP address of the Apache Ignite cluster's node.
@@ -44,7 +46,5 @@ LIMIT 10;
 ```
 
 <Tip>
-At the moment, a connection can be established to only a single node in the cluster. Steps will be taken in the future, to configure the client to automatically fail over to another node if the connection to the current node fails or times out by providing the hosts and ports for many nodes as explained here,
-<br>
-https://ignite.apache.org/docs/latest/thin-clients/python-thin-client
+Currently, a connection can be established only to a single node in the cluster. In the future, we'll configure the client to automatically fail over to another node if the connection to the current node fails or times out by providing the hosts and ports for many nodes as explained [here](https://ignite.apache.org/docs/latest/thin-clients/python-thin-client).
 </Tip>

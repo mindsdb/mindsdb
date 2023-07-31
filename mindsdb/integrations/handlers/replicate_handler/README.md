@@ -34,8 +34,8 @@ Yes, Of Course few that comes to my mind are
 ### Please provide a minimal SQL example that uses this ML engine (pointers to integration tests in the PR also valid)
 [Example](./Manual_QA.md)
 
-
-Here are some amazing example you check :
+## Usage
+To use this handler and connect to a Replicate cluster in MindsDB, you need an account on Replicate. Make sure to create an account by following this [link](https://replicate.com/signin?next=/account/api-tokens).
 
 - [audio](./usage_audio.md)
     - [Audio Generation](./usage_audio.md#audio-generation)
@@ -46,5 +46,3 @@ Here are some amazing example you check :
 - [LLM](./usage_LLM.md)
 - [text2img](./usage_text2img.md)
 - [text2vid](./usage_text2video.md)
-
-- There is much more you can do this is just starting

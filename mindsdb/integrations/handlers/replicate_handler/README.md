@@ -37,7 +37,7 @@ Yes, Of Course few that comes to my mind are
 ## Usage
 To use this handler and connect to a Replicate cluster in MindsDB, you need an account on Replicate. Make sure to create an account by following this [link](https://replicate.com/signin?next=/account/api-tokens).
 
-- [audio](./usage_audio.md)
+- [Audio](./usage_audio.md)
     - [Audio Generation](./usage_audio.md#audio-generation)
     - [Custom Audio Cloning](./usage_audio.md#custom-audio-cloning)
 - [img2text](./usage_img2text.md)

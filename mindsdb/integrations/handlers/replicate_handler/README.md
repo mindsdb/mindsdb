@@ -35,3 +35,16 @@ Yes, Of Course few that comes to my mind are
 [Example](./Manual_QA.md)
 
 
+Here are some amazing example you check :
+
+- [audio](./usage_audio.md)
+    - [Audio Generation](./usage_audio.md#audio-generation)
+    - [Custom Audio Cloning](./usage_audio.md#custom-audio-cloning)
+- [img2text](./usage_img2text.md)
+    - [Image Captioning](./usage_img2text.md#image-captioning)
+    - [Image Text Matching](./usage_img2text.md#visual-question-answering)
+- [LLM](./usage_LLM.md)
+- [text2img](./usage_text2img.md)
+- [text2vid](./usage_text2video.md)
+
+- There is much more you can do this is just starting

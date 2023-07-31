@@ -14,6 +14,8 @@ PARAMETERS = {
 ```
 
 The result is as follows:
+<br>
+[![ignite-create-db.png](https://i.postimg.cc/HLSByMqt/ignite-create-db.png)](https://postimg.cc/947d3DF4)
 
 **2. Testing SELECT method**
 
@@ -22,3 +24,5 @@ SELECT * FROM ignite_datasource.City LIMIT 10;
 ```
 
 The result is as follows:
+<br>
+[![ignite-select.png](https://i.postimg.cc/85jwB5Dg/ignite-select.png)](https://postimg.cc/cgGQddrF)

@@ -51,6 +51,9 @@ class MySQLHandler(DatabaseHandler):
             'password': self.connection_data.get('password'),
             'database': self.connection_data.get('database')
         }
+        
+        if 'conn_attrs' in self.connection_data:
+            config['conn_attrs'] = self.connection_data['conn_attrs']
 
         ssl = self.connection_data.get('ssl')
         if ssl is True:

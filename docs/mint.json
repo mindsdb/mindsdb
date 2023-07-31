@@ -126,6 +126,7 @@
             "app-integrations/github",
             "app-integrations/gmail",
             "app-integrations/google-calendar",
+            "app-integrations/shopify",
             "app-integrations/twitter",
             "app-integrations/youtube"
           ]

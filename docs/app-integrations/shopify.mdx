@@ -1,9 +1,9 @@
 ---
-title: Shopify Data Handler
-sidebarTitle: Shopify Data Handler
+title: Shopify
+sidebarTitle: Shopify
 ---
 
-This is the implementation of the shopify data handler. It is responsible for fetching data from shopify and converting it into a format that can be used by the rest of the application.
+This is the implementation of the Shopify app handler. It is responsible for fetching data from Shopify and utilizing it for training models and making predictions.
 
 ## Implementation
 
@@ -12,25 +12,27 @@ The required arguments to establish a connection are as follows:
 - `shop_url`: a required URL to your Shopify store.
 - `access_token`: a required access token to use for authentication.
 
-Watch this video on creating a Shopify access token [here](https://www.youtube.com/watch?v=4f_aiC5oTNc&t=302s).
+<Tip>
+Here is how you can [create a Shopify access token](https://www.youtube.com/watch?v=4f_aiC5oTNc&t=302s).
+</Tip>
 
 ## Usage
 
-In order to use the Shopify data handler, you must first create a new instance of the handler.You can do it by the following query:
+In order to connect your Shopify account to MindsDB, you must first create a new instance of the handler. You can do it by the following query:
 
-~~~~sql
+```sql
 CREATE DATABASE shopify_datasource
 WITH ENGINE = 'shopify',
 PARAMETERS = {
   "shop_url": "your-shop-name.myshopify.com",
   "access_token": "shppa_..."
 };
-~~~~
+```
 
 Once you have created the database, you can query it like any other database. For example:
 
-~~~~sql
+```sql
 SELECT *
 FROM shopify_datasource.products
-limit 10;
-~~~~
+LIMIT 10;
+```

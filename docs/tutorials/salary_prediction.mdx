@@ -68,9 +68,7 @@ PREDICT salary;
 To monitor the status of the predictor use this SQL command:
 
 ```sql
-SELECT status
-FROM mindsdb.models
-WHERE name='salary_model';
+DESCRIBE salary_model;
 ```
 
 Right after creating the predictor, the model shows that it is in the generating phase.

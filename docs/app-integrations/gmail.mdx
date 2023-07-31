@@ -33,17 +33,16 @@ parameters = {
 };
 ```
 
-Or, can also connect by giving the credentials file from a s3 [pre signed url](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ShareObjectPreSignedURL.html). To do this you need to pass in the credentials_file parameter as a [pre signed url](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ShareObjectPreSignedURL.html). For example:
+Or, you can also connect by giving the credentials file from an s3 [pre signed url](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ShareObjectPreSignedURL.html). To do this you need to pass in the credentials_file parameter as a [pre signed url](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ShareObjectPreSignedURL.html). For example:
 
-~~~~sql
+```sql
 CREATE DATABASE mindsdb_gmail
 WITH ENGINE = 'gmail',
 parameters = {
     "s3_credentials_file": "https://s3.amazonaws.com/your_bucket/credentials.json?response-content-disposition=inline&X-Amz-Security-Token=12312...",
     -- "scopes": ['SCOPE_1', 'SCOPE_2', ...] -- Optional scopes. By default 'https://.../gmail.compose' & 'https://.../gmail.readonly' scopes are used
 };
-~~~~
-
+```
 
 <Tip>
 You need a Google account in order to use this integration. Here is how to get the credentials file:
@@ -82,6 +81,10 @@ You need a Google account in order to use this integration. Here is how to get t
 4. Download the JSON file:
 
     4.1 After creating your credentials, click the download button (an icon of an arrow pointing down) on the right side of your client ID. This will download a JSON file, so you will use the location to it in the `credentials_file` param. 
+</Tip>
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/gmail_handler) and run this command: `pip install -r requirements.txt`.
 </Tip>
 
 ## Usage
@@ -157,3 +160,7 @@ SELECT h.PRED, h.PRED_explain, t.text_spammy AS input_text
 FROM mindsdb.emails_text AS t
 JOIN mindsdb.spam_classifier AS h;
 ```
+
+<Info>
+For more information about available actions and development plans, visit [this page](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/gmail_handler/README.md).
+</Info>

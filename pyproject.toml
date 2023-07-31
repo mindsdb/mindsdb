@@ -1,3 +1,31 @@
+[tool.poetry]
+name = "mindsdb"
+version = "0.0.0"  # leave as 0, it will auto update when pushed to artifact store based on latest git
+#tag
+description = "MindsDB's AI Virtual Database empowers developers to connect any AI/ML model to any datasource. This includes relational and non-relational databases, data warehouses and SaaS applications"
+authors = []
+packages = [
+    { include = "mindsdb" }
+]
+
+
+[tool.poetry.group.dev.dependencies]
+black = "23.3.0"
+flake8 = "5.0.4"
+invoke = ">=1.7.1"
+isort = "5.10.1"
+mypy = ">=0.971"
+pre-commit = ">=2.16.0"
+docker = ">=5.0.3"
+itsdangerous = "2.0.1"
+jinja2 = "<3.1.0"
+netifaces = ">=0.11.0"
+mysql-connector-python = "8.0.29"
+pytest = "^7.4.0"
+pytest-subtests = "^0.11.0"
+pycodestyle = "2.9.1"
+openai = ">=0.27.0" # for ml handler tests [should match version defined in handler's requirements.txt]
+
 [build-system]
 
 # @TODO: We should figure out version limitations for these
@@ -5,3 +33,56 @@ requires = [
     "setuptools",
     "wheel",
 ]
+
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.10"
+werkzeug = "1.0.1"
+lightwood = ">=23.7.1.0,<23.7.2.0"
+markupsafe = "2.0.1"
+flask-restx = ">=1.0.1,<2.0.0"
+flask = ">=1.0,<2.0"
+itsdangerous = "2.0.1"
+jinja2 = "<3.1.0"
+python-multipart = ">=0.0.5"
+pyparsing = "2.3.1"
+cryptography = ">=35.0"
+psycopg = {version = ">=1.15.3", extras = ["binary"]}
+psycopg2-binary = "^2.9.6"
+python-tds = ">=1.10.0"
+waitress = ">=1.4.4"
+pymongo = {version = ">=4.1.1", extras = ["srv"]}
+setuptools = "^68.0.0"
+psutil = "^5.9.5"
+sqlalchemy = ">=1.4.29,<2.0.0"
+alembic = ">=1.3.3"
+sentry-sdk = "^1.28.1"
+walrus = "0.8.2"
+flask-compress = ">=1.0.0"
+appdirs = ">=1.0.0"
+mindsdb-sql = ">=0.6.5,<0.7.0"
+mindsdb-evaluator = ">=0.0.7,<0.1.0"
+checksumdir = ">=1.2.0"
+duckdb = "0.6.0"
+requests = ">=2.0.0"
+clickhouse-driver = "^0.2.6"
+clickhouse-sqlalchemy = "^0.2.4"
+charset-normalizer = "^3.2.0"
+pyopenssl = ">=22.0.0"
+pydateinfer = "0.3.0"
+pyarrow = ">=10.0.1,<10.1.0"
+dataprep-ml = "^0.0.15"
+python-magic = ">=0.4.27"
+openpyxl = ">=3.1.1"
+dill = "0.3.6"
+slack-sdk = "^3.21.3"
+mysql-connector-python = "^8.0.29"
+
+[tool.poetry.extras]
+grpc = ["grpcio-tools"]
+telemetry = ["sentry-sdk"]
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "semver"

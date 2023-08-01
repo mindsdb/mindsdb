@@ -138,7 +138,7 @@ class DBMemory(BaseMemory):
 
     def _add_to_history(self, chat_id, message):
 
-        chat_bot_id = self.chat_task.bot_record.id
+        chat_bot_id = self.chat_task.bot_id
         message = db.ChatBotsHistory(
             chat_bot_id=chat_bot_id,
             type=message.type.name,
@@ -150,7 +150,7 @@ class DBMemory(BaseMemory):
         db.session.commit()
 
     def _get_chat_history(self, chat_id):
-        chat_bot_id = self.chat_task.bot_record.id
+        chat_bot_id = self.chat_task.bot_id
         query = db.ChatBotsHistory.query\
             .filter(
                 db.ChatBotsHistory.chat_bot_id == chat_bot_id,

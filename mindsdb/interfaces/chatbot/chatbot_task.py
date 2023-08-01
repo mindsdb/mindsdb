@@ -18,7 +18,7 @@ class ChatBotTask(BaseTask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.bot_id = self.object_id
-        self.bot_record = db.ChatBots.query.get(self.bot_id)
+
         self.session = SessionController()
 
     def run(self, stop_event):
@@ -26,18 +26,20 @@ class ChatBotTask(BaseTask):
         # TODO check deleted, raise errors
         # TODO checks on delete predictor / project/ integration
 
-        self.base_model_name = self.bot_record.model_name
-        self.project_name = db.Project.query.get(self.bot_record.project_id).name
+        bot_record = db.ChatBots.query.get(self.bot_id)
+
+        self.base_model_name = bot_record.model_name
+        self.project_name = db.Project.query.get(bot_record.project_id).name
         self.project_datanode = self.session.datahub.get(self.project_name)
 
-        database_name = db.Integration.query.get(self.bot_record.database_id).name
+        database_name = db.Integration.query.get(bot_record.database_id).name
 
         self.chat_handler = self.session.integration_controller.get_handler(database_name)
         if not isinstance(self.chat_handler, APIChatHandler):
             raise Exception(f"Can't use chat database: {database_name}")
 
         # get chat handler info
-        self.bot_params = self.bot_record.params or {}
+        self.bot_params = bot_record.params or {}
 
         chat_params = self.chat_handler.get_chat_config()
         self.bot_params['bot_username'] = self.chat_handler.get_my_user_name()

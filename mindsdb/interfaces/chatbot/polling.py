@@ -56,7 +56,7 @@ class MessageCountPolling(BasePolling):
 
             if stop_event.is_set():
                 return
-            log.logger.debug('running ' + self.chat_task.bot_record.name)
+            log.logger.debug(f'running {self.chat_task.bot_id}')
             time.sleep(7)
 
     def get_last_message(self, chat_memory):

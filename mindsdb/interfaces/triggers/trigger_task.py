@@ -11,22 +11,17 @@ from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteComm
 
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities import log
+from mindsdb.interfaces.tasks.task import BaseTask
 
 
-class TriggerTask:
-    def __init__(self, trigger_id):
-        self.trigger_id = trigger_id
+class TriggerTask(BaseTask):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.command_executor = None
 
     def run(self, stop_event):
-        trigger = db.Triggers.query.get(self.trigger_id)
-        try:
-            self._run(trigger, stop_event)
-        except Exception:
-            trigger.last_error = str(traceback.format_exc())
-            db.session.commit()
+        trigger = db.Triggers.query.get(self.object_id)
 
-    def _run(self, trigger, stop_event):
         log.logger.info(f'trigger starting: {trigger.name}')
 
         # parse query
@@ -58,8 +53,6 @@ class TriggerTask:
     def _callback(self, row, key):
         log.logger.debug(f'trigger call: {row}, {key}')
 
-        trigger = db.Triggers.query.get(self.trigger_id)
-
         try:
             row.update(key)
             table = [
@@ -85,9 +78,9 @@ class TriggerTask:
             # exec query
             ret = self.command_executor.execute_command(query)
             if ret.error_code is not None:
-                trigger.last_error = ret.error_message
+                self.set_error(ret.error_message)
 
         except Exception:
-            trigger.last_error = str(traceback.format_exc())
+            self.set_error(str(traceback.format_exc()))
 
         db.session.commit()

@@ -348,7 +348,6 @@ class Triggers(Base):
     query_str = Column(String, nullable=False)
     columns = Column(String, nullable=False)  # list of columns separated by delimiter
 
-    last_error = Column(String)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
 
@@ -362,6 +361,7 @@ class Tasks(Base):
     object_type = Column(String, nullable=False)
     object_id = Column(Integer, nullable=False)
 
+    last_error = Column(String)
     active = Column(Boolean, default=True)
 
     # for running in concurrent processes

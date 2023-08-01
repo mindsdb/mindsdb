@@ -1,4 +1,4 @@
-
+import traceback
 import threading
 from mindsdb.utilities.context import context as ctx
 from mindsdb.interfaces.storage import db
@@ -26,15 +26,21 @@ class TaskThread(threading.Thread):
         object_type = task_record.object_type
         object_id = task_record.object_id
 
-        if object_type == 'trigger':
+        try:
+            if object_type == 'trigger':
 
-            trigger = TriggerTask(object_id)
-            trigger.run(self._stop_event)
+                trigger = TriggerTask(object_id)
+                trigger.run(self._stop_event)
 
-        elif object_type == 'chatbot':
-            # TODO
-            ...
+            elif object_type == 'chatbot':
+                # TODO
+                ...
+        except Exception:
+            task_record.last_error = str(traceback.format_exc())
+            db.session.commit()
+
         db.session.rollback()
+
 
     def stop(self):
 

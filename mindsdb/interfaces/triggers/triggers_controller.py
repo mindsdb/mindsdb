@@ -125,7 +125,7 @@ class TriggersController:
             db.Triggers.database_id,
             db.Triggers.table_name,
             db.Triggers.query_str,
-            db.Triggers.last_error,
+            db.Tasks.last_error,
         )\
             .join(db.Triggers, db.Triggers.id == db.Tasks.object_id)\
             .filter(

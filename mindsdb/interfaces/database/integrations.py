@@ -11,6 +11,7 @@ from time import time
 from pathlib import Path
 from copy import deepcopy
 from typing import Optional
+from textwrap import dedent
 from collections import OrderedDict
 
 from sqlalchemy import func
@@ -428,8 +429,18 @@ class IntegrationController:
             raise Exception(f"Can't find handler for '{integration_name}' ({integration_engine})")
 
         integration_meta = self.handlers_import_status[integration_engine]
-        if not integration_meta["import"]["success"]:
-            msg = f"to use {integration_engine} please install 'pip install mindsdb[{integration_engine}]'"
+        if integration_meta["import"]["success"] is False:
+            msg = dedent(f'''\
+                Handler '{integration_engine}' cannot be used. Reason is:
+                    {integration_meta['import']['error_message']}
+            ''')
+            is_cloud = Config().get('cloud', False)
+            if is_cloud is False:
+                msg += dedent(f'''
+
+                If error is related to missing dependencies, then try to run command in shell and restart mindsdb:
+                    pip install mindsdb[{integration_engine}]
+                ''')
             logger.debug(msg)
             raise Exception(msg)
 

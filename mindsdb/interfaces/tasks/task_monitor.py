@@ -37,7 +37,8 @@ class TaskMonitor:
 
             except (SystemExit, KeyboardInterrupt):
                 self.stop_all_tasks()
-                raise
+                return
+
             except Exception as e:
                 log.logger.error(e)
 

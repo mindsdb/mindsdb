@@ -29,7 +29,7 @@ class TaskThread(threading.Thread):
         try:
             if object_type == 'trigger':
 
-                trigger = TriggerTask(object_id)
+                trigger = TriggerTask(self.task_id, object_id)
                 trigger.run(self._stop_event)
 
             elif object_type == 'chatbot':

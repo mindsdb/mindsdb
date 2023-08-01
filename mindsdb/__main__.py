@@ -288,7 +288,7 @@ if __name__ == '__main__':
         }
 
     # disabled on cloud
-    if config.get('tasks', {}).get('disable') is not True and not is_cloud:
+    if config.get('tasks', {}).get('disable') is not True:
         apis['tasks'] = {
             'process': None,
             'started': False

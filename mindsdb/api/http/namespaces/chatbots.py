@@ -122,6 +122,7 @@ def create_chatbot(project_name, name, chatbot):
     )
     return created_chatbot.as_dict(), HTTPStatus.CREATED
 
+
 @ns_conf.route('/<project_name>/chatbots/<chatbot_name>')
 @ns_conf.param('project_name', 'Name of the project')
 @ns_conf.param('chatbot_name', 'Name of the chatbot')

@@ -12,40 +12,6 @@ from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.storage.db import Predictor
 
 
-@ns_conf.route('/<project_name>/chatbots')
-class ChatBotsResource(Resource):
-    @ns_conf.doc('list_chatbots')
-    def get(self, project_name):
-        ''' List all chatbots '''
-        chatbot_controller = ChatBotController()
-        try:
-            all_bots = chatbot_controller.get_chatbots(project_name)
-        except NoResultFound:
-            # Project needs to exist.
-            return http_error(
-                HTTPStatus.NOT_FOUND,
-                'Project not found',
-                f'Project with name {project_name} does not exist')
-        return [b.as_dict() for b in all_bots]
-
-    @ns_conf.doc('create_chatbot')
-    def post(self, project_name):
-        '''Create a chatbot'''
-
-        # Check for required parameters.
-        if 'chatbot' not in request.json:
-            return http_error(
-                HTTPStatus.BAD_REQUEST,
-                'Missing parameter',
-                'Must provide "chatbot" parameter in POST body'
-            )
-
-        chatbot = request.json['chatbot']
-
-        name = chatbot.get('name')
-        return create_chatbot(project_name, name, chatbot)
-
-
 def create_chatbot(project_name, name, chatbot):
     if name is None:
         return http_error(
@@ -121,6 +87,40 @@ def create_chatbot(project_name, name, chatbot):
         params=params
     )
     return created_chatbot.as_dict(), HTTPStatus.CREATED
+
+
+@ns_conf.route('/<project_name>/chatbots')
+class ChatBotsResource(Resource):
+    @ns_conf.doc('list_chatbots')
+    def get(self, project_name):
+        ''' List all chatbots '''
+        chatbot_controller = ChatBotController()
+        try:
+            all_bots = chatbot_controller.get_chatbots(project_name)
+        except NoResultFound:
+            # Project needs to exist.
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Project not found',
+                f'Project with name {project_name} does not exist')
+        return [b.as_dict() for b in all_bots]
+
+    @ns_conf.doc('create_chatbot')
+    def post(self, project_name):
+        '''Create a chatbot'''
+
+        # Check for required parameters.
+        if 'chatbot' not in request.json:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Missing parameter',
+                'Must provide "chatbot" parameter in POST body'
+            )
+
+        chatbot = request.json['chatbot']
+
+        name = chatbot.get('name')
+        return create_chatbot(project_name, name, chatbot)
 
 
 @ns_conf.route('/<project_name>/chatbots/<chatbot_name>')

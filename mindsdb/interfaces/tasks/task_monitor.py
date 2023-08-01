@@ -71,8 +71,14 @@ class TaskMonitor:
                 self.stop_task(task_id)
 
             else:
-                # set alive time of running tasks
-                self._set_alive(task_id)
+                # need to be reloaded ?
+                record = db.Tasks.query.get(task_id)
+                if record.reload:
+                    record.reload = False
+                    self.stop_task(task_id)
+                else:
+                    # set alive time of running tasks
+                    self._set_alive(task_id)
 
     def _lock_task(self, task):
         run_by = f'{socket.gethostname()} {os.getpid()}'

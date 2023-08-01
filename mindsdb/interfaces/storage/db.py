@@ -354,6 +354,7 @@ class Tasks(Base):
 
     last_error = Column(String)
     active = Column(Boolean, default=True)
+    reload = Column(Boolean, default=False)
 
     # for running in concurrent processes
     run_by = Column(String)

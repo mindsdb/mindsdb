@@ -14,6 +14,8 @@ class TaskThread(threading.Thread):
         threading.Thread.__init__(self)
         self.task_id = task_id
         self._stop_event = threading.Event()
+        self.object_type = None
+        self.object_id = None
 
     def run(self):
         # create context and session
@@ -25,17 +27,18 @@ class TaskThread(threading.Thread):
         if task_record.user_class is not None:
             ctx.user_class = task_record.user_class
 
-        object_type = task_record.object_type
-        object_id = task_record.object_id
+        self.object_type = task_record.object_type
+        self.object_id = task_record.object_id
 
+        log.logger.info(f'Task starting: {self.object_type}.{self.object_id}')
         try:
-            if object_type == 'trigger':
+            if self.object_type == 'trigger':
 
-                trigger = TriggerTask(self.task_id, object_id)
+                trigger = TriggerTask(self.task_id, self.object_id)
                 trigger.run(self._stop_event)
 
-            elif object_type == 'chatbot':
-                bot = ChatBotTask(self.task_id, object_id)
+            elif self.object_type == 'chatbot':
+                bot = ChatBotTask(self.task_id, self.object_id)
                 bot.run(self._stop_event)
 
         except Exception:
@@ -45,4 +48,6 @@ class TaskThread(threading.Thread):
         db.session.commit()
 
     def stop(self):
+        log.logger.info(f'Task stopping: {self.object_type}.{self.object_id}')
+
         self._stop_event.set()

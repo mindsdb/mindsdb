@@ -26,6 +26,7 @@ def upgrade():
         sa.Column('object_id', sa.Integer(), nullable=False),
         sa.Column('last_error', sa.String(), nullable=True),
         sa.Column('active', sa.Boolean(), nullable=True),
+        sa.Column('reload', sa.Boolean(), nullable=True),
         sa.Column('run_by', sa.String(), nullable=True),
         sa.Column('alive_time', sa.DateTime(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=True),

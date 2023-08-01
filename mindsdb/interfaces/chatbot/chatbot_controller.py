@@ -176,14 +176,20 @@ class ChatBotController:
         if database_id is not None:
             # TODO check database_id
             existing_chatbot.database_id = database_id
-        if is_running is not None:
-            task = db.Tasks.query.filter(
-                db.Tasks.object_type == self.OBJECT_TYPE,
-                db.Tasks.object_id == existing_chatbot.id,
-                db.Tasks.company_id == ctx.company_id,
-            ).first()
-            if task is not None:
+
+        task = db.Tasks.query.filter(
+            db.Tasks.object_type == self.OBJECT_TYPE,
+            db.Tasks.object_id == existing_chatbot.id,
+            db.Tasks.company_id == ctx.company_id,
+        ).first()
+
+        if task is not None:
+            if is_running is not None:
                 task.active = is_running
+
+            # reload task
+            task.reload = True
+
         if params is not None:
             existing_chatbot.params = params
         db.session.commit()

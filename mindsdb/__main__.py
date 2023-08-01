@@ -237,22 +237,6 @@ if __name__ == '__main__':
             db.session.commit()
         # endregion
 
-        for integration_name in config.get('integrations', {}):
-            try:
-                it = integration_controller.get(integration_name)
-                if it is not None:
-                    integration_controller.delete(integration_name)
-                print(f'Adding: {integration_name}')
-                integration_data = config['integrations'][integration_name]
-                engine = integration_data.get('type')
-                if engine is not None:
-                    del integration_data['type']
-                integration_controller.add(integration_name, engine, integration_data)
-            except Exception as e:
-                log.logger.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
-
-    # @TODO Backwards compatibility for tests, remove later
-
     if args.api is None:
         api_arr = ['http', 'mysql']
     else:

@@ -132,10 +132,6 @@ class TaskMonitor:
 
 
 def start(verbose=False):
-    is_cloud = Config().get('cloud', False)
-    if is_cloud is True:
-        # disabled on cloud
-        return
 
     monitor = TaskMonitor()
     monitor.start()

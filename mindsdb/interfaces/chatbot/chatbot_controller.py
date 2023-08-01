@@ -5,6 +5,8 @@ from mindsdb.interfaces.database.projects import ProjectController
 
 from mindsdb.utilities.context import context as ctx
 
+from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+
 
 class ChatBotController:
     '''Handles CRUD operations at the database level for Chatbots'''
@@ -74,7 +76,6 @@ class ChatBotController:
             project_name: str,
             model_name: str,
             database_id: int = None,
-            chat_engine: str = None,
             is_running: bool = True,
             params: Dict[str, str] = {}) -> db.ChatBots:
         '''
@@ -85,7 +86,6 @@ class ChatBotController:
             project_name (str): The containing project
             model_name (str): The name of the existing ML model the chatbot will use
             database_id (int): The ID of the existing database the chatbot will use
-            chat_engine (str): The name of the chat integration the chatbot will use (e.g. slack)
             is_running (bool): Whether or not to start the chatbot right after creation
             params: (Dict[str, str]): Parameters to use when running the chatbot
 
@@ -103,6 +103,12 @@ class ChatBotController:
             raise Exception(f'Chat bot already exists: {name}')
 
         # TODO check input: model_name, database_id
+
+        # check database
+        session_controller = SessionController()
+        db_record = session_controller.integration_controller.get_by_id(database_id)
+        if db_record is None:
+            raise Exception(f"Database doesn't exits {database_id}")
 
         bot = db.ChatBots(
             name=name,
@@ -135,7 +141,6 @@ class ChatBotController:
             name: str = None,
             model_name: str = None,
             database_id: int = None,
-            chat_engine: str = None,
             is_running: bool = None,
             params: Dict[str, str] = None):
         '''
@@ -147,7 +152,6 @@ class ChatBotController:
             name (str): The updated name of the chatbot
             model_name (str): The name of the existing ML model the chatbot will use
             database_id (int): The ID of the existing database the chatbot will use
-            chat_engine (str): The name of the chat integration the chatbot will use (e.g. slack)
             is_running (bool): Whether or not the chatbot will run after update/creation
             params: (Dict[str, str]): Parameters to use when running the chatbot
 

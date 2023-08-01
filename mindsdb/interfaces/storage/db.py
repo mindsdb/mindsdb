@@ -310,7 +310,6 @@ class ChatBots(Base):
             'name': self.name,
             'project_id': self.project_id,
             'model_name': self.model_name,
-            'chat_engine': self.chat_engine,
             'params': self.params,
             'created_at': self.created_at
         }

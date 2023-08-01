@@ -34,7 +34,7 @@ class BotExecutor:
         functions = self._prepare_available_functions()
 
         model_executor = self._get_model(self.chat_task.base_model_name)
-        model_output = model_executor.call(self.chat_memory, functions)
+        model_output = model_executor.call(self.chat_memory.get_history(), functions)
         return model_output
 
 

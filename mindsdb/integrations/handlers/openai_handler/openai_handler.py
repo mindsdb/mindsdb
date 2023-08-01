@@ -65,6 +65,37 @@ class OpenAIHandler(BaseMLEngine):
                         4) a `prompt' and 'user_column' and 'assistant_column`
                 '''))
 
+        # for all args that are not expected, raise an error
+        known_args = set()
+        # flatten of keys_collection
+        for keys in keys_collection:
+            known_args = known_args.union(set(keys))
+
+        # TODO: need a systematic way to maintain a list of known args
+        known_args = known_args.union(
+            {
+                "target",
+                "model_name",
+                "mode",
+                "predict_params",
+                "input_text",
+                "ft_api_info",
+                "ft_result_stats",
+                "runtime",
+                "max_tokens",
+                "temperature",
+                "api_key",
+                "openai_api_key",
+            }
+        )
+
+        unknown_args = set(args.keys()) - known_args
+        if unknown_args:
+            # return a list of unknown args as a string
+            raise Exception(
+                f"Unknown arguments: {', '.join(unknown_args)}.\n Known arguments are: {', '.join(known_args)}"
+            )
+
     def create(self, target, args=None, **kwargs):
         args = args['using']
 

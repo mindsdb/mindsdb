@@ -26,7 +26,9 @@ PARAMETERS = {
     "port": "1521",
     "sid": "ORCL",
     "user": "admin",
-    "password": "pass"
+    "password": "pass",
+    "disable_oob": true, -- optional, disable out-of-band breaks, sometimes may help with connection see https://python-oracledb.readthedocs.io/en/latest/api_manual/module.html
+    "auth_mode": "SYSDBA" -- optional, to connect with database privilege: SYSDBA, SYSOPER or others
 };
 ```
 

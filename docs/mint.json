@@ -126,7 +126,8 @@
             "app-integrations/github",
             "app-integrations/gmail",
             "app-integrations/google-calendar",
-            "app-integrations/twitter"
+            "app-integrations/twitter",
+            "app-integrations/youtube"
           ]
         },
         {
@@ -141,6 +142,7 @@
             "data-integrations/apache-cassandra",
             "data-integrations/apache-druid",
             "data-integrations/apache-hive",
+            "data-integrations/apache-ignite",
             "data-integrations/apache-impala",
             "data-integrations/apache-pinot",
             "data-integrations/apache-solr",
@@ -159,6 +161,7 @@
             "data-integrations/elasticsearch",
             "data-integrations/firebird",
             "data-integrations/google-bigquery",
+            "data-integrations/google-cloud-sql",
             "data-integrations/google-sheets",
             "data-integrations/ibm-db2",
             "data-integrations/ibm-informix",
@@ -396,6 +399,7 @@
                 "rest/views/list-views",
                 "rest/views/list-view",
                 "rest/views/create-view",
+                "rest/views/update-view",
                 "rest/views/delete-views"
               ]
             },

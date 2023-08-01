@@ -37,7 +37,8 @@ class TaskMonitor:
 
             except (SystemExit, KeyboardInterrupt):
                 self.stop_all_tasks()
-                raise
+                return
+
             except Exception as e:
                 log.logger.error(e)
 
@@ -50,7 +51,7 @@ class TaskMonitor:
     def check_tasks(self):
         allowed_tasks = set()
 
-        for task in db.Tasks.query.filter(db.Tasks.active == True): # noqa
+        for task in db.session.query(db.Tasks).filter(db.Tasks.active == True): # noqa
             allowed_tasks.add(task.id)
 
             # start new tasks
@@ -104,15 +105,16 @@ class TaskMonitor:
 
     def _unlock_task(self, task_id):
         task = db.Tasks.query.get(task_id)
-        task.alive_time = None
-        db.session.commit()
+        if task is not None:
+            task.alive_time = None
+            db.session.commit()
 
     def start_task(self, task):
         if not self._lock_task(task):
             # can't lock, skip
             return
 
-        thread = TaskThread(task)
+        thread = TaskThread(task.id)
 
         thread.start()
         self._active_tasks[task.id] = thread

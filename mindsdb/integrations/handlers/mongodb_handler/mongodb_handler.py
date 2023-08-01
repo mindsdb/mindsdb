@@ -77,6 +77,7 @@ class MongoDBHandler(DatabaseHandler):
         return self.connection
 
     def subscribe(self, stop_event, callback, table_name, columns=None, **kwargs):
+
         con = self.connect()
         cur = con[self.database][table_name].watch()
         while True:
@@ -94,7 +95,7 @@ class MongoDBHandler(DatabaseHandler):
                     updated_columns = set(res['fullDocument'].keys())
                     if not set(columns) & set(updated_columns):
                         # do nothing
-                        return
+                        continue
 
                 callback(row=res['fullDocument'], key={'_id': _id})
             if res['operationType'] == 'update':
@@ -102,7 +103,7 @@ class MongoDBHandler(DatabaseHandler):
                     updated_columns = set(res['updateDescription']['updatedFields'].keys())
                     if not set(columns) & set(updated_columns):
                         # do nothing
-                        return
+                        continue
 
                 # get all document
                 full_doc = con[self.database][table_name].find_one(res['documentKey'])

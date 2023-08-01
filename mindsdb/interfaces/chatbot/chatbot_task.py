@@ -4,6 +4,7 @@ from mindsdb.integrations.libs.api_handler import APIChatHandler
 
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.interfaces.storage import db
+from mindsdb.interfaces.tasks.task import BaseTask
 
 from .polling import MessageCountPolling, RealtimePolling
 from .memory import DBMemory, HandlerMemory
@@ -12,12 +13,11 @@ from .chatbot_executor import MultiModeBotExecutor, BotExecutor
 from .types import ChatBotMessage
 
 
-class ChatBotTask:
+class ChatBotTask(BaseTask):
 
-    """A thread for polling style chatbots to operate."""
-
-    def __init__(self, bot_id):
-        self.bot_id = bot_id
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.bot_id = self.object_id
         self.bot_record = db.ChatBots.query.get(self.bot_id)
         self.session = SessionController()
 

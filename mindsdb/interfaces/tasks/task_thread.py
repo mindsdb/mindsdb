@@ -41,7 +41,6 @@ class TaskThread(threading.Thread):
 
         db.session.rollback()
 
-
     def stop(self):
 
         self._stop_event.set()

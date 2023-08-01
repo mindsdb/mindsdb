@@ -14,4 +14,3 @@ class BaseTask:
         task_record = db.Tasks.query.get(self.task_id)
         task_record.last_error = str(message)
         db.session.commit()
-

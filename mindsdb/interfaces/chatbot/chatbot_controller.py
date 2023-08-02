@@ -18,7 +18,18 @@ class ChatBotController:
             project_controller = ProjectController()
         self.project_controller = project_controller
 
-    def get_chatbot(self, chatbot_name: str, project_name: str = 'mindsdb') -> db.ChatBots:
+    def as_dict(self, bot, task) -> Dict:
+        return {
+            'id': bot.id,
+            'name': bot.name,
+            'database_id': bot.database_id,
+            'model_name': bot.model_name,
+            'params': bot.params,
+            'created_at': bot.created_at,
+            'is_running': task.active
+        }
+
+    def get_chatbot(self, chatbot_name: str, project_name: str = 'mindsdb') -> Dict:
         '''
         Gets a chatbot by name.
 
@@ -33,7 +44,7 @@ class ChatBotController:
         project = self.project_controller.get(name=project_name)
 
         query = db.session.query(
-            db.ChatBots
+            db.ChatBots, db.Tasks
         ).join(
             db.Tasks, db.ChatBots.id == db.Tasks.object_id
         ).filter(
@@ -43,9 +54,11 @@ class ChatBotController:
             db.Tasks.company_id == ctx.company_id,
         )
 
-        return query.first()
+        record = query.first()
+        if record:
+            return self.as_dict(record[0], record[1])
 
-    def get_chatbots(self, project_name: str = 'mindsdb') -> List[db.ChatBots]:
+    def get_chatbots(self, project_name: str = 'mindsdb') -> List[dict]:
         '''
         Gets all chatbots in a project.
 
@@ -59,7 +72,7 @@ class ChatBotController:
         project = self.project_controller.get(name=project_name)
 
         query = db.session.query(
-            db.ChatBots
+            db.ChatBots, db.Tasks
         ).join(
             db.Tasks, db.ChatBots.id == db.Tasks.object_id
         ).filter(
@@ -68,7 +81,11 @@ class ChatBotController:
             db.Tasks.company_id == ctx.company_id,
         )
 
-        return query.all()
+        return [
+            self.as_dict(bot, task)
+            for bot, task in query.all()
+        ]
+
 
     def add_chatbot(
             self,
@@ -77,7 +94,7 @@ class ChatBotController:
             model_name: str,
             database_id: int = None,
             is_running: bool = True,
-            params: Dict[str, str] = {}) -> db.ChatBots:
+            params: Dict[str, str] = {}) -> dict:
         '''
         Adds a chatbot to the database.
 
@@ -132,7 +149,7 @@ class ChatBotController:
 
         db.session.commit()
 
-        return bot
+        return self.as_dict(bot, task_record)
 
     def update_chatbot(
             self,
@@ -194,7 +211,7 @@ class ChatBotController:
             existing_chatbot.params = params
         db.session.commit()
 
-        return existing_chatbot
+        return self.as_dict(existing_chatbot, task)
 
     def delete_chatbot(self, chatbot_name: str, project_name: str = 'mindsdb'):
         '''

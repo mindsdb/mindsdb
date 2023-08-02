@@ -86,7 +86,7 @@ def create_chatbot(project_name, name, chatbot):
         is_running=is_running,
         params=params
     )
-    return created_chatbot.as_dict(), HTTPStatus.CREATED
+    return created_chatbot, HTTPStatus.CREATED
 
 
 @ns_conf.route('/<project_name>/chatbots')
@@ -103,7 +103,7 @@ class ChatBotsResource(Resource):
                 HTTPStatus.NOT_FOUND,
                 'Project not found',
                 f'Project with name {project_name} does not exist')
-        return [b.as_dict() for b in all_bots]
+        return all_bots
 
     @ns_conf.doc('create_chatbot')
     def post(self, project_name):
@@ -139,7 +139,7 @@ class ChatBotResource(Resource):
                     'Chatbot not found',
                     f'Chatbot with name {chatbot_name} does not exist'
                 )
-            return existing_chatbot.as_dict()
+            return existing_chatbot
         except NoResultFound:
             # Project needs to exist.
             return http_error(
@@ -220,7 +220,7 @@ class ChatBotResource(Resource):
             is_running=is_running,
             params=params
         )
-        return updated_chatbot.as_dict()
+        return updated_chatbot
 
     @ns_conf.doc('delete_chatbot')
     def delete(self, project_name, chatbot_name):

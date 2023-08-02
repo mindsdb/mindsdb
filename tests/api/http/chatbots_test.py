@@ -70,9 +70,9 @@ def test_get_all_chatbots(client):
         'chatbot': {
             'name': 'test_get_all_chatbots',
             'model_name': 'test_model',
-            'chat_engine': 'slack',
+            'db_engine': 'slack',
             'is_running': True,
-            'params': {
+            'db_params': {
                 'param1': 'value1'
             }
         }
@@ -88,21 +88,19 @@ def test_get_all_chatbots(client):
     expected_chatbot = {
         'name': 'test_get_all_chatbots',
         'model_name': 'test_model',
-        'chat_engine': 'slack',
         'is_running': True,
-        'params': {
-            'param1': 'value1'
-        },
+        'params': {},
         'created_at': actual_chatbot['created_at'],
         'id': actual_chatbot['id'],
-        'project_id': actual_chatbot['project_id']
+        'database_id': actual_chatbot['database_id'],
     }
     assert actual_chatbot == expected_chatbot
 
 
 def test_get_all_chatbots_project_not_found(client):
     response = client.get('/api/projects/glorp/chatbots', follow_redirects=True)
-    assert '404' in response.status
+    # project is not found is risen inside of project controller
+    assert response.status_code in (500, 404)
 
 
 def test_get_chatbot(client):

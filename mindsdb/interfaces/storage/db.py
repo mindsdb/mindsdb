@@ -334,10 +334,10 @@ class Triggers(Base):
     name = Column(String, nullable=False)
     project_id = Column(Integer, nullable=False)
 
-    database_id = Column(Integer)
+    database_id = Column(Integer, nullable=False)
     table_name = Column(String, nullable=False)
     query_str = Column(String, nullable=False)
-    columns = Column(String, nullable=False)  # list of columns separated by delimiter
+    columns = Column(String)  # list of columns separated by delimiter
 
     created_at = Column(DateTime, default=datetime.datetime.now)
 
@@ -358,6 +358,6 @@ class Tasks(Base):
 
     # for running in concurrent processes
     run_by = Column(String)
-    alive_time = Column(DateTime)
+    alive_time = Column(DateTime(timezone=True))
 
     created_at = Column(DateTime, default=datetime.datetime.now)

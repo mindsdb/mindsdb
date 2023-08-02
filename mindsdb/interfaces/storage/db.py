@@ -311,7 +311,8 @@ class ChatBots(Base):
             'project_id': self.project_id,
             'model_name': self.model_name,
             'params': self.params,
-            'created_at': self.created_at
+            'created_at': self.created_at,
+            'database_id': self.database_id,
         }
 
 

@@ -1,7 +1,10 @@
 import os
 import json
 import datetime
-from typing import Dict
+from typing import Dict, List, Optional
+import pydantic
+from enum import Enum
+
 
 import numpy as np
 from sqlalchemy import create_engine, types, UniqueConstraint
@@ -370,3 +373,79 @@ class Tasks(Base):
 
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
+
+class KBEmbeddingModel(str, Enum):
+    OPENAI = "openai"
+    SENTENCE_TRANSFORMER = "sentence_transformer"
+    COHERE = "cohere"
+    DUMMY = "dummy"  # this is for testing
+
+class KBVectorDatabase(str, Enum):
+    PGVECTOR = "pgvector"
+    CHROMADB = "chromadb"
+
+class KBRetrievalStrategy(str, Enum):
+    SIMILARITY = "similarity"
+    MMR = "mmr"
+    BM25 = "bm25"
+    HYBRID = "hybrid"   # similarity + bm25
+
+class KnowledgeBase(Base):
+
+
+    class ParamSpec(pydantic.BaseModel):
+        """
+        Describe the parameters used to configure a knowledge base.
+        """
+        embedding_model: KBEmbeddingModel = KBEmbeddingModel.OPENAI
+        vector_database: KBVectorDatabase = KBVectorDatabase.CHROMADB
+        retrieval_strategy: KBRetrievalStrategy = KBRetrievalStrategy.SIMILARITY
+        chunk_size = 1000
+        chunk_overlap = 100
+
+        content_field: Optional[str] = None  # If None, use the entire document as the content.
+        metadata_fields: Optional[List[str]] = None  # additional fields to include in the metadata
+        id_field: str = "id" # the field to use as the document id. This is used to match documents when updating the knowledge base.
+
+
+    __tablename__ = 'knowledge_base'
+    id = Column(Integer, primary_key=True)
+
+    name = Column(String, nullable=False, comment="The name of the knowledge base.")
+    company_id = Column(Integer)
+    user_class = Column(Integer, nullable=True)
+    project_id = Column(Integer, nullable=False)
+    _params = Column(JSON, comment="Parameters used to create the knowledge base.")
+    collection_handle = Column(
+        String, 
+        comment="Then handler used to link the knowledge base object to an external collection. This can be a collection name or a collection id e.g., in chromadb."
+    )
+
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    deleted_at = Column(DateTime)
+
+    __table_args__ = (
+        UniqueConstraint('name', 'project_id', name='uniq_kb_name_project_id'),
+    )
+
+    @property
+    def params(self) -> ParamSpec:
+        """
+        Deserialize the params column into a ParamSpec object.
+        """
+        return self.ParamSpec(**self._params)
+
+
+    @params.setter
+    def params(self, value: dict):
+        """
+        Serialize the ParamSpec object into the params column.
+        """
+        # run validation against the ParamSpec model
+        try:
+            self.ParamSpec(**value)
+        except pydantic.ValidationError as e:
+            raise ValueError(f"Invalid params: {e}")
+
+        self._params = value

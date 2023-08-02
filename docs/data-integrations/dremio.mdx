@@ -1,0 +1,45 @@
+---
+title: Dremio - PostgreSQL Data Handler Implementation
+sidebarTitle: Dremio - PostgreSQL Data Handler Implementation
+---
+
+Dremio's PostgreSQL data handler provides seamless integration between MindsDB and PostgreSQL, enabling users to perform advanced data analytics and processing on PostgreSQL databases. By harnessing the power of Dremio and PostgreSQL, data professionals can efficiently scale, analyze, and derive insights from even the most complex data workloads.
+
+## Implementation
+
+To establish a connection with a PostgreSQL database in MindsDB using Dremio's PostgreSQL data handler, the following arguments are required:
+
+user: The database user's credentials.
+password: The password associated with the user account.
+host: The host name, IP address, or URL where the PostgreSQL database is located.
+port: The port used to establish a TCP/IP connection.
+database: The name of the PostgreSQL database to be accessed.
+
+<Tip>
+If you have MindsDB installed locally via pip, you need to install all the necessary handler dependencies manually. To achieve this, navigate to the handler’s folder (mindsdb/integrations/handlers/postgres_handler) and execute the following command: pip install -r requirements.txt.
+
+## Usage
+
+To leverage the Dremio PostgreSQL data handler and connect to a PostgreSQL database within MindsDB, the following syntax can be used:
+```sql
+CREATE DATABASE psql_datasource
+WITH
+    ENGINE = 'postgres',
+    PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": 5432,
+    "database": "postgres",
+    "user": "postgres",
+    "password": "password"
+    };
+```
+
+This command establishes a connection to the PostgreSQL database with the specified parameters and assigns the name "psql_datasource" to this Dremio datasource.
+
+Once the connection is established, you can query your table using the established connection:
+```sql
+SELECT *
+FROM psql_datasource.demo_table
+LIMIT 10;
+```
+With Dremio's PostgreSQL data handler, you can optimize your data analytics workflows, access PostgreSQL data seamlessly, and gain valuable insights to drive data-based decisions efficiently.

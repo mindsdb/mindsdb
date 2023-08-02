@@ -157,6 +157,7 @@
             "data-integrations/databend",
             "data-integrations/databricks",
             "data-integrations/datastax",
+            "data-integrations/dremio",
             "data-integrations/duckdb",
             "data-integrations/edgelessdb",
             "data-integrations/elasticsearch",

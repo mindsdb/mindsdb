@@ -12,14 +12,14 @@ class RealtimeChatBotTask:
     _DEFAULT_MAX_ITERATIONS = 10
     _PROMPT_USER_COLUMN = 'input'
 
-    def __init__(self, handler_factory, chat_engine, bot_record):
+    def __init__(self, handler_factory, alerter, chat_engine, bot_record):
 
         # Need to set context first.
         self._bot_record = bot_record
         self._set_context()
         self._session = SessionController()
 
-        self._chat_handler = handler_factory.create_realtime_chat_handler(chat_engine, self._on_message, bot_record.params)
+        self._chat_handler = handler_factory.create_realtime_chat_handler(alerter, chat_engine, self._on_message, bot_record.params)
 
         self._model_name = self._bot_record.model_name
         project_name = db.Project.query.get(self._bot_record.project_id).name
@@ -34,6 +34,7 @@ class RealtimeChatBotTask:
         if 'using' in model_record.learn_args and 'user_column' in model_record.learn_args['using']:
             self._user_col = model_record.learn_args['using']['user_column']
         self._output_col = model_record.to_predict[0]
+        self.alerter = alerter
 
     def _set_context(self):
         ctx.set_default()
@@ -88,7 +89,31 @@ class RealtimeChatBotTask:
                 destination=message.user,
             )
             if response.error:
+                self.alerter.send_slack_alert(
+                    "@here :robot_face: : Oh! there is an inconvenience, the chatbot can't send messages",
+                    [
+                        {
+                        "color": "#C80001",
+                        "fields": [
+                            {
+                                "title": "Chatbot id",
+                                "value": self._bot_record.id
+                            },
+                             {
+                                "title": "Destination",
+                                "value": message.user
+                            },
+                            {
+                                "title": "Message",
+                                "value": response_text
+                            }
+                        ],
+                        }
+                    ]
+                )
+
                 reply_history.error = response.error
+
             db.session.add(reply_history)
             db.session.commit()
             return

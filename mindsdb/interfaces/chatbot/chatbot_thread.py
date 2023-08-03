@@ -10,10 +10,11 @@ from mindsdb.interfaces.chatbot.chatbot_task import ChatBotTask
 
 class ChatBotThread(threading.Thread):
     """A thread for polling style chatbots to operate."""
-    def __init__(self, bot_record):
+    def __init__(self, alerter, bot_record):
         threading.Thread.__init__(self)
         self.bot_record = bot_record
         self._to_stop = False
+        self.alerter= alerter
 
     def run(self):
         # create context and session
@@ -42,6 +43,21 @@ class ChatBotThread(threading.Thread):
             try:
                 task.run()
             except Exception as e:
+                self.alerter.send_slack_alert(
+                    "@here :robot_face: : The chatbot is unable to establish a connection",
+                    [
+                        {
+                        "color": "#C80001",
+                        "fields": [
+                            {
+                                "title": "Chatbot id",
+                                "value": self._bot_record.id
+                            }
+                        ],
+                        }
+                    ]
+                )
+
                 log.logger.error(e)
 
             if self._to_stop:

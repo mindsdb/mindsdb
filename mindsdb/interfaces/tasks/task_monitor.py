@@ -41,6 +41,7 @@ class TaskMonitor:
 
             except Exception as e:
                 log.logger.error(e)
+                db.session.rollback()
 
     def stop_all_tasks(self):
 

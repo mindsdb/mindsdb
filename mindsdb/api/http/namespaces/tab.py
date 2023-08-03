@@ -1,4 +1,7 @@
 import json
+import traceback
+from http import HTTPStatus
+
 from flask import request
 from flask_restx import Resource
 
@@ -6,6 +9,7 @@ from mindsdb.interfaces.storage.fs import FileStorageFactory, RESOURCE_GROUP
 from mindsdb.api.http.namespaces.configs.tabs import ns_conf
 from mindsdb.utilities.log import get_log
 from mindsdb.utilities.context import context as ctx
+from mindsdb.api.http.utils import http_error
 
 logger = get_log("main")
 
@@ -52,6 +56,11 @@ class Tab(Resource):
             storage.file_set(TABS_FILENAME, b_types)
         except Exception as e:
             logger.warning("unable to store tabs data - %s", e)
-            return str(e), 500
+            print(traceback.format_exc())
+            return http_error(
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                "Can't save tabs",
+                'something went wrong during tabs saving'
+            )
 
         return '', 200

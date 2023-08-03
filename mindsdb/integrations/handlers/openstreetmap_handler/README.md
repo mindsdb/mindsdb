@@ -25,14 +25,7 @@ https://www.openstreetmap.org/about
 
 ## OpenStreetMap Handler Implementation
 
-This handler was implemented using [OSMPythonTools](https://wiki.openstreetmap.org/wiki/Overpass_API), the Overpass API wrapper for Python.
-
-## OpenStreetMap Handler Initialization
-
-The OpenStreetMap handler is initialized with the following parameters:
-
-- `area`: a required area to query for map data.
-- `timeout`: a required timeout to use for the query.
+This handler was implemented using [python_overpy](https://github.com/DinoTools/python-overpy), the Overpass API wrapper for Python.
 
 ## Implemented Features
 
@@ -68,10 +61,8 @@ The OpenStreetMap handler is initialized with the following parameters:
 ~~~~sql
 CREATE DATABASE openstreetmap_datasource
 WITH
-engine='openstreetmap',
+ENGINE='openstreetmap',
 parameters={
-    "area": "New York City",
-    "timeout": 1000
 };
 ~~~~
 
@@ -80,7 +71,7 @@ Use the established connection to query your database:
 ~~~~
 
 ```sql 
-SELECT * FROM openstreetmap_datasource.nodes LIMIT 10;
+SELECT * FROM openstreetmap_datasource.nodes ;
 ```
 
 ```sql

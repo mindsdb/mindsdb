@@ -49,7 +49,7 @@ class OpenStreetMapHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        api_session = overpy.Overpass( **self.connection_data)
+        api_session = overpy.Overpass()
 
         self.connection = api_session
 

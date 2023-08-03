@@ -50,7 +50,7 @@ class OpenStreetMapNodeTable(APITable):
         return nodes_df
     
     def get_columns(self) -> List[Text]:
-        return pd.json_normalize(self.get_nodes(limit=1)).columns.tolist()
+        return pd.json_normalize(self.get_nodes()).columns.tolist()
     
     def get_nodes(self, **kwargs) -> List[Dict]:
             
@@ -60,7 +60,6 @@ class OpenStreetMapNodeTable(APITable):
             ({{bbox}});
             out;
             """,
-            bbox=self.connection_data['bbox']
         )
         return [node.to_dict() for node in nodes.nodes]
     
@@ -100,7 +99,7 @@ class OpenStreetMapWayTable(APITable):
             ({{bbox}});
             out;
             """,
-            bbox=self.connection_data['bbox']
+           # bbox=self.connection_data['bbox']
         )
         return [way.to_dict() for way in ways.ways]
     
@@ -141,7 +140,7 @@ class OpenStreetMapRelationTable(APITable):
                     ({{bbox}});
                     out;
                     """,
-                    bbox=self.connection_data['bbox']
+                   # bbox=self.connection_data['bbox']
                 )
                 return [relation.to_dict() for relation in relations.relations]
     

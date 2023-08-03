@@ -26,9 +26,9 @@ PARAMETERS = {
         }
    }
 ```
-![Capture1](https://github.com/fkamau1/mindsdb/assets/70659811/32a42724-adeb-4399-a698-ad7808c83948)
 
-![CREATE_DATABASE](Image URL of the screenshot)
+![Capture10](https://github.com/fkamau1/mindsdb/assets/70659811/3605e978-f666-45db-b968-78736015eedc)
+
 
 **2. Testing CREATE MODEL**
 
@@ -42,22 +42,20 @@ PREDICT Winning_Numbers;
 
 ```
 
-![CREATE_MODEL](Image URL of the screenshot)
-
 ![Capture7](https://github.com/fkamau1/mindsdb/assets/70659811/5226759e-23d3-4bfc-bc9f-264e35562618)
 
 **3. Testing SELECT FROM MODEL**
 
 ```
-SELECT Winning_Numbers
-FROM mindsdb.winningnumbers
-WHERE Draw_Date = "2023-08-01"
-AND Mega_Ball = "1";
+SELECT t.Winning_Numbers AS actual_number,
+       p.Winning_Numbers AS predicted_number
+FROM bqdataset.winningNumbers AS t
+JOIN mindsdb.winningnumbers AS p
+WHERE p.Draw_Date = "2010-09-14"
+AND p.Mega_Ball = "1";
 ```
 
-
-![SELECT_FROM](Image URL of the screenshot)
-![Capture8](https://github.com/fkamau1/mindsdb/assets/70659811/cac7e89d-f483-44f7-80ff-485f46ff86ab)
+![Capture9](https://github.com/fkamau1/mindsdb/assets/70659811/29c13e63-4e32-4ba0-92fe-4026365e8c4b)
 
 
 ### Results

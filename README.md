@@ -56,7 +56,7 @@
  [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Build%20AI-Centered%20Applications%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,nlp,machine_learning,neural_networks,databases,gpt3)
 
 MindsDB offers three primary benefits to its users. 
-1. Creating and managing AI models (LLM based Semantic Search and QnA, TimeSeries, Classification, Recommenders, etc) through an “enhanced SQL” abstraction. 
+1. Creating and managing AI models (LLM based Semantic Search and QnA, TimeSeries Forecasting, Anomaly Detection, Classification, Recommenders, etc) through an “enhanced SQL” abstraction. 
 2. Automate training and finetuning AI models from data contained in any of the 130+ datasources we support.
 3. Hook AI models to run automatically as new data is observed and plug the output into any of our integrations.
 

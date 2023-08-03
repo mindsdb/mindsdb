@@ -247,7 +247,7 @@ class ChatBotTask:
     def _get_avail_modes_items(self):
         return [
             f'- code: {key}, description: {value["info"]}'
-            for key, value in self.params['modes'].items()
+            for key, value in self.params.get('modes', {}).items()
         ]
 
     def _make_select_mode_prompt(self):

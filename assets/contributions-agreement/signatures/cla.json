@@ -5455,6 +5455,14 @@
       "created_at": "2023-07-18T15:41:19Z",
       "repoId": 143328315,
       "pullRequestNo": 6868
+    },
+    {
+      "name": "ludovicolc",
+      "id": 105851039,
+      "comment_id": 1655408815,
+      "created_at": "2023-07-28T09:54:46Z",
+      "repoId": 143328315,
+      "pullRequestNo": 6972
     }
   ]
 }

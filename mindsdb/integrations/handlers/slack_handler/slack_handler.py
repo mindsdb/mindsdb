@@ -1,5 +1,5 @@
 import os
-import datetime as datetime
+from datetime import datetime as datetime, timezone
 import ast
 from typing import List
 import pandas as pd
@@ -41,6 +41,10 @@ class SlackChannelsTable(APITable):
         Returns:
             conversation_history
         """
+        # override the default function
+        def parse_utc_date(date_str):
+            date_obj = datetime.fromisoformat(date_str).replace(tzinfo=timezone.utc)
+            return date_obj.strftime('%Y-%m-%d %H:%M:%S')
 
         # Get the channels list and ids
         channels = self.client.conversations_list(types="public_channel,private_channel")['channels']
@@ -48,7 +52,7 @@ class SlackChannelsTable(APITable):
         
         # Extract comparison conditions from the query
         conditions = extract_comparison_conditions(query.where)
-        
+        channel_name = conditions[0][2];
         filters = []
         params = {}
         order_by_conditions = {}
@@ -66,6 +70,15 @@ class SlackChannelsTable(APITable):
                     params['limit'] = int(arg2)
                 else:
                     raise NotImplementedError(f'Unknown op: {op}')
+                
+            elif arg1 == 'message_created_at':
+                date = parse_utc_date(arg2)
+                if op == '>':
+                    params['start_time'] = date
+                elif op == '<':
+                    params['end_time'] = date
+                else:
+                    raise NotImplementedError
 
             else:
                 filters.append([op, arg1, arg2])
@@ -125,11 +138,55 @@ class SlackChannelsTable(APITable):
         columns = [target.parts[-1].lower() for target in query.targets if isinstance(target, ast.Identifier)]
         result = result[columns]
 
-        # Append the history to the response
+        # Append the history, timestamp, datetime to the response
         response_history = []
-        for message in conversation_history:
-            response_history.append(message['text'])
-        result['messages'] = response_history
+        response_ts = []
+        response_datetime = []
+        response_datetime_timestamp = []
+        
+        # if we have 'message_created_at' attribute, then execute this
+        if 'start_time' in params or 'end_time' in params:
+            # for every message convert ts to str and ts to DateTime object and message to the response object
+            for message in conversation_history:
+                timestamp = message['ts']
+                float_ts = float(message['ts'])
+                datetime_ts = datetime.fromtimestamp(float_ts, tz=timezone.utc)
+                datetime_ts = datetime_ts.strftime('%Y-%m-%d %H:%M:%S')
+                response_datetime.append(datetime_ts)
+                response_ts.append(timestamp)
+                
+                # if '>' operator store message in response_datetime_timestamp
+                if 'start_time' in params and datetime_ts > params['start_time']:
+                    response_datetime_timestamp.append(message['text'])
+                # if '<' operator store message in response_datetime_timestamp
+                elif 'end_time' in params and datetime_ts < params['end_time']:
+                    response_datetime_timestamp.append(message['text'])
+                # else store it in response_history
+                else:
+                    response_history.append(message['text'])
+                    
+        # else parse message and return as a response object
+        else:
+            # for every message convert ts to str and ts to DateTime object and message to the response object
+            for message in conversation_history:
+                timestamp = message['ts']
+                float_ts = float(message['ts'])
+                datetime_ts = datetime.fromtimestamp(float_ts, tz=timezone.utc)
+                datetime_ts = datetime_ts.strftime('%Y-%m-%d %H:%M:%S')
+                response_datetime.append(datetime_ts)
+                response_ts.append(timestamp)
+                response_history.append(message['text'])
+                           
+        result['channel'] = channel_name
+        # convert response_datetime_timestamp to Dataframe object in order to return
+        if 'start_time' in params or 'end_time' in params:
+            filtered_df = pd.DataFrame(response_datetime_timestamp, columns=result.columns)
+            result['messages'] = filtered_df
+        else:
+            result['messages'] = response_history
+        
+        result['message_created_at'] = response_datetime
+        result['ts'] = response_ts
         
         # Sort the data based on order_by_conditions
         if len(order_by_conditions.get("columns", [])) > 0:
@@ -146,7 +203,9 @@ class SlackChannelsTable(APITable):
         for target in query.targets:
             if target.alias:
                 result.rename(columns={target.parts[-1]: str(target.alias)}, inplace=True)
-
+        
+        # Remove null rows from the result
+        result = result[result['messages'].notnull()]
         return result
         
     def get_columns(self):
@@ -157,6 +216,7 @@ class SlackChannelsTable(APITable):
         return [
             'ts',
             'text',
+            'message_created_at',
             'user',
             'channel',
             'reactions',
@@ -199,7 +259,7 @@ class SlackChannelsTable(APITable):
             inserted_id = response['ts']
             params['ts'] = inserted_id
 
-    def update(self, query: ASTNode):
+    def update(self, query: ast.Update):
         """
         Updates the message in the Slack Channel
 
@@ -208,11 +268,39 @@ class SlackChannelsTable(APITable):
             channel_name
             ts  [TimeStamp -> Can be found by running select command, the entire result will be printed in the terminal]
         """
+        
+        # Get the channels list and ids
+        channels = self.client.conversations_list(types="public_channel,private_channel")['channels']
+        channel_ids = {c['name']: c['id'] for c in channels}
+        
+        # Extract comparison conditions from the query
+        conditions = extract_comparison_conditions(query.where)
+        
+        filters = []
+        params = {}
+        
+        keys = list(query.update_columns.keys())
+        
+        # Build the filters and parameters for the query
+        for op, arg1, arg2 in conditions:
+            if arg1 == 'channel':
+                if arg2 in channel_ids:
+                    params['channel'] = channel_ids[arg2]
+                else:
+                    raise ValueError(f"Channel '{arg2}' not found")
+           
+            if keys[0] == 'message':
+                params['message'] = str(query.update_columns['message'])
+            else:
+                raise ValueError(f"Message '{arg2}' not found")
 
-        # get column names and values from the query
-        columns = [col.name for col in query.update_columns]
-        for row in query.values:
-            params = dict(zip(columns, row))
+            if arg1 == 'ts':
+                if op == '=': 
+                    params['ts'] = float(arg2)
+                else:
+                    raise NotImplementedError(f'Unknown op: {op}')
+            else:
+                filters.append([op, arg1, arg2])
 
         # check if required parameters are provided
         if 'channel' not in params or 'ts' not in params or 'message' not in params:
@@ -226,9 +314,11 @@ class SlackChannelsTable(APITable):
                 text=params['message']
             )
         except SlackApiError as e:
-            raise Exception(f"Error updating message in Slack channel '{params['channel']}' with timestamp '{params['ts']}': {e.response['error']}")
+            raise Exception(f"Error updating message in Slack channel '{params['channel']}' with timestamp '{params['ts']}' and message '{params['message']}': {e.response['error']}")
+        
+        return response
     
-    def delete(self, query: ASTNode):
+    def delete(self, query: ast.Delete):
         """
         Deletes the message in the Slack Channel
 
@@ -236,11 +326,31 @@ class SlackChannelsTable(APITable):
             channel_name
             ts  [TimeStamp -> Can be found by running select command, the entire result will be printed in the terminal]
         """
+        # Get the channels list and ids
+        channels = self.client.conversations_list(types="public_channel,private_channel")['channels']
+        channel_ids = {c['name']: c['id'] for c in channels}
+        # Extract comparison conditions from the query
+        conditions = extract_comparison_conditions(query.where)
+        
+        filters = []
+        params = {}
+        
+        # Build the filters and parameters for the query
+        for op, arg1, arg2 in conditions:
+            if arg1 == 'channel':
+                if arg2 in channel_ids:
+                    params['channel'] = channel_ids[arg2]
+                else:
+                    raise ValueError(f"Channel '{arg2}' not found")
 
-        # get column names and values from the query
-        columns = [col.name for col in query.columns]
-        for row in query.values:
-            params = dict(zip(columns, row))
+            if arg1 == 'ts':
+                if op == '=': 
+                    params['ts'] = float(arg2)
+                else:
+                    raise NotImplementedError(f'Unknown op: {op}')
+
+            else:
+                filters.append([op, arg1, arg2])
 
         # check if required parameters are provided
         if 'channel' not in params or 'ts' not in params:

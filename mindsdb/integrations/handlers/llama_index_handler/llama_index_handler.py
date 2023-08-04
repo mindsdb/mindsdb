@@ -74,6 +74,19 @@ class LlamaIndexHandler(BaseMLEngine):
         index = self._setup_index(reader)
         path = self.model_storage.fileStorage.get_path('./')
         index.storage_context.persist(persist_dir=path)
+        self.model_storage.folder_sync('context')
+
+    def update(self, args) -> None:
+        prompt_template = args['using'].get('prompt_template', args.get('prompt_template', None))
+        if prompt_template is not None:
+            _validate_prompt_template(prompt_template)
+        args_cur = self.model_storage.json_get('args')
+        args_cur['using'].update(args['using'])
+
+        # check new set of arguments
+        self.create_validation(None, args_cur)
+
+        self.model_storage.json_set('args', args_cur)
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> pd.DataFrame:
         args = self.model_storage.json_get('args')

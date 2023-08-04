@@ -1,5 +1,5 @@
 Werkzeug==1.0.1
-lightwood >= 23.7.1.0, < 23.7.2.0
+lightwood >= 23.8.1.0, < 23.8.2.0
 pandas >=2.0.0, <2.1.0
 markupsafe == 2.0.1
 flask-restx >= 1.0.1, < 2.0.0

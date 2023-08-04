@@ -47,18 +47,3 @@ SELECT summary
 FROM openai_test
 WHERE text = (SELECT doc_content FROM my_docs.get_doc_details WHERE google_doc_id = "1ip1WRzegUGx-zrZNRMFHtemXZxm2zH5WkItLKOVV9og");
 ~~~~
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -3,7 +3,7 @@ title: Shopify
 sidebarTitle: Shopify
 ---
 
-This is the implementation of the Shopify app handler. It is responsible for fetching data from Shopify and utilizing it for training models and making predictions.
+This is the implementation of the Shopify app handler. It is responsible for fetching data from Shopify and utilizing it for training models and making predictions. Atm, it supports querying Products, Customers and Orders.
 
 ## Implementation
 
@@ -18,7 +18,7 @@ Here is how you can [create a Shopify access token](https://www.youtube.com/watc
 
 ## Usage
 
-In order to connect your Shopify account to MindsDB, you must first create a new instance of the handler. You can do it by the following query:
+To connect your Shopify account to MindsDB, you must first create a new handler instance. You can do it by the following query:
 
 ```sql
 CREATE DATABASE shopify_datasource
@@ -36,3 +36,23 @@ SELECT *
 FROM shopify_datasource.products
 LIMIT 10;
 ```
+Also, you can run more advanced queries and query the products or orders by status etc. For example:
+
+```sql
+SELECT  id, title
+FROM shopify_datasource.products
+WHERE status = 'active'
+ORDER BY id
+LIMIT 5
+```
+If you want to insert data into the store, run `INSERT INTO` statement:
+
+```sql
+INSERT INTO shopify_datasource.customers(first_name, last_name, email)
+VALUES 
+('John', 'Doe', 'john.doe@example.com')
+```
+
+<Info>
+For more information about available actions and development plans, visit [this page](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/shopify_handler/README.md).
+</Info>

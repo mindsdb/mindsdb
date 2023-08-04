@@ -17,11 +17,19 @@ parameters = {
 ~~~
 
 # Implemented Features
-[x]Google Docs - get_doc_details table
-  [x] Support LIMIT
-  [x]Support WHERE
-  [x]Support ORDER BY
-  [x]Support column selection
+- [x] Google Docs - get_doc_details table
+  - [x] Support LIMIT
+  - [x] Support WHERE
+  - [x] Support ORDER BY
+  - [x] Support column selection
+
+# Possible Feature Additions
+- [ ] Google Docs - list_all_docs table
+  - [ ]  Support LIMIT
+  - [ ]  Support WHERE
+  - [ ]  Support ORDER BY
+  - [ ]  Support column selection
+
 
 # Select Data
 ~~~~sql

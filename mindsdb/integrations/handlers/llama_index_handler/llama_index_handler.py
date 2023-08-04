@@ -15,6 +15,12 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities.config import Config
 
 
+def _validate_prompt_template(prompt_template: str):
+    if '{context_str}' not in prompt_template or '{query_str}' not in prompt_template:
+        raise Exception(
+            "Provided prompt template is invalid, missing `{context_str}`, `{query_str}`. Please ensure both placeholders are present and try again.")  # noqa
+
+
 class LlamaIndexHandler(BaseMLEngine):
     """ Integration with the LlamaIndex data framework for LLM applications. """
     name = 'llama_index'
@@ -27,12 +33,19 @@ class LlamaIndexHandler(BaseMLEngine):
         self.default_reader = 'DFReader'
         self.supported_reader = ['DFReader', 'SimpleWebPageReader']
 
+    @staticmethod
+    def create_validation(target, args=None, **kwargs):
+        if 'prompt_template' in args['using']:
+            _validate_prompt_template(args['using']['prompt_template'])
+
+        if args['using'].get('mode') == 'conversational':
+            for param in ('user_column', 'assistant_column'):
+                if param not in args['using']:
+                    raise Exception(f'Conversational mode requires {param} parameter')
+
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         if 'using' not in args:
             raise Exception("LlamaIndex engine requires a USING clause! Refer to its documentation for more details.")
-
-        if 'prompt_template' in args['using']:
-            self._validate_prompt_template(args['using']['prompt_template'])
 
         if 'index_class' not in args['using']:
             args['using']['index_class'] = self.default_index_class
@@ -112,10 +125,6 @@ class LlamaIndexHandler(BaseMLEngine):
         index = indexer.from_documents(documents, service_context=self._get_service_context())
 
         return index
-
-    def _validate_prompt_template(self, prompt_template: str):
-        if '{context_str}' not in prompt_template or '{query_str}' not in prompt_template:
-            raise Exception("Provided prompt template is invalid, missing one of `{context_str}` or `{query_str}`. Please ensure both placeholders are present and try again.")  # noqa
 
     def _get_llama_index_api_key(self, args, strict=True):
         """

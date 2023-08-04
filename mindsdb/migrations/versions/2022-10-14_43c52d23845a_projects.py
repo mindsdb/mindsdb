@@ -69,10 +69,10 @@ def upgrade():
             nullable=False
         )
 
-    views = conn.execute('''
+    views = conn.execute(sa.text('''
         select id, name from view
         where exists (select 1 from predictor where view.name = predictor.name)
-    ''').fetchall()
+    ''')).fetchall()
 
     for row in views:
         conn.execute(

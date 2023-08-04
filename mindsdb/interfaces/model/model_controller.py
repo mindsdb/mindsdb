@@ -534,7 +534,7 @@ class ModelController():
                 active=None
             )
             if model_record.active:
-                raise Exception(f"Can't remove active version: f{model['PROJECT']}.{model['NAME']}.{model['VERSION']}")
+                raise Exception(f"Can't remove active version: {model['PROJECT']}.{model['NAME']}.{model['VERSION']}")
 
             is_cloud = self.config.get('cloud', False)
             if is_cloud:

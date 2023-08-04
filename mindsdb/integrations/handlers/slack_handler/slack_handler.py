@@ -434,7 +434,7 @@ class SlackHandler(APIChatHandler):
             # This app-level token will be used only for establishing a connection
             app_token=self.connection_args['app_token'],  # xapp-A111-222-xyz
             # You will be using this WebClient for performing Web API calls in listeners
-            web_client=WebClient(token=self.connection_args['token'])  # xoxb-111-222-xyz
+            web_client=WebClient(token=self.connection_args['token']),  # xoxb-111-222-xyz
         )
 
         def _process_websocket_message(client: SocketModeClient, request: SocketModeRequest):
@@ -472,6 +472,8 @@ class SlackHandler(APIChatHandler):
         self._socket_mode_client.connect()
 
         stop_event.wait()
+
+        self._socket_mode_client.disconnect()
 
 
     def create_connection(self):

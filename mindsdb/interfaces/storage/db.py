@@ -5,14 +5,19 @@ from typing import Dict
 
 import numpy as np
 from sqlalchemy import create_engine, types, UniqueConstraint
-from sqlalchemy.orm import scoped_session, sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import scoped_session, sessionmaker, declarative_base
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index, text
 from sqlalchemy.sql.schema import ForeignKey
 from sqlalchemy import JSON
 from sqlalchemy.exc import OperationalError
 
-Base = declarative_base()
+
+class Base:
+    __allow_unmapped__ = True
+
+
+Base = declarative_base(cls=Base)
+
 session, engine = None, None
 
 

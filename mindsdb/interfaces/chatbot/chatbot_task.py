@@ -1,3 +1,4 @@
+import traceback
 import datetime as dt
 
 from mindsdb.integrations.libs.api_handler import APIChatHandler
@@ -64,6 +65,14 @@ class ChatBotTask(BaseTask):
 
     def on_message(self, chat_memory, message: ChatBotMessage):
 
+        try:
+            self._on_message(chat_memory, message)
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except Exception:
+            self.set_error(str(traceback.format_exc()))
+
+    def _on_message(self, chat_memory, message: ChatBotMessage):
         # add question to history
         # TODO move it to realtime pooling
         chat_memory.add_to_history(message)

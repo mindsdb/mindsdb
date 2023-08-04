@@ -61,6 +61,14 @@ class ModelExecutor:
                 data=messages,
                 params=params
             )
+
+        elif model_info['engine'] == 'llama_index':
+            predictions = self.chat_task.project_datanode.predict(
+                model_name=model_info['model_name'],
+                data=messages,
+                params={'prompt': self.prompt}
+            )
+
         else:
             raise BotException('Not supported')
 

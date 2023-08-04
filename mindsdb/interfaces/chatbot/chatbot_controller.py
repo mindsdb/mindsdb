@@ -6,6 +6,7 @@ from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.context import context as ctx
 
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+from mindsdb.utilities.config import Config
 
 
 class ChatBotController:
@@ -92,6 +93,12 @@ class ChatBotController:
         Returns:
             bot (db.ChatBots): The created chatbot
         '''
+
+        config = Config()
+
+        is_cloud = config.get('cloud', False)
+        if is_cloud and ctx.user_class == 0:
+            raise Exception("You can't create chatbot")
 
         if project_name is None:
             project_name = 'mindsdb'

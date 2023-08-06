@@ -30,6 +30,14 @@ If you installed MindsDB locally via pip, you need to install all handler depend
 
 In order to make use of this handler and connect to the BigQuery database in MindsDB, the following syntax can be used:
 
+<Note>
+You can use either the `service_account_keys` parameter or the `service_account_json` parameter.
+
+If you use MindsDB Cloud, it is recommended to provide the `service_account_json` parameter, as in the example below.
+
+If you use local installation of MindsDB, you can provide either the `service_account_keys` parameter or the `service_account_json` parameter, as in the example below.
+</Note>
+
 <CodeGroup>
 
 ```sql service_account_keys

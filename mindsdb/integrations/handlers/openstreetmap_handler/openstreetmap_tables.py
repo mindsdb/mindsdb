@@ -62,6 +62,36 @@ class OpenStreetMapNodeTable(APITable):
             """,
         )
         return [node.to_dict() for node in nodes.nodes]
+
+    def execute_osm_node_query(self, tag_key, tag_value, area=None, min_lat=None, min_lon=None, max_lat=None, max_lon=None):
+        query_template = """
+        [out:json];
+        {area_clause}
+        node{area_node_clause}["{tag_key}"="{tag_value}"]{bbox};
+        out;
+        """
+
+        area_clause, area_node_clause = "", ""
+        if area:
+            area_clause = 'area[name="{}"]->.city;\n'.format(area)
+            area_node_clause = "(area.city)"
+
+        bbox_clause = ""
+        if min_lat or min_lon or max_lat or max_lon:
+            bbox_clause = "{},{},{},{}".format(min_lat, min_lon, max_lat, max_lon)
+
+        query = query_template.format(
+            area_clause=area_clause,
+            area_node_clause=area_node_clause,
+            tag_key=tag_key,
+            tag_value=tag_value,
+            bbox=bbox_clause
+        )
+
+        api = self.handler.connect()
+
+        result = api.query(query)
+        return result
     
 
 class OpenStreetMapWayTable(APITable):

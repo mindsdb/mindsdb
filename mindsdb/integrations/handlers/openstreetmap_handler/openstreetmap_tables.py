@@ -84,10 +84,23 @@ class OpenStreetMapNodeTable(APITable):
         where_conditions = kwargs.get('where_conditions', None)
 
         area, tags = None, {}
+        min_lat, min_lon, max_lat, max_lon = None, None, None, None
         if where_conditions:
             for condition in where_conditions:
                 if condition[1] == 'area':
                     area = condition[2]
+
+                elif condition[1] == 'min_lat':
+                    min_lat = condition[2]
+
+                elif condition[1] == 'min_lon':
+                    min_lon = condition[2]
+
+                elif condition[1] == 'max_lat':
+                    max_lat = condition[2]
+
+                elif condition[1] == 'max_lon':
+                    max_lon = condition[2]
 
                 else:
                     tags[condition[1]] = condition[2]
@@ -95,6 +108,10 @@ class OpenStreetMapNodeTable(APITable):
         result = self.execute_osm_node_query(
             tags=tags,
             area=area,
+            min_lat=min_lat,
+            min_lon=min_lon,
+            max_lat=max_lat,
+            max_lon=max_lon,
             limit=kwargs.get('limit', None)
         )
 

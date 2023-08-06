@@ -3,7 +3,6 @@ from typing import Optional
 import dill
 import pandas as pd
 from integrations.handlers.sentence_transformer_handler.settings import (
-    Embeddings,
     df_to_documents,
     load_embeddings_model,
 )

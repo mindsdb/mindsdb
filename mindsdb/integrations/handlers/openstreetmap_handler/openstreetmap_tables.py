@@ -33,35 +33,59 @@ class OpenStreetMapNodeTable(APITable):
         select_statement_parser = SELECTQueryParser(
             query,
             'nodes',
-            self.get_columns()
+            []
         )
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         nodes_df = pd.json_normalize(self.get_nodes(where_conditions=where_conditions, limit=result_limit))
+        print(nodes_df)
+
+        selected_columns = selected_columns if len(selected_columns) != 0 else nodes_df.columns.tolist()
+        print(selected_columns)
 
         select_statement_executor = SELECTQueryExecutor(
             nodes_df,
             selected_columns,
-            where_conditions,
+            [],
             order_by_conditions
         )
         nodes_df = select_statement_executor.execute_query()
+        print(nodes_df)
 
         return nodes_df
     
-    def get_columns(self) -> List[Text]:
-        return pd.json_normalize(self.get_nodes()).columns.tolist()
+    def get_columns(self, where_conditions) -> List[Text]:
+        return pd.json_normalize(self.get_nodes(where_condition=where_conditions, limit=1)).columns.tolist()
     
     def get_nodes(self, **kwargs) -> List[Dict]:
+        where_conditions = kwargs.get('where_conditions', None)
+
+        area, tag_key, tag_value = None, None, None
+        if where_conditions:
+            for condition in where_conditions:
+                if condition[1] == 'area':
+                    area = condition[2]
+
+                else:
+                    tag_key,  tag_value = condition[1], condition[2]
             
-        api_session = self.handler.connect()
-        nodes = api_session.query("""
-            node
-            ({{bbox}});
-            out;
-            """,
+        result = self.execute_osm_node_query(
+            tag_key=tag_key,
+            tag_value=tag_value,
+            area=area,
+            limit=kwargs.get('limit', None)
         )
-        return [node.to_dict() for node in nodes.nodes]
+
+        nodes = []
+        for node in result.nodes:
+            node_dict = {
+                "id": node.id,
+                "lat": node.lat,
+                "lon": node.lon,
+                "tags": node.tags
+            }
+            nodes.append(node_dict)
+        return nodes
 
     def execute_osm_node_query(self, tag_key, tag_value, area=None, min_lat=None, min_lon=None, max_lat=None, max_lon=None, limit=None):
         query_template = """

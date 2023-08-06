@@ -5,7 +5,9 @@ from typing import Text, List, Dict
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 
-from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
+from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
+
+from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryExecutor
 
 
 class OpenStreetMapNodeTable(APITable):
@@ -30,18 +32,43 @@ class OpenStreetMapNodeTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'nodes',
-            []
-        )
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+        where_conditions = extract_comparison_conditions(query.where)
+
+        if query.limit:
+            result_limit = query.limit.value
+        else:
+            result_limit = 20
 
         nodes_df = pd.json_normalize(self.get_nodes(where_conditions=where_conditions, limit=result_limit))
-        print(nodes_df)
 
-        selected_columns = selected_columns if len(selected_columns) != 0 else nodes_df.columns.tolist()
-        print(selected_columns)
+        selected_columns = []
+        for target in query.targets:
+            if isinstance(target, ast.Star):
+                selected_columns = nodes_df.columns
+                break
+            elif isinstance(target, ast.Identifier):
+                selected_columns.append(target.parts[-1])
+            else:
+                raise ValueError(f"Unknown query target {type(target)}")
+
+        order_by_conditions = {}
+        if query.order_by and len(query.order_by) > 0:
+            order_by_conditions["columns"] = []
+            order_by_conditions["ascending"] = []
+
+            for an_order in query.order_by:
+                if an_order.field.parts[0] == 'nodes':
+                    if an_order.field.parts[1] in nodes_df.columns:
+                        order_by_conditions["columns"].append(an_order.field.parts[1])
+
+                        if an_order.direction == "ASC":
+                            order_by_conditions["ascending"].append(True)
+                        else:
+                            order_by_conditions["ascending"].append(False)
+                    else:
+                        raise ValueError(
+                            f"Order by unknown column {an_order.field.parts[1]}"
+                        )
 
         select_statement_executor = SELECTQueryExecutor(
             nodes_df,
@@ -50,12 +77,8 @@ class OpenStreetMapNodeTable(APITable):
             order_by_conditions
         )
         nodes_df = select_statement_executor.execute_query()
-        print(nodes_df)
 
         return nodes_df
-    
-    def get_columns(self, where_conditions) -> List[Text]:
-        return pd.json_normalize(self.get_nodes(where_condition=where_conditions, limit=1)).columns.tolist()
     
     def get_nodes(self, **kwargs) -> List[Dict]:
         where_conditions = kwargs.get('where_conditions', None)

@@ -970,6 +970,71 @@ paths:
                 type: object
                 items:
                   type: string
+    put:
+      security:
+        - ApiKeyAuth: []
+      summary: Updates an existing view.
+      description: Updates an existing view, or creates a new view if one doesn't exist.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project
+          required: true
+          schema:
+            type: string
+        - name: viewName
+          in: path
+          description: The name of the view
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                view:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: Name of the view
+                    query:
+                      type: string
+                      description: The SQL query that will save the result-set in a view.
+      responses:
+        '200':
+          description: View was successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/View'
+        '400':
+          description: Bad request format
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
   '/api/databases/{databaseName}/tables':
     post:
       security:

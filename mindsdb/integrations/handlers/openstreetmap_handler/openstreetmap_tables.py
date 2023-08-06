@@ -37,7 +37,7 @@ class OpenStreetMapNodeTable(APITable):
         )
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        nodes_df = pd.json_normalize(self.get_nodes(limit=result_limit))
+        nodes_df = pd.json_normalize(self.get_nodes(where_conditions=where_conditions, limit=result_limit))
 
         select_statement_executor = SELECTQueryExecutor(
             nodes_df,
@@ -63,12 +63,12 @@ class OpenStreetMapNodeTable(APITable):
         )
         return [node.to_dict() for node in nodes.nodes]
 
-    def execute_osm_node_query(self, tag_key, tag_value, area=None, min_lat=None, min_lon=None, max_lat=None, max_lon=None):
+    def execute_osm_node_query(self, tag_key, tag_value, area=None, min_lat=None, min_lon=None, max_lat=None, max_lon=None, limit=None):
         query_template = """
         [out:json];
         {area_clause}
         node{area_node_clause}["{tag_key}"="{tag_value}"]{bbox};
-        out;
+        out {limit};
         """
 
         area_clause, area_node_clause = "", ""
@@ -80,12 +80,15 @@ class OpenStreetMapNodeTable(APITable):
         if min_lat or min_lon or max_lat or max_lon:
             bbox_clause = "{},{},{},{}".format(min_lat, min_lon, max_lat, max_lon)
 
+        limit_clause = limit if limit else ""
+
         query = query_template.format(
             area_clause=area_clause,
             area_node_clause=area_node_clause,
             tag_key=tag_key,
             tag_value=tag_value,
-            bbox=bbox_clause
+            bbox=bbox_clause,
+            limit=limit_clause
         )
 
         api = self.handler.connect()

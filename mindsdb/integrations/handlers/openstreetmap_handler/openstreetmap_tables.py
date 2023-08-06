@@ -83,18 +83,17 @@ class OpenStreetMapNodeTable(APITable):
     def get_nodes(self, **kwargs) -> List[Dict]:
         where_conditions = kwargs.get('where_conditions', None)
 
-        area, tag_key, tag_value = None, None, None
+        area, tags = None, {}
         if where_conditions:
             for condition in where_conditions:
                 if condition[1] == 'area':
                     area = condition[2]
 
                 else:
-                    tag_key,  tag_value = condition[1], condition[2]
+                    tags[condition[1]] = condition[2]
             
         result = self.execute_osm_node_query(
-            tag_key=tag_key,
-            tag_value=tag_value,
+            tags=tags,
             area=area,
             limit=kwargs.get('limit', None)
         )
@@ -110,13 +109,18 @@ class OpenStreetMapNodeTable(APITable):
             nodes.append(node_dict)
         return nodes
 
-    def execute_osm_node_query(self, tag_key, tag_value, area=None, min_lat=None, min_lon=None, max_lat=None, max_lon=None, limit=None):
+    def execute_osm_node_query(self, tags, area=None, min_lat=None, min_lon=None, max_lat=None, max_lon=None, limit=None):
         query_template = """
         [out:json];
         {area_clause}
-        node{area_node_clause}["{tag_key}"="{tag_value}"]{bbox};
+        node{area_node_clause}{tags_clause}{bbox};
         out {limit};
         """
+
+        tags_clause = ""
+        if tags:
+            for tag_key, tag_value in tags.items():
+                tags_clause += '["{}"="{}"]'.format(tag_key, tag_value)
 
         area_clause, area_node_clause = "", ""
         if area:
@@ -132,8 +136,7 @@ class OpenStreetMapNodeTable(APITable):
         query = query_template.format(
             area_clause=area_clause,
             area_node_clause=area_node_clause,
-            tag_key=tag_key,
-            tag_value=tag_value,
+            tags_clause=tags_clause,
             bbox=bbox_clause,
             limit=limit_clause
         )

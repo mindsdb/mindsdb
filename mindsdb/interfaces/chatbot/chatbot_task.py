@@ -7,6 +7,8 @@ from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import Session
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.tasks.task import BaseTask
 
+from mindsdb.utilities import log
+
 from .polling import MessageCountPolling, RealtimePolling
 from .memory import DBMemory, HandlerMemory
 from .chatbot_executor import MultiModeBotExecutor, BotExecutor
@@ -77,6 +79,8 @@ class ChatBotTask(BaseTask):
         # TODO move it to realtime pooling
         chat_memory.add_to_history(message)
 
+        log.logger.debug(f'>>chatbot {chat_memory.chat_id} in: {message.text}')
+
         # process
         bot_executor = self.bot_executor_cls(self, chat_memory)
         response_text = bot_executor.process()
@@ -94,6 +98,7 @@ class ChatBotTask(BaseTask):
 
         # send to chat adapter
         self.chat_pooling.send_message(response_message)
+        log.logger.debug(f'>>chatbot {chat_id} out: {response_message.text}')
 
         # send to history
         chat_memory.add_to_history(response_message)

@@ -1,11 +1,6 @@
 [
     {
       "runs_on": "ubuntu-latest",
-      "python-version": "3.11",
-      "runOnBranch": "always"
-    },
-    {
-      "runs_on": "ubuntu-latest",
       "python-version": "3.10",
       "runOnBranch": "always"
     },

@@ -122,11 +122,15 @@ class ModelController():
         if not hasattr(ml_handler, 'describe'):
             raise Exception("ML handler doesn't support description")
 
-        df = ml_handler.describe(attribute)
 
         if attribute is None:
             # show model record
             model_info = self.get_model_info(model_record)
+
+            try:
+                df = ml_handler.describe(attribute)
+            except NotImplementedError:
+                df = pd.DataFrame()
 
             # expecting list of attributes in first column df
             attributes = []
@@ -139,7 +143,7 @@ class ModelController():
             model_info.insert(0, 'tables', [attributes])
             return model_info
         else:
-            return df
+            return ml_handler.describe(attribute)
 
     def get_model(self, name, version=None, ml_handler_name=None, project_name=None):
         show_active = True if version is None else None

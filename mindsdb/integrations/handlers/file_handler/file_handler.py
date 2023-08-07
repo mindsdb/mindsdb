@@ -229,10 +229,19 @@ class FileHandler(DatabaseHandler):
                 errors = 'strict'
                 if best_meta is not None:
                     encoding = file_encoding_meta.best().encoding
+
+                    try:
+                        data_str = StringIO(byte_str.decode(encoding, errors))
+                    except UnicodeDecodeError:
+                        encoding = 'utf-8'
+                        errors = 'replace'
+
+                        data_str = StringIO(byte_str.decode(encoding, errors))
                 else:
                     encoding = 'utf-8'
                     errors = 'replace'
-                data_str = StringIO(byte_str.decode(encoding, errors))
+
+                    data_str = StringIO(byte_str.decode(encoding, errors))
         except Exception:
             print(traceback.format_exc())
             print('Could not load into string')

@@ -5,14 +5,19 @@ from typing import Dict
 
 import numpy as np
 from sqlalchemy import create_engine, types, UniqueConstraint
-from sqlalchemy.orm import scoped_session, sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import scoped_session, sessionmaker, declarative_base
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index, text
 from sqlalchemy.sql.schema import ForeignKey
 from sqlalchemy import JSON
 from sqlalchemy.exc import OperationalError
 
-Base = declarative_base()
+
+class Base:
+    __allow_unmapped__ = True
+
+
+Base = declarative_base(cls=Base)
+
 session, engine = None, None
 
 
@@ -20,10 +25,14 @@ def init(connection_str: str = None):
     global Base, session, engine
     if connection_str is None:
         connection_str = os.environ['MINDSDB_DB_CON']
+    base_args = {
+        'pool_size': 30,
+        'max_overflow': 200
+    }
     if connection_str.startswith('sqlite:'):
-        engine = create_engine(connection_str, echo=False)
+        engine = create_engine(connection_str, echo=False, **base_args)
     else:
-        engine = create_engine(connection_str, convert_unicode=True, pool_size=30, max_overflow=200, echo=False)
+        engine = create_engine(connection_str, convert_unicode=True, echo=False, **base_args)
     session = scoped_session(sessionmaker(bind=engine, autoflush=True))
     Base.query = session.query_property()
 

@@ -55,9 +55,9 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        #python -m pip install --upgrade pip==21.0.1
-        pip install 'pymssql >= 2.1.4'
-        pip install boto3
+        pip install --upgrade pip
+        # temp
+        pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
         pip install --no-cache-dir .
         pip install -r requirements_test.txt
         pip uninstall pycodestyle -y && pip install pycodestyle==2.9.1  # temp fix while exist conflict in last version with flake8

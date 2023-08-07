@@ -334,3 +334,38 @@ class ChatBotsHistory(Base):
     destination = Column(String)
     sent_at = Column(DateTime, default=datetime.datetime.now)
     error = Column(String)
+
+
+class Triggers(Base):
+    __tablename__ = 'triggers'
+    id = Column(Integer, primary_key=True)
+
+    name = Column(String, nullable=False)
+    project_id = Column(Integer, nullable=False)
+
+    database_id = Column(Integer)
+    table_name = Column(String, nullable=False)
+    query_str = Column(String, nullable=False)
+    columns = Column(String, nullable=False)  # list of columns separated by delimiter
+
+    created_at = Column(DateTime, default=datetime.datetime.now)
+
+
+class Tasks(Base):
+    __tablename__ = 'tasks'
+    id = Column(Integer, primary_key=True)
+    company_id = Column(Integer)
+    user_class = Column(Integer, nullable=True)
+
+    # trigger, chatbot
+    object_type = Column(String, nullable=False)
+    object_id = Column(Integer, nullable=False)
+
+    last_error = Column(String)
+    active = Column(Boolean, default=True)
+
+    # for running in concurrent processes
+    run_by = Column(String)
+    alive_time = Column(DateTime)
+
+    created_at = Column(DateTime, default=datetime.datetime.now)

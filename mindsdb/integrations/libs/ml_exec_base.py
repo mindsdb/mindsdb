@@ -506,7 +506,7 @@ class BaseMLEngineExec:
         return predictions
 
     @profiler.profile()
-    def update(
+    def finetune(
             self, model_name, project_name,
             base_model_version: int,
             data_integration_ref=None,

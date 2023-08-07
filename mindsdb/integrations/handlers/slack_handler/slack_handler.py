@@ -473,7 +473,7 @@ class SlackHandler(APIChatHandler):
 
         stop_event.wait()
 
-        self._socket_mode_client.disconnect()
+        self._socket_mode_client.close()
 
 
     def create_connection(self):

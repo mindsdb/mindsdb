@@ -127,7 +127,14 @@ class TaskMonitor:
         self._active_tasks[task.id] = thread
 
     def stop_task(self, task_id: int):
-        self._active_tasks[task_id].stop()
+        thread = self._active_tasks[task_id]
+        thread.stop()
+        thread.join(1)
+
+        if thread.is_alive():
+            # don't delete task, wait next circle
+            return
+
         del self._active_tasks[task_id]
         self._unlock_task(task_id)
 

@@ -25,10 +25,14 @@ def init(connection_str: str = None):
     global Base, session, engine
     if connection_str is None:
         connection_str = os.environ['MINDSDB_DB_CON']
+    base_args = {
+        'pool_size': 30,
+        'max_overflow': 200
+    }
     if connection_str.startswith('sqlite:'):
-        engine = create_engine(connection_str, echo=False)
+        engine = create_engine(connection_str, echo=False, **base_args)
     else:
-        engine = create_engine(connection_str, convert_unicode=True, pool_size=30, max_overflow=200, echo=False)
+        engine = create_engine(connection_str, convert_unicode=True, echo=False, **base_args)
     session = scoped_session(sessionmaker(bind=engine, autoflush=True))
     Base.query = session.query_property()
 

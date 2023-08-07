@@ -499,6 +499,8 @@ class ExecuteCommands:
         elif type(statement) == Set:
             category = (statement.category or "").lower()
             if category == "" and type(statement.arg) == BinaryOperation:
+                if isinstance(statement.arg.args[0], Variable):
+                    return ExecuteAnswer(ANSWER_TYPE.OK)
                 if statement.arg.args[0].parts[0].lower() == 'profiling':
                     if statement.arg.args[1].value in (1, True):
                         profiler.enable()

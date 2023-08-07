@@ -302,21 +302,14 @@ class JobsHistory(Base):
 class ChatBots(Base):
     __tablename__ = 'chat_bots'
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer)
-    user_class = Column(Integer, nullable=True)
 
     name = Column(String, nullable=False)
     project_id = Column(Integer, nullable=False)
 
     model_name = Column(String, nullable=False)
-    # If database_id is set we use an API Handler to poll chat messages.
     database_id = Column(Integer)
-    # If chat_engine is set we use a RealtimeChatHandler to subscribe to chat messages.
-    # TODO(tmichaeldb): Consolidate existing polling logic and realtime chat logic together.
-    chat_engine = Column(String)
     params = Column(JSON)
 
-    is_running = Column(Boolean, default=True)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
@@ -326,10 +319,9 @@ class ChatBots(Base):
             'name': self.name,
             'project_id': self.project_id,
             'model_name': self.model_name,
-            'chat_engine': self.chat_engine,
             'params': self.params,
-            'is_running': self.is_running,
-            'created_at': self.created_at
+            'created_at': self.created_at,
+            'database_id': self.database_id,
         }
 
 
@@ -337,9 +329,47 @@ class ChatBotsHistory(Base):
     __tablename__ = 'chat_bots_history'
     id = Column(Integer, primary_key=True)
     chat_bot_id = Column(Integer)
-    type = Column(String)
+    type = Column(String)  # TODO replace to enum
     text = Column(String)
     user = Column(String)
     destination = Column(String)
     sent_at = Column(DateTime, default=datetime.datetime.now)
     error = Column(String)
+
+
+class Triggers(Base):
+    __tablename__ = 'triggers'
+    id = Column(Integer, primary_key=True)
+
+    name = Column(String, nullable=False)
+    project_id = Column(Integer, nullable=False)
+
+    database_id = Column(Integer, nullable=False)
+    table_name = Column(String, nullable=False)
+    query_str = Column(String, nullable=False)
+    columns = Column(String)  # list of columns separated by delimiter
+
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+
+
+class Tasks(Base):
+    __tablename__ = 'tasks'
+    id = Column(Integer, primary_key=True)
+    company_id = Column(Integer)
+    user_class = Column(Integer, nullable=True)
+
+    # trigger, chatbot
+    object_type = Column(String, nullable=False)
+    object_id = Column(Integer, nullable=False)
+
+    last_error = Column(String)
+    active = Column(Boolean, default=True)
+    reload = Column(Boolean, default=False)
+
+    # for running in concurrent processes
+    run_by = Column(String)
+    alive_time = Column(DateTime(timezone=True))
+
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.now)

@@ -1,4 +1,4 @@
-from integrations.handlers.huggingface_handler.finetune import (
+from mindsdb.integrations.handlers.huggingface_handler.finetune import (
     _finetune_cls,
     _finetune_fill_mask,
     _finetune_question_answering,

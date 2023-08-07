@@ -340,6 +340,7 @@ class Triggers(Base):
     query_str = Column(String, nullable=False)
     columns = Column(String)  # list of columns separated by delimiter
 
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
 
@@ -361,4 +362,5 @@ class Tasks(Base):
     run_by = Column(String)
     alive_time = Column(DateTime(timezone=True))
 
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)

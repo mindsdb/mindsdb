@@ -29,6 +29,7 @@ def upgrade():
         sa.Column('reload', sa.Boolean(), nullable=True),
         sa.Column('run_by', sa.String(), nullable=True),
         sa.Column('alive_time', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('updated_at', sa.DateTime(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=True),
         sa.PrimaryKeyConstraint('id')
     )
@@ -41,6 +42,7 @@ def upgrade():
         sa.Column('table_name', sa.String(), nullable=False),
         sa.Column('columns', sa.String(), nullable=True),
         sa.Column('query_str', sa.String(), nullable=False),
+        sa.Column('updated_at', sa.DateTime(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=True),
         sa.PrimaryKeyConstraint('id')
     )

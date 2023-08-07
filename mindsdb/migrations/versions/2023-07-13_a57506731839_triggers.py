@@ -26,8 +26,10 @@ def upgrade():
         sa.Column('object_id', sa.Integer(), nullable=False),
         sa.Column('last_error', sa.String(), nullable=True),
         sa.Column('active', sa.Boolean(), nullable=True),
+        sa.Column('reload', sa.Boolean(), nullable=True),
         sa.Column('run_by', sa.String(), nullable=True),
-        sa.Column('alive_time', sa.DateTime(), nullable=True),
+        sa.Column('alive_time', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('updated_at', sa.DateTime(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=True),
         sa.PrimaryKeyConstraint('id')
     )
@@ -36,10 +38,11 @@ def upgrade():
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('name', sa.String(), nullable=False),
         sa.Column('project_id', sa.Integer(), nullable=False),
-        sa.Column('database_id', sa.Integer(), nullable=True),
+        sa.Column('database_id', sa.Integer(), nullable=False),
         sa.Column('table_name', sa.String(), nullable=False),
-        sa.Column('columns', sa.String(), nullable=False),
+        sa.Column('columns', sa.String(), nullable=True),
         sa.Column('query_str', sa.String(), nullable=False),
+        sa.Column('updated_at', sa.DateTime(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=True),
         sa.PrimaryKeyConstraint('id')
     )

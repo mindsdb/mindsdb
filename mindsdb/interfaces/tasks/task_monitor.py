@@ -41,6 +41,7 @@ class TaskMonitor:
 
             except Exception as e:
                 log.logger.error(e)
+                db.session.rollback()
 
     def stop_all_tasks(self):
 
@@ -71,8 +72,14 @@ class TaskMonitor:
                 self.stop_task(task_id)
 
             else:
-                # set alive time of running tasks
-                self._set_alive(task_id)
+                # need to be reloaded ?
+                record = db.Tasks.query.get(task_id)
+                if record.reload:
+                    record.reload = False
+                    self.stop_task(task_id)
+                else:
+                    # set alive time of running tasks
+                    self._set_alive(task_id)
 
     def _lock_task(self, task):
         run_by = f'{socket.gethostname()} {os.getpid()}'
@@ -120,16 +127,19 @@ class TaskMonitor:
         self._active_tasks[task.id] = thread
 
     def stop_task(self, task_id: int):
-        self._active_tasks[task_id].stop()
+        thread = self._active_tasks[task_id]
+        thread.stop()
+        thread.join(1)
+
+        if thread.is_alive():
+            # don't delete task, wait next circle
+            return
+
         del self._active_tasks[task_id]
         self._unlock_task(task_id)
 
 
 def start(verbose=False):
-    is_cloud = Config().get('cloud', False)
-    if is_cloud is True:
-        # disabled on cloud
-        return
 
     monitor = TaskMonitor()
     monitor.start()

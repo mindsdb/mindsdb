@@ -6,6 +6,8 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.context import context as ctx
 
+from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+
 
 class TriggersController:
     OBJECT_TYPE = 'trigger'
@@ -66,7 +68,7 @@ class TriggersController:
             columns=columns_str
         )
         db.session.add(record)
-        db.session.commit()
+        db.session.flush()
 
         task_record = db.Tasks(
             company_id=ctx.company_id,
@@ -115,7 +117,6 @@ class TriggersController:
         return query.first()
 
     def get_list(self, project_name=None):
-        from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
         session = SessionController()
 
         query = db.session.query(

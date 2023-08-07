@@ -14,7 +14,6 @@ from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, 
 from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
-from mindsdb.interfaces.triggers.triggers_controller import TriggersController
 
 
 class InformationSchemaDataNode(DataNode):
@@ -312,6 +311,7 @@ class InformationSchemaDataNode(DataNode):
         return pd.DataFrame(data, columns=columns)
 
     def _get_triggers(self, query: ASTNode = None):
+        from mindsdb.interfaces.triggers.triggers_controller import TriggersController
         triggers_controller = TriggersController()
 
         project_name = None

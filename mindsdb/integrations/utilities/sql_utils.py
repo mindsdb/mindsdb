@@ -104,3 +104,21 @@ def project_dataframe(df, targets, table_columns):
     if len(df_col_rename) > 0:
         df = df.rename(columns=df_col_rename)
     return df
+
+
+def sort_dataframe(df, order_by: list):
+    cols = []
+    ascending = []
+    for order in order_by:
+        if not isinstance(order, ast.OrderBy):
+            continue
+
+        col = order.field.parts[-1]
+        if col not in df.columns:
+            continue
+
+        cols.append(col)
+        ascending.append(False if order.direction.lower() == 'desc' else True)
+    if len(cols) > 0:
+        df = df.sort_values(by=cols, ascending=ascending)
+    return df

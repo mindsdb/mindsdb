@@ -18,11 +18,10 @@ class TriggerTask(BaseTask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.command_executor = None
+        self.query = None
 
     def run(self, stop_event):
         trigger = db.Triggers.query.get(self.object_id)
-
-        log.logger.info(f'trigger starting: {trigger.name}')
 
         # parse query
         self.query = parse_sql(trigger.query_str, dialect='mindsdb')

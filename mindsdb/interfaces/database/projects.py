@@ -327,6 +327,8 @@ class ProjectController:
 
         record = q.first()
 
+        if record is None:
+            raise ValueError(f'Project is not found: {name}/{id}')
         return Project.from_record(record)
 
     def add(self, name: str) -> Project:

@@ -6,6 +6,12 @@ import pandas as pd
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from slack_sdk.web.slack_response import SlackResponse
+from slack_sdk.socket_mode import SocketModeClient
+from slack_sdk.socket_mode.request import SocketModeRequest
+from slack_sdk.socket_mode.response import SocketModeResponse
+
+from mindsdb.interfaces.chatbot.types import ChatBotMessage
+
 
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
@@ -14,7 +20,8 @@ from mindsdb_sql.parser import ast
 from mindsdb_sql.parser.ast import ASTNode, Update, Delete
 from mindsdb_sql.planner.utils import query_traversal
 
-from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
+from mindsdb.integrations.libs.api_handler import APIChatHandler, APITable, FuncParser
+
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
 from mindsdb.integrations.libs.response import (
@@ -70,7 +77,7 @@ class SlackChannelsTable(APITable):
                     params['limit'] = int(arg2)
                 else:
                     raise NotImplementedError(f'Unknown op: {op}')
-                
+
             elif arg1 == 'message_created_at':
                 date = parse_utc_date(arg2)
                 if op == '>':
@@ -143,7 +150,7 @@ class SlackChannelsTable(APITable):
         response_ts = []
         response_datetime = []
         response_datetime_timestamp = []
-        
+
         # if we have 'message_created_at' attribute, then execute this
         if 'start_time' in params or 'end_time' in params:
             # for every message convert ts to str and ts to DateTime object and message to the response object
@@ -154,7 +161,7 @@ class SlackChannelsTable(APITable):
                 datetime_ts = datetime_ts.strftime('%Y-%m-%d %H:%M:%S')
                 response_datetime.append(datetime_ts)
                 response_ts.append(timestamp)
-                
+
                 # if '>' operator store message in response_datetime_timestamp
                 if 'start_time' in params and datetime_ts > params['start_time']:
                     response_datetime_timestamp.append(message['text'])
@@ -164,7 +171,7 @@ class SlackChannelsTable(APITable):
                 # else store it in response_history
                 else:
                     response_history.append(message['text'])
-                    
+
         # else parse message and return as a response object
         else:
             # for every message convert ts to str and ts to DateTime object and message to the response object
@@ -176,7 +183,7 @@ class SlackChannelsTable(APITable):
                 response_datetime.append(datetime_ts)
                 response_ts.append(timestamp)
                 response_history.append(message['text'])
-                           
+
         result['channel'] = channel_name
         # convert response_datetime_timestamp to Dataframe object in order to return
         if 'start_time' in params or 'end_time' in params:
@@ -187,7 +194,7 @@ class SlackChannelsTable(APITable):
         
         result['message_created_at'] = response_datetime
         result['ts'] = response_ts
-        
+
         # Sort the data based on order_by_conditions
         if len(order_by_conditions.get("columns", [])) > 0:
             result = result.sort_values(
@@ -203,10 +210,10 @@ class SlackChannelsTable(APITable):
         for target in query.targets:
             if target.alias:
                 result.rename(columns={target.parts[-1]: str(target.alias)}, inplace=True)
-        
+
         # Remove null rows from the result
         result = result[result['messages'].notnull()]
-        return result
+        return result.rename(columns={'messages': 'text'})
         
     def get_columns(self):
         """
@@ -244,14 +251,14 @@ class SlackChannelsTable(APITable):
             params = dict(zip(columns, row))
 
             # check if required parameters are provided
-            if 'channel' not in params or 'message' not in params:
-                raise Exception("To insert data into Slack, you need to provide the 'channel' and 'message' parameters.")
+            if 'channel' not in params or 'text' not in params:
+                raise Exception("To insert data into Slack, you need to provide the 'channel' and 'text' parameters.")
 
             # post message to Slack channel
             try:
                 response = self.client.chat_postMessage(
                     channel=params['channel'],
-                    text=params['message']
+                    text=params['text']
                 )
             except SlackApiError as e:
                 raise Exception(f"Error posting message to Slack channel '{params['channel']}': {e.response['error']}")
@@ -268,19 +275,19 @@ class SlackChannelsTable(APITable):
             channel_name
             ts  [TimeStamp -> Can be found by running select command, the entire result will be printed in the terminal]
         """
-        
+
         # Get the channels list and ids
         channels = self.client.conversations_list(types="public_channel,private_channel")['channels']
         channel_ids = {c['name']: c['id'] for c in channels}
-        
+
         # Extract comparison conditions from the query
         conditions = extract_comparison_conditions(query.where)
-        
+
         filters = []
         params = {}
-        
+
         keys = list(query.update_columns.keys())
-        
+
         # Build the filters and parameters for the query
         for op, arg1, arg2 in conditions:
             if arg1 == 'channel':
@@ -288,14 +295,14 @@ class SlackChannelsTable(APITable):
                     params['channel'] = channel_ids[arg2]
                 else:
                     raise ValueError(f"Channel '{arg2}' not found")
-           
+
             if keys[0] == 'message':
                 params['message'] = str(query.update_columns['message'])
             else:
                 raise ValueError(f"Message '{arg2}' not found")
 
             if arg1 == 'ts':
-                if op == '=': 
+                if op == '=':
                     params['ts'] = float(arg2)
                 else:
                     raise NotImplementedError(f'Unknown op: {op}')
@@ -303,22 +310,22 @@ class SlackChannelsTable(APITable):
                 filters.append([op, arg1, arg2])
 
         # check if required parameters are provided
-        if 'channel' not in params or 'ts' not in params or 'message' not in params:
-            raise Exception("To update a message in Slack, you need to provide the 'channel', 'ts', and 'message' parameters.")
+        if 'channel' not in params or 'ts' not in params or 'text' not in params:
+            raise Exception("To update a message in Slack, you need to provide the 'channel', 'ts', and 'text' parameters.")
 
         # update message in Slack channel
         try:
             response = self.client.chat_update(
                 channel=params['channel'],
                 ts=params['ts'],
-                text=params['message']
+                text=params['text']
             )
         except SlackApiError as e:
             raise Exception(f"Error updating message in Slack channel '{params['channel']}' with timestamp '{params['ts']}' and message '{params['message']}': {e.response['error']}")
-        
+
         return response
     
-    def delete(self, query: ast.Delete):
+    def delete(self, query: ASTNode):
         """
         Deletes the message in the Slack Channel
 
@@ -331,10 +338,10 @@ class SlackChannelsTable(APITable):
         channel_ids = {c['name']: c['id'] for c in channels}
         # Extract comparison conditions from the query
         conditions = extract_comparison_conditions(query.where)
-        
+
         filters = []
         params = {}
-        
+
         # Build the filters and parameters for the query
         for op, arg1, arg2 in conditions:
             if arg1 == 'channel':
@@ -344,7 +351,7 @@ class SlackChannelsTable(APITable):
                     raise ValueError(f"Channel '{arg2}' not found")
 
             if arg1 == 'ts':
-                if op == '=': 
+                if op == '=':
                     params['ts'] = float(arg2)
                 else:
                     raise NotImplementedError(f'Unknown op: {op}')
@@ -366,7 +373,7 @@ class SlackChannelsTable(APITable):
         except SlackApiError as e:
             raise Exception(f"Error deleting message from Slack channel '{params['channel']}' with timestamp '{params['ts']}': {e.response['error']}")
 
-class SlackHandler(APIHandler):
+class SlackHandler(APIChatHandler):
     """
     A class for handling connections and interactions with Slack API.
     Agrs:
@@ -382,7 +389,7 @@ class SlackHandler(APIHandler):
         args = kwargs.get('connection_data', {})
         self.connection_args = {}
         handler_config = Config().get('slack_handler', {})
-        for k in ['token']:
+        for k in ['token', 'app_token']:
             if k in args:
                 self.connection_args[k] = args[k]
             elif f'SLACK_{k.upper()}' in os.environ:
@@ -395,10 +402,85 @@ class SlackHandler(APIHandler):
         channels = SlackChannelsTable(self)
         self._register_table('channels', channels)
 
+        self._socket_mode_client = None
+
+    def get_chat_config(self):
+        params = {
+            'polling': {
+                'type': 'realtime',
+                'table_name': 'channels'
+            },
+            'chat_table': {
+                'name': 'channels',
+                'chat_id_col': 'channel',
+                'username_col': 'user',
+                'text_col': 'text',
+                'time_col': 'thread_ts',
+            }
+        }
+        return params
+
+    def get_my_user_name(self):
+        # TODO
+        api = self.connect()
+        resp = api.users_profile_get()
+        return resp.data['profile']['bot_id']
+
+    def subscribe(self, stop_event, callback, table_name, **kwargs):
+        if table_name != 'channels':
+            raise RuntimeError(f'Table not supported: {table_name}')
+
+        self._socket_mode_client = SocketModeClient(
+            # This app-level token will be used only for establishing a connection
+            app_token=self.connection_args['app_token'],  # xapp-A111-222-xyz
+            # You will be using this WebClient for performing Web API calls in listeners
+            web_client=WebClient(token=self.connection_args['token']),  # xoxb-111-222-xyz
+        )
+
+        def _process_websocket_message(client: SocketModeClient, request: SocketModeRequest):
+            # Acknowledge the request
+            response = SocketModeResponse(envelope_id=request.envelope_id)
+            client.send_socket_mode_response(response)
+
+            if request.type != 'events_api':
+                return
+
+            payload_event = request.payload['event']
+            if payload_event['type'] != 'message':
+                return
+            if 'subtype' in payload_event:
+                # Don't respond to message_changed, message_deleted, etc.
+                return
+            if payload_event['channel_type'] != 'im':
+                # Only support IMs currently.
+                return
+            if 'bot_id' in payload_event:
+                # A bot sent this message.
+                return
+
+            key = {
+                'channel': payload_event['channel'],
+            }
+            row = {
+                'text': payload_event['text'],
+                'user': payload_event['user'],
+            }
+
+            callback(row, key)
+
+        self._socket_mode_client.socket_mode_request_listeners.append(_process_websocket_message)
+        self._socket_mode_client.connect()
+
+        stop_event.wait()
+
+        self._socket_mode_client.close()
+
+
     def create_connection(self):
         """
         Creates a WebClient object to connect to the Slack API token stored in the connection_args attribute.
         """
+
         client = WebClient(token=self.connection_args['token'])
         return client
     
@@ -423,6 +505,15 @@ class SlackHandler(APIHandler):
 
             # Call API method to check the connection
             api.auth_test()
+
+            # check app_token
+            if 'app_token' in self.connection_args:
+                socket_client = SocketModeClient(
+                    app_token=self.connection_args['app_token'],
+                    web_client=api
+                )
+                socket_client.connect()
+                socket_client.disconnect()
             
             response.success = True
         except SlackApiError as e:

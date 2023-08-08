@@ -105,34 +105,9 @@ def _finetune_translate(df, args):
     ft_args["predict_with_generate"] = True
 
     model = AutoModelForSeq2SeqLM.from_pretrained(args["model_name"], config=config)
-    metric = evaluate.load("sacrebleu")
+    model.resize_token_embeddings(len(tokenizer))
     training_args = Seq2SeqTrainingArguments(**ft_args)
     data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
-
-    def _postprocess_text(preds, labels):
-        preds = [pred.strip() for pred in preds]
-        labels = [[label.strip()] for label in labels]
-        return preds, labels
-
-    def _compute_metrics(eval_preds):
-        # ref: github.com/huggingface/notebooks/blob/main/examples/translation.ipynb
-        preds, labels = eval_preds
-        if isinstance(preds, tuple):
-            preds = preds[0]
-
-        decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
-        decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
-        decoded_preds, decoded_labels = _postprocess_text(decoded_preds, decoded_labels)
-
-        result = metric.compute(predictions=decoded_preds, references=decoded_labels)
-        result = {"bleu": result["score"]}
-
-        prediction_lens = [
-            np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds
-        ]
-        result["gen_len"] = np.mean(prediction_lens)  # todo: remove?
-        result = {k: round(v, 4) for k, v in result.items()}
-        return result
 
     # generate trainer and finetune
     trainer = Trainer(
@@ -141,7 +116,7 @@ def _finetune_translate(df, args):
         train_dataset=train_ds,
         eval_dataset=eval_ds,
         data_collator=data_collator,
-        compute_metrics=_compute_metrics,
+        # compute_metrics=_compute_metrics,
     )
 
     return tokenizer, trainer

@@ -1,0 +1,55 @@
+---
+title: MatrixOne
+sidebarTitle: MatrixOne
+---
+
+This is the implementation of the MatrixOne data handler for MindsDB.
+
+[MatrixOne](https://github.com/matrixorigin/matrixone) is a future-oriented hyper-converged cloud and edge native DBMS that supports transactional, analytical, and streaming workloads with a simplified and distributed database engine, across multiple data centers, clouds, edges, and other heterogeneous infrastructures.
+
+## Implementation
+
+This handler is implemented using `PyMySQL`, a Python library that allows you to use Python code to run SQL commands on the MatrixOne database.
+
+The required arguments to establish a connection are as follows:
+
+* `user` is the username associated with the database.
+* `password` is the password to authenticate your access.
+* `host` is the hostname or IP address of the database.
+* `port` is the port through which TCP/IP connection is to be made.
+* `database` is the database name to be connected.
+
+There are several optional arguments that can be used as well.
+
+* `ssl` indicates whether SSL is enabled (`True`) or disabled (`False`).
+* `ssl_ca` is the SSL Certificate Authority.
+* `ssl_cert` stores the SSL certificates.
+* `ssl_key` stores the SSL keys.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/matrixone_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the MatrixOne database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE matrixone_datasource
+WITH
+    engine = 'matrixone',
+    parameters = {
+        "user": "dump",
+        "password": "111",
+        "host": "127.0.0.1",
+        "port": 6001,
+        "database": "mo_catalog"
+    };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM Matrixone_datasource.demo;
+```

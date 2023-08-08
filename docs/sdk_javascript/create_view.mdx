@@ -1,0 +1,23 @@
+---
+title: createView()
+sidebarTitle: createView()
+---
+
+## Description
+
+The `createView()` function creates a view in MindsDB.
+
+## Syntax
+
+Here is the syntax:
+
+```
+const viewSelect = `SELECT t.sqft, t.location, m.rental_price
+  FROM mysql_demo_db.home_rentals as t
+  JOIN mindsdb.home_rentals_model as m`;
+    
+const predictionsView = await MindsDB.Views.createView(
+  'view_name',
+  'project_name',
+  viewSelect);
+```

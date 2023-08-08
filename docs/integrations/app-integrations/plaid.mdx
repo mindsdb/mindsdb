@@ -1,0 +1,69 @@
+---
+title: Plaid
+sidebarTitle: Plaid
+---
+
+This is the implementation of the Plaid app handler for MindsDB. It helps you automate the financial data processing.
+
+[Plaid](https://plaid.com/) helps all companies build fintech solutions by making it easy, safe and reliable for people to connect their financial data to apps and services.
+
+## Implementation
+
+The required arguments to establish a connection are as follows:
+
+* `client_id`
+* `secret`
+* `access_token`
+* `plaid_env`
+
+<Tip>
+You can get the `client_id`, `secret`, and `access_token` values [here](https://dashboard.plaid.com/team/keys) once you sign in to your Plaid account.
+And [here](https://plaid.com/docs/api/tokens/#itempublic_tokenexchange) is how you generate the `access_token` value.
+</Tip>
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/plaid_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect the Plaid app to MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE my_plaid 
+WITH 
+    ENGINE = 'plaid',
+    PARAMETERS = {
+      "client_id": "YOUR_CLIENT_ID",
+      "secret": "YOUR_SECRET",
+      "access_token": "YOUR_PUBLIC_KEY",
+      "plaid_env": "ENV"
+    };
+```
+
+It creates a database that comes with two tables: `transactions` and `balance`.
+
+Now you can query your data, like this:
+
+```sql
+SELECT id, merchant_name, authorized_date, amount, payment_channel
+FROM my_plaid.transactions 
+WHERE start_date = '2022-01-01' 
+AND end_date = '2023-04-11' 
+LIMIT 20;
+```
+
+And if you want to use functions provided by the Plaid API, you can use the native queries syntax, like this:
+
+```sql
+SELECT * FROM my_plaid (
+  get_transactions(
+    start_date = '2022-01-01',
+    end_date = '2022-02-01'
+  )
+);
+```
+
+<Info>
+For more information about available actions and development plans, visit [this page](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/plaid_handler/README.md).
+</Info>

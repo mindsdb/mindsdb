@@ -1,0 +1,94 @@
+---
+title: MindsDB and MySQL CLI
+sidebarTitle: MySQL CLI
+---
+
+MindsDB provides a powerful MySQL API that allows users to connect to it
+using the MySQL Command Line Client.
+
+Please note that connecting to MindsDB's MySQL API is the same as connecting to
+a MySQL database. Find more information on MySQL CLI
+[here](https://dev.mysql.com/doc/refman/8.0/en/mysql.html).
+
+<Tip>
+If you installed MindsDB locally, use the below command to run its MySQL API:
+
+```bash
+python -m mindsdb --api http,mysql,postgres
+```
+</Tip>
+
+<Tip>
+If you installed MindsDB locally, use the below command to run its MySQL API:
+
+```bash
+python -m mindsdb --api http,mysql,postgres
+```
+</Tip>
+
+## How to Connect
+
+To connect MindsDB in MySQL, use the `mysql` client program:
+
+```bash
+mysql -h [hostname] --port [TCP/IP port number] -u [user] -p [password]
+```
+
+Here are the commands that allow you to connect to either a local MindsDB
+installation or a MindsDB Cloud instance.
+
+<CodeGroup>
+
+    ```bash Self-Hosted Local Deployment
+    mysql -h 127.0.0.1 --port 47335 -u mindsdb
+    ```
+
+    ```bash MindsDB Cloud
+    mysql -h cloud.mindsdb.com --port 3306 -u [mindsdb_cloud_username] -p [mindsdb_cloud_password]
+    ```
+
+    ```bash MindsDB Pro
+    mysql -h <dedicated instace ip> --port 3306 -u [mindsdb_cloud_username] -p [mindsdb_cloud_password]
+    ```
+
+</CodeGroup>
+
+On execution, we get:
+
+```bash
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Server version: 5.7.1-MindsDB-1.0 (MindsDB)
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+MySQL [(none)]>
+```
+
+## Example
+
+In this example, we connect to the MindsDB Cloud instance, as below.
+
+```bash
+mysql -h cloud.mindsdb.com --port 3306 -u zoran@mindsdb.com -p
+```
+
+On execution, we get:
+
+```bash
+Enter password:
+
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Server version: 5.7.1-MindsDB-1.0 (MindsDB)
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+MySQL [(none)]>
+```
+
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Use Cases** section, where you'll find various examples of regression, classification, time series, and NLP predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on [MindsDB database structure](/sql/table-structure/). Also, don't miss out on the remaining pages from the **MindsDB SQL** section, as they explain a common SQL syntax with examples.
+
+Have fun!

@@ -1,5 +1,5 @@
 ---
-title: CREATE JOB Statement
+title: CREATE JOB
 sidebarTitle: CREATE JOB
 ---
 
@@ -8,10 +8,6 @@ sidebarTitle: CREATE JOB
 The `CREATE JOB` statement lets you schedule the execution of queries by providing relevant parameters, such as start date, end date, or repetition frequency.
 
 ## Syntax
-
-With the following syntax, you can create jobs, delete jobs, and query for jobs and their history.
-
-### Creating a Job
 
 Here is the syntax:
 
@@ -55,125 +51,9 @@ And the supported `<period>` values:
 - `month` / `months`
 </Info>
 
-### Deleting a Job
+## Examples
 
-Here is the syntax for deleting a job:
-
-```sql
-DROP JOB [project_name.]job_name;
-```
-
-The `project_name` value is optional. The `job_name` value indicates the job to be deleted.
-
-Let's look at some examples:
-
-```sql
-DROP JOB my_project.retrain_and_save_job;
-```
-
-Here we drop the `retrain_and_save_job` that resides in the `my_project` project.
-
-And another example:
-
-```sql
-DROP JOB create_table_job;
-```
-
-Here we drop the `create_table_job` job that resides in the current project.
-
-To learn more about projects in MindsDB, visit our docs [here](/sql/project).
-
-### Querying Jobs
-
-Here is how we can view all jobs in the current project:
-
-```sql
-SELECT *
-FROM jobs;
-```
-
-On execution, we get:
-
-```sql
-+------------------------------------+---------+----------------------------+----------------------------+----------------------------+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| NAME                               | PROJECT | RUN_START                  | RUN_END                    | NEXT_RUN_AT                | SCHEDULE_STR  | QUERY                                                                                                                                                                                                                                   |
-+------------------------------------+---------+----------------------------+----------------------------+----------------------------+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| drop_model                         | mindsdb | 2023-04-01 00:00:00.000000 | [NULL]                     | 2023-04-01 00:00:00.000000 | [NULL]        | DROP MODEL mindsdb.home_rentals_model                                                                                                                                                                                                   |
-| retrain_model_and_save_predictions | mindsdb | 2023-02-15 19:19:43.210122 | 2023-04-01 00:00:00.000000 | 2023-02-15 19:19:43.210122 | every 2 days  | RETRAIN mindsdb.home_rentals_model USING join_learn_process = true; INSERT INTO my_integration.rentals (SELECT m.rental_price, m.rental_price_explain FROM mindsdb.home_rentals_model AS m JOIN example_db.demo_data.home_rentals AS d) |
-| save_predictions                   | mindsdb | 2023-02-15 19:19:48.545580 | [NULL]                     | 2023-02-15 19:19:48.545580 | every hour    | CREATE TABLE my_integration.`result_{{START_DATETIME}}` (SELECT m.rental_price, m.rental_price_explain FROM mindsdb.home_rentals_model AS m JOIN example_db.demo_data.home_rentals AS d)                                                |
-+------------------------------------+---------+----------------------------+----------------------------+----------------------------+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-```
-
-We can also view jobs from a defined project:
-
-```sql
-SELECT *
-FROM my_project.jobs;
-```
-
-Or from all projects at once:
-
-```sql
-SELECT *
-FROM information_schema.jobs;
-```
-
-### Querying Jobs History
-
-You can query the history of jobs similar to querying for jobs.
-
-Here is how we can view all jobs history in the current project:
-
-```sql
-SELECT *
-FROM jobs_history;
-```
-
-On execution, we get:
-
-```sql
-+------------------------------------+---------+----------------------------+----------------------------+----------------------------+--------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| NAME                               | PROJECT | RUN_START                  | RUN_END                    | NEXT_RUN_AT                | ERROR  | QUERY                                                                                                                                                                                                                                   |
-+------------------------------------+---------+----------------------------+----------------------------+----------------------------+--------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| retrain_model_and_save_predictions | mindsdb | 2023-02-15 19:19:43.210122 | 2023-04-01 00:00:00.000000 | 2023-02-15 19:19:43.210122 | [NULL] | RETRAIN mindsdb.home_rentals_model USING join_learn_process = true; INSERT INTO my_integration.rentals (SELECT m.rental_price, m.rental_price_explain FROM mindsdb.home_rentals_model AS m JOIN example_db.demo_data.home_rentals AS d) |
-| save_predictions                   | mindsdb | 2023-02-15 19:19:48.545580 | [NULL]                     | 2023-02-15 19:19:48.545580 | [NULL] | CREATE TABLE my_integration.`result_{{START_DATETIME}}` (SELECT m.rental_price, m.rental_price_explain FROM mindsdb.home_rentals_model AS m JOIN example_db.demo_data.home_rentals AS d)                                                |
-+------------------------------------+---------+----------------------------+----------------------------+----------------------------+--------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-```
-
-Please note that the `drop_model` job is not in the `jobs_history` table because it didn't start yet.
-
-We can also view jobs history from a defined project:
-
-```sql
-SELECT *
-FROM my_project.jobs_history;
-```
-
-Or from all projects at once:
-
-```sql
-SELECT *
-FROM information_schema.jobs_history;
-```
-
-### Additional Configuration
-
-Here is the template of the `config.json` file that you can pass as a parameter when starting your local MindsDB instance:
-
-```bash
-"jobs": {
-        "disable": true,
-        "check_interval": 30
-      }
-```
-
-The `disable` parameter defines whether the scheduler is active (`true`) or not (`false`). By default, in the MindsDB Cloud Editor, the scheduler is active.
-
-The `check_interval` parameter defines the interval in seconds between consecutive checks of the scheduler table. By default, in the MindsDB Cloud Editor, it is 30 seconds.
-
-You can modify the default configuration in your local MindsDB installation by creating a `config.json` file and starting MindsDB with this file as a parameter. You can find detailed instructions [here](/setup/custom-config#starting-mindsdb-with-extended-configuration).
-
-## Example 1: Retrain a Model
+### Example 1: Retrain a Model
 
 In this example, we create a job in the current project to retrain the `home_rentals_model` model and insert predictions into the `rentals` table.
 
@@ -200,7 +80,7 @@ Please note that the `join_learn_process` parameter in the `USING` clause of the
 
 The `retrain_model_and_save_predictions` job starts its execution on the current system date and ends on the 1st of April 2023. The job is executed every 2 days.
 
-## Example 2: Save Predictions
+### Example 2: Save Predictions
 
 In this example, the job creates a table named as `result_{{START_DATETIME}}` and inserts predictions into it.
 
@@ -227,7 +107,7 @@ You can use the following variables for this purpose:
 
 The `save_predictions` job starts its execution on the current system date and repeats every 2 hours until it is manually disabled.
 
-## Example 3: Drop a Model
+### Example 3: Drop a Model
 
 In this example, we create a job to drop the `home_rentals_model` model scheduled on the 1st of April 2023.
 
@@ -241,7 +121,7 @@ START '2023-04-01';
 
 This job runs once on the 1st of April 2023.
 
-## Example 4: Twitter Chatbot
+### Example 4: Twitter Chatbot
 
 You can easily create a chatbot to respond to tweets using jobs. But before you get to it, you should connect your Twitter account to MindsDB following the instructions [here](/data-integrations/twitter).
 
@@ -274,3 +154,20 @@ The [`SELECT`](/sql/api/select) statement joins the data table with the model ta
 <Tip>
 To learn more about OpenAI integration with MindsDB, visit our docs [here](/nlp/nlp-mindsdb-openai).
 </Tip>
+
+## Additional Configuration
+
+Here is the template of the `config.json` file that you can pass as a parameter when starting your local MindsDB instance:
+
+```bash
+"jobs": {
+        "disable": true,
+        "check_interval": 30
+      }
+```
+
+The `disable` parameter defines whether the scheduler is active (`true`) or not (`false`). By default, in the MindsDB Cloud Editor, the scheduler is active.
+
+The `check_interval` parameter defines the interval in seconds between consecutive checks of the scheduler table. By default, in the MindsDB Cloud Editor, it is 30 seconds.
+
+You can modify the default configuration in your local MindsDB installation by creating a `config.json` file and starting MindsDB with this file as a parameter. You can find detailed instructions [here](/setup/custom-config#starting-mindsdb-with-extended-configuration).

@@ -1,0 +1,48 @@
+---
+title: Amazon DynamoDB
+sidebarTitle: Amazon DynamoDB
+---
+
+This is the implementation of the DynamoDB data handler for MindsDB.
+
+[Amazon DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Introduction.html) is a fully managed, serverless, key-value NoSQL database designed to run high-performance applications at any scale. DynamoDB offers built-in security, continuous backups, automated multi-region replication, in-memory caching, and data export tools.
+
+## Implementation
+
+This handler is implemented using `boto3`, the AWS SDK for Python.
+
+The required arguments to establish a connection are as follows:
+
+* `aws_access_key_id` is the AWS access key.
+* `aws_secret_access_key` is the AWS secret access key.
+* `region_name` is the AWS region.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/dynamodb_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the DynamoDB database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE dynamodb_datasource
+WITH
+    engine = 'dynamodb',
+    parameters = {
+      "aws_access_key_id": "PCAQ2LJDOSWLNSQKOCPW",
+      "aws_secret_access_key": "U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i",
+      "region_name": "us-east-1"
+    };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM dynamodb_datasource.example_tbl;
+```
+
+<Tip>
+Queries to DynamoDB can be issued in PartiQL using [this handler](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ql-reference.html).
+</Tip>

@@ -1,0 +1,45 @@
+## Testing: Home Rentals Tutorial
+
+1. Testing CREATE DATABASE
+
+```sql
+CREATE DATABASE example_db
+WITH ENGINE = "postgres",
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "3.220.66.106",
+    "port": "5432",
+    "database": "demo"
+};
+
+```
+
+![image](https://github.com/nitin-pandita/mindsdb/assets/91310284/ad26b1a7-3a72-49cc-ac52-38797366b104)
+
+2. Testing CREATE MODEL
+
+```sql
+CREATE MODEL mindsdb.home_rentals_model
+FROM example_db
+  (SELECT * FROM demo_data.home_rentals)
+PREDICT rental_price;
+
+```
+
+![image](https://github.com/nitin-pandita/mindsdb/assets/91310284/f01875cd-ccef-4ab0-8a33-30a053eb2761)
+
+![image](https://github.com/nitin-pandita/mindsdb/assets/91310284/9bb8de4f-9655-4f12-91c2-d9a541bf83aa)
+
+3. Testing SELECT (making predictions)
+
+```sql
+SELECT rental_price, rental_price_explain
+FROM mindsdb.home_rentals_model
+WHERE sqft = 823
+AND location='good'
+AND neighborhood='downtown'
+AND days_on_market=10;
+```
+
+![image](https://github.com/nitin-pandita/mindsdb/assets/91310284/94824c46-34aa-446f-bb1b-bdd8fc680a8c)

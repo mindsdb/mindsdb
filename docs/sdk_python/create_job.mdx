@@ -1,0 +1,26 @@
+---
+title: create_job()
+sidebarTitle: create_job()
+---
+
+## Description
+
+The `get_job()` and `create_job()` functions let you save either an existing job or a newly created job into a variable.
+
+## Syntax
+
+Use the `get_job()` method to get an existing job:
+
+```bash
+my_job = project.get_job('my_job')
+```
+
+Or, the `create_job()` method to create a job:
+
+```bash
+my_job = project.create_job(
+    'job_name',
+    'select * from models',
+    repeat_str = '1 hour'
+)
+```

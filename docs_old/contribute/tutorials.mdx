@@ -1,0 +1,63 @@
+---
+title: How to Write a Tutorial
+sidebarTitle: Writing Tutorials
+---
+
+This section presents how to write a tutorial with MindsDB.
+
+<Info> 
+**Content of the Tutorial**
+
+You are free to create your content. However, you should include in your tutorial all the chapters listed here.
+
+The tutorial should be a Markdown file, for example, `mindsdb-tutorial.mdx`. Here is the [basic Markdown syntax](https://www.markdownguide.org/basic-syntax/).
+</Info>
+
+## Introduction
+
+Here you introduce the readers to the tutorial. You can describe what dataset
+you use and what you predict.
+
+## Data Setup
+
+This chapter contains an introduction to the dataset you use.
+
+### Connecting the Data
+
+Let others follow your tutorial by providing information on where to get the
+data from and how to connect it to MindsDB.
+
+### Understanding the Data
+
+You can briefly introduce the dataset you use.
+
+## Training a Predictor
+
+Here you use the [`CREATE MODEL`](/sql/create/model/) command to create
+a predictor.
+
+## Status of a Predictor
+
+The next step is to check the status of a predictor. If its value is `complete`,
+you can proceed to the next chapter.
+
+## Making Predictions
+
+Use the [`SELECT`](/sql/api/select/) statement to query for prediction results.
+It is good to present the output to the readers.
+
+### Making a Single Prediction
+
+In the case of regression and classification predictors, you can make a single
+prediction. It is good to present the output to the readers.
+
+### Making Batch Predictions
+
+You can make batch predictions using the [`JOIN`](/sql/api/join/) clause for all
+predictor types, such as regression, classification, and time series. It is good
+to present the output to the readers.
+
+## What's Next?
+
+Submit a PR with your tutorial. We'll review it, and soon you'll see your
+tutorial in the MindsDB docs!

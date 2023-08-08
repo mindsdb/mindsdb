@@ -1,0 +1,41 @@
+## Testing: OpenAI - Prompt Completion with Parameters Provided at Prediction Time Tutorial
+
+1. Testing CREATE MODEL
+
+```sql
+CREATE MODEL mindsdb.openai_test_c
+PREDICT answer
+USING
+    engine = 'openai',
+    prompt_template = 'Context: {{context}}. Question: {{question}}. Answer:',
+    max_tokens = 100,
+    temperature = 0.3;
+```
+
+```sql
+| NAME | ENGINE | PROJECT | ACTIVE | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | TAG |
+| ---- | ------ | ------- | ------ | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | --- |
+| openai_test_c | openai | mindsdb | true | 1 | generating | [NULL] | answer | up_to_date | 23.5.3.2 | [NULL] | [NULL] | {'target': 'answer', 'using': {'prompt_template': 'Context: {{context}}. Question: {{question}}. Answer:', 'max_tokens': 100, 'temperature': 0.3}} | [NULL] |
+```
+
+2. Testing SELECT (making predictions)
+
+```sql
+SELECT instruction, answer
+FROM mindsdb.openai_test_c
+WHERE instruction = 'Speculate extensively'
+USING
+    prompt_template = '{{instruction}}. What does Tom Hanks like?',
+    max_tokens = 100,
+    temperature = 0.5;
+```
+
+```sql
+| instruction | answer |
+| ----------- | ------ |
+| Speculate extensively | Tom Hanks is a well-known Hollywood actor who has been active in the entertainment industry for several decades. Based on his public persona and interviews, it is safe to say that Tom Hanks likes a variety of things.
+
+For starters, he is a big fan of baseball and has often been seen at games supporting his favorite team, the Oakland Athletics. He is also an avid collector of vintage typewriters and has even released an app that simulates the experience of typing on one.
+
+In |
+```

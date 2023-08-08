@@ -1,0 +1,411 @@
+---
+title: DESCRIBE Statement
+sidebarTitle: DESCRIBE
+---
+
+## Description
+
+The `DESCRIBE` statement is used to display the attributes of an existing model.
+
+The available options to describe a model depend on the underlying engine.
+
+## Syntax
+
+Here is how to retrieve general information on the model:
+
+```sql
+DESCRIBE model_name;
+```
+
+This command is similar to the below command:
+
+```sql
+SELECT *
+FROM models
+WHERE name = 'model_name';
+```
+
+One difference between these two commands is that `DESCRIBE` outputs an additional column that stores all available options to describe a model, depending on the underlying engine.
+
+## Examples
+
+### Lightwood Models
+
+MindsDB uses the Lightwood engine by default. Let's see how to describe such models.
+
+```sql
+DESCRIBE home_rentals_model;
+```
+
+On execution we get:
+
+```sql
++--------------------------------------+--------------------+-----------+---------+--------+---------+----------+----------+--------------+---------------+-----------------+--------+--------------------------------------+----------------------------+--------+
+| tables                               | NAME               | ENGINE    | PROJECT | ACTIVE | VERSION | STATUS   | ACCURACY | PREDICT      | UPDATE_STATUS | MINDSDB_VERSION | ERROR  | SELECT_DATA_QUERY                    | TRAINING_OPTIONS           | TAG    |
++--------------------------------------+--------------------+-----------+---------+--------+---------+----------+----------+--------------+---------------+-----------------+--------+--------------------------------------+----------------------------+--------+
+| ["info","features","model","jsonai"] | home_rentals_model | lightwood | mindsdb | true   | 1       | complete | 0.999    | rental_price | up_to_date    | 23.4.4.0        | [NULL] | SELECT * FROM demo_data.home_rentals | {'target': 'rental_price'} | [NULL] |
++--------------------------------------+--------------------+-----------+---------+--------+---------+----------+----------+--------------+---------------+-----------------+--------+--------------------------------------+----------------------------+--------+
+```
+
+The `tables` output column lists all available options to describe a model.
+
+<Tabs>
+<Tab title='DESCRIBE info'>
+
+```sql
+DESCRIBE home_rentals_model.info;
+```
+
+The above command returns the following output columns:
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>accuracies</code></td>
+          <td>It lists the accuracy function used to evaluate the model and the achieved score.</td>
+        </tr>
+        <tr>
+          <td><code>column_importances</code></td>
+          <td>It lists all feature-type columns and assigns importance values.</td>
+        </tr>
+        <tr>
+          <td><code>outputs</code></td>
+          <td>The target column.</td>
+        </tr>
+        <tr>
+          <td><code>inputs</code></td>
+          <td>All the feature columns.</td>
+        </tr>
+      </tbody>
+    </table>
+
+</Tab>
+<Tab title='DESCRIBE features'>
+
+```sql
+DESCRIBE home_rentals_model.features;
+```
+
+The above command returns the following output columns:
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>column</code></td>
+          <td>Data columns that were used to create the model.</td>
+        </tr>
+        <tr>
+          <td><code>type</code></td>
+          <td>Data type of the column.</td>
+        </tr>
+        <tr>
+          <td><code>encoder</code></td>
+          <td>Encoder type used for the column.</td>
+        </tr>
+        <tr>
+          <td><code>role</code></td>
+          <td>Role of the column (`feature` or `target`).</td>
+        </tr>
+      </tbody>
+    </table>
+
+</Tab>
+<Tab title='DESCRIBE model'>
+
+```sql
+DESCRIBE home_rentals_model.model;
+```
+
+The above command returns the following output columns:
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>name</code></td>
+          <td>Name of the candidate model.</td>
+        </tr>
+        <tr>
+          <td><code>performance</code></td>
+          <td>Accuracy value from 0 to 1, depending on the type of the model.</td>
+        </tr>
+        <tr>
+          <td><code>training_time</code></td>
+          <td>Time elapsed for the training of the model.</td>
+        </tr>
+        <tr>
+          <td><code>selected</code></td>
+          <td>`1` for the best performing model and `0` for the rest.</td>
+        </tr>
+        <tr>
+          <td><code>accuracy_functions</code></td>
+          <td>It defines the accuracy function used to evaluate the model. It stores the `r2_score` value for regression predictions, the `balanced_accuracy_score` value for classification predictions, and the `bounded_ts_accuracy` value for time series predictions. The values vary between 0 and 1, where 1 indicates a perfect predictor, based on results obtained for a held out portion of data.</td>
+        </tr>
+      </tbody>
+    </table>
+
+</Tab>
+<Tab title='DESCRIBE jsonai'>
+
+```sql
+DESCRIBE home_rentals_model.jsonai;
+```
+
+The above command returns the following output column:
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>ensemble</code></td>
+          <td>Object of the JSON type describing the parameters used to select the best candidate model.</td>
+        </tr>
+      </tbody>
+    </table>
+
+</Tab>
+</Tabs>
+
+### NLP Models
+
+MindsDB offers NLP models that utilize either Hugging Face or OpenAI engines. Let's see how to describe such models.
+
+```sql
+DESCRIBE sentiment_classifier;
+```
+
+On execution we get:
+
+```sql
++---------------------+----------------------+--------+---------+--------+---------+----------+----------+-----------+---------------+-----------------+--------+-------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------+
+| tables              | NAME                 | ENGINE | PROJECT | ACTIVE | VERSION | STATUS   | ACCURACY | PREDICT   | UPDATE_STATUS | MINDSDB_VERSION | ERROR  | SELECT_DATA_QUERY | TRAINING_OPTIONS                                                                                                                                                                                                                                                                                              | TAG    |
++---------------------+----------------------+--------+---------+--------+---------+----------+----------+-----------+---------------+-----------------+--------+-------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------+
+| ["args","metadata"] | sentiment_classifier | openai | mindsdb | true   | 1       | complete | [NULL]   | sentiment | up_to_date    | 23.1.3.2        | [NULL] | [NULL]            | {'target': 'sentiment', 'using': {'prompt_template': 'describe the sentiment of the reviews\n                     strictly as "positive", "neutral", or "negative".\n                     "I love the product":positive\n                     "It is a scam":negative\n                     "{{review}}.":'}} | [NULL] |
++---------------------+----------------------+--------+---------+--------+---------+----------+----------+-----------+---------------+-----------------+--------+-------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------+
+```
+
+The `tables` output column lists all available options to describe a model.
+
+<Tabs>
+<Tab title='DESCRIBE args'>
+
+```sql
+DESCRIBE sentiment_classifier.args;
+```
+
+The above command returns the following output columns:
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>key</code></td>
+          <td>It stores parameters, such as `prompt_template` and `target`.</td>
+        </tr>
+        <tr>
+          <td><code>value</code></td>
+          <td>It stores parameter values.</td>
+        </tr>
+      </tbody>
+    </table>
+
+</Tab>
+<Tab title='DESCRIBE metadata'>
+
+```sql
+DESCRIBE sentiment_classifier.metadata;
+```
+
+The above command returns the following output columns:
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>key</code></td>
+          <td>It stores metadata parameters.</td>
+        </tr>
+        <tr>
+          <td><code>value</code></td>
+          <td>It stores parameter values.</td>
+        </tr>
+      </tbody>
+    </table>
+
+</Tab>
+</Tabs>
+
+### Nixtla Models
+
+MindsDB integrates Nixtla engines, such as StatsForecast, NeuralForecast, and HierarchicalForecast. Let's see how to describe models based on Nixtla engines.
+
+```sql
+DESCRIBE quarterly_expenditure_forecaster;
+```
+
+On execution we get:
+
+```sql
++-----------------------------+----------------------------------+---------------+---------+--------+---------+----------+----------+-------------+---------------+-----------------+--------+---------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------+--------+
+| tables                      | NAME                             | ENGINE        | PROJECT | ACTIVE | VERSION | STATUS   | ACCURACY | PREDICT     | UPDATE_STATUS | MINDSDB_VERSION | ERROR  | SELECT_DATA_QUERY                     | TRAINING_OPTIONS                                                                                                                                    | TAG    |
++-----------------------------+----------------------------------+---------------+---------+--------+---------+----------+----------+-------------+---------------+-----------------+--------+---------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------+--------+
+| ["info","features","model"] | quarterly_expenditure_forecaster | statsforecast | mindsdb | true   | 1       | complete | [NULL]   | expenditure | up_to_date    | 23.4.4.0        | [NULL] | SELECT * FROM historical_expenditures | {'target': 'expenditure', 'using': {}, 'timeseries_settings': {'is_timeseries': True, 'order_by': 'month', 'horizon': 3, 'group_by': ['category']}} | [NULL] |
++-----------------------------+----------------------------------+---------------+---------+--------+---------+----------+----------+-------------+---------------+-----------------+--------+---------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------+--------+
+```
+
+The `tables` output column lists all available options to describe a model.
+
+<Tabs>
+<Tab title='DESCRIBE info'>
+
+```sql
+DESCRIBE quarterly_expenditure_forecaster.info;
+```
+
+The above command returns the following output columns:
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>accuracies</code></td>
+          <td>It lists the chosen model name and its accuracy score.</td>
+        </tr>
+        <tr>
+          <td><code>outputs</code></td>
+          <td>The target column.</td>
+        </tr>
+        <tr>
+          <td><code>inputs</code></td>
+          <td>All the feature columns.</td>
+        </tr>
+      </tbody>
+    </table>
+
+</Tab>
+<Tab title='DESCRIBE features'>
+
+```sql
+DESCRIBE quarterly_expenditure_forecaster.features;
+```
+
+The above command returns the following output columns:
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>ds</code></td>
+          <td>It defines intervals between records. For example, here, we've got monthly expenditure records.</td>
+        </tr>
+        <tr>
+          <td><code>y</code></td>
+          <td>It stores the target column.</td>
+        </tr>
+        <tr>
+          <td><code>unique_id</code></td>
+          <td>It stores columns listed in the `GROUP BY` clause. It defines the column(s) in the dataset by which you can split it into multiple time series that track the same process or value for different entities or groups.</td>
+        </tr>
+      </tbody>
+    </table>
+
+</Tab>
+<Tab title='DESCRIBE model'>
+
+```sql
+DESCRIBE quarterly_expenditure_forecaster.model;
+```
+
+The above command returns the following output columns:
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>model_name</code></td>
+          <td>It is the chosen model name.</td>
+        </tr>
+        <tr>
+          <td><code>frequency</code></td>
+          <td>It is the frequency</td>
+        </tr>
+        <tr>
+          <td><code>season_length</code></td>
+          <td>It indicates how many measurements until the next *season* occurs. For example, a time series with monthly measurements and a season length of 12 means that, every 12 months, a new *season* occurs. It can have a very strong effect on the final model’s performance.</td>
+        </tr>
+        <tr>
+          <td><code>hierarchy</code></td>
+          <td>It defines whether HierarchicalForecast is used (`true`) or not (`false`).</td>
+        </tr>
+      </tbody>
+    </table>
+
+</Tab>
+</Tabs>
+
+### Other Models
+
+Models that utlize LangChain or are brought to MindsDB via MLflow can be described as follows:
+
+```sql
+DESCRIBE other_model;
+```
+
+The above command returs `["info"]` in its first output column.
+
+```sql
+DESCRIBE other_model.info;
+```
+
+The above command lists basic model information.
+
+<Note>
+If you need more information on how to `DESCRIBE [MODEL]` or understand the results, feel free to ask us on the [community Slack workspace](https://mindsdb.com/joincommunity).
+</Note>

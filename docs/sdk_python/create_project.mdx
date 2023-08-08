@@ -1,0 +1,28 @@
+---
+title: create_project()
+sidebarTitle: create_project()
+---
+
+## Description
+
+The `get_project()` and `create_project()` functions fetch an existing project or create a new one.
+
+## Syntax
+
+Use the `get_project()` method to get the default `mindsdb` project:
+
+```bash
+project = server.get_project()
+```
+
+Use the `get_project()` method to get other project:
+
+```bash
+project = server.get_project('project_name')
+```
+
+Use the `create_project()` method to create a new project:
+
+```bash
+project = server.create_project('project_name')
+```

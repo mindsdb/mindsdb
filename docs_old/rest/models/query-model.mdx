@@ -1,0 +1,39 @@
+---
+title: Query a Model
+openapi: "POST /api/projects/{projectName}/models/{modelName}/predict"
+sidebarTitle: Query a Model
+---
+
+<ResponseExample>
+
+```json Response
+[
+    {
+        "__mindsdb_row_id": null,
+        "days_on_market": null,
+        "location": null,
+        "neighborhood": null,
+        "number_of_bathrooms": null,
+        "number_of_rooms": null,
+        "rental_price": 2847,
+        "rental_price_anomaly": null,
+        "rental_price_confidence": 0.99,
+        "rental_price_explain": "{\"predicted_value\": 2847, \"confidence\": 0.99, \"anomaly\": null, \"truth\": null, \"confidence_lower_bound\": 2730, \"confidence_upper_bound\": 2964}",
+        "rental_price_max": 2964,
+        "rental_price_min": 2730,
+        "rental_price_original": null,
+        "select_data_query": null,
+        "sqft": 823,
+        "when_data": null
+    }
+]
+```
+
+</ResponseExample>
+
+<Note>
+
+The REST API playground can currently only be used with MindsDB running locally at http://127.0.0.1:47334. Support for MindsDB Cloud is in progress. In the meantime,
+check out our [SQL example](/rest/sql) for how to use the REST API with MindsDB Cloud. 
+
+</Note>

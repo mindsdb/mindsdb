@@ -1,0 +1,169 @@
+---
+title: MindsDB and DBT
+sidebarTitle: DBT
+---
+
+DBT is a development framework that facilitates data transformation
+processes. You can read more about DBT [here](https://www.getdbt.com/).
+
+## Usage
+
+### Installing Adapter for DBT
+
+MindsDB provides an adapter to integrate your predictions into the DBT workflow.
+
+To find out more about the [dbt-mindsdb](https://github.com/mindsdb/dbt-mindsdb)
+adapter, follow the instructions
+[here](https://github.com/mindsdb/dbt-mindsdb/blob/main/README.md).
+
+You can install the [dbt-mindsdb](https://github.com/mindsdb/dbt-mindsdb)
+adapter by executing this command: `pip install dbt-mindsdb`.
+
+### Profile Setup
+
+1.  Create a DBT project:
+
+    ```bash
+    dbt init [project_name]
+    ```
+
+2.  Configure your `profiles.yml` file:
+
+    <Tip>
+      What MindsDB Supports" Currently, MindsDB supports only user/password
+      authentication. Please see below `~/.dbt/profiles.yml` file for details.
+    </Tip>
+
+    <CodeGroup>
+
+    ```yml Self-Hosted Local Deployment
+        mindsdb:
+          outputs:
+          dev:
+            type: mindsdb
+            database: "mindsdb"
+            host: "127.0.0.1"
+            port: 47335
+            schema: "mindsdb"
+            username: "mindsdb"
+            password: ""
+          target: dev
+    ```
+
+    ```yml MindsDB Cloud
+      mindsdb:
+        outputs:
+        dev:
+          type: mindsdb
+          database: "mindsdb"
+          host: "cloud.mindsdb.com"
+          port: 3306
+          schema: "[dbt schema]"
+          username: "[mindsdb cloud username]" # your Mindsdb Cloud email address is your username
+          password: "[mindsdb cloud password]"
+        target: dev
+    ```
+
+    </CodeGroup>
+
+Let's list the required data fields.
+
+| Key        | Required | Description                                      | Example                                  |
+| ---------- | :------: | ------------------------------------------------ | ---------------------------------------- |
+| `type`     |    ✔️    | The adapter name                                 | `mindsdb`                                |
+| `database` |    ✔️    | The database name                                | `mindsdb`                                |
+| `host`     |    ✔️    | The MindsDB (hostname) to connect to             | `cloud.mindsdb.com`                      |
+| `port`     |    ✔️    | The port to be used                              | `47335` or `3306`                        |
+| `schema`   |    ✔️    | The schema (database) where models are built     | The MindsDB data source                  |
+| `username` |    ✔️    | The username to be used to connect to the server | `mindsdb` or MindsDB Cloud user          |
+| `password` |    ✔️    | The password to be used for authentication       | local password or MindsDB Cloud password |
+
+### Creating a Predictor
+
+Create a `table_name.sql` file where `table_name` is the name of the predictor.
+
+```sql
+{{
+    config(
+        materialized='predictor',
+        integration='photorep',
+        predict='name',
+        predict_alias='predicted_name',
+        using={
+            'encoders.location.module': 'CategoricalAutoEncoder',
+            'encoders.rental_price.module': 'NumericEncoder'
+        }
+    )
+}}
+    SELECT *
+    FROM stores;
+```
+
+Let's list the required and optional data fields.
+
+| Parameter       | Required | Description                                                                               | Example          |
+| --------------- | :------: | ----------------------------------------------------------------------------------------- | ---------------- |
+| `materialized`  |    ✔️    | Use always the value `predictor`                                                          | `predictor`      |
+| `integration`   |    ✔️    | Create an integration in MindsDB that is used to get the data from and save the result to | `photorep`       |
+| `predict`       |    ✔️    | Field to be predicted                                                                     | `name`           |
+| `predict_alias` |          | Alias for predicted field                                                                 | `predicted_name` |
+| `using`         |          | Configuration options for trained model                                                   | ...              |
+
+### Creating Predictions Table
+
+Create a `table_name.sql` file where `table_name` is used as the name of the
+predictor. Or you can create a `schema_name.table_name.sql` file where
+`schema_name` is the name of the integration and `table_name` is the name of the
+predictor.
+
+```sql
+{{
+    config(
+        materialized='table',
+        predictor_name='store_predictor',
+        integration='photorep'
+    )
+}}
+    SELECT a, bc
+    FROM ddd
+    WHERE name > latest;
+```
+
+Let's list the required data fields.
+
+| Parameter        | Required | Description                                                                               | Example           |
+| ---------------- | :------: | ----------------------------------------------------------------------------------------- | ----------------- |
+| `materialized`   |    ✔️    | Use always the value `table`                                                              | `table`           |
+| `predictor_name` |    ✔️    | Name of the predictor model from `CREATE MODEL`                                           | `store_predictor` |
+| `integration`    |    ✔️    | Create an integration in MindsDB that is used to get the data from and save the result to | `photorep`        |
+
+<Warning>
+  Note that each time DBT is run, the results table is overwritten.
+</Warning>
+
+## Testing
+
+1. Install dev requirements:
+
+   ```bash
+   pip install -r dev_requirements.txt
+   ```
+
+2. Run tests:
+
+   ```bash
+   python -m pytest tests/
+   ```
+
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Tutorials** and
+**Community Tutorials** sections, where you'll find various examples of
+regression, classification, and time series predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on
+[MindsDB database structure](/sql/table-structure/). Also, don't miss out on the
+remaining pages from the **SQL API** section, as they explain a common SQL
+syntax with examples.
+
+Have fun!

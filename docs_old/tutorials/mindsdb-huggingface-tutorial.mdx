@@ -1,0 +1,140 @@
+---
+Text Classification with Hugging Face and MindsDB
+---
+
+## Introduction
+
+In this tutorial, you'll see how to use Hugging Face models in MindsDB to perform NLP tasks, such as text classification.
+
+## Connecting a Database
+
+We use our sample PostgreSQL database. It contains the user_comments table that will be used as input data for the text classification model.
+
+To classify the user comments, we're going to use Hugging Face's [Twitter-roBERTa-base for Sentiment Analysis](https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment) model. This Hugging Face transformer is a roBERTa-base model trained on ~58M tweets and fine-tuned for sentiment analysis with the TweetEval benchmark.
+
+Here is how to connect our sample PostgreSQL database to MindsDB:
+
+```
+CREATE DATABASE nlp_example
+WITH ENGINE = "postgres",
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "3.220.66.106",
+    "port": "5432",
+    "database": "demo"
+    };
+```
+
+Let's query the input table, as below:
+
+```
+SELECT * FROM nlp_example.demo_data.user_comments;
+```
+
+Check out [Hugging Face's documentation](https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment) to explore more transformer models.
+
+## Training a model
+
+Now that we have our data accessible by MindsDB, we're going to create a model .
+
+```
+CREATE MODEL nlp_predictor
+PREDICT sentiment
+USING
+  engine = 'huggingface',
+  task = 'text-classification',
+  model_name = "cardiffnlp/twitter-Roberta-base-sentiment",
+  input_column = 'comment',
+  labels = ['negative','neutral','positive'];
+```
+
+Let's check the training status of our model.
+
+```
+DESCRIBE nlp_predictor;
+```
+
+Once the status of the model is complete, you can start using it to make predictions.
+
+## Making predictions
+
+Now that our model is ready, we can start using it to classify user comments as positive, neutral, or negative.
+
+Let's start by making a few single predictions where the input comment is provided in the WHERE clause.
+
+Example 1:
+
+```
+SELECT * FROM nlp_predictor
+WHERE comment = 'It is really hard to do this';
+```
+
+Example 2:
+
+```
+SELECT * FROM nlp_predictor
+WHERE comment = 'I love this world'
+```
+
+Example 3:
+
+```sql
+SELECT * FROM nlp_predictor
+WHERE comment = 'I do not know how I feel about this world'
+```
+
+Example 4:
+
+```sql
+SELECT * FROM nlp_predictor
+WHERE comment = 'I am confused about this'
+```
+
+Example 5:
+
+```sql
+SELECT * FROM nlp_predictor
+WHERE comment = 'I am neutral'
+```
+
+Example 6:
+
+```
+SELECT * FROM nlp_predictor
+WHERE comment = 'I have a nonbiased opinion about that matter, congressman'
+```
+
+Example 7:
+
+```sql
+SELECT * FROM nlp_predictor
+WHERE comment = 'I am impartial to dancing'
+```
+
+Run all above examples in the MindsDB editor to find out how the model classified these comments.
+
+Let's look at how to make batch predictions for the user_comments table. Here, the comments are fed to the model one by one, and the model classifies each of them.
+
+```
+SELECT *
+FROM nlp_predictor AS model
+JOIN nlp_example.demo_data.user_comments AS datatable;
+```
+
+## What's Next
+
+By following this tutorial, you learned how to perform the following tasks with MindsDB:
+
+- [x] How to connect a data source (here, a PostgreSQL database) to MindsDB with the `CREATE DATABASE` statement.
+- [x] How to create and deploy a Hugging Face model using the `CREATE MODEL` statement.
+- [x] How to perform text classification on your data.
+
+Great work!
+
+Want to learn more about MindsDB? Check out these resources:
+
+- [MindsDB](https://mindsdb.com/)
+- [MindsDB Documentation](https://docs.mindsdb.com/)
+- [Slack](https://mindsdb.com/joincommunity)
+- [GitHub](https://github.com/mindsdb/mindsdb/)

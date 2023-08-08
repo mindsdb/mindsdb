@@ -1,0 +1,26 @@
+---
+title: create_model()
+sidebarTitle: create_model()
+---
+
+## Description
+
+The `get_model()` and `create_model()` methods enable you to get an existing model or create and deploy a new model.
+
+## Syntax
+
+Use the `get_model()` method to get an existing model:
+
+```bash
+my_model = project.get_model('my_model')
+```
+
+Or, the `create_model()` method to create and train a new model:
+
+```bash
+my_model = project.create_model (
+    name = 'my_model',
+    predict = 'target',
+    query = my_table
+)
+```

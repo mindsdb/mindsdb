@@ -1,0 +1,194 @@
+---
+title: Setup for Linux via pip
+sidebarTitle: pip on Linux
+---
+
+<iframe
+  className="w-full h-96"
+  width="613"
+  height="286"
+  src="https://www.youtube.com/embed/TVgp5xtfFmk"
+  title="Deploy MindsDB using PIP on Linux"
+  frameborder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowfullscreen
+></iframe>
+
+<Tip>
+To successfully install MindsDB, use **Python 64-bit version**. Also, make sure that **Python >= 3.8** and **pip >= 20.3**.
+</Tip>
+
+## Installation using the Python [`venv`](https://docs.python.org/3/library/venv.html) Module
+
+1. Create a new virtual environment called `mindsdb`:
+
+   ```bash
+   python -m venv mindsdb
+   ```
+
+   Now, activate it:
+
+   ```bash
+   source mindsdb/bin/activate
+   ```
+
+2. Once inside the virtual environment, run the command below to mitigate the
+   dependency issues:
+
+   ```bash
+   pip install --upgrade pip setuptools wheel
+   ```
+
+3. Install MindsDB:
+
+   ```bash
+   pip install mindsdb
+   ```
+
+4. Verify MindsDB installation:
+
+   ```bash
+   pip freeze
+   ```
+
+   You should see a list of installed packages including but not limited to the
+   following:
+
+   ```bash
+   ...
+   alembic==1.7.7
+   aniso8601==9.0.1
+   appdirs==1.4.4
+   lightgbm==3.3.0
+   lightwood==22.4.1.0
+   MindsDB==22.4.5.0
+   mindsdb-datasources==1.8.2
+   mindsdb-sql==0.3.3
+   mindsdb-streams==0.0.5
+   ...
+   ```
+
+5. Start MindsDB:
+
+   ```bash
+   python -m mindsdb
+   ```
+   
+By default, MindsDB will always start the `http` and `mysql` APIs. If you want to use Mongo API, you will need to provide that as a parameter to `--api`. You can do it as following:
+
+   ```bash
+   python -m mindsdb --api=http,mongodb,mysql
+   ```
+
+## Installation using Anaconda
+
+Here, you need either [Anaconda](https://www.anaconda.com/products/individual)
+or [Conda](https://conda.io/projects/conda/en/latest/index.html) installed on
+your machine.
+
+1. Open Anaconda prompt and create a new virtual environment:
+
+   ```bash
+   conda create -n mindsdb
+   ```
+
+   Now, activate it:
+
+   ```bash
+   conda activate mindsdb
+   ```
+
+2. Once inside the virtual environment, run the command below to mitigate the
+   dependency issues:
+
+   ```bash
+   pip install --upgrade pip setuptools wheel
+   ```
+
+3. Install MindsDB:
+
+   ```bash
+   pip install mindsdb
+   ```
+
+4. Verify MindsDB installation:
+
+   ```bach
+   conda list
+   ```
+
+   You should see a list of installed packages including but not limited to the
+   following:
+
+   ```bash
+   ...
+   alembic==1.7.7
+   aniso8601==9.0.1
+   appdirs==1.4.4
+   lightgbm==3.3.0
+   lightwood==22.4.1.0
+   MindsDB==22.4.5.0
+   mindsdb-datasources==1.8.2
+   mindsdb-sql==0.3.3
+   mindsdb-streams==0.0.5
+   ...
+   ```
+
+## Troubleshooting
+
+### Pip and Python Versions
+
+We suggest using **Python 3.8.x, or 3.9.x versions** for now.
+
+To successfully install MindsDB, use **Python 64-bit version**. Also, make sure
+that **Python >= 3.8** and **pip >= 20.3**. You can check the pip and python
+versions by running the `pip --version` and
+`python --version` commands.
+
+Please note that depending on your environment and installed pip and python
+packages, you might have to use **pip3** instead of **pip** or **python3.x**
+instead of **py**. For example, `pip3 install mindsdb` instead of
+`pip install mindsdb`.
+
+### How to Avoid Dependency Issues
+
+Install MindsDB in a virtual environment using **pip** to avoid dependency
+issues.
+
+Or you could try to install MindsDB with
+[Anaconda](https://www.anaconda.com/products/individual) and run the
+installation from the **Anaconda prompt**.
+
+### How to Avoid Common Errors
+
+MindsDB requires around 3 GB of free disk space to install all of its
+dependencies. Make sure to allocate min. 3 GB of disk space to avoid the
+`IOError: [Errno 28] No space left on device while installing MindsDB` error.
+
+Before anything, activate your virtual environment where your MindsDB is
+installed. It is to avoid the `No module named mindsdb` error.
+
+### How to Overcome `ImportError: failed to find libmagic`
+
+If you get the `ImportError: failed to find libmagic` error, you should install the `libmagic` manually by running the command below:
+
+```bash
+pip install python-magic-bin
+```
+
+## Further Issues?
+
+You can try to replicate your issue using the
+[Docker setup](/setup/self-hosted/docker/).
+
+Also, please create an issue with detailed description in the
+[MindsDB GitHub repository](https://github.com/mindsdb/mindsdb/issues) so we can
+help you. Usually, we review issues and respond within a few hours.
+
+## What's Next
+
+Now that you installed and started MindsDB locally in your Docker container, go ahead and find out how to create and train a model using the [`CREATE MODEL`](/sql/create/model) statement. In the **MindsDB SQL** section, you'll find a comprehensive overview of the SQL syntax offered by MindsDB. We also provide Mongo-QL syntax documented in the **MindsDB Mongo-QL** section.
+
+You can connect MindsDB to different clients, including [PostgreSQL CLI](/connect/postgres-client) and [MySQL CLI](/connect/mysql-client).
+
+Check out the **Use Cases** section to follow tutorials that cover Large Language Models, Natural Language Processing, Time Series, Classification, and Regression models.

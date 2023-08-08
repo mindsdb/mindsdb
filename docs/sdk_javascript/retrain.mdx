@@ -1,0 +1,33 @@
+---
+title: retrain()
+sidebarTitle: retrain()
+---
+
+## Description
+
+The `retrain()` fuction lets us retrain the model, for example, when there is a new version of MindsDB available.
+
+## Syntax
+
+Here is how to get an existing model and retrain it if its update status is `available`.
+
+```
+// Getting an existing model
+const homeRentalPriceModel = await MindsDB.Models.getModel('home_rentals_model', 'mindsdb');
+
+// Checking the status and retraining a model if required
+if (homeRentalPriceModel.updateStatus === 'available') {
+  try {
+  
+    // For custom retraining: homerentalPriceModel.retrain('example_db', trainingOptions);
+    await homeRentalPriceModel.retrain();
+    console.log('retrained a model');
+      
+  } catch (error) {
+    // Something went wrong with retraining
+    console.log(error);
+  }
+}
+```
+
+You can find full training options [here](https://mindsdb.github.io/mindsdb-js-sdk/interfaces/models_trainingOptions.TrainingOptions.html).

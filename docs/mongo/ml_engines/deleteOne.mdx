@@ -1,0 +1,42 @@
+---
+title: db.ml_engines.deleteOne()
+sidebarTitle: db.ml_engines.deleteOne()
+---
+
+### Description
+
+This method deletes an ML engine.
+
+### Syntax
+
+Here is the syntax:
+
+```sql
+db.ml_engines.deleteOne({"name": "ml_engine_name"})
+```
+
+On execution, we get:
+
+```sql
+{
+  acknowledged: true,
+  deletedCount: 1
+}
+```
+
+### Example
+
+Let's delete an OpenAI engine created earlier.
+
+```sql
+db.ml_engines.deleteOne({"name": "openai_engine"})
+```
+
+On execution, we get:
+
+```sql
+{
+  acknowledged: true,
+  deletedCount: 1
+}
+```

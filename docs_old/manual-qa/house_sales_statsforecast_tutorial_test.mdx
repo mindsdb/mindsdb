@@ -1,0 +1,79 @@
+## Testing: House Sales with StatsForecast Tutorial
+
+1. Testing CREATE ML_ENGINE
+```sql
+CREATE ML_ENGINE statsforecast
+FROM statsforecast;
+```
+
+Output:
+![image](https://github.com/akj2018/mindsdb/assets/43956935/7d7d8d80-9448-4627-a2a9-b399722887ed)
+
+<br>
+
+2. Testing SHOW ML_ENGINES
+```sql
+SHOW ML_ENGINES;
+```
+
+Output:
+![image](https://github.com/akj2018/mindsdb/assets/43956935/58fc76b3-7f7f-4c3a-848f-960d84382f1b)
+
+<br>
+
+3. Testing CREATE DATABASE
+```sql
+CREATE DATABASE mysql_demo_db
+WITH ENGINE = 'mysql',
+PARAMETERS = {
+    "user": "user",
+    "password": "MindsDBUser123!",
+    "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
+    "port": "3306",
+    "database": "public"
+};
+```
+
+Output:
+![image](https://github.com/akj2018/mindsdb/assets/43956935/1d9bddcb-f26d-4d99-be51-8e5f800388b2)
+![image](https://github.com/akj2018/mindsdb/assets/43956935/5f49eb9c-81a4-4311-8ed1-60f7cc8939e7)
+
+<br>
+
+4. Testing CREATE MODEL
+```sql
+CREATE MODEL mindsdb.house_sales_predictor
+FROM mysql_demo_db
+  (SELECT * FROM house_sales)
+PREDICT house_price_moving_average
+ORDER BY saledate
+GROUP BY bedrooms, type
+WINDOW 8
+HORIZON 4
+USING ENGINE = 'statsforecast';
+```
+
+Output:
+
+![image](https://github.com/akj2018/mindsdb/assets/43956935/87474725-c9d5-4e26-af5b-eca4b77b94a3)
+
+
+| NAME                     | ENGINE        | PROJECT | ACTIVE  | VERSION | STATUS     | ACCURACY | PREDICT                    | UPDATE_STATUS | MINDSDB_VERSION | ERROR  | SELECT_DATA_QUERY           | TRAINING_OPTIONS                                                 | TAG    |
+| ------------------------ | ------------- | ------- | ------- | ------- | ---------- | -------- | ---------------------------| ------------- | --------------- | ------ | --------------------------- | ---------------------------------------------------------------- | ------ |
+| house_sales_predictor    | statsforecast | mindsdb | true    | 1       | generating | [NULL]   | house_price_moving_average | up_to_date    | 23.6.2.0        | [NULL] | SELECT \* FROM house_sales  | {'target': 'house_price_moving_average', 'using': {}, 'timeseries_settings': {'is_timeseries': True, 'order_by': 'saledate', 'horizon': 4, 'window': 8, 'group_by': ['bedrooms', 'type']}} | [NULL] |
+
+<br>
+
+5. Testing SELECT (making predictions)
+```sql
+SELECT m.saledate AS date, m.house_price_moving_average AS forecast
+FROM mindsdb.house_sales_predictor AS m
+JOIN mysql_demo_db.house_sales AS t
+WHERE t.saledate > LATEST
+AND t.type = 'house'
+AND t.bedrooms = 2
+LIMIT 3;
+```
+
+Output:
+![image](https://github.com/akj2018/mindsdb/assets/43956935/4b73d1bf-1f70-44e2-ba5f-cf7a782f71e9)

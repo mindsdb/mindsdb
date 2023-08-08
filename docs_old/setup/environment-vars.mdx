@@ -1,0 +1,65 @@
+---
+title: Environment Variables
+sidebarTitle: Environment Variables
+---
+
+Most of the MindsDB functionality can be modified by extending the default configuration, but some of the configuration options 
+can be added as environment variables on the server where MindsDB is deployed.
+
+## MindsDB Storage 
+
+By default, MindsDB stores the configuration files by determining appropriate platform-specific directories, e.g. a "user data dir": 
+
+* On Linux `~/.local/share/mindsdb/var`
+* On MacOS `~/Library/Application Support/mindsdb/var`
+* On Windows `C:\Documents and Settings\<User>\Application Data\Local Settings\<AppAuthor>\mindsdb\var`
+
+In the `MINDSDB_STORAGE_DIR` location, MindsDB stores users' data, models and uploaded data files, the static assets for the frontend application and the 
+`sqlite.db` file. 
+You can change the default storage location using `MINDSDB_STORAGE_DIR` variable.
+
+#### Example
+
+```
+MINDSDB_STORAGE_DIR='~/home/mindsdb/var'
+```
+
+
+## MindsDB Configuration Storage 
+
+MindsDB uses `sqlite` database by default to store the required configuration as models, projects, files metadata etc. 
+The full list of the above schemas can be found [here](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/interfaces/storage/db.py#L69). You can change the 
+default storage option and use different database by adding the new connection string using `MINDSDB_DB_CON` variable.
+
+#### Example
+
+```
+MINDSDB_DB_CON='postgresql://user:secret@localhost'
+```
+
+## MindsDB server
+
+By default for the HTTP API, MindsDB uses [Waitress](https://pypi.org/project/waitress/) which is a pure-Python WSGI server. There is an option to change that 
+and use [Flask](https://flask.palletsprojects.com/en/2.2.x/) or [Gunircorn](https://gunicorn.org/)
+
+<Warning>
+
+If you want to use Gunicorn as a default server, make sure you run `pip install gunicorn`
+
+</Warning>
+
+#### Example
+
+```
+MINDSDB_DEFAULT_SERVER=flask
+```
+
+## MindsDB Updates
+
+If you use on-premise deployment of MindsDB and you do not use MindsDB SQL editor, you can set the `CHECK_FOR_UPDATES` environment variable as below,
+
+### Example
+
+```bash
+CHECK_FOR_UPDATES = 0
+```

@@ -2,6 +2,7 @@ import datetime
 from typing import Optional
 from pathlib import Path
 from functools import reduce
+from textwrap import dedent
 
 import pandas as pd
 from mindsdb_sql.parser.dialects.mindsdb import (
@@ -951,8 +952,19 @@ class ExecuteCommands:
         if handler_module_meta is None:
             raise SqlApiException(f"There is no engine '{statement.handler}'")
         if handler_module_meta.get("import", {}).get("success") is not True:
-            log.logger.info(f"to use {statement.handler} please install it 'pip install mindsdb[{statement.handler}]'")
-            raise SqlApiException(f"Can't import engine '{statement.handler}'. to use it please install it 'pip install mindsdb[{statement.handler}]'")
+            msg = dedent(f'''\
+                Handler '{handler_module_meta['name']}' cannot be used. Reason is:
+                    {handler_module_meta['import']['error_message']}
+            ''')
+            is_cloud = self.session.config.get('cloud', False)
+            if is_cloud is False:
+                msg += dedent(f'''
+
+                If error is related to missing dependencies, then try to run command in shell and restart mindsdb:
+                    pip install mindsdb[{handler_module_meta['name']}]
+                ''')
+            log.logger.info(msg)
+            raise SqlApiException(msg)
 
         integration_id = self.session.integration_controller.add(
             name=name,

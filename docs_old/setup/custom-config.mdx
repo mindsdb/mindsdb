@@ -1,0 +1,94 @@
+---
+title: Extend the Default MindsDB Configuration
+sidebarTitle: Extend the Default MindsDB Configuration
+---
+
+<Tip>
+  To follow this guide, please make sure you have a local installation of
+  MindsDB. [Here](/setup/self-hosted/pip/source/), you can find out how to
+  install MindsDB locally.
+</Tip>
+
+## Starting MindsDB with Default Configuration
+
+It is very straightforward to start MindsDB locally with the default config
+file - just run the commands below.
+
+First, activate the virtual environment with this command:
+
+```bash
+source mindsdb/bin/activate
+```
+
+And then, start MindsDB using this command:
+
+```bash
+python -m mindsdb
+```
+
+Now you can access your MindsDB locally at `127.0.0.1:47334`.
+
+## Starting MindsDB with Extended Configuration
+
+First, you should prepare a `config.json` file based on the following template; remember to substitute the values for your custom configuration.
+
+```bash
+{
+    "permanent_storage": {
+        "location": "local"
+    },
+    "paths": {},
+    "log": {
+        "level": {
+            "console": "INFO",
+            "file": "DEBUG",
+            "db": "WARNING"
+        }
+    },
+    "debug": false,
+    "integrations": {},
+    "gui": {
+        "autoupdate": true
+    },
+    "auth":{
+        "username": "mindsdb",
+        "password": "123"
+    },
+    "api": {
+        "http": {
+            "host": "127.0.0.1",
+            "port": "47334"
+        },
+        "mysql": {
+            "host": "127.0.0.1",
+            "port": "47335",
+            "database": "mindsdb",
+            "ssl": true
+        },
+        "mongodb": {
+            "host": "127.0.0.1",
+            "port": "47336",
+            "database": "mindsdb"
+        }
+    },
+    "cache": {
+        "type": "local"
+    }
+}
+```
+
+Now that your `config.json` file is ready, run the command below to start
+MindsDB locally with your custom configuration.
+
+```bash
+python -m mindsdb --config=/path-to-the-extended-config-file/config-file.json
+```
+
+You can access your MindsDB locally at `127.0.0.1:47334`, or any other IP
+address and port combination if you altered them.
+
+<Tip>
+**What's next?** We recommend you follow one of our tutorials or learn more about the
+[MindsDB Database](/sql/table-structure/).
+
+</Tip>

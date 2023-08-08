@@ -263,6 +263,7 @@ class Project:
         data['jobs'] = {'type': 'table', 'deletable': False}
         data['jobs_history'] = {'type': 'table', 'deletable': False}
         data['mdb_triggers'] = {'type': 'table', 'deletable': False}
+        data['chatbots'] = {'type': 'table', 'deletable': False}
 
         models = self.get_models()
         for model in models:

@@ -1,0 +1,50 @@
+---
+title: Cloud Spanner
+sidebarTitle: Cloud Spanner
+---
+
+This is the implementation of the Cloud Spanner data handler for MindsDB.
+
+[Cloud Spanner](https://cloud.google.com/spanner) is a fully managed, mission-critical, relational database service that offers transactional consistency at global scale, automatic, synchronous replication for high availability. It supports two SQL dialects: GoogleSQL (ANSI 2011 with extensions) and PostgreSQL.
+
+## Implementation
+
+This handler was implemented using the `google-cloud-spanner` Python client library.
+
+The required arguments to establish a connection are as follows:
+
+* `instance_id` is the instance identifier.
+* `database_id` is the database identifier.
+* `project` is the identifier of the project that owns the resources.
+* `credentials` is a stringified GCP service account key JSON.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/cloud_spanner_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the Cloud Spanner database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE cloud_spanner_datasource
+WITH
+    engine = 'cloud_spanner',
+    parameters = {
+      "instance_id": "my-instance",
+      "database_id": "example-id",
+      "project": "my-project",
+      "credentials": "{...}"
+    };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM cloud_spanner_datasource.my_table;
+```
+
+<Note>
+Cloud Spanner supports both PostgreSQL and GoogleSQL dialects. However, not all PostgresSQL features are supported.
+</Note>

@@ -1,0 +1,315 @@
+---
+title: NLP with MindsDB and OpenAI
+---
+
+## MindsDB NLP Supported Tasks
+
+MindsDB lets you create models that utilize features provided by OpenAI GPT-3. Currently, there are three operation modes:
+
+- Answering Questions without Context
+- Answering Questions with Context
+- Prompt Completion
+
+<Tip>
+  Currently, MindsDB's NLP engine is powered by [Hugging
+  Face](https://huggingface.co/) and [OpenAI](https://openai.com/). But we plan
+  to expand to other NLP options in the future, so stay tuned!
+</Tip>
+
+<Tip>
+**Fine-tune an OpenAI model with MindsDB**
+
+All OpenAI models belong to the group of Large Language Models (LLMs). By definition, these are pre-trained on large amounts of data. However, it is possible to fine-tune these models with a task-specific dataset for a defined use case.
+
+OpenAI supports fine-tuning of some of its models, including `davinci`, `curie`, `babbage`, and `ada` ([more details here](https://platform.openai.com/docs/guides/fine-tuning)). And with MindsDB, you can easily [fine-tune an OpenAI model](/sql/api/finetune) making it more applicable to your specific use case.
+</Tip>
+
+## How to Bring the OpenAI Model to MindsDB
+
+We use the [`CREATE MODEL`](/sql/create/model) statement to bring the OpenAI models to MindsDB.
+
+Generally, it looks like this:
+
+```sql
+CREATE MODEL project_name.predictor_name        -- AI TABLE TO STORE THE MODEL
+PREDICT target_column                           -- NAME OF THE COLUMN TO STORE PREDICTED VALUES
+USING
+  engine = 'openai',                            -- USING THE OPENAI ENGINE
+  prompt_template = 'prompt/task
+                    {{input_column}}',          -- PROMPT TEMPLATE WITH PLACEHOLDERS FOR INPUT COLUMNS
+  model_name = 'model_name',                    -- OPTIONAL, DEFAULT IS THE gpt-3.5-turbo MODEL
+  api_key = 'YOUR_OPENAI_API_KEY';              -- OPTIONAL, IF NOT PASSED MINDSDB FETCHES THE
+                                                -- `OPENAI_API_KEY` ENVIRONMENT VARIABLE VALUE
+```
+
+<Info>
+  
+**Default Model**
+
+When you create an OpenAI model in MindsDB, it uses the `gpt-3.5-turbo` model by default. But you can use the `gpt-4` model as well by passing it to the `model-name` parameter in the `USING` clause of the `CREATE MODEL` statement.
+</Info>
+
+MindsDB provides an OpenAI engine by default. But if you want to use your own OpenAI engine, please create it using the command below and passing your OpenAI API key:
+
+```sql
+CREATE ML_ENGINE openai2
+FROM openai
+USING
+  api_key = 'YOUR_OPENAI_API_KEY';
+```
+
+<Note>
+If you want to use the OpenAI API key provided by MindsDB, please confirm your email. Alternatively, you have the option to utilize your own OpenAI API key by specifying it in the `api_key` parameter.
+</Note>
+
+<Tip>
+
+**MindsDB Pro**
+
+Please note that it is required to provide an OpenAI API key when using MindsDB Pro version.
+
+</Tip>
+
+## Example
+
+<Tip>
+  For more examples and explanations, visit our [doc page on
+  OpenAI](/custom-model/openai/).
+</Tip>
+
+### Example using SQL
+
+Let's go through a sentiment classification example to understand better how to bring OpenAI models to MindsDB as AI tables.
+
+```sql
+CREATE MODEL mindsdb.sentiment_classifier
+PREDICT sentiment
+USING
+  engine = 'openai',
+  prompt_template = 'predict the sentiment of the text:{{review}} exactly as either positive or negative or neutral';
+```
+
+On execution, we get:
+
+```sql
+Query successfully completed
+```
+
+Where:
+
+| Expressions       | Values                                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------------------ |
+| `project_name`    | `mindsdb`                                                                                        |
+| `predictor_name`  | `sentiment_classifier`                                                                           |
+| `target_column`   | `sentiment`                                                                                      |
+| `engine`          | `openai`                                                                                         |
+| `prompt_template` | `predict the sentiment of the text:{{review}} exactly as either positive or negative or neutral` |
+
+<Note>
+  In the `prompt_template` parameter, we use a placeholder for a text value that
+  comes from the `review` column, that is, `text:{{ review }}`.
+</Note>
+
+Before querying for predictions, we should verify the status of the `sentiment_classifier` model.
+
+```sql
+DESCRIBE sentiment_classifier;
+```
+
+On execution, we get:
+
+```sql
++--------------------+------+-------+-------+--------+--------+---------+-------------+---------------+------+-----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------+-------+
+|NAME                |ENGINE|PROJECT|VERSION|STATUS  |ACCURACY|PREDICT  |UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY|TRAINING_OPTIONS                                                                                                                                       |TAG    |
++--------------------+------+-------+-------+--------+--------+---------+-------------+---------------+------+-----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------+-------+
+|sentiment_classifier|openai|mindsdb|1      |complete|[NULL]  |sentiment|up_to_date   |22.12.4.3      |[NULL]|[NULL]           |{'target': 'sentiment', 'using': {'prompt_template': 'predict the sentiment of the text:{{review}} exactly as either positive or negative or neutral'}}|[NULL] |
++--------------------+------+-------+-------+--------+--------+---------+-------------+---------------+------+-----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------+-------+
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT output.sentiment, input.review
+FROM example_db.demo_data.amazon_reviews AS input
+JOIN mindsdb.sentiment_classifier AS output
+LIMIT 3;
+```
+
+<Note>
+    Don't forget to create the `example_db` database before using one of its tables, like in the query above.
+
+    ```sql
+    CREATE DATABASE example_db
+    WITH ENGINE = "postgres",
+    PARAMETERS = {
+        "user": "demo_user",
+        "password": "demo_password",
+        "host": "3.220.66.106",
+        "port": "5432",
+        "database": "demo"
+        };
+    ```
+
+</Note>
+
+On execution, we get:
+
+```sql
++----------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| sentiment                              | review                                                                                                                                                                                                                                                                                                                                                                            |
++----------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| positive                               | Late gift for my grandson. He is very happy with it. Easy for him (9yo ).                                                                                                                                                                                                                                                                                                         |
+| The sentiment of the text is positive. | I'm not super thrilled with the proprietary OS on this unit, but it does work okay and does what I need it to do. Appearance is very nice, price is very good and I can't complain too much - just wish it were easier (or at least more obvious) to port new apps onto it. For now, it helps me see things that are too small on my phone while I'm traveling. I'm a happy buyer.|
+| positive                               | I purchased this Kindle Fire HD 8 was purchased for use by 5 and 8 yer old grandchildren. They basically use it to play Amazon games that you download.                                                                                                                                                                                                                           |
++----------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+For the full library of supported examples please go [here](/nlp/nlp-extended-examples).
+
+### Example using MQL
+
+Now let's go through a sentiment classification using Mongo database syntax.
+
+We have a sample Mongo database that you can connect to your MindsDB Cloud account by running this command in Mongo Shell:
+
+```bash
+use mindsdb
+```
+
+Followed by:
+
+```bash
+db.databases.insertOne({
+    'name': 'mongo_test_db',
+    'engine': 'mongodb',
+    'connection_args': {
+        "host": "mongodb+srv://admin:201287aA@cluster0.myfdu.mongodb.net/admin?authSource=admin&replicaSet=atlas-5koz1i-shard-0&readPreference=primary&appname=MongoDB%20Compass&ssl=true",
+        "database": "test_data"
+        }
+})
+```
+
+We use this sample database throughout the example.
+
+The next step is to create a connection between Mongo and MindsDB. Follow the instructions to connect MindsDB via [Mongo Compass](/connect/mongo-compass) or [Mongo Shell](/connect/mongo-shell).
+
+Now, we are ready to create an OpenAI model.
+
+```bash
+db.models.insertOne({
+    name: 'sentiment_classifier_openai_mql',
+    predict: 'sentiment',
+    training_options: {
+            engine: 'openai',
+            prompt_template: 'predict the sentiment of the text:{{review}} exactly as either positive or negative or neutral'
+           }
+})
+```
+
+On execution, we get:
+
+```bash
+{ acknowledged: true,
+  insertedId: ObjectId("63c19c3fe1d9855caa931df6") }
+```
+
+Before querying for predictions, we should verify the status of the `sentiment_classifier` model.
+
+```bash
+db.getCollection('models').find({'name': 'sentiment_classifier_openai_mql'})
+```
+
+On execution, we get:
+
+```bash
+{ NAME: 'sentiment_classifier_openai_mql',
+  ENGINE: 'openai',
+  PROJECT: 'mindsdb',
+  VERSION: 1,
+  STATUS: 'complete',
+  ACCURACY: null,
+  PREDICT: 'sentiment',
+  UPDATE_STATUS: 'up_to_date',
+  MINDSDB_VERSION: '22.12.4.3',
+  ERROR: null,
+  SELECT_DATA_QUERY: null,
+  TRAINING_OPTIONS: '{\'target\': \'sentiment\', \'using\': {\'prompt_template\': \'predict the sentiment of the text:{{review}} exactly as either positive or negative or neutral\'}}',
+  TAG: null,
+  _id: ObjectId("000000000000002836398080") }
+```
+
+Once the status is `complete`, we can query for a single prediction.
+
+```bash
+db.sentiment_classifier_openai_mql.find({review: 'It is ok.'})
+```
+
+On execution, we get:
+
+```bash
+{
+  sentiment: 'The sentiment of the text is neutral.',
+  review: 'It is ok.'
+}
+```
+
+You can also query for batch predictions. Here we use the `mongo_test_db` database connected earlier in this example.
+
+```bash
+db.sentiment_classifier_openai_mql.find(
+    {'collection': 'mongo_test_db.amazon_reviews'},
+    {'sentiment_classifier_openai_mql.sentiment': 'sentiment',
+     'amazon_reviews.review': 'review'
+    }
+)
+```
+
+On execution, we get:
+
+```bash
+{
+  sentiment: 'positive',
+  review: 'Late gift for my grandson. He is very happy with it. Easy for him (9yo ).'
+}
+{
+  sentiment: 'The sentiment of the text is positive.',
+  review: "I'm not super thrilled with the proprietary OS on this unit, but it does work okay and does what I need it to do. Appearance is very nice, price is very good and I can't complain too much - just wish it were easier (or at least more obvious) to port new apps onto it. For now, it helps me see things that are too small on my phone while I'm traveling. I'm a happy buyer."
+}
+{
+  sentiment: 'positive',
+  review: 'I purchased this Kindle Fire HD 8 was purchased for use by 5 and 8 yer old grandchildren. They basically use it to play Amazon games that you download.'
+}
+...
+```
+
+For the full library of supported examples please go [here](/nlp/nlp-extended-examples).
+
+## Parameter descriptions
+
+MindsDB lets you customize models using parameters provided by OpenAI. Currently, there are eleven parameters to optionally modify:
+
+- model_name: An optional string that identifies the model to use, it defaults to text-davinci-002 model, for a list of models available and their description visit: [Model overview](https://platform.openai.com/docs/models/overview)
+- max_tokens: The maximum number of tokens to generate in the completion. The token count of your prompt plus max_tokens cannot exceed the model's context length.
+- temperature: What sampling temperature to use. Higher values means the model will take more risks.
+- top_p: An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass.
+- n: How many completions to generate for each prompt.
+- stop: Up to 4 sequences where the API will stop generating further tokens. The returned text will not contain the stop sequence.
+- presence_penalty: Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics.
+- frequency_penalty: Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood to repeat the same line verbatim.
+- best_of: Generates best_of completions server-side and returns the "best" (the one with the highest log probability per token). Results cannot be streamed. When used with n, best_of controls the number of candidate completions and n specifies how many to return – best_of must be greater than n.
+- logit_bias: Modify the likelihood of specified tokens appearing in the completion. Accepts a json object that maps tokens (specified by their token ID in the GPT tokenizer) to an associated bias value from -100 to 100. The exact effect will vary per model, but values between -1 and 1 should decrease or increase likelihood of selection; values like -100 or 100 should result in a ban or exclusive selection of the relevant token.
+- user: A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
+
+## What's Next?
+
+Have fun while trying it out yourself!
+
+- Bookmark [MindsDB repository on GitHub](https://github.com/mindsdb/mindsdb).
+- Sign up for a free [MindsDB account](https://cloud.mindsdb.com/register/nlp).
+- Engage with the MindsDB community on
+  [Slack](https://mindsdb.com/joincommunity) or
+  [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions and
+  share your ideas and thoughts.
+
+If this tutorial was helpful, please give us a GitHub star
+[here](https://github.com/mindsdb/mindsdb).

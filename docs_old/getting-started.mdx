@@ -1,0 +1,186 @@
+---
+title: Getting Started
+---
+
+MindsDB can be integrated with the most popular databases, as well as with the DBT and MLflow workflows.
+
+To try out MindsDB right away without bringing in your own data or models, follow our [Quickstart guide](/quickstart/).
+
+### 1. Create a MindsDB Cloud Account or Install MindsDB Locally
+
+<Tabs>
+  <Tab title="MindsDB Cloud">
+    Create your [free MindsDB Cloud account](https://cloud.mindsdb.com/signup).
+  </Tab>
+  <Tab title="Docker">
+    To get started with a Docker installation, follow the MindsDB installation
+    instructions using [Docker](/setup/self-hosted/docker/).
+  </Tab>
+  <Tab title="pip">
+    You can also install MindsDB using pip on
+    [Windows](/setup/self-hosted/pip/windows/),
+    [Mac](/setup/self-hosted/pip/macos/), and [Linux](/setup/self-hosted/pip/linux/)
+  </Tab>
+</Tabs>
+
+### 2. Connect to MindsDB from a SQL Client
+
+<Tip>
+  If you do not have a preferred SQL client yet, we recommend using the [MindsDB
+  SQL Editor](https://cloud.mindsdb.com/editor) or [DBeaver Community
+  Edition](https://dbeaver.io/download/). Follow [this guide](/setup/cloud/) to
+  set up your MindsDB SQL Editor. And [here](/connect/dbeaver/), you'll find how
+  to connect to MindsDB from DBeaver.
+</Tip>
+
+<Tabs>
+    <Tab title="MindsDB Cloud">
+        By default, on MindsDB Cloud the SQL Editor is already connected. Skip to step 3
+    </Tab>
+    <Tab title="MindsDB Cloud to Dbeaver">
+        a. Create a new MySQL connection.
+
+            ![DBeaver Create Connection](/assets/dbeaver-create-connection.png)
+
+        b. Configure it using the parameters below, as well as your username and password.
+
+            ```
+            Host: `cloud.mindsdb.com`
+            Port: `3306`
+            Database: `mindsdb`
+            ```
+
+            ![DBeaver Configure Connection](/assets/dbeaver-configure-cloud-connection.png)
+    </Tab>
+    <Tab title="Local to Dbeaver">
+        a. Create a new MySQL connection.
+
+            ![DBeaver Create Connection](/assets/dbeaver-create-connection.png)
+
+        b. Configure it using the following parameters:
+
+            ```
+            Host: `localhost`
+            Port: `47335`
+            Database: `mindsdb`
+            Username: `mindsdb`
+            Password: <leave it empty>
+            ```
+
+            ![DBeaver Configure Connection](/assets/dbeaver-configure-docker-connection.png)
+    </Tab>
+
+</Tabs>
+
+### 3. Connect your Data to MindsDB Using [`CREATE DATABASE`](/sql/create/databases/)
+
+```sql
+CREATE DATABASE example_data
+WITH ENGINE = "postgres",
+PARAMETERS = {
+  "user": "demo_user",
+  "password": "demo_password",
+  "host": "3.220.66.106",
+  "port": "5432",
+  "database": "demo"
+};
+```
+
+### 4. Preview the Available Data Using [`SELECT`](/sql/api/select/)
+
+```sql
+SELECT *
+FROM example_data.demo_data.home_rentals
+LIMIT 10;
+```
+
+### 5. Create a Model Using [`CREATE MODEL`](/sql/create/model/)
+
+If you already have a model in MLFlow, you can connect to your model.
+
+<Tabs>
+    <Tab title="MindsDB creates my model">
+        ```sql
+        CREATE MODEL mindsdb.home_rentals_predictor
+        FROM example_data
+            (SELECT * FROM demo_data.home_rentals)
+        PREDICT rental_price;
+        ```
+    </Tab>
+    <Tab title="My model is in MLflow">
+        ```sql
+        CREATE MODEL mindsdb.home_rentals_predictor
+            FROM example_data (select * from demo_data.home_rentals)
+            PREDICT rental_price
+            USING url.predict='http://host.docker.internal:1234/invocations',
+            format='mlflow',
+            dtype_dict={"number_of_rooms": "categorical", "number_of_bathrooms": "categorical", "sqft": "integer", "days_on_market": "integer",
+                        "initial_price": "integer", "location": "categorical", "neighborhood":"categorical" };
+        ```
+    </Tab>
+
+</Tabs>
+
+### 6. Make Predictions Using [`SELECT`](/sql/api/select/)
+
+```sql
+SELECT rental_price
+FROM mindsdb.home_rentals_predictor
+WHERE number_of_bathrooms = 2
+AND sqft = 1000;
+```
+
+On execution, we get:
+
+```sql
++--------------+
+| rental_price |
++--------------+
+| 1130         |
++--------------+
+```
+
+### 7. Integrate your Predictions into the DBT Workflow
+
+To do so, you need to make the following changes:
+
+<CodeGroup>
+```yml profiles.yml
+mindsdb:
+    type: mysql
+    host: mysql.mindsdb.com
+    user: mindsdb.user@example.com
+    password: mindsdbpassword
+    port: 3306
+    dbname: mindsdb
+    schema: example_data
+    threads: 1
+    keepalives_idle: 0 # default 0, indicating the system default
+    connect_timeout: 10 # default 10 seconds
+```
+
+```yml schema.yml
+version: 2
+
+models:
+    - name: predicted_rentals
+    description: "Integrating MindsDB predictions and historical   data"
+```
+
+```sql predicted_rentals.sql
+with predictions as (
+    SELECT hrp.rental_price as predicted_price, hr.rental_price as actual_price
+    FROM mindsdb.home_rentals_predictor hrp
+    JOIN exampleData.demo_data.home_rentals hr
+    WHERE hr.number_of_bathrooms=2 AND hr.sqft=1000;
+)
+select * from predictions;
+```
+
+```yml dbt_project.yml
+models:
+  home_rentals:
+    +materialized: view
+```
+
+</CodeGroup>

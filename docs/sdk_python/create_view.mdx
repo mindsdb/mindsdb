@@ -1,0 +1,25 @@
+---
+title: create_view()
+sidebarTitle: create_view()
+---
+
+## Description
+
+The `get_view()` and `create_view()` functions let you save either an existing view or a newly created view into a variable.
+
+## Syntax
+
+Use the `get_view()` method to get an existing view:
+
+```bash
+my_view = project.get_view('my_view')
+```
+
+Or, the `create_view()` method to create a view:
+
+```bash
+my_view = project.create_view(
+    'view_name',
+    mysql_demo_db.query('SELECT * FROM my_table LIMIT 100')
+)
+```

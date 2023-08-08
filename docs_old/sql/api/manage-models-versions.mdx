@@ -1,0 +1,113 @@
+---
+title: How to Use and Manage Model Versions in MindsDB
+sidebarTitle: Manage Model Versions
+---
+
+## Creating a Model
+
+To create a model, use the [`CREATE MODEL`](/sql/create/model/) statement.
+
+```sql
+CREATE MODEL mindsdb.home_rentals
+FROM example_db
+    (SELECT * FROM demo_data.home_rentals)
+PREDICT rental_price
+USING engine = 'lightwood',
+      tag = 'my model';
+```
+
+Now, your model has one version. You can verify by querying the `models_versions` table.
+
+```sql
+SELECT *
+FROM mindsdb.models_versions
+WHERE name = 'home_rentals';
+```
+
+On execution, we get:
+
+```sql
++------------+-------+------+-------+--------+--------+------------+-------------+---------------+------+------------------------------------+---------------------------------------+--------+
+|NAME        |PROJECT|ACTIVE|VERSION|STATUS  |ACCURACY|PREDICT     |UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY                   |TRAINING_OPTIONS                       |TAG     |
++------------+-------+------+-------+--------+--------+------------+-------------+---------------+------+------------------------------------+---------------------------------------+--------+
+|home_rentals|mindsdb|true  |1      |complete|0.999   |rental_price|up_to_date   |22.11.3.2      |[NULL]|SELECT * FROM demo_data.home_rentals|{'target': 'rental_price', 'using': {}}|my model|
++------------+-------+------+-------+--------+--------+------------+-------------+---------------+------+------------------------------------+---------------------------------------+--------+
+```
+
+## Retraining a Model
+
+To retrain a model, use the [`RETRAIN`](/sql/api/retrain/) statement.
+
+```sql
+RETRAIN mindsdb.home_rentals;
+```
+
+Let's query for the model versions again.
+
+```sql
+SELECT *
+FROM mindsdb.models_versions
+WHERE name = 'home_rentals';
+```
+
+On execution, we get:
+
+```sql
++------------+-------+------+-------+--------+--------+------------+-------------+---------------+------+------------------------------------+---------------------------------------+--------+
+|NAME        |PROJECT|ACTIVE|VERSION|STATUS  |ACCURACY|PREDICT     |UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY                   |TRAINING_OPTIONS                       |TAG     |
++------------+-------+------+-------+--------+--------+------------+-------------+---------------+------+------------------------------------+---------------------------------------+--------+
+|home_rentals|mindsdb|false |1      |complete|0.999   |rental_price|up_to_date   |22.11.3.2      |[NULL]|SELECT * FROM demo_data.home_rentals|{'target': 'rental_price', 'using': {}}|my model|
+|home_rentals|mindsdb|true  |2      |complete|0.999   |rental_price|up_to_date   |22.11.3.2      |[NULL]|SELECT * FROM demo_data.home_rentals|{'target': 'rental_price', 'using': {}}|my model|
++------------+-------+------+-------+--------+--------+------------+-------------+---------------+------+------------------------------------+---------------------------------------+--------+
+```
+
+## Using Active Model Version
+
+To use the currently active model version, run this query:
+
+```sql
+SELECT *
+FROM mindsdb.home_rentals AS p
+JOIN example_db.demo_data.home_rentals AS d;
+```
+
+## Using Specific Model Version
+
+To use a specific model version, even if it is set to inactive, run this query:
+
+```sql
+SELECT *
+FROM mindsdb.home_rentals.1 AS p
+JOIN example_db.demo_data.home_rentals AS d;
+```
+
+## Setting Model Version as Active
+
+To set a specific model version as active, run the `UPDATE` statement:
+
+```sql
+UPDATE mindsdb.models_versions
+SET active = 1
+WHERE version = 1
+AND name = 'home_rentals';
+```
+
+## Deleting Specific Model Version
+
+To delete a specific model version, run the `DELETE FROM` statement:
+
+```sql
+DELETE FROM mindsdb.models_versions
+WHERE version = 2
+AND name = 'home_rentals';
+```
+
+Please note that you cannot delete the version that is active.
+
+## Deleting All Model Versions
+
+To delete all models version, run the `DROP MODEL` statement:
+
+```sql
+DROP MODEL mindsdb.home_rentals;
+```

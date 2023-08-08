@@ -1,0 +1,118 @@
+---
+title: Google Calendar
+sidebarTitle: Google Calendar
+---
+
+This is the implementation of the Google Calendar app handler for MindsDB. It makes event data available to use for model training and predictions.
+
+Google Calendar is a time-management and scheduling calendar service developed by Google.
+
+## Connection
+
+The required arguments to establish a connection are as follows:
+
+* `credentials_file` is a path to the JSON file that stores credentials to the Google account.
+
+<Tip>
+Please note that a Google account with enabled Google Calendar is required. You can find more information [here](https://developers.google.com/calendar/api/quickstart/python).
+</Tip>
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/google_calendar_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+In order to make use of this handler and connect the Google Calendar app to MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE my_calendar
+WITH
+    ENGINE = 'google_calendar',
+    PARAMETERS = {
+        'credentials_file': '\path-to-your-file\credentials.json'
+    }; 
+```
+<Tip>
+    
+You need a Google account in order to use this integration. Here is how to get the credentials file:
+
+1. Create a Google Cloud Platform (GCP) Project:
+
+    1.1 Go to the GCP Console (https://console.cloud.google.com/).
+    
+    1.2 If you haven't created a project before, you'll be prompted to do so now.
+    
+    1.3 Give your new project a name.
+    
+    1.4 Click `Create` to create the new project.
+
+2. Enable the Google Calendar API:
+
+    2.1 In the GCP Console, select your project.
+
+    2.2 Navigate to `APIs & Services` > `Library`.
+
+    2.3 In the search bar, search for `Google Calendar API`.
+
+    2.4 Click on ` Google Calendar API `, then click `Enable`.
+
+3. Create credentials for the  Google Calendar API :
+
+    3.1 Navigate to `APIs & Services` > `Credentials`.
+
+    3.2 Click on the `Create Credentials` button and choose `OAuth client ID`.
+
+    3.3 If you haven't configured the OAuth consent screen before, you'll be prompted to do so now. Make sure to choose `External` for User Type, and add all the necessary scopes. Make sure to save the changes.
+    Now, create the OAuth client ID. Choose `Desktop app` for the Application Type and give it a name.
+
+    3.4 Click `Create`.
+
+4. Download the JSON file:
+
+    4.1 After creating your credentials, click the download button (an icon of an arrow pointing down) on the right side of your client ID. This will download a JSON file, so you will use the location to it in the `credentials_file` param. 
+</Tip>
+
+## Usage
+
+This creates a database that comes with the `calendar` table.
+
+Now you can use your Google Calendar data, like this:
+
+* searching for events:
+
+    ```sql
+    SELECT id, created_at, author_username, text
+    FROM my_calendar.events
+    WHERE start_time = '2023-02-16'
+    AND end_time = '2023-04-09' LIMIT 20;
+    ```
+
+* creating events:
+
+    ```sql
+    INSERT INTO my_calendar.events(start_time, end_time, summary, description, location, attendees, reminders, timeZone)
+    VALUES ('2023-02-16 10:00:00', '2023-02-16 11:00:00', 'MindsDB Meeting', 'Discussing the future of MindsDB', 'MindsDB HQ', '', 'Europe/Athens');
+    ```
+
+* updating one or more events:
+
+    ```sql
+    UPDATE my_calendar.events
+    SET summary     = 'MindsDB Meeting',
+        description = 'Discussing the future of MindsDB',
+        location    = 'MindsDB HQ',
+        attendees   = '',
+        reminders   = ''
+    WHERE event_id > 1 AND event_id < 10;                   -- used to update events in a given range
+    ```
+
+* deleting one or more events:
+
+    ```sql
+    DELETE
+    FROM my_calendar.events
+    WHERE id = '1';
+    ```
+
+<Info>
+For more information about available actions and development plans, visit [this page](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/google_calendar_handler/README.md).
+</Info>

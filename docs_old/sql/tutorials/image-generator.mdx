@@ -1,0 +1,83 @@
+---
+title: Generating Images with OpenAI
+sidebarTitle: Image Generator
+---
+
+In this tutorial, we'll generate images with the help of AI.
+
+<Tip>
+You can build a Twitter chatbot that converts text prompts into images. Follow [this blog post](https://mindsdb.com/blog/tutorial-how-to-add-ai-image-generation-to-your-own-app) to see the total workflow.
+</Tip>
+
+## Creating a Model
+
+Let's create an OpenAI model:
+
+```sql
+CREATE MODEL mindsdb.dalle
+PREDICT img_url
+USING
+   engine = 'openai',
+   mode = 'image',
+   prompt_template = '{{text}}, 8K | highly detailed realistic 3d oil painting style cyberpunk by MAD DOG JONES combined with Van Gogh  |  cinematic lighting | happy colors';
+```
+
+This model connects to the OpenAI’s DALL-E engine for generating images. The `{{text}}` variable present in the `prompt_template` parameter is replaced with the user's input.
+
+<Note>
+If you want to use the OpenAI API key provided by MindsDB, please confirm your email. Alternatively, you have the option to utilize your own OpenAI API key by specifying it in the `api_key` parameter.
+</Note>
+
+## Generating Images
+
+Now that the model is ready, we can generate some images.
+
+```sql
+SELECT text, img_url
+FROM mindsdb.dalle 
+WHERE text = 'a cute robot helping a little kid build a better world';
+```
+
+On execution, we get:
+
+```sql
++--------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| text                                                   | img_url                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
++--------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| a cute robot helping a little kid build a better world | https://oaidalleapiprodscus.blob.core.windows.net/private/org-1QXk2w4H0OhDrF2Hd4QV5K2c/user-piMc91jPmVdhttPLHl2y50E7/img-p5NROyoV5ysWWUY91xhQUZdg.png?st=2023-05-29T16%3A45%3A02Z&se=2023-05-29T18%3A45%3A02Z&sp=r&sv=2021-08-06&sr=b&rscd=inline&rsct=image/png&skoid=6aaadede-4fb3-4698-a8f6-684d7786b067&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2023-05-29T10%3A29%3A15Z&ske=2023-05-30T10%3A29%3A15Z&sks=b&skv=2021-08-06&sig=vUI9vedjWtA7L0J3V0/4c05Wzh1Kf2/zyl%2BN1yfK6rU%3D |
++--------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+The model provides a link to the generated image.
+
+<p align="center">
+  <img src="/assets/sql/tutorials/generating_images_1.png" />
+</p>
+
+Let's try another prompt.
+
+```sql
+SELECT text, img_url
+FROM mindsdb.dalle 
+WHERE text = 'design of a happy tree house';
+```
+
+On execution, we get:
+
+```sql
++------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| text                                                   | img_url                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
++------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| design of a happy tree house | https://oaidalleapiprodscus.blob.core.windows.net/private/org-1QXk2w4H0OhDrF2Hd4QV5K2c/user-piMc91jPmVdhttPLHl2y50E7/img-O1GPmdmuoRXFTGdUjahOf1Ws.png?st=2023-05-29T16%3A50%3A34Z&se=2023-05-29T18%3A50%3A34Z&sp=r&sv=2021-08-06&sr=b&rscd=inline&rsct=image/png&skoid=6aaadede-4fb3-4698-a8f6-684d7786b067&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2023-05-29T17%3A03%3A23Z&ske=2023-05-30T17%3A03%3A23Z&sks=b&skv=2021-08-06&sig=9vY%2Bqr/0CrzqqdM4uYEa/XwYXMBn67RBodhzsg%2Bs9ag%3D |
++------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+Here is the generated image:
+
+<p align="center">
+  <img src="/assets/sql/tutorials/generating_images_2.png" />
+</p>
+
+<Tip>
+Check out how to implement a Twitter chatbot that answers by generating images. Follow [this link](https://mindsdb.com/blog/tutorial-how-to-add-ai-image-generation-to-your-own-app) to learn more.
+</Tip>

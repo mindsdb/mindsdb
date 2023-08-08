@@ -1,0 +1,475 @@
+---
+title: ML Models in MindsDB
+---
+
+In this section, we go through the ML model types available in MindsDB. These are regression models, classification models, and time series models.
+
+<Note>
+**Disclaimer**
+
+In this section, we describe the default behavior using the Lightwood ML engine. Other ML handlers may behave differently. For example, some may not perform validation automatically when creating a model, as numerous behaviors are handler-specific.
+</Note>
+
+## What is an ML Model?
+
+A machine learning (ML) model is a program trained using the available data in order to learn how to recognize patterns and behaviors to predict future data. There are various types of ML models that use different learning paradigms, but MindsDB models are all *supervised* because they learn from pairs of input data and expected output.
+
+You input data into an ML model. It processes this input data, searching for patterns and correlations. After that, the ML model returns output data defined based on the input data.
+
+### Features
+
+Features are variables that an ML model uses as input data to search for patterns and predict the target variable. In tabular datasets, features usually correspond to single columns.
+
+### Target
+
+The target is a variable of interest that an ML model predicts based on the information fetched out of the features.
+
+### Training Dataset
+
+The training dataset is used during the training phase of an ML model. It contains both feature variables and a target variable. As its name indicates, it is used to train an ML model.
+
+The ML model takes the entire training dataset as input. It learns the patterns and relationships between feature variables and target values.
+
+Once the training process is complete, one can move on to the validation phase.
+
+### Validation Dataset
+
+The validation dataset is used during the validation phase of an ML model. It contains both feature variables and a target variable, like the training dataset. But as its name indicates, it is used to validate the predictions made by an ML model. It has no overlap with the training dataset, as it is a *held-out* set to simulate a real scenario where the model generates predictions for novel input data.
+
+The ML model takes only the feature variables from the validation dataset as input. Based on what the model learns during the training process, it makes predictions for the values of a target variable.
+
+Now comes the validation step. To assess the accuracy of the ML model, one compares the target variable values from the validation dataset with the target variable values predicted by the ML model. The closer these values are to each other, the better accuracy of the ML model.
+
+### Input Dataset
+
+After completing the training and validation phases, one can provide the input dataset consisting of only the feature variables to predict the target variable values.
+
+## How is an ML Model Created?
+
+In MindsDB, we use the [CREATE MODEL](/sql/create/model/) statement to create, train, and validate a model.
+
+### Training Phase
+
+Let's look at our training dataset. It contains both features and a target.
+
+```sql
+SELECT *
+FROM files.salary_dataset
+LIMIT 5;
+```
+
+On execution, we get:
+
+```sql
++---------+--------------+-----------+---------+--------+---------------+-------------------+------+
+|companyId|jobType       |degree     |major    |industry|yearsExperience|milesFromMetropolis|salary|
++---------+--------------+-----------+---------+--------+---------------+-------------------+------+
+|COMP37   |CFO           |MASTERS    |MATH     |HEALTH  |10             |83                 |130   |
+|COMP19   |CEO           |HIGH_SCHOOL|NONE     |WEB     |3              |73                 |101   |
+|COMP52   |VICE_PRESIDENT|DOCTORAL   |PHYSICS  |HEALTH  |10             |38                 |137   |
+|COMP38   |MANAGER       |DOCTORAL   |CHEMISTRY|AUTO    |8              |17                 |142   |
+|COMP7    |VICE_PRESIDENT|BACHELORS  |PHYSICS  |FINANCE |8              |16                 |163   |
++---------+--------------+-----------+---------+--------+---------------+-------------------+------+
+```
+
+Here, the features are `companyId`, `jobType`, `degree`, `major`, `industry`, `yearsExperience`, and `milesFromMetropolis`.
+
+And the target variable is `salary`.
+
+Let's create and train an ML model using this training dataset.
+
+```sql
+CREATE MODEL salary_predictor
+FROM files
+    (SELECT * FROM salary_dataset)
+PREDICT salary;
+```
+
+On execution, we get:
+
+```sql
+Query successfully completed
+```
+
+### Progress
+
+Here is how to check whether the training process is completed:
+
+```sql
+DESCRIBE salary_predictor;
+```
+
+Once the status is `complete`, the training phase is completed.
+
+### Validation Phase
+
+By default, the `CREATE MODEL` statement performs validation of the model.
+
+Additionally, we can validate the model manually by querying it and providing the feature values in the `WHERE` clause like this:
+
+```sql
+SELECT salary, salary_explain
+FROM mindsdb.salary_predictor
+WHERE companyId = 'COMP37'
+AND jobType = 'MANAGER'
+AND degree = 'DOCTORAL'
+AND major = 'MATH'
+AND industry = 'FINANCE'
+AND yearsExperience = 5
+AND milesFromMetropolis = 50;
+```
+
+On execution, we get:
+
+```sql
++------+------------------------------------------------------------------------------------------------------------------------------------------+
+|salary|salary_explain                                                                                                                            |
++------+------------------------------------------------------------------------------------------------------------------------------------------+
+|128   |{"predicted_value": 128, "confidence": 0.67, "anomaly": null, "truth": null, "confidence_lower_bound": 109, "confidence_upper_bound": 147}|
++------+------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+By comparing the real salary values for the defined individuals and the predicted salary values, one can figure out the accuracy of the ML model.
+
+<Note>
+Please note that MindsDB calculates the model's accuracy by default while running the `CREATE MODEL` statement. However, it is not guaranteed that all ML engines do this.
+
+By default, the `CREATE MODEL` statement does the following:
+
+- it creates a model,
+- it divides the input data into training and validation datasets,
+- it trains a model using the training dataset,
+- it validates a model using the validation dataset,
+- it compares the true and predicted values of a target to define the model's accuracy.
+</Note>
+
+Let's look at the basic types of ML models.
+
+## ML Model Types
+
+### Regression Models
+
+Regression is a type of predictive modeling that analyses input data, including relationships between dependent and independent variables and the target variable that is to be predicted.
+
+In the case of regression models, the target variable belongs to a set of continuous values. For example, having data on real estates, such as the number of rooms, location, and rental price, one can predict the rental price using regression. The rental price is predicted based on the input data, and its value is any value from a range between minimum and maximum rental price values from the training data.
+
+#### Example
+
+First, let's look at our input data.
+
+```sql
+SELECT *
+FROM example_db.demo_data.home_rentals
+LIMIT 5;
+```
+
+On execution, we get:
+
+```sql
++---------------+-------------------+----+--------+--------------+--------------+------------+
+|number_of_rooms|number_of_bathrooms|sqft|location|days_on_market|neighborhood  |rental_price|
++---------------+-------------------+----+--------+--------------+--------------+------------+
+|2              |1                  |917 |great   |13            |berkeley_hills|3901        |
+|0              |1                  |194 |great   |10            |berkeley_hills|2042        |
+|1              |1                  |543 |poor    |18            |westbrae      |1871        |
+|2              |1                  |503 |good    |10            |downtown      |3026        |
+|3              |2                  |1066|good    |13            |thowsand_oaks |4774        |
++---------------+-------------------+----+--------+--------------+--------------+------------+
+```
+
+Here, the features are `number_of_rooms`, `number_of_bathrooms`, `sqft`, `location`, `days_on_market`, and `neighborhood`.
+
+And the target variable is `rental_price`.
+
+Let's create and train an ML model.
+
+```sql
+CREATE MODEL mindsdb.home_rentals_model
+FROM example_db
+  (SELECT * FROM demo_data.home_rentals)
+PREDICT rental_price;
+```
+
+On execution, we get:
+
+```sql
+Query successfully completed
+```
+
+Once the training process is completed, we can query for predictions.
+
+```sql
+SELECT rental_price, rental_price_explain
+FROM mindsdb.home_rentals_model
+WHERE sqft = 823
+AND location='good'
+AND neighborhood='downtown'
+AND days_on_market=10;
+```
+
+On execution, we get:
+
+```sql
++--------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+| rental_price | rental_price_explain                                                                                                                          |
++--------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+| 4394         | {"predicted_value": 4394, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 4313, "confidence_upper_bound": 4475} |
++--------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+For details, check out [this tutorial](/sql/tutorials/home-rentals/).
+
+### Classification Models
+
+Classification is a type of predictive modeling that analyses input data, including relationships between dependent and independent variables and the target variable that is to be predicted.
+
+In the case of classification models, the target variable belongs to a set of discrete values. For example, having data on each customer of a telecom company, one can predict the churn possibility using classification. The churn is predicted based on the input data, and its value is either `Yes` or `No`. This is a special case called binary classification.
+
+#### Example
+
+First, let's look at our input data.
+
+```sql
+SELECT *
+FROM example_db.demo_data.customer_churn
+LIMIT 5;
+```
+
+On execution, we get:
+
+```sql
++----------+------+-------------+-------+----------+------+------------+----------------+---------------+--------------+------------+----------------+-----------+-----------+---------------+--------------+----------------+-------------------------+--------------+------------+------+
+|customerid|gender|seniorcitizen|partner|dependents|tenure|phoneservice|multiplelines   |internetservice|onlinesecurity|onlinebackup|deviceprotection|techsupport|streamingtv|streamingmovies|contract      |paperlessbilling|paymentmethod            |monthlycharges|totalcharges|churn |
++----------+------+-------------+-------+----------+------+------------+----------------+---------------+--------------+------------+----------------+-----------+-----------+---------------+--------------+----------------+-------------------------+--------------+------------+------+
+|7590-VHVEG|Female|0            |Yes    |No        |1     |No          |No phone service|DSL            |No            |Yes         |No              |No         |No         |No             |Month-to-month|Yes             |Electronic check         |$29.85        |$29.85      |No    |
+|5575-GNVDE|Male  |0            |No     |No        |34    |Yes         |No              |DSL            |Yes           |No          |Yes             |No         |No         |No             |One year      |No              |Mailed check             |$56.95        |$1,889.50   |No    |
+|3668-QPYBK|Male  |0            |No     |No        |2     |Yes         |No              |DSL            |Yes           |Yes         |No              |No         |No         |No             |Month-to-month|Yes             |Mailed check             |$53.85        |$108.15     |Yes   |
+|7795-CFOCW|Male  |0            |No     |No        |45    |No          |No phone service|DSL            |Yes           |No          |Yes             |Yes        |No         |No             |One year      |No              |Bank transfer (automatic)|$42.30        |$1,840.75   |No    |
+|9237-HQITU|Female|0            |No     |No        |2     |Yes         |No              |Fiber optic    |No            |No          |No              |No         |No         |No             |Month-to-month|Yes             |Electronic check         |$70.70        |$151.65     |Yes   |
++----------+------+-------------+-------+----------+------+------------+----------------+---------------+--------------+------------+----------------+-----------+-----------+---------------+--------------+----------------+-------------------------+--------------+------------+------+
+```
+
+Here, the features are `customerid`, `gender`, `seniorcitizen`, `partner`, `dependents`, `tenure`, `phoneservice`, `multiplelines`, `internetservice`, `onlinesecurity`, `onlinebackup`, `deviceprotection`, `techsupport`, `streamingtv`, `streamingmovies`, `contract`, `paperlessbilling`, `paymentmethod`, `monthlycharges`, and `totalcharges`.
+
+And the target variable is `churn`.
+
+Let's create and train an ML model.
+
+```sql
+CREATE MODEL churn_predictor
+FROM example_db
+    (SELECT * FROM demo_data.customer_churn)
+PREDICT churn;
+```
+
+On execution, we get:
+
+```sql
+Query successfully completed
+```
+
+Once the training process is completed, we can query for predictions.
+
+```sql
+SELECT churn, churn_confidence, churn_explain
+FROM mindsdb.customer_churn_predictor
+WHERE seniorcitizen=0
+AND partner='Yes'
+AND dependents='No'
+AND tenure=1
+AND phoneservice='No'
+AND multiplelines='No phone service'
+AND internetservice='DSL';
+```
+
+On execution, we get:
+
+```sql
++-------+---------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Churn | Churn_confidence    | Churn_explain                                                                                                                                                    |
++-------+---------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Yes   | 0.7752808988764045  | {"predicted_value": "Yes", "confidence": 0.7752808988764045, "anomaly": null, "truth": null, "probability_class_No": 0.4756, "probability_class_Yes": 0.5244}    |
++-------+---------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+For details, check out [this tutorial](/sql/tutorials/customer-churn/).
+
+### Time Series Models
+
+Time series models fall under the regression or classification category. But what's distinct about them is that we order data by date, time, or any value defining sequential order of events. Usually, predictions made by time series models are referred to as *forecasts*.
+
+A time series model predicts a target that comes from a continuous set (regression) or a discrete set (classification).
+
+There is a mandatory `ORDER BY` clause followed by a sequential column, such as a date. It orders all the rows accordingly.
+
+If you want to group your predictions, there is an optional `GROUP BY` clause. By following this clause with a column name, or multiple column names, one can make predictions for partitions of data defined by these columns.
+
+In the case of time series models, one should define how many data rows are used to train the model. The `WINDOW` clause followed by an integer does just that.
+
+There is an optional `HORIZON` clause where you can define how many rows, or how far into the future, you want to predict. By default, it is one.
+
+#### Example
+
+First, let's look at our input data.
+
+```sql
+SELECT *
+FROM example_db.demo_data.house_sales
+LIMIT 5;
+```
+
+On execution, we get:
+
+```sql
++----------+------+-----+--------+
+|saledate  |ma    |type |bedrooms|
++----------+------+-----+--------+
+|2007-09-30|441854|house|2       |
+|2007-12-31|441854|house|2       |
+|2008-03-31|441854|house|2       |
+|2008-06-30|441854|house|2       |
+|2008-09-30|451583|house|2       |
++----------+------+-----+--------+
+```
+
+Here, the features are `saledate`, `type`, and `bedrooms`.
+
+And the target variable is `ma`.
+
+Let's create and train an ML model.
+
+```sql
+CREATE MODEL mindsdb.house_sales_predictor
+FROM files
+  (SELECT * FROM house_sales)
+PREDICT MA
+ORDER BY saledate
+GROUP BY bedrooms, type
+-- the target column to be predicted stores one row per quarter
+WINDOW 8      -- using data from the last two years to make forecasts (last 8 rows)
+HORIZON 4;    -- making forecasts for the next year (next 4 rows)
+```
+
+On execution, we get:
+
+```sql
+Query successfully completed
+```
+
+Once the training process is completed, we can query for predictions.
+
+```sql
+SELECT m.saledate AS date, m.MA AS forecast, MA_explain
+FROM mindsdb.house_sales_predictor AS m
+JOIN files.house_sales AS t
+WHERE t.saledate > LATEST
+AND t.type = 'house'
+AND t.bedrooms = 2
+LIMIT 4;
+```
+
+On execution, we get:
+
+```sql
++-------------+-------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| date        | forecast          | MA_explain                                                                                                                                                                                    |
++-------------+-------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| 2019-12-31  | 441413.5849598734 | {"predicted_value": 441413.5849598734, "confidence": 0.99, "anomaly": true, "truth": null, "confidence_lower_bound": 440046.28237074096, "confidence_upper_bound": 442780.88754900586}        |
+| 2020-04-01  | 443292.5194586229 | {"predicted_value": 443292.5194586229, "confidence": 0.9991, "anomaly": null, "truth": null, "confidence_lower_bound": 427609.3325864327, "confidence_upper_bound": 458975.7063308131}        |
+| 2020-07-02  | 443292.5194585953 | {"predicted_value": 443292.5194585953, "confidence": 0.9991, "anomaly": null, "truth": null, "confidence_lower_bound": 424501.59192981094, "confidence_upper_bound": 462083.4469873797}       |
+| 2020-10-02  | 443292.5194585953 | {"predicted_value": 443292.5194585953, "confidence": 0.9991, "anomaly": null, "truth": null, "confidence_lower_bound": 424501.59192981094, "confidence_upper_bound": 462083.4469873797}       |
++-------------+-------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+For details, check out [this tutorial](/sql/tutorials/house-sales-forecasting/).
+
+## How it Works in the Background
+
+MindsDB uses the Lightwood ML engine by default. This section takes a closer look at how this package automatically chooses what type of model to use.
+
+Models in Lightwood follow an encoder-mixer-decoder pattern, where refined, or encoded, representations of all features are mixed to produce target predictions. Here are [the mixers used by Lightwood](https://lightwood.io/mixer.html).
+
+Please note that there is an ensembling step after training all mixers in case multiple mixers are used. Read on to learn more.
+
+To give you some details on how MindsDB creates a model using different mixers, here is [the full code](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py).
+
+And here comes the breakdown:
+- This [piece of code](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L238,L351) adds mixers to the `submodels` array depending on the model type and the data type of the target variable.
+- And [here](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L353,L358), we choose the best of submodels to be used to create, train, and validate our ML model.
+
+Let's dive into the details of how MindsDB picks the mixers.
+
+<Tabs>
+
+<Tab title="Case 1">
+
+Here is the [piece of code](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L239,L277) being analyzed.
+
+[If we deal with a simple encoder/decoder pair performing the task](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L239,L250), we use the [Unit](https://lightwood.io/mixer.html#mixer.Unit) mixer that can be thought of as a bypass mixer.
+
+A good example is the [Spam Classifier model of Hugging Face](/custom-model/huggingface#model-1-spam-classifier/) because it uses a single column as input.
+
+[Otherwise](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L251,L277), we choose from a range of other mixers depending on the following conditions:
+
+- [If it is not a time series case](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L252,L264), we use the [Neural](https://lightwood.io/mixer.html#mixer.Neural) mixer.
+A good example is the [Customer Churn model](/sql/tutorials/customer-churn#training-a-predictor/).
+
+- [If it is a time series case](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L265,L277), we use the [NeuralTs](https://lightwood.io/mixer.html#mixer.NeuralTs) mixer.
+A good example is the [House Sales model](/sql/tutorials/house-sales-forecasting#training-a-predictor/).
+
+</Tab>
+
+<Tab title="Case 2">
+
+Here is the [piece of code](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L279,L324) being analyzed.
+
+[If it is not a time series case, or it is a time series case with the HORIZON value being one, and the target variable type is not an array of values](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L279,L310), we use the [LightGBM](https://lightwood.io/mixer.html#mixer.LightGBM), [XGBoostMixer](https://lightwood.io/mixer.html#mixer.XGBoostMixer), [Regression](https://lightwood.io/mixer.html#mixer.Regression), and [RandomForest](https://lightwood.io/mixer.html#mixer.RandomForest) mixers.
+
+A good example is the [Home Rentals model](/sql/tutorials/home-rentals#training-a-predictor/).
+
+[Otherwise, if it is a time series case and the HORIZON value is greater than one](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L311,L324), we use the [LightGBMArray](https://lightwood.io/mixer.html#mixer.LightGBMArray) mixer.
+
+A good example is the [House Sales model](/sql/tutorials/house-sales-forecasting#training-a-predictor/).
+
+</Tab>
+
+<Tab title="Case 3">
+
+Here is the [piece of code](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L326,L351) being analyzed.
+
+[If it is an autoregressive case and the target type is an integer, float, or quantity](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L326,L351), we use the [SkTime](https://lightwood.io/mixer.html#mixer.SkTime), [ETSMixer](https://lightwood.io/mixer.html#mixer.ETSMixer), and [ARIMAMixer](https://lightwood.io/mixer.html#mixer.ARIMAMixer) mixers.
+
+The autoregressive case means that we use the target values (as encoded features) from as many previous rows as defined in the `WINDOW` clause.
+
+A good example is the [Home Rentals model](/sql/tutorials/home-rentals#training-a-predictor/).
+
+</Tab>
+
+</Tabs>
+
+<br></br>
+
+<Note>
+MindsDB may use one or multiple mixers while preparing a model. Depending on the model type and the data type of the target variable, one mixer is chosen or a set of mixers are ensembled to create, train, and validate an ML model.
+</Note>
+
+The three cases above describe how MindsDB chooses the mixer candidates and stores them in the `submodels` array.
+
+By default, after training all relevant mixers in the `submodels` array, MindsDB uses the [BestOf](https://lightwood.io/ensemble.html#ensemble.BestOf) ensemble to [single out the best mixer as the final model](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L353,L358).
+
+But you can always use a different ensemble that may aggregate multiple mixers per model, such as the [MeanEnsemble](https://lightwood.io/ensemble.html#ensemble.MeanEnsemble), [ModeEnsemble](https://lightwood.io/ensemble.html#ensemble.ModeEnsemble), [StackedEnsemble](https://lightwood.io/ensemble.html#ensemble.StackedEnsemble), [TsStackedEnsemble](https://lightwood.io/ensemble.html#ensemble.TsStackedEnsemble), or [WeightedMeanEnsemble](https://lightwood.io/ensemble.html#ensemble.WeightedMeanEnsemble) ensemble type.
+[Here](https://github.com/mindsdb/lightwood/tree/staging/lightwood/ensemble), you'll find implementations of all ensemble types.
+
+## What's Next?
+
+Have fun while trying out different ML models yourself!
+
+- Bookmark [MindsDB repository on GitHub](https://github.com/mindsdb/mindsdb).
+- Sign up for a free [MindsDB account](https://cloud.mindsdb.com/register).
+- Engage with the MindsDB community on
+  [Slack](https://mindsdb.com/joincommunity) or
+  [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions and
+  share your ideas and thoughts.
+
+If this material was helpful, please give us a GitHub star
+[here](https://github.com/mindsdb/mindsdb).

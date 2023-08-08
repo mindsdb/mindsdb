@@ -1,0 +1,201 @@
+# Sentiment Analysis on Movie Reviews using OpenAI and MongoDB
+
+## Introduction
+
+Good Day Devs! In this tutorial, we are going to analyse the sentiment on movie reviews using OpenAi and MongoDB. we'll use Movie Reviews Dataset from [`Hugging Face`](https://huggingface.co/datasets/rotten_tomatoes).
+
+- type of sentiment we are going to analyse for movie review
+  - positive
+  - neutral
+  - negative
+
+## Data Setup
+
+- Download [`MongoDB Compass`](https://www.mongodb.com/try/download/compass) or [`MongoDB Shell`](https://www.mongodb.com/try/download/shell)
+- Download the [`Movie reviews`](https://huggingface.co/datasets/rotten_tomatoes) dataset
+- Run the `MongoDB Compass` or `MongoDB Shell`
+
+## Connecting the Database
+
+- Open the MongoDb Compass Or Shell.
+- Connect with URI : `mongodb://cloud.mindsdb.com`.
+- If you are using the MongoDB Shell then shell prompt will ask for `login-email` and `password` then hit `Enter` key to connect.
+- If you are using the MongoDB Compass then,
+  - add `URI` in the URI input area
+  - In `Advanced Connection Options` select `Authentication`
+  - Then select `Username/Password` ,enter credentials in it and hit `Connect` button.
+
+After connecting with the MindsDB Cloud, let's bring our database using `insertOne` statement,
+
+- `host` : connection string for the mongodb which you can get from `MongoDB Atlas`.
+
+```bash
+test> use mindsdb
+mindsdb> db.databases.insertOne({
+            'name': 'mongo_demo_db',
+            'engine': 'mongodb',
+            'connection_args': {
+                "host": "mongodb+srv://<username>:<password>@<cluster host/ID>.mongodb.net/",
+                "database": "public"
+            }
+        })
+```
+
+Here is the output:
+
+```bash
+{
+  acknowledged: true,
+  insertedId: ObjectId("6415a242e60077d8d3548786")
+}
+```
+
+// By following these steps you're good to go with further steps i.e, analyse the movie review sentiment.
+
+## Understanding the Data
+
+We use the movie reviews dataset, where each row has a movie review and we'll predication whether the review is positive, negative or neutral.
+
+Let’s look at the data stored in the `movie_reviews` table that contains the input columns for the model.
+
+```bash
+mindsdb> use mongo_demo_db
+mongo_demo_db> db.movie_reviews.find({}).limit(3)
+```
+
+Here is the output:
+
+```bash
+{
+  _id : "64129b66e24d840208b2e498",
+  review : "it was good"
+},
+{
+  _id : "64129d44e24d840208b2e49a",
+  review : "this is a film well worth seeing , talking and singing heads and all ."
+},
+{
+  _id : "64129d64e24d840208b2e49b",
+  review : "ultimately , it ponders the reasons we need stories so much ."
+}
+```
+
+## Training a Predictor
+
+We use the `openai` engine to predict the sentiment of the review.
+
+we can create a model for text sentiment analysis like this:
+
+```bash
+mongo_demo_db> use mindsdb
+mindsdb> db.models.insertOne({
+            name: 'sentiment_classifier_openai',
+            predict: 'sentiment',
+            training_options: {
+                        engine: 'openai',
+                        prompt_template: 'describe the sentiment of the reviews strictly as "positive", "neutral", or "negative". "offers that rare combination of entertainment and education":positive "the thing looks like a made-for-home-video quickie":negative "{{review}}.":'
+            }
+          })
+```
+
+Here is the output:
+
+```bash
+{
+  acknowledged: true,
+  insertedId: ObjectId("6415a242e60077d8d3641099")
+}
+```
+
+Here, we provided `prompt_template` option with mainly three sentiments, and those are `positive`, `negative` and `neutral`.
+
+## Status of a Predictor
+
+The next step is to check the status of a predictor. Once the above query has started execution, we can check the status of the creation process with the following query:
+
+```bash
+mindsdb> db.getCollection('models').find({
+            'name': 'sentiment_classifier_openai'
+          })
+```
+
+It may take a while to register as `complete` depending on the internet connection.
+
+## Making Predictions
+
+### Making a Single Prediction
+
+Once the creation is complete, the behavior is the same as with any other AI table.
+Here we are querying by specifying synthetic data in the actual query and the model we created i.e, `sentiment_classifier_openai`:
+
+```bash
+mindsdb> db.sentiment_classifier_openai.find({
+            review: "it was good"
+          })
+```
+
+On execution, we get:
+
+```bash
+{
+  review: "it was good",
+  sentiment: "neutral"
+}
+```
+
+### Making Batch Predictions
+
+Similarly, we can join model with another table for batch predictions with the following query:
+
+```bash
+mindsdb> db.sentiment_classifier_openai.find(
+            {
+                'collection': 'mongo_demo_db.movie_reviews'
+            },
+            {
+                'sentiment_classifier_openai.sentiment': 'sentiment',
+                'movie_reviews.review': 'review'
+            }
+          ).limit(5)
+```
+
+On execution, we get:
+
+```bash
+{
+  review : "it was good",
+  sentiment : "neutral"
+},
+{
+  review : "this is a film well worth seeing , talking and singing heads and all .",
+  sentiment : "positive"
+},
+{
+  review : "ultimately , it ponders the reasons we need stories so much .",
+  sentiment : "neutral"
+},
+{
+  review : "everytime you think undercover brother has run out of steam , it finds a new way to surprise and amuse",
+  sentiment : "positive"
+},
+{
+  review : "it's a feel-bad ending for a depressing story that throws a bunch of hot-button items in the viewer's face and asks to be seen as hip, winking social commentary.",
+  sentiment : "negative"
+}
+```
+
+The `movie_reviews` table is used to make batch predictions. Upon joining the `sentiment_classifier_openai` model with the `movie_reviews` table, the model uses all values from the `review` column.
+
+## What's Next?
+
+Have fun while trying it out yourself!
+
+- Bookmark [MindsDB repository on GitHub](https://github.com/mindsdb/mindsdb).
+- Sign up for a free [MindsDB account](https://cloud.mindsdb.com/register).
+- Engage with the MindsDB community on
+  [Slack](https://mindsdb.com/joincommunity) or
+  [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions and
+  share your ideas and thoughts.
+
+If this tutorial was helpful, please give us a GitHub star
+[here](https://github.com/mindsdb/mindsdb).

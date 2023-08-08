@@ -1,0 +1,318 @@
+---
+title: NLP with MindsDB and Hugging Face
+sidebarTitle: NLP with MindsDB and Hugging Face
+---
+
+## MindsDB NLP Supported Tasks
+
+There are four main NLP tasks currently supported by MindsDB:
+
+- Text Classification
+- Zero-Shot Classification
+- Translation
+- Summarization
+
+<Tip>
+Currently, MindsDB's NLP engine is powered by [Hugging Face](https://huggingface.co/) and [OpenAI](https://openai.com/). But we plan to expand to other NLP options in the future, so stay tuned!
+</Tip>
+
+<Tip>
+The MindsDB's Hugging Face engine is extensible. We are actively working on adding more tasks and models.
+If you have a specific task or model in mind, please let us know in the [MindsDB Community](https://community.mindsdb.com/).
+</Tip>
+
+## MindsDB NLP Tested Models
+
+<AccordionGroup>
+    <Accordion title="Text Classification" defaultOpen="true">
+        Completes the task of assigning a label to a text. For example, you can use it to classify a movie review as positive or negative.
+        ##### Supported Models
+        - [Spam detection](https://huggingface.co/mariagrandury/roberta-base-finetuned-sms-spam-detection)
+        - [Sentiment analysis](https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment)
+        - [Sentiment analysis Spanish](https://huggingface.co/pysentimiento/robertuito-sentiment-analysis)
+        - [Sentiment analysis finance](https://huggingface.co/ProsusAI/finbert)
+        - [Emotions classifier](https://huggingface.co/j-hartmann/emotion-english-distilroberta-base)
+        - [Emotions classifier Ekmanm's 6 emotions](https://huggingface.co/j-hartmann/emotion-english-distilroberta-base)
+        - [Toxicity classifier](https://huggingface.co/SkolkovoInstitute/roberta_toxicity_classifier)
+        - [Environmental, Social, and Governance (ESG) 4 classifier](https://huggingface.co/yiyanghkust/finbert-esg)
+        - [Environmental, Social, and Governance (ESG) 26 classifier](https://huggingface.co/nbroad/ESG-BERT)
+        - [Hate speech classifier](https://huggingface.co/Hate-speech-CNERG/bert-base-uncased-hatexplain)
+        - [Crypto Signals classifier](https://huggingface.co/ElKulako/cryptobert)
+        - [US political party classifier](https://huggingface.co/m-newhauser/distilbert-political-tweets)
+        - [Question Detection](https://huggingface.co/shahrukhx01/bert-mini-finetune-question-detection)
+        - [Industry classifier](https://huggingface.co/sampathkethineedi/industry-classification)
+
+    </Accordion>
+    <Accordion title="Zero-Shot Classification" defaultOpen="true">
+        Completes the task of assigning a label to a text without training on the labels.
+        For example, you can use it to classify a movie review as positive or negative without training on positive or negative labels.
+        ##### Supported Models
+        -[BART](https://huggingface.co/facebook/bart-large-mnli)
+    </Accordion>
+
+    <Accordion title="Translation" defaultOpen="true">
+        Completes the task of translating a text from one language to another. For example, you can use it to translate a text from English to French.
+        ##### Supported Models
+        - [English to French T5](https://huggingface.co/t5-base)
+        - [French to English T5](https://huggingface.co/t5-base)
+        - [Spanish to English](https://huggingface.co/Helsinki-NLP/opus-mt-es-en)
+    </Accordion>
+
+    <Accordion title="Summarization" defaultOpen="true">
+        Completes the task of summarizing a text. For example, you can use it to summarize an abstract into a title.
+        ##### Supported Models
+        - [BART](https://huggingface.co/sshleifer/distilbart-cnn-12-6)
+        - [Google Pegasus](https://huggingface.co/google/pegasus-xsum)
+    </Accordion>
+
+</AccordionGroup>
+
+The Hugging Face models are used to perform these tasks.
+Keep in mind that usually there is more than one model for each task,
+so you can choose the one that suits you best.
+
+## How to Bring the Hugging Face Model to MindsDB
+
+We use the [`CREATE MODEL`](/sql/create/model) statement to bring the Hugging Face models to MindsDB.
+
+Generally, it looks like this:
+
+```sql
+CREATE MODEL project_name.predictor_name        -- AI TABLE TO STORE THE MODEL
+PREDICT target_column                           -- NAME OF THE COLUMN TO STORE PREDICTED VALUES
+USING
+  engine = 'huggingface',                       -- USING THE HUGGING FACE ENGINE
+  task = 'task',                                -- TASK OF CLASSIFYING TEXT (OPTIONAL)
+  model_name = 'model_name_from_hugging_face',  -- MODEL NAME UNDER THE HUGGING FACE MODEL HUB
+  input_column = 'input_column',                -- COLUMN NAME OF THE INPUT DATA
+  labels = ['label', 'label_1'];                -- ARRAY OF LABELS
+```
+
+Where:
+
+| Expressions      | Description                                                                                         |
+| ---------------- | --------------------------------------------------------------------------------------------------- |
+| `project_name`   | Name of the project where the model is created. By default, the `mindsdb` project is used.          |
+| `predictor_name` | Name of the model to be created.                                                                    |
+| `target_column`  | Column to store the predicted values.                                                               |
+| `engine`         | Optional. You can provide an ML engine, based on which the model is created.                        |
+| `task`           | Optional. It is relative to the Hugging Face task tag.                                              |
+| `model_name`     | Model name from the Hugging Face model hub.                                                         |
+| `input_column`   | Name of the column that has the input data, especially important for batch predictions using JOIN.  |
+| `labels`         | Depending on the model. Usually used for Zero-Shot Classification models.                           |
+
+<Tip>
+For more examples and explanations, visit our [doc page on Hugging Face](/custom-model/huggingface/).
+</Tip>
+
+### Example using SQL
+
+Let's go through a Spam Classification example to understand better how to link Hugging Face models and bring them to MindsDB as AI tables.
+
+<Note>
+    **Using Local Installation of MindsDB**
+
+    Please note that if you use a local installation of MindsDB, instead of MindsDB Cloud, you should install `transformers==4.21.0` to be able to use the Hugging Face models.
+</Note>
+
+```sql
+CREATE MODEL mindsdb.spam_classifier                           
+PREDICT PRED                           
+USING
+  engine = 'huggingface',              
+  task = 'text-classification',        
+  model_name = 'mrm8488/bert-tiny-finetuned-sms-spam-detection', 
+  input_column = 'text_spammy',        
+  labels = ['ham', 'spam'];
+```
+
+Where:
+
+| Expressions      | Values                                                                                                                  |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `project_name`   | mindsdb                                                                                                                 |
+| `predictor_name` | spam_classifier                                                                                                         |
+| `target_column`  | PRED                                                                                                                    |
+| `engine`         | huggingface                                                                                                             |
+| `task`           | text-classification                                                                                                     |
+| `model_name`     | [mrm8488/bert-tiny-finetuned-sms-spam-detection](https://huggingface.co/mrm8488/bert-tiny-finetuned-sms-spam-detection) |
+| `input_column`   | text_spammy                                                                                                             |
+| `labels`         | ['ham', 'spam']                                                                                                         |
+
+
+On execution, we get:
+
+```sql
+Query successfully completed
+```
+
+Before querying for predictions, we should verify the status of the `spam_classifier` model.
+
+```sql
+DESCRIBE spam_classifier;
+```
+
+On execution, we get:
+
+```sql
++---------------+-------+--------+--------+-------+-------------+---------------+------+-----------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|NAME           |PROJECT|STATUS  |ACCURACY|PREDICT|UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY|TRAINING_OPTIONS                                                                                                                                                                                               |
++---------------+-------+--------+--------+-------+-------------+---------------+------+-----------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|spam_classifier|mindsdb|complete|[NULL]  |PRED   |up_to_date   |22.10.2.1      |[NULL]|[NULL]           |{'target': 'PRED', 'using': {'engine': 'huggingface', 'task': 'text-classification', 'model_name': 'mrm8488/bert-tiny-finetuned-sms-spam-detection', 'input_column': 'text_spammy', 'labels': ['ham', 'spam']}}|
++---------------+-------+--------+--------+-------+-------------+---------------+------+-----------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT h.PRED, h.PRED_explain, t.text_spammy AS input_text
+FROM example_db.demo_data.hf_test AS t
+JOIN mindsdb.spam_classifier AS h;
+```
+
+On execution, we get:
+
+```sql
++----+---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|PRED|PRED_explain                                             |input_text                                                                                                                                                       |
++----+---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|spam|{'spam': 0.9051626920700073, 'ham': 0.09483727067708969} |Free entry in 2 a wkly comp to win FA Cup final tkts 21st May 2005. Text FA to 87121 to receive entry question(std txt rate)T&C's apply 08452810075over18's      |
+|ham |{'ham': 0.9380123615264893, 'spam': 0.061987683176994324}|Nah I don't think he goes to usf, he lives around here though                                                                                                    |
+|spam|{'spam': 0.9064534902572632, 'ham': 0.09354648739099503} |WINNER!! As a valued network customer you have been selected to receivea £900 prize reward! To claim call 09061701461. Claim code KL341. Valid 12 hours only.    |
++----+---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+For the full library of supported examples please go [here](/nlp/nlp-extended-examples).
+
+### Example using MQL
+
+Let's go through a Sentiment Classification example, but this time we'll use a Mongo database.
+
+<Note>
+    **Using Local Installation of MindsDB**
+
+    Please note that if you use a local installation of MindsDB, instead of MindsDB Cloud, you should install `transformers==4.21.0` to be able to use the Hugging Face models.
+</Note>
+
+We have a sample Mongo database that you can connect to your MindsDB Cloud account by running this command in Mongo Shell:
+
+```bash
+use mindsdb
+```
+
+Followed by:
+
+```bash
+db.databases.insertOne({
+    'name': 'mongo_test_db', 
+    'engine': 'mongodb',
+    'connection_args': {
+        "host": "mongodb+srv://admin:201287aA@cluster0.myfdu.mongodb.net/admin?authSource=admin&replicaSet=atlas-5koz1i-shard-0&readPreference=primary&appname=MongoDB%20Compass&ssl=true",
+        "database": "test_data"
+        }   
+})
+```
+
+We use this sample database throughout the example.
+
+The next step is to create a connection between Mongo and MindsDB. Follow the instructions to connect MindsDB via [Mongo Compass](/connect/mongo-compass) or [Mongo Shell](/connect/mongo-shell).
+
+Now, we are ready to create a Hugging Face model.
+
+```bash
+db.models.insertOne({
+    name: 'sentiment_classifier',
+    predict: 'sentiment',
+    training_options: {
+            engine: 'huggingface',
+            task: 'text-classification',
+            model_name: 'cardiffnlp/twitter-roberta-base-sentiment',
+            input_column: 'comment',
+            labels: ['negative','neutral','positive']
+           }
+})
+```
+
+On execution, we get:
+
+```bash
+{ acknowledged: true,
+  insertedId: ObjectId("63c00c704d444a0b83808420") }
+```
+
+We can check its status using this command:
+
+```bash
+db.getCollection('models').find({'name': 'sentiment_classifier'})
+```
+
+On execution, we get:
+
+```bash
+{ NAME: 'sentiment_classifier_hf',
+  PROJECT: 'mindsdb',
+  VERSION: 1,
+  STATUS: 'complete',
+  ACCURACY: null,
+  PREDICT: 'sentiment',
+  UPDATE_STATUS: 'up_to_date',
+  MINDSDB_VERSION: '22.11.4.3',
+  ERROR: null,
+  SELECT_DATA_QUERY: null,
+  TRAINING_OPTIONS: '{\'target\': \'sentiment\', \'using\': {\'task\': \'text-classification\', \'model_name\': \'cardiffnlp/twitter-roberta-base-sentiment\', \'input_column\': \'comment\', \'labels\': [\'negative\', \'neutral\', \'positive\']}}',
+  TAG: null }
+```
+
+Once the status is `complete`, we can query for predictions.
+
+Here is how to query for a single prediction:
+
+```bash
+db.sentiment_classifier.find({comment: 'It is really easy to do NLP with MindsDB'})
+```
+
+On execution, we get:
+
+```bash
+{ sentiment: 'positive',
+  sentiment_explain: 
+   { positive: 0.9350261688232422,
+     neutral: 0.06265384703874588,
+     negative: 0.0023200225550681353 },
+  comment: 'It is really easy to do NLP with MindsDB' }
+```
+
+You can also query for batch predictions. Here we use the `mongo_test_db` database connected earlier in this example.
+
+```bash
+db.sentiment_classifier.find(
+    {'collection': 'mongo_test_db.user_comments'},
+    {'sentiment_classifier.sentiment': 'sentiment',
+     'user_comments.comment': 'comment'
+    }
+)
+```
+
+On execution, we get:
+
+```bash
+{ sentiment: 'positive', comment: 'I love pizza' }
+{ sentiment: 'negative', comment: 'I hate dancing' }
+{ sentiment: 'neutral', comment: 'Baking is not a big deal' }
+```
+
+For the full library of supported examples please go [here](/nlp/nlp-extended-examples).
+
+## What's Next?
+
+Have fun while trying it out yourself!
+
+- Bookmark [MindsDB repository on GitHub](https://github.com/mindsdb/mindsdb).
+- Sign up for a free [MindsDB account](https://cloud.mindsdb.com/register/nlp).
+- Engage with the MindsDB community on
+  [Slack](https://mindsdb.com/joincommunity) or
+  [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions and
+  share your ideas and thoughts.
+
+If this tutorial was helpful, please give us a GitHub star
+[here](https://github.com/mindsdb/mindsdb).

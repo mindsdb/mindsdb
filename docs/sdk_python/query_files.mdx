@@ -1,0 +1,16 @@
+---
+title: Query Files
+sidebarTitle: Query Files
+---
+
+## Description
+
+In MindsDB, files are treated as tables. These are stored in the default `files` database. To query a file, you must save this `files` database into a variable and then, run the `query()` function on it.
+
+## Syntax
+
+Here is the syntax:
+
+```
+server.get_database('files').query('SELECT * FROM table_name')
+```

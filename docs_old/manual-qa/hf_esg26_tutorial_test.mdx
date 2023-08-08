@@ -1,0 +1,44 @@
+## Testing: Hugging Face - ESG (26) Tutorial
+
+Testing CREATE MODEL
+```sql
+CREATE MODEL mindsdb.hf_esg_26
+PREDICT PRED
+USING
+engine = 'huggingface',
+task = 'text-classification',
+model_name = 'yiyanghkust/finbert-esg',
+input_column = 'text';
+```
+
+```sql
+| NAME | ENGINE | PROJECT | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | CURRENT_TRAINING_PHASE | TOTAL_TRAINING_PHASES | TRAINING_PHASE_NAME | TAG | CREATED_AT | TRAINING_TIME |
+| ---- | ------ | ------- | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | ---------------------- | --------------------- | ------------------- | --- | ---------- | ------------- |
+| hf_esg_26 | huggingface | mindsdb | 1 | complete | [NULL] | PRED | up_to_date | 23.6.3.1 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'task': 'text-classification', 'model_name': 'yiyanghkust/finbert-esg', 'input_column': 'text'}} | [NULL] | [NULL] | [NULL] | [NULL] | 2023-06-18 13:42:33.381029 | 42 |
+```
+
+Testing the status of the model
+```sql
+SELECT *
+FROM mindsdb.models 
+WHERE name = 'hf_esg_26';
+```
+
+```sql
+| NAME | ENGINE | PROJECT | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | CURRENT_TRAINING_PHASE | TOTAL_TRAINING_PHASES | TRAINING_PHASE_NAME | TAG | CREATED_AT | TRAINING_TIME |
+| ---- | ------ | ------- | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | ---------------------- | --------------------- | ------------------- | --- | ---------- | ------------- |
+| hf_esg_26 | huggingface | mindsdb | 1 | complete | [NULL] | PRED | up_to_date | 23.6.3.1 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'task': 'text-classification', 'model_name': 'yiyanghkust/finbert-esg', 'input_column': 'text'}} | [NULL] | [NULL] | [NULL] | [NULL] | 2023-06-18 13:42:33.381029 | 42 |
+```
+
+Testing SELECT (making predictions)
+```sql
+SELECT *
+FROM mindsdb.hf_esg_26
+WHERE text = 'We believe it is essential to establish validated conflict-free sources of 3TG within the Democratic Republic of the Congo (the “DRC”) and adjoining countries (together, with the DRC, the “Covered Countries”), so that these minerals can be procured in a way that contributes to economic growth and development in the region. To aid in this effort, we have established a conflict minerals policy and an internal team to implement the policy.';
+```
+
+```sql
+| PRED | PRED_explain | text |
+| ---- | ------------ | ---- |
+| Social | {"Environmental":0.2031957507133484,"Governance":0.08251894265413284,"None":0.05089299753308296,"Social":0.6633923053741455} | We believe it is essential to establish validated conflict-free sources of 3TG within the Democratic Republic of the Congo (the “DRC”) and adjoining countries (together, with the DRC, the “Covered Countries”), so that these minerals can be procured in a way that contributes to economic growth and development in the region. To aid in this effort, we have established a conflict minerals policy and an internal team to implement the policy. |
+```

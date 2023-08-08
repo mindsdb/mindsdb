@@ -1,0 +1,401 @@
+---
+title: FINETUNE Statement
+sidebarTitle: FINETUNE
+---
+
+## Description
+
+The `FINETUNE` statement lets you retrain a model with additional training data.
+
+Imagine you have a model that was trained with a certain dataset. Now there is more training data available and you wish to retrain this model with a new dataset. The `FINETUNE` statement lets you partially retrain the model, so it takes less time and resources than the [`RETRAIN`](/sql/api/retrain) statement. In the machine learning literature, this is also referred to as *fine-tuning* a model.
+
+## Syntax
+
+Here is the syntax:
+
+```sql
+FINETUNE project_name.model_name
+FROM integration_name
+    (SELECT column_name, ... FROM table_name)
+[USING
+    key = value,
+    ...];
+```
+
+Where:
+
+| Expressions                                 | Description                                                                                                        |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `project_name`                              | Name of the project where the model resides.                                                                       |
+| `model_name`                                | Name of the model to be retrained.                                                                                 |
+| `integration_name`                          | Name of the integration created using the [`CREATE DATABASE`](/sql/create/databases) statement or file upload.    |
+| `(SELECT column_name, ... FROM table_name)` | Selecting additional data to be used for retraining.                                                               |
+| `USING key = value`                         | Optional. The `USING` clause lets you pass multiple parameters to the `FINETUNE` statement.                          |
+
+<Info>
+**Model Versions**
+
+Every time the model is retrained/adjusted, its new version is created with an incremented version number. Unless overridden, the most recent version becomes active when training completes.
+
+You can query for all model versions like this:
+
+```sql
+SELECT *
+FROM project_name.models_versions;
+```
+
+For more information on managing model versions, check out our docs [here](/sql/api/manage-models-versions).
+</Info>
+ 
+## Example 1: Regression Model
+
+In this example, we use our sample PostgreSQL database. You can connect to it like this:
+
+```sql
+CREATE DATABASE example_db
+WITH ENGINE = "postgres",
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "3.220.66.106",
+    "port": "5432",
+    "database": "demo"
+    };
+```
+
+First, we create and train the model using a subset of the `home_rentals` data, considering properties that have been on the market less than 10 days.
+
+```sql
+CREATE MODEL mindsdb.adjust_home_rentals_model
+FROM example_db
+    (SELECT * 
+    FROM demo_data.home_rentals 
+    WHERE days_on_market < 10)
+PREDICT rental_price;
+```
+
+On execution, we get:
+
+```sql
+Query successfully completed
+```
+
+We can check its status using this command:
+
+```sql
+SELECT *
+FROM mindsdb.models
+WHERE name = 'adjust_home_rentals_model';
+```
+
+Once the status is complete, we can query for predictions.
+
+```sql
+SELECT rental_price, rental_price_explain 
+FROM mindsdb.adjust_home_rentals_model
+WHERE sqft = 1000
+AND location = 'great'
+AND neighborhood = 'berkeley_hills'
+AND number_of_rooms = 2
+AND number_of_bathrooms = 1
+AND days_on_market = 40;
+```
+
+On execution, we get:
+
+```sql
++---------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+| rental_price  | rental_price_explain                                                                                                                          |
++---------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+| 2621          | {"predicted_value": 2621, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 2523, "confidence_upper_bound": 2719} |
++---------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+```
+ 
+Let’s adjust this model with more training data. Now we consider properties that have been on the market for 10 or more days.
+
+```sql
+FINETUNE mindsdb.adjust_home_rentals_model
+FROM example_db
+    (SELECT * 
+    FROM demo_data.home_rentals 
+    WHERE days_on_market >= 10);
+```
+
+On execution, we get:
+
+```sql
+Query successfully completed
+```
+
+To check the status and versions of the model, run this command:
+
+```sql
+SELECT name, engine, project, active, version, status
+FROM mindsdb.models_versions
+WHERE name = 'adjust_home_rentals_model';
+```
+
+On execution, we get:
+
+```sql
++---------------------------+-----------+---------+--------+---------+----------+
+| name                      | engine    | project | active | version | status   |
++---------------------------+-----------+---------+--------+---------+----------+
+| adjust_home_rentals_model | lightwood | mindsdb | false  | 1       | complete |
+| adjust_home_rentals_model | lightwood | mindsdb | true   | 2       | complete |
++---------------------------+-----------+---------+--------+---------+----------+
+```
+
+Please note that the longer the property is on the market, the lower its rental price. Hence, we can expect the `rental_price` prediction to be lower.
+
+```sql
+SELECT rental_price, rental_price_explain 
+FROM mindsdb.adjust_home_rentals_model
+WHERE sqft = 1000
+AND location = 'great'
+AND neighborhood = 'berkeley_hills'
+AND number_of_rooms = 2
+AND number_of_bathrooms = 1
+AND days_on_market = 40;
+```
+
+On execution, we get:
+
+```sql
++---------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+| rental_price  | rental_price_explain                                                                                                                          |
++---------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+| 2055          | {"predicted_value": 2055, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 1957, "confidence_upper_bound": 2153} |
++---------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+## Example 2: Classification Model
+
+In this example, we again use our sample PostgreSQL database.
+
+First, we create and train the model using a subset of the `customer_churn` data, considering only female customers.
+
+```sql
+CREATE MODEL mindsdb.adjust_customer_churn_model
+FROM example_db
+    (SELECT *
+    FROM demo_data.customer_churn
+    WHERE gender = 'Female')
+PREDICT churn;
+```
+
+On execution, we get:
+
+```sql
+Query successfully completed
+```
+
+We can check its status using this command:
+
+```sql
+SELECT *
+FROM mindsdb.models
+WHERE name = 'adjust_customer_churn_model';
+```
+
+Once the status is complete, we can query for predictions.
+
+```sql
+SELECT churn, churn_explain
+FROM mindsdb.adjust_customer_churn_model
+WHERE seniorcitizen = 0
+AND partner = 'Yes'
+AND dependents = 'No'
+AND tenure = 1
+AND phoneservice = 'No'
+AND multiplelines = 'No phone service'
+AND internetservice = 'DSL';
+```
+
+On execution, we get:
+
+```sql
++--------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| churn  | churn_explain                                                                                                                                              |
++--------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| No     | {"predicted_value": "No", "confidence": 0.9887640449438202, "anomaly": null, "truth": null, "probability_class_No": 0.934, "probability_class_Yes": 0.066} |
++--------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+ 
+Let’s adjust this model with more training data. Now we also consider male customers.
+
+```sql
+FINETUNE mindsdb.adjust_customer_churn_model
+FROM example_db
+    (SELECT *
+    FROM demo_data.customer_churn
+    WHERE gender = 'Male');
+```
+
+On execution, we get:
+
+```sql
+Query successfully completed
+```
+
+To check the status and versions of the model, run this command:
+
+```sql
+SELECT name, engine, project, active, version, status
+FROM mindsdb.models_versions
+WHERE name = 'adjust_customer_churn_model';
+```
+
+On execution, we get:
+
+```sql
++-----------------------------+-----------+---------+--------+---------+----------+
+| name                        | engine    | project | active | version | status   |
++-----------------------------+-----------+---------+--------+---------+----------+
+| adjust_customer_churn_model | lightwood | mindsdb | false  | 1       | complete |
+| adjust_customer_churn_model | lightwood | mindsdb | true   | 2       | complete |
++-----------------------------+-----------+---------+--------+---------+----------+
+```
+
+Let’s query for a prediction again.
+
+```sql
+SELECT churn, churn_explain
+FROM mindsdb.adjust_customer_churn_model
+WHERE seniorcitizen = 0
+AND partner = 'Yes'
+AND dependents = 'No'
+AND tenure = 1
+AND phoneservice = 'No'
+AND multiplelines = 'No phone service'
+AND internetservice = 'DSL';
+```
+
+On execution, we get:
+
+```sql
++--------+--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| churn  | churn_explain                                                                                                                                                |
++--------+--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| No     | {"predicted_value": "No", "confidence": 0.9887640449438202, "anomaly": null, "truth": null, "probability_class_No": 0.9294, "probability_class_Yes": 0.0706} |
++--------+--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+Here after adjusting the model, there are no significant changes to the predictions. However, the probability class for `Yes` and `No` values has been updated. The probability of a `Yes` value has increased slightly, while the probability of a `No` value has decreased.
+
+## Example 3: OpenAI Model
+
+All OpenAI models belong to the group of Large Language Models (LLMs). By definition, these are pre-trained on large amounts of data. However, it is possible to fine-tune these models with a task-specific dataset for a defined use case.
+
+<Tip>
+OpenAI supports fine-tuning of some of its models, including `davinci`, `curie`, `babbage`, and `ada` ([more details here](https://platform.openai.com/docs/guides/fine-tuning)). And with MindsDB, you can easily fine-tune an OpenAI model making it more applicable to your specific use case.
+</Tip>
+
+Let's create a model to answer questions about MindsDB's custom SQL syntax.
+
+```sql
+CREATE MODEL openai_davinci
+PREDICT completion
+USING
+    engine = 'openai',
+    model_name = 'davinci',
+    prompt_template = 'Return a valid SQL string for the following question about MindsDB in-database machine learning: {{prompt}}';
+```
+
+You can check model status with this command:
+
+```sql
+DESCRIBE openai_davinci;
+```
+
+Once the status is complete, we can query for predictions:
+
+```sql
+SELECT prompt, completion
+FROM openai_davinci as m
+WHERE prompt = 'What is the SQL syntax to join input data with predictions from a MindsDB machine learning model?'
+USING max_tokens=400;
+```
+
+On execution, we get:
+
+```sql
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+| prompt                                                                                            | completion                                                                                           |
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+| What is the SQL syntax to join input data with predictions from a MindsDB machine learning model? | The SQL syntax is: SELECT * FROM input_data INNER JOIN predictions ON input_data.id = predictions.id |
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+```
+
+If you followed one of the MindsDB tutorials before, you'll see that the syntax provided by the model is not exactly as expected.
+
+Now, we'll fine-tune our model using a table that stores details about MindsDB's custom SQL syntax.
+
+<Info>
+Here is a table we'll use to fine-tune our model:
+
+```sql
+SELECT prompt, completion
+FROM files.openai_learninghub_ft;
+```
+
+And here is its content:
+
+```sql
++---------------------------------------------------------------------------------------------------+------------------------------------------+
+| prompt                                                                                            | completion                               |
++---------------------------------------------------------------------------------------------------+------------------------------------------+
+| What is the SQL syntax to connect a database to MindsDB?                                          | CREATE DATABASE datasource_name          |
+|                                                                                                   | [WITH] [ENGINE [=] engine_name] [,]      |
+|                                                                                                   | [PARAMETERS [=] {                        |
+|                                                                                                   |    "key": "value",                       |
+|                                                                                                   |    ...                                   |
+|                                                                                                   |    }];                                   |
+|                                                                                                   |                                          |
+| What is the SQL command to create a home rentals MindsDB machine learning model?                  | CREATE MODEL                             |
+|                                                                                                   |   mindsdb.home_rentals_model             |
+|                                                                                                   | FROM example_db                          |
+|                                                                                                   |   (SELECT * FROM demo_data.home_rentals) |
+|                                                                                                   | PREDICT rental_price;                    |
+|                                                                                                   |                                          |
+| What is the SQL syntax to join input data with predictions from a MindsDB machine learning model? | SELECT t.column_name, p.column_name, ... |
+|                                                                                                   | FROM integration_name.table_name [AS] t  |
+|                                                                                                   | JOIN project_name.model_name [AS] p;     |
++---------------------------------------------------------------------------------------------------+------------------------------------------+
+```
+</Info>
+
+This is how you can fine-tune an OpenAI model:
+
+```sql
+FINETUNE openai_davinci
+FROM files
+    (SELECT prompt, completion FROM openai_learninghub_ft);
+```
+
+The [`FINETUNE`](/sql/api/finetune) command creates a new version of the `openai_davinci` model. You can query all available versions as below:
+
+```sql
+SELECT *
+FROM models_versions
+WHERE name = 'openai_davinci';
+```
+
+Once the new version status is complete and active, we can query the model again, expecting a more accurate output.
+
+```sql
+SELECT prompt, completion
+FROM openai_davinci as m
+WHERE prompt = 'What is the SQL syntax to join input data with predictions from a MindsDB machine learning model?'
+USING max_tokens=400;
+```
+
+On execution, we get:
+
+```sql
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+| prompt                                                                                            | completion                                                                                           |
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+| What is the SQL syntax to join input data with predictions from a MindsDB machine learning model? | SELECT * FROM mindsdb.models.my_model JOIN mindsdb.input_data_name;                                  |
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+```

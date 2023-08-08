@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "mintlify": "<1.1.11"
+  }
+}

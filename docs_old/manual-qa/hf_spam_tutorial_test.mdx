@@ -1,0 +1,36 @@
+## Testing: Hugging Face - Spam Tutorial
+
+Testing CREATE MODEL
+
+```sql
+CREATE MODEL mindsdb.hf_spam
+PREDICT PRED
+USING
+engine = 'huggingface',
+task = 'text-classification',
+model_name = 'mariagrandury/roberta-base-finetuned-sms-spam-detection',
+input_column = 'text',
+labels = ['spam', 'ham'];
+```
+Status of the model
+
+```sql
+SELECT *
+FROM mindsdb.models 
+WHERE name = 'hf_spam';
+
+```
+
+Testing SELECT (making predictions)
+```sql
+SELECT *
+FROM mindsdb.hf_spam
+WHERE text = 'I like you. I love you.';
+
+```
+
+Output:
+
+| PRED | PRED_explain | text |
+| ---- | ------------ | ---- |
+| spam | {"ham":0.00020051795581821352,"spam":0.9997995495796204} | I like you. I love you. |

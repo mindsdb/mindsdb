@@ -1,5 +1,5 @@
 ---
-title: DROP JOB Statement
+title: DROP JOB
 sidebarTitle: DROP JOB
 ---
 
@@ -9,14 +9,28 @@ The `DROP JOB` statement deletes the job.
 
 ## Syntax
 
-Here is the syntax:
+Here is the syntax for deleting a job:
 
 ```sql
-DROP JOB job_name;
+DROP JOB [project_name.]job_name;
 ```
 
-On execution, we get:
+The `project_name` value is optional. The `job_name` value indicates the job to be deleted.
+
+Let's look at some examples:
 
 ```sql
-Query successfully completed
+DROP JOB my_project.retrain_and_save_job;
 ```
+
+Here we drop the `retrain_and_save_job` that resides in the `my_project` project.
+
+And another example:
+
+```sql
+DROP JOB create_table_job;
+```
+
+Here we drop the `create_table_job` job that resides in the current project.
+
+To learn more about projects in MindsDB, visit our docs [here](/sql/project).

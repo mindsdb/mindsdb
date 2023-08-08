@@ -1,0 +1,39 @@
+---
+title: adjust()
+sidebarTitle: adjust()
+---
+
+## Description
+
+The `adjust()` fuction lets us finetune the model with specific data.
+
+## Syntax
+
+Here is how you can finetune, or adjust, a model:
+
+```
+// Getting a model
+const homeRentalPriceModel = await MindsDB.Models.getModel('home_rentals_model', 'mindsdb');
+console.log('got a model');
+
+// Defining data used to finetune a model
+const adjustSelect = 'SELECT * FROM demo_data.home_rentals WHERE days_on_market >= 10';
+//const params = { 'key' : 'value' }
+
+try {
+
+  // Finetuning/adjusting a model with the specified dataset
+  await homeRentalPriceModel.adjust({
+    integration: 'example_db',
+    select: adjustSelect
+    //using: params
+  });
+  console.log('finetuned a model');  
+    
+} catch (error) {
+  // Something went wrong adjusting
+  console.log(error);
+}
+```
+
+You can find full adjust options [here](https://mindsdb.github.io/mindsdb-js-sdk/interfaces/models_trainingOptions.AdjustOptions.html).

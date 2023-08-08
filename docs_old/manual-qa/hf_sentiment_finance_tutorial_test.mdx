@@ -1,0 +1,54 @@
+## Testing: Hugging Face - Sentiment (Finance) Tutorial Tutorial
+
+Testing CREATE MODEL
+
+```sql
+CREATE MODEL mindsdb.hf_sentiment_finance
+PREDICT PRED
+USING
+engine = 'huggingface',
+task = 'text-classification',
+model_name = 'ProsusAI/finbert',
+input_column = 'text';
+```
+
+Output:
+```
+| NAME | ENGINE | PROJECT | ACTIVE | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | TAG |
+| ---- | ------ | ------- | ------ | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | --- |
+| hf_sentiment_finance | huggingface | mindsdb | true | 1 | generating | [NULL] | PRED | up_to_date | 23.5.4.1 | [NULL] | [NULL] | {'target': 'PRED', 'using': {'task': 'text-classification', 'model_name': 'ProsusAI/finbert', 'input_column': 'text'}} | [NULL] |
+
+```
+
+
+STATUS OF THE MODEL
+
+```sql
+SELECT *
+FROM mindsdb.models 
+WHERE name = 'hf_sentiment_finance';
+```
+Output:
+
+```
+| NAME | ENGINE | PROJECT | VERSION | STATUS | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY | TRAINING_OPTIONS | CURRENT_TRAINING_PHASE | TOTAL_TRAINING_PHASES | TRAINING_PHASE_NAME | TAG | CREATED_AT | TRAINING_TIME |
+| ---- | ------ | ------- | ------- | ------ | -------- | ------- | ------------- | --------------- | ----- | ----------------- | ---------------- | ---------------------- | --------------------- | ------------------- | --- | ---------- | ------------- |
+| hf_sentiment_finance | huggingface | mindsdb | 1 | complete | [NULL] | PRED | up_to_date | 23.5.4.1 | [NULL] | [NULL] | {"target":"PRED","using":{"input_column":"text","model_name":"ProsusAI/finbert","task":"text-classification"}} | [NULL] | [NULL] | [NULL] | [NULL] | 2023-06-04 07:27:14.234061 | 59 |
+```
+
+
+Testing SELECT (making predictions)
+
+```sql
+SELECT *
+FROM mindsdb.hf_sentiment_finance
+WHERE text = 'Stocks rallied and the British pound gained.';
+```
+
+Output:
+
+```
+| PRED | PRED_explain | text |
+| ---- | ------------ | ---- |
+| positive | {"negative":0.034473586827516556,"neutral":0.06716513633728027,"positive":0.898361325263977} | Stocks rallied and the British pound gained. |
+```

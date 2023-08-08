@@ -1,0 +1,172 @@
+---
+title: LangChain
+sidebarTitle: LangChain
+---
+
+LangChain is a machine learning framework for developing applications powered by large language models (LLMs).
+
+## How to Bring LangChain Models to MindsDB
+
+We use the [`CREATE MODEL`](/sql/create/model) statement to bring LangChain models to MindsDB.
+
+```sql
+CREATE MODEL tool_based_agent
+PREDICT completion
+USING
+    engine = 'langchain',
+    prompt_template = 'Answer the users input in a helpful way: {{input}}';
+```
+
+<Tip>
+Before using the LangChain engine, you need to create it based on the handler available in MindsDB:
+
+```sql
+CREATE ML_ENGINE langchain
+FROM langchain;
+```
+</Tip>
+
+Here, we create the `tool_based_agent` model using the LangChain engine, as defined in the `engine` parameter. This model answers users' questions in a helpful way, as defined in the `prompt_template` parameter, which specifies `input` as the input column when calling the model. `Agents` and `Tools` are some of the main abstractions that LangChain offers. You can read more about them in the LangChain documentation ([[1]](https://python.langchain.com/en/latest/modules/agents/getting_started.html), [[2]](https://python.langchain.com/en/latest/modules/agents/tools.html)).
+
+There are three different tools utilized by this agent:
+
+* **MindsDB** is the internal MindsDB executor.
+* **Metadata** fetches the metadata information for the available tables.
+* **Write** is able to write agent responses into a MindsDB data source.
+
+Each tool exposes the internal MindsDB executor in a different way to perform its tasks, effectively enabling the agent model to read from (and potentially write to) data sources or models available in the active MindsDB project.
+
+### Example 1: Describing Connected Data Sources
+
+We can ask questions about data sources connected to MindsDB.
+
+```sql
+SELECT input, completion
+FROM tool_based_agent
+WHERE input = 'Could you describe the `mysql_demo_db.house_sales` table please?'
+USING
+    verbose = True,
+    tools = [],
+    max_iterations = 10;
+```
+
+On execution, we get:
+
+```sql
++------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| input                                                            | completion                                                                                                                                                  |
++------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Could you describe the `mysql_demo_db.house_sales` table please? | The `mysql_demo_db.house_sales` table has four columns: `saledate` (text), `house_price_moving_average` (integer), `type` (text), and `bedrooms` (integer). |
++------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+To get information about the `mysql_demo_db.house_sales` table, the agent uses the Metadata tool. Then the agent prepares the response.
+
+<Note>
+The Write tool only comes into play when writing to other data sources. By default, the agent is able to write an answer back to the user (through standard output), like in this case.
+</Note>
+
+### Example 2: Analyzing Data
+
+We can ask questions to analyze the available data.
+
+```sql
+SELECT input, completion
+FROM tool_based_agent
+WHERE input = 'I want to know the average number of beds in the downtown neighbourhood as per the `mysql_demo_db.home_rentals` table'
+USING
+    verbose = True,
+    tools = [],
+    max_iterations = 10;
+```
+
+On execution, we get:
+
+```sql
++-----------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+| input                                                                                                                 | completion                                                                                                     |
++-----------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+| I want to know the average number of beds in the downtown neighbourhood as per the `mysql_demo_db.home_rentals` table | The average number of beds in the downtown neighbourhood as per the `mysql_demo_db.home_rentals` table is 1.6. |
++-----------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+```
+
+Here, the model uses the Metadata tool again to fetch the column information. As there is no `beds` column in the `mysql_demo_db.home_rentals` table, it uses the `number_of_rooms` column and writes the following query:
+
+```sql
+SELECT AVG(number_of_rooms)
+FROM mysql_demo_db.home_rentals
+WHERE neighborhood = 'downtown';
+```
+
+This query returns the value of 1.6, which is then used to write an answer.
+
+### Example 3: Retrieving Data
+
+We can ask the model to retrieve specific data.
+
+```sql
+SELECT input, completion
+FROM tool_based_agent
+WHERE input = 'There is a property in the south_side neighborhood with an initial price of 2543 the `mysql_demo_db.home_rentals` table. What are some other deatils of this listing?'
+USING
+    verbose = True,
+    tools = [],
+    max_iterations = 10;
+```
+
+On execution, we get:
+
+```sql
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| input                                                                                                                                                                 | completion                                                                                                                                                                              |
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| There is a property in the south_side neighborhood with an initial price of 2543 the `mysql_demo_db.home_rentals` table. What are some other deatils of this listing? | The property in the south_side neighborhood with an initial price of 2543 has 1 bedroom, 1 bathroom, is 630 sqft, has been on the market for 11 days, and has a rental price of 2543.0. |
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+Here, the model uses the Metadata tool again to fetch information about the table. Then, it creates and executes the following query:
+
+```sql
+SELECT *
+FROM mysql_demo_db.home_rentals
+WHERE neightborhood = 'south_side'
+AND initial_price = 2543;
+```
+
+On execution, the model gets this output:
+
+```sql
++---------------+-------------------+----+--------+--------------+-------------+------------+------------+
+|number_of_rooms|number_of_bathrooms|sqft|location|days_on_market|initial_price|neighborhood|rental_price|
++---------------+-------------------+----+--------+--------------+-------------+------------+------------+
+|1              |1                  |630 |great   |11            |2543         |south_side  |2543        |
++---------------+-------------------+----+--------+--------------+-------------+------------+------------+
+```
+
+Consequently, it takes the query output and writes an answer.
+
+### Example 4: Inserting Data
+
+We can ask the model to insert data into a table, assuming we have sufficient privileges on that database.
+
+```sql
+SELECT input, completion
+FROM tool_based_agent
+WHERE input = 'I want to insert a new record into the `local_database.home_rentals` table. Its details are: number_of_rooms=4, number_of_bathrooms=2, sqft=950'
+USING
+    verbose = True,
+    tools = [],
+    max_iterations = 10;
+```
+
+On execution, we get:
+
+```sql
++----------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| input                                                                                                                                                    | completion                                                                                                                                                   |
++----------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| I want to insert a new record into the `local_database.home_rentals_inserted` table. Its details are: number_of_rooms=4, number_of_bathrooms=2, sqft=950 | The record has been successfully inserted into the `local_database.home_rentals` table with the details: number_of_rooms=4, number_of_bathrooms=2, sqft=950. |
++----------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+The agent uses the Write tool to `INSERT INTO` the `local_database` database.

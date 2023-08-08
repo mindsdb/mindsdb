@@ -1,0 +1,17 @@
+---
+title: runQuery('INSERT INTO ...')
+sidebarTitle: runQuery('INSERT INTO ...')
+---
+
+## Description
+
+The `runQuery()` function executes a query given as its argument directly in MindsDB.
+
+## Syntax
+
+Here is the syntax:
+
+```
+const query = `INSERT INTO integration_name.table_name (SELECT ...)`;
+const queryResult = await MindsDB.SQL.runQuery(query);
+```

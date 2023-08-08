@@ -1,0 +1,96 @@
+---
+title: db.predictors.insertOne()
+sidebarTitle: db.predictors.insertOne()
+---
+
+## Description
+
+The `db.predictors.insertOne()` method creates and trains a new model.
+
+## Syntax
+
+Here is the syntax:
+
+```sql
+db.predictors.insertOne({
+     name: "predictor_name",
+     predict: "target_column",
+     connection: "integration_name",
+     select_data_query: "db.collection_name.find({})"
+});
+```
+
+On execution, we get:
+
+```json
+WriteResult({
+    "nInserted" : 1
+})
+```
+
+Where:
+
+| Expressions         | Description                                                                                                                            |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`              | The name of the model to be created.                                                                                                   |
+| `predict`           | The name of the target column to be predicted.                                                                                         |
+| `connection`        | The name of the integration created via [the `db.databases.insertOne()` method](/mongo/database/) or [file upload](/sql/create/file/). |
+| `select_data_query` | Object that stores the data collection name to be used for training and validation and additional arguments for filtering the data.    |
+
+<Note>
+Checking Predictor Status
+
+After running the `db.predictors.insertOne()`
+method, execute the `db.predictors.find()` method from the `mindsdb.models`
+collection to check the status of the model.
+
+```sql
+db.predictors.find({name: "model_name"});
+```
+
+</Note>
+
+## Example
+
+This example shows how you can create and train the `home_rentals_model` machine
+learning model to predict the rental prices for real estate properties inside
+the dataset.
+
+```sql
+db.predictors.insertOne({
+     name: "home_rentals_model",
+     predict: "rental_price",
+     connection: "mongo_integration",
+     select_data_query: "db.home_rentals.find({})"
+});
+```
+
+On execution, we get:
+
+```json
+WriteResult({
+    "nInserted" : 1
+})
+```
+
+To check the predictor status, query the `mindsdb.models` table using the `db.predictors.find()` command.
+
+```sql
+db.predictors.find({name: "home_rentals_model"});
+```
+
+On execution, we get:
+
+```json
+{
+  "name": "home_rentals_model",
+  "status": "complete",
+  "accuracy": 0.91,
+  "predict": "rental_price",
+  "update_status": "up_to_date",
+  "mindsdb_version": "22.8.3.1",
+  "error": null,
+  "select_data_query": "",
+  "training_options": ""
+}
+```

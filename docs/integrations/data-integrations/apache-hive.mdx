@@ -1,0 +1,59 @@
+---
+title: Apache Hive
+sidebarTitle: Apache Hive
+---
+
+This is the implementation of the Hive data handler for MindsDB.
+
+[Apache Hive](https://hive.apache.org/) is a data warehouse software project built on top of Apache Hadoop for providing data query and analysis. Hive gives an SQL-like interface to query data stored in various databases and file systems that integrate with Hadoop.
+
+## Implementation
+
+This handler is implemented using the `pyHive`, a Python library that allows you to use Python code to run SQL commands on Hive.
+
+The required arguments to establish a connection are as follows:
+
+* `user` is the username associated with the database.
+* `password` is the password to authenticate your access.
+* `host` is the server IP address or hostname.
+* `port` is the port through which TCP/IP connection is to be made.
+* `database` is the database name to be connected.
+* `auth` defaults to `CUSTOM` if not provided. Check for other options in [here](https://pypi.org/project/PyHive/).
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/hive_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the Hive database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE hive_datasource
+WITH
+  engine = 'hive',
+  parameters = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "127.0.0.1",
+    "port": "10000",
+    "database": "default"
+  };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM hive_datasource.table_name;
+```
+
+<Tip>
+To install `pyHive`, the following Linux packages are required:
+- libsasl2-dev 
+- sasl2-bin 
+- libsasl2-2 
+- libsasl2-dev 
+- libsasl2-modules 
+- libsasl2-modules-gssapi-mit
+</Tip>

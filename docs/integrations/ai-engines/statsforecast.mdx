@@ -1,0 +1,320 @@
+---
+title: Nixtla's StatsForecast Integration with MindsDB
+sidebarTitle: StatsForecast
+---
+
+Nixtla’s StatsForecast integration offers univariate time series forecasting models. StatsForecast uses classical methods such as ARIMA, rather than deep learning. Models train very quickly and generalize well, so are unlikely to overfit. Models also perform well on short time series, where deep learning models may be more likely to overfit.
+
+You can learn more about its features [here](https://nixtla.github.io/statsforecast/).
+
+## Example: StatsForecast
+
+Let's go through an example of how to use Nixtla's StatsForecast with MindsDB to forecast monthly expenditures.
+
+Please note that before using the StatsForecast engine, you should create it from the MindsDB Cloud editor with the below command:
+
+```sql
+CREATE ML_ENGINE statsforecast
+FROM statsforecast;
+```
+
+You can check the available engines with this command:
+
+```sql
+SHOW ML_ENGINES;
+```
+
+If you see the StatsForecast engine on the list, you are ready to follow the tutorials.
+
+### Tutorial using SQL
+
+In this tutorial, we create a model to predict expenditures based on historical data using the StatsForecast engine.
+
+We use a table from our MySQL public demo database, so let’s start by connecting MindsDB to it:
+
+```sql
+CREATE DATABASE mysql_demo_db
+WITH ENGINE = 'mysql',
+PARAMETERS = {
+    "user": "user",
+    "password": "MindsDBUser123!",
+    "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
+    "port": "3306",
+    "database": "public"
+};
+```
+
+Now that we’ve connected our database to MindsDB, let’s query the data to be used in the example:
+
+```sql
+SELECT *
+FROM mysql_demo_db.historical_expenditures
+LIMIT 3;
+```
+
+Here is the output:
+
+```sql
++------------+----------+-------------+
+| month      | category | expenditure |
++------------+----------+-------------+
+| 1982-04-01 | food     | 1162.6      |
+| 1982-05-01 | food     | 1150.9      |
+| 1982-06-01 | food     | 1160        |
++------------+----------+-------------+
+```
+
+The `historical_expenditures` table stores monthly expenditure data for various categories, such as `food`, `clothing`, `industry`, and more.
+
+Let's create a model table to predict the expenditures:
+
+```sql
+CREATE MODEL quarterly_expenditure_forecaster
+FROM mysql_demo_db
+  (SELECT * FROM historical_expenditures)
+PREDICT expenditure
+ORDER BY month
+GROUP BY category
+HORIZON 3
+USING ENGINE = 'statsforecast';
+```
+
+<Tip>
+Please visit our docs on the [`CREATE MODEL`](/sql/create/model) statement to learn more.
+</Tip>
+
+Please note that the `WINDOW` clause is not required because StatsForecast automatically calculates the best window as part of hyperparameter tuning.
+
+The `ENGINE` parameter in the `USING` clause specifies the ML engine used to make predictions.
+
+We can check the training status with the following query:
+
+```sql
+DESCRIBE quarterly_expenditure_forecaster;
+```
+
+One of the pros of using the StatsForecast engine is that it is fast - it doesn’t take long until the model completes the training process.
+
+Once the model status is `complete`, the behavior is the same as with any other AI table – you can query for batch predictions by joining it with a data table:
+
+```sql
+SELECT m.month as month, m.expenditure as forecasted
+FROM mindsdb.quarterly_expenditure_forecaster as m
+JOIN mysql_demo_db.historical_expenditures as t
+WHERE t.month > LATEST
+AND t.category = 'food';
+```
+
+Here is the output data:
+
+```sql
++----------------------------+-----------------+
+| month                      | forecasted      |
++----------------------------+-----------------+
+| 2017-10-01 00:00:00.000000 | 10256.251953125 |
+| 2017-11-01 00:00:00.000000 | 10182.58984375  |
+| 2017-12-01 00:00:00.000000 | 10316.259765625 |
++----------------------------+-----------------+
+```
+
+The `historical_expenditures` table is used to make batch predictions. Upon joining the `quarterly_expenditure_forecaster` model with the `historical_expenditures` table, we get predictions for the next quarter as defined by the `HORIZON 3` clause.
+
+Please note that the output `month` column contains both the date and timestamp. This format is used by default, as the timestamp is required when dealing with the hourly frequency of data.
+
+MindsDB provides the `LATEST` keyword that marks the latest training data point. In the `WHERE` clause, we specify the `month > LATEST` condition to ensure the predictions are made for data after the latest training data point.
+
+Let’s consider our `quarterly_expenditure_forecaster` model. We train the model using data until the third quarter of 2017, and the predictions come for the fourth quarter of 2017 (as defined by `HORIZON 3`).
+
+### Tutorial using MQL
+
+In this tutorial, we create a model to predict expenditures based on historical data using the StatsForecast engine.
+
+Before we start, visit our docs to learn how to connect [Mongo Compass](https://docs.mindsdb.com/connect/mongo-compass) and [Mongo Shell](https://docs.mindsdb.com/connect/mongo-shell) to MindsDB.
+
+We use a collection from our Mongo public demo database, so let’s start by connecting MindsDB to it from Mongo Compass or Mongo Shell:
+
+```bash
+> use mindsdb
+> db.databases.insertOne({
+        'name': 'mongo_demo_db',
+        'engine': 'mongodb',
+        'connection_args': {
+            "host": "mongodb+srv://user:MindsDBUser123!@demo-data-mdb.trzfwvb.mongodb.net/",
+            "database": "public"
+        }
+   })
+```
+
+Now that we’ve connected our database to MindsDB, let’s query the data to be used in the example.
+
+```bash
+> use mongo_demo_db
+> db.historical_expenditures.find({}).limit(3)
+```
+
+Here is the output:
+
+```bash
+{
+  _id: '63fd2388bee7187f230f56fc',
+  month: '1982-04-01',
+  category: 'food',
+  expenditure: '1162.6'
+}
+{
+  _id: '63fd2388bee7187f230f56fd',
+  month: '1982-05-01',
+  category: 'food',
+  expenditure: '1150.9'
+}
+{
+  _id: '63fd2388bee7187f230f56fe',
+  month: '1982-06-01',
+  category: 'food',
+  expenditure: '1160'
+}
+```
+
+The `historical_expenditures` collection stores monthly expenditure data for various categories, such as `food`, `clothing`, `industry`, and more.
+
+Let's create a model to predict the expenditures:
+
+```bash
+> use mindsdb
+> db.predictors.insertOne({
+       name: 'quarterly_expenditure_forecaster',
+       predict: 'expenditure',
+       connection: 'mongo_demo_db',
+       select_data_query: 'db.historical_expenditures.find({})',
+       training_options: {
+          timeseries_settings: {                
+              order_by: ['month'],               
+              group_by: ['category'],
+              horizon: 3           
+          },
+          engine: 'statsforecast'
+      }  
+  })
+```
+
+<Tip>
+Please visit our docs on the [`insertOne`](/mongo/insert) statement to learn more.
+</Tip>
+
+Please note that the `window` clause is not required because StatsForecast automatically calculates the best window as part of hyperparameter tuning.
+
+The `engine` parameter in the `training_options` clause specifies the ML engine used to make predictions.
+
+We can check the training status with the following query:
+
+```bash
+> db.getCollection('models').find({
+      name: 'quarterly_expenditure_forecaster'
+  })
+```
+
+One of the pros of using the StatsForecast engine is that it is fast - it doesn’t take long until the model completes the training process.
+
+Once the model status is `complete`, the behavior is the same as with any other AI collection – you can query for batch predictions by joining it with a data collection:
+
+```bash
+> db.quarterly_expenditure_forecaster.find({
+      collection: 'mongo_demo_db.historical_expenditures', 
+      query:  { 
+          "$where": "this.month > latest and this.category = 'food'" 
+      }
+  }).limit(3)
+```
+
+Here is the output data:
+
+```bash
+{
+  _id: '63fd2388bee7187f230f58a5',
+  month: 2017-10-01T00:00:00.000Z,
+  category: 'food',
+  expenditure: 10256.251953125
+}
+{
+  _id: '63fd2388bee7187f230f58a4',
+  month: 2017-11-01T00:00:00.000Z,
+  category: 'food',
+  expenditure: 10182.58984375
+}
+{
+  _id: '63fd2388bee7187f230f58a3',
+  month: 2017-12-01T00:00:00.000Z,
+  category: 'food',
+  expenditure: 10316.259765625
+}
+```
+
+The `historical_expenditures` collection is used to make batch predictions. Upon joining the `quarterly_expenditure_forecaster` model with the `historical_expenditures` collection, we get predictions for the next quarter as defined by the `horizon: 3` clause.
+
+Please note that the output `month` column contains both the date and timestamp. This format is used by default, as the timestamp is required when dealing with the hourly frequency of data.
+
+MindsDB provides the `latest` keyword that marks the latest training data point. In the `where` clause, we specify the `month > latest` condition to ensure the predictions are made for data after the latest training data point.
+
+Let’s consider our `quarterly_expenditure_forecaster` model. We train the model using data until the third quarter of 2017, and the predictions come for the fourth quarter of 2017 (as defined by `horizon: 3`).
+
+## Example: StatsForecast + HierarchicalForecast
+
+The StatsForecast handler also supports hierarchical reconciliation via Nixtla’s [HierarchicalForecast package](https://nixtla.github.io/hierarchicalforecast/). Hierarchical reconciliation may improve prediction accuracy when the data has a hierarchical structure.
+
+In this example, there may be a hierarchy as total expenditure is comprised of 7 different categories.
+
+```sql
+SELECT DISTINCT category
+FROM mysql_demo_db.historical_expenditures;
+```
+
+Here are the available categories:
+
+```sql
++-------------------+
+| category          |
++-------------------+
+| food              |
+| household_goods   |
+| clothing          |
+| department_stores |
+| other             |
+| cafes             |
+| industry          |
++-------------------+
+```
+
+Spending in each category may be related over time. For example, if spending on `food` rises in October 2017, it may be more likely that spending on `cafes` also rises in October 2017. Hierarchical reconciliation can account for this shared information.
+
+Here is how we can create a model:
+
+```sql
+CREATE MODEL hierarchical_expenditure_forecaster
+FROM mysql_demo_db
+  (SELECT * FROM historical_expenditures)
+PREDICT expenditure
+ORDER BY month
+GROUP BY category
+HORIZON 3
+USING
+  ENGINE = 'statsforecast',
+  HIERARCHY = [‘category’];
+```
+
+You can use the `DESCRIBE [MODEL]` command to check for details:
+
+```sql
+DESCRIBE hierarchical_expenditure_forecaster.model;
+```
+
+On execution, we get:
+
+```sql
++------------+-----------+---------------+--------------+
+| model_name | frequency | season_length | hierarchy    |
++------------+-----------+---------------+--------------+
+| AutoARIMA  | MS        | 1             | ["category"] |
++------------+-----------+---------------+--------------+
+```
+
+Predictions with this model account for the hierarchical structure. The output may differ from the default model, which does not assume any hierarchy.

@@ -1,0 +1,37 @@
+---
+title: getDatabase.delete()
+sidebarTitle: getDatabase.delete()
+---
+
+## Description
+
+The `delete` function removes a data source from MindsDB. Please note that in order to delete a connected data source, we need to fetch it first with the `getDatabase` function.
+
+## Syntax
+
+Here is how to get an existing database and remove it:
+
+```
+try {
+
+  const db = await MindsDB.Databases.getDatabase('mysql_datasource');
+  console.log('got a database')
+    
+  // Deleting a database
+  if (db) {
+    try {
+
+      await db.delete();
+      console.log('deleted a database');
+      
+    } catch (error) {
+      // Couldn't delete a database
+      console.log(error);
+    }
+  } 
+
+} catch (error) {
+    // Couldn't connect to database
+    console.log(error);
+  }
+```

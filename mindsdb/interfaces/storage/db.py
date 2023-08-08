@@ -29,10 +29,7 @@ def init(connection_str: str = None):
         'pool_size': 30,
         'max_overflow': 200
     }
-    if connection_str.startswith('sqlite:'):
-        engine = create_engine(connection_str, echo=False, **base_args)
-    else:
-        engine = create_engine(connection_str, convert_unicode=True, echo=False, **base_args)
+    engine = create_engine(connection_str, echo=False, **base_args)
     session = scoped_session(sessionmaker(bind=engine, autoflush=True))
     Base.query = session.query_property()
 

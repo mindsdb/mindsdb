@@ -1641,6 +1641,10 @@ class SQLQuery():
                     # unknown operation, exit immediately
                     return predictor_data
 
+                if isinstance(arg, dt.date):
+                    # convert to datetime
+                    arg = dt.datetime.combine(arg, dt.datetime.min.time())
+
                 # check condition
                 filter_op2 = op_map[filter_op]
                 if getattr(val, filter_op2)(arg):

@@ -66,10 +66,6 @@ def learn_process(class_path, engine, context_dump, integration_id,
                 training_data_columns_count = len(training_data_df.columns)
                 training_data_rows_count = len(training_data_df)
 
-                if target not in training_data_df.columns:
-                    raise Exception(
-                        f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
-
             predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
             predictor_record.training_data_columns_count = training_data_columns_count
             predictor_record.training_data_rows_count = training_data_rows_count

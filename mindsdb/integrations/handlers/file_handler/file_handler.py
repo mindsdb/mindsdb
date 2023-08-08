@@ -26,15 +26,10 @@ from mindsdb.integrations.libs.response import (
 )
 
 
-def clean_row(row):
-    n_row = []
-    for cell in row:
-        if str(cell) in ['', ' ', '  ', 'NaN', 'nan', 'NA']:
-            n_row.append(None)
-        else:
-            n_row.append(cell)
-
-    return n_row
+def clean_cell(val):
+    if str(val) in ['', ' ', '  ', 'NaN', 'nan', 'NA']:
+        return None
+    return val
 
 
 class FileHandler(DatabaseHandler):
@@ -104,41 +99,36 @@ class FileHandler(DatabaseHandler):
 
         if custom_parser:
             header, file_data = custom_parser(data, fmt)
+            df = pd.DataFrame(file_data, columns=header)
 
         elif fmt == 'parquet':
             df = pd.read_parquet(data)
-            header = df.columns.values.tolist()
-            file_data = df.values.tolist()
 
         elif fmt == 'csv':
-            df = pd.read_csv(data, sep=dialect.delimiter)
-            header = df.columns.values.tolist()
-            file_data = df.values.tolist()
+            df = pd.read_csv(data, sep=dialect.delimiter, index_col=False)
 
         elif fmt in ['xlsx', 'xls']:
             data.seek(0)
             df = pd.read_excel(data)
-            header = df.columns.values.tolist()
-            file_data = df.values.tolist()
 
         elif fmt == 'json':
             data.seek(0)
             json_doc = json.loads(data.read())
             df = pd.json_normalize(json_doc, max_level=0)
-            header = df.columns.values.tolist()
-            file_data = df.values.tolist()
 
         else:
             raise ValueError('Could not load file into any format, supported formats are csv, json, xls, xlsx')
 
-        if clean_rows:
-            file_list_data = [clean_row(row) for row in file_data]
-        else:
-            file_list_data = file_data
+        header = df.columns.values.tolist()
+
+        df = df.rename(columns={
+            key: key.strip() for key in header
+        })
+        df = df.applymap(clean_cell)
 
         header = [x.strip() for x in header]
         col_map = dict((col, col) for col in header)
-        return pd.DataFrame(file_list_data, columns=header), col_map
+        return df, col_map
 
     @staticmethod
     def is_it_parquet(data: BytesIO) -> bool:

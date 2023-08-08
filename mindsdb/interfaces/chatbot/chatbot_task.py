@@ -1,3 +1,4 @@
+import traceback
 import datetime as dt
 
 from mindsdb.integrations.libs.api_handler import APIChatHandler
@@ -5,6 +6,8 @@ from mindsdb.integrations.libs.api_handler import APIChatHandler
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.tasks.task import BaseTask
+
+from mindsdb.utilities import log
 
 from .polling import MessageCountPolling, RealtimePolling
 from .memory import DBMemory, HandlerMemory
@@ -64,9 +67,19 @@ class ChatBotTask(BaseTask):
 
     def on_message(self, chat_memory, message: ChatBotMessage):
 
+        try:
+            self._on_message(chat_memory, message)
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except Exception:
+            self.set_error(str(traceback.format_exc()))
+
+    def _on_message(self, chat_memory, message: ChatBotMessage):
         # add question to history
         # TODO move it to realtime pooling
         chat_memory.add_to_history(message)
+
+        log.logger.debug(f'>>chatbot {chat_memory.chat_id} in: {message.text}')
 
         # process
         bot_executor = self.bot_executor_cls(self, chat_memory)
@@ -85,6 +98,7 @@ class ChatBotTask(BaseTask):
 
         # send to chat adapter
         self.chat_pooling.send_message(response_message)
+        log.logger.debug(f'>>chatbot {chat_id} out: {response_message.text}')
 
         # send to history
         chat_memory.add_to_history(response_message)

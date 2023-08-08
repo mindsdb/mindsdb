@@ -74,7 +74,7 @@ def create_chatbot(project_name, name, chatbot):
         session_controller.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
     except PredictorRecordNotFound:
         return http_error(
-            HTTPStatus.NOT_FOUND,
+            HTTPStatus.BAD_REQUEST,
             'Model not found',
             f'Model with name {model_name} not found')
 

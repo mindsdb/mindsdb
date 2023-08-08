@@ -122,11 +122,15 @@ class ModelController():
         if not hasattr(ml_handler, 'describe'):
             raise Exception("ML handler doesn't support description")
 
-        df = ml_handler.describe(attribute)
 
         if attribute is None:
             # show model record
             model_info = self.get_model_info(model_record)
+
+            try:
+                df = ml_handler.describe(attribute)
+            except NotImplementedError:
+                df = pd.DataFrame()
 
             # expecting list of attributes in first column df
             attributes = []
@@ -139,7 +143,7 @@ class ModelController():
             model_info.insert(0, 'tables', [attributes])
             return model_info
         else:
-            return df
+            return ml_handler.describe(attribute)
 
     def get_model(self, name, version=None, ml_handler_name=None, project_name=None):
         show_active = True if version is None else None
@@ -458,8 +462,26 @@ class ModelController():
     @profiler.profile()
     def finetune_model(self, statement, ml_handler):
         params = self.prepare_finetune_statement(statement, ml_handler.database_controller)
-        predictor_record = ml_handler.update(**params)
+        predictor_record = ml_handler.finetune(**params)
         return self.get_model_info(predictor_record)
+
+    def update_model(self, session, project_name: str, model_name: str, problem_definition, version=None):
+
+        model_record = get_model_record(
+            name=model_name,
+            version=version,
+            project_name=project_name,
+            except_absent=True
+        )
+        integration_record = db.Integration.query.get(model_record.integration_id)
+
+        ml_handler_base = session.integration_controller.get_handler(integration_record.name)
+
+        ml_handler = ml_handler_base._get_ml_handler(model_record.id)
+        if not hasattr(ml_handler, 'update'):
+            raise Exception("ML handler doesn't updating")
+
+        ml_handler.update(args=problem_definition)
 
     def get_model_info(self, predictor_record):
         from mindsdb.interfaces.database.projects import ProjectController
@@ -534,7 +556,7 @@ class ModelController():
                 active=None
             )
             if model_record.active:
-                raise Exception(f"Can't remove active version: f{model['PROJECT']}.{model['NAME']}.{model['VERSION']}")
+                raise Exception(f"Can't remove active version: {model['PROJECT']}.{model['NAME']}.{model['VERSION']}")
 
             is_cloud = self.config.get('cloud', False)
             if is_cloud:

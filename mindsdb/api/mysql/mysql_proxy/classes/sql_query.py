@@ -95,12 +95,10 @@ def get_preditor_alias(step, mindsdb_database):
 def get_table_alias(table_obj, default_db_name):
     # (database, table, alias)
     if isinstance(table_obj, Identifier):
-        if len(table_obj.parts) > 2:
-            raise ErSqlWrongArguments(f'Table name must contain no more than 2 parts. Got name: {table_obj.parts}')
-        elif len(table_obj.parts) == 1:
+        if len(table_obj.parts) == 1:
             name = (default_db_name, table_obj.parts[0])
         else:
-            name = tuple(table_obj.parts)
+            name = (table_obj.parts[0], table_obj.parts[-1])
     elif isinstance(table_obj, Select):
         # it is subquery
         if table_obj.alias is None:
@@ -716,7 +714,7 @@ class SQLQuery():
                 result = steps_data[-1]
                 self.fetched_data = result
         except Exception as e:
-            raise SqlApiUnknownError("error in preparing result quiery step") from e
+            raise SqlApiUnknownError("error in preparing result query step") from e
 
         try:
             if hasattr(self, 'columns_list') is False:

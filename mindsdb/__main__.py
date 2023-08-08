@@ -9,6 +9,7 @@ import asyncio
 import secrets
 import traceback
 import threading
+from textwrap import dedent
 from packaging import version
 
 from mindsdb.__about__ import __version__ as mindsdb_version
@@ -189,16 +190,14 @@ if __name__ == '__main__':
     print(f'Configuration file:\n   {config.config_path}')
     print(f"Storage path:\n   {config['paths']['root']}")
 
-    # @TODO Backwards compatibility for tests, remove later
     for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():
         import_meta = handler_meta.get('import', {})
-        dependencies = import_meta.get('dependencies')
         if import_meta.get('success', False) is not True:
-            print(f"Dependencies for the handler '{handler_name}' are not installed by default.\n",
-                  f'If you want to use "{handler_name}" please install "{dependencies}"')
-
-    # from mindsdb.utilities.fs import get_marked_processes_and_threads
-    # marks = get_marked_processes_and_threads()
+            print(dedent('''
+                Some handlers cannot be imported. You can check list of available handlers by execute command in sql editor:
+                    select * from information_schema.handlers;
+            '''))
+            break
 
     if not is_cloud:
         # region creating permanent integrations
@@ -237,22 +236,6 @@ if __name__ == '__main__':
         if is_modified is True:
             db.session.commit()
         # endregion
-
-        for integration_name in config.get('integrations', {}):
-            try:
-                it = integration_controller.get(integration_name)
-                if it is not None:
-                    integration_controller.delete(integration_name)
-                print(f'Adding: {integration_name}')
-                integration_data = config['integrations'][integration_name]
-                engine = integration_data.get('type')
-                if engine is not None:
-                    del integration_data['type']
-                integration_controller.add(integration_name, engine, integration_data)
-            except Exception as e:
-                log.logger.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
-
-    # @TODO Backwards compatibility for tests, remove later
 
     if args.api is None:
         api_arr = ['http', 'mysql']

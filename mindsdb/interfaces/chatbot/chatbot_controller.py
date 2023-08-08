@@ -46,7 +46,7 @@ class ChatBotController:
 
         return query.first()
 
-    def get_chatbots(self, project_name: str = 'mindsdb') -> List[db.ChatBots]:
+    def get_chatbots(self, project_name: str = 'mindsdb') -> List[dict]:
         '''
         Gets all chatbots in a project.
 
@@ -60,7 +60,7 @@ class ChatBotController:
         project = self.project_controller.get(name=project_name)
 
         query = db.session.query(
-            db.ChatBots
+            db.ChatBots, db.Tasks
         ).join(
             db.Tasks, db.ChatBots.id == db.Tasks.object_id
         ).filter(
@@ -69,7 +69,30 @@ class ChatBotController:
             db.Tasks.company_id == ctx.company_id,
         )
 
-        return query.all()
+        session = SessionController()
+        database_names = {
+            i['id']: i['name']
+            for i in session.database_controller.get_list()
+        }
+
+        bots = []
+        for bot, task in query.all():
+            bots.append(
+                {
+                    'id': bot.id,
+                    'name': bot.name,
+                    'project': project_name,
+                    'database_id': bot.database_id,  # TODO remove in future
+                    'database': database_names.get(bot.database_id, '?'),
+                    'model_name': bot.model_name,
+                    'params': bot.params,
+                    'created_at': bot.created_at,
+                    'is_running': task.active,
+                    'last_error': task.last_error,
+                }
+            )
+
+        return bots
 
     def add_chatbot(
             self,

@@ -103,7 +103,7 @@ class ChatBotsResource(Resource):
                 HTTPStatus.NOT_FOUND,
                 'Project not found',
                 f'Project with name {project_name} does not exist')
-        return [b.as_dict() for b in all_bots]
+        return all_bots
 
     @ns_conf.doc('create_chatbot')
     def post(self, project_name):

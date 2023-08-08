@@ -252,6 +252,27 @@ On execution, we get:
 +----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
+## Available Modes
+
+You can define a mode for OpenAI models as follows:
+
+```sql
+CREATE MODEL model_name
+PREDICT target_column
+USING
+   engine = 'openai',
+   mode = 'mode_name',
+   prompt_template = 'message to the model';
+```
+
+The available modes include `default`, `conversational`, `conversational-full`, `image`, `embedding`.
+
+- The `default` mode is used by default. The model replies to the `prompt_template` message.
+- The `conversational` mode enables the model to read and reply to multiple messages.
+- The `conversational-full` mode enables the model to read and reply to multiple messages, one reply per message.
+- The `image` mode is used when we want the model to create an image instead of a text reply.
+- The `embedding` mode enables the model to return output in the form of embeddings.
+
 ## Example
 
 Let's go through a sentiment classification example to understand better how to bring OpenAI models to MindsDB as AI tables.

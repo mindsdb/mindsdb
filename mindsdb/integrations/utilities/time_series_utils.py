@@ -54,7 +54,6 @@ def get_results_from_nixtla_df(nixtla_df, model_args):
     else:
         group_by_col = model_args["group_by"][0]
         return_df[group_by_col] = return_df["unique_id"]
-    return_df['ds'] = pd.Series(return_df.ds.dt.to_pydatetime(), dtype=object)
     return return_df.drop(["unique_id"], axis=1).rename({"ds": model_args["order_by"]}, axis=1)
 
 

@@ -17,11 +17,11 @@ FROM monkeylearn`
 PREDICT tag
 USING
 engine = 'monkeylearn',
-api_key = '275430c92b4b10c6280a54c476367c5c9248eaa6',
-model_id = 'cl_GhPhiVYE',
+api_key = 'your_api_key',
+model_id = 'monkeylearn_model_id',
 input_column = 'text';`
 
-![2 create_model1](https://github.com/mindsdb/mindsdb/assets/32901682/4e6f60db-ceac-409a-90c8-c64999a860c3)
+![createmodel1](https://github.com/mindsdb/mindsdb/assets/32901682/40bc9607-3a13-442d-ae23-159fca7bae4c)
 
 
 **Select model:**
@@ -56,11 +56,12 @@ FROM files (select * from queries)
 PREDICT tag
 USING
 engine = 'monkeylearn',
-api_key = '275430c92b4b10c6280a54c476367c5c9248eaa6',
-model_id = 'cl_GhPhiVYE',
+api_key = 'your_api_key',
+model_id = 'monkeylearn_model_id',
 input_column = 'text';`
 
-![6 create_model2](https://github.com/mindsdb/mindsdb/assets/32901682/8380fad9-57c9-4fcf-9b6b-b7ca4f0702f9)
+![createmodel2](https://github.com/mindsdb/mindsdb/assets/32901682/1c9a849b-f8d8-4ac1-9954-ed977d08cf2f)
+
 
 
 **Select a prediction:**
@@ -94,11 +95,12 @@ The file is uploaded directly into the GUI.
 FROM files (select * from queries2)
 PREDICT tag
 USING
-engine = 'monkeylearn',
-api_key = '275430c92b4b10c6280a54c476367c5c9248eaa6',
-model_id = 'cl_GhPhiVYE',
+api_key = 'your_api_key',
+model_id = 'monkeylearn_model_id',
 input_column = 'text';`
-![9 3rd_model](https://github.com/mindsdb/mindsdb/assets/32901682/a27f4b5e-fbd2-4ea7-a8d8-b097e9621aa2)
+
+![model3](https://github.com/mindsdb/mindsdb/assets/32901682/0a02cd2a-596a-43d7-abd5-6d517c656781)
+
 
 
 **Select prediction:**

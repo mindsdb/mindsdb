@@ -106,7 +106,7 @@ class HandlerMemory(BaseMemory):
                 ]
             ),
             order_by=[OrderBy(Identifier(time_col))],
-            limit=Constant(1),
+            limit=Constant(self.MAX_DEPTH),
         )
 
         resp = self.chat_task.chat_handler.query(ast_query)

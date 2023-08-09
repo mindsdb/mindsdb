@@ -87,6 +87,7 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==23.1.2 &
     pip install --no-cache-dir 'pysurrealdb' 'websocket' || true && \
     pip install --no-cache-dir 'pygithub' || true && \
     pip install --prefer-binary --no-cache-dir hugging_py_face || true && \
+    pip install --no-cache-dir pyignite || true && \
     pip install --prefer-binary --no-cache-dir ShopifyApi || true
 
 ARG VERSION=

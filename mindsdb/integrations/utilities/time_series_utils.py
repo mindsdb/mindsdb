@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from sklearn.metrics import r2_score
 from hierarchicalforecast.core import HierarchicalReconciliation
@@ -59,7 +60,8 @@ def get_results_from_nixtla_df(nixtla_df, model_args):
 def infer_frequency(df, time_column, default=DEFAULT_FREQUENCY):
     try:  # infer frequency from time column
         date_series = pd.to_datetime(df[time_column]).unique()
-        date_series.sort()
+        if isinstance(date_series, np.ndarray):
+            date_series.sort()
         inferred_freq = pd.infer_freq(date_series)
     except TypeError:
         inferred_freq = default

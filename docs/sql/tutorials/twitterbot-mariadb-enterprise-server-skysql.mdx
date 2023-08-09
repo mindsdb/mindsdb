@@ -16,11 +16,11 @@ You’ll build a system that scans for targeted content to respond to, and uses 
 <table>
   <tr>
    <td>
-      <img src="assets/tutorials/twitter_chatbot/placeholder.png" width="" alt="alt_text" title="Twitter Bot Profile Page" />
+      <img src="assets/tutorials/twitter_chatbot/Twitter-chatbot-snoopstien.png" width="" alt="alt_text" title="Twitter Bot Profile Page" />
       <a href="https://www.twitter.com/snoop_stein">https://www.twitter.com/snoop_stein</a>
    </td>
    <td>
-      <img src="assets/tutorials/twitter_chatbot/placeholder.png" width="" alt="alt_text" title="Live Twitter Bot Interactivity" />
+      <img src="assets/tutorials/twitter_chatbot/Twitter-chatbot-mindsdb-testing-live-twitter.png" width="" alt="alt_text" title="Live Twitter Bot Interactivity" />
    </td>
   </tr>
 </table>
@@ -31,7 +31,7 @@ You’ll build a system that scans for targeted content to respond to, and uses 
 You’ll use [MindsDB](https://docs.mindsdb.com/what-is-mindsdb) to construct the bot and interact with LLMs like OpenAI’s ChatGPT, while indexing and storing accumulated tweet data in a [MariaDB relational database](https://skysql.cloud/mindsdb-docs). In the diagram below, the teal colored database represents data in MariaDB. The gray/light blue colored database represents data stored in MindsDB. What you build can then be embedded into your application with one of MindsDB SDKs, and/or called from the [MindsDB REST API](https://docs.mindsdb.com/rest/sql).
 
 
-![alt_text](assets/tutorials/twitter_chatbot/placeholder.png "Tutorial Architecture")
+![alt_text](assets/tutorials/twitter_chatbot/Twitter-chatbot-mindsdb-mariadb-sql.png "Tutorial Architecture")
 
 
 But wait, isn’t MindsDB a database, you might rightly ask? MindsDB manages AI models and automates workflows connecting AI models with enterprise databases. MindsDB is an AI Database rather than a traditional database. Therefore, if your model necessitates considerable input or yields a substantial output volume, or if you're seeking the data reliability assurances provided by a relational database, it's advisable to allocate that data storage to a different platform. Ultimately, MindsDB focuses on streamlining the processes of linking your data, training models and deploying AI models rather than being a comprehensive storage solution.
@@ -68,7 +68,7 @@ MariaDB ColumnStore extends MariaDB Enterprise Server database with distributed,
 
 
 
-![alt_text](images/animated-gif-skysql-service-create.gif "How to Create SkySQL Service")
+![alt_text](assets/tutorials/twitter_chatbot/animated-gif-skysql-service-create.gif "How to Create SkySQL Service")
 
 
 **> Technology, topology : Enterprise Server** > **ColumnStore Data Warehouse**
@@ -91,7 +91,7 @@ Now let’s create the schema to hold data from Twitter’s API calls from Minds
 In the SkySQL Console left-hand navigation pane, click **Workspace**> **Query Editor**. Copy and paste the SQL code (below the screenshot) into the editor and click the run button as shown below, which will produce the two tables in the schema browser, `chatbot_input `and `chatbot_output`. 
 
 
-![alt_text](assets/tutorials/twitter_chatbot/placeholder.png "Creating MariaDB datasbase schema")
+![alt_text](assets/tutorials/twitter_chatbot/Twitter-chatbot-mindsdb-mariadb-CS-SQL.png "Creating MariaDB datasbase schema")
 
 
 SQL to execute:
@@ -142,7 +142,7 @@ This will create the `chatbot_input `and `chatbot_output `tables.
 Tweets have a long list of fields in the Twitter API and object model; if you look at their [API documentation](https://developer.twitter.com/en/docs/twitter-api/data-dictionary/object-model/tweet) you’ll see this tutorial is using a subset. Of course, the datatypes and field titles are most clearly visible in the SQL script above. You’ll also see them and their values in the MindsDB console (pictured below) as you do testing, develop and execute queries. This will help you target the content you want ChatGPT (another supported LLM) to respond to from Twitter.
 
 
-![alt_text](assets/tutorials/twitter_chatbot/placeholder.png "TWitter output in MindsDB console")
+![alt_text](assets/tutorials/twitter_chatbot/Twitter-chatbot-mindsdb-console.png "TWitter output in MindsDB console")
 
 
 
@@ -158,16 +158,16 @@ Ok, a little more infrastructure setup to do before we roll up our sleeves and g
 
 Let’s add the MindsDB Cloud IP addresses to the network allowlist on SkySQL. To get the IPs, click on the **add > new datasource** button in the MindsDB console, and search/choose MariaDB. You’ll see the IP addresses in question on the resulting screen. 
 
-![alt_text](assets/tutorials/twitter_chatbot/placeholder.png "New Datasource Dialog")
+![alt_text](assets/tutorials/twitter_chatbot/Twitter-chatbot-mindsdb-console-new-DS.png "New Datasource Dialog")
 
-![alt_text](assets/tutorials/twitter_chatbot/placeholder.png "Getting IP addresses for allowlist")
+![alt_text](assets/tutorials/twitter_chatbot/Twitter-chatbot-mindsdb-sky-allowlist.png "Getting IP addresses for allowlist")
 
 
 Copy/paste these IPs Into a temporary text document and then add them with the /32 CIDR notation to the SkySQL > **settings**> **secure access** panel as shown below:
 
 
 
-![alt_text](assets/tutorials/twitter_chatbot/placeholder.png  "Configuring allow lists")
+![alt_text](assets/tutorials/twitter_chatbot/Twitter-chatbot-mindsdb-mariadb-IP-allow.png  "Configuring allow lists")
 
 
 If you’re developing on a laptop, MariaDB SkySQL will automatically prompt you to update the allowlist for new IP addresses as you travel, ensuring that your laptop IP can communicate to the query editor, regardless of your location.
@@ -198,7 +198,7 @@ You can find the values to fill in this template in the SkySQL console. To get t
 **Dashboard > Connect** as shown below:
 
 
-![alt_text](images/mariadb-sky-connect.gif "Accessing SkySQL Connect Dialog")
+![alt_text](assets/tutorials/twitter_chatbot/mariadb-sky-connect.gif "Accessing SkySQL Connect Dialog")
 
 
 **About SSL**: We recommend setting SSL to false for development and testing purposes. For production systems, it should be enabled. You can learn more about these settings in the MindsDB [documentation for connecting to MariaDB](https://docs.mindsdb.com/connect/connect-mariadb-skysql).
@@ -215,7 +215,7 @@ Then, execute the completed SQL template in the MindsDB SQL editor by highlighti
 
 
 
-![alt_text](assets/tutorials/twitter_chatbot/placeholder.png "Generated SQL template for SkySQL connection")
+![alt_text](assets/tutorials/twitter_chatbot/Twitter-chatbot-mindsdb-new-DS-SQL.png "Generated SQL template for SkySQL connection")
 
 
 You’ll notice a DB connection icon now on the left hand nav for MindsDB Demo cloud (mariadb_db in the above screenshot).
@@ -227,7 +227,7 @@ Click the **add > new datasource** button in the MindsDB console, and search/cho
 
 
 
-![alt_text](assets/tutorials/twitter_chatbot/placeholder.png "New Datasource Dialog")
+![alt_text](assets/tutorials/twitter_chatbot/Twitter-chatbot-mindsdb-console-new-DS.png "New Datasource Dialog")
 
 
 [Fill in the template](https://docs.mindsdb.com/app-integrations/twitter) with your Twitter API keys/tokens. Then, in the MindsDB SQL editor, select the SQL, and execute it by clicking **Run**.

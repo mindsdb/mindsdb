@@ -47,8 +47,25 @@ def get_all_website_links(url):
             
     domain_name = urlparse(url).netloc
     try:
-        content_html = requests.get(url).content
-        soup = BeautifulSoup(content_html, "html.parser")
+        # Create a session to handle cookies
+        session = requests.Session()
+
+        # Add headers to mimic a real browser request
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36"
+        }
+
+        # Send GET request
+        response = session.get(url, headers=headers)
+        # Accept cookies if necessary
+        if 'cookie' in response.request.headers:
+            session.cookies.update(response.cookies)
+
+        content_html = response.text
+
+        # Parse HTML content with BeautifulSoup
+        soup = BeautifulSoup(content_html, 'html.parser')
+
     except Exception as e:
         error_message = traceback.format_exc().splitlines()[-1]
         logging.error("An exception occurred: %s", str(e))
@@ -75,25 +92,32 @@ def get_all_website_links(url):
 
     return {'url': url,'urls': urls, 'html_content': content_html, 'text_content': content_text, 'error': None}
 
-
-# this returns the soup object
 def get_readable_text_from_soup(soup):
 
-    # Remove script and style elements
-    for script in soup(["script", "style"]):
-        script.decompose()
+ 
+    # Start formatting as Markdown
+    markdown_output = ""
 
-    # Get text, #todo add new line for li elements
-    text = soup.get_text()
+    # Iterate through headings and paragraphs
+    for tag in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'ul', 'ol', 'li']):
+        if tag.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
+            markdown_output += "#" * int(tag.name[1]) + " " + tag.get_text().strip() + "\n\n"
+        elif tag.name == 'p':
+            markdown_output += tag.get_text().strip() + "\n\n"
+        elif tag.name == 'a':
+            markdown_output += f"[{tag.get_text().strip()}]({tag['href']})\n\n"
+        elif tag.name == 'ul':
+            for li in tag.find_all('li'):
+                markdown_output += f"* {li.get_text().strip()}\n"
+            markdown_output += "\n"
+        elif tag.name == 'ol':
+            for index, li in enumerate(tag.find_all('li')):
+                markdown_output += f"{index + 1}. {li.get_text().strip()}\n"
+            markdown_output += "\n"
 
-    # Remove leading and trailing spaces on each line
-    lines = (line.strip() for line in text.splitlines())
-    # Break multi-headlines into a line each
-    chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-    # Remove blank lines
-    text = '\n'.join(chunk for chunk in chunks if chunk)
+    return markdown_output
 
-    return text
+
 
 
 # this bad girl does the recursive crawling of the websites

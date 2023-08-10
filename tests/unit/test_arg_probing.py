@@ -1,5 +1,3 @@
-from unittest.mock import Mock, patch
-
 import pytest
 
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler

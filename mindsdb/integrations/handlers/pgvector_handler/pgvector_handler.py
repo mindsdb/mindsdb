@@ -1,10 +1,8 @@
 from collections import OrderedDict
 
+import pandas as pd
 import psycopg
-from mindsdb_sql import ASTNode, parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from pandas import DataFrame
-from psycopg.pq import ExecStatus
+from mindsdb_sql import ASTNode, CreateTable, Insert, Select
 
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import (
     PostgresHandler,
@@ -13,7 +11,6 @@ from mindsdb.integrations.libs.base import VectorStoreHandler
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse as Response
-from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
 
@@ -27,102 +24,128 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
         super().__init__(name=name, **kwargs)
 
-    def check_connection(self) -> StatusResponse:
-        """
-        Check the connection of the PostgreSQL database
-        :return: success status and error message if error occurs
-        """
-        response = StatusResponse(False)
-        need_to_close = self.is_connected is False
-
-        try:
-            connection = self.connect()
-            with connection.cursor() as cur:
-                cur.execute("select 1;")
-            response.success = True
-        except psycopg.Error as e:
-            log.logger.error(f"Error connecting to PostgreSQL {self.database}, {e}!")
-            response.error_message = e
-
-        if response.success is True and need_to_close:
-            self.disconnect()
-        if response.success is False and self.is_connected is True:
-            self.is_connected = False
-
-        return response
-
     @profiler.profile()
-    def native_query(self, query: str) -> Response:
+    def connect(self):
         """
-        Receive SQL query and runs it
-        :param query: The SQL query to run in PostgreSQL
-        :return: returns the records from the current recordset
+        Handles the connection to a PostgreSQL database instance.
         """
-        need_to_close = self.is_connected is False
+        if self.is_connected is True:
+            return self.connection
 
-        connection = self.connect()
-        with connection.cursor() as cur:
+        config = {
+            "host": self.connection_args.get("host"),
+            "port": self.connection_args.get("port"),
+            "user": self.connection_args.get("user"),
+            "password": self.connection_args.get("password"),
+            "dbname": self.connection_args.get("database"),
+        }
+
+        if self.connection_args.get("sslmode"):
+            config["sslmode"] = self.connection_args.get("sslmode")
+
+        if self.connection_args.get("schema"):
+            config[
+                "options"
+            ] = f'-c search_path={self.connection_args.get("schema")},public'
+
+        connection = psycopg.connect(**config, connect_timeout=10)
+
+        self.is_connected = True
+        self.connection = connection
+
+        with self.connection.cursor() as cur:
             try:
+                # load pg_vector extension
                 cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
-                cur.execute(query)
-                if ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
-                    response = Response(RESPONSE_TYPE.OK)
-                else:
-                    result = cur.fetchall()
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        DataFrame(result, columns=[x.name for x in cur.description]),
-                    )
-                connection.commit()
+                self.connection.commit()
 
-            except Exception as e:
-                log.logger.error(f"Error running query: {query} on {self.database}!")
-                response = Response(
-                    RESPONSE_TYPE.ERROR, error_code=0, error_message=str(e)
+            except psycopg.Error as e:
+                log.logger.error(
+                    f"Error loading pg_vector extension, ensure you have installed it before running, {e}!"
                 )
-                connection.rollback()
 
-        if need_to_close is True:
-            self.disconnect()
+        return self.connection
 
-        return response
+    def similarity_search(self, query: ASTNode) -> Response:
+        """
+        Run a select query on the vectorpg database using the <-> operator.
+        """
+
+        collection_name = query.from_table.parts[-1]
+
+        with self.connection.cursor() as cur:
+            try:
+                # convert search embedding to string
+                string_embeddings_search = str(query.where.args[1].items[0].value)
+                # get limit from query
+                limit = query.limit.value if query.limit else 5
+                # we need to use the <-> operator to search for similar vectors,
+                # so we need to convert the string to a vector and also use a threshold (e.g. 0.5)
+                cur.execute(
+                    f"SELECT * FROM {collection_name} WHERE embedding <-> '{string_embeddings_search}' < 0.5 LIMIT {limit}"
+                )
+                self.connection.commit()
+                result = cur.fetchall()
+            except psycopg.Error as e:
+                log.logger.error(f"Error creating table {collection_name}, {e}!")
+                return Response(resp_type=RESPONSE_TYPE.ERROR, error_message=e)
+
+        result = pd.DataFrame(result, columns=["id", "embeddings"])
+
+        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=result)
+
+    def run_create_collection(self, query: ASTNode) -> Response:
+        """
+        Run a create table query on the pgvector database.
+        """
+        collection_name = query.name.parts[-1]
+
+        with self.connection.cursor() as cur:
+            try:
+                cur.execute(
+                    f"CREATE TABLE IF NOT EXISTS {collection_name} (id bigserial PRIMARY KEY, embedding vector)"
+                )
+                self.connection.commit()
+            except psycopg.Error as e:
+                log.logger.error(f"Error creating table {collection_name}, {e}!")
+                return Response(resp_type=RESPONSE_TYPE.ERROR, error_message=e)
+
+        return Response(resp_type=RESPONSE_TYPE.OK)
 
     @profiler.profile()
     def query(self, query: ASTNode) -> Response:
         """
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
         """
-        query_str = self.renderer.get_string(query, with_failback=True)
-        return self.native_query(query_str)
 
-    def get_tables(self) -> Response:
-        """
-        List all tables in PostgreSQL without the system tables information_schema and pg_catalog
-        """
-        query = """
-            SELECT
-                table_schema,
-                table_name,
-                table_type
-            FROM
-                information_schema.tables
-            WHERE
-                table_schema NOT IN ('information_schema', 'pg_catalog')
-                and table_type in ('BASE TABLE', 'VIEW')
-        """
-        return self.native_query(query)
+        try:
+            self.connect()
 
-    def get_columns(self, table_name: str) -> Response:
-        query = f"""
-            SELECT
-                column_name as "Field",
-                data_type as "Type"
-            FROM
-                information_schema.columns
-            WHERE
-                table_name = '{table_name}'
-        """
-        return self.native_query(query)
+            if isinstance(query, Select):
+                if query.where:
+                    return self.similarity_search(query)
+                else:
+                    query_str = self.renderer.get_string(query, with_failback=True)
+                    return self.native_query(query_str)
+
+            elif isinstance(query, CreateTable):
+                return self.run_create_collection(query)
+
+            elif isinstance(query, Insert):
+                query_str = self.renderer.get_string(query, with_failback=True)
+                return self.native_query(query_str)
+
+            else:
+                raise NotImplementedError(
+                    f"Unsupported query type {query.__class__.__name__}!"
+                )
+
+        except Exception as e:
+            log.logger.error(f"Error executing query on pgvector db, {e}!")
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Error executing query on pgvector db, {e}!",
+            )
 
 
 connection_args = OrderedDict(

@@ -1,0 +1,75 @@
+---
+title: MindsDB and MLflow
+sidebarTitle: MLflow
+---
+
+MLflow allows you to create, train, and serve machine learning models, apart from other features, such as organizing experiments, tracking metrics, and more.
+
+## How to Use MLflow Models in MindsDB
+
+Here are the prerequisites for using MLflow-served models in MindsDB:
+
+1. Train a model via a wrapper class that inherits from the `mlflow.pyfunc.PythonModel` class. It should expose the `predict()` method that returns the predicted output for some input data when called.
+
+    <Warning>
+    Please ensure that the Python version specified for Conda environment matches the one used to train the model.
+    </Warning>
+
+2. Start the MLflow server:
+
+    ```bash
+    mlflow server -p 5001 --backend-store-uri sqlite:////path/to/mlflow.db --default-artifact-root ./artifacts --host 0.0.0.0
+    ```
+
+3. Serve the trained model:
+
+    ```bash
+    mlflow models serve --model-uri ./model_folder_name
+    ```
+
+## Example
+
+Let's create a model that registers an MLflow-served model as an AI Table:
+
+```sql
+CREATE MODEL mindsdb.mlflow_model
+PREDICT target
+USING
+    engine = 'mlflow',
+    model_name = 'model_folder_name',                     -- replace the model_folder_name variable with a real value
+    mlflow_server_url = 'http://0.0.0.0:5001/',           -- match the port number with the MLflow server (point 2 in the previous section)
+    mlflow_server_path = 'sqlite:////path/to/mlflow.db',  -- replace the path with a real value (here we use the sqlite database)
+    predict_url = 'http://localhost:5000/invocations';    -- match the port number that serves the trained model (point 3 in the previous section)
+```
+
+Here is how to check the models status:
+
+```sql
+DESCRIBE mlflow_model;
+```
+
+Once the status is `complete`, we can query for predictions.
+
+One way is to query for a single prediction using synthetic data in the `WHERE` clause.
+
+```sql
+SELECT target
+FROM mindsdb.mlflow_model
+WHERE text = 'The tsunami is coming, seek high ground';
+```
+
+Another way is to query for batch predictions by joining the model with the data table.
+
+```sql
+SELECT t.text, m.predict
+FROM mindsdb.mlflow_model AS m
+JOIN files.some_text as t;
+```
+
+Here, the data table comes from the `files` integration. It is joined with the model and predictions are made for all the records at once.
+
+<Tip>
+**Get More Insights**
+
+Check out the article on [How to bring your own machine learning model to databases](https://medium.com/mindsdb/how-to-bring-your-own-machine-learning-model-to-databases-47a188d6db00) by [Patricio Cerda Mardini](https://medium.com/@paxcema) to learn more.
+</Tip>

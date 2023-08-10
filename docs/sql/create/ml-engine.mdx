@@ -36,6 +36,10 @@ FROM handler_name
 
 Please replace `ml_engine_name`, `handler_name`, and optionally, `argument_key` and `argument_value` with the real values.
 
+<Note>
+Please do not use the same `ml_engine_name` as the `handler_name` to avoid issue while dropping the ML engine.
+</Note>
+
 To verify that your ML engine was successfully created, run the command below:
 
 ```sql

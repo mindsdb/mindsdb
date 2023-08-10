@@ -1,0 +1,81 @@
+## Testing: Sentiment Analysis Tutorial
+
+Testing CREATE DATABASE
+
+```sql
+CREATE DATABASE mysql_demo_db
+WITH ENGINE = 'mysql',
+PARAMETERS = {
+    "user": "user",
+    "password": "MindsDBUser123!",
+    "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
+    "port": "3306",
+    "database": "public"
+};
+```
+
+```sql
+Query successfully completed
+```
+
+Testing CREATE MODEL
+```sql
+CREATE MODEL sentiment_classifier_model
+PREDICT sentiment
+USING
+  engine = 'openai',
+  prompt_template = 'describe the sentiment of the reviews
+                     strictly as "positive", "neutral", or "negative".
+                     "I love the product":positive
+                     "It is a scam":negative
+                     "{{review}}.":';
+```
+
+```sql
+| NAME                       | ENGINE | PROJECT | ACTIVE | VERSION | STATUS      | ACCURACY | PREDICT   | UPDATE_STATUS | MINDSDB_VERSION | ERROR | SELECT_DATA_QUERY                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | TRAINING_OPTIONS | TAG |
+| -------------------------- | ------ | ------- | ------ | ------- | ----------- | -------- | --------- | -------------- | ---------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | --- |
+| sentiment_classifier_model | openai | mindsdb | true   | 1       | generating  | [NULL]   | sentiment | up_to_date     | 23.4.4.2        | [NULL] | {'target': 'sentiment', 'using': {'prompt_template': 'describe the sentiment of the reviews\n                     strictly as "positive", "neutral", or "negative".\n                     "I love the product":positive\n                     "It is a scam":negative\n                     "{{review}}.":'}} | [NULL]           |
+```
+
+
+Testing SELECT (making predictions)
+```sql
+SELECT review, sentiment
+FROM sentiment_classifier_model
+WHERE review = 'The movie was really good.';
+```
+
+```sql
+
+| review                       | sentiment |
+| ---------------------------- | --------- |
+| The movie was really good.   | positive. |
+```
+
+```sql
+SELECT review, sentiment
+FROM sentiment_classifier_model
+WHERE review = 'Every day is a new opportunity to learn, grow and improve yourself';
+```
+
+```sql
+| review                                                             | sentiment |
+| -------------------------------------------------------------------| --------- |
+| Every day is a new opportunity to learn, grow and improve yourself | neutral   |
+```
+
+
+```sql
+SELECT review, sentiment
+FROM sentiment_classifier_model
+WHERE review = 'Its the worst experience I have had';
+```
+
+```sql
+| review                                   | sentiment |
+| ---------------------------------------- | --------- |
+| It's the worst experience I have had     | negative  |
+```
+
+
+

@@ -1,0 +1,153 @@
+---
+title: Twitter
+sidebarTitle: Twitter
+---
+
+In this section, we present how to integrate a Twitter account with MindsDB.
+
+## Connection
+
+To connect a Twitter account to MindsDB, you need a Twitter developer account.
+
+<Tip>
+We recommend you use the [Elevated access](https://developer.twitter.com/en/support/twitter-api/developer-account) allowing you to pull 2m tweets and to avoid _parameters or authentication issue_ error you might get sometimes. You can check [this step-by-step guide](https://medium.com/@skillcate/set-up-twitter-api-to-pull-2m-tweets-month-44d004c6f7ce) describing how to apply for the Elevated access.
+</Tip>
+
+If you don't already have a Twitter developer account, follow the steps in the video below to apply for one.
+
+<Accordion title="How to Apply for a Twitter Developer Account" icon="twitter" iconType="thin">
+
+  [Begin here to apply for a Twitter developer account](https://developer.twitter.com/apply-for-access)
+
+  <div style={{position: "relative", paddingBottom: "59.602649006622514%", height: 0}}><iframe src="https://www.youtube.com/embed/qVe7PeC0sUQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture; web-share" style={{position: "absolute", top: 0, left: 0, width: "100%", height: "100%"}}></iframe></div>
+
+  When presented with questions under *How will you use the Twitter API or Twitter Data?*, use answers similar to the ones below (tweak to fit your exact use case). The more thorough your answers are, the more likely it is your account will get approved.
+
+  **Intended Usage (In Your Words)**
+
+  *I have a blog and want to educate users how to use the Twitter API with MindsDB.*
+
+  *I will read tweets that mention me and use them with MindsDB machine learning to generate responses. I plan to post tweets 2-3 times a day and keep using Twitter like I normally would.*
+
+  **Are you planning to analyze Twitter data?**
+
+  *I plan to build machine learning algorithms based on Twitter data. I am interested in doing sentiment analysis and topic analysis.*
+
+  *I will potentially extract:*
+  * *Tweet text*
+  * *Favorite count and retweet count*
+  * *Hashtags and mentions*
+
+  **Will your app use Tweet, Retweet, Like, Follow, or Direct Message functionality?**
+
+  *I will use the Twitter API to post responses to tweets that mention me.*
+
+  *I will have word filters to make sure that I never share offensive or potentially controversial subjects.*
+
+  **Do you plan to display Tweets or aggregate data about Twitter content outside Twitter?**
+
+  *I plan to share aggregate data as examples for users of my upcoming blog. I don't intend to create an automated dashboard that consumes a lot of Twitter API calls.*
+
+  *Every API call will be done locally, or automated on a simple web server. Aggregate of data will be for educational purposes only.*
+
+  **Will your product, service, or analysis make Twitter content or derived information available to a government entity?**
+
+  Answer NO to this one.
+</Accordion>
+
+If you already have a Twitter developer account, you need to generate API keys following the instructions below or heading to the [Twitter developer website](https://developer.twitter.com/en).
+
+<Accordion title="How to Generate API Keys" icon="twitter" iconType="thin">
+  * Create an application with Read/Write permissions activated:
+    * Open [developer portal](https://developer.twitter.com/en/portal/projects-and-apps).
+    * Select the `Add app` button to create a new app.
+    * Select the `Create new` button.
+    * Select `Production` and give it a name.
+    * Copy and populate the following in the below `CREATE DATABASE` statement:
+      * `Bearer Token` as a value of the `bearer_token` parameter.
+      * `API Key` as a value of the `consumer_key` parameter.
+      * `API Key Secret` as a value of the `consumer_secret` parameter.
+  * Setup user authentication settings:
+    * Click `Setup` under `User authentication settings`:
+    * On `Permissions`, select `Read and Write`.
+    * On `Type of app`, select `Web App`, `Automated App or Bot`.
+    * On `App info`, provide any URL for the callback URL and website URL (you can use the URL of this page).
+    * Click `Save`.
+  * Generate access tokens:
+    * Once you are back in the app settings, click `Keys and Tokens`:
+    * Generate `Access Token` and `Access Token Secret` and populate it in the below `CREATE DATABASE` statement:
+      * `Access Token` as a value of the `access_token` parameter.
+      * `Access Token Secret` as a value of the `access_token_secret` parameter.
+</Accordion>
+
+Once you have all the tokens and keys, here is how to connect your Twitter account to MindsDB:
+
+```sql
+CREATE DATABASE my_twitter 
+WITH 
+    ENGINE = 'twitter',
+    PARAMETERS = {
+      "bearer_token": "twitter bearer token",
+      "consumer_key": "twitter consumer key",
+      "consumer_secret": "twitter consumer key secret",
+      "access_token": "twitter access token",
+	  "access_token_secret": "twitter access token secret"
+    };
+```
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/twitter_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+The `my_twitter` database contains a table called `tweets` by default.
+
+Here is how to search tweets containing `mindsdb` keyword:
+
+```sql
+SELECT id, created_at, author_username, text 
+FROM my_twitter.tweets 
+WHERE query = '(mindsdb OR #mindsdb) -is:retweet -is:reply'
+AND created_at > '2023-02-16' 
+LIMIT 20;
+```
+
+<Warning>
+Please note that we can see only recent tweets from the past seven days. The `created_at` column condition is skipped if the provided date is earlier than seven days.
+</Warning>
+
+Alternatively, you can use a Twitter native query, as below:
+
+```sql
+SELECT * FROM my_twitter (
+  search_recent_tweets(
+    query = '(mindsdb OR #mindsdb) -is:retweet -is:reply',
+    start_time = '2023-03-16T00:00:00.000Z',
+    max_results = 2
+  )
+);
+```
+
+<Tip>
+To learn more about native queries in MindsDB, visit our docs [here](/sql/native-queries).
+</Tip>
+
+Here is how to write tweets:
+
+```sql
+INSERT INTO my_twitter.tweets (reply_to_tweet_id, text)
+VALUES 
+    (1626198053446369280, 'MindsDB is great! now its super simple to build ML powered apps'),
+    (1626198053446369280, 'Holy!! MindsDB is the best thing they have invented for developers doing ML');
+```
+
+<Info>
+For more information about available actions and development plans, visit [this page](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/twitter_handler/README.md).
+</Info>
+
+<Tip>
+**What's next?**
+
+Check out the [tutorial on how to create a Twitter chatbot](/sql/tutorials/twitter-chatbot) to see one of the interesting applications of this integration.
+</Tip>

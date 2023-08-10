@@ -1,0 +1,48 @@
+---
+title: DuckDB
+sidebarTitle: DuckDB
+---
+
+This is the implementation of the DuckDB data handler for MindsDB.
+
+[DuckDB](https://duckdb.org/) is an open-source analytical database system. It is designed for fast execution of analytical queries. There are no external dependencies and the DBMS runs completely embedded within a host process, similar to SQLite. DuckDB provides a rich SQL dialect with support for complex queries with transactional guarantees (ACID).
+
+## Implementation
+
+This handler is implemented using the `duckdb` Python client library.
+
+<Tip>
+The DuckDB handler is currently using the `0.7.1.dev187` pre-relase version of the Python client library. In case of issues, make sure your DuckDB database is compatible with this version. See the [`requirements.txt`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/duckdb_handler/requirements.txt) for details.
+</Tip>
+
+The required arguments to establish a connection are as follows:
+
+* `database` is the name of the DuckDB database file. It can be set to `:memory:` to create an in-memory database.
+
+The optional arguments are as follows:
+
+* `read_only` is a flag that specifies whether the connection is in the read-only mode. This is required if multiple processes want to access the same database file at the same time.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/duckdb_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the DuckDB database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE duckdb_datasource
+WITH
+    engine = 'duckdb',
+    parameters = {
+        "database": "db.duckdb"
+    };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM duckdb_datasource.my_table;
+```

@@ -1,0 +1,58 @@
+---
+title: db.ml_engines.insertOne()
+sidebarTitle: db.ml_engines.insertOne()
+---
+
+### Description
+
+This method creates an ML engine based on one of the available ML handlers.
+
+### Syntax
+
+Here is the syntax:
+
+```sql
+db.ml_engines.insertOne(
+    {
+        "name": "ml_engine_name",
+        "handler": "handler_name",
+        "params": {
+            "key": "value"
+            }
+    }
+)
+```
+
+On execution, we get:
+
+```sql
+{
+  acknowledged: true,
+  insertedId: ObjectId("6465e96766d152ae1e247802")
+}
+```
+
+### Example
+
+Let's create an OpenAI engine that uses the OpenAI handler.
+
+```sql
+db.ml_engines.insertOne(
+    {
+        "name": "openai_engine",
+        "handler": "openai",
+        "params": {
+            "api_key": "qqq"
+            }
+    }
+)
+```
+
+On execution, we get:
+
+```sql
+{
+  acknowledged: true,
+  insertedId: ObjectId("6465e9d566d152ae1e247803")
+}
+```

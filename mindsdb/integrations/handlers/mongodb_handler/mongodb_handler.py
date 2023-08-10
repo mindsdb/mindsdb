@@ -1,14 +1,18 @@
 import re
+import time
+from collections import OrderedDict
 
 from bson import ObjectId
 import certifi
 import pandas as pd
+import pymongo
 from pymongo import MongoClient
 
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -22,6 +26,7 @@ class MongoDBHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the MongoDB statements.
     """
+    _SUBSCRIBE_SLEEP_INTERVAL = 0.5
 
     name = 'mongodb'
 
@@ -70,6 +75,39 @@ class MongoDBHandler(DatabaseHandler):
         self.is_connected = True
         self.connection = connection
         return self.connection
+
+    def subscribe(self, stop_event, callback, table_name, columns=None, **kwargs):
+
+        con = self.connect()
+        cur = con[self.database][table_name].watch()
+        while True:
+            if stop_event.is_set():
+                cur.close()
+                return
+
+            res = cur.try_next()
+            if res is None:
+                time.sleep(self._SUBSCRIBE_SLEEP_INTERVAL)
+                continue
+            _id = res['documentKey']['_id']
+            if res['operationType'] == 'insert':
+                if columns is not None:
+                    updated_columns = set(res['fullDocument'].keys())
+                    if not set(columns) & set(updated_columns):
+                        # do nothing
+                        continue
+
+                callback(row=res['fullDocument'], key={'_id': _id})
+            if res['operationType'] == 'update':
+                if columns is not None:
+                    updated_columns = set(res['updateDescription']['updatedFields'].keys())
+                    if not set(columns) & set(updated_columns):
+                        # do nothing
+                        continue
+
+                # get all document
+                full_doc = con[self.database][table_name].find_one(res['documentKey'])
+                callback(row=full_doc, key={'_id': _id})
 
     def disconnect(self):
         if self.is_connected is False:
@@ -138,8 +176,9 @@ class MongoDBHandler(DatabaseHandler):
                 cursor = fnc(*step['args'])
 
             result = []
-            for row in cursor:
-                result.append(self.flatten(row, level=self.flatten_level))
+            if not isinstance(cursor, pymongo.results.UpdateResult):
+                for row in cursor:
+                    result.append(self.flatten(row, level=self.flatten_level))
 
             if len(result) > 0:
                 df = pd.DataFrame(result)
@@ -233,3 +272,43 @@ class MongoDBHandler(DatabaseHandler):
         )
         return response
 
+connection_args = OrderedDict(
+    user={
+        'type': ARG_TYPE.STR,
+        'description': 'The user name used to authenticate with the MongoDB server.',
+        'required': True,
+        'label': 'User'
+    },
+    password={
+        'type': ARG_TYPE.PWD,
+        'description': 'The password to authenticate the user with the MongoDB server.',
+        'required': True,
+        'label': 'Password'
+    },
+    database={
+        'type': ARG_TYPE.STR,
+        'description': 'The database name to use when connecting with the MongoDB server.',
+        'required': True,
+        'label': 'Database'
+    },
+    host={
+        'type': ARG_TYPE.STR,
+        'description': 'The host name or IP address of the MongoDB server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.',
+        'required': True,
+        'label': 'Host'
+    },
+    port={
+        'type': ARG_TYPE.INT,
+        'description': 'The TCP/IP port of the MongoDB server. Must be an integer.',
+        'required': True,
+        'label': 'Port'
+    },
+)
+
+connection_args_example = OrderedDict(
+    host='127.0.0.1',
+    port=27017,
+    username='mongo',
+    password='password',
+    database='database'
+)

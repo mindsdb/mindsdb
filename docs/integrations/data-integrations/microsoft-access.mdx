@@ -1,0 +1,38 @@
+---
+title: Microsoft Access
+sidebarTitle: Microsoft Access
+---
+
+This is the implementation of the Microsoft Access data handler for MindsDB.
+
+[Microsoft Access](https://www.microsoft.com/en-us/microsoft-365/access) is a pseudo-relational database engine from Microsoft. It is part of the Microsoft Office suite of applications that also includes Word, Outlook, and Excel, among others. Access is also available for purchase as a stand-alone product. It uses the Jet Database Engine for data storage.
+
+## Implementation
+
+This handler is implemented using `pyodbc`, the Python ODBC bridge.
+
+The only required argument to establish a connection is `db_file` that points to a database file to be queried.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/access_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the Access database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE access_datasource
+WITH
+    engine = 'access',
+    parameters = {
+      "db_file":"C:\\Users\\minurap\\Documents\\example_db.accdb"
+    };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM access_datasource.example_tbl;
+```

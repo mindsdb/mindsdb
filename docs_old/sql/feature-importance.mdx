@@ -1,0 +1,138 @@
+---
+title: Feature Importance of MindsDB and Lightwood
+sidebarTitle: Feature Importance
+---
+
+MindsDB together with the Lightwood ML engine provide the feature importance tool.
+
+## What is Feature Importance?
+
+Feature importance is a useful tool for obtaining explanations about how any given machine learning model generally works. Simply put, it assigns a relative numerical score to each input feature so that a user understands what parts of the input are used to a greater or lesser degree by the model when generating predictions.
+
+While there are a few variations of this technique, Lightwood offers the *permutation-based* variant.
+
+## Permutation Feature Importance
+
+The procedure consists of splitting data into the training and validation sets. Once the ML model is trained with the former, the latter is used to, among other things, find out the importance scores for each feature.
+
+The algorithm is rather simple. We iterate over all the input features and *randomly shuffle the information within each of them one by one* without shuffling the rest of the input features. Then, the model generates predictions for this altered input as it normally would for any other input.
+
+Once we have predictions for all the shuffled variations of the validation dataset, we can evaluate accuracy metrics that are of interest to the user, such as mean absolute error for regression tasks, and compare them against the value obtained for the original dataset, which acts as a reference value. Based on the lost accuracy, we finally assign a numerical score that reflects this impact and report it as the *importance* of this column for the model.
+
+For edge cases where a feature is completely irrelevant (no lost accuracy if the feature is absent) or absolutely critical (accuracy drops to the minimum possible value if the feature is absent), the *importance score* is 0.0 and 1.0, respectively. However, the user should be careful to note that these scores do not model intra-feature dependencies or correlations, meaning that it is not wise to interpret the scores as independent from each other, as any feature that is correlated with another highly-scored feature will present a high score, too.
+
+## How to Use the Permutation Feature Importance
+
+You can customize the behavior of this analysis module from the MindsDB SQL editor via the USING key. For example, if you want to consider all rows in the validation dataset, rather than clip it to some default value, here is an example:
+
+```sql
+...
+USING
+engine = 'lightwood',
+analysis_blocks = [
+  {"module": "PermutationFeatureImportance", 
+   "args": {"row_limit": 0}} -- all validation data is used 
+];
+```
+
+Once you train a model, use the `DESCRIBE model_name;` command to see the reported importance scores.
+
+## Example
+
+Let's use the following data to create a model:
+
+```sql
+SELECT *
+FROM example_db.demo_data.home_rentals
+LIMIT 5;
+```
+
+On execution, we get:
+
+```sql
++---------------+-------------------+----+--------+--------------+--------------+------------+
+|number_of_rooms|number_of_bathrooms|sqft|location|days_on_market|neighborhood  |rental_price|
++---------------+-------------------+----+--------+--------------+--------------+------------+
+|2              |1                  |917 |great   |13            |berkeley_hills|3901        |
+|0              |1                  |194 |great   |10            |berkeley_hills|2042        |
+|1              |1                  |543 |poor    |18            |westbrae      |1871        |
+|2              |1                  |503 |good    |10            |downtown      |3026        |
+|3              |2                  |1066|good    |13            |thowsand_oaks |4774        |
++---------------+-------------------+----+--------+--------------+--------------+------------+
+```
+
+Now we create a model using the `USING` clause as shown in the previous chapter.
+
+```sql
+CREATE MODEL home_rentals_model
+FROM example_db
+    (SELECT * FROM demo_data.home_rentals)
+PREDICT rental_price
+USING
+    engine = 'lightwood',
+    analysis_blocks = [
+        {"module": "PermutationFeatureImportance", 
+        "args": {"row_limit": 0}}
+    ];
+```
+
+On execution, we get:
+
+```sql
+Query successfully completed
+```
+
+Here is how you can monitor the status of the model:
+
+```sql
+DESCRIBE home_rentals_model;
+```
+
+Once the status is *complete*, we can query the model.
+
+```sql
+SELECT d.sqft, d.neighborhood, d.days_on_market,
+       m.rental_price AS predicted_price, m.rental_price_explain
+FROM mindsdb.home_rentals_model AS m
+JOIN example_db.demo_data.home_rentals AS d
+LIMIT 5;
+```
+
+On execution, we get:
+
+```sql
++----+--------------+--------------+---------------+---------------------------------------------------------------------------------------------------------------------------------------------+
+|sqft|neighborhood  |days_on_market|predicted_price|rental_price_explain                                                                                                                         |
++----+--------------+--------------+---------------+---------------------------------------------------------------------------------------------------------------------------------------------+
+|917 |berkeley_hills|13            |3886           |{"predicted_value": 3886, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 3805, "confidence_upper_bound": 3967}|
+|194 |berkeley_hills|10            |2007           |{"predicted_value": 2007, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 1925, "confidence_upper_bound": 2088}|
+|543 |westbrae      |18            |1865           |{"predicted_value": 1865, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 1783, "confidence_upper_bound": 1946}|
+|503 |downtown      |10            |3020           |{"predicted_value": 3020, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 2938, "confidence_upper_bound": 3101}|
+|1066|thowsand_oaks |13            |4748           |{"predicted_value": 4748, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 4667, "confidence_upper_bound": 4829}|
++----+--------------+--------------+---------------+---------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+Here is how you can check the importance scores for all columns:
+
+```sql
+DESCRIBE home_rentals_model;
+```
+
+On execution, we get:
+
+```sql
++------------------+----------------------------------------------------------------------------------------------------------------------+----------------+-------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------+
+|accuracies        |column_importance                                                                                                     |outputs         |inputs                                                                                     |model                                                                                                                                               |
++------------------+----------------------------------------------------------------------------------------------------------------------+----------------+-------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------+
+|{"r2_score":0.999}|{"days_on_market":0.09,"location":0.042,"neighborhood":0,"number_of_bathrooms":0,"number_of_rooms":0.292,"sqft":0.999}|["rental_price"]|["number_of_rooms","number_of_bathrooms","sqft","location","days_on_market","neighborhood"]|encoders --> dtype_dict --> dependency_dict --> model --> problem_definition --> identifiers --> imputers --> analysis_blocks --> accuracy_functions|
++------------------+----------------------------------------------------------------------------------------------------------------------+----------------+-------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+Please note that the `rental_price` column is not listed here, as it is the target column. The column importance scores are presented for all the feature columns.
+
+<Tip>
+**About Confidence Estimation**
+
+Check out the article on [Model agnostic confidence estimation with conformal predictors for AutoML](https://medium.com/mindsdb/model-agnostic-confidence-estimation-with-conformal-predictors-for-automl-55fce87ef42a) by [Patricio Cerda Mardini](https://medium.com/@paxcema)
+to learn how MindsDB estimates confidence.
+</Tip>

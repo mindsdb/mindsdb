@@ -1,6 +1,5 @@
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
-from slack_bolt import App
 from ..slack_handler import SlackHandler
 import unittest
 from unittest.mock import patch

@@ -1,0 +1,31 @@
+---
+title: db.databases.deleteOne()
+sidebarTitle: db.databases.deleteOne()
+---
+
+## Description
+
+The `db.databases.deleteOne()` method deletes a connection to a data source specified in its argument.
+
+## Syntax
+
+Here is the syntax:
+
+```sql
+db.databases.deleteOne({name: "connection_name"});
+```
+
+On execution, we get:
+
+```json
+{
+  "acknowledged": true,
+  "deletedCount": 1
+}
+```
+
+Where:
+
+| Name   | Description                           |
+| ------ | ------------------------------------- |
+| `name` | Name of the connection to be deleted. |

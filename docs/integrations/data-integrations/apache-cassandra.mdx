@@ -1,0 +1,50 @@
+---
+title: Apache Cassandra
+sidebarTitle: Apache Cassandra
+---
+
+This is the implementation of the Cassandra data handler for MindsDB.
+
+[Cassandra](https://cassandra.apache.org/_/index.html) is a free and open-source, distributed, wide-column store, NoSQL database management system designed to handle large amounts of data across many commodity servers, providing high availability with no single point of failure.
+
+## Implementation
+
+As ScyllaDB is API-compatible with Apache Cassandra, the Cassandra data handler extends the ScyllaDB handler and uses the `scylla-driver` Python library.
+
+The required arguments to establish a connection are as follows:
+
+* `host` is the host name or IP address of the Cassandra database.
+* `port` is the port to use when connecting.
+* `user` is the user to authenticate.
+* `password` is the password to authenticate the user.
+* `keyspace` is the keyspace to connect, the top level container for tables.
+* `protocol_version` is not required and defaults to 4.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/cassandra_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the Cassandra server in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE sc
+WITH
+  engine = "cassandra",
+  parameters = {
+    "host": "127.0.0.1",
+    "port": "9043",
+    "user": "user",
+    "password": "pass",
+    "keyspace": "test_data",
+    "protocol_version": 4
+  };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM cassandra_datasource.example_table LIMIT 10;
+```

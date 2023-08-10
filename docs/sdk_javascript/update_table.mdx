@@ -1,0 +1,19 @@
+---
+title: runQuery('UPDATE ...')
+sidebarTitle: runQuery('UPDATE ...')
+---
+
+## Description
+
+The `runQuery()` function executes a query given as its argument directly in MindsDB.
+
+## Syntax
+
+Here is the syntax:
+
+```
+const query = `UPDATE integration_name.table_name
+               SET column_name = new_value
+               WHERE column_name = old_value`;
+const queryResult = await MindsDB.SQL.runQuery(query);
+```

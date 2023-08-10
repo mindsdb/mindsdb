@@ -1,0 +1,49 @@
+---
+title: Amazon Redshift
+sidebarTitle: Amazon Redshift
+---
+
+This is the implementation of the Redshift data handler for MindsDB.
+
+[Amazon Redshift](https://docs.aws.amazon.com/redshift/latest/mgmt/welcome.html) is a fully managed, petabyte-scale data warehouse service in the cloud. You can start with just a few hundred gigabytes of data and scale to a petabyte or more. This enables you to use your data to acquire new insights for your business and customers.
+
+## Implementation
+
+This handler is implemented using the `redshift_connector` library that is provided by the Amazon Web Services.
+
+The required arguments to establish a connection are as follows:
+
+* `host` is the host name or IP address of the Redshift cluster.
+* `port` is the port to use when connecting with the Redshift cluster.
+* `database` is the database name to use when connecting with the Redshift cluster.
+* `user` is the username to authenticate the user with the Redshift cluster.
+* `password` is the password to authenticate the user with the Redshift cluster.
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/redshift_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+Before attempting to connect to the Redshift database to MindsDB, ensure that it accepts incoming connections. Here is a [guideline](https://aws.amazon.com/premiumsupport/knowledge-center/cannot-connect-redshift-cluster) on how to do that.
+
+In order to make use of this handler and connect to the Redshift database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE redshift_datasource
+WITH
+  engine = 'redshift',
+  parameters = {
+    "host": "examplecluster.abc123xyz789.us-west-1.redshift.amazonaws.com",
+    "port": 5439,
+    "database": "example_db",
+    "user": "awsuser",
+    "password": "my_password"
+  };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM redshift_datasource.example_tbl;
+```

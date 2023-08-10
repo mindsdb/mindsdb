@@ -1,0 +1,47 @@
+---
+title: PostgreSQL
+sidebarTitle: PostgreSQL
+---
+
+This is the implementation of the PostgreSQL data handler for MindsDB.
+
+[PostgreSQL](https://www.postgresql.org) is a powerful, open-source, object-relational database system that uses and extends the SQL language combined with many features that safely store and scale the most complicated data workloads.
+
+## Implementation
+
+The required arguments to establish a connection are as follows:
+
+* `user` is the database user.
+* `password` is the database password.
+* `host` is the host name, IP address, or URL.
+* `port` is the port used to make TCP/IP connection.
+* `database` is the database name.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/postgres_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the PostgreSQL database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE psql_datasource
+WITH
+    ENGINE = 'postgres',
+    PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": 5432,
+    "database": "postgres",
+    "user": "postgres",
+    "password": "password"
+    };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM psql_datasource.demo_table
+LIMIT 10;
+```

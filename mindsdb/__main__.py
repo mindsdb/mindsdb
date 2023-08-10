@@ -9,6 +9,7 @@ import asyncio
 import secrets
 import traceback
 import threading
+from textwrap import dedent
 from packaging import version
 
 from mindsdb.__about__ import __version__ as mindsdb_version
@@ -16,7 +17,7 @@ from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
 from mindsdb.api.postgres.start import start as start_postgres
-from mindsdb.interfaces.chatbot.chatbot_monitor import start as start_chatbot
+from mindsdb.interfaces.tasks.task_monitor import start as start_tasks
 from mindsdb.interfaces.jobs.scheduler import start as start_scheduler
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
@@ -189,16 +190,14 @@ if __name__ == '__main__':
     print(f'Configuration file:\n   {config.config_path}')
     print(f"Storage path:\n   {config['paths']['root']}")
 
-    # @TODO Backwards compatibility for tests, remove later
     for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():
         import_meta = handler_meta.get('import', {})
-        dependencies = import_meta.get('dependencies')
         if import_meta.get('success', False) is not True:
-            print(f"Dependencies for the handler '{handler_name}' are not installed by default.\n",
-                  f'If you want to use "{handler_name}" please install "{dependencies}"')
-
-    # from mindsdb.utilities.fs import get_marked_processes_and_threads
-    # marks = get_marked_processes_and_threads()
+            print(dedent('''
+                Some handlers cannot be imported. You can check list of available handlers by execute command in sql editor:
+                    select * from information_schema.handlers;
+            '''))
+            break
 
     if not is_cloud:
         # region creating permanent integrations
@@ -238,22 +237,6 @@ if __name__ == '__main__':
             db.session.commit()
         # endregion
 
-        for integration_name in config.get('integrations', {}):
-            try:
-                it = integration_controller.get(integration_name)
-                if it is not None:
-                    integration_controller.delete(integration_name)
-                print(f'Adding: {integration_name}')
-                integration_data = config['integrations'][integration_name]
-                engine = integration_data.get('type')
-                if engine is not None:
-                    del integration_data['type']
-                integration_controller.add(integration_name, engine, integration_data)
-            except Exception as e:
-                log.logger.error(f'\n\nError: {e} adding database integration {integration_name}\n\n')
-
-    # @TODO Backwards compatibility for tests, remove later
-
     if args.api is None:
         api_arr = ['http', 'mysql']
     else:
@@ -278,7 +261,7 @@ if __name__ == '__main__':
         'mongodb': start_mongo,
         'postgres': start_postgres,
         'jobs': start_scheduler,
-        'chatbot': start_chatbot
+        'tasks': start_tasks
     }
 
     if config.get('jobs', {}).get('disable') is not True:
@@ -288,8 +271,8 @@ if __name__ == '__main__':
         }
 
     # disabled on cloud
-    if config.get('chatbot', {}).get('disable') is not True and not is_cloud:
-        apis['chatbot'] = {
+    if config.get('tasks', {}).get('disable') is not True:
+        apis['tasks'] = {
             'process': None,
             'started': False
         }

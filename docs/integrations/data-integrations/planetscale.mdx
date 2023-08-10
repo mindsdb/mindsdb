@@ -1,0 +1,48 @@
+---
+title: PlanetScale
+sidebarTitle: PlanetScale
+---
+
+This is the implementation of the PlanetScale data handler for MindsDB.
+
+[PlanetScale](https://planetscale.com/) is a MySQL-compatible, serverless database platform.
+
+## Implementation
+
+This handler is implemented by extending the MySQL data handler.
+
+The required arguments to establish a connection are as follows:
+
+* `user` is the database user.
+* `password` is the database password.
+* `host` is the host name, IP address, or URL.
+* `port` is the port used to make TCP/IP connection.
+* `database` is the database name.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/planetscale_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the PlanetScale database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE planetscale_datasource
+WITH
+  ENGINE = 'planet_scale',
+  PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": 3306,
+    "user": "planetscale_user",
+    "password": "password",
+    "database": "planetscale_db"
+  };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM planetscale_datasource.my_table;
+```

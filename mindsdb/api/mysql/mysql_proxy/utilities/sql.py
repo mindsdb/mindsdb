@@ -1,7 +1,8 @@
 import copy
-
+import json
 import duckdb
 import numpy as np
+import pandas as pd
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -95,6 +96,10 @@ def query_df(df, query, session=None):
             df = df.astype({'TRAINING_OPTIONS': 'string'})
 
     con = duckdb.connect(database=':memory:')
+
+    # lets make sure we have the right types, pandas sucks at type inference
+    df = infer_and_convert_types(df)
+    
     con.register('df_table', df)
     result_df = con.execute(query_str).fetchdf()
     result_df = result_df.replace({np.nan: None})
@@ -111,3 +116,45 @@ def query_df(df, query, session=None):
         axis='columns'
     )
     return result_df
+
+
+
+
+
+def infer_column_type(column):
+    # If already a datetime type, leave it as such
+    if pd.api.types.is_datetime64_any_dtype(column):
+        return column
+
+    # Try to convert the entire column to integers
+    try:
+        return column.astype(int)
+    except ValueError:
+        # Check if the column can be converted to datetime
+        try:
+            return pd.to_datetime(column)
+        except:
+            # If that fails, try to convert the entire column to floats
+            try:
+                return column.astype(float)
+            except ValueError:
+                
+                # If both fail, leave the column as a string
+                return column.astype(str)
+
+def infer_and_convert_types(df, sample_size=100):
+    for column in df.columns:
+        # Sample the column to analyze
+        sample_data = df[column].sample(min(sample_size, len(df)))
+
+        # Infer the type from the sample
+        inferred_column = infer_column_type(sample_data)
+
+        # Check if the inferred type is the same as the original type
+        if inferred_column.dtype != sample_data.dtype:
+            # If not, apply the inferred type to the entire column
+            df[column] = infer_column_type(df[column])
+
+    return df
+
+

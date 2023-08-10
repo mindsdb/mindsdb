@@ -85,7 +85,7 @@ Generate a simple customer response depending on the following options:
 Now that we generated our AI-Table, we can query for messages and their generated responses using **JOIN**s.
 
 ```sql
-SELECT input.message_id,  m.response, input.customer_message
+SELECT i.message_id,  m.response, i.customer_message
 FROM postgres_demo_db.cutomer_messages AS i
 JOIN ai_response_model AS m;
 ```

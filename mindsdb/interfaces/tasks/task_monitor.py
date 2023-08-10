@@ -16,8 +16,8 @@ from .task_thread import TaskThread
 
 class TaskMonitor:
 
-    MONITOR_INTERVAL_SECONDS = 1
-    LOCK_EXPIRED_SECONDS = MONITOR_INTERVAL_SECONDS * 10
+    MONITOR_INTERVAL_SECONDS = 2
+    LOCK_EXPIRED_SECONDS = MONITOR_INTERVAL_SECONDS * 30
 
     def __init__(self):
         self._active_tasks = {}

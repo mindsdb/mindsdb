@@ -68,7 +68,12 @@ class IgniteHandler(DatabaseHandler):
             password=self.connection_data['password']
         )
 
-        nodes = [(self.connection_data['host'], self.connection_data['port'])]
+        try:
+            port = int(self.connection_data['port'])
+        except ValueError:
+            raise ValueError("Invalid port number")
+
+        nodes = [(self.connection_data['host'], port)]
         self.connection = self.client.connect(nodes)
         self.is_connected = True
 

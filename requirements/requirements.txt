@@ -28,8 +28,6 @@ checksumdir >= 1.2.0
 duckdb == 0.6.0
 requests >= 2.0.0
 mysql-connector-python
-clickhouse-driver
-clickhouse-sqlalchemy
 charset-normalizer
 pyOpenSSL >= 22.0.0
 pydateinfer==0.3.0

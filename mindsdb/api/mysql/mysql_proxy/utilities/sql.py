@@ -1,5 +1,5 @@
 import copy
-import json
+
 import duckdb
 import numpy as np
 import pandas as pd
@@ -99,7 +99,7 @@ def query_df(df, query, session=None):
 
     # lets make sure we have the right types, pandas sucks at type inference
     df = infer_and_convert_types(df)
-    
+
     con.register('df_table', df)
     result_df = con.execute(query_str).fetchdf()
     result_df = result_df.replace({np.nan: None})
@@ -118,9 +118,6 @@ def query_df(df, query, session=None):
     return result_df
 
 
-
-
-
 def infer_column_type(column):
     # If already a datetime type, leave it as such
     if pd.api.types.is_datetime64_any_dtype(column):
@@ -133,14 +130,14 @@ def infer_column_type(column):
         # Check if the column can be converted to datetime
         try:
             return pd.to_datetime(column)
-        except:
+        except (pd.errors.ParserError, ValueError):
             # If that fails, try to convert the entire column to floats
             try:
                 return column.astype(float)
             except ValueError:
-                
                 # If both fail, leave the column as a string
                 return column.astype(str)
+
 
 def infer_and_convert_types(df, sample_size=100):
     for column in df.columns:
@@ -156,5 +153,3 @@ def infer_and_convert_types(df, sample_size=100):
             df[column] = infer_column_type(df[column])
 
     return df
-
-

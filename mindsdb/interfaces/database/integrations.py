@@ -553,7 +553,6 @@ class IntegrationController:
             except Exception as e:
                 # do nothing
                 logger.debug("Failed to patch connection_args for %s, reason: %s", handler_folder_name, str(e))
- 
         module_attrs = [attr for attr in [
             'connection_args_example',
             'connection_args',

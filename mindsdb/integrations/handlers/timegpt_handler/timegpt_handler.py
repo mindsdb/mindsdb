@@ -30,7 +30,7 @@ class TimeGPTHandler(BaseMLEngine):
         model_args["horizon"] = time_settings["horizon"]
         model_args["order_by"] = time_settings["order_by"]
         model_args["group_by"] = time_settings["group_by"]
-        model_args["level"] = using_args.get("level", [80, 90])
+        model_args["level"] = using_args.get("level", 90)
         model_args["frequency"] = (
             using_args["frequency"] if "frequency" in using_args else None
         )
@@ -46,13 +46,13 @@ class TimeGPTHandler(BaseMLEngine):
             prediction_df,
             h=model_args["horizon"],
             freq='T',  # TimeGPT automatically infers the correct frequency
-            level=model_args["level"],
+            level=[model_args["level"]],
         )
         results_df = forecast_df[['unique_id', 'ds', 'TimeGPT']]
         results_df = self._get_results_from_nixtla_df(results_df, model_args)
 
-        # add confidence (note: for now we keep the highest level)
-        level = sorted(model_args['level'])[-1]
+        # add confidence
+        level = model_args['level']
         results_df['confidence'] = level/100
         results_df['lower'] = forecast_df[f'TimeGPT-lo-{level}']
         results_df['upper'] = forecast_df[f'TimeGPT-hi-{level}']

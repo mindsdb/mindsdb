@@ -49,7 +49,15 @@ class TimeGPTHandler(BaseMLEngine):
             level=model_args["level"],
         )
         results_df = forecast_df[['unique_id', 'ds', 'TimeGPT']]
-        return self._get_results_from_nixtla_df(results_df, model_args)
+        results_df = self._get_results_from_nixtla_df(results_df, model_args)
+
+        # add confidence (note: for now we keep the highest level)
+        level = sorted(model_args['level'])[-1]
+        results_df['confidence'] = level/100
+        results_df['lower'] = forecast_df[f'TimeGPT-lo-{level}']
+        results_df['upper'] = forecast_df[f'TimeGPT-hi-{level}']
+
+        return results_df
 
     def describe(self, attribute=None):
         model_args = self.model_storage.json_get("model_args")
@@ -88,20 +96,19 @@ class TimeGPTHandler(BaseMLEngine):
     # TODO: consolidate this method with the ones in time_series_utils.py
     @staticmethod
     def _convert_to_iso(df, date_column):
-        # Determine if the values in the date column are numeric (Unix timestamp) or string (date)
+        # whether values in date_column are numeric (Unix timestamp) or string (date)
         if pd.api.types.is_numeric_dtype(df[date_column]):
-            # Check if the maximum value is likely in milliseconds (larger than a reasonable timestamp in seconds)
-            if df[date_column].max() > 1e12:
-                # Convert milliseconds to seconds
-                df[date_column] = pd.to_datetime(df[date_column], unit='ms')
-            else:
-                # Convert seconds to datetime
-                df[date_column] = pd.to_datetime(df[date_column], unit='s')
+            unit = ''
+            # ascending unit order
+            for u in ['ns', 'us', 'ms', 's']:
+                mindate = pd.to_datetime(df[date_column].min(), unit=u, origin='unix')
+                maxdate = pd.to_datetime(df[date_column].max(), unit=u, origin='unix')
+                if mindate > pd.to_datetime('1970-01-01T00:00:00') and maxdate < pd.to_datetime('2050-12-31T23:59:59'):
+                    unit = u
+            df[date_column] = pd.to_datetime(df[date_column], unit=unit, origin='unix')
         elif pd.api.types.is_string_dtype(df[date_column]):
-            # Convert string to datetime
             df[date_column] = pd.to_datetime(df[date_column])
-        # Convert datetime to ISO 8601 format
-        df[date_column] = df[date_column].dt.strftime('%Y-%m-%dT%H:%M:%S')
+        df[date_column] = df[date_column].dt.strftime('%Y-%m-%dT%H:%M:%S')  # convert to ISO 8601 format
         return df
 
     # TODO: consolidate this method with the ones in time_series_utils.py

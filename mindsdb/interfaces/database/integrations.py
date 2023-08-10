@@ -538,6 +538,22 @@ class IntegrationController:
         if import_error is not None:
             handler_meta['import']['error_message'] = str(import_error)
 
+        # for ml engines, patch the connection_args from the argument probing
+        if hasattr(module, 'Handler'):
+            handler_class = module.Handler
+            try:
+                prediction_args = handler_class.prediction_args()
+                creation_args = handler_class.creation_args()
+                connection_args = {
+                    "prediction": prediction_args,
+                    "creation_args": creation_args
+                }
+                setattr(module, 'connection_args', connection_args)
+                logger.debug("Patched connection_args for %s", handler_folder_name)
+            except Exception as e:
+                # do nothing
+                logger.debug("Failed to patch connection_args for %s, reason: %s", handler_folder_name, str(e))
+ 
         module_attrs = [attr for attr in [
             'connection_args_example',
             'connection_args',
@@ -546,6 +562,7 @@ class IntegrationController:
             'type',
             'title'
         ] if hasattr(module, attr)]
+
         for attr in module_attrs:
             handler_meta[attr] = getattr(module, attr)
 

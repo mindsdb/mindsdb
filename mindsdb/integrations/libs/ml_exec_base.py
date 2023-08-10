@@ -86,6 +86,7 @@ class WarmProcess:
                 initargs (tuple): the same as ProcessPoolExecutor initargs
         """
         self.pool = ProcessPoolExecutor(1, initializer=initializer, initargs=initargs)
+        self.last_usage_at = time.time()
         self._markers = set()
         # region bacause of ProcessPoolExecutor does not start new process
         # untill it get a task, we need manually run dummy task to force init.
@@ -101,6 +102,9 @@ class WarmProcess:
         """ callback for initial task
         """
         self._init_done = True
+
+    def _update_last_usage_at_callback(self, _task):
+        self.last_usage_at = time.time()
 
     def ready(self) -> bool:
         """ check is process ready to get a task or not
@@ -137,6 +141,14 @@ class WarmProcess:
             return False
         return marker in self._markers
 
+    def is_marked(self) -> bool:
+        """ check if process has any marker
+
+            Returns:
+                bool
+        """
+        return len(self._markers) > 0
+
     def apply_async(self, func: Callable, *args: tuple, **kwargs: dict) -> Future:
         """ Run new task
 
@@ -153,6 +165,8 @@ class WarmProcess:
         self.task = self.pool.submit(
             func, *args, **kwargs
         )
+        self.task.add_done_callback(self._update_last_usage_at_callback)
+        self.last_usage_at = time.time()
         return self.task
 
 
@@ -211,6 +225,7 @@ class ProcessCache:
                     self._keep_alive[handler.__name__] = preload_handlers[handler]
                     self.cache[handler.__name__] = {
                         'last_usage_at': time.time(),
+                        'handler_module': handler.__module__,
                         'processes': [
                             WarmProcess(init_ml_handler, (handler.__module__,))
                             for _x in range(preload_handlers[handler])
@@ -236,6 +251,7 @@ class ProcessCache:
                 warm_process = WarmProcess(init_ml_handler, (handler.__module__,))
                 self.cache[handler_name] = {
                     'last_usage_at': None,
+                    'handler_module': handler.__module__,
                     'processes': [warm_process]
                 }
             else:
@@ -271,21 +287,30 @@ class ProcessCache:
         while self._stop_event.wait(timeout=10) is False:
             with self._lock:
                 for handler_name in self.cache.keys():
-                    last_usage_at = self.cache[handler_name]['last_usage_at']
                     processes = self.cache[handler_name]['processes']
-                    if (
-                        (
-                            handler_name not in self._keep_alive
-                            or self._keep_alive[handler_name] < len(processes)
+                    processes.sort(key=lambda x: x.is_marked())
+
+                    expected_count = 0
+                    if handler_name in self._keep_alive:
+                        expected_count = self._keep_alive[handler_name]
+
+                    # stop processes which was used, it needs to free memory
+                    for i, process in enumerate(processes):
+                        if (
+                            process.ready()
+                            and process.is_marked()
+                            and (time.time() - process.last_usage_at) > self._ttl
+                        ):
+                            print('DEL USED PROCESS')
+                            processes.pop(i)
+                            del process
+                            break
+
+                    while expected_count > len(processes):
+                        print('START NEW PROCESS')
+                        processes.append(
+                            WarmProcess(init_ml_handler, (self.cache[handler_name]['handler_module'],))
                         )
-                        and last_usage_at is not None
-                        and (time.time() - last_usage_at) > self._ttl
-                    ):
-                        for i, process in enumerate(processes):
-                            if process.ready():
-                                processes.pop(i)
-                                del process
-                                break
 
 
 process_cache = ProcessCache()

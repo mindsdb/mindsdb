@@ -7,9 +7,57 @@ import traceback
 import pandas as pd
 from threading import Lock
 
-import requests
+
 import concurrent.futures
 from urllib.parse import urlparse
+
+import fitz  # PyMuPDF
+import io
+
+
+
+
+
+def pdf_to_markdown(response):
+    # Download the PDF from the given URL
+    
+    file_stream = io.BytesIO(response.content)
+
+    # Open the PDF from the in-memory file
+    document = fitz.open(stream=file_stream, filetype='pdf')
+
+    markdown_text = ''
+    for page_num in range(len(document)):
+        page = document.load_page(page_num)
+
+        # Get the blocks of text
+        blocks = page.get_text("blocks")
+
+        # Sort the blocks by their vertical position on the page
+        blocks.sort(key=lambda block: (block[1], block[0]))
+
+        previous_block_bottom = 0
+        for block in blocks:
+            y0 = block[1]
+            y1 = block[3]
+            block_text = block[4]
+
+            # Check if there's a large vertical gap between this block and the previous one
+            if y0 - previous_block_bottom > 10:
+                markdown_text += '\n'
+
+            markdown_text += block_text + '\n'
+            previous_block_bottom = y1
+
+        markdown_text += '\n'
+
+    # Close the document
+    document.close()
+
+    return markdown_text
+
+
+
 
 
 url_list_lock = Lock()
@@ -61,34 +109,42 @@ def get_all_website_links(url):
         if 'cookie' in response.request.headers:
             session.cookies.update(response.cookies)
 
-        content_html = response.text
+        content_type = response.headers.get('Content-Type', '').lower()
 
-        # Parse HTML content with BeautifulSoup
-        soup = BeautifulSoup(content_html, 'html.parser')
+        if 'application/pdf' in content_type:
+            
+            content_html = 'PDF'
+            content_text = pdf_to_markdown(response)
+        else:
+            content_html = response.text
+
+            # Parse HTML content with BeautifulSoup
+            soup = BeautifulSoup(content_html, 'html.parser')
+            content_text = get_readable_text_from_soup(soup)
+            for a_tag in soup.findAll("a"):
+                href = a_tag.attrs.get("href")
+                if href == "" or href is None:
+                    continue
+                href = urljoin(url, href)
+                parsed_href = urlparse(href)
+                
+                href = parsed_href.scheme + "://" + parsed_href.netloc + parsed_href.path
+                if not is_valid(href):
+                    continue
+                if href in urls:
+                    continue
+                if domain_name != parsed_href.netloc:
+                    continue
+                
+                href = href.rstrip('/')    
+                urls.add(href)
 
     except Exception as e:
         error_message = traceback.format_exc().splitlines()[-1]
         logging.error("An exception occurred: %s", str(e))
         return {'url':url,'urls':urls, 'html_content':'', 'text_content': '', 'error':str(error_message)}
     
-    content_text = get_readable_text_from_soup(soup)
-    for a_tag in soup.findAll("a"):
-        href = a_tag.attrs.get("href")
-        if href == "" or href is None:
-            continue
-        href = urljoin(url, href)
-        parsed_href = urlparse(href)
-        
-        href = parsed_href.scheme + "://" + parsed_href.netloc + parsed_href.path
-        if not is_valid(href):
-            continue
-        if href in urls:
-            continue
-        if domain_name != parsed_href.netloc:
-            continue
-        
-        href = href.rstrip('/')    
-        urls.add(href)
+    
 
     return {'url': url,'urls': urls, 'html_content': content_html, 'text_content': content_text, 'error': None}
 
@@ -259,6 +315,6 @@ def dict_to_dataframe(dict_of_dicts, columns_to_ignore=None, index_name=None):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    df = get_df_from_query_str('docs.mindsdb.com, docs.airbyte.com, limit=4')
-    print(df)
+    response = requests.get('https://www.goldmansachs.com/media-relations/press-releases/current/pdfs/2023-q2-results.pdf')
+    print(pdf_to_markdown(response))
 

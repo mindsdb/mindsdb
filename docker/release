@@ -21,11 +21,11 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==23.1.2 &
         psycopg[binary]>=1.15.3 \
         pymongo certifi \
         snowflake-connector-python>=2.7.6 \
-        snowflake-sqlalchemy>=1.4.3 \
         clickhouse-driver clickhouse-sqlalchemy \
         scylla-driver && \
     pip install --prefer-binary --no-cache-dir \
         databricks-sql-connector sqlalchemy-databricks || true && \
+    pip install git+https://github.com/ea-rus/snowflake-sqlalchemy && \
     pip install --prefer-binary --no-cache-dir \
         fdb pyodbc || true && \
     pip install --prefer-binary --no-cache-dir \

@@ -1,8 +1,16 @@
-from typing import Any, Optional, Dict
+import ast
+import inspect
+import logging
+import textwrap
+from _ast import AnnAssign, AugAssign
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 from mindsdb_sql.parser.ast.base import ASTNode
+
 from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse
+
+LOG = logging.getLogger(__name__)
 
 
 class BaseHandler:
@@ -207,3 +215,141 @@ class BaseMLEngine:
 
     def close(self):
         pass
+
+
+class ArgProbeMixin:
+    """
+    A mixin class that provides probing of arguments that
+    are needed by a handler during creation and prediction time
+    by running the static analysis on the source code of the handler.
+    """
+
+    class ArgProbeVisitor(ast.NodeVisitor):
+        def __init__(self):
+            self.arg_keys = []
+            self.var_names_to_track = {"args"}
+
+        def visit_Assign(self, node):
+            # track if args['using'] get assigned to any variable
+            # if so, we should track the variable by adding it to
+            # self.var_names_to_track
+            # E.g., using_args = args['using']
+            # we should track using_args as well
+            if (
+                isinstance(node.value, ast.Subscript)
+                and isinstance(node.value.value, ast.Name)
+                and node.value.value.id == "args"
+            ):
+                if (
+                    isinstance(node.value.slice, ast.Index)
+                    and isinstance(node.value.slice.value, ast.Str)
+                    and node.value.slice.value.s == "using"
+                ):
+                    self.var_names_to_track.add(node.targets[0].id)
+
+            # for an assignment like `self.args['name'] = 'value'`, we should ignore
+            # the left side of the assignment
+            self.visit(node.value)
+
+        def visit_AnnAssign(self, node: AnnAssign) -> Any:
+            self.visit(node.value)
+
+        def visit_AugAssign(self, node: AugAssign) -> Any:
+            self.visit(node.value)
+
+        def visit_Subscript(self, node):
+            if (
+                isinstance(node.value, ast.Name)
+                and node.value.id in self.var_names_to_track
+            ):
+                if isinstance(node.slice, ast.Index) and isinstance(
+                    node.slice.value, ast.Str
+                ):
+                    self.arg_keys.append({"name": node.slice.value.s, "required": True})
+            self.generic_visit(node)
+
+        def visit_Call(self, node):
+            if isinstance(node.func, ast.Attribute) and node.func.attr == "get":
+                if (
+                    isinstance(node.func.value, ast.Name)
+                    and node.func.value.id in self.var_names_to_track
+                ):
+                    if isinstance(node.args[0], ast.Str):
+                        self.arg_keys.append(
+                            {"name": node.args[0].s, "required": False}
+                        )
+            self.generic_visit(node)
+
+    @classmethod
+    def probe_function(self, method_name: str) -> List[Dict]:
+        """
+        Probe the source code of the method with name method_name.
+        Specifically, trace how the argument `args`, which is a dict is used in the method.
+
+        Find all places where a key of the dict is used, and return a list of all keys that are used.
+        E.g.,
+        args["key1"] -> "key1" is accessed, and it is required
+        args.get("key2", "default_value") -> "key2" is accessed, and it is optional (default value is provided)
+
+        Return a list of dict
+        where each dict looks like
+        {
+            "name": "key1",
+            "required": True
+        }
+        """
+        try:
+            source_code = self.get_source_code(method_name)
+        except Exception as e:
+            LOG.error(
+                f"Failed to get source code of method {method_name} in {self.__class__.__name__}"
+            )
+            return []
+
+        # parse the source code
+        # fix the indentation
+        source_code = textwrap.dedent(source_code)
+        # parse the source code
+        tree = ast.parse(source_code)
+
+        # find all places where a key in args is accessed
+        # and if it is accessed using args["key"] or args.get("key", "default_value")
+
+        visitor = self.ArgProbeVisitor()
+        visitor.visit(tree)
+
+        # deduplicate the keys
+        unique_arg_keys = set([(r["name"], r["required"]) for r in visitor.arg_keys])
+
+        # convert back to list
+        visitor.arg_keys = [{"name": k, "required": v} for k, v in unique_arg_keys]
+
+        # filter out record where name == "using"
+        return [r for r in visitor.arg_keys if r["name"] != "using"]
+
+    @classmethod
+    def get_source_code(self, method_name: str):
+        """
+        Get the source code of the method specified by method_name
+        """
+        method = getattr(self, method_name)
+        if method is None:
+            raise Exception(
+                f"Method {method_name} does not exist in {self.__class__.__name__}"
+            )
+        source_code = inspect.getsource(method)
+        return source_code
+
+    @classmethod
+    def prediction_args(self):
+        """
+        Get the arguments that are needed by the prediction method
+        """
+        return self.probe_function("predict")
+
+    @classmethod
+    def creation_args(self):
+        """
+        Get the arguments that are needed by the creation method
+        """
+        return self.probe_function("create")

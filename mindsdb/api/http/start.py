@@ -36,11 +36,11 @@ def start(verbose, no_studio, with_nlp):
         preload_hendlers[lightwood_handler.Handler] = 4 if is_cloud else 1
 
     huggingface_handler = integration_controller.handler_modules['huggingface']
-    if huggingface_handler is not None:
+    if huggingface_handler.Handler is not None:
         preload_hendlers[huggingface_handler.Handler] = 1 if is_cloud else 0
 
     openai_handler = integration_controller.handler_modules['openai']
-    if openai_handler is not None:
+    if openai_handler.Handler is not None:
         preload_hendlers[openai_handler.Handler] = 1 if is_cloud else 0
 
     process_cache.init(preload_hendlers)

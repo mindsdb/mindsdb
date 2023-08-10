@@ -1,21 +1,15 @@
-import requests
-from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin
 import logging
 import re
 import traceback
-import pandas as pd
 from threading import Lock
-
-
 import concurrent.futures
-from urllib.parse import urlparse
-
-import fitz  # PyMuPDF
 import io
 
-
-
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+import fitz  # PyMuPDF
 
 
 def pdf_to_markdown(response):
@@ -57,10 +51,8 @@ def pdf_to_markdown(response):
     return markdown_text
 
 
-
-
-
 url_list_lock = Lock()
+
 
 def is_valid(url):
     parsed = urlparse(url)
@@ -143,14 +135,12 @@ def get_all_website_links(url):
         error_message = traceback.format_exc().splitlines()[-1]
         logging.error("An exception occurred: %s", str(e))
         return {'url':url,'urls':urls, 'html_content':'', 'text_content': '', 'error':str(error_message)}
-    
-    
 
     return {'url': url,'urls': urls, 'html_content': content_html, 'text_content': content_text, 'error': None}
 
+
 def get_readable_text_from_soup(soup):
 
- 
     # Start formatting as Markdown
     markdown_output = ""
 
@@ -172,8 +162,6 @@ def get_readable_text_from_soup(soup):
             markdown_output += "\n"
 
     return markdown_output
-
-
 
 
 # this bad girl does the recursive crawling of the websites

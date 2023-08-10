@@ -71,6 +71,10 @@ def dummy_task():
     return None
 
 
+def empty_callback(_task):
+    return None
+
+
 class WarmProcess:
     """ Class-wrapper for a process that persist for a long time. The process
         may be initialized with any handler requirements. Current implimentation
@@ -477,6 +481,8 @@ class BaseMLEngineExec:
             task.result()
             predictor_record = db.Predictor.query.get(predictor_record.id)
             db.session.refresh(predictor_record)
+        else:
+            task.add_done_callback(empty_callback)
 
         return predictor_record
 
@@ -635,5 +641,6 @@ class BaseMLEngineExec:
             else:
                 # return the base predictor record if process is not joined
                 predictor_record = db.Predictor.query.get(base_predictor_record.id)
+                task.add_done_callback(empty_callback)
 
         return predictor_record

@@ -133,7 +133,7 @@ def infer_column_type(column):
         # Check if the column can be converted to datetime
         try:
             return pd.to_datetime(column)
-        except (pd.errors.ParserError, ValueError):
+        except (pd.errors.ParserError, ValueError, TypeError):
             # If that fails, try to convert the entire column to floats
             try:
                 return column.astype(int)

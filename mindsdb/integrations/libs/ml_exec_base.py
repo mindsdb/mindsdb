@@ -16,6 +16,7 @@ In particular, three big components are included:
 
 """  # noqa
 
+import sys
 import time
 import threading
 import datetime as dt
@@ -60,6 +61,8 @@ class MLEngineException(Exception):
 
 
 def init_ml_handler(module_path):
+    import os
+    print(f'!!! init_ml_handler {os.getpid()}')
     import importlib  # noqa
 
     from mindsdb.integrations.libs.learn_process import learn_process, predict_process  # noqa
@@ -100,7 +103,16 @@ class WarmProcess:
         # endregion
 
     def __del__(self):
-        self.pool.shutdown(wait=False)
+        print('TERMINATE')
+        # workaround for https://bugs.python.org/issue39098
+        if sys.version_info[0] == 3 and sys.version_info[1] <= 3.8:
+            t = threading.Thread(target=self._shutdown)
+            t.run()
+        else:
+            self.pool.shutdown(wait=False)
+
+    def _shutdown(self):
+        self.pool.shutdown(wait=True)
 
     def _init_done_callback(self, _task):
         """ callback for initial task
@@ -182,7 +194,7 @@ def warm_function(func, context: str, *args, **kwargs):
 class ProcessCache:
     """ simple cache for WarmProcess-es
     """
-    def __init__(self, ttl: int = 120):
+    def __init__(self, ttl: int = 12):
         """ Args:
             ttl (int) time to live for unused process
         """
@@ -307,7 +319,8 @@ class ProcessCache:
                         ):
                             print('DEL USED PROCESS')
                             processes.pop(i)
-                            del process
+                            # del process
+                            process.__del__()
                             break
 
                     while expected_count > len(processes):

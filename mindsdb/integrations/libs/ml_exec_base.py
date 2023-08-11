@@ -61,8 +61,6 @@ class MLEngineException(Exception):
 
 
 def init_ml_handler(module_path):
-    import os
-    print(f'!!! init_ml_handler {os.getpid()}')
     import importlib  # noqa
 
     from mindsdb.integrations.libs.learn_process import learn_process, predict_process  # noqa
@@ -103,7 +101,9 @@ class WarmProcess:
         # endregion
 
     def __del__(self):
-        print('TERMINATE')
+        self.shutdown()
+
+    def shutdown(self):
         # workaround for https://bugs.python.org/issue39098
         if sys.version_info[0] == 3 and sys.version_info[1] <= 8:
             t = threading.Thread(target=self._shutdown)
@@ -112,7 +112,6 @@ class WarmProcess:
             self.pool.shutdown(wait=False)
 
     def _shutdown(self):
-        print('SHUTDOWN IN THREAD')
         self.pool.shutdown(wait=True)
 
     def _init_done_callback(self, _task):
@@ -318,14 +317,12 @@ class ProcessCache:
                             and process.is_marked()
                             and (time.time() - process.last_usage_at) > self._ttl
                         ):
-                            print('DEL USED PROCESS')
                             processes.pop(i)
                             # del process
-                            process.__del__()
+                            process.shutdown()
                             break
 
                     while expected_count > len(processes):
-                        print('START NEW PROCESS')
                         processes.append(
                             WarmProcess(init_ml_handler, (self.cache[handler_name]['handler_module'],))
                         )

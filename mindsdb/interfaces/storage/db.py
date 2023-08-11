@@ -3,7 +3,7 @@ import json
 import os
 import uuid
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict
 
 import numpy as np
 import pydantic

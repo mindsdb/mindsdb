@@ -64,7 +64,6 @@
     "name": "Documentation"
   },
   "redirects": [
-    {"source": "/app-integrations/binance","destination": "/integrations/app-integrations/binance"},
     {"source": "/app-integrations/github","destination": "/integrations/app-integrations/github"},
     {"source": "/app-integrations/gmail","destination": "/integrations/app-integrations/gmail"},
     {"source": "/app-integrations/google-calendar","destination": "/integrations/app-integrations/google-calendar"},

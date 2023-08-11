@@ -74,7 +74,9 @@ class SearchLocationTable(APITable):
             # search not works without searchQuery, use 'London'
             params["searchQuery"] = "London"
 
-        result = self.handler.call_twitter_api(params=params, filters=filters)
+        result = self.handler.call_tripadvisor_searchlocation_api(
+            params=params, filters=filters
+        )
 
         # filter targets
         columns = []
@@ -127,18 +129,6 @@ class SearchLocationTable(APITable):
             "latitude",
             "longitude",
         ]
-
-    def filter_columns(self, result: pd.DataFrame, query: ast.Select = None):
-        columns = []
-        if query is not None:
-            for target in query.targets:
-                if isinstance(target, ast.Star):
-                    columns = self.get_columns()
-                    break
-                elif isinstance(target, ast.Identifier):
-                    columns.append(target.value)
-        if len(columns) > 0:
-            result = result[columns]
 
 
 class LocationDetailsTable(APITable):

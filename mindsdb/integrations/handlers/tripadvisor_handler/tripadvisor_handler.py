@@ -24,6 +24,7 @@ from mindsdb.integrations.libs.response import (
 
 from tripadvisor_api import TripAdvisorAPI
 from tripadvisor_table import SearchLocationTable
+from tripadvisor_api import TripAdvisorAPICall
 
 
 class TripAdvisorHandler(APIHandler):
@@ -147,7 +148,7 @@ class TripAdvisorHandler(APIHandler):
                 else:
                     params["max_results"] = left
 
-            log.logger.debug(f">>>twitter in: {method_name}({params})")
+            log.logger.debug(f">>>tripadvisor in: {method_name}({params})")
             resp = method(**params)
 
             if hasattr(resp, "includes"):
@@ -227,21 +228,36 @@ class TripAdvisorHandler(APIHandler):
         if self.is_connected is False:
             self.connect()
 
-        pages = params["page"]
-        data = []
+        locations = self.api.makeRequest(TripAdvisorAPICall.SEARCH_LOCATION, **params)
+        result = []
 
-        for page in range(1, pages + 1):
-            params["page"] = page
-            result = self.api.get_everything(**params)
-            articles = result["articles"]
-            for article in articles:
-                article["source_id"] = article["source"]["id"]
-                article["source_name"] = article["source"]["name"]
-                del article["source"]
-                article["query"] = params.get("q")
-                article["searchIn"] = params.get("searchIn")
-                article["domains"] = params.get("domains")
-                article["excludedDomains"] = params.get("exclude_domains")
-                data.append(article)
+        for loc in locations:
+            data = {
+                "location_id": loc.location_id if loc.location_id else None,
+                "name": loc.name if loc.name else None,
+                "distance": loc.distance if loc.distance else None,
+                "rating": loc.rating if loc.rating else None,
+                "bearing": loc.bearing if loc.bearing else None,
+                "street1": loc.address_obj.street1 if loc.address_obj.street1 else None,
+                "street2": loc.address_obj.street2 if loc.address_obj.street2 else None,
+                "city": loc.address_obj.city if loc.address_obj.city else None,
+                "state": loc.address_obj.state if loc.address_obj.state else None,
+                "country": loc.address_obj.country if loc.address_obj.country else None,
+                "postalcode": loc.address_obj.postalcode
+                if loc.address_obj.postalcode
+                else None,
+                "address_string": loc.address_obj.address_string
+                if loc.address_obj.address_string
+                else None,
+                "phone": loc.address_obj.phone if loc.address_obj.phone else None,
+                "latitude": loc.address_obj.latitude
+                if loc.address_obj.latitude
+                else None,
+                "longitude": loc.address_obj.longitude
+                if loc.address_obj.longitude
+                else None,
+            }
+            result.append(data)
 
-        return pd.DataFrame(data=data)
+        result = pd.DataFrame(result)
+        return result

@@ -241,8 +241,7 @@ def get_all_websites(urls, limit=1, html=False):
         columns_to_ignore += ['html_content']
     df = dict_to_dataframe(reviewd_urls, columns_to_ignore=columns_to_ignore, index_name='url')
 
-
-    if df[df.error.isna()].empty:
+    if not df.empty and df[df.error.isna()].empty:
         # no real data - rise exception from first row
         raise Exception(str(df.iloc[0].error))
     return df

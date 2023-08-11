@@ -823,7 +823,7 @@
             "integrations/ai-engines/openai",
             "integrations/ai-engines/huggingface",
             "integrations/ai-engines/langchain",
-            "custom-model/monkeylearn"
+            "integrations/ai-engines/monkeylearn"
           ]
         },
         {

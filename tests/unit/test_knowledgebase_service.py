@@ -1,256 +1,220 @@
-import os
-from unittest.mock import patch
+"""
+Tests for knowledge base service
+"""
+
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
 
 from mindsdb.interfaces.knowledge_base.service import (
-    KnowledgeBaseError,
+    FilterCondition,
+    FilterOP,
     KnowledgeBaseService,
 )
-from mindsdb.interfaces.storage.db import (
-    KBEmbeddingModel,
-    KBRetrievalStrategy,
-    KBVectorDatabase,
-    KnowledgeBase,
-)
-
-
-# patch mindsdb.utilities.fs.get_or_create_data_dir
-# to return a temp dir
-@pytest.fixture(autouse=True, scope="function")
-def temp_data_dir(tmp_path):
-    with patch(
-        "mindsdb.interfaces.knowledge_base.service.get_or_create_data_dir"
-    ) as mock:
-        mock.return_value = str(tmp_path)
-        yield mock
+from mindsdb.interfaces.storage.db import KnowledgeBase
 
 
 @pytest.fixture
-def knowledge_base_object():
+def mock_embedding_model_handler():
+    """
+    Mock embedding model handler
+    # TODO: to be replaced with a real embedding model handler
+    """
+    mock_handler = MagicMock()
+
+    # for the predict method, we append a column to the input dataframe,
+    # which is the embedding vector
+    def predict(df: pd.DataFrame, args=None):
+        embedding_vector = [1, 2, 3]
+        vector_col = []
+        for _ in range(df.shape[0]):
+            vector_col.append(embedding_vector)
+        # make a copy of the input dataframe
+        df = df.copy()
+        df["embedding_vector"] = vector_col
+        return df
+
+    mock_handler.predict.side_effect = predict
+
+    # for the describe method, when attribute is 'args', we return a dataframe
+    # which contains the target and output_column info
+    def describe(attribute):
+        if attribute == "args":
+            return pd.DataFrame(
+                {
+                    "key": ["target", "output_column"],
+                    "value": ["embedding_vector", "embedding_vector"],
+                }
+            )
+        else:
+            return None
+
+    mock_handler.describe.side_effect = describe
+
+    return mock_handler
+
+
+@pytest.fixture
+def mock_vector_database_handler():
+    """
+    Mock vector database handler
+    # TODO: to be replaced with a real vector database handler
+    """
+    mock_handler = MagicMock()
+
+    def select(table_name, search_vector, metadata_filters, limit):
+        # return a dataframe with a column named 'content'
+        return pd.DataFrame(
+            {
+                "id": [1, 2, 3],
+                "content": ["test", "test", "test"],
+                "metadata": [{"test": "test"}, {"test": "test"}, {"test": "test"}],
+            }
+        )
+
+    mock_handler.select.side_effect = select
+
+    return mock_handler
+
+
+@pytest.fixture
+def mock_knowledgebase():
+    """
+    Mock knowledge base
+    """
     return KnowledgeBase(
-        name="test",
-        collection_handle="test",
+        name="test knowledge base",
+        company_id=-1,
         project_id=-1,
-        params={
-            "embedding_model": KBEmbeddingModel.DUMMY,
-            "retrieval_strategy": KBRetrievalStrategy.SIMILARITY,
-            "vector_database": KBVectorDatabase.CHROMADB,
-            "content_field": "content",
-            "id_field": "id",
-        },
+        embedding_model_id=-1,
+        vector_database_id=-1,
+        vector_database_table_name="test",
     )
 
 
 @pytest.fixture
-def docs_dataframe():
-    return pd.DataFrame(
-        [
-            ["1", "content1", "metadata1"],
-            ["2", "content2", "metadata2"],
-            ["3", "content3", "metadata3"],
-            ["4", "content4", "metadata4"],
+def knowledgebase_service(
+    mock_knowledgebase, mock_embedding_model_handler, mock_vector_database_handler
+) -> KnowledgeBaseService:
+    """
+    Knowledge base service
+    """
+    # patch KnowledgeBaseService's _get_embedding_model_handler method
+    # patch KnowledgeBaseService's _get_vector_database_handler method
+    with patch.object(
+        KnowledgeBaseService,
+        "_get_embedding_model_handler",
+        return_value=mock_embedding_model_handler,
+    ), patch.object(
+        KnowledgeBaseService,
+        "_get_vector_database_handler",
+        return_value=mock_vector_database_handler,
+    ):
+        return KnowledgeBaseService(mock_knowledgebase)
+
+
+def test_select_from_knowledgebase(knowledgebase_service):
+    """
+    Test select from knowledge base
+    """
+
+    # test select by providing search texts
+    result = knowledgebase_service.select(
+        search_texts=[
+            FilterCondition(column="content", operator=FilterOP.EQUAL, value="test")
+        ]
+    )
+    assert result.shape[0] == 3
+    # the embedding model predict method should be called
+    # with the input dataframe
+    # get the dataframe passed to the predict method
+    input_df = knowledgebase_service.embedding_model_handler.predict.call_args[0][0]
+    pd.testing.assert_frame_equal(input_df, pd.DataFrame({"content": ["test"]}))
+
+    # multiple search texts
+    result = knowledgebase_service.select(
+        search_texts=[
+            FilterCondition(column="content", operator=FilterOP.EQUAL, value="test"),
+            FilterCondition(column="content2", operator=FilterOP.EQUAL, value="test2"),
+        ]
+    )
+    input_df = knowledgebase_service.embedding_model_handler.predict.call_args[0][0]
+    pd.testing.assert_frame_equal(
+        input_df, pd.DataFrame({"content": ["test"], "content2": ["test2"]})
+    )
+    assert result.shape[0] == 3
+
+    # test select by providing metadata filters
+    # reset the mock embedding model handler
+    knowledgebase_service.embedding_model_handler.reset_mock()
+    result = knowledgebase_service.select(
+        metadata_filters=[
+            FilterCondition(
+                column="created_at", operator=FilterOP.GREATER_THAN, value="2020-01-01"
+            )
+        ]
+    )
+    # we should not call the embedding model predict method
+    knowledgebase_service.embedding_model_handler.predict.assert_not_called()
+    assert result.shape[0] == 3
+
+    # test select by providing both search texts and metadata filters
+    result = knowledgebase_service.select(
+        search_texts=[
+            FilterCondition(column="content", operator=FilterOP.EQUAL, value="test")
         ],
-        columns=["id", "content", "metadata"],
+        metadata_filters=[
+            FilterCondition(
+                column="created_at", operator=FilterOP.GREATER_THAN, value="2020-01-01"
+            )
+        ],
     )
 
+    assert result.shape[0] == 3
 
-def test_no_id_field(knowledge_base_object, docs_dataframe):
+
+def test_delete_from_knowledgebase(knowledgebase_service):
     """
-    When the dataframe does not have the id_field, an error should be raised
+    Test delete from knowledge base
     """
-    # wrong id column name
-    docs_dataframe = docs_dataframe.rename(columns={"id": "wrong_id"})
-    # create the serivce
-    service = KnowledgeBaseService(knowledge_base_object)
-
-    with pytest.raises(KnowledgeBaseError):
-        service.create_index(df=docs_dataframe)
-
-    docs_dataframe = docs_dataframe.drop(columns=["wrong_id"])
-    # create the serivce
-    service = KnowledgeBaseService(knowledge_base_object)
-    # create the index
-    with pytest.raises(KnowledgeBaseError):
-        service.create_index(df=docs_dataframe)
-
-
-def test_no_content_field(knowledge_base_object, docs_dataframe):
-    """
-    When the dataframe does not have the content_field
-    Every column besides the id_field should be considered contents
-    """
-    # providing the wrong content column name should raise an error
-    docs_dataframe = docs_dataframe.rename(columns={"content": "wrong_content"})
-
-    # create the serivce
-    service = KnowledgeBaseService(knowledge_base_object)
-
-    with pytest.raises(KnowledgeBaseError):
-        service.create_index(df=docs_dataframe)
-
-    # if user has not specified a content field, all columns
-    # besides the id field should be considered content
-    knowledge_base_object.params = {
-        "embedding_model": KBEmbeddingModel.DUMMY,
-        "retrieval_strategy": KBRetrievalStrategy.SIMILARITY,
-        "vector_database": KBVectorDatabase.CHROMADB,
-        "id_field": "id",
-        "content_field": None,
-    }
-    assert knowledge_base_object.params.content_field is None
-    # create the serivce
-    service = KnowledgeBaseService(knowledge_base_object)
-    # create the index
-    service.create_index(df=docs_dataframe)
-
-    # check that the index was created
-    # the underlying number of docs in the index should be the same as the number of docs in the dataframe
-    store = service._get_or_create_vector_store()
-    assert store._collection.count() == docs_dataframe.shape[0]
-
-    # the content column should be the concatenation of all columns besides the id field
-    doc = store._collection.get(ids=["1"])["documents"][0]
-    assert doc == "wrong_content: content1, metadata: metadata1"
-
-
-def test_no_meta_field(knowledge_base_object, docs_dataframe):
-    """
-    When the dataframe does not have the meta_field
-    Every column besides the content_field should be considered metadata
-    """
-    assert knowledge_base_object.params.metadata_fields is None
-    # create the serivce
-    service = KnowledgeBaseService(knowledge_base_object)
-    # create the index
-    service.create_index(df=docs_dataframe)
-
-    metadata = service._get_or_create_vector_store()._collection.get(ids=["1"])[
-        "metadatas"
-    ][0]
-    assert metadata == {
-        "metadata": "metadata1",
-        "id": "1",
-    }
-
-
-def test_create_index(knowledge_base_object: KnowledgeBase, docs_dataframe):
-    # create the serivce
-    service = KnowledgeBaseService(knowledge_base_object)
-    # create the index
-    service.create_index(df=docs_dataframe)
-    # check that the index was created
-    # the underlying number of docs in the index should be the same as the number of docs in the dataframe
-    store = service._get_or_create_vector_store()
-    assert store._collection.count() == docs_dataframe.shape[0]
-
-
-def test_query_index(knowledge_base_object: KnowledgeBase, docs_dataframe):
-    # create the serivce
-    service = KnowledgeBaseService(knowledge_base_object)
-    # create the index
-    service.create_index(df=docs_dataframe)
-
-    # query the index
-    result = service.query_index(query="content1", top_k=10)
-    # check that the result is correct
-    assert type(result) == pd.DataFrame
-    assert result.shape[0] == docs_dataframe.shape[0]
-    assert result.columns.tolist() == ["id", "content", "metadata", "score"]
-
-    # query the index, with top_k=1 should just return the top result
-    result = service.query_index(query="content1", top_k=1)
-    assert result.shape[0] == 1
-
-
-def test_update_index(knowledge_base_object: KnowledgeBase, docs_dataframe):
-    # create the serivce
-    service = KnowledgeBaseService(knowledge_base_object)
-    # create the index
-    service.create_index(df=docs_dataframe)
-
-    # update the index
-    new_docs_data_frame = docs_dataframe.append(
-        {"id": "5", "content": "totally different stuff", "metadata": "metadata5"},
-        ignore_index=True,
+    knowledgebase_service.delete(
+        metadata_filters=[
+            FilterCondition(
+                column="created_at", operator=FilterOP.GREATER_THAN, value="2020-01-01"
+            )
+        ]
     )
+    # vector database handler's delete method should be called
+    knowledgebase_service.vector_database_handler.delete.assert_called_once()
 
-    service.update_index(df=new_docs_data_frame)
-
-    # check that the index was updated
-    # the underlying number of docs in the index should be the same as the number of docs in the dataframe
-    store = service._get_or_create_vector_store()
-    assert store._collection.count() == new_docs_data_frame.shape[0]
-
-    # query the new index, you should see the new doc inside of it
-    result = service.query_index(query="totally different stuff", top_k=10)
-    assert "5" in result["id"].tolist()
-
-
-def test_delete_index(knowledge_base_object: KnowledgeBase, docs_dataframe):
-    # create the serivce
-    service = KnowledgeBaseService(knowledge_base_object)
-    # create the index
-    service.create_index(df=docs_dataframe)
-    assert (
-        service._get_or_create_vector_store()._collection.count()
-        == docs_dataframe.shape[0]
-    )
-
-    service.delete_index()
-    assert service._get_or_create_vector_store()._collection.count() == 0
+    # specifying search texts should raise an error
+    with pytest.raises(TypeError):
+        knowledgebase_service.delete(
+            search_texts=[
+                FilterCondition(column="content", operator=FilterOP.EQUAL, value="test")
+            ]
+        )
 
 
-def test_multiple_indexes(knowledge_base_object: KnowledgeBase, docs_dataframe):
-    # create another knowledge base object
-    kb2 = KnowledgeBase(
-        name="test_kb2",
-        collection_handle="test_kb2",
-        params={
-            "embedding_model": KBEmbeddingModel.DUMMY,
-            "retrieval_strategy": KBRetrievalStrategy.SIMILARITY,
-            "vector_database": KBVectorDatabase.CHROMADB,
-            "id_field": "id",
-            "content_field": "content",
-            "metadata_fields": ["metadata"],
-        },
-    )
+def test_update_knowledgebase(knowledgebase_service):
+    """
+    Test update knowledge base
+    """
+    data = pd.DataFrame(data={"content": ["test"], "content2": ["test2"]})
 
-    # create a new doc dataframe
-    new_docs_data_frame = pd.DataFrame(
-        {
-            "id": ["5", "6"],
-            "content": ["totally different stuff", "totally different stuff 2"],
-            "metadata": ["metadata5", "metadata6"],
-        }
-    )
+    knowledgebase_service.update(df=data, columns=["content", "content2"])
+    # vector database handler's insert method should be called
+    knowledgebase_service.vector_database_handler.insert.assert_called_once()
 
-    # create the serivce
-    service = KnowledgeBaseService(knowledge_base_object)
-    # create the index
-    service.create_index(df=docs_dataframe)
 
-    # create the serivce
-    service2 = KnowledgeBaseService(kb2)
-    service2.create_index(df=new_docs_data_frame)
+def test_insert_into_knowledgebase(knowledgebase_service):
+    """
+    Test insert into knowledge base
+    """
+    data = pd.DataFrame(data={"content": ["test"], "content2": ["test2"]})
 
-    # check that the index was created
-    # the underlying number of docs in the index should be the same as the number of docs in the dataframe
-    store = service._get_or_create_vector_store()
-    assert store._collection.count() == docs_dataframe.shape[0]
+    knowledgebase_service.insert(df=data, columns=["content", "content2"])
 
-    store2 = service2._get_or_create_vector_store()
-    assert store2._collection.count() == new_docs_data_frame.shape[0]
-
-    # query the index
-    result = service.query_index(query="content1", top_k=10)
-    # check that the result is correct
-    assert type(result) == pd.DataFrame
-    assert result.shape[0] == docs_dataframe.shape[0]
-
-    # query the index
-    result = service2.query_index(query="totally different stuff", top_k=10)
-    # check that the result is correct
-    assert type(result) == pd.DataFrame
-    assert result.shape[0] == new_docs_data_frame.shape[0]
+    # vector database handler's insert method should be called
+    knowledgebase_service.vector_database_handler.insert.assert_called_once()

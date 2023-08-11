@@ -2,236 +2,178 @@
 Tasks related to the knowledge base
 """
 
-from functools import lru_cache
+from enum import Enum
+from typing import Iterable, Optional
 
-import chromadb
 import pandas as pd
-from langchain.document_loaders import DataFrameLoader
-from langchain.embeddings import (
-    CohereEmbeddings,
-    FakeEmbeddings,
-    OpenAIEmbeddings,
-    SentenceTransformerEmbeddings,
-)
-from langchain.embeddings.base import Embeddings
-from langchain.retrievers import BM25Retriever, EnsembleRetriever
-from langchain.schema.retriever import BaseRetriever
-from langchain.vectorstores import Chroma, PGVector
-from langchain.vectorstores.base import VectorStore
+from pydantic import BaseModel
 
-from mindsdb.interfaces.storage.db import (
-    KBEmbeddingModel,
-    KBRetrievalStrategy,
-    KBVectorDatabase,
-    KnowledgeBase,
-    engine,
-)
-from mindsdb.utilities.fs import get_or_create_data_dir
-from mindsdb.utilities.log import get_log
-
-LOG = get_log()
+from mindsdb.integrations.libs.base import BaseMLEngine, VectorStoreHandler
+from mindsdb.interfaces.storage.db import KnowledgeBase
 
 
-class KnowledgeBaseError(Exception):
+class FilterOP(Enum):
     """
-    Exception raised when there is an error with the knowledge base
+    Filter operators
     """
 
+    EQUAL = "="
+    NOT_EQUAL = "!="
+    GREATER_THAN = ">"
+    GREATER_THAN_OR_EQUAL = ">="
+    LESS_THAN = "<"
+    LESS_THAN_OR_EQUAL = "<="
+    IN = "IN"
+    NOT_IN = "NOT IN"
+    LIKE = "LIKE"
+    NOT_LIKE = "NOT LIKE"
+    IS_NULL = "IS NULL"
+    IS_NOT_NULL = "IS NOT NULL"
 
-def get_chromdb_persistence_path():
-    return get_or_create_data_dir() + "/chromadb.db"
 
-
-def get_embedding_func(embedding_method: KBEmbeddingModel) -> Embeddings:
+class FilterCondition(BaseModel):
     """
-    Cached function to return an embedding function based on the embedding method
+    Filter condition
     """
-    if embedding_method == KBEmbeddingModel.OPENAI:
-        return OpenAIEmbeddings()  # require OPENAI_API_KEY to be set in env
-    elif embedding_method == KBEmbeddingModel.SENTENCE_TRANSFORMER:
-        return SentenceTransformerEmbeddings()
-    elif embedding_method == KBEmbeddingModel.COHERE:
-        return CohereEmbeddings()  # require COHERE_API_KEY to be set in env
-    elif embedding_method == KBEmbeddingModel.DUMMY:
-        return FakeEmbeddings(size=1024)
-    else:
-        raise NotImplementedError(
-            f"Embedding method {embedding_method} is not implemented"
-        )
 
-
-def get_store(knowledge_base: KnowledgeBase) -> VectorStore:
-    """
-    Cached function to return a langchain vector store object based on the knowledge base
-    """
-    collection_handle = knowledge_base.collection_handle
-    embedding_func = get_embedding_func(knowledge_base.params.embedding_model)
-    if knowledge_base.params.vector_database == KBVectorDatabase.CHROMADB:
-        # construct a persistent client, with storage backed by a local database
-        client = chromadb.PersistentClient(get_chromdb_persistence_path())
-        # create a new vector store
-        store = Chroma(
-            client=client,
-            collection_name=collection_handle,
-            embedding_function=embedding_func,
-        )
-    elif knowledge_base.params.vector_database == KBVectorDatabase.POSTGRES:
-        # get the postgres connection string from sql_alchemy
-        connection_string = engine.url
-        # make sure we are connecting to postgres
-        if not connection_string.drivername.startswith("postgres"):
-            raise ValueError(
-                "We are not using postgres as the database, but the knowledge base is configured to use postgres"
-            )
-
-        # create a new vector store
-        store = PGVector(
-            collection_name=collection_handle,
-            embedding_function=embedding_func,
-            connection_string=connection_string,
-        )
-
-    else:
-        raise NotImplementedError(
-            f"Vector database {knowledge_base.params.vector_database} is not implemented"
-        )
-
-    return store
+    column: str
+    operator: FilterOP
+    value: str
 
 
 class KnowledgeBaseService:
-    def __init__(self, knowledge_base: KnowledgeBase):
-        self.knowledge_base = knowledge_base
+    def __init__(self, kb: KnowledgeBase) -> None:
+        self.kb = kb
+        # provision the embedding model and vector database
+        # to be used across the service
+        self.vector_database_handler: VectorStoreHandler = (
+            self._get_vector_database_handler()
+        )
+        self.embedding_model_handler: BaseMLEngine = self._get_embedding_model_handler()
+        self.table_name = kb.vector_database_table_name
 
-    def _get_or_create_vector_store(self) -> VectorStore:
+    def _get_embedding_model_handler(self):
         """
-        Connect to the underlying collection of vectors for the knowledge base.
+        Get the embedding model handler given the integration id
         """
-        return get_store(self.knowledge_base)
+        ...
 
-    def _get_or_create_retriever(self) -> BaseRetriever:
+    def _get_vector_database_handler(self):
         """
-        Create a retriever interface based on the knowledge base object.
-        This is the main interface for querying the knowledge base.
+        Get the vector database handler given the integration id
         """
-        if self.knowledge_base.params.retrieval_strategy == KBRetrievalStrategy.BM25:
-            raise NotImplementedError("BM25 is not implemented yet")
-        elif (
-            self.knowledge_base.params.retrieval_strategy == KBRetrievalStrategy.HYBRID
-        ):
-            raise NotImplementedError("Hybrid is not implemented yet")
-        elif (
-            self.knowledge_base.params.retrieval_strategy
-            == KBRetrievalStrategy.SIMILARITY
-        ):
-            store = self._get_or_create_vector_store()
-            return store.as_retriever()  # default is cosine similarity
+        ...
 
-        elif self.knowledge_base.params.retrieval_strategy == KBRetrievalStrategy.MMR:
-            store = self._get_or_create_vector_store()
-            return store.as_retriever(search_type="mmr")
+    def _get_embedding_column(self) -> str:
+        # get the column that stores the embedding vectors in the
+        # returned dataframe from the embedding model
+        # get the args from the embedding model
+        df = self.embedding_model_handler.describe(attribute="args")
+        # check if the dataframe contains two columns key and value
+        if "key" in df.columns and "value" in df.columns:
+            df = df.set_index("key")
+            if "target" in df.index:
+                return df.loc["target"]["value"]
+            elif "output_column" in df.index:
+                return df.loc["output_column"]["value"]
+            else:
+                raise Exception(
+                    "Could not find target or output_column in the embedding model args"
+                )
         else:
-            raise NotImplementedError(
-                f"Retrieval strategy {self.knowledge_base.params.retrieval_strategy} is not implemented"
-            )
+            # try to get the args object from the handler directly
+            args = self.embedding_model_handler.model_storage.json_get("args")
+            if "target" in args:
+                return args["target"]
+            elif "output_column" in args:
+                return args["output_column"]
+            else:
+                raise Exception(
+                    "Could not find target or output_column in the embedding model args"
+                )
 
-    def create_index(self, df: pd.DataFrame):
+    def select(
+        self,
+        search_texts: Optional[Iterable[FilterCondition]] = None,
+        metadata_filters: Optional[Iterable[FilterCondition]] = None,
+        limit: int = 10,
+    ) -> pd.DataFrame:
         """
-        Create a new index in langchain based on the current knowledge base
-
-        df is the dataframe that contains the documents to be indexed
-        Important columns are id, content and metadata
+        Select all the rows from the knowledge base that match the given filters
         """
-        store = self._get_or_create_vector_store()
+        if search_texts is not None:
+            # construct a dataframe to pass to the embedding model
+            data = {}
+            for search_text in search_texts:
+                data[search_text.column] = [search_text.value]
 
-        id_col = self.knowledge_base.params.id_field
-        content_col = self.knowledge_base.params.content_field
-        metadata_cols = self.knowledge_base.params.metadata_fields
+            df = pd.DataFrame(data)
 
-        # make sure the id column is present
-        if id_col not in df.columns:
-            raise KnowledgeBaseError(
-                f"ID column {id_col} is not present in the dataframe"
-            )
+            # get a search vector from the embedding model
+            result_df = self.embedding_model_handler.predict(df)
+            vector_column_name = self._get_embedding_column()
+            # check if the vector column exists in the dataframe
+            if vector_column_name not in result_df.columns:
+                raise Exception(
+                    f"Could not find vector column {vector_column_name} in the result dataframe"
+                )
 
-        # if no content column is specified, we convert all non-id columns to a single content column, in the form of
-        # "col1: value1, col2: value2, ..."
-        if content_col is None:
-            df["_mindsdb_kb_content"] = df.apply(
-                lambda x: ", ".join(
-                    [f"{col}: {x[col]}" for col in df.columns if col != id_col]
-                ),
-                axis=1,
-            )
+            # get the vector column
+            search_vector = result_df.iloc[0][vector_column_name]
+        else:
+            search_vector = None
 
-            content_col = "_mindsdb_kb_content"
-
-        # make sure the content column is present
-        if content_col not in df.columns:
-            raise KnowledgeBaseError(
-                f"Content column {content_col} is not present in the dataframe"
-            )
-
-        # if no metadata columns are specified, we use all columns except id and content
-        if metadata_cols is None:
-            metadata_cols = [col for col in df.columns if col != content_col]
-
-        # create the document objects
-        loader = DataFrameLoader(
-            data_frame=df,
-            page_content_column=content_col,
+        # pass the search vector to the vector database to get the results
+        result = self.vector_database_handler.select(
+            table_name=self.table_name,
+            search_vector=search_vector,
+            metadata_filters=metadata_filters,
+            limit=limit,
         )
 
-        # create the index
-        store.add_documents(
-            loader.load(),
-            ids=df[id_col].tolist(),
+        return result
+
+    def insert(self, df: pd.DataFrame, columns: Iterable[str]) -> None:
+        """
+        Insert the given data into the knowledge base
+        """
+
+        # pass the dataframe to the embedding model to get the embedding vectors
+        result_df = self.embedding_model_handler.predict(df)
+        vector_column_name = self._get_embedding_column()
+        # check if the vector column exists in the dataframe
+        if vector_column_name not in result_df.columns:
+            raise Exception(
+                f"Could not find vector column {vector_column_name} in the result dataframe"
+            )
+
+        # get the vector column
+        vector_col = result_df[vector_column_name]
+        # add the vector column to the dataframe
+        df["embeddings"] = vector_col
+
+        # pass the dataframe + embedding vectors to the vector database to store the vectors
+        self.vector_database_handler.insert(
+            table_name=self.table_name,
+            df=df,
+            columns=columns,
         )
 
-    def query_index(self, query: str, top_k: int = 10) -> pd.DataFrame:
+    def update(self, df: pd.DataFrame, columns: Iterable[str]) -> None:
         """
-        Query the index in langchain based on the current knowledge base
+        Update the given data in the knowledge base
         """
-        # TODO: add support for metadata filters
-        # retriever = self._get_or_create_retriever()
+        return self.insert(
+            df, columns
+        )  # this assumes the vector database will handle the upsert
 
-        # search the index and return the scores
-        store = self._get_or_create_vector_store()
-        docs = store.similarity_search_with_score(
-            query,
-            k=top_k,
+    def delete(
+        self, metadata_filters: Optional[Iterable[FilterCondition]] = None
+    ) -> None:
+        """
+        Delete all the rows from the knowledge base that match the given filters
+        """
+        # pass the metadata filters to the vector database to delete the vectors
+        self.vector_database_handler.delete(
+            table_name=self.table_name, filters=metadata_filters
         )
-
-        # convert the results to a dataframe
-        df = pd.DataFrame.from_records(
-            [
-                {
-                    "id": doc.metadata.get("id", None),
-                    "content": doc.page_content,
-                    "metadata": doc.metadata,
-                    "score": score,
-                }
-                for doc, score in docs
-            ]
-        )
-
-        return df
-
-    def update_index(self, df: pd.DataFrame):
-        """
-        Update the index in langchain based on the current knowledge base
-
-        This is a bit of tricky, since we want to do upsert as much as possible.
-        For non-changed documents, we don't want to recompute the embeddings, to save time.
-        For now, we will just delete the index and recreate it.
-        """
-        self.delete_index()
-        self.create_index(df)
-
-    def delete_index(self):
-        """
-        Delete the index in langchain based on the current knowledge base
-        """
-        store = self._get_or_create_vector_store()
-        store.delete_collection()
-        # after collection is deleted, calling the get_or_create_vector_store will create a new collection

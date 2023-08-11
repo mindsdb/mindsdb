@@ -119,22 +119,25 @@ def query_df(df, query, session=None):
 
 
 def infer_column_type(column):
+    if not pd.api.types.is_object_dtype(column):
+        return column
+
     # If already a datetime type, leave it as such
     if pd.api.types.is_datetime64_any_dtype(column):
         return column
 
     # Try to convert the entire column to integers
     try:
-        return column.astype(int)
-    except ValueError:
+        return column.astype(float)
+    except (ValueError, TypeError):
         # Check if the column can be converted to datetime
         try:
             return pd.to_datetime(column)
         except (pd.errors.ParserError, ValueError):
             # If that fails, try to convert the entire column to floats
             try:
-                return column.astype(float)
-            except ValueError:
+                return column.astype(int)
+            except (ValueError, TypeError):
                 # If both fail, leave the column as a string
                 return column.astype(str)
 

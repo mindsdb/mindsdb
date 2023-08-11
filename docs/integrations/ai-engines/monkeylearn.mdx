@@ -1,6 +1,6 @@
 ---
 title: MindsDB and Monkeylearn
-sidebarTitle: Monkeylearn
+sidebarTitle: MonkeyLearn
 ---
 
 Monkeylearn is a No-code text analysis tool. MindsDB allows you to use pre-built & custom Monkeylearn models to use its features like classifying text according to user needs and fields of interest like business, reviews, comments, and customer feedback.
@@ -51,19 +51,7 @@ Where:
 | `input column`                         |Specifies the input column when calling the model         | 
 
 
-Select the model to make sure that the training status is complete.
-
-```sql
-SELECT * FROM mindsdb.models WHERE name = 'ecommerce_ticket_classifier';
-```
-
-On execution, you get:
-
-<p align="center">
-  <img src="/assets/tutorials/3.select_predictor.png" />
-</p>
-
-You can also use the `DESCRIBE` syntax to verify the model's status.
+You can use the `DESCRIBE` syntax to verify the model's status.
 
 ```sql
 DESCRIBE ecommerce_ticket_classifier;

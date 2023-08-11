@@ -3,7 +3,7 @@ title: MindsDB and Monkeylearn
 sidebarTitle: Monkeylearn
 ---
 
-Monkeylearn is a No-code text analysis tool. MindsDB allows you to use pre-built & custom Monkeylearn models to use its features like classifying text according to user needs and fields of interest like business, reviews, comments, and customer-feedback.
+Monkeylearn is a No-code text analysis tool. MindsDB allows you to use pre-built & custom Monkeylearn models to use its features like classifying text according to user needs and fields of interest like business, reviews, comments, and customer feedback.
 
 ## How to bring MonkeyLearn Models to MindsDB
 
@@ -14,7 +14,10 @@ Create ML_ENGINE monkeylearn
 FROM monkeylearn
 ```
 
-![ML_engine](https://raw.githubusercontent.com/mindsdb/mindsdb/staging/docs/assets/tutorials/1.create_ml.png)
+<p align="center">
+  <img src="/assets/tutorials/1.create_ml.png" />
+</p>
+
 
 Once the ML_ENGINE is created, we use the `CREATE MODEL` statement to bring Monkeylearn models to MindsDB.
 
@@ -32,7 +35,9 @@ input_column = 'text';
 
 On execution, you get:
 
-![Create_model1](https://raw.githubusercontent.com/mindsdb/mindsdb/staging/docs/assets/tutorials/createmodel1.png)
+<p align="center">
+  <img src="/assets/tutorials/createmodel1.png" />
+</p>
 
 Where:
 
@@ -54,7 +59,9 @@ SELECT * FROM mindsdb.models WHERE name = 'ecommerce_ticket_classifier';
 
 On execution, you get:
 
-![select_model](https://raw.githubusercontent.com/mindsdb/mindsdb/staging/docs/assets/tutorials/3.select_predictor.png)
+<p align="center">
+  <img src="/assets/tutorials/3.select_predictor.png" />
+</p>
 
 You can also use the `DESCRIBE` syntax to verify the model's status.
 
@@ -64,7 +71,9 @@ DESCRIBE ecommerce_ticket_classifier;
 
 On execution, you get:
 
-![describe](https://raw.githubusercontent.com/mindsdb/mindsdb/staging/docs/assets/tutorials/4.describe.png)
+<p align="center">
+  <img src="/assets/tutorials/4.describe.png" />
+</p>
 
 Use the `SELECT` statement to make a prediction on the model.
 
@@ -75,7 +84,9 @@ WHERE text = 'Where is my order? The delivery status shows shipped. When I call 
 
 On execution, you get:
 
-![select_prediction](https://raw.githubusercontent.com/mindsdb/mindsdb/staging/docs/assets/tutorials/5.select_prediction.png)
+<p align="center">
+  <img src="/assets/tutorials/5.select_prediction.png" />
+</p>
 
 ### Creating a model with a dataset. 
 
@@ -103,6 +114,8 @@ WHERE text = 'I ordered 4 units but only received 3';
 
 On execution, you get:
 
-![prediction2](https://raw.githubusercontent.com/mindsdb/mindsdb/staging/docs/assets/tutorials/10.select_prediction.png)
+<p align="center">
+  <img src="/assets/tutorials/10.select_prediction.png" />
+</p>
 
 The MindsDB model created with the Monkeylearn model successfully predicted the tag of an E-commerce support ticket according to the text input.

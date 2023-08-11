@@ -1,0 +1,110 @@
+In this section, we present how to connect to Binance and create a time series model to predict the future price of Bitcoin (BTC)
+
+## Connection
+
+This handler integrates with the [Binance API](https://binance-docs.github.io/apidocs/spot/en/#change-log) to make aggregate trade (kline) data available to use for model training and predictions.
+
+Since there are no parameters required to connect to Binance using MindsDB, you can use the below statement:
+
+```sql
+CREATE DATABASE my_binance
+WITH
+  ENGINE = 'binance';
+```
+
+## Usage
+
+### Select Data
+By default, aggregate data (klines) from the latest 1000 trading intervals with a length of one minute (1m) each will be returned.
+
+```sql
+SELECT *
+FROM my_binance.aggregated_trade_data
+WHERE symbol = 'BTCUSDT';
+```
+<Accordion title="Response" icon="binance" iconType="thin">
+    Here is the sample output data:
+
+    ```
+    | symbol      | open_time    | open_price  | high_price  | low_price   | close_price | volume      | close_time    | quote_asset_volume | number_of_trades | taker_buy_base_asset_volume | taker_buy_quote_asset_volume |
+    | ----------- | -----------  | ----------- | ----------- | ----------- | ----------- | ----------- | -----------   | ------------------ | ---------------- | --------------------------- | ---------------------------- |
+    | BTCUSDT     | 1678338600   | 21752.65000 | 21761.33000 | 21751.53000 | 21756.7000  | 103.8614100 | 1678338659.999| 2259656.20520700   | 3655             | 55.25763000                 | 1202219.60971860             |
+    ```
+    where:
+    * `symbol` - Trading pair (BTC to USDT in the above example)
+    * `open_time` - Start time of interval in seconds since the Unix epoch (default interval is 1m)
+    * `open_price` - Price of base asset at beginning of trading interval
+    * `high_price` - Highest price of base asset during trading interval
+    * `low_price` - Lowest price of base asset during trading interval
+    * `close_price` - Price of base asset at end of trading interval
+    * `volume` - Total amount of base asset traded during interval
+    * `close_time` - End time of interval in seconds since the Unix epoch
+    * `quote_asset_volume` - Total amount of quote asset (USDT in above case) traded during interval
+    * `number_of_trades` - Total number of trades made during interval
+    * `taker_buy_base_asset_volume` - How much of the base asset volume is contributed by taker buy orders
+    * `taker_buy_quote_asset_volume` - How much of the quote asset volume is contributed by taker buy orders
+</Accordion>
+
+To get a customized response we can pass open_time, close_time, and interval:
+
+```sql
+SELECT *
+FROM my_binance.aggregated_trade_data
+WHERE symbol = 'BTCUSDT'
+AND open_time > '2023-01-01'
+AND close_time < '2023-01-03 08:00:00'
+AND interval = '1s'
+LIMIT 10000;
+```
+
+<Note>
+Supported intervals are [listed here](https://binance-docs.github.io/apidocs/spot/en/#kline-candlestick-data)
+</Note>
+
+### Train a Model
+
+Here is how to create a time series model using 10000 trading intervals in the past with duration of 1m.
+
+```sql
+CREATE MODEL mindsdb.btc_forecast_model
+FROM my_binance
+(
+  SELECT * FROM aggregated_trade_data
+  WHERE symbol = 'BTCUSDT'
+  AND close_time < '2023-01-01'
+  AND interval = '1m'
+  LIMIT 10000;
+)
+
+PREDICT open_price
+
+ORDER BY open_time
+WINDOW 100
+HORIZON 10;
+```
+
+<Note>
+For more accuracy, the limit can be set to a higher value (e.g. 100,000)
+</Note>
+
+### Making Predictions
+
+First let's make a view for the most recent BTCUSDT aggregate trade data:
+
+```sql
+CREATE VIEW recent_btcusdt_data AS (
+  SELECT * FROM my_binance.aggregated_trade_data
+  WHERE symbol = 'BTCUSDT'
+)
+```
+
+Now let's predict the future price of BTC:
+
+```sql
+SELECT m.*
+FROM recent_btcusdt_data AS t
+JOIN mindsdb.btc_forecast_model AS m
+WHERE m.open_time > LATEST
+```
+
+This will give the predicted BTC price for the next 10 minutes (as the horizon is set to 10) in terms of USDT.

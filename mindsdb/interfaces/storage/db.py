@@ -1,18 +1,28 @@
-import os
-import json
 import datetime
-from typing import Dict, List, Optional
-import pydantic
+import json
+import os
+import uuid
 from enum import Enum
-
+from typing import Dict, List, Optional
 
 import numpy as np
-from sqlalchemy import create_engine, types, UniqueConstraint
-from sqlalchemy.orm import scoped_session, sessionmaker, declarative_base
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index, text
-from sqlalchemy.sql.schema import ForeignKey
-from sqlalchemy import JSON
+import pydantic
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Index,
+    Integer,
+    String,
+    UniqueConstraint,
+    create_engine,
+    text,
+    types,
+)
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import declarative_base, relationship, scoped_session, sessionmaker
+from sqlalchemy.sql.schema import ForeignKey
 
 
 class Base:
@@ -374,41 +384,27 @@ class Tasks(Base):
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
-class KBEmbeddingModel(str, Enum):
-    OPENAI = "openai"
-    SENTENCE_TRANSFORMER = "sentence_transformer"
-    COHERE = "cohere"
-    DUMMY = "dummy"  # this is for testing
-
-class KBVectorDatabase(str, Enum):
-    PGVECTOR = "pgvector"
-    CHROMADB = "chromadb"
 
 class KBRetrievalStrategy(str, Enum):
     SIMILARITY = "similarity"
     MMR = "mmr"
     BM25 = "bm25"
-    HYBRID = "hybrid"   # similarity + bm25
+    HYBRID = "hybrid"  # similarity + bm25
+
 
 class KnowledgeBase(Base):
-
-
     class ParamSpec(pydantic.BaseModel):
         """
         Describe the parameters used to configure a knowledge base.
         """
-        embedding_model: KBEmbeddingModel = KBEmbeddingModel.OPENAI
-        vector_database: KBVectorDatabase = KBVectorDatabase.CHROMADB
+
         retrieval_strategy: KBRetrievalStrategy = KBRetrievalStrategy.SIMILARITY
-        chunk_size = 1000
+        chunk_size = (
+            1000  # TODO: not taking effect for now since chunking is not implemented
+        )
         chunk_overlap = 100
 
-        content_field: Optional[str] = None  # If None, use the entire document as the content.
-        metadata_fields: Optional[List[str]] = None  # additional fields to include in the metadata
-        id_field: str = "id" # the field to use as the document id. This is used to match documents when updating the knowledge base.
-
-
-    __tablename__ = 'knowledge_base'
+    __tablename__ = "knowledge_base"
     id = Column(Integer, primary_key=True)
 
     name = Column(String, nullable=False, comment="The name of the knowledge base.")
@@ -416,18 +412,37 @@ class KnowledgeBase(Base):
     user_class = Column(Integer, nullable=True)
     project_id = Column(Integer, nullable=False)
     _params = Column(JSON, comment="Parameters used to create the knowledge base.")
-    collection_handle = Column(
-        String, 
-        comment="Then handler used to link the knowledge base object to an external collection. This can be a collection name or a collection id e.g., in chromadb."
+
+    # reference to the embedding model and the vector database
+    embedding_model_id = Column(
+        ForeignKey("integration.id", name="fk_embedding_integration_id")
+    )
+    vector_database_id = Column(
+        ForeignKey("integration.id", name="fk_vectordatabase_integration_id")
+    )
+    # default to the name of the knowledge base + uuid
+    vector_database_table_name = Column(
+        String,
+        nullable=False,
+        comment="The name of the table in the vector database.",
+        default=lambda context: f"{context.current_parameters['name']}_{uuid.uuid4().hex}",
     )
 
+    embedding_model = relationship("Integration", foreign_keys=[embedding_model_id])
+    vector_database = relationship("Integration", foreign_keys=[vector_database_id])
+
     created_at = Column(DateTime, default=datetime.datetime.now)
-    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    updated_at = Column(
+        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
+    )
     deleted_at = Column(DateTime)
 
     __table_args__ = (
-        UniqueConstraint('name', 'project_id', name='uniq_kb_name_project_id'),
+        UniqueConstraint("name", "project_id", name="uniq_kb_name_project_id"),
     )
+
+    # when vector database table name is not set
+    # use the name of the knowledge base + uuid as the table name
 
     @property
     def params(self) -> ParamSpec:
@@ -435,7 +450,6 @@ class KnowledgeBase(Base):
         Deserialize the params column into a ParamSpec object.
         """
         return self.ParamSpec(**self._params)
-
 
     @params.setter
     def params(self, value: dict):

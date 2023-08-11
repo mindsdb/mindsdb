@@ -105,13 +105,14 @@ class WarmProcess:
     def __del__(self):
         print('TERMINATE')
         # workaround for https://bugs.python.org/issue39098
-        if sys.version_info[0] == 3 and sys.version_info[1] <= 3.8:
+        if sys.version_info[0] == 3 and sys.version_info[1] <= 8:
             t = threading.Thread(target=self._shutdown)
             t.run()
         else:
             self.pool.shutdown(wait=False)
 
     def _shutdown(self):
+        print('SHUTDOWN IN THREAD')
         self.pool.shutdown(wait=True)
 
     def _init_done_callback(self, _task):
@@ -194,7 +195,7 @@ def warm_function(func, context: str, *args, **kwargs):
 class ProcessCache:
     """ simple cache for WarmProcess-es
     """
-    def __init__(self, ttl: int = 12):
+    def __init__(self, ttl: int = 120):
         """ Args:
             ttl (int) time to live for unused process
         """

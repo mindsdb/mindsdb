@@ -15,7 +15,7 @@ except Exception as e:
 title = "ChromaDB"
 name = "chromadb"
 type = HANDLER_TYPE.DATA
-icon_path = "icon.svg"
+icon_path = "icon.png"
 
 __all__ = [
     "Handler",

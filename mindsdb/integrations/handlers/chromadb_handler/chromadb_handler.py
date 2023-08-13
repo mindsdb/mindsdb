@@ -1,14 +1,21 @@
-import ast
-import uuid
 from collections import OrderedDict
+from typing import Dict
 
 import chromadb
-import numpy as np
 import pandas as pd
 from chromadb import API
 from chromadb.config import Settings
+from integrations.handlers.chromadb_handler.settings import DEFAULT_EMBEDDINGS_MODEL
+from langchain.vectorstores import Chroma
 from mindsdb_sql import ASTNode, CreateTable, Insert, Select, Star
 
+from mindsdb.integrations.handlers.chromadb_handler.helpers import (
+    documents_to_df,
+    extract_collection_name,
+    get_metadata_filter,
+    load_embeddings_model,
+    split_documents,
+)
 from mindsdb.integrations.libs.base import VectorStoreHandler
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
@@ -16,8 +23,10 @@ from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.utilities import log
 
+# todo create separate util dir for vectorstore
 
-class ChromaDBHandler(VectorStoreHandler):
+
+class ChromaDBHandler(Chroma, VectorStoreHandler):
     """This handler handles connection and execution of the ChromaDB statements."""
 
     name = "chromadb"
@@ -32,15 +41,34 @@ class ChromaDBHandler(VectorStoreHandler):
             "chroma_server_http_port": self._connection_data.get(
                 "chroma_server_http_port"
             ),
-            "persist_directory": self._connection_data.get(
-                "persist_directory", "chroma"
-            ),
         }
 
-        self._client = chromadb.Client(Settings(**self._client_config))
+        self._collection_name = self._connection_data.get(
+            "collection_name", "default_collection"
+        )
+        self._embedding_model_name = self._connection_data.get(
+            "embedding_function", DEFAULT_EMBEDDINGS_MODEL
+        )
+
+        self._embedding_function = load_embeddings_model(self._embedding_model_name)
+
+        self._persist_directory = self._connection_data.get("persist_directory")
+        self._collection_metadata = self._connection_data.get("collection_metadata")
+
+        self._client = chromadb.Client()
         self.is_connected = True
 
         VectorStoreHandler.__init__(self, name)
+
+        Chroma.__init__(
+            self,
+            client=self._client,
+            client_settings=self._connection_data,
+            embedding_function=self._embedding_function,
+            collection_name=self._collection_name,
+            collection_metadata=self._collection_metadata,
+            persist_directory=self._persist_directory,
+        )
 
     def __del__(self):
         if self.is_connected is True:
@@ -57,6 +85,7 @@ class ChromaDBHandler(VectorStoreHandler):
             return self._client
 
         try:
+
             self._client = chromadb.Client(Settings(**self._client_config))
             self.is_connected = True
         except Exception as e:
@@ -93,88 +122,144 @@ class ChromaDBHandler(VectorStoreHandler):
 
         return responseCode
 
-    def count(self, query: ASTNode):
+    def filter_query(self, query: ASTNode) -> Dict:
+        """Converts WHERE clause to ChromaDB query syntax to filter Chromadb collection.
 
-        # if count is used, return the count of the collection
-        if not isinstance(query.targets[0].args[0], Star):
-            # if count is not using '*' argument, raise error
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message="Count only supports '*' argument",
+        Args:
+            query (ASTNode): The query to filter.
+
+        Returns:
+            Dict: filter for collection.
+        """
+
+        where = {}
+        if query.where.op == "and":
+            for arg in query.where.args:
+                if arg.op == "=":
+
+                    if arg.args[0].parts[-1] == "meta_data_filter":
+                        # filters on metadata
+                        where["meta_data_filter"] = get_metadata_filter(
+                            arg.args[1].value
+                        )
+
+                    elif arg.args[0].parts[-1] == "search_query":
+                        # extract the search query
+                        where["search_query"] = arg.args[1].value
+                    else:
+                        raise NotImplementedError(
+                            f"where clause parameter {arg.args[0].parts[-1]} is not supported, "
+                            f"only 'meta_data_filter' and 'search_query' are supported"
+                        )
+                else:
+                    raise NotImplementedError(
+                        f"Unsupported where clause {arg.op} operator, only '=' is supported"
+                    )
+
+        elif query.where.op == "=":
+            # requires separate handling as the where clause is not a list when single condition
+            if query.where.args[0].parts[-1] == "meta_data_filter":
+                # filters on metadata
+                where["meta_data_filter"] = get_metadata_filter(
+                    query.where.args[1].value
+                )
+
+            elif query.where.args[0].parts[-1] == "search_query":
+                # extract the search query
+                where["search_query"] = query.where.args[1].value
+            else:
+                raise NotImplementedError(
+                    f"where clause parameter {query.where.args[0].parts[-1]} is not supported, "
+                    f"only 'meta_data_filter' and 'search_query' are supported"
+                )
+
+        else:
+            raise NotImplementedError(
+                f"Unsupported where clause {query.where.op} operator, only '=' and 'and' is supported"
             )
 
-        collection_data = self._collection.count()
-        return pd.DataFrame(columns=["count"], data=[[collection_data]])
+        return where
 
-    def similarity_search(self, query: ASTNode) -> Response:
+    def query_collection(self, query: ASTNode) -> Response:
         """
-        Run a query on a chroma database
+        Run a select query on the ChromaDB database, filter collection (if where clause)
+        and return result. NB Limit will define the number of documents returned, not the number of rows.
         """
 
         collection_name = query.from_table.parts[-1]
         self._collection = self._client.get_collection(collection_name)
 
         if hasattr(query.targets[0], "op") and query.targets[0].op == "count":
-            # get count of embeddings in a collection
 
-            return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=self.count(query))
-
-        elif isinstance(query.targets[0], Star):
-
-            result = pd.DataFrame()
-
-            if not query.where:
-                # return data for select * without where - NB max results is 10
-                collection_data = self._collection.peek(
-                    limit=query.limit.value if query.limit else 10
-                )
-                result["embeddings"] = collection_data["embeddings"]
-
-            elif query.where.args[0].parts[-1] == "search_embedding":
-                # return data based on similarity search from input embeddings
-                search_embedding = query.where.args[1].items[0].value
-
-                collection_data = self._collection.query(
-                    query_embeddings=search_embedding,
-                    n_results=query.limit.value if query.limit else 5,
-                    include=["embeddings", "distances"],
-                )
-
-                embeddings_arr = np.array(collection_data["embeddings"][0])
-                distance_arr = np.array(collection_data["distances"][0])
-
-                indices = np.where(distance_arr > 0.5)[0]
-                result["embeddings"] = embeddings_arr[indices].tolist()
-
-            else:
-
+            # if count is used, return the count of the collection
+            if not isinstance(query.targets[0].args[0], Star):
+                # if count is not using '*' argument, raise error
                 return Response(
                     resp_type=RESPONSE_TYPE.ERROR,
-                    error_message="SELECT only supports COUNT(*), SELECT * or WHERE with 'search_embeddings' parameter",
+                    error_message="Count only supports '*' argument",
                 )
+
+            collection_data = self._collection.count()
+            result = pd.DataFrame(columns=["count"], data=[[collection_data]])
+
+        else:
+
+            # if there is a where clause, parse it to Chromadb query syntax
+            where = self.filter_query(query) if query.where else {}
+
+            if where.get("search_query"):
+                # if 'search_query' provided, run similarity search
+
+                collection_data = self.similarity_search(
+                    filter=where.get(
+                        "meta_data_filter"
+                    ),  # filters on metadata, for now only column name
+                    query=where.get("search_query"),
+                    k=query.limit.value if query.limit else 5,
+                )
+                result = documents_to_df(collection_data)
+
+            else:
+                # if no 'search_query' provided, run a regular query and filter on metadata if provided
+                collection_data = self._collection.get(
+                    where=where.get("meta_data_filter")
+                )
+                result = pd.DataFrame(collection_data)[
+                    ["ids", "documents", "metadatas"]
+                ]
+
+        if query.limit:
+            # if there is a limit clause, limit the result.
+            result = result.head(query.limit.value)
 
         return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=result)
 
-    def create_or_get_collection(self, query: ASTNode) -> Response:
+    def run_create_table(self, query: ASTNode) -> Response:
         """
         Run a create table query on the ChromaDB database.
         """
         collection_name = query.name.parts[-1]
-        self._client.get_or_create_collection(collection_name)
+        self._client.create_collection(collection_name)
 
         return Response(resp_type=RESPONSE_TYPE.OK)
 
-    def add_embeddings(self, query):
+    def run_insert(self, query):
         """
         Run an insert query on the ChromaDB database.
         """
         collection_name = query.table.parts[-1]
+        columns = [column.name for column in query.columns]
+        df = pd.DataFrame(data=query.values, columns=columns)
+        documents = split_documents(df, columns)
 
-        embeddings = [ast.literal_eval(embedding[0]) for embedding in query.values]
-        ids = [str(uuid.uuid1()) for _ in embeddings]
-
-        # Add new embeddings to Chroma collection
-        self._client.get_collection(collection_name).add(ids=ids, embeddings=embeddings)
+        # converts list of Documents to embedding vectors and stores them in a ChromaDB collection
+        Chroma.from_documents(
+            documents=documents,
+            embedding=self._embedding_function,
+            persist_directory=self._persist_directory,
+            client_settings=Settings(**self._client_config),
+            collection_name=collection_name,
+        )
 
         return Response(resp_type=RESPONSE_TYPE.OK)
 
@@ -186,13 +271,13 @@ class ChromaDBHandler(VectorStoreHandler):
             self.connect()
 
             if isinstance(query, Select):
-                return self.similarity_search(query)
+                return self.query_collection(query)
 
             elif isinstance(query, CreateTable):
-                return self.create_or_get_collection(query)
+                return self.run_create_table(query)
 
             elif isinstance(query, Insert):
-                return self.add_embeddings(query)
+                return self.run_insert(query)
 
             else:
                 raise NotImplementedError(
@@ -204,6 +289,27 @@ class ChromaDBHandler(VectorStoreHandler):
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
                 error_message=f"Error executing query on ChromaDB client, {e}!",
+            )
+
+    def native_query(self, query: str) -> Response:
+        """
+        Execute a native query on the ChromaDB database.
+        """
+
+        # todo fix this - not sure if we need this?
+        try:
+            self.connect()
+            # parse query and extract collection name and any conditions
+            collection_name = extract_collection_name(query)
+            self._collection = self._client.get_collection(collection_name)
+
+        except Exception as e:
+            log.logger.error(
+                f'Error executing native query on ChromaDB client {self._connection_data["chroma_server_host"]}, {e}!'
+            )
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f'Error executing native query on ChromaDB client {self._connection_data["chroma_server_host"]}, {e}!',
             )
 
     def get_tables(self) -> Response:
@@ -248,9 +354,9 @@ connection_args = OrderedDict(
         "type": ARG_TYPE.INT,
         "description": "chromadb server port",
     },
-    persist_directory={
+    embedding_function={
         "type": ARG_TYPE.STR,
-        "description": "persistence directory for chroma",
+        "description": "embedding function to use (optional)",
     },
 )
 
@@ -258,5 +364,5 @@ connection_args_example = OrderedDict(
     chroma_api_impl="rest",
     chroma_server_host="localhost",
     chroma_server_http_port=8000,
-    persist_directoryn="chroma",
+    embedding_function="sentence-transformers/all-mpnet-base-v2",
 )

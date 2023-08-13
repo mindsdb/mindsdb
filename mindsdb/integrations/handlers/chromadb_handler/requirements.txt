@@ -3,5 +3,4 @@ SQLAlchemy
 duckdb==0.7.1
 chromadb==0.3.25
 requests==2.28.0
-sentence_transformers
 markupsafe == 2.0.1

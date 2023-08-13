@@ -94,7 +94,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
         return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=result)
 
-    def run_create_collection(self, query: ASTNode) -> Response:
+    def create_collection(self, query: ASTNode) -> Response:
         """
         Run a create table query on the pgvector database.
         """
@@ -129,7 +129,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
                     return self.native_query(query_str)
 
             elif isinstance(query, CreateTable):
-                return self.run_create_collection(query)
+                return self.create_collection(query)
 
             elif isinstance(query, Insert):
                 query_str = self.renderer.get_string(query, with_failback=True)

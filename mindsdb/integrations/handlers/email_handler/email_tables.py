@@ -53,16 +53,7 @@ class EmailsTable(APITable):
                     raise NotImplementedError("Only > and < operators are supported for created_at column.")
                 continue
 
-            # TODO: what exactly is the since_emailid? Is it the id of the email?
-            elif arg1 == 'id':
-                if op == '>':
-                    search_params['since_emailid'] = arg2
-                else:
-                    raise NotImplementedError("Only > operator is supported for id column.")
-                continue
-
-            # TODO: these arguments should only be supported with the = operator, right?
-            elif arg1 in ['mailbox', 'subject', 'to', 'from']:
+            elif arg1 in ['mailbox', 'subject', 'to', 'from', 'since_emailid']:
                 if op != '=':
                     raise NotImplementedError("Only = operator is supported for mailbox, subject, to and from columns.")
                 else:

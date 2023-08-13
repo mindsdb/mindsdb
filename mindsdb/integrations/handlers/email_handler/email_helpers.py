@@ -46,7 +46,7 @@ class EmailClient:
         if since_date is not None:
             since_date_str = since_date.strftime("%d-%b-%Y")
         else:
-            since_date = datetime.today() - timedelta(days=20)
+            since_date = datetime.today() - timedelta(days=10)
             since_date_str = since_date.strftime("%d-%b-%Y")
         query_parts.append(f'(SINCE "{since_date_str}")')
 
@@ -80,7 +80,8 @@ class EmailClient:
             email_line["subject"] = str(email_message['Subject'])
             email_line["created_at"] = email_message['Date']
             resp, email_data = self.imap_server.uid('fetch', emailid, '(BODY[TEXT])')
-            email_line["body"] = email_data[0][1].decode('utf-8')
+            try:
+                email_line["body"] = email_data[0][1].decode('utf-8')
 
             ret.append(email_line)
 

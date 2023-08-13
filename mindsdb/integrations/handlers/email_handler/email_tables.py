@@ -72,7 +72,8 @@ class EmailsTable(APITable):
             emails_df,
             selected_columns,
             [],
-            order_by_conditions
+            order_by_conditions,
+            result_limit
         )
         emails_df = select_statement_executor.execute_query()
 

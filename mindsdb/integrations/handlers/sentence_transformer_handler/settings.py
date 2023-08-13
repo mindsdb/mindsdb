@@ -3,8 +3,12 @@ from typing import List, Union
 
 import pandas as pd
 import torch
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
+
+
+class Parameters(BaseModel):
+    embeddings_model_name: str
 
 
 @lru_cache()
@@ -21,48 +25,26 @@ def load_embeddings_model(embeddings_model_name):
     return embedding_model
 
 
-class Document(BaseModel):
-    """
-    store for text, capturing metadata
-    """
-
-    text: str
-    metadata: Field(default_factory=dict)
-
-
 class DfLoader:
     def __init__(self, data_frame: pd.DataFrame, page_content_column: str):
         self._data_frame = data_frame
         self._page_content_column = page_content_column
 
-    def load(self) -> List[Document]:
-        """takes a Dataframe column and loads it as a list of documents"""
-        documents = []
+    def load(self) -> List[str]:
+        """takes a Dataframe column and loads it as a list of texts"""
+        texts = []
         for n_row, frame in self._data_frame[self._page_content_column].iteritems():
             if pd.notnull(frame):
                 # ignore rows with None values
-                column_name = self._page_content_column
-
-                document_contents = frame
-
-                documents.append(
-                    Document(
-                        text=document_contents,
-                        metadata={
-                            "source": "dataframe",
-                            "row": n_row,
-                            "column": column_name,
-                        },
-                    )
-                )
-        return documents
+                texts.append(frame)
+        return texts
 
 
 def df_to_documents(
     df: pd.DataFrame, page_content_columns: Union[List[str], str]
-) -> List[Document]:
+) -> List[str]:
     """Given a subset of columns, converts a dataframe into a list of Documents"""
-    documents = []
+    texts = []
 
     if isinstance(page_content_columns, str):
         page_content_columns = [page_content_columns]
@@ -74,6 +56,6 @@ def df_to_documents(
             )
 
         loader = DfLoader(data_frame=df, page_content_column=page_content_column)
-        documents.extend(loader.load())
+        texts.extend(loader.load())
 
-    return documents
+    return texts

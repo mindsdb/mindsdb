@@ -3,6 +3,7 @@ from typing import Optional
 import dill
 import pandas as pd
 from integrations.handlers.sentence_transformer_handler.settings import (
+    Parameters,
     df_to_documents,
     load_embeddings_model,
 )
@@ -17,15 +18,19 @@ class SentenceTransformerHandler(BaseMLEngine):
     name = "sentence transformer"
 
     def create(self, target, df=None, args=None, **kwargs):
+        """creates embeddings model and persists"""
 
         args = args["using"]
 
-        model = load_embeddings_model(args["embeddings_model_name"])
+        valid_args = Parameters(**args)
+
+        model = load_embeddings_model(valid_args.embeddings_model_name)
 
         self.model_storage.file_set("model", dill.dumps(model))
-        self.model_storage.json_set("args", args)
+        self.model_storage.json_set("args", valid_args.dict())
 
     def predict(self, df, args=None):
+        """loads persisted embeddings model and gets embeddings on input text column(s)"""
 
         args = args["predict_params"]
         columns = args.get("columns")
@@ -44,22 +49,12 @@ class SentenceTransformerHandler(BaseMLEngine):
         model = dill.loads(self.model_storage.file_get("model"))
 
         embeddings = []
-        metadata = []
 
         for _, document in enumerate(documents):
-
-            _metadata = document.metadata
-            # add text to metadata
-            _metadata["text"] = document.text
-
             _embeddings = model.encode(document.text).tolist()
-
-            metadata.append(_metadata)
             embeddings.append(_embeddings)
 
-        embeddings_df = pd.DataFrame(
-            data={"embeddings": embeddings, "metadata": metadata}
-        )
+        embeddings_df = pd.DataFrame(data={"embeddings": embeddings})
 
         return embeddings_df
 

@@ -1,0 +1,46 @@
+---
+title: Firebird
+sidebarTitle: Firebird
+---
+
+This is the implementation of the Firebird data handler for MindsDB.
+
+[Firebird](https://firebirdsql.org/en/about-firebird/) is a relational database offering many ANSI SQL standard features that runs on Linux, Windows, and a variety of Unix platforms. Firebird offers excellent concurrency, high performance, and powerful language support for stored procedures and triggers. It has been used in production systems, under a variety of names, since 1981.
+
+## Implementation
+
+This handler is implemented using the `fdb` library, the Python driver for Firebird.
+
+The required arguments to establish a connection are as follows:
+
+* `host` is the host name or IP address of the Firebird server.
+* `database` is the port to use when connecting with the Firebird server.
+* `user` is the username to authenticate the user with the Firebird server.
+* `password` is the password to authenticate the user with the Firebird server.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/firebird_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the Firebird server in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE firebird_datasource
+WITH
+    engine = 'firebird',
+    parameters = {
+        "host": "localhost",
+        "database": "C:\Users\minura\Documents\mindsdb\example.fdb",
+        "user": "sysdba",
+        "password": "password"
+    };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM firebird_datasource.example_tbl;
+```

@@ -1,0 +1,63 @@
+---
+title: MindsDB Documentation
+sidebarTitle: Writing Documentation
+---
+
+This section gets you started on how to contribute to the MindsDB documentation.
+
+MindsDB's documentation is run using Mintlify. If you want to contribute to our docs, please follow the steps below to set up the environment locally.
+
+## Running the Docs Locally
+
+<Info>
+    **Prerequisite**
+    You should have installed Git (version 2.30.1 or higher) and Node.js (version 18.10.0 or higher).
+</Info>
+
+Step 1. Clone the MindsDB Git repository:
+
+```console
+git clone https://github.com/mindsdb/mindsdb.git
+```
+
+Step 2. Install Mintlify on your OS:
+
+```console
+npm i mintlify -g
+```
+
+Step 3. Go to the `docs` folder inside the cloned MindsDB Git repository and start Mintlify there:
+
+```console
+mintlify dev
+```
+
+The documentation website is now available at `http://localhost:3000`.
+
+<Warning>
+  **Getting an Error?**
+  If you use the Windows operating system, you may get an error saying `no such file or directory: C:/Users/Username/.mintlify/mint/client`. Here are the steps to troubleshoot it:
+        - Go to the `C:/Users/Username/.mintlify/` directory.
+        - Remove the `mint` folder.
+        - Open the Git Bash in this location and run `git clone https://github.com/mintlify/mint.git`.
+        - Repeat step 3.
+</Warning>
+
+## MindsDB Repository Structure
+
+Here is the structure of the MindsDB docs repository:
+
+```
+docs                          # All documentation source files
+|__assets/                    # Images and icons used throughout the docs
+│  ├─ ...
+│__folders_with_mdx_files/    # All remaining folders that store the .mdx files
+|__mdx_files                  # Some of the .mdx files are stored in the docs directory
+|__mintlify.json              # This JSON file stores navigation and page setup
+```
+
+## What's Next?
+
+Follow our [docs rules](/docs-rules/) and have fun.
+
+Thank you for contributing to the MindsDB docs!

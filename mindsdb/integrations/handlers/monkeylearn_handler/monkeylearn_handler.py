@@ -52,17 +52,17 @@ class monkeylearnHandler(BaseMLEngine):
         if len(input_list) > 500:
             raise Exception("Classifier only supports 500 data elements in list")
         ml = MonkeyLearn(args['api_key'])
-        df_dict = []
-        pred_dict = {}
+        df_list = []
         for text in input_list:
+            pred_dict = {}
             classifier_response = ml.classifiers.classify(args['model_id'], [text])
             for res_dict in classifier_response.body:
                 if res_dict.get("error") is True:
                     raise Exception(res_dict["error_detail"])
                 pred_dict['classification'] = res_dict['classifications']
                 pred_dict['tag'] = res_dict['classifications'][0]['tag_name']
-                df_dict.append(pred_dict)
-        pred_df = pd.DataFrame(df_dict)
+                df_list.append(pd.DataFrame([pred_dict]))
+        pred_df = pd.concat(df_list)
         return pred_df
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:

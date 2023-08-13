@@ -1,0 +1,26 @@
+---
+title: create_table()
+sidebarTitle: create_table()
+---
+
+## Description
+
+The `get_table()` and `create_table()` functions let you save either an existing table or a newly created table into a variable.
+
+## Syntax
+
+Use the `get_table()` method to fetch a table from the `mysql_demo_db` database:
+
+```bash
+my_table = mysql_demo_db.get_table('my_table')
+```
+
+Or, the `create_table()` method to create a new table:
+
+```bash
+# option 1
+my_table = mysql_demo_db.create_table('my_table', 'SELECT * FROM some_table WHERE key=value')
+
+# option 2
+my_table = mysql_demo_db.create_table('my_table', base_table)
+```

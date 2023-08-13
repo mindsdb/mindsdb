@@ -262,6 +262,8 @@ class Project:
         data['models_versions'] = {'type': 'table', 'deletable': False}
         data['jobs'] = {'type': 'table', 'deletable': False}
         data['jobs_history'] = {'type': 'table', 'deletable': False}
+        data['mdb_triggers'] = {'type': 'table', 'deletable': False}
+        data['chatbots'] = {'type': 'table', 'deletable': False}
 
         models = self.get_models()
         for model in models:
@@ -326,6 +328,8 @@ class ProjectController:
 
         record = q.first()
 
+        if record is None:
+            raise ValueError(f'Project is not found: {name}/{id}')
         return Project.from_record(record)
 
     def add(self, name: str) -> Project:

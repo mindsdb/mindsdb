@@ -1,0 +1,179 @@
+---
+Multilingual Spam Data Translation with Hugging Face and MindsDB
+---
+
+## Introduction
+
+In this tutorial, you will learn how to use MindsDB and Hugging Face to perform translation tasks on multilingual datasets.
+
+## Data Setup
+
+If you want to follow along, download [this dataset](https://www.kaggle.com/datasets/rajnathpatel/multilingual-spam-data?resource=download).
+
+It contains multilingual spam data in English, Hindi, German, and French languages. It is primarily used to test the zero-shot transfer for text classification using pre-trained language models. The original data in English was machine-translated into Hindi, German, and French. We'll use this dataset to learn how perform text translation tasks.
+
+Here is how to upload this dataset to MindsDB:
+
+1. Click on "Add" and then "Upload File".
+2. Import a file.
+3. Provide a name (for example, multilingual_dataset).
+4. Click "Save and Continue"
+
+Here is how to preview the data:
+
+```sql
+SELECT *
+FROM files.multilingual_dataset;
+```
+
+## French to English
+
+### Training a model: French to English
+
+Now that you've got some data to work with, it's time to use MindsDB and Hugging Face to perform NLP operations. We'll translate 3 different languages and learn the basics of NLP language translation tasks with MindsDB.
+
+Start by creating a model to translate French to English:
+
+```sql
+CREATE MODEL mindsdb.hf_fr_en
+PREDICT PRED
+USING
+engine = 'huggingface',
+model_name = 'Helsinki-NLP/opus-mt-fr-en',
+input_column = 'text',
+lang_input ='fr',
+lang_output = 'en';
+```
+
+Check the model status:
+
+```sql
+DESCRIBE hf_fr_en;
+```
+
+Once the status is complete, it is time to start testing your model.
+
+### Making predictions: French to English
+
+Let's make a couple of single predictions:
+
+```sql
+SELECT *
+FROM mindsdb.hf_fr_en
+WHERE text = 'Quelle heure est-il?';
+```
+
+```sql
+SELECT *
+FROM mindsdb.hf_fr_en
+WHERE text = "Je m'appelle Alissa";
+```
+
+Run all above examples in the MindsDB editor to find out how the model translates French to English.
+
+## German to English
+
+### Training a model: German to English
+
+We create a model using the [Helsinki-NLP/opus-mt-de-en](https://huggingface.co/Helsinki-NLP/opus-mt-de-en) Hugging Face model.
+
+```sql
+CREATE MODEL mindsdb.hf_de_en
+PREDICT PRED
+USING
+engine = 'huggingface',
+model_name = 'Helsinki-NLP/opus-mt-de-en',
+input_column = 'text',
+lang_input ='de',
+lang_output = 'en';
+```
+
+Checking the status:
+
+```sql
+DESCRIBE hf_de_en;
+```
+
+Once the status is complete, it is time to start testing your model.
+
+### Making predictions: German to English
+
+Let's make a couple of single predictions:
+
+```sql
+SELECT *
+FROM hf_de_en
+WHERE text = 'Hallo, mein Name ist Alissa';
+```
+
+```sql
+SELECT *
+FROM hf_de_en
+WHERE text = 'Guten Tag, es ist so schön, Sie zu sehen?';
+```
+
+Run all above examples in the MindsDB editor to find out how the model translates German to English.
+
+## Hindi (Urdu) to English
+
+### Training a model: Hindi (Urdu) to English
+
+We create a model using the [Helsinki-NLP/opus-mt-hi-en](https://huggingface.co/Helsinki-NLP/opus-mt-hi-en) Hugging Face model.
+
+```sql
+CREATE MODEL mindsdb.hi_en
+PREDICT PRED
+USING
+engine = 'huggingface',
+model_name = 'Helsinki-NLP/opus-mt-hi-en',
+input_column = 'text_hi',
+lang_input ='hi',
+lang_output = 'en';
+```
+
+Checking the status:
+
+```sql
+DESCRIBE hi_en;
+```
+
+Once the status is complete, it is time to start testing your model.
+
+### Making predictions: Hindi (Urdu) to English
+
+Let's make a couple of single predictions:
+
+```sql
+SELECT *
+FROM hi_en
+WHERE text_hi = 'namaste, aap kaise hain?';
+```
+
+```sql
+SELECT *
+FROM hi_en
+WHERE text_hi = 'मेरा भाई भी मेरे साथ बातें करना नहीं चाहता; वे मेरे साथ सहायक की नाई बर्ताव करते हैं।';
+```
+
+Run all above examples in the MindsDB editor to find out how the model translates Hindi (Urdu) to English.
+
+## Making batch predictions
+
+Here is how to make batch predictions by joining the data table with the model:
+
+```sql
+SELECT *
+FROM hf_fr_en AS model
+JOIN files.multilingual_dataset AS datatable;
+```
+
+## Conclusion
+
+MindsDB's integration with Hugging Face gives you the power to perform Natural Language Processing tasks quickly and easily. In just a few steps, you've already learned how to create Hugging Face transformer models in MindsDB and use them to translate multilingual data into English.
+
+Want to learn more about MindsDB? Check out these resources:
+
+- [MindsDB](https://mindsdb.com/)
+- [MindsDB Documentation](https://docs.mindsdb.com/)
+- [Slack](https://mindsdb.com/joincommunity)
+- [GitHub](https://github.com/mindsdb/mindsdb/)

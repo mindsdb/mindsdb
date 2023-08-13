@@ -1,0 +1,18 @@
+---
+title: query('UPDATE ...')
+sidebarTitle: query('UPDATE ...')
+---
+
+## Description
+
+The `query()` function is executed on a data source connected to MindsDB and saved into a variable. It updates a table from this data source.
+
+## Syntax
+
+Here is the syntax:
+
+```sql
+my_data_source.query('UPDATE integration_name.table_name
+                        SET column_name = new_value
+                        WHERE column_name = old_value')
+```

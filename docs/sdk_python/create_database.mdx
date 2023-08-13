@@ -1,0 +1,32 @@
+---
+title: create_database()
+sidebarTitle: create_database()
+---
+
+## Description
+
+The `get_database()` and `create_database()` functions enable you to use the existing data source or connect a new one.
+
+## Syntax
+
+You can use the `get_database()` method to get an existing database:
+
+```bash
+mysql_demo_db = server.get_database('mysql_demo_db')
+```
+
+Or, the `create_database()` method to connect a new data source to MindsDB:
+
+```bash
+mysql_demo_db = server.create_database(
+    engine = "mysql",
+    name = "mysql_demo_db",
+    connection_args = {
+      "user": "user",
+      "password": "MindsDBUser123!",
+      "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
+      "port": "3306",
+      "database": "public"
+    }
+)
+```

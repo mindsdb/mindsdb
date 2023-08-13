@@ -1,0 +1,175 @@
+---
+title: MindsDB and Metabase
+sidebarTitle: Metabase
+---
+
+Metabase is open-source software that facilitates data analysis. It lets you visualize your data easily and intuitively. Now that MindsDB supports the MySQL binary protocol, you can connect it to Metabase and see the forecasts by creating and training the models.
+
+For more information, visit [Metabase](https://www.metabase.com/).
+
+## Setup
+
+### MindsDB
+
+Let's set up the MindsDB following one of the guides from the **Deployment**
+section. Please note that the MindsDB Cloud is not yet supported.
+
+<Warning>
+  **Currently, only local and on-premise installations are stable**
+</Warning>
+
+You can choose one of the following approaches to set up the MindsDB locally:
+
+- [Docker](/setup/self-hosted/docker)
+- [Windows via pip](/setup/self-hosted/pip/windows)
+- [Linux via pip](/setup/self-hosted/pip/linux)
+- [MacOS via pip](/setup/self-hosted/pip/macos)
+- [Sourcecode via pip](/setup/self-hosted/pip/source)
+
+Here, we use the [Docker](/setup/self-hosted/docker) setup for MindsDB.
+
+### Metabase
+
+Now, let's set up the Metabase by following one of the approaches presented on
+[the Metabase Open Source Edition page](https://www.metabase.com/start/oss/).
+
+Here, we use the
+[.jar approach](https://www.metabase.com/docs/latest/installation-and-operation/running-the-metabase-jar-file.html)
+for Metabase.
+
+## How to Connect
+
+Follow the steps below to connect your MindsDB to Metabase.
+
+1. Open your Metabase and navigate to the _Admin settings_ by clicking the cog
+   in the bottom left corner.
+2. Once there, click on _Databases_ in the top navigation bar.
+3. Click on _Add database_ in the top right corner.
+4. Fill in the form using the following data:
+
+  <Tabs>
+    <Tab title="Local MindsDB">
+      ```text
+      Database type: `MySQL`
+      Display name: `MindsDB`
+      Host: `localhost`
+      Port: `47335`
+      Database name: `mindsdb`
+      Username: `mindsdb`
+      Password: *leave it empty*
+      ```
+    </Tab>
+    <Tab title="MindsDB Cloud">
+      ```text
+      Database type: `MySQL`
+      Display name: `MindsDB`
+      Host: `cloud.mindsdb.com`
+      Port: `3306`
+      Database name: `mindsdb`
+      Username: `<your MindsDB Cloud username>`
+      Password: `<your MindsDB Cloud password>`
+      ```
+    </Tab>
+    <Tab title="MindsDB Pro">
+      ```text
+      Database type: `MySQL`
+      Display name: `MindsDB`
+      Host: `<dedicated instace ip>`
+      Port: 3306
+      Database name: `mindsdb`
+      Username: `<your MindsDB Cloud username>`
+      Password: `<your MindsDB Cloud password>`
+      ```
+    </Tab>
+  </Tabs>
+  
+
+   <p align="center">
+     <img src="/assets/metabase_add_database.png" />
+   </p>
+
+5. Click on _Save_.
+
+Now you're connected!
+
+<p align="center">
+  <img src="/assets/metabase_connected.png" />
+</p>
+
+## Example
+
+Now that the connection between MindsDB and Metabase is established, let's do
+some examples.
+
+Most of the SQL statements that you usually run in your
+[MindsDB SQL Editor](/connect/mindsdb_editor/) can be run in Metabase as well.
+Let's start with something easy.
+
+On your Metabase's home page, click on _New > SQL query_ in the top right corner
+and then, select your MindsDB database.
+
+Let's execute the following command in the editor.
+
+```sql
+SHOW TABLES;
+```
+
+On execution, we get:
+
+<p align="center">
+  <img src="/assets/metabase_run_query_show_tables.png" />
+</p>
+
+Please note that creating a
+[database connection](/sql/tutorials/home-rentals/#connecting-the-data) using
+the `CREATE DATABASE` statement fails because of the curly braces (`{}`) being
+used by JDBC as the escape sequences.
+
+```sql
+CREATE DATABASE example_db
+    WITH ENGINE = "postgres",
+    PARAMETERS = {
+        "user": "demo_user",
+        "password": "demo_password",
+        "host": "3.220.66.106",
+        "port": "5432",
+        "database": "demo"
+};
+```
+
+On execution, we get:
+
+<p align="center">
+  <img src="/assets/metabase_run_query_failure.png" />
+</p>
+
+You can overcome this issue using the
+[MindsDB SQL Editor](/connect/mindsdb_editor/) to create a database.
+
+Now, getting back to the Metabase, let's run some queries on the database
+created with the help of the [MindsDB SQL Editor](/connect/mindsdb_editor/).
+
+```sql
+SELECT *
+FROM example_db.demo_data.home_rentals
+LIMIT 10;
+```
+
+On execution, we get:
+
+<p align="center">
+  <img src="/assets/metabase_run_query_home_rentals.png" />
+</p>
+
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Tutorials** and
+**Community Tutorials** sections, where you'll find various examples of
+regression, classification, and time series predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on
+[MindsDB database structure](/sql/table-structure/). Also, don't miss out on the
+remaining pages from the **SQL API** section, as they explain a common SQL
+syntax with examples.
+
+Have fun!

@@ -1,0 +1,274 @@
+---
+title: Quickstart
+sidebarTitle: Try It Out
+---
+
+Follow the steps below to start making data forecasts with MindsDB using standard SQL.
+
+Check out our [Getting Started guide](/getting-started/) to set up and work with
+MindsDB using your own data and models.
+
+## 1. Create a MindsDB Cloud Account or Install MindsDB Locally
+
+Create your [free MindsDB Cloud account](https://cloud.mindsdb.com/register) to
+start practicing right away using the MindsDB Cloud Editor.
+
+If you prefer a local MindsDB installation, follow the **Deployment** guides of
+MindsDB documentation. You can install MindsDB using
+[Docker](setup/self-hosted/docker/) or follow the standard installation using
+[pip](setup/self-hosted/pip/source/).
+
+## 2. Connect to MindsDB from a SQL Client
+
+You can use the MindsDB Cloud Editor or open your preferred SQL client, such
+as DBeaver or MySQL CLI, and connect to MindsDB.
+
+<Tabs>
+
+  <Tab title="Using the MindsDB Cloud Editor">
+    Log in to your MindsDB Cloud account. The
+    [Editor](https://cloud.mindsdb.com/editor) is the first thing you'll see!
+  </Tab>
+
+  <Tab title="Using a Third-Party SQL Client">
+    To connect to MindsDB from a third-party SQL client, use the connection details
+    below.
+
+    ```
+    User: your_mindsdb_cloud_username
+    Password: your_mindsdb_cloud_password
+    Host: `cloud.mindsdb.com`
+    Port: `3306`
+    ```
+
+    <Tip>
+      If you do not have a preferred SQL client yet, we recommend using the [MindsDB
+      SQL Editor](https://cloud.mindsdb.com/editor) or [DBeaver Community
+      Edition](https://dbeaver.io/download/). Follow [this guide](/setup/cloud/) to
+      set up your MindsDB SQL Editor. And [here](/connect/dbeaver/), you'll find how
+      to connect to MindsDB from DBeaver.
+    </Tip>
+  </Tab>
+
+</Tabs>
+
+## 3. Connect a Database Using [`CREATE DATABASE`](/sql/create/databases/)
+
+We have a sample database that you can use right away. To connect a database to your MindsDB Cloud account, use the [`CREATE DATABASE`](/sql/create/databases/) statement, as below.
+
+```sql
+CREATE DATABASE example_data
+WITH ENGINE = "postgres",
+PARAMETERS = {
+  "user": "demo_user",
+  "password": "demo_password",
+  "host": "3.220.66.106",
+  "port": "5432",
+  "database": "demo"
+};
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (3.22 sec)
+```
+
+## 4. Preview the Available Data Using [`SELECT`](/sql/api/select/)
+
+You can now preview the available data with a standard `SELECT` statement.
+
+```sql
+SELECT *
+FROM example_data.demo_data.home_rentals
+LIMIT 10;
+```
+
+On execution, we get:
+
+```sql
++-----------------+---------------------+------+----------+----------------+---------------+--------------+--------------+
+| number_of_rooms | number_of_bathrooms | sqft | location | days_on_market | initial_price | neighborhood | rental_price |
++-----------------+---------------------+------+----------+----------------+---------------+--------------+--------------+
+| 0.0             | 1.0                 | 484  | great    | 10             | 2271          | south_side   | 2271         |
+| 1.0             | 1.0                 | 674  | good     | 1              | 2167          | downtown     | 2167         |
+| 1.0             | 1.0                 | 554  | poor     | 19             | 1883          | westbrae     | 1883         |
+| 0.0             | 1.0                 | 529  | great    | 3              | 2431          | south_side   | 2431         |
+| 3.0             | 2.0                 | 1219 | great    | 3              | 5510          | south_side   | 5510         |
+| 1.0             | 1.0                 | 398  | great    | 11             | 2272          | south_side   | 2272         |
+| 3.0             | 2.0                 | 1190 | poor     | 58             | 4463          | westbrae     | 4124         |
+| 1.0             | 1.0                 | 730  | good     | 0              | 2224          | downtown     | 2224         |
+| 0.0             | 1.0                 | 298  | great    | 9              | 2104          | south_side   | 2104         |
+| 2.0             | 1.0                 | 878  | great    | 8              | 3861          | south_side   | 3861         |
++-----------------+---------------------+------+----------+----------------+---------------+--------------+--------------+
+```
+
+You could also browse the databases of MindsDB using the command below.
+
+```sql
+SHOW databases;
+```
+
+On execution, we get:
+
+```sql
++---------------------+
+| Database            |
++---------------------+
+| information_schema  |
+| mindsdb             |
+| files               |
+| example_data        |
++---------------------+
+```
+
+To learn more about MindsDB tables structure, check out
+[this guide](/sql/table-structure/).
+
+## 5. Create a Model Using [`CREATE MODEL`](/sql/create/model/)
+
+Now you are ready to create your first model. Use the
+[`CREATE MODEL`](/sql/create/model/) statement, as below.
+
+```sql
+CREATE MODEL mindsdb.home_rentals_model
+FROM example_data
+  (SELECT * FROM demo_data.home_rentals)
+PREDICT rental_price;
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (9.79 sec)
+```
+
+## 6. Check the Status of a Model
+
+It may take a couple of minutes until the model is trained. You can monitor
+the status of your model by executing the following command:
+
+```sql
+DESCRIBE home_rentals_model;
+```
+
+On execution, we get:
+
+```sql
++------------+
+| status     |
++------------+
+| generating |
++------------+
+```
+
+After a short time, we get:
+
+```sql
++----------+
+| status   |
++----------+
+| training |
++----------+
+```
+
+And finally, we get:
+
+```sql
++----------+
+| status   |
++----------+
+| complete |
++----------+
+```
+
+Alternatively, you can use the `SHOW MODELS` command as below.
+
+```sql
+SHOW MODELS
+[FROM project_name]
+[LIKE 'model_name']
+[WHERE column_name = value];
+```
+
+Here is an example:
+
+```sql
+SHOW MODELS
+FROM mindsdb
+LIKE 'home_rentals_model'
+WHERE status = 'complete';
+```
+
+<Warning>
+  The status of the model must be `complete` before you can start making predictions.
+</Warning>
+
+## 7. Make Predictions Using [`SELECT`](/sql/api/select/)
+
+The [`SELECT`](/sql/api/select/) statement allows you to make predictions based
+on features, where features are the input variables, or input columns, that are
+used to make forecasts.
+
+Let's predict what would be the rental price of a 1000 square feet house with
+two bathrooms.
+
+```sql
+SELECT rental_price
+FROM mindsdb.home_rentals_model
+WHERE number_of_bathrooms = 2
+AND sqft = 1000;
+```
+
+On execution, we get:
+
+```sql
++--------------+
+| rental_price |
++--------------+
+| 1130         |
++--------------+
+```
+
+Here is how to make batch predictions:
+
+```sql
+SELECT m.rental_price, m.rental_price_explain
+FROM mindsdb.home_rentals_model AS m
+JOIN example_data.demo_data.home_rentals AS d;
+```
+
+<Check>
+**Congratulations!** If you got this far, you have successfully trained a predictive model using SQL
+and got the future data!
+</Check>
+
+<Tip>
+**From Our Community**
+
+Check out the articles and video guides created by our community:
+
+- Article on [Self-Service Machine Learning with Intelligent Databases](https://medium.com/mindsdb/self-service-machine-learning-with-intelligent-databases-ea628aa85f1e)
+  by [MindsDB Team](https://medium.com/@mindsdbteam)
+
+- Article on [MindsDB: Your Introduction to Creating Machine Learning Predictive Models](https://dev.to/chandrevdw31/mindsdb-your-introduction-to-creating-machine-learning-predictive-models-12d3)
+  by [Chandre Van Der Westhuizen](https://github.com/chandrevdw31)
+
+- Article on [Introduction to AI Tables](https://medium.com/towards-data-science/introduction-to-ai-tables-a719251e1a58)
+  by [Javi Sánchez](https://medium.com/@javi_sanchez)
+
+- Article on [Why Your Database Needs a Machine Learning Brain](https://medium.com/mindsdb/why-your-database-needs-a-machine-learning-brain-fc580fac47e4)
+  by [James Wilson](https://medium.com/@jameswilsonai)
+
+- Video guide on [How Mindsdb is impacting the world of Machine Learning](https://youtu.be/YngjfwJLplA)
+  by [Prathik Shetty](https://github.com/prathikshetty2002)
+
+- Video guide on [Simple starting guide video tutorial for MindsDB](https://www.youtube.com/watch?v=z7tRc8JpuRI)
+  by [Posterizedsoul](https://github.com/Posterizedsoul)
+
+- Video guide on [What are AI Tables and How to use MindsDB ?](https://youtu.be/Wqy_OcKdg-Y) by
+  [@akhilcoder](https://twitter.com/akhilcoder)
+
+- Video guide on [MindsDB - Predict data with machine learning](https://youtu.be/y2DNgJOplxM)
+  by [HellFire](https://github.com/Artemis6969)
+</Tip>

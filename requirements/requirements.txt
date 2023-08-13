@@ -1,5 +1,6 @@
 Werkzeug==1.0.1
-lightwood >= 23.7.1.0, < 23.7.2.0
+lightwood >= 23.8.1.0, < 23.8.2.0
+pandas >=2.0.0, <2.1.0
 markupsafe == 2.0.1
 flask-restx >= 1.0.1, < 2.0.0
 flask >= 1.0, < 2.0
@@ -15,20 +16,18 @@ waitress >= 1.4.4
 pymongo[srv] >= 4.1.1
 setuptools
 psutil
-sqlalchemy >= 1.4.29, < 2.0.0
+sqlalchemy >= 2.0.0, < 3.0.0
 alembic >= 1.3.3
 sentry-sdk
 walrus==0.8.2
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
-mindsdb-sql >= 0.6.5, < 0.7.0
+mindsdb-sql >= 0.7.0, < 0.8.0
 mindsdb-evaluator >= 0.0.7, < 0.1.0
 checksumdir >= 1.2.0
 duckdb == 0.6.0
 requests >= 2.0.0
 mysql-connector-python
-clickhouse-driver
-clickhouse-sqlalchemy
 charset-normalizer
 pyOpenSSL >= 22.0.0
 pydateinfer==0.3.0

@@ -383,6 +383,8 @@ class JobsExecutor:
         try:
             self.update_task_schedule(record)
         except Exception as e:
+            db.session.rollback()
+
             log.logger.error(f'Error to update schedule: {e}')
             error += f'Error to update schedule: {e}'
 

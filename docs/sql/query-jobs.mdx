@@ -1,0 +1,77 @@
+---
+title: Query Jobs
+sidebarTitle: Query Jobs
+---
+
+## Querying Jobs
+
+Here is how we can view all jobs in the current project:
+
+```sql
+SELECT *
+FROM jobs;
+```
+
+On execution, we get:
+
+```sql
++------------------------------------+---------+----------------------------+----------------------------+----------------------------+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| NAME                               | PROJECT | RUN_START                  | RUN_END                    | NEXT_RUN_AT                | SCHEDULE_STR  | QUERY                                                                                                                                                                                                                                   |
++------------------------------------+---------+----------------------------+----------------------------+----------------------------+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| drop_model                         | mindsdb | 2023-04-01 00:00:00.000000 | [NULL]                     | 2023-04-01 00:00:00.000000 | [NULL]        | DROP MODEL mindsdb.home_rentals_model                                                                                                                                                                                                   |
+| retrain_model_and_save_predictions | mindsdb | 2023-02-15 19:19:43.210122 | 2023-04-01 00:00:00.000000 | 2023-02-15 19:19:43.210122 | every 2 days  | RETRAIN mindsdb.home_rentals_model USING join_learn_process = true; INSERT INTO my_integration.rentals (SELECT m.rental_price, m.rental_price_explain FROM mindsdb.home_rentals_model AS m JOIN example_db.demo_data.home_rentals AS d) |
+| save_predictions                   | mindsdb | 2023-02-15 19:19:48.545580 | [NULL]                     | 2023-02-15 19:19:48.545580 | every hour    | CREATE TABLE my_integration.`result_{{START_DATETIME}}` (SELECT m.rental_price, m.rental_price_explain FROM mindsdb.home_rentals_model AS m JOIN example_db.demo_data.home_rentals AS d)                                                |
++------------------------------------+---------+----------------------------+----------------------------+----------------------------+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+We can also view jobs from a defined project:
+
+```sql
+SELECT *
+FROM my_project.jobs;
+```
+
+Or from all projects at once:
+
+```sql
+SELECT *
+FROM information_schema.jobs;
+```
+
+## Querying Jobs History
+
+You can query the history of jobs similar to querying for jobs. Here you can find information about an error if the job didn't execute successfully.
+
+Here is how we can view all jobs history in the current project:
+
+```sql
+SELECT *
+FROM jobs_history;
+```
+
+On execution, we get:
+
+```sql
++------------------------------------+---------+----------------------------+----------------------------+----------------------------+--------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| NAME                               | PROJECT | RUN_START                  | RUN_END                    | NEXT_RUN_AT                | ERROR  | QUERY                                                                                                                                                                                                                                   |
++------------------------------------+---------+----------------------------+----------------------------+----------------------------+--------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| retrain_model_and_save_predictions | mindsdb | 2023-02-15 19:19:43.210122 | 2023-04-01 00:00:00.000000 | 2023-02-15 19:19:43.210122 | [NULL] | RETRAIN mindsdb.home_rentals_model USING join_learn_process = true; INSERT INTO my_integration.rentals (SELECT m.rental_price, m.rental_price_explain FROM mindsdb.home_rentals_model AS m JOIN example_db.demo_data.home_rentals AS d) |
+| save_predictions                   | mindsdb | 2023-02-15 19:19:48.545580 | [NULL]                     | 2023-02-15 19:19:48.545580 | [NULL] | CREATE TABLE my_integration.`result_{{START_DATETIME}}` (SELECT m.rental_price, m.rental_price_explain FROM mindsdb.home_rentals_model AS m JOIN example_db.demo_data.home_rentals AS d)                                                |
++------------------------------------+---------+----------------------------+----------------------------+----------------------------+--------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+Please note that the `drop_model` job is not in the `jobs_history` table because it didn't start yet.
+
+We can also view jobs history from a defined project:
+
+```sql
+SELECT *
+FROM my_project.jobs_history;
+```
+
+Or from all projects at once:
+
+```sql
+SELECT *
+FROM information_schema.jobs_history;
+```

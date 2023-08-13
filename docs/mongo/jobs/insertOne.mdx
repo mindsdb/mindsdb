@@ -1,0 +1,46 @@
+---
+title: db.jobs.insert()
+sidebarTitle: db.jobs.insert()
+---
+
+## Description
+
+The `db.jobs.insert()` function creates and schedules a job.
+
+## Syntax
+
+Here is the syntax:
+
+```
+db.jobs.insert({
+    'name': 'job2',
+    'query': "select * from models"
+})
+```
+
+And here is a more complex example:
+
+```
+db.jobs.insert({
+    'name': 'job1',
+    'schedule_str': 'every day',
+    'start_at': '2023-03-30',    
+    'end_at': '2023-03-30 11:11:11',
+    'query': "\
+        db.home_rentals_model.aggregate([\
+            {'$match': {\
+                'collection': 'example_db.demo_data.home_rentals',\
+                'query':  {\
+                    'number_of_rooms': 2\
+                }\
+            }},\
+            {'$project':  {\
+            'home_rentals.rental_price': 'real_price',\
+            'home_rentals_model.rental_price': 'predicted_price',\
+            }},\
+            {'$limit': 2},\
+            {'$out': {'db': 'photorep', 'coll': 'aaa', 'append': true}}\
+        ])\
+    "
+})
+```

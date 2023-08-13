@@ -1,0 +1,17 @@
+---
+title: Upload Files
+sidebarTitle: Upload Files
+---
+
+## Description
+
+In MindsDB, files are treated as tables. These are stored in the default `files` database. To upload a file, you must save this `files` database into a variable and then, run the `create_table()` function on it.
+
+## Syntax
+
+Here is the syntax:
+
+```
+files_db = server.get_database('files')
+files_db.create_table('filename', df)
+```

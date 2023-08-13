@@ -1,0 +1,40 @@
+---
+title: Installation
+sidebarTitle: Installation
+---
+
+Python SDK enables you to connect to the MindsDB server from Python using HTTP API. Read along to see how to install and test the MindsDB Python SDK.
+
+## Simple Installation
+
+To install the MindsDB Python SDK, run the below command:
+
+```bash
+pip install mindsdb_sdk
+```
+
+Here is the expected output:
+
+<p align="center">
+  <img src="/assets/pythonsdk_install_output.png" />
+</p>
+
+## Advanced Installation
+
+Instead of using the `pip install mindsdb_sdk` command, you can install it by cloning the [Python SDK repository](https://github.com/mindsdb/mindsdb_python_sdk). Then you should create a virtual environment, install all dependencies from the `requirements.txt` file, and run tests as instructed below.
+
+To test all the components, go to the project directory (`mindsdb_sdk`) and run the below command:
+
+```bash
+env PYTHONPATH=./ pytest
+```
+
+To generate the API documentation, run the below commands:
+
+```bash
+pip install sphinx
+cd docs
+make html
+```
+
+The documentation is generated in the `docs/build/html` folder.

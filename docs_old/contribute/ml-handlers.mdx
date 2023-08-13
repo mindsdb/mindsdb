@@ -1,0 +1,249 @@
+---
+title: Building a Machine Learning Handler
+sidebarTitle: Building an ML Handler
+---
+
+In this section, you'll find how to create new machine learning (ML) handlers within MindsDB.
+
+<Note>
+    **Prerequisite**
+
+    You should have the latest staging version of the MindsDB repository installed locally. Follow [this guide](/contribute/install/) to learn how to install MindsDB for development.
+</Note>
+
+## What are Machine Learning Handlers?
+
+ML handlers act as a bridge to any ML framework. You use ML handlers to create ML engines using [the CREATE ML_ENGINE command](/sql/create/ml-engine/). So you can expose ML models from any supported ML engine as an AI table.
+
+<Note>
+    **Database Handlers**
+
+    To learn more about handlers and how to implement a database handler, visit our [doc page here](/contribute/data-handlers/).
+</Note>
+
+## Creating a Machine Learning Handler
+
+You can create your own ML handler within MindsDB by inheriting from the [BaseMLEngine](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L123) class.
+
+By providing the implementation for some or all of the methods contained in the `BaseMLEngine` class, you can connect with the machine learning library or framework of your choice.
+
+### Core Methods
+
+Apart from the `__init__()` method, there are five methods, of which two must be implemented. We recommend checking actual examples in the codebase to get an idea of what goes into each of these methods, as they can change a bit depending on the nature of the system being integrated.
+
+Let's review the purpose of each method.
+
+| Method            | Purpose                                                                              |
+|-------------------|--------------------------------------------------------------------------------------|
+| `create()`        | It creates a model inside the engine registry.                                       |
+| `predict()`       | It calls a model and returns prediction data.                                        |
+| `update()`        | Optional. It updates an existing model without resetting its internal structure.     |
+| `describe()`      | Optional. It provides global model insights.                                         |
+| `create_engine()` | Optional. It connects with external sources, such as REST API.                       |
+
+Authors can opt for adding private methods, new files and folders, or any combination of these to structure all the necessary work that will enable the core methods to work as intended.
+
+<Tip>
+    **Other Common Methods**
+    
+    Under the `mindsdb.integrations.libs.utils` library, contributors can find various methods that may be useful while implementing new handlers.
+
+    Also, there is a wrapper class for the `BaseMLEngine` instances called [BaseMLEngineExec](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/ml_exec_base.py#L157). It is automatically deployed to take care of modifying the data responses into something that can be used alongside data handlers.
+</Tip>
+
+### Implementation
+
+Here are the methods that must be implemented while inheriting from the [BaseMLEngine](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L123) class:
+
+* [The create() method](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L151) saves a model inside the engine registry for later usage.
+
+```py
+def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        """
+        Saves a model inside the engine registry for later usage.
+        Normally, an input dataframe is required to train the model.
+        However, some integrations may merely require registering the model instead of training, in which case `df` can be omitted.
+        Any other arguments required to register the model can be passed in an `args` dictionary.
+        """
+```
+
+* [The predict() method](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L162) calls a model with an input dataframe and optionally, arguments to modify model's behaviour. This method returns a dataframe with the predicted values.
+
+```py
+def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
+        """
+        Calls a model with some input dataframe `df`, and optionally some arguments `args` that may modify the model behavior.
+        The expected output is a dataframe with the predicted values in the target-named column.
+        Additional columns can be present, and will be considered row-wise explanations if their names finish with `_explain`.
+        """
+```
+
+And here are the optional methods that you can implement alongside the mandatory ones if your ML framework allows it:
+
+* [The update() method](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L171) is used to update, fine-tune, or adjust an existing model without resetting its internal state.
+
+```py
+def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        """
+        Optional.
+        Used to update/fine-tune/adjust a pre-existing model without resetting its internal state (e.g. weights).
+        Availability will depend on underlying integration support, as not all ML models can be partially updated.
+        """
+```
+
+* [The describe() method](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L181) provides global model insights, such as framework-level parameters used in training.
+
+```py
+def describe(self, key: Optional[str] = None) -> pd.DataFrame:
+        """
+        Optional.
+        When called, this method provides global model insights, e.g. framework-level parameters used in training.
+        """
+```
+
+* [The create_engine() method](https://github.com/mindsdb/mindsdb/blob/3d9090acb0b8b3b0e2a96e2c93dad436f5ebef90/mindsdb/integrations/libs/base.py#L189) is used to connect with the external sources, such as REST API.
+
+```py
+def create_engine(self, connection_args: dict):
+        """
+        Optional.
+        Used to connect with external sources (e.g. a REST API) that the engine will require to use any other methods.
+        """
+```
+
+## MindsDB ML Ecosystem
+
+MindsDB has recently decoupled some modules out of its AutoML package in order to leverage them in integrations with other ML engines. The three modules are as follows:
+
+1. The [type_infer](https://github.com/mindsdb/type_infer) module that implements automated type inference for any dataset.<br></br>
+Below is the description of the input and output of this module.<br></br>
+**Input:** tabular dataset.<br></br>
+**Output:** best guesses of what type of data each column contains.
+
+2. The [dataprep_ml](https://github.com/mindsdb/dataprep_ml) module that provides data preparation utilities, such as data cleaning, analysis, and splitting. Data cleaning procedures include column-wise cleaners, column-wise missing value imputers, and data splitters (train-val-test split, either simple or stratified).<br></br>
+Below is the description of the input and output of this module.<br></br>
+**Input:** tabular dataset.<br></br>
+**Output:** cleaned dataset, plus insights useful for data analysis and model building.
+
+3. The [mindsdb_evaluator](https://github.com/mindsdb/mindsdb_evaluator) module that provides utilities for evaluating the accuracy and calibration of ML models.<br></br>
+Below is the description of the input and output of this module.<br></br>
+**Input:** model predictions and the input data used to generate these predictions, including corresponding ground truth values of the column to predict.<br></br>
+**Output:** accuracy metrics that evaluate prediction accuracy and calibration metrics that check whether model-emitted probabilities are calibrated.
+
+We recommend that new contributors use [type_infer](https://github.com/mindsdb/type_infer) and [dataprep_ml](https://github.com/mindsdb/dataprep_ml) modules when writing ML handlers to avoid reimplementing thin AutoML layers over and over again; it is advised to focus on mapping input data and user parameters to the underlying framework’s API.
+
+For now, using the [mindsdb_evaluator](https://github.com/mindsdb/mindsdb_evaluator) module is not required, but will be in the short to medium term, so it’s important to be aware of it while writing a new integration.
+
+<Tip>
+**Example**
+
+Let’s say you want to write an integration for `TPOT`. Its high-level API exposes classes that are either for classification or regression. But as a handler designer, you need to ensure that arbitrary ML tasks are dispatched properly to each class (i.e., not using a regressor for a classification problem and vice versa). First, `type_infer` can help you by estimating the data type of the target variable (so you immediately know what class to use). Additionally, to quickly get a stratified train-test split, you can leverage `dataprep_ml` splitters and continue to focus on the actual usage of TPOT for the training and inference logic.
+</Tip>
+
+<Note>
+We would appreciate your feedback regarding usage & feature roadmap for the above modules, as they are quite new.
+</Note>
+
+## Step-by-Step Instructions
+
+<AccordionGroup>
+
+        <Accordion title="Step 1: Set up and run MindsDB locally">
+
+        1. Set up MindsDB using the [self-hosted pip](/setup/self-hosted/pip/source) installation method.
+        2. Make sure you can run the [quickstart example](/quickstart) locally. If you run into errors, check your bash terminal output.
+        3. Create a new git branch to store your changes.
+
+        </Accordion>
+
+        <Accordion title="Step 2: Write a (failing) test for your new handler">
+
+        1. Check that you can run the existing handler tests with `python -m pytest tests/unit/ml_handlers/`. If you get the `ModuleNotFoundError` error, try adding the `__init__.py` file to any subdirectory that doesn't have it.
+
+        2. Copy the simple tests from a relevant handler. For regular data, use the [Ludwig](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/ludwig_handler) handler. And for time series data, use the [StatsForecast](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/statsforecast_handler) handler.
+        
+        3. Change the SQL query to reference your handler. Specifically, set `USING engine={HandlerName}`.
+        
+        4. Run your new test. Please note that it should fail as you haven’t yet added your handler. The exception should be `Can't find integration_record for handler ...`.
+
+        </Accordion>
+
+        <Accordion title="Step 3: Add your handler to the source code">
+
+        1. Create a new directory in `mindsdb/integrations/handlers/`. You must name the new directory `{HandlerName}_handler/`.
+        
+        2. Copy all the `.py` files from the [StatsForecast](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/statsforecast_handler) handler folder. These are: `__about__.py`, `__init__.py`, `setup.py`, and `statsforecast_handler.py`.
+
+        3. Change the contents of `.py` files to match your new handler. Also, change the name of the `statsforecast_handler.py` file to match your handler.
+
+        4. Modify the `requirements.txt` file to install your handler’s dependencies. You may get conflicts with other packages like Lightwood, but you can ignore them for now.
+
+        5. Create a new blank class for your handler in the `{HandlerName}_handler.py` file. Like for other handlers, this should be a subclass of the `BaseMLEngine` class.
+
+        6. Add your new handler class to the testing DB. In the `tests/unit/executor_test_base.py` file starting at line 91, you can see how other handlers are added with `db.session.add(...)`. Copy that and modify it to add your handler. Please note to add your handler before Lightwood, otherwise the CI will break.
+
+        7. Run your new test. Please note that it should still fail but with a different exception message.
+
+        </Accordion>
+
+        <Accordion title="Step 4: Modify the handler source code until your test passes">
+
+        1. Define a `create()` method that deals with the model setup arguments. This will add your handler to the models table. Depending on the framework, you may also train the model here using the `df` argument.
+
+        2. Save relevant arguments/trained models at the end of your `create` method. This allows them to be accessed later. Use the `engine_storage` attributes; you can find examples in other handlers' folders.
+
+        3. Define a `predict()` method that makes model predictions. This method must return a dataframe with format matching the input, except with a column containing your model’s predictions of the target. The input df is a subset of the original df with the rows determined by the conditions in the predict SQL query.
+
+        4. Don’t debug the `create()` and `predict()` methods with the `print()` statement because they’re inside a subthread. Instead, write relevant info to disk.
+
+        5. Once your first test passes, add new tests for any important cases. You can also add tests for any helper functions you write.
+
+        </Accordion>
+
+        <Accordion title="Step 5: QA your handler locally">
+
+        1. Launch the MindsDB server locally with `python -m mindsdb`. Again, any issues will appear in the terminal output.
+
+        2. Check that your handler has been added to the local server database. You can view the list of handlers with `SELECT * from information_schema.handlers`.
+
+        3. Run the relevant tutorial from the panel on the right side. For regular data, this is `Predict Home Rental Prices`. And for time series data, this is `Forecast Quarterly House Sales`. Specify `USING ENGINE={your_handler}` while creating a model.
+
+        4. Don’t debug the `create()` and `predict()` methods with the `print()` statement because they’re inside a subthread. Instead, write relevant info to disk.
+
+        5. You should get sensible results if your handler has been well-implemented. Make sure you try the predict step with a range of parameters.
+
+        </Accordion>
+
+        <Accordion title="Step 6: Open a pull request">
+
+        1. You need to fork the MindsDB repository. Follow [this guide](https://github.com/mindsdb/mindsdb/blob/staging/CONTRIBUTING.md) to start a PR.
+
+        2. If relevant, add your tests and new dependencies to the CI config. This is at `.github/workflows/mindsdb.yml`.
+
+        </Accordion>
+
+</AccordionGroup>
+
+<Note>
+Please note that `pytest` is the recommended testing package. Use `pytest` to confirm your ML handler implementation is correct.
+</Note>
+
+<Tip>
+**Templates for Unit Tests**
+
+If you implement a time-series ML handler, create your unit tests following the structure of the [StatsForecast unit tests](https://github.com/mindsdb/mindsdb/blob/staging/tests/unit/ml_handlers/test_statsforecast.py).
+
+If you implement an NLP ML handler, create your unit tests following the structure of the [Hugging Face unit tests](https://github.com/mindsdb/mindsdb/blob/staging/tests/unit/ml_handlers/test_huggingface.py).
+</Tip>
+
+
+## Check out our Machine Learning Handlers!
+
+To see some ML handlers that are currently in use, we encourage you to check out the following ML handlers inside the MindsDB repository:
+
+* [Lightwood](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/lightwood_handler)
+* [HuggingFace](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/huggingface_handler)
+* [Ludwig](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/ludwig_handler)
+* [OpenAI](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/openai_handler)
+
+And here are [all the handlers available in the MindsDB repository](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers).

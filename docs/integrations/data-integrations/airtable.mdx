@@ -1,0 +1,54 @@
+---
+title: Airtable
+sidebarTitle: Airtable
+---
+
+This is the implementation of the Airtable data handler for MindsDB.
+
+[Airtable](https://www.airtable.com/lp/campaign/database) is a platform that makes it easy to build powerful, custom applications. These tools can streamline just about any process, workflow, or project. And best of all, you can build them without ever learning to write a single line of code.
+
+## Implementation
+
+This handler is implemented using `duckdb`, a library that allows SQL queries to be executed on `pandas` DataFrames.
+
+In essence, when querying a particular table, the entire table is first pulled into a `pandas` DataFrame using the [Airtable API](https://airtable.com/api). Once this is done, SQL queries can be run on the DataFrame using `duckdb`.
+
+<Tip>
+Since the entire table needs to be pulled into memory first (DataFrame), it is recommended to be somewhat careful when querying large tables so as not to overload your machine.
+</Tip>
+
+The required arguments to establish a connection are as follows:
+
+* `base_id` is the Airtable base ID.
+* `table_name` is the Airtable table name.
+* `api_key` is the API key for the Airtable API.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/airtable_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the Airtable database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE airtable_datasource
+WITH
+  engine = 'airtable',
+  parameters = {
+    "base_id": "dqweqweqrwwqq",
+    "table_name": "iris",
+    "api_key": "knlsndlknslk"
+  };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM airtable_datasource.example_tbl;
+```
+
+<Warning>
+At the moment, only the `SELECT` statemet is allowed to be executed through `duckdb`. This, however, has no restriction on running machine learning algorithms against your data in Airtable using the `CREATE PREDICTOR` statement.
+</Warning>

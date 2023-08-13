@@ -1,0 +1,48 @@
+---
+title: ScyllaDB
+sidebarTitle: ScyllaDB
+---
+
+This is the implementation of the ScyllaDB data handler for MindsDB.
+
+[ScyllaDB](https://www.scylladb.com/) is an open-source distributed NoSQL wide-column data store. It was designed to be compatible with Apache Cassandra while achieving significantly higher throughputs and lower latencies.
+
+## Implementation
+
+This handler is implemented using the `scylla-driver` Python library.
+
+The required arguments to establish a connection are as follows:
+
+* `host` is the host name or IP address of the ScyllaDB.
+* `port` is the port to use when connecting.
+* `user` is the user to authenticate.
+* `password` is the password to authenticate the user.
+* `keyspace` is the keyspace to connect to. It is a top level container for tables.
+* `protocol_version` is not required, and default to 4.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/scylla_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the ScyllaDB server in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE scylladb_datasource
+WITH
+  ENGINE = 'scylladb',
+  PARAMETERS = {
+    "user": "user@mindsdb.com",
+    "password": "pass",
+    "secure_connect_bundle": "/home/zoran/Downloads/secure-connect.zip"
+  };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM scylladb_datasource.keystore.example_table
+LIMIT 10;
+```

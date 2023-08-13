@@ -1,0 +1,81 @@
+---
+title: Handlers in MindsDB
+sidebarTitle: Handlers in MindsDB
+---
+
+## What are Handlers?
+
+At the heart of the MindsDB philosophy lies the belief that predictive insights are best leveraged when produced as close as possible to the data layer. Usually, this *data layer* is a SQL-compatible database, but it could also be a non-SQL database, data stream, or any other tool that interacts with data stored somewhere else.
+
+The above description fits an enormous set of tools used across the software industry. The complexity increases further by bringing Machine Learning into the equation, as the set of popular ML tools is similarly huge. We aim to support most technology stacks, requiring a simple integration procedure so that anyone can easily contribute the necessary *glue* to enable any predictive system for usage within data layers.
+
+This motivates the concept of *handlers*, which is an abstraction for the two types of entities mentioned above: *data layers* and *ML frameworks*. Handlers are meant to enforce a common and sufficient set of behaviors that all MindsDB-compatible entities should support. By creating a handler, the target system is effectively integrated into the wider MindsDB ecosystem.
+
+## Types of Handlers
+
+### Database Handlers
+
+Database handlers act as a bridge to any database. You use database handlers to create databases using [the CREATE DATABASE command](/sql/create/databases/). So you can reach data from any database that has its handler implemented within MindsDB.
+
+<Tip>
+Go ahead and implement a handler for the database of your choice! <a href="https://github.com/mindsdb/mindsdb/blob/staging/docs/contribute/data-handlers.mdx">Here</a> you'll find instructions on how to implement a database handler.
+</Tip>
+
+### Machine Learning (ML) Handlers
+
+ML handlers act as a bridge to any ML framework. You use ML handlers to create ML engines using [the CREATE ML_ENGINE command](/sql/create/ml-engine/). So you can expose ML models from any supported ML engine as an AI table.
+
+<Tip>
+Go ahead and implement a handler for the ML library or framework of your choice! <a href="https://github.com/mindsdb/mindsdb/blob/staging/docs/contribute/ml-handlers.mdx">Here</a> you'll find instructions on how to implement an ML handler.
+</Tip>
+
+## Handlers in the MindsDB Repository
+
+The source code for integrations is located in the main MindsDB repository under the [/integrations](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations) directory.
+
+```
+integrations                      # Contains handlers' source codes
+├─ handlers/                      # Each handler has its own handler directory
+│  ├─ mysql_handler/              # MySQL integration code
+│  ├─ lightwood_handler/          # Lightwood integration code
+│  ├─  .../                       # Other handlers
+├─ handlers_client/               # Handler clients directory
+│  ├─ db_client/              
+│  ├─ ml_client/              
+├─ libs/                          # Handler libraries directory
+│  ├─ base.py                     # Each handler class inherits from one of the base classes
+└─ utilities                      # Handler utility directory
+│  ├─ install.py                  # Script that installs all handler dependencies
+```
+
+## Structure of a Handler
+
+In technical terms, a handler is a self-contained Python package having everything required for MindsDB to interact with it. It includes aspects like dependencies, unit tests, and continuous integration logic. It is up to the author to determine the nature of the package, for example, closed or open source, version control, and more. Although, we encourage opening pull requests to expand the default set of supported tools.
+
+The entry point for a database handler is a class definition that should inherit directly from the [mindsdb.integrations.libs.base.DatabaseHandler](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L102) class and thus indirectly from the [mindsdb.integrations.libs.base.BaseHandler](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L8) class, which defines all the methods that must be overwritten in order to achieve a functional implementation.
+
+And the entry point for an ML handler is a class definition that should inherit from the [mindsdb.integrations.libs.base.BaseMLEngine](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L122) class, which defines all the methods that must be overwritten in order to achieve a functional implementation.
+
+<Note>
+All other details of the handler's structure are not enforced, so the author can decide on its design.
+</Note>
+
+## Things to Remember
+
+Here are a few points to keep in mind while implementing a handler.
+
+### Handlers Inherit from Base Classes
+
+Inherit from the [`DatabaseHandler`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L102) class when adding a new database handler. For more info, visit our [doc page here](/contribute/data-handlers/).
+
+Inherit from the [`BaseMLEngine`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L122) class when adding a new ML handler. For more info, visit our [doc page here](/contribute/ml-handlers/).
+
+### Parsing SQL
+
+Whenever you want to parse a string that contains SQL, we strongly recommend using the `mindsdb_sql` package. It provides a parser that fully supports the MindsDB SQL dialect and partially the standard SQL dialect. There is also a *render* feature to map other dialects into the already supported ones.
+
+### Formatting Output
+
+In the case of data handlers, when it comes to building the response of the public methods, the output should be wrapped by the [mindsdb.integrations.libs.response.HandlerResponse](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/response.py#L7) or [mindsdb.integrations.libs.response.HandlerStatusResponse](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/response.py#L32) class. These classes are used by the MindsDB executioner to orchestrate and coordinate multiple handler instances in parallel.
+
+And in the case of ML handlers, output wrapping is automatically done by an intermediate wrapper, the `BaseMLEngineExec` class, so the contributor wouldn't need to worry about it.

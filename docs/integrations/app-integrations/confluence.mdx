@@ -1,0 +1,55 @@
+---
+title: Confluence
+sidebarTitle: Confluence
+---
+
+This is the implementation of the Confluence app handler for MindsDB. It enables pulling the Confluence data to use it for model training.
+
+[Confluence](https://www.atlassian.com/software/confluence) is a collaborative tool for documentation, project collaboration, Jira integrations, and more.
+
+## Implementation
+
+This handler is implemented using `atlassian-python-api`, a library that provides a simple and convenient way to interact with Atlassian products.
+
+The required arguments to establish a connection are as follows:
+
+* `url` is a Confluence-hosted URL instance.
+* `confluence_api_token` is a token used to authenticate.
+
+<Tip>
+Please follow [this link](https://docs.searchunify.com/Content/Content-Sources/Atlassian-Jira-Confluence-Authentication-Create-API-Token.htm) to generate the token for accessing the Confluence API.
+</Tip>
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/confluence_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect the Confluence app to MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE mindsdb_confluence
+WITH
+    ENGINE = 'confluence',
+    PARAMETERS = {
+    "url": "https://wiki.onap.org/",
+    "confluence_api_token": "MDk5NzgyNzY1Mzc3OlP5jEKnCL/z1+jIyEfIVIwERbJF"  
+    };
+```
+
+It creates a database that comes with the `pages` table.
+
+Now you can query your data, like this:
+
+```sql
+SELECT id, key, name, type
+FROM mindsdb_confluence.pages
+WHERE type = "personal"
+ORDER BY id ASC, name DESC
+LIMIT 10;
+```
+
+<Info>
+For more information about available actions and development plans, visit [this page](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/confluence_handler/README.md).
+</Info>

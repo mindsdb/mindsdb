@@ -1,0 +1,27 @@
+---
+title: Tables, Views, and Files
+sidebarTitle: Tables, Views, and Files
+---
+
+Tables, views, and files store data. Let's go over these concepts.
+
+In MindsDB, you can create tables in the connected databases, assuming the user used to connect this database to MindsDB has a write access. To do that, we provide the customized `CREATE TABLE` statement so you can create a table based on a `SELECT` query that fetched the predictions.
+
+Another way to save your predictions in MindsDB is to create views. Similarly to creating tables but here we use the customized `CREATE VIEW` statement. Please note that views, as opposed to tables, are stored in projects within MindsDB.
+
+MindsDB lets you upload files, including CSV, XLSX, and JSON files, so you can utilize data stored in these files as like as any other table data.
+
+<Info>
+**Next Steps**
+
+Below are the links to help you explore further.
+
+<CardGroup cols={3}>
+
+    <Card title="CREATE TABLE" icon="link" href="/sql/create/table">See how to create a table.</Card>
+    <Card title="CREATE VIEW" icon="link" href="/sql/create/view">Create a view in a project.</Card>
+    <Card title="Upload Files" icon="link" href="/sql/create/file">Upload files to MindsDB.</Card>
+
+</CardGroup>
+
+</Info>

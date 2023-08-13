@@ -1,0 +1,61 @@
+---
+title: MindsDB and Postgres CLI
+sidebarTitle: Postgres CLI
+---
+
+The Postgres API enables users to connect to MindsDB using the PostgreSQL protocol.
+
+<Tip>
+If you installed MindsDB locally, use the below command to run its Postgres API:
+
+```bash
+python -m mindsdb --api http,mysql,postgres
+```
+</Tip>
+
+## How to Connect
+
+To connect MindsDB in PostgreSQL, use the `psql` client program:
+
+```bash
+psql -h localhost -p 55432 -d mindsdb -U mindsdb
+```
+
+We use the local MindsDB installation with the following parameters:
+
+* host: `localhost`
+* port: `55432`
+* database: `mindsdb`
+* user: `mindsdb`
+
+Here are the commands that allow you to connect to either a local MindsDB installation or a MindsDB Cloud instance.
+
+<CodeGroup>
+
+    ```bash Self-Hosted Local Deployment
+    psql -h 127.0.0.1 -p 47335 -d mindsdb -U mindsdb
+    ```
+
+    ```bash MindsDB Cloud
+    psql -h cloud.mindsdb.com -p 3306 -U [mindsdb_cloud_username] --password [mindsdb_cloud_password]
+    ```
+
+    ```bash MindsDB Pro
+    psql -h <dedicated instace ip> -p 3306 -U [mindsdb_cloud_username] --password [mindsdb_cloud_password]
+    ```
+
+</CodeGroup>
+
+<br></br>
+
+<Note>
+Please see [this page](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/api/postgres) for implementation details.
+</Note>
+
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Use Cases** section, where you'll find various examples of regression, classification, time series, and NLP predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on [MindsDB database structure](/sql/table-structure/). Also, don't miss out on the remaining pages from the **MindsDB SQL** section, as they explain a common SQL syntax with examples.
+
+Have fun!

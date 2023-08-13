@@ -1,0 +1,66 @@
+---
+title: How to Create a Data Integration Doc Page
+sidebarTitle: Create a Data Integration Doc Page
+---
+
+Currently, all the supported data integrations are listed [here](/data-integrations/all-data-integrations).
+
+We plan to provide extensive instructions on how to connect and use each of the data integrations. Thus, each data integration requires its dedicated doc page.
+
+Please follow the steps below to create a dedicated doc page for your chosen data integration.
+
+## Step 1. Create a File
+
+Create a [Markdown file](https://www.markdownguide.org/basic-syntax/) under the `mindsdb/docs/data-integrations` directory and name it with the database name.
+
+<Tip>
+If you implement a doc page for the Amazon Redshift database, name the file as `amazon-redshift.mdx`.
+</Tip>
+
+## Step 2. Implement the Content
+
+Please include the following at the beginning of the file:
+
+```sql
+---
+title: <INPUT DATA INTEGRATION NAME HERE>
+sidebarTitle: <INPUT DATA INTEGRATION NAME HERE>
+---
+
+<ADD YOUR CONTENT HERE FOLLOWING THE INSTRUCTIONS BELOW>
+```
+
+<Tip>
+Here is a sample for the Oracle data integration:
+
+```sql
+---
+title: Oracle
+sidebarTitle: Oracle
+---
+
+<ADD YOUR CONTENT HERE FOLLOWING THE INSTRUCTIONS BELOW>
+```
+</Tip>
+
+Here are the resources you should use to implement the content of the doc page:
+
+- Use the connection template and example from [here](/data-integrations/all-data-integrations).
+
+    <Tip>
+    If you implement a doc page for the Google BigQuery database, use [this chapter](/data-integrations/all-data-integrations#google-bigquery).
+    </Tip>
+
+- Check out the dedicated handler folder [here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers). Pay attention to the `README.md` file, as it contains valuable information that should be included in the doc page.
+
+    <Tip>
+    If you implement a doc page for the Google BigQuery database, go to [its handler folder here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/bigquery_handler) and see the [`README.md` file here](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/bigquery_handler/README.md).
+    </Tip>
+
+You are welcome to provide usage examples of the data integrations in MindsDB!
+
+## Step 3. Create a PR
+
+Once you are done, create a PR. We'll review it soon!
+
+Thank you for contributing to MindsDB!

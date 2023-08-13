@@ -1,0 +1,184 @@
+---
+title: MindsDB and SQL Alchemy
+sidebarTitle: SQL Alchemy
+---
+
+SQL Alchemy is a Python SQL toolkit, that provides object-relational mapping features for the Python programming language.
+
+SQL Alchemy facilitates working with databases and Python. You can download it [here](https://www.sqlalchemy.org/) or run a `pip install sqlalchemy`.
+
+<Tip>
+You can consider an option to interact with MindsDB directly from [MySQL CLI](/connect/mysql-client/) or [Postgres CLI](/connect/postgres-client/).
+</Tip>
+
+## How to Connect
+
+Please follow the instructions below to connect your MindsDB to SQL Alchemy.
+
+<Tabs>
+        <Tab title="Local MindsDB">
+        You can use the Python code below to connect your MindsDB database to SQL Alchemy.
+
+        Make sure you have the *pymysql* module installed before executing the Python code. To install it, run the `pip install pymysql` command.
+
+        ```python
+        from sqlalchemy import create_engine
+
+        user = 'mindsdb'
+        password = ''
+        host = '127.0.0.1'
+        port = 47335
+        database = ''
+
+        def get_connection():
+            return create_engine(
+                url="mysql+pymysql://{0}:{1}@{2}:{3}/{4}".format(user, password, host, port, database)
+            )
+
+        if __name__ == '__main__':
+            try:
+                engine = get_connection()
+                engine.connect()
+                print(f"Connection to the {host} for user {user} created successfully.")
+            except Exception as ex:
+                print("Connection could not be made due to the following error: \n", ex)
+        ```
+
+        Please note that we use the following connection details:
+
+        - Username is `mindsdb`
+        - Password is left empty
+        - Host is `127.0.0.1`
+        - Port is `47335`
+        - Database name is left empty
+
+        To create a database connection, execute the code above. On success, the following output is expected:
+
+        ```bash
+        Connection to the 127.0.0.1 for user mindsdb created successfully.
+        ```
+
+        </Tab>
+        <Tab title="MindsDB Cloud">
+        You can use the Python code below to connect your MindsDB account to SQL Alchemy.
+
+        Make sure you have the *pymysql* module installed before executing the Python code. To install it, run the `pip install pymysql` command.
+
+        ```python
+        from sqlalchemy import create_engine
+
+        user = 'MindsDB Cloud username' # your Mindsdb Cloud email address is your username
+        password = 'MindsDB Cloud password' # replace this value
+        host = 'cloud.mindsdb.com'
+        port = 3306
+        database = ''
+
+        def get_connection():
+            return create_engine(
+                url="mysql+pymysql://{0}:{1}@{2}:{3}/{4}".format(user, password, host, port, database)
+            )
+
+        if __name__ == '__main__':
+            try:
+                engine = get_connection()
+                engine.connect()
+                print(f"Connection to the {host} for user {user} created successfully.")
+            except Exception as ex:
+                print("Connection could not be made due to the following error: \n", ex)
+        ```
+
+        Please note that we use the following connection details:
+
+        - Username is your MindsDB Cloud email address
+        - Password is your MindsDB Cloud password
+        - Host is `cloud.mindsdb.com`
+        - Port is `3306`
+        - Database name is left empty
+
+        To create a database connection, execute the code above. On success, the following output is expected:
+
+        ```bash
+        Connection to the cloud.mindsdb.com for user MindsDB-Cloud-Username created successfully.
+        ```
+
+        </Tab>
+        <Tab title="MindsDB Pro">
+        You can use the Python code below to connect your MindsDB account to SQL Alchemy.
+
+        Make sure you have the *pymysql* module installed before executing the Python code. To install it, run the `pip install pymysql` command.
+
+        ```python
+        from sqlalchemy import create_engine
+
+        user = 'MindsDB Cloud username' # your Mindsdb Cloud email address is your username
+        password = 'MindsDB Cloud password' # replace this value
+        host = '<dedicated instace ip>'
+        port = 3306
+        database = ''
+
+        def get_connection():
+            return create_engine(
+                url="mysql+pymysql://{0}:{1}@{2}:{3}/{4}".format(user, password, host, port, database)
+            )
+
+        if __name__ == '__main__':
+            try:
+                engine = get_connection()
+                engine.connect()
+                print(f"Connection to the {host} for user {user} created successfully.")
+            except Exception as ex:
+                print("Connection could not be made due to the following error: \n", ex)
+        ```
+
+        Please note that we use the following connection details:
+
+        - Username is your MindsDB Cloud email address
+        - Password is your MindsDB Cloud password
+        - Host is the IP address of your dedicated instance
+        - Port is your custom port
+        - Database name is left empty
+
+        To create a database connection, execute the code above. On success, the following output is expected:
+
+        ```bash
+        Connection to the cloud.mindsdb.com for user MindsDB-Cloud-Username created successfully.
+        ```
+
+        </Tab>      
+</Tabs>
+
+<br />
+
+
+<Note>
+  The Sqlachemy `create_engine` is lazy. This implies any human error when
+  entering the connection details would be undetectable until an action becomes
+  necessary, such as when calling the `execute` method to execute SQL commands.
+</Note>
+
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Tutorials** and
+**Community Tutorials** sections, where you'll find various examples of
+regression, classification, and time series predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on
+[MindsDB database structure](/sql/table-structure/). Also, don't miss out on the
+remaining pages from the **SQL API** section, as they explain a common SQL
+syntax with examples.
+
+Have fun!
+<Tip>
+**From Our Community**
+
+Check out the articles and video guides created by our community:
+
+- Article on [Predict Diamond prices with SQL Alchemy](https://dev.to/tesprogram/predict-diamond-prices-with-sql-alchemy-and-mindsdb-b4e)
+  by [Teslim Odumuyiwa](https://github.com/Tes-program)
+
+- Article on [Predicting Home Rental Prices with MindsDB in Python](https://curiousprogrammer.hashnode.dev/predicting-home-rental-prices-with-mindsdb-in-python)
+  by [Temidayo](https://hashnode.com/@Temicoder)
+
+- Video guide on [How to connect to MindsDB with SQL Alchemy(Python)](https://www.youtube.com/watch?v=pYR83QTyOQA)
+  by [Nishant Sapkota](https://github.com/thenishantsapkota)
+</Tip>

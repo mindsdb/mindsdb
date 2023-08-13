@@ -1,0 +1,20 @@
+---
+title: getAllProjects()
+sidebarTitle: getAllProjects()
+---
+
+## Description
+
+The `getAllProjects()` function lists all available projects.
+
+## Syntax
+
+Here is how to list all available projects:
+
+```
+const allProjects = await MindsDB.Projects.getAllProjects();
+console.log('all projects:')
+allProjects.forEach(p => {
+  console.log(p.name);
+});
+```

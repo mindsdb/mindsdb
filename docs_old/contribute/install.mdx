@@ -1,0 +1,90 @@
+---
+title: MindsDB Installation for Development
+sidebarTitle: MindsDB Installation for Development
+---
+
+If you want to contribute to the development of MindsDB, you need to install
+it first.
+
+There are a few installation options that you can choose as follows:
+
+- from [source](/setup/self-hosted/pip/source/),
+- using PyPi for [Windows](/setup/self-hosted/pip/windows/),
+  [Linux](/setup/self-hosted/pip/linux/), or
+  [MacOS](/setup/self-hosted/pip/macos/),
+- using [Docker image](/setup/self-hosted/docker/).
+
+Our preferred MindsDB installation method for development is the installation
+from source.
+
+## Installing MindsDB
+
+Here, we recall the steps of MindsDB installation from source. You can either
+follow the steps below or visit the provided link.
+
+Before proceeding, make sure you have `Git` and `Python 3.8.x` or `Python 3.9.x`
+installed.
+
+1. Fork the MindsDB repository from
+   [GitHub](https://github.com/mindsdb/mindsdb/fork).
+
+2. Clone the fork locally:
+
+```bash
+git clone git@github.com:YOUR_USERNAME/mindsdb.git
+```
+
+3. Create a new virtual environment:
+
+```bash
+python -m venv mindsdb-venv
+```
+
+4. Activate the virtual environment:
+
+```bash
+source mindsdb-venv/bin/activate
+```
+
+5. Install dependencies:
+
+```bash
+cd mindsdb && pip install -r requirements.txt
+```
+
+6. Install MindsDB:
+
+```bash
+python setup.py develop
+```
+
+7. Start MindsDB:
+
+```bash
+python -m mindsdb
+```
+
+If everything works as expected, you should see the following message in the
+console:
+
+```
+...
+
+2022-06-28 16:21:46,942 - INFO - - GUI available at http://127.0.0.1:47334/
+2022-06-28 16:21:47,010 - INFO - Starting MindsDB Mysql proxy server on
+tcp://127.0.0.1:47335 2022-06-28 16:21:47,015 - INFO - Waiting for incoming
+connections... mysql API: started on 47335 http API: started on 47334
+```
+
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Tutorials** and
+**Community Tutorials** sections, where you'll find various examples of
+regression, classification, and time series predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on
+[MindsDB database structure](/sql/table-structure/). Also, don't miss out on the
+remaining pages from the **SQL API** section, as they explain a common SQL
+syntax with examples.
+
+Have fun!

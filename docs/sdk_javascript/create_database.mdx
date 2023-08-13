@@ -1,0 +1,37 @@
+---
+title: createDatabase()
+sidebarTitle: createDatabase()
+---
+
+## Description
+
+The `MindsDB.Databases.createDatabase` function connects a new data source to MindsDB.
+
+## Syntax
+
+Here is how to connect our sample MySQL database:
+
+```
+const connectionParams = {
+  'user': 'user',
+  'port': 3306,
+  'password': 'MindsDBUser123!',
+  'host': 'db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com',
+  'database': 'public'
+}
+
+try {
+
+  const mysqlDatabase = await MindsDB.Databases.createDatabase(
+    'mysql_datasource',
+    'mysql',
+    connectionParams);
+  console.log('connected a database');
+
+} catch (error) {
+  // Couldn't connect to database
+  console.log(error);
+}
+```
+
+First, we define the connection paramaters and then use the `createDatabase` function to connect a database.

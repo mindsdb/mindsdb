@@ -82,6 +82,8 @@ class EmailClient:
             resp, email_data = self.imap_server.uid('fetch', emailid, '(BODY[TEXT])')
             try:
                 email_line["body"] = email_data[0][1].decode('utf-8')
+            except UnicodeDecodeError:
+                ValueError(f"Could not decode email body with id {emailid}")
 
             ret.append(email_line)
 

@@ -1,3 +1,4 @@
+import os
 import time
 from unittest.mock import patch
 
@@ -35,7 +36,6 @@ class TestLangchainEmbedding(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_dummy_embedding(self, mock_handler):
-
         self.run_sql("create database proj")
         # create  the model
         self.run_sql(
@@ -89,8 +89,78 @@ class TestLangchainEmbedding(BaseExecutorTest):
         assert "embeddings" in ret.columns
         assert ret.shape[0] == 4
 
-    def test_openai_embedding(self):
-        ...
+    def test_user_friends_embedding_model_name(self):
+        self.run_sql("create database proj")
+        # create  the model
+        self.run_sql(
+            """
+            CREATE MODEL proj.test_dummy_embedding
+            PREDICT content
+            USING
+                engine='langchain_embedding',
+                class = 'fake', -- a more user friendly name
+                size = 512
+            """
+        )
+
+        self.wait_predictor("proj", "test_dummy_embedding")
+
+    # skip if there is no openai key defined in the env
+    @pytest.mark.skipif(
+        "OPENAI_API_KEY" not in os.environ,
+        reason="OPENAI_API_KEY env variable is not defined",
+    )
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_openai_embedding(self, mock_handler):
+        self.run_sql("create database proj")
+        # create the model
+        self.run_sql(
+            """
+            CREATE MODEL proj.test_openai_embedding
+            PREDICT content
+            USING
+                engine='langchain_embedding',
+                class = 'openai'
+            """
+        )
+
+        self.wait_predictor("proj", "test_openai_embedding")
+
+        # single line prediction
+        ret = self.run_sql(
+            """
+            SELECT * FROM proj.test_openai_embedding
+            WHERE content='hello'
+            """
+        )
+
+        assert "content" in ret.columns
+        assert "embeddings" in ret.columns
+
+        # multiple lines
+        # insert data
+        df = pd.DataFrame(
+            [
+                ["hello"],
+                ["world"],
+                ["foo"],
+                ["bar"],
+            ],
+            columns=["content"],
+        )
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
+
+        # query
+        ret = self.run_sql(
+            """
+            SELECT * FROM proj.test_openai_embedding
+            JOIN pg.df
+            """
+        )
+
+        assert "content" in ret.columns
+        assert "embeddings" in ret.columns
+        assert ret.shape[0] == 4
 
     def test_huggingface_embedding(self):
         ...

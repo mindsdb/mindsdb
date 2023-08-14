@@ -1,11 +1,39 @@
 import importlib
-from typing import Dict, Optional, Union
+from typing import Dict, Union
 
 import pandas as pd
 from langchain.embeddings.base import Embeddings
 from pandas import DataFrame
 
 from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.utilities.log import get_log
+
+LOG = get_log("langchain_embedding")
+
+# construct the embedding model name to the class mapping
+# we try to import all embedding models from langchain.embeddings
+# for each class, we get a more user friendly name for it
+# E.g. OpenAIEmbeddings -> OpenAI
+# This is used for the user to select the embedding model
+EMBEDDING_MODELS = {}
+
+try:
+    module = importlib.import_module("langchain.embeddings")
+    # iterate __all__ to get all the classes
+    for class_name in module.__all__:
+        class_ = getattr(module, class_name)
+        if not issubclass(class_, Embeddings):
+            continue
+        # convert the class name to a more user friendly name
+        # e.g. OpenAIEmbeddings -> OpenAI
+        user_friendly_name = class_name.replace("Embeddings", "")
+        EMBEDDING_MODELS[user_friendly_name] = class_name
+        EMBEDDING_MODELS[user_friendly_name.lower()] = class_name
+
+except ImportError:
+    raise Exception(
+        "The langchain is not installed. Please install it with `pip install langchain`."
+    )
 
 
 def get_langchain_class(class_name: str) -> Embeddings:
@@ -19,12 +47,11 @@ def get_langchain_class(class_name: str) -> Embeddings:
     """
     try:
         module = importlib.import_module("langchain.embeddings")
+        class_ = getattr(module, class_name)
     except ImportError:
         raise Exception(
             "The langchain is not installed. Please install it with `pip install langchain`."
         )
-    try:
-        class_ = getattr(module, class_name)
     except AttributeError:
         raise Exception(
             f"Could not find the class {class_name} in langchain.embeddings. Please check the class name."
@@ -38,6 +65,11 @@ def construct_model_from_args(args: Dict) -> Embeddings:
     """
     target = args.pop("target", None)
     class_name = args.pop("class", LangchainEmbeddingHandler.DEFAULT_EMBEDDING_CLASS)
+    if class_name in EMBEDDING_MODELS:
+        LOG.info(
+            f"Mapping the user friendly name {class_name} to the class name: {EMBEDDING_MODELS[class_name]}"
+        )
+        class_name = EMBEDDING_MODELS[class_name]
     MODEL_CLASS = get_langchain_class(class_name)
     serialized_dict = args
     model = MODEL_CLASS(**serialized_dict)

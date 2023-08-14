@@ -59,7 +59,7 @@ class DfLoader(DataFrameLoader):
     def load(self) -> List[Document]:
         """Loads the dataframe as a list of documents"""
         documents = []
-        for n_row, frame in self._data_frame[self._page_content_column].iteritems():
+        for n_row, frame in self._data_frame[self._page_content_column].items():
             if pd.notnull(frame):
                 # ignore rows with None values
                 column_name = self._page_content_column

@@ -15,7 +15,7 @@ FROM monkeylearn
 ```
 
 <p align="center">
-  <img src="/assets/tutorials/1.create_ml.png" />
+  <img src="/docs/assets/tutorials/monkeylearn/1.create_ml.png" />
 </p>
 
 
@@ -28,7 +28,7 @@ CREATE MODEL mindsdb.ecommerce_ticket_classifier
 PREDICT tag
 USING
 engine = 'monkeylearn',
-api_key = 'your_monkeylearn_api_key',
+api_key = 'your_api_key',
 model_id = 'model_id',
 input_column = 'text';
 ```
@@ -36,19 +36,19 @@ input_column = 'text';
 On execution, you get:
 
 <p align="center">
-  <img src="/assets/tutorials/createmodel1.png" />
+  <img src="/docs/assets/tutorials/monkeylearn/createmodel1.png" />
 </p>
 
 Where:
 
 | Expression                             | Description                                              |
 |----------------------------------------|----------------------------------------------------------|
-| `mindsdb.ecommerce_ticket_classifier`  | The model name provided to the model created in MindsDB. |
+| `ecommerce_ticket_classifier`          | The model name provided to the model created in MindsDB. |
 | `tag`     	                           | The column that will provide the predicted result.       | 
 | `engine`                               | The ML framework engine used, which is MonkeyLearn.      | 
-| `your_monkeylearn_api_key`             | The API Key of the model provided by MonkeyLearn.        | 
+| `your_api_key`                         | The API Key of the model provided by MonkeyLearn.        | 
 | `model_id`                             | The respective model's ID you want to make use of.       | 
-| `input column`                         | Specifies the input column when calling the model.       | 
+| `input column`                         | Specifies the input column fed to the model              | 
 
 
 You can use the `DESCRIBE` syntax to verify the model's status.
@@ -60,7 +60,7 @@ DESCRIBE ecommerce_ticket_classifier;
 On execution, you get:
 
 <p align="center">
-  <img src="/assets/tutorials/4.describe.png" />
+  <img src="/docs/assets/tutorials/monkeylearn/4.describe.png" />
 </p>
 
 Use the `SELECT` statement to make a prediction on the model.
@@ -73,12 +73,12 @@ WHERE text = 'Where is my order? The delivery status shows shipped. When I call 
 On execution, you get:
 
 <p align="center">
-  <img src="/assets/tutorials/5.select_prediction.png" />
+  <img src="/docs/assets/tutorials/monkeylearn/5.select_prediction.png" />
 </p>
 
-### Creating a model with a dataset. 
+### Create and train a model. 
 
-You can also create a model with a dataset. For this example, we will be using a dataset consisting of messages for E-commerce support tickets. The dataset will be uploaded as a file onto the GUI.
+You can also create a model with a dataset. For this example, we will be using a dataset consisting of messages for E-commerce support tickets. The dataset will be [uploaded as a file](https://docs.mindsdb.com/sql/create/file)  onto the GUI.
 
 Use the `CREATE MODEL` syntax:
 
@@ -88,7 +88,7 @@ FROM files (select * from queries2)
 PREDICT tag
 USING
 engine = 'monkeylearn',
-api_key = 'your_monkeylearn_api_key',
+api_key = 'your_api_key',
 model_id = 'model_id',
 input_column = 'text';
 ```
@@ -103,7 +103,7 @@ WHERE text = 'I ordered 4 units but only received 3';
 On execution, you get:
 
 <p align="center">
-  <img src="/assets/tutorials/10.select_prediction.png" />
+  <img src="/docs/assets/tutorials/monkeylearn/10.select_prediction.png" />
 </p>
 
 The MindsDB model created with the MonkeyLearn model successfully predicted the tag of an E-commerce support ticket according to the text input.

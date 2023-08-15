@@ -41,11 +41,12 @@ class TestLangchainEmbedding(BaseExecutorTest):
         self.run_sql(
             """
             CREATE MODEL proj.test_dummy_embedding
-            PREDICT content
+            PREDICT embeddings_output_column
             USING
                 engine='langchain_embedding',
                 class = 'FakeEmbeddings',
-                size = 512
+                size = 512,
+                input_columns = ['content']
             """
         )
 
@@ -60,9 +61,9 @@ class TestLangchainEmbedding(BaseExecutorTest):
             """
         )
         assert "content" in ret.columns
-        assert "embeddings" in ret.columns
+        assert "embeddings_output_column" in ret.columns
         # the embeddings should be a list of 512 floats
-        assert len(ret["embeddings"][0]) == 512
+        assert len(ret["embeddings_output_column"][0]) == 512
 
         # multiple lines
         # insert data
@@ -86,16 +87,107 @@ class TestLangchainEmbedding(BaseExecutorTest):
         )
 
         assert "content" in ret.columns
-        assert "embeddings" in ret.columns
+        assert "embeddings_output_column" in ret.columns
         assert ret.shape[0] == 4
 
-    def test_user_friends_embedding_model_name(self):
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_embed_multiple_columns(self, mock_handler):
         self.run_sql("create database proj")
         # create  the model
+        # with multiple input columns
         self.run_sql(
             """
             CREATE MODEL proj.test_dummy_embedding
-            PREDICT content
+            PREDICT embeddings
+            USING
+                engine='langchain_embedding',
+                class = 'fake', -- a more user friendly name
+                size = 512,
+                input_columns = ['content1', 'content2']
+            """
+        )
+
+        self.wait_predictor("proj", "test_dummy_embedding")
+
+        # predictions
+        # one line
+        ret = self.run_sql(
+            """
+            SELECT * FROM proj.test_dummy_embedding
+            WHERE content1='hello'
+            AND content2='world'
+            """
+        )
+
+        assert "content1" in ret.columns
+        assert "content2" in ret.columns
+        assert "embeddings" in ret.columns
+
+        df = pd.DataFrame(
+            {
+                "id": [1, 2, 3, 4],
+                "content1": ["hello", "world", "foo", "bar"],
+                "content2": ["world", "hello", "bar", "foo"],
+            }
+        )
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
+
+        # query
+        ret = self.run_sql(
+            """
+            SELECT * FROM proj.test_dummy_embedding
+            JOIN pg.df
+            """
+        )
+
+        assert "content1" in ret.columns
+        assert "content2" in ret.columns
+        assert "embeddings" in ret.columns
+        assert ret.shape[0] == 4
+
+        # if the input missing columns, it should throw an error
+        with pytest.raises(Exception):
+            self.run_sql(
+                """
+                SELECT * FROM proj.test_dummy_embedding
+                WHERE content1='hello'
+                """
+            )
+
+        # if the input missing columns, it should throw an error
+        with pytest.raises(Exception):
+            df2 = pd.DataFrame(
+                {
+                    "content1": ["hello", "world", "foo", "bar"],
+                }
+            )
+            self.set_handler(mock_handler, name="pg", tables={"df": df2})
+            self.run_sql(
+                """
+                SELECT * FROM proj.test_dummy_embedding
+                JOIN pg.df2
+                """
+            )
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_no_input_columns(self, mock_handler):
+        self.run_sql("create database proj")
+
+        df = pd.DataFrame(
+            {
+                "id": [1, 2, 3, 4],
+                "content1": ["hello", "world", "foo", "bar"],
+                "content2": ["world", "hello", "bar", "foo"],
+            }
+        )
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
+
+        # create the model with no input columns specified should use
+        # all columns when embedding the documents
+        self.run_sql(
+            """
+            CREATE MODEL proj.test_dummy_embedding2
+            PREDICT embeddings
             USING
                 engine='langchain_embedding',
                 class = 'fake', -- a more user friendly name
@@ -103,7 +195,76 @@ class TestLangchainEmbedding(BaseExecutorTest):
             """
         )
 
-        self.wait_predictor("proj", "test_dummy_embedding")
+        self.wait_predictor("proj", "test_dummy_embedding2")
+
+        # predictions
+        # one line
+        ret = self.run_sql(
+            """
+            SELECT * FROM proj.test_dummy_embedding2
+            WHERE content1='hello'
+            AND content2='world'
+            AND id = 1
+            """
+        )
+
+        assert "content1" in ret.columns
+        assert "content2" in ret.columns
+        assert "id" in ret.columns or "`id`" in ret.columns
+        assert "embeddings" in ret.columns
+
+        # multiple lines
+        ret = self.run_sql(
+            """
+            SELECT * FROM proj.test_dummy_embedding2
+            JOIN pg.df
+            """
+        )
+
+        assert "content1" in ret.columns
+        assert "content2" in ret.columns
+        assert ret.shape[0] == 4
+
+        # create the model with no input columns specified,
+        # but with a given from dataframe should use all the columns
+        # from the dataframe when embedding the documents
+        ret = self.run_sql(
+            """
+            CREATE MODEL proj.test_dummy_embedding3
+            FROM pg (
+                SELECT *, NULL as embeddings FROM df  -- this requires an empty column called embeddings
+            )
+            PREDICT embeddings
+            USING
+                engine='langchain_embedding',
+                class = 'fake', -- a more user friendly name
+                size = 512
+            """
+        )
+
+        self.wait_predictor("proj", "test_dummy_embedding3")
+
+        # input columns == ['id', 'content1', 'content2']
+        # predictions
+        # one line
+        ret = self.run_sql(
+            """
+            SELECT * FROM proj.test_dummy_embedding3
+            WHERE content1='hello'
+            AND content2='world'
+            AND id = 1  -- looks like 'id' will be quoted
+            """
+        )
+
+        # missing columns id
+        with pytest.raises(Exception):
+            self.run_sql(
+                """
+                SELECT * FROM proj.test_dummy_embedding3
+                WHERE content1='hello'
+                AND content2='world'
+                """
+            )
 
     # skip if there is no openai key defined in the env
     @pytest.mark.skipif(
@@ -185,7 +346,7 @@ class TestLangchainEmbedding(BaseExecutorTest):
                 CREATE MODEL proj.test_wrong_class_name
                 USING
                     engine='langchain_embedding',
-                    class = 'SomethingDoesntExist',
+                    class = 'SomethingDoesNotExist',
                     size = 512
                 """
             )

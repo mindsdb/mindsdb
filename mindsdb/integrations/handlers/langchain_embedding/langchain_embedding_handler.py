@@ -97,6 +97,26 @@ class LangchainEmbeddingHandler(BaseMLEngine):
     ) -> None:
         # get the class name from the args
         user_args = args.get("using", {})
+
+        # infer the input columns arg if user did not provide it
+        # from the columns of the input dataframe if it is provided
+        if "input_columns" not in user_args and df is not None:
+            # ignore private columns starts with __mindsdb
+            # ignore target column in the input dataframe
+            user_args["input_columns"] = [
+                col
+                for col in df.columns.tolist()
+                if not col.startswith("__mindsdb") and col != target
+            ]
+            # unquote the column names -- removing surrounding `
+            user_args["input_columns"] = [
+                col.strip("`") for col in user_args["input_columns"]
+            ]
+
+        elif "input_columns" not in user_args:
+            # set as empty list if the input_columns is not provided
+            user_args["input_columns"] = []
+
         # this may raise an exception if
         # the arguments are not sufficient to create such as class
         # due to e.g., lack of API key
@@ -104,7 +124,10 @@ class LangchainEmbeddingHandler(BaseMLEngine):
         construct_model_from_args(user_args)
 
         # save the model to the model storage
-        user_args["target"] = target
+        target = target or "embeddings"
+        user_args[
+            "target"
+        ] = target  # this is the name of the column to store the embeddings
         self.model_storage.json_set("args", user_args)
 
     def predict(self, df: DataFrame, args) -> DataFrame:
@@ -113,21 +136,46 @@ class LangchainEmbeddingHandler(BaseMLEngine):
         model = construct_model_from_args(user_args)
 
         # get the target from the model storage
-        target = user_args.get("target")
-        # check if the target is in the df
-        if target is None or target not in df.columns:
+        target = user_args["target"]
+        # run the actual embedding vector generation
+        # TODO: need a better way to handle this
+        # unquote the column names -- removing surrounding `
+        cols_dfs = [col.strip("`") for col in df.columns.tolist()]
+        df.columns = cols_dfs
+        # if input_columns is an empty list, use all the columns
+        input_columns = user_args.get("input_columns") or df.columns.tolist()
+        # check all the input columns are in the df
+        if not all(
+            # ignore surrounding ` in the column names when checking
+            [col in cols_dfs for col in input_columns]
+        ):
             raise Exception(
-                f"Target column {target} not found in the input dataframe. Available columns are {df.columns}"
+                f"Input columns {input_columns} not found in the input dataframe. Available columns are {df.columns}"
             )
 
-        # run the actual embedding vector generation
-        texts = df[target].tolist()
-        embeddings = model.embed_documents(texts)
+        # convert each row into a document
+        df_texts = df[input_columns].apply(self.row_to_document, axis=1)
+        embeddings = model.embed_documents(df_texts.tolist())
 
         # create a new dataframe with the embeddings
-        df_embeddings = df.assign(embeddings=embeddings)
+        df_embeddings = df.copy().assign(**{target: embeddings})
 
         return df_embeddings
+
+    def row_to_document(self, row: pd.Series) -> str:
+        """
+        Convert a row in the input dataframe into a document
+
+        Default implementation is to concatenate all the columns
+        in the form of
+        field1: value1\nfield2: value2\n...
+        """
+        fields = row.index.tolist()
+        values = row.values.tolist()
+        document = "\n".join(
+            [f"{field}: {value}" for field, value in zip(fields, values)]
+        )
+        return document
 
     def finetune(
         self, df: Union[DataFrame, None] = None, args: Union[Dict, None] = None

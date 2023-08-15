@@ -1,8 +1,8 @@
 from types import ModuleType
 
-import pypistats
 from mindsdb_sql import parse_sql
 
+from mindsdb.integrations.handlers.pypi_handler.api import PyPI
 from mindsdb.integrations.handlers.pypi_handler.pypi_tables import (
     PyPIOverallTable,
     PyPIPythonMajorTable,
@@ -40,7 +40,7 @@ class PyPIHandler(APIHandler):
         return StatusResponse(True)
 
     def connect(self) -> ModuleType:
-        self.connection = pypistats
+        self.connection = PyPI
         return self.connection
 
     def native_query(self, query: str) -> StatusResponse:

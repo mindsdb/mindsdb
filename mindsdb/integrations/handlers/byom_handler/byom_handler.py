@@ -34,9 +34,9 @@ class BYOMHandler(BaseMLEngine):
         )
 
     def create(self, target, df=None, args=None, **kwargs):
-        is_cloud = Config().get('cloud', False)
-        if is_cloud is True:
-            raise RuntimeError('BYOM is disabled on cloud')
+        # is_cloud = Config().get('cloud', False)
+        # if is_cloud is True:
+        #     raise RuntimeError('BYOM is disabled on cloud')
 
         model_proxy = self._get_model_proxy()
 
@@ -75,6 +75,10 @@ class BYOMHandler(BaseMLEngine):
 
     def create_engine(self, connection_args):
         # check code and requirements
+        # ADD
+        # is_cloud = Config().get('cloud', False)
+        # if is_cloud is True:
+        #     raise RuntimeError('BYOM is disabled on cloud')
 
         model_proxy = self._get_model_proxy()
 
@@ -122,6 +126,7 @@ class ModelWrapper:
                 self.install_modules(modules)
 
         except Exception as e:
+            # DANGER !!! VENV MUST BE CREATED
             log.logger.info("Can't create virtual environment. venv module should be installed")
 
             self.python_path = Path(sys.executable)
@@ -149,7 +154,7 @@ class ModelWrapper:
 
         is_pandas = any([m.lower().startswith('pandas') for m in modules])
         if not is_pandas:
-            modules.append('pandas >=1.1.5,<=1.3.3')
+            modules.append('pandas >=1.1.5,<=1.3.3')  # pandas >=2.0.0, <2.1.0
 
         # for dataframe serialization
         modules.append('pyarrow==11.0.0')

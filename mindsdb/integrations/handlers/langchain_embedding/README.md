@@ -19,12 +19,14 @@ FROM langchain_embedding;
 Create an embedding model
 ```sql
 CREATE MODEL openai_embedding_model
-PREDICT content
--- the name of the column in the input data that contains the text content
+PREDICT embeddings
+-- the name of the column in the output data that contains the embedding vectors
 USING
   engine = 'langchain_embedding',
-  class = 'OpenAIEmbeddings', -- the name of the embedding class in langchain.embeddings
+  class = 'OpenAIEmbeddings', -- the name of the embedding class in langchain.embeddings, alternatively, you can also use 'openai' instead
+  input_columns = ['content'], -- the name of the column in the input data that contains the text info. You can specify multiple columns if they all contain text info to be embeded
   openai_api_key = '<your_api_key>'  -- alternative set your env variable OPEN_AI_API_KEY on the machine that runs MindsDB
+
 ;
 ```
 All arguments specified after the `USING` clause, except `engine` and `class` will be passed to the constructor when initializing the embedding models. Please refer to the detailed doc page for each embedding models in langchain for acceptable arguments. For example, here is the [doc for OpenAI](https://api.python.langchain.com/en/latest/embeddings/langchain.embeddings.openai.OpenAIEmbeddings.html).

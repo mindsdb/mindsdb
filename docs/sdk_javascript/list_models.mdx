@@ -1,8 +1,12 @@
 ---
-title: listModels()
-sidebarTitle: listModels()
+title: List Models
+sidebarTitle: List Models
 ---
 
-<Info>
-This feature is in progress.
-</Info>
+You can list models using the below code.
+
+```
+const query = 'SHOW MODELS’;
+result = await MindsDB.SQL.runQuery(query);
+console.log(result);
+```

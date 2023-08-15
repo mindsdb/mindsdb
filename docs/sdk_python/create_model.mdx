@@ -1,6 +1,6 @@
 ---
-title: create_model()
-sidebarTitle: create_model()
+title: Create, Train, and Deploy a Model
+sidebarTitle: Create, Train, and Deploy a Model
 ---
 
 ## Description
@@ -22,5 +22,20 @@ my_model = project.create_model (
     name = 'my_model',
     predict = 'target',
     query = my_table
+)
+```
+
+Here is the syntax to create an OpenAI model:
+
+```bash
+sentiment_classifier = project.create_model(
+      name='sentiment_classifier',
+      engine='huggingface',
+      predict='sentiment',
+      options={
+          'model_name':'cardiffnlp/twitter-roberta-base-sentiment',
+          'input_column': 'comment',
+          'labels': ['negative', 'neutral', 'positive']
+      }
 )
 ```

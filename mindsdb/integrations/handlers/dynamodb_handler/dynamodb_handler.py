@@ -162,7 +162,7 @@ class DyanmoDBHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-
+        connection = self.connect()
         result = self.connection.list_tables()
 
         df = pd.DataFrame(
@@ -185,6 +185,7 @@ class DyanmoDBHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
+        connection = self.connect()
 
         result = self.connection.describe_table(
             TableName=table_name

@@ -1,0 +1,184 @@
+---
+title: trainModel()
+sidebarTitle: trainModel()
+---
+
+Training a model requires various parameters, depending on the model type. Here we present examples of regression, time series, and OpenAI models.
+
+<Tip>
+Here are some useful links:
+- [training options](https://mindsdb.github.io/mindsdb-js-sdk/interfaces/models_trainingOptions.TrainingOptions.html),
+- [query options](https://mindsdb.github.io/mindsdb-js-sdk/interfaces/models_queryOptions.QueryOptions.html),
+- [batch query options](https://mindsdb.github.io/mindsdb-js-sdk/interfaces/models_queryOptions.BatchQueryOptions.html).
+</Tip>
+
+#### Regression Model
+
+Let's look at an example of how to create and train a simple regression model, and then, use it for making predictions.
+
+```
+// Defining training options
+const regressionTrainingOptions = {
+  select: 'SELECT * FROM demo_data.home_rentals',
+  integration: 'example_db'
+};
+
+try {
+
+  // Creating and training a model
+  // The returned promise resolves when the model is created, NOT when training is actually complete
+  let homeRentalPriceModel = await MindsDB.Models.trainModel(
+    'home_rentals_model',
+    'rental_price',
+    'mindsdb',
+    regressionTrainingOptions);
+  
+  console.log('created a model');
+
+  // Waiting for the training to be complete
+  while (homeRentalPriceModel.status !== 'complete' && homeRentalPriceModel.status !== 'error') {
+    homeRentalPriceModel = await MindsDB.Models.getModel('home_rentals_model', 'mindsdb');
+  }
+  
+  // Checking model's status
+  console.log('Model status: ' + homeRentalPriceModel.status);
+
+  // Defining query options
+  const queryOptions = {
+    where: [
+      'sqft = 823',
+      'location = "good"',
+      'neighborhood = "downtown"',
+      'days_on_market = 10'
+    ]
+  }
+
+  // Querying for a single prediction
+  const rentalPricePrediction = await homeRentalPriceModel.query(queryOptions);
+  console.log('Predicted value:');
+  console.log(rentalPricePrediction.value);
+  console.log('Prediction insights:');
+  console.log(rentalPricePrediction.explain);
+  console.log('Input data:');
+  console.log(rentalPricePrediction.data);
+  
+} catch (error) {
+  // Something went wrong training or querying
+  console.log(error);
+}
+```
+
+#### Time Series Model
+
+As time series models require more parameters, let's go over an example of how to create and train a time series model, and then, use it for making batch predictions.
+
+```
+// Defining training options
+const timeSeriesTrainingOptions = {
+  integration: 'example_db',
+  select: 'SELECT * FROM demo_data.house_sales',
+  orderBy: 'saledate',
+  groupBy: 'bedrooms',
+  window: 8,
+  horizon: 4
+}
+
+try {
+
+  // Creating and training a model
+  let houseSalesForecastModel = await MindsDB.Models.trainModel(
+    'house_sales_model',
+    'ma',
+    'mindsdb',
+    timeSeriesTrainingOptions);
+    
+  console.log('created a model');
+
+  // Waiting for the training to be complete
+  while (houseSalesForecastModel.status !== 'complete' && houseSalesForecastModel.status !== 'error') {
+    houseSalesForecastModel = await MindsDB.Models.getModel('house_sales_model', 'mindsdb');
+  }
+
+  // Checking model's status
+  console.log('Model status: ' + houseSalesForecastModel.status);
+  
+  // Describing a model
+  const modelDescription = await houseSalesForecastModel.describe();
+  console.log('Model description:');
+  console.log(modelDescription);
+
+  // Defining query options
+  const queryOptions = {
+    // Join model to this data source
+    join: 'example_db.demo_data.house_sales',
+    // When using batch queries, the 't' alias is used for the joined data source ('t' is short for training/test)
+    // The 'm' alias is used for the trained model to be queried
+    where: ['t.saledate > LATEST', 't.bedrooms = 2'],
+    limit: 4
+  }
+  
+  // Querying for batch predictions
+  const rentalPriceForecasts = await houseSalesForecastModel.batchQuery(queryOptions);
+  console.log('Batch predictions:');
+  rentalPriceForecasts.forEach(f => {
+    console.log(f.value);
+    console.log(f.explain);
+    console.log(f.data);
+  })
+  
+} catch (error) {
+  // Something went wrong training or predicting.
+  console.log(error);
+}
+```
+
+#### OpenAI Model
+
+Here is how to create and deploy an OpenAI model from JavaScript code:
+
+```
+// Defining training options
+const trainingOptions = {
+  using: {engine: 'openai', prompt_template: 'describe the sentiment of the reviews strictly as "positive", "neutral", or "negative". "I love the product":positive "It is a scam":negative "{{review}}.":'}
+};
+
+try {
+
+  // Creating and training a model
+  let openai_js = await MindsDB.Models.trainModel(
+    'openai_js',
+    'sentiment',
+    'mindsdb',
+    trainingOptions);
+  
+  console.log('created a model');
+
+  // Waiting for the training to be complete
+  while (openai_js.status !== 'complete' && openai_js.status !== 'error') {
+    openai_js = await MindsDB.Models.getModel('openai_js', 'mindsdb');
+  }
+  
+  // Checking model's status
+  console.log('Model status: ' + openai_js.status);
+
+  // Defining query options
+  const queryOptions = {
+    where: [
+      'review = \'It is ok.\''
+    ]
+  }
+
+  // Querying for a single prediction
+  openai_js = await openai_js.query(queryOptions);
+  console.log('Predicted value:');
+  console.log(openai_js.value);
+  console.log('Prediction insights:');
+  console.log(openai_js.explain);
+  console.log('Input data:');
+  console.log(openai_js.data);
+
+} catch (error) {
+  // Something went wrong training or querying
+  console.log(error);
+}
+```

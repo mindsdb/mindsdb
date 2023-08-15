@@ -1,0 +1,59 @@
+## Testing: Customer Churn Tutorial
+
+1. Testing CREATE DATABASE
+
+```sql
+CREATE DATABASE example_db
+WITH ENGINE = "postgres",
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "3.220.66.106",
+    "port": "5432",
+    "database": "demo"
+};
+
+```
+
+Output:
+
+```sql
+Query successfully completed
+```
+
+2. Testing CREATE MODEL
+
+```sql
+CREATE MODEL mindsdb.customer_churn_predictor
+FROM example_db
+  (SELECT * FROM demo_data.customer_churn)
+PREDICT churn;
+```
+
+Output:
+
+| NAME                     | ENGINE    | PROJECT | ACTIVE | VERSION | STATUS     | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR  | SELECT_DATA_QUERY                       | TRAINING_OPTIONS    | TAG    |
+| ------------------------ | --------- | ------- | ------ | ------- | ---------- | -------- | ------- | ------------- | --------------- | ------ | --------------------------------------- | ------------------- | ------ |
+| customer_churn_predictor | lightwood | mindsdb | true   | 1       | generating | [NULL]   | churn   | up_to_date    | 23.4.4.2        | [NULL] | SELECT \* FROM demo_data.customer_churn | {'target': 'churn'} | [NULL] |
+
+3. Testing SELECT (making predictions)
+
+```sql
+SELECT Churn, Churn_confidence, Churn_explain
+FROM mindsdb.customer_churn_predictor
+WHERE SeniorCitizen=0
+AND Partner='Yes'
+AND Dependents='No'
+AND tenure=1
+AND PhoneService='No'
+AND MultipleLines='No phone service'
+AND InternetService='DSL';
+
+
+```
+
+Output:
+
+| Churn | Churn_confidence   | Churn_explain                                                                                                                                                 |
+| ----- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Yes   | 0.0898876404494382 | {"predicted_value": "Yes", "confidence": 0.0898876404494382, "anomaly": null, "truth": null, "probability_class_No": 0.2379, "probability_class_Yes": 0.7621} |

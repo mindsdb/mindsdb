@@ -222,7 +222,10 @@ class LangChainHandler(BaseMLEngine):
             question = row[args['user_column']]
             answer = row[args['assistant_column']]
 
-            memory.save_context({"input": question}, {"output": answer})
+            if question:
+                memory.chat_memory.add_user_message(question)
+            if answer:
+                memory.chat_memory.add_ai_message(answer)
 
         # use last message as prompt, remove other questions
         df.iloc[:-1, df.columns.get_loc('question')] = ''
@@ -348,7 +351,7 @@ class LangChainHandler(BaseMLEngine):
                         # As a somewhat dirty workaround, we accept the output formatted incorrectly and use it as a response.
                         #
                         # Ideally, in the future, we would write a parser that is more robust and flexible than the one Langchain uses.
-                        response = response.removeprefix(_PARSING_ERROR_PREFIX).removesuffix('`')
+                        response = response.lstrip(_PARSING_ERROR_PREFIX).rstrip('`')
                         completions.append(response)
                 except Exception as e:
                     completions.append(f'agent failed with error:\n{str(e)[:50]}...')

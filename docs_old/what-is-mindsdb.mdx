@@ -1,0 +1,315 @@
+---
+title: What is MindsDB?
+sidebarTitle: What is MindsDB?
+---
+
+MindsDB is an **AI Database** that manages AI models and automates workflows connecting AI models with enterprise databases. We provide a comprehensive solution for deploying and managing Artificial Intelligence (AI) models, encompassing everything from state-of-the-art LLMs and vector operations to cutting-edge time-series forecasting and classical Machine Learning (ML).
+
+MindsDB empowers organizations to harness the power of AI by abstracting AI models as **Generative AI Tables**. These tables are capable of learning from the input data and generating predictions from the underlying model upon being queried. This abstraction makes AI highly accessible, enabling development teams to use their existing SQL skills to build applications powered by AI.
+
+## What are Generative AI Tables?
+
+Generative AI is a subfield of artificial intelligence that trains AI models to create new content, such as realistic text, forecasts, images, and more, by learning patterns from existing data.
+
+MindsDB revolutionizes machine learning within enterprise databases by introducing the concept of **Generative AI tables**. These essentially represent AI models as virtual database tables, capable of producing realistic outputs given certain inputs.
+
+```sql
+-- Example of querying an AI table
+-- This AI table is trained to generate customer support responses.
+
+SELECT 
+  response   -- AI generated output 
+FROM 
+  ai_response_model  -- A generative AI model as a virtual table
+WHERE 
+  customer_message = "Dear Team, I spilled water on the computer I bought on June 1st 2024, order #3418276, and it is no longer working, what should I do?"
+```
+
+Generative AI Tables streamline the process of making predictions based on your data, thereby allowing developers to tap into the comprehensive ecosystem of state-of-the-art Generative AI using simple SQL statements.
+
+To better understand this concept, let’s have a deeper exploration in the use case of generating automated responses to emails coming from customers. 
+
+First lets look at the data that we have. In this case, imagine that you have a table with incoming emails.
+
+```sql
+SELECT message_id, customer_message
+FROM postgres_demo_db.cutomer_messages;
+```
+
+On execution, we get:
+
+
+``` csv
++------------+---------------------------------------------------------------------------------------------------------------------------------------------------+
+| message_id | customer_message                                                                                                                                  |
++------------+---------------------------------------------------------------------------------------------------------------------------------------------------+
+| 1          | "I've been having trouble with my product; it's not working as it should. I would like to request a return. My order number is 12345."            |
+| 2          | "My account settings won't update no matter what I try. Can you help?"                                                                            |
+| 3          | "My product stopped working after just a week of use. I didn't expect this from your brand. Can I get a refund?"                                  |
+| 4          | "I suspect my account has been hacked. I noticed some unusual activity. Please assist me in securing it."                                         |
+| 5          | "There seems to be an issue with the settings on my account, they're not saving correctly."                                                       |
+| 6          | "I believe my account has been compromised. Please help me regain control and secure my account."                                                 |
+| 7          | "I'm not satisfied with the product I received. It's not working as advertised. I'd like to return it, please. My order number is 56789."         |
++------------+---------------------------------------------------------------------------------------------------------------------------------------------------+
+
+```
+
+
+## Creating a Generative AI-Table
+
+We can for example create an OpenAI model that will generate a *response* given some *prompt_template* instructions wirtten in plain English.
+
+```sql
+CREATE MODEL ai_response_model
+PREDICT response
+USING
+    engine = ‘openai’,
+    prompt_template = '
+
+Generate a simple customer response depending on the following options:
+
+- If its a message about returns and there is an order number, the message should be as follows (populate order_id in the URL accordingly):
+"We are sorry about the issues with your product. Please follow this link to process your return: http://website.com/returns?order_id=<order_id>."
+- If the message is about returns but has no order number, respond by asking for the order number and provide a link to see the list of their orders: http://website.com/my_orders.
+- If the message is about the account being compromised, send them a link to immediately change their password: http://website.com/change_password.
+- Otherwise, simply respond with [NEEDS_ATTENTION].
+
+	The message is the following: {customer_message}
+';
+```
+
+Now that we generated our AI-Table, we can query for messages and their generated responses using **JOIN**s.
+
+```sql
+SELECT input.message_id,  m.response, input.customer_message
+FROM postgres_demo_db.cutomer_messages AS i
+JOIN ai_response_model AS m;
+```
+
+Results in:
+
+```csv
++--------------+-------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------+
+| i.message_id | m.response                                                                                                                                | i.customer_message                                                                                                                     |
++--------------+-------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------+
+| 1            | We are sorry about the issues with your product. Please follow this link to process your return http://website.com/returns?order_id=12345 | "I've been having trouble with my product; it's not working as it should. I would like to request a return. My order number is 12345." |
+| 2            | [NEEDS_ATTENTION]                                                                                                                         | "My account settings won't update no matter what I try. Can you help?"                                                                 |
+| 3            | Please provide an order number, follow this link: http://website.com/my_orders                                                            | "My product stopped working after just a week of use. I didn't expect this from your brand. Can I get a refund?"                       |
+| 4            | We understand your concern. Please change your password immediately using this link http://website.com/change_password                    | "I suspect my account has been hacked. I noticed some unusual activity. Please assist me in securing it."                              |
+| 5            | [NEEDS_ATTENTION]                                                                                                                         | "There seems to be an issue with the settings on my account, they're not saving correctly."                                            |
+| 6            | We understand your concern. Please change your password immediately using this link http://website.com/change_password                    | "I believe my account has been compromised. Please help me regain control and secure my account."                                      |
+| 7            | We are sorry about the issues with your product. Please follow this link to process your return http://website.com/returns?order_id=56789 | "I'm not satisfied with the product I received. It's not working . I'd like to return it, please. My order number is 56789."           |
++--------------+---------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+
+## How are AI-Tables different from normal database tables.
+
+To understand the difference, we can go over a much simpler example, here we will see how traditional database tables are designed to give you a deterministic response given some input, and Generative AI Tables are designed to generate an approximate response given some input.
+
+Let’s consider the following `income_table` table that stores the `income` and
+`debt` values.
+
+```sql
+SELECT income, debt
+FROM income_table;
+```
+
+On execution, we get:
+
+```sql
++------+-----+
+|income|debt |
++------+-----+
+|60000 |20000|
+|80000 |25100|
+|100000|30040|
+|120000|36010|
++------+-----+
+```
+
+A simple visualization of the data present in the `income_table` table is as
+follows:
+
+![Income vs Debt](/assets/sql/income_vs_debt.png)
+
+Querying the income table to get the `debt` value for a particular `income`
+value results in the following:
+
+```sql
+SELECT income, debt
+FROM income_table
+WHERE income = 80000;
+```
+
+On execution, we get:
+
+```sql
++------+-----+
+|income|debt |
++------+-----+
+|80000 |25100|
++------+-----+
+```
+
+And here is what we get:
+
+![Income vs Debt chart](/assets/sql/income_vs_debt_known_value.png)
+
+But what happens when querying the table for an `income` value that is not
+present there?
+
+```sql
+SELECT income, debt
+FROM income_table
+WHERE income = 90000;
+```
+
+On execution, we get:
+
+```sql
+Empty set (0.00 sec)
+```
+
+When the `WHERE` clause condition is not fulfilled for any of the rows, no
+value is returned.
+
+![Income vs Debt query](/assets/sql/income_vs_debt_unknown_value.png)
+
+When a table doesn’t have an exact match, the query returns an empty set or null
+value. This is where the AI Tables come into play!
+
+### Solution Offered by MindsDB
+
+Let’s create a `debt_model` model that allows us to approximate the `debt` value
+for any `income` value. We train the `debt_model` model using the data from the
+`income_table` table.
+
+```sql
+CREATE MODEL mindsdb.debt_model
+FROM income_table
+PREDICT debt;
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
+MindsDB provides the [`CREATE MODEL`](/sql/create/model/)
+statement. On execution of this statement, the predictive model works in the
+background, automatically creating a vector representation of the data that can
+be visualized as follows:
+
+![Income vs Debt model](/assets/sql/income_vs_debt_predictor.png)
+
+Let’s now look for the `debt` value of some random `income` value. To get the
+approximated `debt` value, we query the `mindsdb.debt_model` model instead
+of the `income_table` table.
+
+```sql
+SELECT income, debt
+FROM mindsdb.debt_model
+WHERE income = 90000;
+```
+
+On execution, we get:
+
+```sql
++------+-----+
+|income|debt |
++------+-----+
+|90000 |27820|
++------+-----+
+```
+
+And here is how it looks:
+
+![Income vs Debt model](/assets/sql/income_vs_debt_prediction.png)
+
+## Why Choose MindsDB?
+
+
+1. Unified AI Deployment and Management
+
+MindsDB simplifies the deployment and management of AI models by providing a comprehensive cloud platform.
+With MindsDB, you can seamlessly integrate and serve your AI models, eliminating the need for complex infrastructure setup and management.
+The platform allows you to leverage AI's capabilities without getting bogged down by technical complexities.
+
+2. Simplified Integration of AI with Databases
+
+MindsDB simplifies the integration of AI into your existing database infrastructure. MindsDB eliminates the need for complex data pipelines or separate systems for AI deployment by treating machine learning models as virtual tables. This approach allows you to leverage the power of AI directly within your familiar database environment.
+
+3. Increased Accessibility and Adoption
+
+With MindsDB, organizations can unlock the potential of AI for a broader audience. By abstracting AI models as Generative AI Tables, MindsDB enables developers and data scientists to collaborate seamlessly, leveraging their existing SQL and database skills. This accessibility accelerates the adoption of AI across teams and departments, leading to faster innovation and decision-making.
+
+4. Predictive Analytics at Scale
+
+MindsDB's Generative AI Tables enable predictive analytics at scale. By storing machine learning models directly within the database, MindsDB leverages the full power of your data infrastructure. This approach allows for efficient and real-time predictions, eliminating the need for expensive data transfers or separate model deployment. With MindsDB, you can easily and efficiently harness the predictive capabilities of AI.
+
+5. Enhanced Scalability and Performance
+
+MindsDB's cloud infrastructure offers unparalleled scalability and performance. By leveraging the cloud's elastic resources, MindsDB enables you to handle large-scale AI workloads efficiently. Whether you need to process massive amounts of data or serve predictions in real-time, MindsDB's infrastructure can scale to meet your demands, ensuring optimal performance and responsiveness.
+
+6. Improved Data Governance and Security
+
+MindsDB's integration with enterprise databases ensures robust data governance and security. By leveraging existing database security measures, MindsDB enables you to control access, permissions, and auditing for AI models. This integration also ensures compliance with data privacy regulations, providing a secure and trusted environment for AI-powered applications.
+
+
+
+## How to Help Democratize AI?
+
+Here is what you can do:
+
+* Go ahead and try out MindsDB by following our tutorials, and in case of
+      problems, you can always
+      [report an issue here](https://github.com/mindsdb/mindsdb/issues/new/choose).
+
+* Are you familiar with Python? You can then help us out in resolving open
+      issues. At first, have a look at
+      [issues labeled with the good first issue tag](https://github.com/mindsdb/mindsdb/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22),
+      as these should be easy to start.
+
+* You can also help us with documentation and tutorials. Here is how you can
+      contribute by writing
+      [documentation](/contribute/docs/) and
+      [tutorials](/contribute/tutorials). Don't
+      forget to follow the [style guide](/docs-rules/).
+
+* Share with your friends and spread the word about MindsDB.
+
+* Join our team! We are a fast-growing company, so we always have
+      [a few open positions](https://mindsdb.com/careers/).
+
+<Tip>
+**From Our Community**
+
+Check out the articles and video guides created by our community:
+
+- Article on [What is MindsDB?](https://medium.com/@okekeebubechukwu08/what-is-mindsdb-b6862af21492)
+  by [Gloria Okeke E.J](https://medium.com/@okekeebubechukwu08)
+
+- Article on [What is MindsDB? How to get started with it ](https://medium.com/@hritikd3/what-is-mindsdb-how-to-get-started-2b3cf6d99707)
+  by [Hritik Dangi](https://github.com/hritikd3)
+
+- Video guide on [Video: What is MindsDB?](https://www.youtube.com/watch?v=SrDPYqQrzaw) by
+  [Alissa Troiano](https://github.com/alissatroiano)
+
+- Video guide on [What is MindsDB | How to Get Started | A Cloud/AI Enabled Database](https://www.youtube.com/watch?v=XWDVxYVGH9M)
+  by [Arman Chand](https://github.com/ArmanChand)
+
+- Video guide on [What is MindsDB and How to Get Started](https://youtu.be/zHReFuFUI34) by
+  [Hritik Dangi](https://www.linkedin.com/in/hritikd3/)
+
+- Video guide on [What is MindsDB?](https://www.youtube.com/watch?v=i2tMs4MX_yw) uploaded on
+  [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by
+  [Rutam Prita Mishra](https://community.ops.io/rutamhere)
+
+- Video guide on [What is MindsDB - AI Database Prediction](https://www.youtube.com/watch?v=8ySq7Y3sfJs)
+  by [Bhavesh Mishra](https://github.com/thefool76)
+
+- Video guide on [What is MindsDB ?](https://www.youtube.com/watch?v=81Q2aQWuwDM) by
+  [Syed Zubeen](https://github.com/syedzubeen)
+</Tip>

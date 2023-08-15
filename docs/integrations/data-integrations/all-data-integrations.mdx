@@ -1,0 +1,2190 @@
+---
+title: Supported Integrations
+sidebarTitle: Supported Integrations
+---
+
+The list of databases supported by MindsDB keeps growing. Here are the currently supported integrations:
+
+<p align="center">
+  <img src="/assets/supported_integrations.png" />
+</p>
+
+You can find particular [databases' handler files here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers) to see their connection arguments. For example, to see the latest updates to the Oracle handler, check [Oracle's `readme.md` file here](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/oracle_handler/README.md).
+
+Let's look at sample codes showing how to connect to each of the supported integrations.
+
+<Tip>
+**From Our Community**
+
+Check out the video guides created by our community:
+
+- Video guide on [Connect Postgres Database to MindsDB](https://youtu.be/jbH5fsviAgE) by
+  [@akhilcoder](https://twitter.com/akhilcoder)
+
+- Video guide on [Setting up data sources with mindsDB](https://www.youtube.com/watch?v=kRrMjUVnib0)
+  by [Syed Zubeen](https://github.com/syedzubeen)
+</Tip>
+
+## Airtable
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE airtable_datasource          --- display name for the database
+    WITH ENGINE = 'airtable',                    --- name of the MindsDB handler
+    PARAMETERS = {
+      "base_id": " ",                            --- the Airtable base ID
+      "table_name": " ",                         --- the Airtable table name
+      "api_key": " "                             --- the API key for the Airtable API
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE airtable_datasource
+    WITH ENGINE = 'airtable',
+    PARAMETERS = {
+      "base_id": "appve10klsda2",
+      "table_name": "my_table",
+      "api_key": "KdJX2Q5km%5b$T$sQYm^gvN"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Airtable data handler details [here](/data-integrations/airtable).
+</Info>
+
+## Amazon DynamoDB
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE dynamodb_datasource       --- display name for the database
+    WITH ENGINE = 'dynamodb',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "aws_access_key_id": " ",               --- the AWS access key
+      "aws_secret_access_key": " ",           --- the AWS secret access key
+      "region_name": " "                      --- the AWS region
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE dynamodb_datasource
+    WITH ENGINE = 'dynamodb',
+    PARAMETERS = {
+      "aws_access_key_id": "PCAQ2LJDOSWLNSQKOCPW",
+      "aws_secret_access_key": "U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i",
+      "region_name": "us-east-1"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Amazon DynamoDB data handler details [here](/data-integrations/amazon-dynamodb).
+</Info>
+
+## Amazon Redshift
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE amazonredshift_datasource         --- display name for the database
+    WITH ENGINE = 'amazonredshift',                   --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                                    --- host name or IP address of the Redshift cluster
+      "port": ,                                       --- port used when connecting to the Redshift cluster
+      "database": " ",                                --- database name used when connecting to the Redshift cluster
+      "user": " ",                                    --- user to authenticate with the Redshift cluster
+      "password": " "                                 --- password used to authenticate with the Redshift cluster
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE amazonredshift_datasource
+    WITH ENGINE = 'amazonredshift',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 5439,
+      "database": "test",
+      "user": "amazonredshift",
+      "password": "password"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Amazon Redshift data handler details [here](/data-integrations/amazon-redshift).
+</Info>
+
+## Amazon S3
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE amazons3_datasource     --- display name for the database
+    WITH ENGINE = 's3',                     --- name of the MindsDB handler
+    PARAMETERS = {
+      "aws_access_key_id": " ",             --- the AWS access key
+      "aws_secret_access_key": " ",         --- the AWS secret access key
+      "region_name": " ",                   --- the AWS region
+      "bucket": " ",                        --- name of the S3 bucket
+      "key": " ",                           --- key of the object to be queried
+      "input_serialization": " "            --- format of the data to be queried
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE amazons3_datasource
+    WITH ENGINE = 's3',
+    PARAMETERS = {
+        "aws_access_key_id": "PCAQ2LJDOSWLNSQKOCPW",
+        "aws_secret_access_key": "U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i",
+        "region_name": "us-east-1",
+        "bucket": "mindsdb-bucket",
+        "key": "iris.csv",
+        "input_serialization": "{'CSV': {'FileHeaderInfo': 'NONE'}}"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Amazon S3 data handler details [here](/data-integrations/amazon-s3).
+</Info>
+
+## Apache Cassandra
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE cassandra_datasource        --- display name for the database
+    WITH ENGINE = 'cassandra',                  --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                              --- host name or IP address
+      "port": ,                                 --- port used to make TCP/IP connection
+      "user": " ",                              --- database user
+      "password": " ",                          --- database password
+      "keyspace": " ",                          --- database name
+      "protocol_version": ,                     --- optional, protocol version (defaults to 4 if left blank)
+      "secure_connect_bundle": {                --- optional, secure connect bundle file
+        "path": " "                                 --- either "path" or "url"
+      }
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE cassandra_datasource
+    WITH ENGINE = 'cassandra',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 9043,
+      "user": "user",
+      "password": "password",
+      "keyspace": "test_data",
+      "protocol_version": 4
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Apache Cassandra data handler details [here](/data-integrations/apache-cassandra).
+</Info>
+
+## Apache Druid
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE druid_datasource        --- display name for the database
+    WITH ENGINE = 'druid',                  --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                          --- host name or IP address of Apache Druid
+      "port": ,                             --- port where Apache Druid runs
+      "user": " ",                          --- optional, user to authenticate with Apache Druid
+      "password": " ",                      --- optional, password used to authenticate with Apache Druid
+      "path": " ",                          --- query path
+      "scheme": " "                         --- the URI scheme (defaults to `http` if left blank)
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE druid_datasource
+    WITH ENGINE = 'druid',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 8888,
+      "path": "/druid/v2/sql/",
+      "scheme": "http"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Apache Druid data handler details [here](/data-integrations/apache-druid).
+</Info>
+
+## Apache Hive
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE hive_datasource   --- display name for the database
+    WITH ENGINE = 'hive',             --- name of the MindsDB handler
+    PARAMETERS = {
+      "user": " ",                    --- database user
+      "password": " ",                --- database password
+      "host": " ",                    --- host name or IP address
+      "port": ,                       --- port used to make TCP/IP connection
+      "database": " ",                --- database name
+      "auth": " "                     --- defaults to CUSTOM if not provided; check for options here: https://pypi.org/project/PyHive/
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE hive_datasource
+    WITH ENGINE = 'hive',
+    PARAMETERS = {
+      "user": "hive",
+      "password": "password",
+      "host": "127.0.0.1",
+      "port": 10000,
+      "database": "hive_db",
+      "auth": "CUSTOM"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Apache Hive data handler details [here](/data-integrations/apache-hive).
+</Info>
+
+## Apache Impala
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE impala_datasource      --- display name for the database
+    WITH ENGINE = 'impala',                --- name of the MindsDB handler
+    PARAMETERS = {
+      "user": " ",                         --- database user
+      "password": " ",                     --- database password
+      "host": " ",                         --- host name or IP address
+      "port": ,                            --- port used to make TCP/IP connection
+      "database": " "                      --- database name
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE impala_datasource
+    WITH ENGINE = 'impala',
+    PARAMETERS = {
+      "user": "impala_user",
+      "password": "password",
+      "host": "127.0.0.1",
+      "port": 21050,
+      "database": "impala_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Apache Impala data handler details [here](/data-integrations/apache-impala).
+</Info>
+
+## Apache Pinot
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE pinot_datasource        --- display name for the database
+    WITH ENGINE = 'pinot',                  --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                          --- host name or IP address of the Apache Pinot cluster
+      "broker_port": ,                      --- port where the broker of the Apache Pinot cluster runs
+      "controller_port": ,                  --- port where the controller of the Apache Pinot cluster runs
+      "path": " ",                          --- query path
+      "scheme": " ",                        --- scheme (defaults to `http` if left blank)
+      "username": " ",                      --- optional, user
+      "password": " ",                      --- optional, password
+      "verify_ssl": " "                     --- optional, verify SSL
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE pinot_datasource
+    WITH ENGINE = 'pinot',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "broker_port": 8000,
+      "controller_port": 9000,
+      "path": "/query/sql",
+      "scheme": "http"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Apache Pinot data handler details [here](/data-integrations/apache-pinot).
+</Info>
+
+## Apache Solr
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE solr_datasource   --- display name for the database
+    WITH ENGINE = 'solr',             --- name of the MindsDB handler
+    PARAMETERS = {
+      "username": " ",                --- optional, username used to authenticate with the Solr server
+      "password": " ",                --- optional, password used to authenticate with the Solr server
+      "host": " ",                    --- host name or IP address of the Solr serve
+      "port": ,                       --- port number of the Solr server
+      "server_path": " ",             --- defaults to `solr` if left blank
+      "collection": " ",              --- Solr Collection name
+      "use_ssl": " "                  --- defaults to `false` if left blank; refer to https://pypi.org/project/sqlalchemy-solr/
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE solr_datasource
+    WITH ENGINE = 'solr',
+    PARAMETERS = {
+      "username": "solr_user",
+      "password": "password",
+      "host": "127.0.0.1",
+      "port": 8981,
+      "server_path": "solr",
+      "collection": "collection_name",
+      "use_ssl": "false"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Apache Solr data handler details [here](/data-integrations/apache-solr).
+</Info>
+
+## Ckan
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE ckan_datasource          --- display name for the database
+    WITH ENGINE = 'ckan',                    --- name of the MindsDB handler
+    PARAMETERS = {
+      "url": " ",                            --- host name, IP address, or a URL
+      "apikey": " "                          --- the API key used for authentication
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE ckan_datasource
+    WITH ENGINE = 'ckan',
+    PARAMETERS = {
+      "url": "http://demo.ckan.org/api/3/action/",
+      "apikey": "YOUR_API_KEY"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Ckan data handler details [here](/data-integrations/ckan).
+</Info>
+
+## ClickHouse
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE clickhouse_datasource       --- display name for the database
+    WITH ENGINE = 'clickhouse',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                              --- host name or IP address
+      "port": ,                                 --- port used to make TCP/IP connection
+      "database": " ",                          --- database name
+      "user": " ",                              --- database user
+      "password": " ",                          --- database password
+      "protocol": " "                           --- optional, http or https (defaults to `native`)
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE clickhouse_datasource
+    WITH ENGINE = 'clickhouse',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 9000,
+      "database": "test_data",
+      "user": "root",
+      "password": "password"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the ClickHouse data handler details [here](/data-integrations/clickhouse).
+</Info>
+
+## Cloud Spanner
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE cloud_spanner_datasource       --- display name for the database
+    WITH ENGINE = 'cloud_spanner',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "instance_id": " ",                          --- the instance identifier
+      "database_id": ,                             --- the database identifier
+      "project_id": " ",                           --- the identifier of the project that owns the instances and data
+      "credentials": " ",                          --- a stringified GCP service account key JSON
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE cloud_spanner_datasource
+    WITH ENGINE = 'cloud_spanner',
+    PARAMETERS = {
+      "instance_id": "my-instance",
+      "database_id": "example-db",
+      "project": "my-project",
+      "credentials": "{...}"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Cloud Spanner data handler details [here](/data-integrations/cloud-spanner).
+</Info>
+
+## CockroachDB
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE cockroach_datasource        --- display name for the database
+    WITH ENGINE = 'cockroachdb',                --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                              --- host name or IP address
+      "port": ,                                 --- port used to make TCP/IP connection
+      "database": " ",                          --- database name
+      "user": " ",                              --- database user
+      "password": " ",                          --- database password
+      "publish": " "                            --- optional, publish
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE cockroach_datasource
+    WITH ENGINE = 'cockroachdb',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 26257,
+      "database": "cockroachdb",
+      "user": "username",
+      "password": "password"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the CockroachDB data handler details [here](/data-integrations/cockroachdb).
+</Info>
+
+## Couchbase
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE couchbase_datasource        --- display name for the database
+    WITH ENGINE = 'couchbase',                  --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                              --- host name or IP address of the Couchbase server
+      "user": " ",                              --- user to authenticate with the Couchbase server
+      "password": " ",                          --- password used to authenticate with the Couchbase server
+      "bucket": " ",                            --- bucket name
+      "scope": " "                              --- scope used to query (defaults to `_default` if left blank)
+    };                                              --- a scope in Couchbase is equivalent to a schema in MySQL
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE couchbase_datasource
+    WITH ENGINE = 'couchbase',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "user": "couchbase",
+      "password": "password",
+      "bucket": "test-bucket"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Couchbase data handler details [here](/data-integrations/couchbase).
+</Info>
+
+## CrateDB
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE cratedb_datasource        --- display name for the database
+    WITH ENGINE = 'crate',                    --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                            --- host name or IP address
+      "port": ,                               --- port used to make TCP/IP connection
+      "user": " ",                            --- database user
+      "password": " ",                        --- database password
+      "schema_name": " "                      --- database schema name (defaults to `doc` if left blank)
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE cratedb_datasource
+    WITH ENGINE = 'crate',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 4200,
+      "user": "crate",
+      "password": "password",
+      "schema_name": "doc"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the CrateDB data handler details [here](/data-integrations/cratedb).
+</Info>
+
+## D0lt
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE d0lt_datasource             --- display name for the database
+    WITH ENGINE = 'd0lt',                       --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                              --- host name or IP address
+      "port": ,                                 --- port used to make TCP/IP connection
+      "database": " ",                          --- database name
+      "user": " ",                              --- database user
+      "password": " ",                          --- database password
+      "ssl": ,                                  --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
+      "ssl_ca": {                               --- optional, SSL Certificate Authority
+        "path": " "                                 --- either "path" or "url"
+      },
+      "ssl_cert": {                             --- optional, SSL certificates
+        "url": " "                                  --- either "path" or "url"
+      },
+      "ssl_key": {                              --- optional, SSL keys
+        "path": " "                                 --- either "path" or "url"
+      }
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE d0lt_datasource
+    WITH ENGINE = 'd0lt',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 3306,
+      "database": "information_schema",
+      "user": "root",
+      "password": "password"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the D0lt data handler details [here](/data-integrations/d0lt).
+</Info>
+
+## Databend
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE databend_datasource     --- display name for the database
+    WITH ENGINE = 'databend',               --- name of the MindsDB handler
+    PARAMETERS = {
+      "protocol": " ",                      --- protocol used to query Databend (defaults to `native` if left blank); supported protocols: native, http, https
+      "user": " ",                          --- username used to authenticate with the Databend warehouse
+      "port": ,                             --- TCP/IP port of the Databend warehouse
+      "password": " ",                      --- password used to authenticate with the Databend warehouse
+      "host": " ",                          --- host name or IP address of the Databend warehouse (use '127.0.0.1' instead of 'localhost' when connecting to a local server)
+      "database": " "                       --- database name used when connecting to the Databend warehouse
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE databend_datasource
+    WITH ENGINE = 'databend',
+    PARAMETERS = {
+      "protocol": "native",
+      "user": "databend_user",
+      "port": 443,
+      "password": "password",
+      "host": "127.0.0.1",
+      "database": "databend_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Databend data handler details [here](/data-integrations/databend).
+</Info>
+
+## Databricks
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE databricks_datasource         --- display name for the database
+    WITH ENGINE = 'databricks',                   --- name of the MindsDB handler
+    PARAMETERS = {
+      "server_hostname": " ",                     --- server hostname of the cluster or SQL warehouse
+      "http_path": " ",                           --- http path to the cluster or SQL warehouse
+      "access_token": " ",                        --- personal Databricks access token
+      "schema": " ",                              --- schema name (defaults to `default` if left blank)
+      "session_configuration": " ",               --- optional, dictionary of Spark session configuration parameters
+      "http_headers": " ",                        --- optional, additional (key, value) pairs to set in HTTP headers on every RPC request the client makes
+      "catalog": " "                              --- catalog (defaults to `hive_metastore` if left blank)
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE databricks_datasource
+    WITH ENGINE = 'databricks',
+    PARAMETERS = {
+      "server_hostname": "adb-1234567890123456.7.azuredatabricks.net",
+      "http_path": "sql/protocolv1/o/1234567890123456/1234-567890-test123",
+      "access_token": "dapi1234567890ab1cde2f3ab456c7d89efa",
+      "schema": "example_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Databricks data handler details [here](/data-integrations/databricks).
+</Info>
+
+## DataStax
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE datastax_datasource           --- display name for the database
+    WITH ENGINE = 'astra',                        --- name of the MindsDB handler
+    PARAMETERS = {
+      "user": " ",                                --- user to be authenticated
+      "password": " ",                            --- password for authentication
+      "secure_connection_bundle": {               --- secure connection bundle zip file
+        "path": " "                                   --- either "path" or "url"
+      },
+      "host": " ",                                --- optional, host name or IP address
+      "port": ,                                   --- optional, port used to make TCP/IP connection
+      "protocol_version": ,                       --- optional, protocol version
+      "keyspace": " "                             --- optional, keyspace
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE datastax_datasource
+    WITH ENGINE = 'astra',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 7077,
+      "user": "datastax",
+      "password": "password",
+      "secure_connection_bundle": {
+        "path": "/home/Downloads/file.zip"
+      }
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the DataStax data handler details [here](/data-integrations/datastax).
+</Info>
+
+## DuckDB
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE duckdb_datasource       --- display name for the database
+    WITH ENGINE = 'duckdb',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "database": " ",                      --- database file name
+      "read_only":                          --- flag used to set the connection to read-only mode
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE duckdb_datasource
+    WITH ENGINE = 'duckdb',
+    PARAMETERS = {
+      "database": "db.duckdb",
+      "read_only": False
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the DuckDB data handler details [here](/data-integrations/duckdb).
+</Info>
+
+## Elasticsearch
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE elastic_datasource      --- display name for the database
+    WITH ENGINE = 'elasticsearch',          --- name of the MindsDB handler
+    PARAMETERS = {
+      "hosts": " ",                         --- one or more host names or IP addresses of the Elasticsearch server
+      "username": " ",                      --- optional, username to authenticate with the Elasticsearch server
+      "password": " ",                      --- optional, password used to authenticate with the Elasticsearch server
+      "cloud_id": " "                       --- optional, unique ID of your hosted Elasticsearch cluster (must be provided when "hosts" is left blank)
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE elastic_datasource
+    WITH ENGINE = 'elasticsearch',
+    PARAMETERS = {
+      "hosts": "localhost:9200"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Elasticsearch data handler details [here](/data-integrations/elasticsearch).
+</Info>
+
+## Firebird
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE firebird_datasource         --- display name for the database
+    WITH ENGINE = 'firebird',                   --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                              --- host name or IP address of the Firebird server
+      "database": " ",                          --- database name
+      "user": " ",                              --- user to authenticate with the Firebird server
+      "password": " "                           --- password used to authenticate with the Firebird server
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE firebird_datasource
+    WITH ENGINE = 'firebird',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "database": "test",
+      "user": "firebird",
+      "password": "password"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Firebird data handler details [here](/data-integrations/firebird).
+</Info>
+
+## Google BigQuery
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE bigquery_datasource       --- display name for the database
+    WITH ENGINE = 'bigquery',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "project_id": " ",                      --- globally unique project identifier
+      "dataset": " ",                         --- default dataset
+      "service_account_keys": " ",            --- service account keys file
+      "service_account_json": {...}           --- it is an alternative to using 'service_account_keys'
+    };
+    ```
+    </Tab>
+    <Tab title="Example for Self-Hosted MindsDB">
+    ```sql
+    CREATE DATABASE bigquery_datasource
+    WITH ENGINE = 'bigquery',
+    PARAMETERS = {
+      "project_id": "badger-345908",
+      "service_account_keys": "/home/Downloads/badger-345908.json"
+    };
+    ```
+    </Tab>
+    <Tab title="Example for MindsDB Cloud">
+    ```sql
+    CREATE DATABASE bigquery_datasource
+    WITH ENGINE = 'bigquery',
+    PARAMETERS = {
+      "project_id": "badger-345908",
+      "service_account_keys": {
+        "url": "https://url/badger-345908.json"
+      }
+    };
+    ```
+    </Tab>
+    <Tab title="Example without JSON File">
+    ```sql
+    CREATE DATABASE bq
+    WITH
+      ENGINE = 'bigquery',
+      PARAMETERS =  {
+        "project_id": "bgtest-1111",
+        "dataset": "mydataset",
+        "service_account_json": {
+          "type": "service_account",
+          "project_id": "bgtest-1111",
+          "private_key_id": "aaaaaaaaaa",
+          "private_key": "---------BIG STRING WITH KEY-------\n",
+          "client_email": "testbigquery@bgtest-11111.iam.gserviceaccount.com",
+          "client_id": "1111111111111",
+          "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+          "token_uri": "https://oauth2.googleapis.com/token",
+          "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/testbigquery%40bgtest-11111.iam.gserviceaccount.com"
+          }
+        };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Google BigQuery data handler details [here](/data-integrations/google-bigquery).
+</Info>
+
+## Google Sheets
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE sheets_datasource       --- display name for the database
+    WITH ENGINE = 'sheets',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "spreadsheet_id": " ",                --- unique ID of the Google Sheet
+      "sheet_name": " "                     --- name of the Google Sheet
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE sheets_datasource
+    WITH ENGINE = 'sheets',
+    PARAMETERS = {
+      "spreadsheet_id": "abc1234567",       --- located in the URL: https://docs.google.com/spreadsheets/d/abc1234567/edit#gid=0
+      "sheet_name": "Invoice"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Google Sheets data handler details [here](/data-integrations/google-sheets).
+</Info>
+
+## IBM Db2
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE db2_datasource        --- display name for the database
+    WITH ENGINE = 'DB2',                  --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                        --- host name or IP address
+      "port": ,                           --- port used to make TCP/IP connection
+      "database": " ",                    --- database name
+      "user": " ",                        --- database user
+      "password": " ",                    --- database password
+      "schema_name": " "                  --- database schema name
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE db2_datasource
+    WITH ENGINE = 'DB2',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 25000,
+      "database": "BOOKS",
+      "user": "db2admin",
+      "password": "password",
+      "schema_name": "db2admin"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the IBM Db2 data handler details [here](/data-integrations/ibm-db2).
+</Info>
+
+## IBM Informix
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE informix_datasource       --- display name for the database
+    WITH ENGINE = 'informix',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "server": " ",                          --- server name
+      "host": " ",                            --- host name or IP address
+      "port": ,                               --- port used to make TCP/IP connection
+      "database": " ",                        --- database name
+      "user": " ",                            --- database user
+      "password": " ",                        --- database password
+      "schema_name": " ",                     --- database schema name
+      "logging_enabled":                      --- indicates whether logging is enabled (defaults to `True` if left blank)
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE informix_datasource
+    WITH ENGINE = 'informix',
+    PARAMETERS = {
+      "server": "server",
+      "host": "127.0.0.1",
+      "port": 9091,
+      "database": "stores_demo",
+      "user": "informix",
+      "password": "password",
+      "schema_name": "demo_schema",
+      "logging_enabled": False
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the IBM Informix data handler details [here](/data-integrations/ibm-informix).
+</Info>
+
+## MariaDB
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE maria_datasource            --- display name for the database
+    WITH ENGINE = 'mariadb',                    --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                              --- host IP address or URL
+      "port": ,                                 --- port used to make TCP/IP connection
+      "database": " ",                          --- database name
+      "user": " ",                              --- database user
+      "password": " ",                          --- database password
+      "ssl": ,                                  --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
+      "ssl_ca": {                               --- optional, SSL Certificate Authority
+        "path": " "                                 --- either "path" or "url"
+      },
+      "ssl_cert": {                             --- optional, SSL certificates
+        "url": " "                                  --- either "path" or "url"
+      },
+      "ssl_key": {                              --- optional, SSL keys
+        "path": " "                                 --- either "path" or "url"
+      }
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE maria_datasource
+    WITH ENGINE = 'mariadb',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 3306,
+      "database": "mariadb",
+      "user": "root",
+      "password": "password"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the MariaDB data handler details [here](/data-integrations/mariadb).
+</Info>
+
+## MariaDB SkySQL
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE skysql            --- display name for the database
+    WITH ENGINE = 'mariadb',          --- name of the MindsDB handler
+    PARAMETERS = {
+      "user": " ",                    --- database user
+      "password": " ",                --- database password
+      "host": " ",                    --- host IP address or URL
+      "port": ,                       --- port used to make TCP/IP connection
+      "ssl": ,                        --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
+      "ssl-ca": {                     --- optional, SSL Certificate Authority
+        "path": " "                       --- either "path" or "url"
+      },
+      "database": " "                 --- database name
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE skysql_datasource
+    WITH ENGINE = 'mariadb',
+    PARAMETERS = {
+      "host": "mindsdbtest.mdb0002956.db1.skysql.net",
+      "port": 5001,
+      "database": "mindsdb_data",
+      "user": "DB00007539",
+      "password": "password",
+      "ssl-ca": {
+        "url": "https://mindsdb-web-builds.s3.amazonaws.com/aws_skysql_chain.pem"
+      }
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+For more information on how to connect MariaDB SkySQL and MindsDB, visit our [doc page here](/connect/connect-mariadb-skysql/).
+</Info>
+
+## MatrixOne
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE matrixone_datasource        --- display name for the database
+    WITH ENGINE = 'matrixone',                  --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                              --- host IP address or URL
+      "port": ,                                 --- port used to make TCP/IP connection
+      "database": " ",                          --- database name
+      "user": " ",                              --- database user
+      "password": " ",                          --- database password
+      "ssl": ,                                  --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
+      "ssl_ca": {                               --- optional, SSL Certificate Authority
+        "path": " "                                 --- either "path" or "url"
+      },
+      "ssl_cert": {                             --- optional, SSL certificates
+        "url": " "                                  --- either "path" or "url"
+      },
+      "ssl_key": {                              --- optional, SSL keys
+        "path": " "                                 --- either "path" or "url"
+      }
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE matrixone_datasource
+    WITH ENGINE = 'matrixone',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 6001,
+      "database": "mo_catalog",
+      "user": "matrixone",
+      "password": "password"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the MatrixOne data handler details [here](/data-integrations/matrixone).
+</Info>
+
+## Microsoft Access
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE access_datasource       --- display name for the database
+    WITH ENGINE = 'access',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "db_file": " "                        --- path to the database file to be used
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE access_datasource
+    WITH ENGINE = 'access',
+    PARAMETERS = {
+      "db_file": "example_db.accdb"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Microsoft Access data handler details [here](/data-integrations/microsoft-access).
+</Info>
+
+## Microsoft SQL Server
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE mssql_datasource        --- display name for the database
+    WITH ENGINE = 'mssql',                  --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                          --- host name or IP address
+      "port": ,                             --- port used to make TCP/IP connection
+      "database": " ",                      --- database name
+      "user": " ",                          --- database user
+      "password": " "                       --- database password
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE mssql_datasource
+    WITH ENGINE = 'mssql',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 1433,
+      "database": "master",
+      "user": "sa",
+      "password": "password"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Microsoft SQL Server data handler details [here](/data-integrations/microsoft-sql-server).
+</Info>
+
+## MonetDB
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE monetdb_datasource          --- display name for the database
+    WITH ENGINE = 'monetdb',                    --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                              --- host name or IP address
+      "port": ,                                 --- port used to make TCP/IP connection
+      "database": " ",                          --- database name
+      "user": " ",                              --- database user
+      "password": " ",                          --- database password
+      "schema_name": " "                        --- database schema name (defaults to the current schema if left blank)
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE monetdb_datasource
+    WITH ENGINE = 'monetdb',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 50000,
+      "database": "demo",
+      "user": "monetdb",
+      "password": "password",
+      "schema_name": "sys"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the MonetDB data handler details [here](/data-integrations/monetdb).
+</Info>
+
+## MongoDB
+
+<Warning>
+
+**For this connection, we recommend to use the Mongo API instead of the SQL API**
+
+MindsDB has a dedicated [Mongo API](/mongo/collection-structure/) that allows you to use the full power of the MindsDB platform.
+Using the Mongo API feels more natural for MongoDB users and allows you to use all the features of MindsDB.
+
+You can find the instructions on how to connect MindsDB to [MongoDB Compass](/connect/mongo-compass) or [MongoDB Shell](/connect/mongo-shell) and proceed with the [Mongo API documentation](/mongo/collection-structure/) for further details.
+
+</Warning>
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE mongo_datasource          --- display name for the database
+    WITH ENGINE = 'mongo',                    --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                            --- host name or IP address
+      "port": ,                               --- port used to make TCP/IP connection
+      "user": " ",                            --- database user
+      "password": " "                         --- database password
+      "database": " "                         --- database name
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE mongo_datasource
+    WITH ENGINE = 'mongo',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 27017,
+      "user": "mongo",
+      "password": "password",
+      "database": "database"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the MongoDB data handler details [here](/data-integrations/mongodb).
+</Info>
+
+## MySQL
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE mysql_datasource            --- display name for the database
+    WITH ENGINE = 'mysql',                      --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                              --- host name or IP address
+      "port": ,                                 --- port used to make TCP/IP connection
+      "database": " ",                          --- database name
+      "user": " ",                              --- database user
+      "password": " ",                          --- database password
+      "ssl": ,                                  --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
+      "ssl_ca": {                               --- optional, SSL Certificate Authority
+        "path": " "                                 --- either "path" or "url"
+      },
+      "ssl_cert": {                             --- optional, SSL certificates
+        "url": " "                                  --- either "path" or "url"
+      },
+      "ssl_key": {                              --- optional, SSL keys
+        "path": " "                                 --- either "path" or "url"
+      }
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE mysql_datasource
+    WITH ENGINE = 'mysql',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 3306,
+      "database": "mysql",
+      "user": "root",
+      "password": "password"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the MySQL data handler details [here](/data-integrations/mysql).
+</Info>
+
+## OceanBase
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE oceanbase_datasource      --- display name for the database
+    WITH ENGINE = 'oceanbase',                --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                            --- host name or IP address
+      "user": " ",                            --- database user
+      "password": " ",                        --- database password
+      "port": ,                               --- port used to make TCP/IP connection
+      "database": " "                         --- database name
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE oceanbase_datasource
+    WITH ENGINE = 'oceanbase',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "user": "oceanbase_user",
+      "password": "password",
+      "port": 2881,
+      "database": "oceanbase_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the OceanBase data handler details [here](/data-integrations/oceanbase).
+</Info>
+
+## OpenGauss
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE opengauss_datasource            --- display name for the database
+    WITH ENGINE = 'opengauss',                      --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                                  --- host name or IP address
+      "port": ,                                     --- port used to make TCP/IP connection
+      "database": " ",                              --- database name
+      "user": " ",                                  --- database user
+      "password": " ",                              --- database password
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE opengauss_datasource
+    WITH ENGINE = 'opengauss',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 5432,
+      "database": "opengauss",
+      "user": "mindsdb",
+      "password": "password"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the OpenGauss data handler details [here](/data-integrations/opengauss).
+</Info>
+
+## Oracle
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE oracle_datasource         --- display name for the database
+    WITH ENGINE = 'oracle',                   --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                            --- host name or IP address
+      "port": ,                               --- port used to make TCP/IP connection
+      "sid": " ",                             --- unique identifier of the database instance
+      "user": " ",                            --- database user
+      "password": " "                         --- database password
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE oracle_datasource
+    WITH ENGINE = 'oracle',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 1521,
+      "sid": "ORCL",
+      "user": "sys",
+      "password": "password"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Oracle data handler details [here](/data-integrations/oracle).
+</Info>
+
+## OrioleDB
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE orioledb_datasource      --- display name for the database
+    WITH ENGINE = 'orioledb',                --- name of the MindsDB handler
+    PARAMETERS = {
+      "user": " ",                           --- database user
+      "password": " ",                       --- database password
+      "host": " ",                           --- host name or IP address
+      "port": ,                              --- port used to make TCP/IP connection
+      "server": " ",                         --- sets the current server
+      "database": " "                        --- sets the current database
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE orioledb_datasource
+    WITH ENGINE = 'orioledb',
+    PARAMETERS = {
+      "user": "orioledb_user",
+      "password": "password",
+      "host": "127.0.0.1",
+      "port": 55505,
+      "server": "server_name",
+      "database": "oriole_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the OrioleDB data handler details [here](/data-integrations/orioledb).
+</Info>
+
+## PlanetScale
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE planetscale_datasource     --- display name for the database
+    WITH ENGINE = 'planet_scale',              --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                             --- host name or IP address
+      "port": ,                                --- port used to make TCP/IP connection
+      "user": " ",                             --- database user
+      "password": " ",                         --- database password
+      "database": " "                          --- database name
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE planetscale_datasource
+    WITH ENGINE = 'planet_scale',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 3306,
+      "user": "planetscale_user",
+      "password": "password",
+      "database": "planetscale_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the PlanetScale data handler details [here](/data-integrations/planetscale).
+</Info>
+
+## PostgreSQL
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE psql_datasource         --- display name for the database
+    WITH ENGINE = 'postgres',               --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                          --- host name or IP address
+      "port": ,                             --- port used to make TCP/IP connection
+      "database": " ",                      --- database name
+      "user": " ",                          --- database user
+      "password": " "                       --- database password
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE psql_datasource
+    WITH ENGINE = 'postgres',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 5432,
+      "database": "postgres",
+      "user": "postgres",
+      "password": "password"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the PostgreSQL data handler details [here](/data-integrations/postgresql).
+</Info>
+
+## QuestDB
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE questdb_datasource      --- display name for the database
+    WITH ENGINE = 'questdb',                --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                          --- host name or IP address
+      "port": ,                             --- port used to make TCP/IP connection
+      "database": " ",                      --- database name
+      "user": " ",                          --- database user
+      "password": " ",                      --- database password
+      "public":                             --- value of `True` or `False` (defaults to `True` if left blank)
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE questdb_datasource
+    WITH ENGINE = 'questdb',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 8812,
+      "database": "qdb",
+      "user": "admin",
+      "password": "password"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the QuestDB data handler details [here](/data-integrations/questdb).
+</Info>
+
+## SAP HANA
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE sap_hana_datasource           --- display name for the database
+    WITH ENGINE = 'hana',                         --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                                --- host name or IP address
+      "port": ,                                   --- port used to make TCP/IP connection
+      "user": " ",                                --- user
+      "password": " ",                            --- password
+      "schema": " ",                              --- database schema name (defaults to the current schema if left blank)
+      "encrypt":                                  --- indicates whether connection is encrypted (required for cloud usage)
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE sap_hana_datasource
+    WITH ENGINE = 'hana',
+    PARAMETERS = {
+      "host": "<uuid>.hana.trial-us10.hanacloud.ondemand.com",
+      "port": "443",
+      "user": "DBADMIN",
+      "password": "password",
+      "schema": "MINDSDB",
+      "encrypt": True
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the SAP HANA data handler details [here](/data-integrations/sap-hana).
+</Info>
+
+## ScyllaDB
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE scylladb_datasource           --- display name for the database
+    WITH ENGINE = 'scylladb',                     --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                                --- host name or IP address
+      "port": ,                                   --- port used to make TCP/IP connection
+      "user": " ",                                --- user
+      "password": " ",                            --- password
+      "protocol_version": ,                       --- optional, protocol version (defaults to 4 if left blank)
+      "keyspace": " ",                            --- keyspace name (it is the top level container for tables)
+      "secure_connect_bundle": {                  --- secure connect bundle file
+        "path": " "                                   --- either "path" or "url"
+      }
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE scylladb_datasource
+    WITH ENGINE = 'scylladb',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 7199,
+      "user": "user@mindsdb.com",
+      "password": "password",
+      "protocol_version": 4,
+      "keyspace": "keyspace_name",
+      "secure_connect_bundle": {
+        "path": "/home/zoran/Downloads/secure-connect-mindsdb.zip"
+      }
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the ScyllaDB data handler details [here](/data-integrations/scylladb).
+</Info>
+
+## SingleStore
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE singlestore_datasource          --- display name for the database
+    WITH ENGINE = 'singlestore',                    --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                                  --- host name or IP address
+      "port": ,                                     --- port used to make TCP/IP connection
+      "database": " ",                              --- database name
+      "user": " ",                                  --- database user
+      "password": " ",                              --- database password
+      "ssl": ,                                      --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
+      "ssl_ca": {                                   --- optional, SSL Certificate Authority
+        "path": " "                                     --- either "path" or "url"
+      },
+      "ssl_cert": {                                 --- optional, SSL certificates
+        "url": " "                                      --- either "path" or "url"
+      },
+      "ssl_key": {                                  --- optional, SSL keys
+        "path": " "                                     --- either "path" or "url"
+      }
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE singlestore_datasource
+    WITH ENGINE = 'singlestore',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 3306,
+      "database": "singlestore",
+      "user": "root",
+      "password": "password"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the SingleStore data handler details [here](/data-integrations/singlestore).
+</Info>
+
+## Snowflake
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE snowflake_datasource              --- display name for the database
+    WITH ENGINE = 'snowflake',                        --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                                    --- host name or IP address
+      "port": ,                                       --- port used to make TCP/IP connection
+      "database": " ",                                --- database name
+      "user": " ",                                    --- database user
+      "password": " ",                                --- database password
+      "account": " ",                                 --- the Snowflake account
+      "schema": " ",                                  --- schema name (defaults to `public` if left blank)
+      "protocol": " ",                                --- protocol (defaults to `https` if left blank)
+      "warehouse": " "                                --- the warehouse account
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE snowflake_datasource
+    WITH ENGINE = 'snowflake',
+    PARAMETERS = {
+      "host": "account_name.snowflakecomputing.com",
+      "port": 443,
+      "database": "snowflake",
+      "user": "user",
+      "password": "password",
+      "account": "account_name",
+      "schema": "public",
+      "protocol": "https",
+      "warehouse": "warehouse"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Snowflake data handler details [here](/data-integrations/snowflake).
+</Info>
+
+## SQL Anywhere
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE sqlany_datasource   --- display name for the database
+    WITH ENGINE = 'sqlany',             --- name of the MindsDB handler
+    PARAMETERS = {
+      "user": " ",                      --- username
+      "password": " ",                  --- password
+      "host": " ",                      --- host name or IP address of the SAP SQL Anywhere instance
+      "port": ,                         --- port number of the SAP SQL Anywhere instance
+      "server": " ",                    --- sets the current server
+      "database": " "                   --- sets the current database
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE sqlany_datasource
+    WITH ENGINE = 'sqlany',
+    PARAMETERS = {
+      "user": "sqlany_user",
+      "password": "password",
+      "host": "127.0.0.1",
+      "port": 55505,
+      "server": "server_name",
+      "database": "sqlany_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the SQL Anywhere data handler details [here](/data-integrations/sql-anywhere).
+</Info>
+
+## SQLite
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE sqlite_datasource         --- display name for the database
+    WITH ENGINE = 'sqlite',                   --- name of the MindsDB handler
+    PARAMETERS = {
+      "db_file": " "                          --- path to the database file to be used
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE sqlite_datasource
+    WITH ENGINE = 'sqlite',
+    PARAMETERS = {
+      "db_file": "example.db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the SQLite data handler details [here](/data-integrations/sqlite).
+</Info>
+
+## StarRocks
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE starrocks_datasource      --- display name for the database
+    WITH ENGINE = 'starrocks',                --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                            --- host name or IP address
+      "user": " ",                            --- database user
+      "password": " ",                        --- database password
+      "port": ,                               --- port used to make TCP/IP connection
+      "database": " "                         --- database name
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE starrocks_datasource
+    WITH ENGINE = 'starrocks',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "user": "starrocks_user",
+      "password": "password",
+      "port": 8030,
+      "database": "starrocks_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the StarRocks data handler details [here](/data-integrations/starrocks).
+</Info>
+
+## Supabase
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE supabase_datasource             --- display name for the database
+    WITH ENGINE = 'supabase',                       --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                                  --- host name or IP address
+      "port": ,                                     --- port used to make TCP/IP connection
+      "database": " ",                              --- database name
+      "user": " ",                                  --- database user
+      "password": " ",                              --- database password
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE supabase_datasource
+    WITH ENGINE = 'supabase',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 54321,
+      "database": "test",
+      "user": "supabase",
+      "password": "password"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Supabase data handler details [here](/data-integrations/supabase).
+</Info>
+
+## TDengine
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE tdengine_datasource   --- display name for the database
+    WITH ENGINE = 'tdengine',             --- name of the MindsDB handler
+    PARAMETERS = {
+      "user": " ",                        --- server username
+      "password": " ",                    --- server password
+      "url": " ",                         --- URL to the TDEngine server (for local server, it is localhost:6041 by default)
+      "token": " ",                       --- unique token provided when using TDEngine Cloud
+      "database": " "                     --- database name
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE tdengine_datasource
+    WITH ENGINE = 'tdengine',
+    PARAMETERS = {
+      "user": "tdengine_user",
+      "password": "password",
+      "url": "localhost:6041",
+      "token": "token",
+      "database": "tdengine_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the TDengine data handler details [here](/data-integrations/tdengine).
+</Info>
+
+## Teradata
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE teradata_datasource     --- display name for the database
+    WITH ENGINE = 'teradata',               --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                          --- host name or IP address
+      "user": " ",                          --- database user
+      "password": " ",                      --- database password
+      "database": " ",                      --- database name
+      "port":                               --- port used to make TCP/IP connection
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE teradata_datasource
+    WITH ENGINE = 'teradata',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "user": "teradata",
+      "password": "password",
+      "database": "teradata_db",
+      "port": 1025
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Teradata data handler details [here](/data-integrations/teradata).
+</Info>
+
+## TiDB
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE tidb_datasource                 --- display name for the database
+    WITH ENGINE = 'tidb',                           --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                                  --- host name or IP address
+      "port": ,                                     --- port used to make TCP/IP connection
+      "database": " ",                              --- database name
+      "user": " ",                                  --- database user
+      "password": " ",                              --- database password
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE tidb_datasource
+    WITH ENGINE = 'tidb',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 4000,
+      "database": "tidb",
+      "user": "root",
+      "password": "password"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the TiDB data handler details [here](/data-integrations/tidb).
+</Info>
+
+## TimescaleDB
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE timescaledb_datasource    --- display name for the database
+    WITH ENGINE = 'timescaledb',              --- name of the MindsDB handler
+    PARAMETERS = {
+      "user": " ",                            --- database user
+      "password": " ",                        --- database password
+      "host": " ",                            --- host name or IP address
+      "port": ,                               --- port used to make TCP/IP connection
+      "database": " "                         --- database name
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE timescaledb_datasource
+    WITH ENGINE = 'timescaledb',
+    PARAMETERS = {
+      "user": "timescaledb",
+      "password": "password",
+      "host": "127.0.0.1",
+      "port": 36806,
+      "database": "timescaledb_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the TimescaleDB data handler details [here](/data-integrations/timescaledb).
+</Info>
+
+## Trino
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE trino_datasource          --- display name for the database
+    WITH ENGINE = 'trino',                    --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                            --- host name or IP address
+      "port": ,                               --- port used to make TCP/IP connection
+      "auth": " ",                            --- optional, authentication method, currently only `basic` is supported
+      "http_scheme": " ",                     --- optional, `http`(default) or `https`
+      "user": " ",                            --- database user
+      "password": " ",                        --- database password
+      "catalog": " ",                         --- optional, catalog
+      "schema": " "                           --- optional, schema
+      "with":                                 --- optional, default WITH-clause (properties) for ALL tables
+                                                  --- this parameter is experimental and might be changed or removed in future release
+    };
+    ```
+    </Tab>
+    <Tab title="Example 1">
+    ```sql
+    CREATE DATABASE trino_datasource
+    WITH ENGINE = 'trino',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 8080,
+      "user": "trino",
+      "password": "password",
+      "catalog": "default",
+      "schema": "test"
+    };
+    ```
+    </Tab>
+    <Tab title="Example 2">
+    ```sql
+    CREATE DATABASE trino_datasource
+    WITH ENGINE = 'trino',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 443,
+      "auth": "basic",
+      "http_scheme": "https",
+      "user": "trino",
+      "password": "password",
+      "catalog": "default",
+      "schema": "test",
+      "with": "with (transactional = true)"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Trino data handler details [here](/data-integrations/trino).
+</Info>
+
+## Vertica
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE vertica_datasource        --- display name for the database
+    WITH ENGINE = 'vertica',                  --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                            --- host name or IP address
+      "port": ,                               --- port used to make TCP/IP connection
+      "database": " ",                        --- database name
+      "user": " ",                            --- database user
+      "password": " ",                        --- database password
+      "schema_name": " "                      --- database schema name
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE vertica_datasource
+    WITH ENGINE = 'vertica',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 5433,
+      "database": "VMart",
+      "user": "vertica",
+      "password": "password",
+      "schema_name": "public"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Vertica data handler details [here](/data-integrations/vertica).
+</Info>
+
+## Vitess
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE vitess_datasource       --- display name for the database
+    WITH ENGINE = 'vitess',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                          --- host name or IP address
+      "user": " ",                          --- database user
+      "password": " ",                      --- database password
+      "port": ,                             --- port used to make TCP/IP connection
+      "database": " "                       --- database name
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE vitess_datasource
+    WITH ENGINE = 'vitess',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "user": "vitess_user",
+      "password": "password",
+      "port": 33577,
+      "database": "vitess_db"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Vitess data handler details [here](/data-integrations/vitess).
+</Info>
+
+## YugabyteDB
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE yugabyte_datasource       --- display name for the database
+    WITH ENGINE = 'yugabyte',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "user": " ",                            --- database user
+      "password": " ",                        --- database password
+      "host": " ",                            --- host name or IP address
+      "port": ,                               --- port used to make TCP/IP connection
+      "database": " "                         --- database name
+      "schema": " "                           --- schema name, if multiple schemas then comma seperated
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE yugabyte_datasource
+    WITH ENGINE = 'yugabyte',
+    PARAMETERS = {
+      "user": "yugabyte",
+      "password": "password",
+      "host": "127.0.0.1",
+      "port": 5433,
+      "database": "yugabyte_db",
+      "schema":"cd"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the YugabyteDB data handler details [here](/data-integrations/yugabytedb).
+</Info>

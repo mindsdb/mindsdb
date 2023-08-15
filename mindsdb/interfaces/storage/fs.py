@@ -159,7 +159,9 @@ class FileLock:
             except Exception:
                 pass
         try:
-            self._file = open(self._lock_file_path, 'r')
+            # On at least some systems, LOCK_EX can only be used if the file
+            # descriptor refers to a file opened for writing.
+            self._file = open(self._lock_file_path, 'w')
             fd = self._file.fileno()
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except (ValueError, FileNotFoundError):

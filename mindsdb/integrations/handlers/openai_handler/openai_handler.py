@@ -32,7 +32,7 @@ class OpenAIHandler(BaseMLEngine):
         self.generative = True
         self.default_model = 'gpt-3.5-turbo'
         self.default_mode = 'default'  # can also be 'conversational' or 'conversational-full'
-        self.supported_modes = ['default', 'conversational', 'conversational-full', 'image']
+        self.supported_modes = ['default', 'conversational', 'conversational-full', 'image', 'embedding']
         self.rate_limit = 60  # requests per minute
         self.max_batch_size = 20
         self.default_max_tokens = 100
@@ -64,6 +64,37 @@ class OpenAIHandler(BaseMLEngine):
                         3) a `json_struct`
                         4) a `prompt' and 'user_column' and 'assistant_column`
                 '''))
+
+        # for all args that are not expected, raise an error
+        known_args = set()
+        # flatten of keys_collection
+        for keys in keys_collection:
+            known_args = known_args.union(set(keys))
+
+        # TODO: need a systematic way to maintain a list of known args
+        known_args = known_args.union(
+            {
+                "target",
+                "model_name",
+                "mode",
+                "predict_params",
+                "input_text",
+                "ft_api_info",
+                "ft_result_stats",
+                "runtime",
+                "max_tokens",
+                "temperature",
+                "api_key",
+                "openai_api_key",
+            }
+        )
+
+        unknown_args = set(args.keys()) - known_args
+        if unknown_args:
+            # return a list of unknown args as a string
+            raise Exception(
+                f"Unknown arguments: {', '.join(unknown_args)}.\n Known arguments are: {', '.join(known_args)}"
+            )
 
     def create(self, target, args=None, **kwargs):
         args = args['using']
@@ -107,8 +138,22 @@ class OpenAIHandler(BaseMLEngine):
         else:
             base_template = None
 
+        # Embedding Mode
+        if args.get('mode', self.default_mode) == 'embedding':
+            api_args = {
+                'question_column': pred_args.get('question_column', None),
+                'model': pred_args.get('model_name', 'text-embedding-ada-002')
+            }
+            model_name = 'embedding'
+            if args.get('question_column'):
+                prompts = list(df[args['question_column']].apply(lambda x: str(x)))
+                empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
+            else:
+                raise Exception('Embedding mode needs a question_column')
+
         # Image mode
-        if args.get('mode', self.default_mode) == 'image':
+
+        elif args.get('mode', self.default_mode) == 'image':
             api_args = {
                 'n': pred_args.get('n', None),
                 'size': pred_args.get('size', None),
@@ -257,6 +302,8 @@ class OpenAIHandler(BaseMLEngine):
             }
             if model_name == 'image':
                 return _submit_image_completion(kwargs, prompts, api_args)
+            elif model_name == 'embedding':
+                return _submit_embedding_completion(kwargs, prompts, api_args)
             elif model_name in self.chat_completion_models:
                 return _submit_chat_completion(kwargs, prompts, api_args, df, mode=args.get('mode', 'conversational'))
             else:
@@ -283,6 +330,22 @@ class OpenAIHandler(BaseMLEngine):
 
             before_openai_query(kwargs)
             resp = _tidy(openai.Completion.create(**kwargs))
+            _log_api_call(kwargs, resp)
+            return resp
+
+        def _submit_embedding_completion(kwargs, prompts, api_args):
+            def _tidy(comp):
+                tidy_comps = []
+                for c in comp['data']:
+                    if 'embedding' in c:
+                        tidy_comps.append([c['embedding']])
+                return tidy_comps
+
+            kwargs['input'] = prompts
+            kwargs = {**kwargs, **api_args}
+
+            before_openai_query(kwargs)
+            resp = _tidy(openai.Embedding.create(**kwargs))
             _log_api_call(kwargs, resp)
             return resp
 

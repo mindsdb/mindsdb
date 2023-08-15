@@ -54,10 +54,12 @@ class CrawlerTable(APITable):
             limit = query.limit.value
             if limit < 0:
                 limit = None
-        if limit is None:
-            raise NotImplementedError(
-                f'You must specify a LIMIT which defines how deep to crawl, a LIMIT -1 means that will crawl ALL websites and subwebsites (this can take a while)')
+                raise NotImplementedError(
+                f'You must specify a LIMIT which defines how deep to crawl, a LIMIT 10000 means that will crawl ALL websites and subwebsites in that domain (this can take a while)')
 
+        if limit is None or limit == 0:
+            limit = 1
+            
         result = get_all_websites(urls, limit, html=False)
 
         # filter targets

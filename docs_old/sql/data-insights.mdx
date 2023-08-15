@@ -1,0 +1,141 @@
+---
+title: Data Insights
+sidebarTitle: Data Insights
+---
+
+Data Insights is a data visualization feature of the MindsDB Cloud editor.
+
+It lets you explore the queried data by initially displaying and analyzing a
+subset of the first ten rows. You can choose to analyze a full dataset by
+clicking the `Full Data Analysis` button. The analysis presents the distribution
+of your data aggregated by column.
+
+<p align="center">
+  <img src="/assets/sql/data-insights-1.png" />
+</p>
+
+The data used here comes from one of our tutorials. For details, click
+[here](/sql/tutorials/home-rentals/).
+
+Before you see the Data Insights pane, you must run a `SELECT` query on your
+dataset. Let's have a look at the available features.
+
+## Features
+
+### Distribution of Data per Column
+
+When opening the Data Insights pane, you see the distribution of data of each
+output dataset column. Initially, the visualization and analysis of the first
+ten rows is shown, as below.
+
+<p align="center">
+  <img src="/assets/sql/data-insights-2.png" />
+</p>
+
+There is one histogram per column that depicts the column name, data types of
+the distribution, and the distribution itself.
+
+### `Potential Bias` Flag
+
+To see the `Potential Bias` flag, enter a full-screen mode of the Data Insights
+pane.
+
+<p align="center">
+  <img src="/assets/sql/data-insights-3.png" />
+</p>
+
+Here, the `location` column exhibits potential bias, as there are more `great`
+column values than `good` or `poor` column values. Such cases are typically
+flagged. However, it does not necessarily mean that there is a problem with the
+dataset.
+
+The `Potential Bias` flag is used when data does not distribute normally or
+uniformly, likely over-representing or under-representing some values. This may
+be normal, hence, bias is only potential.
+
+### `Missing Values` Flag
+
+To see the `Missing Values` flag, enter a full-screen mode of the Data Insights
+pane.
+
+This flag indicates the proportion of missing values in a column. Columns with a
+high percentage of missing values are not useful for modeling purposes. Hence,
+it is recommended to pay attention to the `Missing Values` flag and try to
+mitigate it whenever possible, as it indicates the degrading quality of your
+data.
+
+### Hovering Over the Histogram
+
+When hovering over the histogram, you get the information on a particular column
+value and how many of such values are present in a column. The format is
+`(column_value, count)`.
+
+<p align="center">
+  <img src="/assets/sql/data-insights-6.png" />
+</p>
+
+It is helpful to determine the exact data value counts from the histograms.
+
+## Full Data Analysis
+
+Let's do a full data analysis step by step.
+
+First, we need to query data for analysis in the MindsDB Cloud editor. Please
+note that you need to query your dataset without using a `LIMIT` keyword to be
+able to perform a complete data analysis.
+
+```sql
+SELECT *
+FROM example_db.demo_data.home_rentals;
+```
+
+On execution, we get:
+
+```sql
++---------------+-------------------+----+--------+--------------+--------------+------------+
+|number_of_rooms|number_of_bathrooms|sqft|location|days_on_market|neighborhood  |rental_price|
++---------------+-------------------+----+--------+--------------+--------------+------------+
+|2              |1                  |917 |great   |13            |berkeley_hills|3901        |
+|0              |1                  |194 |great   |10            |berkeley_hills|2042        |
+|1              |1                  |543 |poor    |18            |westbrae      |1871        |
+|2              |1                  |503 |good    |10            |downtown      |3026        |
+|3              |2                  |1066|good    |13            |thowsand_oaks |4774        |
++---------------+-------------------+----+--------+--------------+--------------+------------+
+```
+
+Now, open the Data Insights pane by clicking the `Data Insights` button to the
+right of the output table. Initially, it shows the analysis of the first ten
+rows of the output table.
+
+<p align="center">
+  <img src="/assets/sql/data-insights-4.png" />
+</p>
+
+To perform a complete analysis of your data, you can either go to a full-screen
+mode or stay in a pane mode and click on the `Full Data Analysis` button. Below
+is the complete data analysis.
+
+<p align="center">
+  <img src="/assets/sql/data-insights-5.png" />
+</p>
+
+Also, whenever your dataset changes, you can click on the
+`Refresh Data Analysis` button to update the data visualization and analysis.
+
+## What's Next?
+
+Want to do more exploratory data analysis in MindsDB? We’re collecting feedback
+to develop even more data visualization features. Let us know what you'd like to
+see as part of Data Insights.
+
+<Tip>
+**From Our Community**
+
+Check out the articles and video guides created by our community:
+
+- Article on [How To Maintain ML-Analytics Cycle With Headless BI](https://medium.com/gooddata-developers/how-to-maintain-ml-analytics-cycle-with-headless-bi-815aceac5027?source=friends_link&sk=45f102ce4a54a6ae8c4dddc900aeebb9)
+  by [Jan Kadlec](https://medium.com/@jkadlec)
+
+- Video guide on [MindsDB Data Insights](https://youtu.be/4oGgocNLi1c) by
+  [@akhilcoder](https://www.youtube.com/@akhilcoder)
+</Tip>

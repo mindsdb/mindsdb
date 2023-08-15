@@ -20,7 +20,7 @@
 </a>
 
 <p>
-	<a href="https://github.com/mindsdb/mindsdb/actions"><img src="https://github.com/mindsdb/mindsdb/workflows/MindsDB%20workflow/badge.svg" alt="MindsDB workflow"></a>
+	<a href="https://github.com/mindsdb/mindsdb/actions"><img src="https://github.com/mindsdb/mindsdb/actions/workflows/release.yml/badge.svg" alt="MindsDB Release"></a>
 	<a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.8.x%7C%203.9.x-brightgreen.svg" alt="Python supported"></a>
 	<a href="https://pypi.org/project/MindsDB/" target="_blank"><img src="https://badge.fury.io/py/MindsDB.svg" alt="PyPi Version"></a>
 	<br />
@@ -52,13 +52,15 @@
 
 ----------------------------------------
 
-[MindsDB’s](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) game-changing AI database empowers the world’s developers to build, manage and automate Generative AI models for data-intensive applications.
+[MindsDB's](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) **AI Virtual Database** empowers developers to connect any AI/ML model to any datasource. This includes relational and non-relational databases, data warehouses and SaaS applications.
  [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Build%20AI-Centered%20Applications%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,nlp,machine_learning,neural_networks,databases,gpt3)
 
 MindsDB offers three primary benefits to its users. 
-1. First, it makes the creation of the next wave of AI-centered applications readily available and accessible for all developers by programming and managing AI models through an “enhanced SQL” abstraction.
-2. MindsDB brings the AI development process much closer to the data, streamlining the production of generative AI while bridging the gap between AI and the data needed to power its potential.
-3. MindsDB removes the complexity or need for managing multiple AI frameworks - in a single platform, organizations can run and automate multiple AI frameworks through hundreds of database integrations.
+1. Creating and managing AI models (LLM based Semantic Search and QnA, TimeSeries Forecasting, Anomaly Detection, Classification, Recommenders, etc) through an “enhanced SQL” abstraction. 
+2. Automate training and finetuning AI models from data contained in any of the 130+ datasources we support.
+3. Hook AI models to run automatically as new data is observed and plug the output into any of our integrations.
+
+<img width="1089" alt="image" src="https://github.com/mindsdb/mindsdb/assets/5898506/5451fe7e-a854-4c53-b34b-769b6c7c9863">
 
 
 [Installation](https://github.com/mindsdb/mindsdb#installation) - [Overview](https://github.com/mindsdb/mindsdb#overview) - [Features](https://github.com/mindsdb/mindsdb#features) - [Database Integrations](https://github.com/mindsdb/mindsdb#database-integrations) - [Quickstart](https://github.com/mindsdb/mindsdb#quickstart) - [Documentation](https://github.com/mindsdb/mindsdb#documentation) - [Support](https://github.com/mindsdb/mindsdb#support) - [Contributing](https://github.com/mindsdb/mindsdb#contributing) - [Mailing lists](https://github.com/mindsdb/mindsdb#mailing-lists) - [License](https://github.com/mindsdb/mindsdb#license)
@@ -88,7 +90,7 @@ docker pull mindsdb/mindsdb
     2. or pick from a variety of state-of-the-art engines for classic machine Learning use cases (regression, classification, or time-series tasks);
     3. or [IMPORT](https://docs.mindsdb.com/custom-model/byom) custom model built with any ML framework to automatically deploy as [AI Tables](https://www.youtube.com/watch?v=tnB4Y9T1E2k).
 3. Query models using [SELECT](https://docs.mindsdb.com/sql/api/select) statements, [API](https://docs.mindsdb.com/rest/usage) calls, or [JOIN](https://docs.mindsdb.com/sql/api/join) commands to make predictions for thousands or millions of data points simultaneously.
-4  Experiment with your models and [Fine-Tune](https://docs.mindsdb.com/sql/api/finetune) them to achieve the best results.
+4.  Experiment with your models and [Fine-Tune](https://docs.mindsdb.com/sql/api/finetune) them to achieve the best results.
 5. Automate your workflows with [JOBs](https://docs.mindsdb.com/sql/create/jobs). 
 
 Follow the [quickstart guide](https://docs.mindsdb.com/quickstart?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) with sample data to get on-boarded as fast as possible.

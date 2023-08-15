@@ -1,0 +1,50 @@
+---
+title: D0lt
+sidebarTitle: D0lt
+---
+
+This is the implementation of the D0lt data handler for MindsDB.
+
+[D0lt](https://docs.dolthub.com/introduction/what-is-dolt) is a single-node and embedded DBMS that incorporates Git-style versioning as a first-class entity. D0lt behaves like Git - it is a content addressable local database where the main objects are tables instead of files. In D0lt, a user creates a database locally. The database contains tables that can be read and updated using SQL. Similar to Git, writes are staged until the user issues a commit. Upon commit, the writes are appended to permanent storage.
+
+Branch and merge semantics are supported allowing for the tables to evolve at a different pace for multiple users. This allows for loose collaboration on data as well as multiple views on the same core data. Merge conflicts are detected for schema and data conflicts. Data conflicts are cell-based, not line-based. Remote repositories allow for cooperation among repository instances. Clone, push, and pull semantics are all available.
+
+## Implementation
+
+This handler is implemented using `mysql-connector`, a Python library that allows you to use Python code to run SQL commands on the D0lt database.
+
+The required arguments to establish a connection are as follows:
+
+* `user` is the username asscociated with the database.
+* `password` is the password to authenticate your access.
+* `host` is the hostname or IP adress of the server.
+* `port` is the port through which TCP/IP connection is to be made.
+* `database` is the database name to be connected.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/d0lt_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the D0lt database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE d0lt_datasource
+WITH
+    engine = 'd0lt',
+    parameters = {
+        "user": "root",
+        "password": "",
+        "host": "127.0.0.1",
+        "port": 3306,
+        "database": "information_schema"
+    };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM D0lt_datasource.TEST;
+```

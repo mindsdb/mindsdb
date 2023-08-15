@@ -28,15 +28,15 @@ def upgrade():
     conn = op.get_bind()
     session = sa.orm.Session(bind=conn)
 
-    view_integration = conn.execute('''
+    view_integration = conn.execute(text('''
         select id from integration where name = 'views'
-    ''').fetchone()
+    ''')).fetchone()
     if view_integration is not None:
         views_integration_id = view_integration['id']
 
-        predictors = conn.execute('''
+        predictors = conn.execute(text('''
             select id, data_integration_id from predictor
-        ''').fetchall()
+        ''')).fetchall()
 
         for predictor in predictors:
             data_integration_ref = None
@@ -59,9 +59,9 @@ def upgrade():
         batch_op.drop_constraint('fk_data_integration_id', type_='foreignkey')
         batch_op.drop_column('data_integration_id')
 
-    conn.execute('''
+    conn.execute(text('''
         delete from integration where name = 'views'
-    ''')
+    '''))
     session.commit()
 
 
@@ -81,9 +81,9 @@ def downgrade():
     session.add(views_integration)
     session.commit()
 
-    predictors = conn.execute('''
+    predictors = conn.execute(text('''
         select id, data_integration_ref from predictor
-    ''').fetchall()
+    ''')).fetchall()
 
     for predictor in predictors:
         data_integration_ref = predictor['data_integration_ref']

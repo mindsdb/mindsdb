@@ -3,7 +3,7 @@ import datetime
 from alembic.autogenerate import produce_migrations, render, api
 from alembic import context
 from sqlalchemy import UniqueConstraint
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
 
 # required for code execution
@@ -21,7 +21,12 @@ depends_on = None
 
 # ========================================== current database state ========================================
 
-Base = declarative_base()
+
+class Base:
+    __allow_unmapped__ = True
+
+
+Base = declarative_base(cls=Base)
 
 # Source: https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
 

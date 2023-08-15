@@ -1,0 +1,59 @@
+---
+title: UPDATE Statement
+sidebarTitle: UPDATE
+---
+
+## Description
+
+MindsDB provides two ways of using the `UPDATE` statement:
+
+1. The regular `UPDATE` statement updates specific column values in an existing table.
+
+2. The `UPDATE FROM SELECT` statement updates data in an existing table from a subselect query. It can be used as an alternative to `CREATE TABLE` or `INSERT INTO` to store predictions.
+
+## Syntax
+
+Here is an example of the regular `UPDATE` statement:
+
+```sql
+UPDATE integration_name.table_name
+SET column_name = new_value
+WHERE column_name = old_value
+```
+
+<Info>
+Please replace the placeholders as follows:
+
+- `integration_name` is the name of the connected data source.
+- `table_name` is the table name within that data source.
+- `column_name` is the column name within that table.
+</Info>
+
+And here is an example of the `UPDATE FROM SELECT` statement that updates a table with predictions made within MindsDB:
+
+```sql
+UPDATE
+    integration_to_be_updated.table_to_be_updated
+SET
+    column_to_be_updated = prediction_data.predicted_value_column,
+FROM 
+    (
+        SELECT p.predicted_value_column, p.column1, p.column2
+        FROM integration_name.table_name as t
+        JOIN model_name as p
+    ) AS prediction_data
+WHERE
+    column1 = prediction_data.column1
+    AND column2 = prediction_data.column2
+```
+
+<Info>
+The steps followed by the syntax:
+
+- It executes query from the `FROM` clause to get the output data. In our example, we query for predictions, but it could be a simple select from another table. Please note that it is aliased as `prediction_data`.
+- It updates all rows from the `table_to_be_updated` table (that belongs to the `integration_to_be_updated` integration) that match the `WHERE` clause criteria. The rows are updated with values as defined in the `SET` clause.
+</Info>
+
+<Tip>
+It is recommended to use the primary key column(s) in the WHERE clause (here, `column1` and `column2`), as the primary key column(s) uniquely identify each row. Otherwise, the `UPDATE` statement may lead to unexpected results by altering rows that you didn't want to affect.
+</Tip>

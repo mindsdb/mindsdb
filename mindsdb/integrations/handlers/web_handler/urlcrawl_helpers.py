@@ -1,18 +1,58 @@
-import requests
-from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin
 import logging
 import re
 import traceback
-import pandas as pd
 from threading import Lock
+import concurrent.futures
+import io
 
 import requests
-import concurrent.futures
-from urllib.parse import urlparse
+from bs4 import BeautifulSoup
+import pandas as pd
+import fitz  # PyMuPDF
+
+
+def pdf_to_markdown(response):
+    # Download the PDF from the given URL
+    
+    file_stream = io.BytesIO(response.content)
+
+    # Open the PDF from the in-memory file
+    document = fitz.open(stream=file_stream, filetype='pdf')
+
+    markdown_text = ''
+    for page_num in range(len(document)):
+        page = document.load_page(page_num)
+
+        # Get the blocks of text
+        blocks = page.get_text("blocks")
+
+        # Sort the blocks by their vertical position on the page
+        blocks.sort(key=lambda block: (block[1], block[0]))
+
+        previous_block_bottom = 0
+        for block in blocks:
+            y0 = block[1]
+            y1 = block[3]
+            block_text = block[4]
+
+            # Check if there's a large vertical gap between this block and the previous one
+            if y0 - previous_block_bottom > 10:
+                markdown_text += '\n'
+
+            markdown_text += block_text + '\n'
+            previous_block_bottom = y1
+
+        markdown_text += '\n'
+
+    # Close the document
+    document.close()
+
+    return markdown_text
 
 
 url_list_lock = Lock()
+
 
 def is_valid(url):
     parsed = urlparse(url)
@@ -47,53 +87,81 @@ def get_all_website_links(url):
             
     domain_name = urlparse(url).netloc
     try:
-        content_html = requests.get(url).content
-        soup = BeautifulSoup(content_html, "html.parser")
+        # Create a session to handle cookies
+        session = requests.Session()
+
+        # Add headers to mimic a real browser request
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36"
+        }
+
+        # Send GET request
+        response = session.get(url, headers=headers)
+        # Accept cookies if necessary
+        if 'cookie' in response.request.headers:
+            session.cookies.update(response.cookies)
+
+        content_type = response.headers.get('Content-Type', '').lower()
+
+        if 'application/pdf' in content_type:
+            
+            content_html = 'PDF'
+            content_text = pdf_to_markdown(response)
+        else:
+            content_html = response.text
+
+            # Parse HTML content with BeautifulSoup
+            soup = BeautifulSoup(content_html, 'html.parser')
+            content_text = get_readable_text_from_soup(soup)
+            for a_tag in soup.findAll("a"):
+                href = a_tag.attrs.get("href")
+                if href == "" or href is None:
+                    continue
+                href = urljoin(url, href)
+                parsed_href = urlparse(href)
+                
+                href = parsed_href.scheme + "://" + parsed_href.netloc + parsed_href.path
+                if not is_valid(href):
+                    continue
+                if href in urls:
+                    continue
+                if domain_name != parsed_href.netloc:
+                    continue
+                
+                href = href.rstrip('/')    
+                urls.add(href)
+
     except Exception as e:
         error_message = traceback.format_exc().splitlines()[-1]
         logging.error("An exception occurred: %s", str(e))
         return {'url':url,'urls':urls, 'html_content':'', 'text_content': '', 'error':str(error_message)}
-    
-    content_text = get_readable_text_from_soup(soup)
-    for a_tag in soup.findAll("a"):
-        href = a_tag.attrs.get("href")
-        if href == "" or href is None:
-            continue
-        href = urljoin(url, href)
-        parsed_href = urlparse(href)
-        
-        href = parsed_href.scheme + "://" + parsed_href.netloc + parsed_href.path
-        if not is_valid(href):
-            continue
-        if href in urls:
-            continue
-        if domain_name != parsed_href.netloc:
-            continue
-        
-        href = href.rstrip('/')    
-        urls.add(href)
 
     return {'url': url,'urls': urls, 'html_content': content_html, 'text_content': content_text, 'error': None}
 
 
-# this returns the soup object
 def get_readable_text_from_soup(soup):
 
-    # Remove script and style elements
-    for script in soup(["script", "style"]):
-        script.decompose()
+    # Start formatting as Markdown
+    markdown_output = ""
 
-    # Get text, #todo add new line for li elements
-    text = soup.get_text()
+    # Iterate through headings and paragraphs
+    for tag in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'ul', 'ol', 'li']):
+        if tag.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
+            markdown_output += "#" * int(tag.name[1]) + " " + tag.get_text().strip() + "\n\n"
+        elif tag.name == 'p':
+            markdown_output += tag.get_text().strip() + "\n\n"
+        elif tag.name == 'a':
+            markdown_output += f"[{tag.get_text().strip()}]({tag['href']})\n\n"
+        elif tag.name == 'ul':
+            for li in tag.find_all('li'):
+                markdown_output += f"* {li.get_text().strip()}\n"
+            markdown_output += "\n"
+        elif tag.name == 'ol':
+            for index, li in enumerate(tag.find_all('li')):
+                markdown_output += f"{index + 1}. {li.get_text().strip()}\n"
+            markdown_output += "\n"
 
-    # Remove leading and trailing spaces on each line
-    lines = (line.strip() for line in text.splitlines())
-    # Break multi-headlines into a line each
-    chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-    # Remove blank lines
-    text = '\n'.join(chunk for chunk in chunks if chunk)
-
-    return text
+    return markdown_output
 
 
 # this bad girl does the recursive crawling of the websites
@@ -173,6 +241,9 @@ def get_all_websites(urls, limit=1, html=False):
         columns_to_ignore += ['html_content']
     df = dict_to_dataframe(reviewd_urls, columns_to_ignore=columns_to_ignore, index_name='url')
 
+    if not df.empty and df[df.error.isna()].empty:
+        # no real data - rise exception from first row
+        raise Exception(str(df.iloc[0].error))
     return df
 
 
@@ -231,6 +302,6 @@ def dict_to_dataframe(dict_of_dicts, columns_to_ignore=None, index_name=None):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    df = get_df_from_query_str('docs.mindsdb.com, docs.airbyte.com, limit=4')
-    print(df)
+    response = requests.get('https://www.goldmansachs.com/media-relations/press-releases/current/pdfs/2023-q2-results.pdf')
+    print(pdf_to_markdown(response))
 

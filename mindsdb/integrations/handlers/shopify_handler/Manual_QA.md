@@ -25,3 +25,20 @@ SELECT * FROM shopify_datasource.products LIMIT 10;
 
 The result is as follows:
 [![shopify-select-method.png](https://i.postimg.cc/LXYW3074/shopify-select-method.png)](https://postimg.cc/k6CwnwqL)
+
+**3. Testing Insert  method**
+
+
+```sql
+INSERT INTO shopify_datasource.customers(first_name, last_name, email)
+VALUES 
+('John', 'Doe', 'john.doe@example.com')
+```
+
+The result is the following:
+[![insert-method.png](https://i.postimg.cc/dVhWpwhh/insert-method.png)](https://postimg.cc/3kHCDMCh)
+
+### Results
+
+Drop a remark based on your observation.
+- [x] Works Great 💚 (This means that all the steps were executed successfully and the expected outputs were returned.)

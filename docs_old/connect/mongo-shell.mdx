@@ -1,0 +1,97 @@
+---
+title: MindsDB and MongoDB Shell
+sidebarTitle: MongoDB Shell
+---
+
+MongoDB Shell is the quickest way to connect and work with MongoDB.
+
+MindsDB provides a powerful MongoDB API, allowing users to connect MindsDB to the [MongoDB Shell](https://www.mongodb.com/try/download/shell). Please note that connection to MongoDB API provided by MindsDB is the same as connection to a MongoDB database. You can download MongoDB Shell [here](https://www.mongodb.com/try/download/shell).
+
+## Overview
+
+Here is an overview of the connection between MindsDB and MongoDB Shell:
+
+<p align="center">
+  <img src="/assets/connect_mongo_shell.png" />
+</p>
+
+Let's go through the steps presented above:
+
+1. We connect MongoDB Shell to MindsDB. It is discussed in the following content.
+
+2. We connect MindsDB to a database. You can use the [`CREATE DATABASE`](/sql/create/databases) statement and run it from MindsDB, passing all required database connection details.
+
+3. Having completed steps 1 and 2, you can access the connected database from MongoDB Shell via MindsDB.
+
+## How to Connect
+
+Here is how to connect MongoDB Shell to MindsDB using either MindsDB Cloud or local installation.
+
+Upon opening the MongoDB Shell, you see the following message:
+
+<p align="center">
+  <img src="/assets/connect_mongo_shell_1.png" />
+</p>
+
+Let's look at the connection strings for both MindsDB Cloud and local installation.
+
+<Tabs>
+
+  <Tab title= "Local MindsDB">
+  
+    Provide your local MindsDB connection string to connect to a local MindsDB installation. You can copy the connection string from the MongoDB Compass if you have already created a connection there.
+
+    Here is a connection string to connect to a local MindsDB installation:
+
+    ```bash
+    mongodb://127.0.0.1:47336/
+    ```
+
+  </Tab>
+
+  <Tab title="MindsDB Cloud">
+
+    Here is a connection string to connect to the MindsDB Cloud account. You can copy the connection string from the MongoDB Compass if you have already created a connection there.
+
+    ```bash
+    mongodb://mindsdb_cloud_username:mindsdb_cloud_password@cloud.mindsdb.com:27017/?authMechanism=DEFAULT
+    ```
+
+    Please replace the `mindsdb_cloud_username` placeholder with your MindsDB Cloud account email. Also, replace the `mindsdb_cloud_password` placeholder with your MindsDB Cloud password. The host value is `cloud.mindsdb.com` and the port value is `27017`. We use the default authentication mechanism.
+
+    Let's look at an example:
+
+    <p align="center">
+      <img src="/assets/connect_mongo_shell_2.png" />
+    </p>
+
+  </Tab>
+  <Tab title="MindsDB Pro">
+
+    Here is a connection string to connect to the MindsDB Pro account. You can copy the connection string from the MongoDB Compass if you have already created a connection there.
+
+    ```bash
+    mongodb://mindsdb_cloud_username:mindsdb_cloud_password@<dedicated instance ip>:3306/?authMechanism=DEFAULT
+    ```
+
+    It is similar to connecting MindsDB Cloud. Please replace the `mindsdb_cloud_username` placeholder with your MindsDB Cloud account email. Also, replace the `mindsdb_cloud_password` placeholder with your MindsDB Cloud password. The host value is the IP address of your dedicated instance and the port value is 3306. We use the default authentication mechanism.
+
+  </Tab>
+</Tabs>
+
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Tutorials** section, where you'll find various examples of regression, classification, and time series predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on [MindsDB collection structure](/mongo/collection-structure/). Also, don't miss out on the remaining pages from the **Mongo API** section, as these explain common MQL syntax with examples.
+
+Have fun!
+
+<Tip>
+**From Our Community**
+
+Check out the video guide created by our community:
+
+- Video guide on [Easily connect to MindsDB Cloud from MongoShell](https://youtube.com/video/ysPRXSgdOVk)
+  by [@akhilcoder](https://twitter.com/akhilcoder)
+</Tip>

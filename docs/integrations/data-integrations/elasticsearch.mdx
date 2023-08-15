@@ -1,0 +1,47 @@
+---
+title: Elasticsearch
+sidebarTitle: Elasticsearch
+---
+
+This is the implementation of the Elasticsearch data handler for MindsDB.
+
+[Elasticsearch](https://www.elastic.co/what-is/elasticsearch) is a distributed, free and open search and analytics engine for all types of data, including textual, numerical, geospatial, structured, and unstructured. Elasticsearch is built on Apache Lucene and was first released in 2010 by Elasticsearch N.V. (now known as Elastic).
+
+## Implementation
+
+This handler is implemented using the `elasticsearch` library, the Python Elasticsearch client.
+
+The required arguments to establish a connection are as follows:
+
+* `hosts` is the host name(s) or IP address(es) of the Elasticsearch server(s). If multiple host name(s) or IP address(es) exist, they should be separated by commas. This parameter is optional, but it should be provided if `cloud_id` is not.
+* `cloud_id` is the unique ID to your hosted Elasticsearch cluster on Elasticsearch Service. This parameter is optional, but it should be provided if `hosts` is not.
+* `username` is the username used to authenticate with the Elasticsearch server. This parameter is optional.
+* `password` is the password used to authenticate the user with the Elasticsearch server. This parameter is optional.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/elasticsearch_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the Elasticsearch server in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE elasticsearch_datasource
+WITH
+  engine = 'elasticsearch',
+  parameters = {
+      "hosts": "localhost:9200"
+  };
+```
+
+You can use this established connection to query your index as follows:
+
+```sql
+SELECT *
+FROM elasticsearch_datasource.example_index;
+```
+
+<Note>
+There are certain limitations that need to be taken into account when issuing queries to Elasticsearch. You can find a detailed guide [here](https://www.elastic.co/guide/en/elasticsearch/reference/current/sql-limitations.html).
+</Note>

@@ -230,9 +230,9 @@ if __name__ == "__main__":
                 )
         sys.exit(0)
 
-    logger.info(f"Version {mindsdb_version}")
-    logger.info(f"Configuration file:\n   {config.config_path}")
-    logger.info(f"Storage path:\n   {config['paths']['root']}")
+    logger.info(f"Version: {mindsdb_version}")
+    logger.info(f"Configuration file: {config.config_path}")
+    logger.info(f"Storage path: {config['paths']['root']}")
 
 <<<<<<< HEAD
     for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():

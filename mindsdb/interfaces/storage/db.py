@@ -21,7 +21,7 @@ from sqlalchemy import (
     types,
 )
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.orm import declarative_base, relationship, scoped_session, sessionmaker
+from sqlalchemy.orm import declarative_base, scoped_session, sessionmaker
 from sqlalchemy.sql.schema import ForeignKey
 
 
@@ -415,7 +415,7 @@ class KnowledgeBase(Base):
 
     # reference to the embedding model and the vector database
     embedding_model_id = Column(
-        ForeignKey("integration.id", name="fk_embedding_integration_id")
+        ForeignKey("predictor.id", name="fk_embedding_integration_id")
     )
     vector_database_id = Column(
         ForeignKey("integration.id", name="fk_vectordatabase_integration_id")
@@ -427,9 +427,6 @@ class KnowledgeBase(Base):
         comment="The name of the table in the vector database.",
         default=lambda context: f"{context.current_parameters['name']}_{uuid.uuid4().hex}",
     )
-
-    embedding_model = relationship("Integration", foreign_keys=[embedding_model_id])
-    vector_database = relationship("Integration", foreign_keys=[vector_database_id])
 
     created_at = Column(DateTime, default=datetime.datetime.now)
     updated_at = Column(

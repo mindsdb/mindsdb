@@ -5,7 +5,8 @@ import numpy as np
 import pandas as pd
 import requests
 
-BASE_URL = r"https://pypistats.org/api/packages/"
+SERVICE_URL = r"https://pypistats.org"
+API_BASE_URL = path.join(SERVICE_URL, "api/packages/")
 
 
 class PyPI:
@@ -16,7 +17,7 @@ class PyPI:
             name(str): package name
         """
         self.name: str = name
-        self.endpoint: str = path.join(BASE_URL, name)
+        self.endpoint: str = path.join(API_BASE_URL, name)
         print(self.endpoint)
 
     def recent(self, period: str = None) -> pd.DataFrame:
@@ -147,3 +148,11 @@ class PyPI:
         if include_null is False:
             return df.dropna()
         return df
+
+    @classmethod
+    def is_connected(cls) -> Dict:
+        try:
+            _ = requests.get(SERVICE_URL, timeout=5).raise_for_status()
+            return {"status": True}
+        except requests.exceptions.RequestException as e:
+            return {"status": False, "message": e}

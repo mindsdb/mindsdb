@@ -15,7 +15,7 @@ class CustomAPITable(APITable):
     name: str = None
     columns: List[str] = [
         "category",
-        "percent",
+        "date",
         "downloads",
     ]
 
@@ -53,9 +53,29 @@ class PyPIRecentTable(CustomAPITable):
         Returns:
             pd.DataFrame: the queried information
         """
+        params = conditions_to_filter(query.where)
+
+        package_name = params["package"]
+        period = params.get("period", None)
+        all_cols = {
+            "day": "last_day",
+            "week": "last_week",
+            "month": "last_month",
+        }
+
+        to_be_excluded = []
+
+        if period:
+            if period in all_cols.keys():
+                del all_cols[period]
+                to_be_excluded = list(all_cols.values())
+            else:
+                raise ValueError(
+                    "Make sure that one of `day`, `week` or `month` values is assigned to `period`."
+                )
 
         select_statement_parser = SELECTQueryParser(
-            query, PyPIRecentTable.name, self.get_columns()
+            query, PyPIRecentTable.name, self.get_columns(to_be_excluded)
         )
         (
             selected_columns,
@@ -64,9 +84,7 @@ class PyPIRecentTable(CustomAPITable):
             _,
         ) = select_statement_parser.parse_query()
 
-        params = conditions_to_filter(query.where)
-
-        raw_df = self.handler.connection.recent(params["package"], format="pandas")
+        raw_df = self.handler.connection(name=package_name).recent(period)
 
         select_statement_executor = SELECTQueryExecutor(
             raw_df, selected_columns, [], order_by_conditions
@@ -90,16 +108,14 @@ class PyPIOverallTable(CustomAPITable):
             pd.DataFrame: the queried information
         """
         params = conditions_to_filter(query.where)
-        available_columns = (
-            self.get_columns(["percent"])
-            if "include_mirrors" in params
-            else self.get_columns()
-        )
+
+        package_name = params["package"]
+        mirrors = params.get("mirrors", None)
 
         select_statement_parser = SELECTQueryParser(
             query,
             PyPIOverallTable.name,
-            available_columns,
+            self.get_columns(),
         )
         (
             selected_columns,
@@ -108,12 +124,7 @@ class PyPIOverallTable(CustomAPITable):
             _,
         ) = select_statement_parser.parse_query()
 
-        if "include_mirrors" in params:
-            raw_df = self.handler.connection.overall(
-                params["package"], format="pandas", mirrors=params["include_mirrors"]
-            )
-        else:
-            raw_df = self.handler.connection.overall(params["package"], format="pandas")
+        raw_df = self.handler.connection(name=package_name).overall(mirrors=mirrors)
 
         select_statement_executor = SELECTQueryExecutor(
             raw_df, selected_columns, [], order_by_conditions
@@ -137,14 +148,15 @@ class PyPIPythonMajorTable(CustomAPITable):
             pd.DataFrame: the queried information
         """
         params = conditions_to_filter(query.where)
-        available_columns = (
-            self.get_columns(["percent"]) if "version" in params else self.get_columns()
-        )
+
+        package_name = params["package"]
+        version = params.get("version", None)
+        include_null = params.get("include_null", None)
 
         select_statement_parser = SELECTQueryParser(
             query,
             PyPIOverallTable.name,
-            available_columns,
+            self.get_columns(),
         )
         (
             selected_columns,
@@ -153,14 +165,9 @@ class PyPIPythonMajorTable(CustomAPITable):
             _,
         ) = select_statement_parser.parse_query()
 
-        if "version" in params:
-            raw_df = self.handler.connection.python_major(
-                params["package"], format="pandas", version=params["version"]
-            )
-        else:
-            raw_df = self.handler.connection.python_major(
-                params["package"], format="pandas"
-            )
+        raw_df = self.handler.connection(name=package_name).python_major(
+            version=version, include_null=include_null
+        )
 
         select_statement_executor = SELECTQueryExecutor(
             raw_df, selected_columns, [], order_by_conditions
@@ -184,14 +191,15 @@ class PyPIPythonMinorTable(CustomAPITable):
             pd.DataFrame: the queried information
         """
         params = conditions_to_filter(query.where)
-        available_columns = (
-            self.get_columns(["percent"]) if "version" in params else self.get_columns()
-        )
+
+        package_name = params["package"]
+        version = params.get("version", None)
+        include_null = params.get("include_null", None)
 
         select_statement_parser = SELECTQueryParser(
             query,
             PyPIOverallTable.name,
-            available_columns,
+            self.get_columns(),
         )
         (
             selected_columns,
@@ -200,14 +208,9 @@ class PyPIPythonMinorTable(CustomAPITable):
             _,
         ) = select_statement_parser.parse_query()
 
-        if "version" in params:
-            raw_df = self.handler.connection.python_minor(
-                params["package"], format="pandas", version=params["version"]
-            )
-        else:
-            raw_df = self.handler.connection.python_minor(
-                params["package"], format="pandas"
-            )
+        raw_df = self.handler.connection(name=package_name).python_minor(
+            version=version, include_null=include_null
+        )
 
         select_statement_executor = SELECTQueryExecutor(
             raw_df, selected_columns, [], order_by_conditions
@@ -231,14 +234,15 @@ class PyPISystemTable(CustomAPITable):
             pd.DataFrame: the queried information
         """
         params = conditions_to_filter(query.where)
-        available_columns = (
-            self.get_columns(["percent"]) if "os" in params else self.get_columns()
-        )
+
+        package_name = params["package"]
+        os = params.get("os", None)
+        include_null = params.get("include_null", None)
 
         select_statement_parser = SELECTQueryParser(
             query,
             PyPIOverallTable.name,
-            available_columns,
+            self.get_columns(),
         )
         (
             selected_columns,
@@ -247,12 +251,9 @@ class PyPISystemTable(CustomAPITable):
             _,
         ) = select_statement_parser.parse_query()
 
-        if "os" in params:
-            raw_df = self.handler.connection.system(
-                params["package"], format="pandas", os=params["os"]
-            )
-        else:
-            raw_df = self.handler.connection.system(params["package"], format="pandas")
+        raw_df = self.handler.connection(name=package_name).system(
+            os=os, include_null=include_null
+        )
 
         select_statement_executor = SELECTQueryExecutor(
             raw_df, selected_columns, [], order_by_conditions

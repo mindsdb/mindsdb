@@ -121,10 +121,12 @@ class PyPIOverallTable(CustomAPITable):
             selected_columns,
             _,
             order_by_conditions,
-            _,
+            result_limit,
         ) = select_statement_parser.parse_query()
 
-        raw_df = self.handler.connection(name=package_name).overall(mirrors=mirrors)
+        raw_df = self.handler.connection(name=package_name, limit=result_limit).overall(
+            mirrors=mirrors
+        )
 
         select_statement_executor = SELECTQueryExecutor(
             raw_df, selected_columns, [], order_by_conditions
@@ -151,7 +153,6 @@ class PyPIPythonMajorTable(CustomAPITable):
 
         package_name = params["package"]
         version = params.get("version", None)
-        include_null = params.get("include_null", None)
 
         select_statement_parser = SELECTQueryParser(
             query,
@@ -162,12 +163,12 @@ class PyPIPythonMajorTable(CustomAPITable):
             selected_columns,
             _,
             order_by_conditions,
-            _,
+            result_limit,
         ) = select_statement_parser.parse_query()
 
-        raw_df = self.handler.connection(name=package_name).python_major(
-            version=version, include_null=include_null
-        )
+        raw_df = self.handler.connection(
+            name=package_name, limit=result_limit
+        ).python_major(version=version)
 
         select_statement_executor = SELECTQueryExecutor(
             raw_df, selected_columns, [], order_by_conditions
@@ -194,7 +195,6 @@ class PyPIPythonMinorTable(CustomAPITable):
 
         package_name = params["package"]
         version = params.get("version", None)
-        include_null = params.get("include_null", None)
 
         select_statement_parser = SELECTQueryParser(
             query,
@@ -205,12 +205,12 @@ class PyPIPythonMinorTable(CustomAPITable):
             selected_columns,
             _,
             order_by_conditions,
-            _,
+            result_limit,
         ) = select_statement_parser.parse_query()
 
-        raw_df = self.handler.connection(name=package_name).python_minor(
-            version=version, include_null=include_null
-        )
+        raw_df = self.handler.connection(
+            name=package_name, limit=result_limit
+        ).python_minor(version=version)
 
         select_statement_executor = SELECTQueryExecutor(
             raw_df, selected_columns, [], order_by_conditions
@@ -237,7 +237,6 @@ class PyPISystemTable(CustomAPITable):
 
         package_name = params["package"]
         os = params.get("os", None)
-        include_null = params.get("include_null", None)
 
         select_statement_parser = SELECTQueryParser(
             query,
@@ -248,11 +247,11 @@ class PyPISystemTable(CustomAPITable):
             selected_columns,
             _,
             order_by_conditions,
-            _,
+            result_limit,
         ) = select_statement_parser.parse_query()
 
-        raw_df = self.handler.connection(name=package_name).system(
-            os=os, include_null=include_null
+        raw_df = self.handler.connection(name=package_name, limit=result_limit).system(
+            os=os
         )
 
         select_statement_executor = SELECTQueryExecutor(

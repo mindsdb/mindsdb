@@ -30,18 +30,13 @@ Each table has its `WHERE` clause(s) and condition(s) as follows.
   - `period`: `{day, week, month}`
 - `overall`
   - `mirrors`: `{true, false}`
-  - `include_null`: `{true, false}`
 - `python_major`
   - `version`: `{2, 3, ...}`
-  - `include_null`: `{true, false}`
 - `python_minor`
   - `version`: `{2.7, 3.2, ...}`
-  - `include_null`: `{true, false}`
 - `system`:
   - `os`: `{"Windows", "Linux", "Darwin", ...}`
-  - `include_null`: `{true, false}`
 
-In addition, keep in mind that each table takes a *REQUIRED* `WHERE` parameter and that's nothing but the package name that is specified with the `package` keyword.
 
 ### All the recent downloads
 ```sql
@@ -70,6 +65,12 @@ FROM pypi_datasource.python_minor WHERE package="mindsdb" AND version="2.7";
 SELECT date, downloads
 FROM pypi_datasource.system WHERE package="mindsdb" AND os="Linux";
 ```
+
+### Keep in mind..
+- Each table takes a *REQUIRED* `WHERE` parameter and that's nothing but the package name that is specified with the `package` keyword.
+- All the `Null` recordes are ignored from viewing.
+- `SELECT` query is limited by 20 records by default. You can change it to whatever amount of records you need.
+
 
 ## Implemented Features
 - [x] Database initialization

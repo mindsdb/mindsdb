@@ -10,15 +10,15 @@ API_BASE_URL = path.join(SERVICE_URL, "api/packages/")
 
 
 class PyPI:
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, limit: int = None) -> None:
         """initializer method
 
         Args:
             name(str): package name
         """
         self.name: str = name
+        self.limit = limit
         self.endpoint: str = path.join(API_BASE_URL, name)
-        print(self.endpoint)
 
     def recent(self, period: str = None) -> pd.DataFrame:
         """recent endpoint
@@ -57,18 +57,15 @@ class PyPI:
             params["mirrors"] = str(mirrors).lower()
 
         payload = requests.get(endpoint, params=params).json()["data"]
-        df = self.__to_dataframe(payload)
+        df = self.__to_dataframe(payload, limit=self.limit)
 
         return df
 
-    def python_major(
-        self, version: str = None, include_null: bool = True
-    ) -> pd.DataFrame:
+    def python_major(self, version: str = None) -> pd.DataFrame:
         """python major endpoint
 
         Args:
             version (str, optional): filter by the major version number. Defaults to None.
-            include_null (bool, optional): include the null records as well. Defaults to True.
 
         Returns:
             pd.DataFrame: pandas dataframe
@@ -80,18 +77,15 @@ class PyPI:
             params["version"] = version
 
         payload = requests.get(endpoint, params=params).json()["data"]
-        df = self.__to_dataframe(payload, include_null=include_null)
+        df = self.__to_dataframe(payload, limit=self.limit)
 
         return df
 
-    def python_minor(
-        self, version: str = None, include_null: bool = True
-    ) -> pd.DataFrame:
+    def python_minor(self, version: str = None) -> pd.DataFrame:
         """python minor endpoint
 
         Args:
             version (str, optional): filter by the minor.patch version number. Defaults to None.
-            include_null (bool, optional): include the null records as well. Defaults to True.
 
         Returns:
             pd.DataFrame: pandas dataframe
@@ -103,16 +97,15 @@ class PyPI:
             params["version"] = version
 
         payload = requests.get(endpoint, params=params).json()["data"]
-        df = self.__to_dataframe(payload, include_null=include_null)
+        df = self.__to_dataframe(payload, limit=self.limit)
 
         return df
 
-    def system(self, os: str = None, include_null: bool = True) -> pd.DataFrame:
+    def system(self, os: str = None) -> pd.DataFrame:
         """system endpoint
 
         Args:
             os (str, optional): filter by the operating system. Defaults to None.
-            include_null (bool, optional): include the null records as well. Defaults to True.
 
         Returns:
             pd.DataFrame: pandas dataframe
@@ -124,30 +117,31 @@ class PyPI:
             params["os"] = os
 
         payload = requests.get(endpoint, params=params).json()["data"]
-        df = self.__to_dataframe(payload, include_null=include_null)
+        df = self.__to_dataframe(payload, limit=self.limit)
 
         return df
 
     @staticmethod
     def __to_dataframe(
-        json_data: Dict, index: Collection = None, include_null: bool = True
+        json_data: Dict,
+        index: Collection = None,
+        limit: int = 20,
     ) -> pd.DataFrame:
-        """converts the raw json to pandas dataframe
+        """_summary_
 
         Args:
             json_data (Dict): data
             index (Collection, optional): desired index. Defaults to None.
-            include_null (bool, optional): dropping or keeping the null records. Defaults to True.
+            limit (int, optional): limit the output coming from dataframe. Defaults to 20.
 
         Returns:
-            pd.DataFrame: pandas dataframe
+            pd.DataFrame: _description_
         """
         df = pd.DataFrame(json_data, index=index)
         df.replace("null", np.nan, inplace=True)
+        df = df.dropna()
 
-        if include_null is False:
-            return df.dropna()
-        return df
+        return df.tail(limit)
 
     @classmethod
     def is_connected(cls) -> Dict:

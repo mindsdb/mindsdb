@@ -5,7 +5,6 @@ import chromadb
 import pandas as pd
 from chromadb import API
 from chromadb.config import Settings
-from integrations.handlers.chromadb_handler.settings import DEFAULT_EMBEDDINGS_MODEL
 from langchain.vectorstores import Chroma
 from mindsdb_sql import ASTNode, CreateTable, Insert, Select, Star
 
@@ -22,6 +21,8 @@ from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.utilities import log
+
+from .settings import DEFAULT_EMBEDDINGS_MODEL
 
 # todo create separate util dir for vectorstore
 

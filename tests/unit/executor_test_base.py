@@ -191,7 +191,7 @@ class BaseExecutorTest(BaseUnitTest):
 
         if mock_lightwood:
             predict_patcher = mock.patch(
-                "mindsdb.integrations.handlers.lightwood_handler.Handler.predict"
+                'mindsdb.integrations.libs.ml_exec_base.BaseMLEngineExec.predict'
             )
             self.mock_predict = predict_patcher.__enter__()
 
@@ -361,10 +361,11 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         self.db.session.add(r)
         self.db.session.commit()
 
-        def predict_f(data, pred_format="dict", *args, **kargs):
+        def predict_f(_model_name, data, pred_format="dict", *args, **kargs):
             dict_arr = []
             explain_arr = []
-            data = data.to_dict(orient="records")
+            if isinstance(data, dict):
+                data = [data]
 
             predicted_value = predictor["predicted_value"]
             target = predictor["predict"]

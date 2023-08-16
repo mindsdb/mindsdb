@@ -204,6 +204,7 @@ class BaseExecutorTest(BaseUnitTest):
         sql_session = SessionController()
         sql_session.database = "mindsdb"
         sql_session.integration_controller = integration_controller
+        self.sql_session = sql_session
 
         self.command_executor = ExecuteCommands(sql_session, executor=None)
 

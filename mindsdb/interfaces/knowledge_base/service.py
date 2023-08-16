@@ -8,7 +8,9 @@ from typing import Iterable, Optional
 import pandas as pd
 from pydantic import BaseModel
 
+import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.base import BaseMLEngine, VectorStoreHandler
+from mindsdb.interfaces.database.integrations import IntegrationController
 from mindsdb.interfaces.storage.db import KnowledgeBase
 
 
@@ -46,6 +48,7 @@ class KnowledgeBaseService:
         self.kb = kb
         # provision the embedding model and vector database
         # to be used across the service
+        self.integration_controller = IntegrationController()
         self.vector_database_handler: VectorStoreHandler = (
             self._get_vector_database_handler()
         )
@@ -56,13 +59,47 @@ class KnowledgeBaseService:
         """
         Get the embedding model handler given the integration id
         """
-        ...
+        predictor_id = self.kb.embedding_model_id
+        predictor = db.Predictor.query.get(predictor_id)
+        # get the name of the integration
+        integration_name = db.Integration.query.get(predictor.integration_id).name
+        # get the handler for the integration
+        handler = self.integration_controller.get_handler(integration_name)
+        # TODO: because we use importlib to import the class dynamically
+        # I cannot get the type check to work
+        wrapped_handler = handler._get_ml_handler(predictor_id=predictor_id)
+        return wrapped_handler
+        # check type
+        # if isinstance(handler, BaseMLEngineExec):
+        #     # get the wrapped handler class
+        #     handler = handler._get_ml_handler(predictor_id=predictor_id)
+        #     assert isinstance(handler, BaseMLEngine), (
+        #         f"Handler for integration {integration_name} is not a BaseMLEngine"
+        #     )
+        #     return handler
+        # else:
+        #     raise Exception(
+        #         f"Handler for integration {integration_name} is not a BaseMLEngineExec"
+        #     )
 
     def _get_vector_database_handler(self):
         """
         Get the vector database handler given the integration id
         """
-        ...
+        database_integration_id = self.kb.vector_database_id
+        # get the name of the database integration
+        database_name = db.Integration.query.get(database_integration_id).name
+        # get the handler for the database integration
+        handler = self.integration_controller.get_handler(database_name)
+        return handler
+        # TODO: because we use importlib to import the class dynamically
+        # I cannot get the type check to work
+        # if isinstance(handler, VectorStoreHandler):
+        #     return handler
+        # else:
+        #     raise Exception(
+        #         f"Handler for database integration {database_name} is not a VectorStoreHandler"
+        #     )
 
     def _get_embedding_column(self) -> str:
         # get the column that stores the embedding vectors in the

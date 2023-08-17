@@ -7,7 +7,7 @@ This is the implementation of the Reddit app handler for MindsDB. It provides in
 
 [Reddit](https://www.reddit.com/) is a network of communities based on people's interests. It provides a platform for users to submit links, create content, and discuss various topics.
 
-## Implementation
+## Connection
 
 This handler is implemented using the [PRAW (Python Reddit API Wrapper)](https://praw.readthedocs.io/en/latest/) library, which is a Python package that provides a simple and easy-to-use interface to access the Reddit API.
 
@@ -30,8 +30,6 @@ Here is how to get your Reddit credentials:
 If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/reddit_handler) and run this command: `pip install -r requirements.txt`.
 </Tip>
 
-## Usage
-
 In order to make use of this handler and connect the Reddit app to MindsDB, the following syntax can be used:
 
 ```sql
@@ -46,6 +44,8 @@ WITH
 ```
 
 It creates a database that comes with two tables: `submission` and `comment`.
+
+## Usage
 
 Now you can fetch data from Reddit, like this:
 

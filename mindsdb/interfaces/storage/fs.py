@@ -536,19 +536,22 @@ class FileStorage:
         return ret_path
 
     def delete(self, relative_path: Union[str, Path] = '.'):
+        path = (self.folder_path / relative_path).resolve()
+        if isinstance(relative_path, str):
+            relative_path = Path(relative_path)
+
+        if relative_path.is_absolute():
+            raise TypeError('FSStorage.delete() got absolute path as argument')
+
+        # complete removal
+        if path == self.folder_path.resolve():
+            with FileLock(self.folder_path):
+                self.fs_store.delete(self.folder_name)
+            # NOTE on some fs .rmtree is not working if any file is open
+            shutil.rmtree(str(self.folder_path))
+            return
+
         with FileLock(self.folder_path):
-            if isinstance(relative_path, str):
-                relative_path = Path(relative_path)
-
-            if relative_path.is_absolute():
-                raise TypeError('FSStorage.delete() got absolute path as argument')
-
-            path = (self.folder_path / relative_path).resolve()
-
-            if path == self.folder_path.resolve():
-                self._complete_removal()
-                return
-
             if self.sync is True:
                 self._pull_no_lock()
 
@@ -562,10 +565,6 @@ class FileStorage:
 
             if self.sync is True:
                 self._push_no_lock()
-
-    def _complete_removal(self):
-        self.fs_store.delete(self.folder_name)
-        shutil.rmtree(str(self.folder_path))
 
 
 class FileStorageFactory:

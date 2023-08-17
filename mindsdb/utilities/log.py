@@ -65,7 +65,7 @@ def configure_logging():
 # I would prefer to leave code to use logging.getLogger(), but there are a lot of complicated situations
 # in MindsDB with processes being spawned that require logging to be configured again in a lot of cases.
 # Using a custom logger-getter like this lets us do that logic here, once.
-def getLogger(name):
+def getLogger(name=None):
     """
     Get a new logger, configuring logging first if it hasn't been done yet.
     """

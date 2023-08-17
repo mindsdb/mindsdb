@@ -1,4 +1,3 @@
-import logging
 import os
 import tarfile
 import tempfile
@@ -14,8 +13,9 @@ from mindsdb.api.http.namespaces.configs.files import ns_conf
 from mindsdb.api.http.utils import http_error, safe_extract
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities import log
 
-logger = logging.getLogger(__name__)
+logger = log.getLogger(__name__)
 
 
 @ns_conf.route("/")

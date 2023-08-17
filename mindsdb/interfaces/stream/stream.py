@@ -3,6 +3,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.utilities.context import context as ctx
 
+logger = log.getLogger(__name__)
 
 class StreamController():
     known_dbs = {}
@@ -21,4 +22,4 @@ class StreamController():
                 raise Exception(f'Unkonw database integration type for: {db_alias}')
             self.known_dbs[integration_meta['engine']](self.config, db_alias, integration_meta).setup()
         except Exception as e:
-            log.logger.warning('Failed to setup stream for ' + db_alias + f', error: {e}')
+            logger.warning('Failed to setup stream for ' + db_alias + f', error: {e}')

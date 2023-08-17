@@ -14,11 +14,16 @@ import mindsdb.utilities.hooks as hooks
 from mindsdb.utilities.context import context as ctx
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.config import Config
+from mindsdb.utilities import log 
 
+logger = log.getLogger(__name__)
 
 @ns_conf.route('/query')
 @ns_conf.param('query', 'Execute query')
 class Query(Resource):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     @ns_conf.doc('query')
     def post(self):
         query = request.json['query']
@@ -74,8 +79,7 @@ class Query(Resource):
                     'error_code': 0,
                     'error_message': str(e)
                 }
-                error_traceback = traceback.format_exc()
-                print(error_traceback)
+                logger.error(f"Error profiling query: \n{traceback.format_exc()}")
 
             if query_response.get('type') == SQL_RESPONSE_TYPE.ERROR:
                 error_type = 'expected'

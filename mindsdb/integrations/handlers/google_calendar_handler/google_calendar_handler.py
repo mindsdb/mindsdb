@@ -13,6 +13,8 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
+
 class GoogleCalendarHandler(APIHandler):
     """
         A class for handling connections and interactions with the Google Calendar API.
@@ -83,7 +85,7 @@ class GoogleCalendarHandler(APIHandler):
             service = self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Google Calendar API: {e}!')
+            logger.error(f'Error connecting to Google Calendar API: {e}!')
             response.error_message = e
 
         self.is_connected = response.success

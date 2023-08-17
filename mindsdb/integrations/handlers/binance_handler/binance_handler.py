@@ -14,6 +14,7 @@ from mindsdb_sql import parse_sql
 
 _BASE_BINANCE_US_URL = 'https://api.binance.us'
 
+logger = log.getLogger(__name__)
 
 class BinanceHandler(APIHandler):
     """A class for handling connections and interactions with the Binance API.
@@ -78,7 +79,7 @@ class BinanceHandler(APIHandler):
             response.success = True
 
         except Exception as e:
-            log.logger.error(f'Error connecting to Binance API: {e}!')
+            logger.error(f'Error connecting to Binance API: {e}!')
             response.error_message = e
 
         self.is_connected = response.success

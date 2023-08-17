@@ -17,6 +17,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
+logger = log.getLogger(__name__)
 
 class MySQLHandler(DatabaseHandler):
     """
@@ -93,7 +94,7 @@ class MySQLHandler(DatabaseHandler):
             connection = self.connect()
             result.success = connection.is_connected()
         except Exception as e:
-            log.logger.error(f'Error connecting to MySQL {self.connection_data["database"]}, {e}!')
+            logger.error(f'Error connecting to MySQL {self.connection_data["database"]}, {e}!')
             result.error_message = str(e)
 
         if result.success is True and need_to_close:
@@ -129,7 +130,7 @@ class MySQLHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
                 connection.commit()
             except Exception as e:
-                log.logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
+                logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e)

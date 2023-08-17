@@ -14,7 +14,9 @@ from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow, 
 from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
+from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 class InformationSchemaDataNode(DataNode):
     type = 'INFORMATION_SCHEMA'
@@ -240,7 +242,7 @@ class InformationSchemaDataNode(DataNode):
                     row.TABLE_SCHEMA = ds_name
                     data.append(row.to_list())
             except Exception:
-                print(f"Can't get tables from '{ds_name}'")
+                logger.error(f"Can't get tables from '{ds_name}'")
 
         for project_name in self.get_projects_names():
             if target_table is not None and target_table != project_name:

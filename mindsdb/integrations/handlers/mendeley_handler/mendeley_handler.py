@@ -12,6 +12,8 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 
+logger = log.getLogger(__name__)
+
 class MendeleyHandler(APIHandler): 
 
     def __init__(self, name, **kwargs): 
@@ -68,7 +70,7 @@ class MendeleyHandler(APIHandler):
             response.success = True
 
         except Exception as e:
-            log.logger.error(f'Error connecting to Mendeley: {e}!')
+            logger.error(f'Error connecting to Mendeley: {e}!')
             response.error_message = str(e)
 
         self.is_connected = response.success

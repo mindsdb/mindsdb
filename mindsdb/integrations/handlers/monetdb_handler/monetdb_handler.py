@@ -19,7 +19,7 @@ import pymonetdb as mdb
 from .utils.monet_get_id import *
 from sqlalchemy_monetdb.dialect import MonetDialect 
 
-
+logger = log.getLogger(__name__)
 
 
 class MonetDBHandler(DatabaseHandler):
@@ -72,7 +72,7 @@ class MonetDBHandler(DatabaseHandler):
   
             self.is_connected= True
         except Exception as e:
-            log.logger.error(f"Error while connecting to {self.database}, {e}")
+            logger.error(f"Error while connecting to {self.database}, {e}")
 
 
         return self.connection
@@ -88,7 +88,7 @@ class MonetDBHandler(DatabaseHandler):
             self.connection.close()
             self.is_connected=False
         except Exception as e:
-            log.logger.error(f"Error while disconnecting to {self.database}, {e}")
+            logger.error(f"Error while disconnecting to {self.database}, {e}")
 
         return 
 
@@ -105,7 +105,7 @@ class MonetDBHandler(DatabaseHandler):
             self.connect()
             responseCode.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to database {self.database}, {e}!')
+            logger.error(f'Error connecting to database {self.database}, {e}!')
             responseCode.error_message = str(e)
         finally:
             if responseCode.success is True and need_to_close:
@@ -143,7 +143,7 @@ class MonetDBHandler(DatabaseHandler):
                 response = Response(RESPONSE_TYPE.OK)
             self.connection.commit()
         except Exception as e:
-            log.logger.error(f'Error running query: {query} on {self.database}!')
+            logger.error(f'Error running query: {query} on {self.database}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)

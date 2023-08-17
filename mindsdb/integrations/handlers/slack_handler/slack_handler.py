@@ -30,6 +30,8 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 
+logger = log.getLogger(__name__)
+
 class SlackChannelsTable(APITable):
     def __init__(self, handler):
         """
@@ -115,7 +117,7 @@ class SlackChannelsTable(APITable):
             result = self.client.conversations_history(channel=params['channel'])
             conversation_history = result["messages"]
         except SlackApiError as e:
-            log.logger.error("Error creating conversation: {}".format(e))
+            logger.error("Error creating conversation: {}".format(e))
             raise e
 
         # Get columns for the query and convert SlackResponse object to pandas DataFrame
@@ -519,7 +521,7 @@ class SlackHandler(APIChatHandler):
             response.success = True
         except SlackApiError as e:
             response.error_message = f'Error connecting to Slack Api: {e.response["error"]}. Check token.'
-            log.logger.error(response.error_message)
+            logger.error(response.error_message)
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False
@@ -558,7 +560,7 @@ class SlackHandler(APIChatHandler):
 
         except SlackApiError as e:
             error = f"Error calling method '{method_name}' with params '{params}': {e.response['error']}"
-            log.logger.error(error)
+            logger.error(error)
             raise e
 
         if 'channels' in result:

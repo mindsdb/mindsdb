@@ -21,6 +21,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
+logger = log.getLogger(__name__)
 
 class DremioHandler(DatabaseHandler):
     """
@@ -95,7 +96,7 @@ class DremioHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Dremio, {e}!')
+            logger.error(f'Error connecting to Dremio, {e}!')
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -127,11 +128,11 @@ class DremioHandler(DatabaseHandler):
             job_id = sql_result.json()['id']
 
             if sql_result.status_code == 200:
-                log.logger.info('Job creation successful. Job id is: ' + job_id)
+                logger.info('Job creation successful. Job id is: ' + job_id)
             else:
-                log.logger.info('Job creation failed.')
+                logger.info('Job creation failed.')
 
-            log.logger.info('Waiting for the job to complete...')
+            logger.info('Waiting for the job to complete...')
 
             job_status = requests.request("GET", self.base_url + "/api/v3/job/" + job_id, headers=auth_headers).json()[
                 'jobState']
@@ -157,7 +158,7 @@ class DremioHandler(DatabaseHandler):
                 )
 
         except Exception as e:
-            log.logger.error(f'Error running query: {query} on Dremio!')
+            logger.error(f'Error running query: {query} on Dremio!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)

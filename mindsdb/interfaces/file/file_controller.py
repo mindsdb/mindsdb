@@ -10,6 +10,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.context import context as ctx
 
+logger = log.getLogger(__name__)
 
 class FileController():
     def __init__(self):
@@ -101,7 +102,7 @@ class FileController():
 
             self.fs_store.put(store_file_path, base_dir=self.dir)
         except Exception as e:
-            log.logger.error(e)
+            logger.error(e)
             raise
         finally:
             if file_dir is not None:

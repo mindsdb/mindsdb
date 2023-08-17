@@ -1,5 +1,4 @@
 import datetime
-import logging
 import mimetypes
 import os
 import secrets
@@ -45,8 +44,9 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
-from mindsdb.utilities.log import configure_logging
+from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 class Swagger_Api(Api):
     """
@@ -66,9 +66,6 @@ def custom_output_json(data, code, headers=None):
 
 
 def get_last_compatible_gui_version() -> LooseVersion:
-    configure_logging()
-    logger = logging.getLogger(__name__)
-
     logger.debug("Getting last compatible frontend..")
     try:
         res = requests.get(
@@ -143,9 +140,6 @@ def get_last_compatible_gui_version() -> LooseVersion:
 
 
 def get_current_gui_version() -> LooseVersion:
-    configure_logging()
-    logger = logging.getLogger(__name__)
-
     logger.debug("Getting current frontend version..")
     config = Config()
     static_path = Path(config["paths"]["static"])
@@ -165,9 +159,6 @@ def get_current_gui_version() -> LooseVersion:
 
 
 def initialize_static():
-    configure_logging()
-    logger = logging.getLogger(__name__)
-
     logger.debug("Initializing static..")
     config = Config()
     last_gui_version_lv = get_last_compatible_gui_version()
@@ -198,9 +189,6 @@ def initialize_static():
 
 
 def initialize_app(config, no_studio, with_nlp):
-    configure_logging()
-    logger = logging.getLogger(__name__)
-
     logger.error("Initializing app..")
     static_root = config["paths"]["static"]
     logger.debug(f"Static route: {static_root}")
@@ -328,9 +316,6 @@ def initialize_app(config, no_studio, with_nlp):
 
 
 def initialize_flask(config, init_static_thread, no_studio):
-    configure_logging()
-    logger = logging.getLogger(__name__)
-
     logger.debug("Initializing flask..")
     # region required for windows https://github.com/mindsdb/mindsdb/issues/2526
     mimetypes.add_type("text/css", ".css")
@@ -405,9 +390,6 @@ def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_f
 
     If some error then do nothing.
     """
-    configure_logging()
-    logger = logging.getLogger(__name__)
-    
     if init_static_thread is not None:
         init_static_thread.join()
     inject_telemetry_to_static(static_folder)

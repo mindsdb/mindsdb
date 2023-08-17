@@ -13,6 +13,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 import pandas as pd
 import jaydebeapi as jdbcconnector
 
+logger = log.getLogger(__name__)
 
 class NuoHandler(DatabaseHandler):
 
@@ -63,7 +64,7 @@ class NuoHandler(DatabaseHandler):
             else: 
                 self.connection = jdbcconnector.connect(jclassname=jdbc_class, url=self.jdbc_url)
         except Exception as e:
-            log.logger.error(f"Error while connecting to {self.database}, {e}")
+            logger.error(f"Error while connecting to {self.database}, {e}")
 
         return self.connection
 
@@ -114,7 +115,7 @@ class NuoHandler(DatabaseHandler):
             self.connection.close()
             self.is_connected=False
         except Exception as e:
-            log.logger.error(f"Error while disconnecting to {self.database}, {e}")
+            logger.error(f"Error while disconnecting to {self.database}, {e}")
 
         return 
 
@@ -131,7 +132,7 @@ class NuoHandler(DatabaseHandler):
             self.connect()
             responseCode.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to database {self.database}, {e}!')
+            logger.error(f'Error connecting to database {self.database}, {e}!')
             responseCode.error_message = str(e)
         finally:
             if responseCode.success is True and need_to_close:
@@ -168,7 +169,7 @@ class NuoHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
                 self.connection.commit()
             except Exception as e:
-                log.logger.error(f'Error running query: {query} on {self.database}!')
+                logger.error(f'Error running query: {query} on {self.database}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e)

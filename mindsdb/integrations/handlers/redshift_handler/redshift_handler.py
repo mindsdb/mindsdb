@@ -19,6 +19,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
+logger = log.getLogger(__name__)
 
 class RedshiftHandler(DatabaseHandler):
     """
@@ -95,7 +96,7 @@ class RedshiftHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Redshift {self.connection_data["database"]}, {e}!')
+            logger.error(f'Error connecting to Redshift {self.connection_data["database"]}, {e}!')
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -134,7 +135,7 @@ class RedshiftHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
                     connection.commit()
             except Exception as e:
-                log.logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
+                logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e)

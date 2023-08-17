@@ -5,6 +5,7 @@ from mindsdb.utilities import log
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.context import context as ctx
 
+logger = log.getLogger(__name__)
 
 class Integration:
     def __init__(self, config, name):
@@ -30,23 +31,23 @@ class StreamIntegration(Integration):
         Thread(target=StreamIntegration._loop, args=(self,)).start()
 
     def _loop(self):
-        log.logger.info("INTEGRATION %s: starting", self.name)
+        logger.info("INTEGRATION %s: starting", self.name)
         while not STOP_THREADS_EVENT.wait(1.0):
             if self._control_stream is not None:
                 # Create or delete streams based on messages from control_stream
                 for dct in self._control_stream.read():
                     if 'action' not in dct:
-                        log.logger.error('INTEGRATION %s: no action value found in control record - %s', self.name, dct)
+                        logger.error('INTEGRATION %s: no action value found in control record - %s', self.name, dct)
                     else:
                         if dct['action'] == 'create':
                             for k in ['name', 'predictor', 'stream_in', 'stream_out']:
                                 if k not in dct:
                                     # Not all required parameters were provided (i.e. stream will not be created)
                                     # TODO: what's a good way to notify user about this?
-                                    log.logger.error('INTEGRATION %s: stream creating error. not enough data in control record - %s', self.name, dct)
+                                    logger.error('INTEGRATION %s: stream creating error. not enough data in control record - %s', self.name, dct)
                                     break
                             else:
-                                log.logger.info('INTEGRATION %s: creating stream %s', self.name, dct['name'])
+                                logger.info('INTEGRATION %s: creating stream %s', self.name, dct['name'])
                                 if db.session.query(db.Stream).filter_by(name=dct['name'], company_id=self.company_id).first() is None:
                                     stream = db.Stream(
                                         company_id=self.company_id,
@@ -62,16 +63,16 @@ class StreamIntegration(Integration):
                                     db.session.add(stream)
                                     db.session.commit()
                                 else:
-                                    log.logger.error('INTEGRATION %s: stream with this name already exists - %s', self.name, dct['name'])
+                                    logger.error('INTEGRATION %s: stream with this name already exists - %s', self.name, dct['name'])
                         elif dct['action'] == 'delete':
                             for k in ['name']:
                                 if k not in dct:
                                     # Not all required parameters were provided (i.e. stream will not be created)
                                     # TODO: what's a good way to notify user about this?
-                                    log.logger.error('INTEGRATION %s: unable to delete stream - stream name is not provided', self.name)
+                                    logger.error('INTEGRATION %s: unable to delete stream - stream name is not provided', self.name)
                                     break
                             else:
-                                log.logger.error('INTEGRATION %s: deleting stream - %s', self.name, dct['name'])
+                                logger.error('INTEGRATION %s: deleting stream - %s', self.name, dct['name'])
                                 db.session.query(db.Stream).filter_by(
                                     company_id=self.company_id,
                                     integration=self.name,
@@ -80,7 +81,7 @@ class StreamIntegration(Integration):
                                 db.session.commit()
                         else:
                             # Bad action value
-                            log.logger.error('INTEGRATION %s: bad action value received - %s', self.name, dct)
+                            logger.error('INTEGRATION %s: bad action value received - %s', self.name, dct)
 
             # it is really required to add 'commit' here
             # to avoid case when sessin.query returns previously
@@ -96,7 +97,7 @@ class StreamIntegration(Integration):
             indices_to_delete = []
             for i, s in enumerate(self._streams):
                 if s.name not in map(lambda x: x.name, stream_db_recs):
-                    log.logger.info("INTEGRATION %s: stopping stream - %s", self.name, s.name)
+                    logger.info("INTEGRATION %s: stopping stream - %s", self.name, s.name)
                     indices_to_delete.append(i)
                     self._streams[i].stop_event.set()
             self._streams = [s for i, s in enumerate(self._streams) if i not in indices_to_delete]
@@ -104,10 +105,10 @@ class StreamIntegration(Integration):
             # Start new streams found in DB
             for s in stream_db_recs:
                 if s.name not in map(lambda x: x.name, self._streams):
-                    log.logger.info("INTEGRATION %s: starting stream - %s", self.name, s.name)
+                    logger.info("INTEGRATION %s: starting stream - %s", self.name, s.name)
                     self._streams.append(self._make_stream(s))
 
-        log.logger.info("INTEGRATION %s: stopping", self.name)
+        logger.info("INTEGRATION %s: stopping", self.name)
         for s in self._streams:
             s.stop_event.set()
 

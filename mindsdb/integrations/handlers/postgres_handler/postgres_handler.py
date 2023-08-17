@@ -18,6 +18,7 @@ from mindsdb.integrations.libs.response import (
 )
 import mindsdb.utilities.profiler as profiler
 
+logger = log.getLogger(__name__)
 
 class PostgresHandler(DatabaseHandler):
     """
@@ -89,7 +90,7 @@ class PostgresHandler(DatabaseHandler):
                 cur.execute('select 1;')
             response.success = True
         except psycopg.Error as e:
-            log.logger.error(f'Error connecting to PostgreSQL {self.database}, {e}!')
+            logger.error(f'Error connecting to PostgreSQL {self.database}, {e}!')
             response.error_message = e
 
         if response.success is True and need_to_close:
@@ -125,7 +126,7 @@ class PostgresHandler(DatabaseHandler):
                     )
                 connection.commit()
             except Exception as e:
-                log.logger.error(f'Error running query: {query} on {self.database}!')
+                logger.error(f'Error running query: {query} on {self.database}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_code=0,

@@ -18,6 +18,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 class GoogleSearchConsoleHandler(APIHandler):
     """
@@ -92,7 +93,7 @@ class GoogleSearchConsoleHandler(APIHandler):
             service = self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Google Search Console API: {e}!')
+            logger.error(f'Error connecting to Google Search Console API: {e}!')
             response.error_message = e
 
         self.is_connected = response.success

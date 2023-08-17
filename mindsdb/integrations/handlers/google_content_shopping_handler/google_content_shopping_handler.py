@@ -16,6 +16,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 class GoogleContentShoppingHandler(APIHandler):
     """
@@ -91,7 +92,7 @@ class GoogleContentShoppingHandler(APIHandler):
             service = self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Google Content API for Shopping: {e}!')
+            logger.error(f'Error connecting to Google Content API for Shopping: {e}!')
             response.error_message = e
 
         self.is_connected = response.success

@@ -1,11 +1,6 @@
-import logging
-
 from mindsdb.utilities import log
 
-# Do this as early as possible
-log.configure_logging()
-
-logger = logging.getLogger(__name__)
+logger = log.getLogger(__name__)
 logger.debug("Starting MindsDB...")
 
 import asyncio

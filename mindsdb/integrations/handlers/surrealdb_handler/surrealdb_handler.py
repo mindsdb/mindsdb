@@ -15,6 +15,7 @@ from .utils.surreal_get_info import *
 import pysurrealdb as surreal
 import pandas as pd
 
+logger = log.getLogger(__name__)
 
 class SurrealDBHandler(DatabaseHandler):
     """
@@ -62,7 +63,7 @@ class SurrealDBHandler(DatabaseHandler):
             )
             self.is_connected = True
         except Exception as e:
-            log.logger.error(f"Error while connecting to SurrealDB, {e}")
+            logger.error(f"Error while connecting to SurrealDB, {e}")
 
         return self.connection
 
@@ -78,7 +79,7 @@ class SurrealDBHandler(DatabaseHandler):
             self.connect()
             response_code.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to SurrealDB, {e}!')
+            logger.error(f'Error connecting to SurrealDB, {e}!')
             response_code.error_message = str(e)
         finally:
             if response_code.success is True and need_to_close:
@@ -98,7 +99,7 @@ class SurrealDBHandler(DatabaseHandler):
             self.connection.close()
             self.is_connected = False
         except Exception as e:
-            log.logger.error(f"Error while disconnecting to SurrealDB, {e}")
+            logger.error(f"Error while disconnecting to SurrealDB, {e}")
 
         return
 
@@ -127,7 +128,7 @@ class SurrealDBHandler(DatabaseHandler):
             else:
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            log.logger.error(f'Error running query: {query} on SurrealDB!')
+            logger.error(f'Error running query: {query} on SurrealDB!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)

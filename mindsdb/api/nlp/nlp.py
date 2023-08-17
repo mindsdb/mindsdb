@@ -1,7 +1,8 @@
 from flask_restx import Namespace, Resource
 import mysql.connector
+from mindsdb.utilities import log
 
-
+logger = log.getLogger(__name__)
 ns_conf = Namespace('nlp', description='The NLP API of mindsdb')
 
 
@@ -19,7 +20,7 @@ class PredictorList(Resource):
             # itg.register((dataframe, 'db_name'))
 
             sql = itg(query).query
-            print(f'The NLP API got the natural language query "{query}" and will execute the sql query: {sql}')
+            logger.info(f'The NLP API got the natural language query "{query}" and will execute the sql query: {sql}')
 
             con = mysql.connector.connect(
                 host='localhost',

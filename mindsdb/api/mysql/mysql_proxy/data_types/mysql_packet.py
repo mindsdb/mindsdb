@@ -12,7 +12,9 @@
 import struct
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import MAX_PACKET_SIZE
+from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 class Packet:
     def __init__(self, length=0, body='', packet_string=None, socket=None, session=None, proxy=None, **kwargs):
@@ -89,10 +91,10 @@ class Packet:
     def pprintPacket(self, body=None):
         if body is None:
             body = self.body
-        print(str(self))
+        logger.info(str(self))
         for i, x in enumerate(body):
             part = '[BODY]'
-            print('''{part}{i}:{h} ({inte}:{actual})'''.format(part=part, i=i + 1, h=hex(ord(x)), inte=ord(x), actual=str(x)))
+            logger.info('''{part}{i}:{h} ({inte}:{actual})'''.format(part=part, i=i + 1, h=hex(ord(x)), inte=ord(x), actual=str(x)))
 
     def isEOF(self):
         if self.length == 0:

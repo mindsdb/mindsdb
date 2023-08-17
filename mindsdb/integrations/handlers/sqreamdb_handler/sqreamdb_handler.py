@@ -19,7 +19,7 @@ import pysqream as db
 
 from pysqream_sqlalchemy.dialect import SqreamDialect 
 
-
+logger = log.getLogger(__name__)
 
 
 class SQreamDBHandler(DatabaseHandler):
@@ -83,7 +83,7 @@ class SQreamDBHandler(DatabaseHandler):
                 cur.execute('select 1;')
             response.success = True
         except db.Error as e:
-            log.logger.error(f'Error connecting to SQreamDB {self.database}, {e}!')
+            logger.error(f'Error connecting to SQreamDB {self.database}, {e}!')
             response.error_message = e
 
         if response.success is True and need_to_close:
@@ -120,7 +120,7 @@ class SQreamDBHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
                 self.connection.commit()
             except Exception as e:
-                log.logger.error(f'Error running query: {query} on {self.database}!')
+                logger.error(f'Error running query: {query} on {self.database}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e)

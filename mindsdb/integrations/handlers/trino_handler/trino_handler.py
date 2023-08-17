@@ -15,6 +15,7 @@ from mindsdb.integrations.libs.response import (
 )
 from .trino_config_provider import TrinoConfigProvider
 
+logger = log.getLogger(__name__)
 
 class TrinoHandler(DatabaseHandler):
     """
@@ -111,7 +112,7 @@ class TrinoHandler(DatabaseHandler):
             cur.execute("SELECT 1")
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Trino {self.connection_data["schema"]}, {e}!')
+            logger.error(f'Error connecting to Trino {self.connection_data["schema"]}, {e}!')
             response.error_message = str(e)
 
         if response.success is False and self.is_connected is True:
@@ -141,7 +142,7 @@ class TrinoHandler(DatabaseHandler):
                 response = Response(RESPONSE_TYPE.OK)
             connection.commit()
         except Exception as e:
-            log.logger.error(f'Error connecting to Trino {self.connection_data["schema"]}, {e}!')
+            logger.error(f'Error connecting to Trino {self.connection_data["schema"]}, {e}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)

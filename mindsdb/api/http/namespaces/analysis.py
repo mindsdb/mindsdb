@@ -13,7 +13,9 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.analysis import ns_conf
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
+from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 def analyze_df(df: DataFrame) -> dict:
     if len(df) == 0:
@@ -60,7 +62,7 @@ class QueryAnalysis(Resource):
             result = mysql_proxy.process_query(query)
         except Exception as e:
             import traceback
-            print(traceback.format_exc())
+            logger.error(traceback.format_exc())
             return http_error(500, 'Error', str(e))
 
         if result.type == SQL_RESPONSE_TYPE.ERROR:

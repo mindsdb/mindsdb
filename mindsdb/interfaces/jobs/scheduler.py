@@ -1,5 +1,4 @@
 import datetime as dt
-import logging
 import queue
 import random
 import threading
@@ -10,7 +9,7 @@ from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 
-logger = {}
+logger = log.getLogger(__name__)
 
 
 def execute_async(q_in, q_out):
@@ -133,9 +132,6 @@ class Scheduler:
 
 
 def start(verbose=False):
-    log.configure_logging()  # Because this is the entrypoint for a process, we need to config logging
-    global logger
-    logger = logging.getLogger(__name__)
     logger.info("Jobs API is starting..")
     scheduler = Scheduler()
 

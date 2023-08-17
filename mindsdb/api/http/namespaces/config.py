@@ -1,6 +1,5 @@
 import copy
 import datetime
-import logging
 import os
 import shutil
 import tempfile
@@ -16,8 +15,9 @@ from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.api.http.utils import http_error
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.log_controller import get_logs
+from mindsdb.utilities import log
 
-logger = logging.getLogger(__name__)
+logger = log.getLogger(__name__)
 
 
 @ns_conf.route("/logs")

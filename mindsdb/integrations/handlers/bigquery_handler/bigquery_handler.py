@@ -17,6 +17,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 class BigQueryHandler(DatabaseHandler):
     """
@@ -83,7 +84,7 @@ class BigQueryHandler(DatabaseHandler):
 
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to BigQuery {self.connection_data["project_id"]}, {e}!')
+            logger.error(f'Error connecting to BigQuery {self.connection_data["project_id"]}, {e}!')
             response.error_message = e
 
         if response.success is False and self.is_connected is True:
@@ -110,7 +111,7 @@ class BigQueryHandler(DatabaseHandler):
             else:
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            log.logger.error(f'Error running query: {query} on {self.connection_data["project_id"]}!')
+            logger.error(f'Error running query: {query} on {self.connection_data["project_id"]}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)

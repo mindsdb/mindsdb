@@ -12,6 +12,7 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 
+logger = log.getLogger(__name__)
 
 def split_sql(sql):
     # split sql by ';' ignoring delimiter in quotes
@@ -376,7 +377,7 @@ class JobsExecutor:
                     error = ret.error_message
                     break
             except Exception as e:
-                log.logger.error(e)
+                logger.error(e)
                 error = str(e)
                 break
 
@@ -384,7 +385,6 @@ class JobsExecutor:
             self.update_task_schedule(record)
         except Exception as e:
             db.session.rollback()
-
             log.logger.error(f'Error to update schedule: {e}')
             error += f'Error to update schedule: {e}'
 

@@ -18,8 +18,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 
-log = get_log()
-
+logger = log.getLogger(__name__)
 
 class TDEngineHandler(DatabaseHandler):
     """
@@ -73,7 +72,7 @@ class TDEngineHandler(DatabaseHandler):
             connection = self.connect()
             result.success = connection is not None
         except Exception as e:
-            log.error(f'Error connecting to TDEngine {self.connection_data["database"]}, {e}!')
+            logger.error(f'Error connecting to TDEngine {self.connection_data["database"]}, {e}!')
             result.error_message = str(e)
 
         if result.success is True and need_to_close:
@@ -110,7 +109,7 @@ class TDEngineHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
                 connection.commit()
         except Exception as e:
-                log.error(f'Error running query: {query} on {self.connection_data["database"]}!')
+                logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e)

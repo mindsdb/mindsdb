@@ -9,6 +9,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
+logger = log.getLogger(__name__)
 
 class StripeHandler(APIHandler):
     """
@@ -74,7 +75,7 @@ class StripeHandler(APIHandler):
             stripe.Account.retrieve()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Stripe!')
+            logger.error(f'Error connecting to Stripe!')
             response.error_message = str(e)
 
         self.is_connected = response.success

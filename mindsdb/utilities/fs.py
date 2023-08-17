@@ -1,4 +1,3 @@
-import logging
 import os
 import tempfile
 import threading
@@ -9,7 +8,9 @@ from typing import Optional
 import psutil
 from appdirs import user_data_dir
 
-logger = logging.getLogger(__name__)
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 def create_directory(path):

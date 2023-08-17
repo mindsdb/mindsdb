@@ -1,7 +1,6 @@
 from collections import OrderedDict
 from mindsdb.integrations.libs.base import DatabaseHandler
 
-from mindsdb.utilities import log
 from mindsdb_sql.parser.ast.base import ASTNode
 from couchbase.n1ql import N1QLQuery
 import pandas as pd
@@ -11,6 +10,7 @@ from typing import Optional
 from datetime import timedelta
 
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from mindsdb.utilities import log
 
 
 
@@ -28,8 +28,9 @@ from couchbase.exceptions import UnAmbiguousTimeoutException
 # needed for options -- cluster, timeout, SQL++ (N1QL) query, etc.
 from couchbase.options import (ClusterOptions, ClusterTimeoutOptions,
                                QueryOptions)
-
 from couchbase.exceptions import QueryErrorContext,KeyspaceNotFoundException,CouchbaseException
+
+logger = log.getLogger(__name__)
 
 class CouchbaseHandler(DatabaseHandler):
     """
@@ -112,10 +113,10 @@ class CouchbaseHandler(DatabaseHandler):
 
         try:
             cluster = self.connect()
-            print(self.is_connected)
+            logger.debug(self.is_connected)
             result.success = cluster.connected
         except UnAmbiguousTimeoutException as e:
-            log.logger.error(f'Error connecting to Couchbase {self.connection_data["bucket"]}, {e}!')
+            logger.error(f'Error connecting to Couchbase {self.connection_data["bucket"]}, {e}!')
             result.error_message = str(e)
 
         if result.success is True and need_to_close:
@@ -144,7 +145,6 @@ class CouchbaseHandler(DatabaseHandler):
             # keys = []
             for collection in row_iter:
                 # data.append()
-                # print(type(collection))
                 for collection_name, row in collection.items():
                     if isinstance(row, dict):
                         for k, v in row.items():
@@ -165,7 +165,7 @@ class CouchbaseHandler(DatabaseHandler):
             else:
                 response = Response(RESPONSE_TYPE.OK)
         except CouchbaseException as e:
-            print(f'Error: {e.error_context.first_error_message}')
+            logger.error(f'{e.error_context.first_error_message}')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=f'{e.error_context.first_error_message}'
@@ -229,7 +229,6 @@ class CouchbaseHandler(DatabaseHandler):
         try:
             q = f'SELECT * FROM `{table_name}` limit 1'
             row_iter = cb.query(q)
-            # print(row_iter.execute())
             data = []
             for row in row_iter:   
                 for k, v in row[table_name].items():
@@ -240,7 +239,7 @@ class CouchbaseHandler(DatabaseHandler):
                 df
             )
         except KeyspaceNotFoundException as e:
-            print(f'Error: {e.error_context.first_error_message}')
+            logger.error(f'{e.error_context.first_error_message}')
             response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=f'Error: {e.error_context.first_error_message}'

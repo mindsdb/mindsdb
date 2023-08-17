@@ -1,4 +1,3 @@
-import logging
 import os
 import shutil
 import tempfile
@@ -8,8 +7,9 @@ from zipfile import ZipFile
 import requests
 
 from mindsdb.utilities.config import Config
+from mindsdb.utilities import log
 
-logger = logging.getLogger(__name__)
+logger = log.getLogger(__name__)
 
 
 def download_gui(destignation, version):

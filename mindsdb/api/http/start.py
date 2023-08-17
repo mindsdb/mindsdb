@@ -1,4 +1,3 @@
-import logging
 import multiprocessing as mp
 import os
 
@@ -10,12 +9,11 @@ from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import init_lexer_parsers
-from mindsdb.utilities.log import configure_logging
+from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 def start(verbose, no_studio, with_nlp):
-    configure_logging()  # Because this is the entrypoint for a process, we need to config logging
-    logger = logging.getLogger(__name__)
     logger.info("HTTP API is starting..")
     config = Config()
     is_cloud = config.get("cloud", False)
@@ -59,8 +57,7 @@ def start(verbose, no_studio, with_nlp):
     elif server.lower() == "flask":
         logger.debug("Serving HTTP app with flask..")
         # that will 'disable access' log in console
-        # logger = logging.getLogger("werkzeug")
-        # logger.setLevel(logging.WARNING)
+        # logger = log.getLogger("werkzeug")
 
         app.run(
             debug=False,

@@ -11,6 +11,9 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
 
 from .reddit_tables import CommentTable, SubmissionTable
+
+logger = log.getLogger(__name__)
+
 class RedditHandler(APIHandler):
 
 
@@ -70,7 +73,7 @@ class RedditHandler(APIHandler):
 
         except Exception as e:
             response.error_message = f'Error connecting to Reddit api: {e}. '
-            log.logger.error(response.error_message)
+            logger.error(response.error_message)
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False

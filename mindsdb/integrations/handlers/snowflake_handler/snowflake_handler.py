@@ -13,6 +13,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 class SnowflakeHandler(DatabaseHandler):
     """
@@ -66,7 +67,7 @@ class SnowflakeHandler(DatabaseHandler):
                 cur.execute('select 1;')
             response.success = True
         except connector.errors.Error as e:
-            log.logger.error(f'Error connecting to Snowflake {self.connection_data["database"]}, {e}!')
+            logger.error(f'Error connecting to Snowflake {self.connection_data["database"]}, {e}!')
             response.error_message = e
 
         if response.success is True and need_to_close:
@@ -100,7 +101,7 @@ class SnowflakeHandler(DatabaseHandler):
                 else:
                     response = Response(RESPONSE_TYPE.OK)
             except Exception as e:
-                log.logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
+                logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e)

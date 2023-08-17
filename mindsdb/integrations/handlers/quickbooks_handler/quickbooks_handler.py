@@ -12,6 +12,7 @@ from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 from .quickbooks_table import AccountsTable, PurchasesTable, BillPaymentsTable, VendorsTable, BillsTable, EmployeesTable
 
+logger = log.getLogger(__name__)
 
 class QuickbooksHandler(APIHandler):
     """
@@ -69,12 +70,12 @@ class QuickbooksHandler(APIHandler):
         try:
             quickbooks = self.connect()
             quickbooks.accounts.get()
-            log.logger.info(quickbooks.accounts.get())
+            logger.info(quickbooks.accounts.get())
             response.success = True
 
         except Exception as e:
             response.error_message = f'Error connecting to Quickbooks API: {e}. '
-            log.logger.error(response.error_message)
+            logger.error(response.error_message)
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False

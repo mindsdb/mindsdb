@@ -32,6 +32,8 @@ DEFAULT_SCOPES = ['https://www.googleapis.com/auth/gmail.compose',
                   'https://www.googleapis.com/auth/gmail.readonly',
                   'https://www.googleapis.com/auth/gmail.modify']
 
+logger = log.getLogger(__name__)
+
 
 class EmailsTable(APITable):
     """Implementation for the emails table for Gmail"""
@@ -300,7 +302,7 @@ class GmailHandler(APIHandler):
                     creds.write(response.text)
                 return True
             else:
-                log.logger.error("Failed to get credentials from S3", response.status_code)
+                logger.error("Failed to get credentials from S3", response.status_code)
 
         if self.credentials_file and os.path.isfile(self.credentials_file):
             copyfile(self.credentials_file, creds_file)
@@ -373,7 +375,7 @@ class GmailHandler(APIHandler):
                 response.success = True
         except HttpError as error:
             response.error_message = f'Error connecting to Gmail api: {error}.'
-            log.logger.error(response.error_message)
+            logger.error(response.error_message)
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False
@@ -405,13 +407,13 @@ class GmailHandler(APIHandler):
                     'attachmentId': part['body']['attachmentId']
                 })
             else:
-                log.logger.debug(f"Unhandled mimeType: {part['mimeType']}")
+                logger.debug(f"Unhandled mimeType: {part['mimeType']}")
 
         return body
 
     def _parse_message(self, data, message, exception):
         if exception:
-            log.logger.error(f'Exception in getting full email: {exception}')
+            logger.error(f'Exception in getting full email: {exception}')
             return
 
         payload = message['payload']
@@ -523,7 +525,7 @@ class GmailHandler(APIHandler):
                 else:
                     params['maxResults'] = left
 
-            log.logger.debug(f'Calling Gmail API: {method_name} with params ({params})')
+            logger.debug(f'Calling Gmail API: {method_name} with params ({params})')
 
             resp = method(**params).execute()
 

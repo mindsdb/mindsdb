@@ -1,5 +1,4 @@
 from urllib.parse import urlparse, urljoin
-import logging
 import re
 import traceback
 from threading import Lock
@@ -10,7 +9,11 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import fitz  # PyMuPDF
+import concurrent.futures
+from urllib.parse import urlparse
+from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 def pdf_to_markdown(response):
     # Download the PDF from the given URL
@@ -75,14 +78,14 @@ def parallel_get_all_website_links(urls):
             try:
                 url_contents[url] = future.result()
             except Exception as exc:
-                logging.error(f'{url} generated an exception: {exc}')
+                logger.error(f'{url} generated an exception: {exc}')
    
     return url_contents
 
 
 # this crawls one individual website
 def get_all_website_links(url):
-    logging.info('crawling: {url} ...'.format(url=url))
+    logger.info('crawling: {url} ...'.format(url=url))
     urls = set()
             
     domain_name = urlparse(url).netloc
@@ -133,7 +136,7 @@ def get_all_website_links(url):
 
     except Exception as e:
         error_message = traceback.format_exc().splitlines()[-1]
-        logging.error("An exception occurred: %s", str(e))
+        logger.error("An exception occurred: %s", str(e))
         return {'url':url,'urls':urls, 'html_content':'', 'text_content': '', 'error':str(error_message)}
 
     return {'url': url,'urls': urls, 'html_content': content_html, 'text_content': content_text, 'error': None}
@@ -177,7 +180,7 @@ def get_all_website_links_rec(url, reviewd_urls, limit=None):
             reviewd_urls[url] = get_all_website_links(url)
         except Exception as e:
             error_message = traceback.format_exc().splitlines()[-1]
-            logging.error("An exception occurred: %s", str(e))
+            logger.error("An exception occurred: %s", str(e))
             reviewd_urls[url] = {'url': url, 'urls': [], 'html_content': '', 'text_content': '', 'error': str(error_message)}
 
     to_rev_url_list = []
@@ -305,7 +308,6 @@ def dict_to_dataframe(dict_of_dicts, columns_to_ignore=None, index_name=None):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
     response = requests.get('https://www.goldmansachs.com/media-relations/press-releases/current/pdfs/2023-q2-results.pdf')
-    print(pdf_to_markdown(response))
+    logger.info(pdf_to_markdown(response))
 

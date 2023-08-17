@@ -7,7 +7,7 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -17,7 +17,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 
-log = get_log()
+logger = log.getLogger(__name__)
 
 
 class ImpalaHandler(DatabaseHandler):
@@ -76,7 +76,7 @@ class ImpalaHandler(DatabaseHandler):
             connection = self.connect()
             result.success = connection is not None
         except Exception as e:
-            log.error(f'x x x Error connecting to Impala {self.connection_data["database"]}, {e}!')
+            logger.error(f'x x x Error connecting to Impala {self.connection_data["database"]}, {e}!')
             result.error_message = str(e)
 
         if result.success is True and need_to_close:
@@ -113,7 +113,7 @@ class ImpalaHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
                 connection.commit()
             except Exception as e:
-                log.error(f'Error running query: {query} on {self.connection_data["database"]}!')
+                logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e)

@@ -20,8 +20,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 
-log = get_log()
-
+logger = log.getLogger(__name__)
 
 class SQLAnyHandler(DatabaseHandler):
     """
@@ -103,7 +102,7 @@ class SQLAnyHandler(DatabaseHandler):
             cur.execute('SELECT 1 FROM SYS.DUMMY;')
             response.success = True
         except sqlanydb.Error as e:
-            log.error(f'Error connecting to SAP SQL Anywhere {self.host}, {e}!')
+            logger.error(f'Error connecting to SAP SQL Anywhere {self.host}, {e}!')
             response.error_message = e
 
         if response.success is True and need_to_close:
@@ -139,7 +138,7 @@ class SQLAnyHandler(DatabaseHandler):
                 )
             connection.commit()
         except Exception as e:
-            log.error(f'Error running query: {query} on {self.connection}!')
+            logger.error(f'Error running query: {query} on {self.connection}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_code=0,

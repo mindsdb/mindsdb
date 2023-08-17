@@ -6,6 +6,7 @@ from mindsdb_sql import parse_sql
 import unittest
 from unittest.mock import Mock, patch
 from unittest import mock
+import logging
 
 
 class GmailHandlerTest(unittest.TestCase):
@@ -37,7 +38,7 @@ class GmailHandlerTest(unittest.TestCase):
         mock_response.status_code = 404
         mock_get.return_value = mock_response
 
-        with patch('mindsdb.utilities.log.logger') as mock_logger:
+        with patch('mindsdb.integrations.handlers.gmail_handler.gmail_handler.logger') as mock_logger:
             result = self.handler._has_creds_file(self.credentials_file)
             # Assert that the requests.get method was called with the correct URL
             self.assertFalse(result)

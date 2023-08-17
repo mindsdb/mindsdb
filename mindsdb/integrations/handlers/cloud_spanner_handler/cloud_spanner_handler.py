@@ -18,6 +18,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 class CloudSpannerHandler(DatabaseHandler):
     """This handler handles connection and execution of the Cloud Spanner statements."""
@@ -81,7 +82,7 @@ class CloudSpannerHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(
+            logger.error(
                 f'Error connecting to Cloud Spanner {self.connection_data["database_id"]}, {e}!'
             )
             response.error_message = str(e)
@@ -124,7 +125,7 @@ class CloudSpannerHandler(DatabaseHandler):
 
             connection.commit()
         except Exception as e:
-            log.logger.error(
+            logger.error(
                 f'Error running query: {query} on {self.connection_data["database_id"]}!'
             )
             response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))

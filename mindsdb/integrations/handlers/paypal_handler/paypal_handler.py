@@ -9,6 +9,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
+logger = log.getLogger(__name__)
 
 class PayPalHandler(APIHandler):
     """
@@ -73,7 +74,7 @@ class PayPalHandler(APIHandler):
             connection.get_access_token()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to PayPal!')
+            logger.error(f'Error connecting to PayPal!')
             response.error_message = str(e)
 
         self.is_connected = response.success

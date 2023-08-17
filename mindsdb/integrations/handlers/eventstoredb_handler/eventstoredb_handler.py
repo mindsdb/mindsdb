@@ -13,6 +13,8 @@ import requests
 import pandas as pd
 from mindsdb_sql import parse_sql, get_lexer_parser
 
+logger = log.getLogger(__name__)
+
 
 class EventStoreDB(DatabaseHandler):
     """
@@ -75,9 +77,9 @@ class EventStoreDB(DatabaseHandler):
     def connect(self, **kwargs):
         if self.check_connection() == StatusResponse(True):
             self.is_connected = True
-            log.logger.info(f'{self.name} connection successful!')
+            logger.info(f'{self.name} connection successful!')
             return StatusResponse(True)
-        log.logger.info(f'{self.name} connection could not be made.')
+        logger.info(f'{self.name} connection could not be made.')
         return StatusResponse(False)
 
     def disconnect(self, **kwargs):
@@ -89,7 +91,7 @@ class EventStoreDB(DatabaseHandler):
             if response.status_code == 204:
                 return StatusResponse(True)
         except Exception as e:
-            log.logger.error(f'{self.name} check connection failed with: {e}!')
+            logger.error(f'{self.name} check connection failed with: {e}!')
         return StatusResponse(False)
 
     def query(self, query: ASTNode) -> Response:

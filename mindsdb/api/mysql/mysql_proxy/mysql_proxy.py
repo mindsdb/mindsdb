@@ -22,7 +22,6 @@ from functools import partial
 import select
 import base64
 from typing import List, Dict
-import logging
 
 from numpy import dtype as np_dtype
 from pandas.api import types as pd_types
@@ -34,9 +33,8 @@ from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
 from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import server_capabilities
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import SqlStatementParser
-from mindsdb.api.mysql.mysql_proxy.utilities import logger
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
-from mindsdb.utilities.log import configure_logging
+from mindsdb.utilities import log
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     SqlApiException,
     ErWrongCharset,
@@ -80,7 +78,7 @@ from mindsdb.utilities.context import context as ctx
 import mindsdb.utilities.hooks as hooks
 import mindsdb.utilities.profiler as profiler
 
-logger = logging.getLogger(__name__)
+logger = log.getLogger(__name__)
 
 def empty_fn():
     pass
@@ -151,8 +149,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         srv.server_close()
 
     def __init__(self, request, client_address, server):
-        configure_logging()
-        self.logger = logging.getLogger(__name__)
         self.charset = 'utf8'
         self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
         self.session = None
@@ -160,9 +156,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         super().__init__(request, client_address, server)
 
     def init_session(self):
-        self.logger.debug('New connection [{ip}:{port}]'.format(
+        logger.debug('New connection [{ip}:{port}]'.format(
             ip=self.client_address[0], port=self.client_address[1]))
-        self.logger.debug(self.__dict__)
 
         if self.server.connection_id >= 65025:
             self.server.connection_id = 0
@@ -176,11 +171,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.salt = base64.b64encode(os.urandom(15)).decode()
 
         self.socket = self.request
-        self.logging = self.logger
+        self.logging = logger
 
         self.current_transaction = None
 
-        self.logger.debug('session salt: {salt}'.format(salt=self.salt))
+        logger.debug('session salt: {salt}'.format(salt=self.salt))
 
     def handshake(self):
         def switch_auth(method='mysql_native_password'):
@@ -193,14 +188,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return password
 
         def get_fast_auth_password():
-            self.logger.debug('Asking for fast auth password')
+            logger.debug('Asking for fast auth password')
             self.packet(FastAuthFail).send()
             password_answer = self.packet(PasswordAnswer)
             password_answer.get()
             try:
                 password = password_answer.password.value.decode()
             except Exception:
-                self.logger.warning('error: no password in Fast Auth answer')
+                logger.warning('error: no password in Fast Auth answer')
                 self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg='Is not password in connection query.').send()
                 return None
             return password
@@ -208,13 +203,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         username = None
         password = None
 
-        self.logger.debug('send HandshakePacket')
+        logger.debug('send HandshakePacket')
         self.packet(HandshakePacket).send()
 
         handshake_resp = self.packet(HandshakeResponsePacket)
         handshake_resp.get()
         if handshake_resp.length == 0:
-            self.logger.warning('HandshakeResponsePacket empty')
+            logger.warning('HandshakeResponsePacket empty')
             self.packet(OkPacket).send()
             return False
         self.client_capabilities = ClentCapabilities(handshake_resp.capabilities.value)
@@ -224,7 +219,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.session.is_ssl = False
 
         if handshake_resp.type == 'SSLRequest':
-            self.logger.debug('switch to SSL')
+            logger.debug('switch to SSL')
             self.session.is_ssl = True
 
             ssl_context = ssl.SSLContext()
@@ -249,12 +244,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 new_method = 'caching_sha2_password' if client_auth_plugin == 'caching_sha2_password' else 'mysql_native_password'
 
                 if new_method == 'caching_sha2_password' and self.session.is_ssl is False:
-                    self.logger.warning(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                    logger.warning(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                                    'error: cant switch to caching_sha2_password without SSL')
                     self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg='caching_sha2_password without SSL not supported').send()
                     return False
 
-                self.logger.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+                logger.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                              f'switch auth method to {new_method}')
                 password = switch_auth(new_method)
 
@@ -264,7 +259,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     else:
                         password = get_fast_auth_password()
         elif 'caching_sha2_password' in client_auth_plugin:
-            self.logger.debug(
+            logger.debug(
                 f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                 'check auth using caching_sha2_password'
             )
@@ -278,11 +273,11 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 # else:
                 password = switch_auth()
         elif 'mysql_native_password' in client_auth_plugin:
-            self.logger.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+            logger.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                          'check auth using mysql_native_password')
             password = handshake_resp.enc_password.value
         else:
-            self.logger.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+            logger.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                          'unknown method, possible ERROR. Try to switch to mysql_native_password')
             password = switch_auth('mysql_native_password')
 
@@ -290,7 +285,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.session.database = handshake_resp.database.value.decode()
         except Exception:
             self.session.database = None
-        self.logger.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
+        logger.debug(f'Check auth, user={username}, ssl={self.session.is_ssl}, auth_method={client_auth_plugin}: '
                      f'connecting to database {self.session.database}')
 
         auth_data = self.server.check_auth(username, password, scramble_func, self.salt, ctx.company_id)
@@ -301,7 +296,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             return True
         else:
             self.packet(ErrPacket, err_code=ERR.ER_PASSWORD_NO_MATCH, msg=f'Access denied for user {username}').send()
-            self.logger.warning(f'Access denied for user {username}')
+            logger.warning(f'Access denied for user {username}')
             return False
 
     def send_package_group(self, packages):
@@ -337,7 +332,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             data = []
         packets = []
         for i, column in enumerate(columns):
-            self.logger.info("%s._get_column_defenition_packets: handling column - %s of %s type", self.__class__.__name__, column, type(column))
+            logger.info("%s._get_column_defenition_packets: handling column - %s of %s type", self.__class__.__name__, column, type(column))
             table_name = column.get('table_name', 'table_name')
             column_name = column.get('name', 'column_name')
             column_alias = column.get('alias', column_name)
@@ -631,7 +626,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         self.server.hook_before_handle()
 
-        self.logger.debug('handle new incoming connection')
+        logger.debug('handle new incoming connection')
         cloud_connection = self.is_cloud_connection()
 
         ctx.company_id = cloud_connection.get('company_id')
@@ -649,21 +644,21 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.session.auth = True
 
         while True:
-            self.logger.debug('Got a new packet')
+            logger.debug('Got a new packet')
             p = self.packet(CommandPacket)
 
             try:
                 success = p.get()
             except Exception:
-                self.logger.error('Session closed, on packet read error')
-                self.logger.error(traceback.format_exc())
+                logger.error('Session closed, on packet read error')
+                logger.error(traceback.format_exc())
                 return
 
             if success is False:
-                self.logger.debug('Session closed by client')
+                logger.debug('Session closed by client')
                 return
 
-            self.logger.debug('Command TYPE: {type}'.format(
+            logger.debug('Command TYPE: {type}'.format(
                 type=getConstName(COMMANDS, p.type.value)))
 
             command_names = {
@@ -689,7 +684,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 if p.type.value == COMMANDS.COM_QUERY:
                     sql = self.decode_utf(p.sql.value)
                     sql = SqlStatementParser.clear_sql(sql)
-                    self.logger.debug(f'COM_QUERY: {sql}')
+                    logger.debug(f'COM_QUERY: {sql}')
                     profiler.set_meta(query=sql, api='mysql', environment=Config().get('environment'))
                     with profiler.Context('mysql_query_processing'):
                         response = self.process_query(sql)
@@ -703,7 +698,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 elif p.type.value == COMMANDS.COM_STMT_CLOSE:
                     self.answer_stmt_close(p.stmt_id.value)
                 elif p.type.value == COMMANDS.COM_QUIT:
-                    self.logger.debug('Session closed, on client disconnect')
+                    logger.debug('Session closed, on client disconnect')
                     self.session = None
                     break
                 elif p.type.value == COMMANDS.COM_INIT_DB:
@@ -720,8 +715,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     # this command is deprecated, but console client still use it.
                     response = SQLAnswer(RESPONSE_TYPE.OK)
                 else:
-                    self.logger.warning('Command has no specific handler, return OK msg')
-                    self.logger.debug(str(p))
+                    logger.warning('Command has no specific handler, return OK msg')
+                    logger.debug(str(p))
                     # p.pprintPacket() TODO: Make a version of print packet
                     # that sends it to debug instead
                     response = SQLAnswer(RESPONSE_TYPE.OK)
@@ -750,7 +745,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 # any other exception
                 error_type = 'unexpected'
                 error_traceback = traceback.format_exc()
-                self.logger.error(
+                logger.error(
                     f'ERROR while executing query\n'
                     f'{error_traceback}\n'
                     f'{e}'

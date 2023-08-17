@@ -26,6 +26,7 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 
+logger = log.getLogger(__name__)
 
 class TweetsTable(APITable):
 
@@ -277,7 +278,7 @@ class TwitterHandler(APIHandler):
 
         except tweepy.Unauthorized as e:
             response.error_message = f'Error connecting to Twitter api: {e}. Check bearer_token'
-            log.logger.error(response.error_message)
+            logger.error(response.error_message)
 
         if response.success is True and len(self.connection_args) > 1:
             # not only bearer_token, check read-write mode (OAuth 2.0 Authorization Code with PKCE)
@@ -289,7 +290,7 @@ class TwitterHandler(APIHandler):
             except tweepy.Unauthorized as e:
                 keys = 'consumer_key', 'consumer_secret', 'access_token', 'access_token_secret'
                 response.error_message = f'Error connecting to Twitter api: {e}. Check' + ', '.join(keys)
-                log.logger.error(response.error_message)
+                logger.error(response.error_message)
 
                 response.success = False
 
@@ -399,7 +400,7 @@ class TwitterHandler(APIHandler):
                 else:
                     params['max_results'] = left
 
-            log.logger.debug(f'>>>twitter in: {method_name}({params})')
+            logger.debug(f'>>>twitter in: {method_name}({params})')
             resp = method(**params)
 
             if hasattr(resp, 'includes'):

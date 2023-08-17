@@ -15,7 +15,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities import log
 
-
+logger = log.getLogger(__name__)
 
 
 class AltibaseHandler(DatabaseHandler):
@@ -73,7 +73,7 @@ class AltibaseHandler(DatabaseHandler):
             self.connection = connection
             self.is_connected = True
         except Exception as e:
-            log.logger.error(f"Error while connecting to {self.database}, {e}")
+            logger.error(f"Error while connecting to {self.database}, {e}")
         
         return self.connection
 
@@ -86,7 +86,7 @@ class AltibaseHandler(DatabaseHandler):
                 self.connection.close()
                 self.is_connected = False
             except Exception as e:
-                log.logger.error(f"Error while disconnecting to {self.database}, {e}")
+                logger.error(f"Error while disconnecting to {self.database}, {e}")
                 return False
         return True 
 
@@ -102,7 +102,7 @@ class AltibaseHandler(DatabaseHandler):
             self.connect()
             responseCode.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to database {self.database}, {e}!')
+            logger.error(f'Error connecting to database {self.database}, {e}!')
             responseCode.error_message = str(e)
         finally:
             if responseCode.success and need_to_close:
@@ -137,7 +137,7 @@ class AltibaseHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
                 connection.commit()
             except Exception as e:
-                log.logger.error(f'Error running query: {query} on {self.database}!')
+                logger.error(f'Error running query: {query} on {self.database}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e)

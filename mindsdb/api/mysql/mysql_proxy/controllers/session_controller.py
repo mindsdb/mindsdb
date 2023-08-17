@@ -15,12 +15,13 @@ from uuid import uuid4
 import requests
 
 from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
-from mindsdb.api.mysql.mysql_proxy.utilities import logger
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.database.integrations import integration_controller
+from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 class SessionController:
     """

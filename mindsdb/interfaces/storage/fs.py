@@ -43,7 +43,7 @@ def copy(src, dst):
             if dirhash(src) == dirhash(dst):
                 return
         shutil.rmtree(dst, ignore_errors=True)
-        shutil.copytree(src, dst)
+        shutil.copytree(src, dst, dirs_exist_ok=True)
     else:
         if os.path.exists(dst):
             if hashlib.md5(open(src, 'rb').read()).hexdigest() == hashlib.md5(open(dst, 'rb').read()).hexdigest():

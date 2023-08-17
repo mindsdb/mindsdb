@@ -180,6 +180,7 @@
         {
           "group": "Chatbots",
           "pages": [
+            "sql/tutorials/llm-chatbot-ui",
             "sql/tutorials/slack-chatbot",
             "sql/tutorials/twitterbot-mariadb-enterprise-server-skysql"
           ]
@@ -767,6 +768,7 @@
             "integrations/app-integrations/gmail",
             "integrations/app-integrations/google-calendar",
             "integrations/app-integrations/shopify",
+            "integrations/app-integrations/slack",
             "integrations/app-integrations/twitter",
             "integrations/app-integrations/web-crawler",
             "integrations/app-integrations/youtube"

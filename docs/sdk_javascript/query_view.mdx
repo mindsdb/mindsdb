@@ -1,0 +1,17 @@
+---
+title: Query a View
+sidebarTitle: Query a View
+---
+
+## Description
+
+The `runQuery()` function executes a query given as its argument directly in MindsDB.
+
+## Syntax
+
+Here is the syntax:
+
+```
+const query = `SELECT * FROM project_name.view_name`;
+const queryResult = await MindsDB.SQL.runQuery(query);
+```

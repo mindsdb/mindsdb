@@ -898,7 +898,8 @@
       "group": "FAQs",
       "pages": [
         "faqs/whitelist-ips",
-        "faqs/persist-predictions"
+        "faqs/persist-predictions",
+        "faqs/mindsdb-with-php"
       ]
     }
   ],

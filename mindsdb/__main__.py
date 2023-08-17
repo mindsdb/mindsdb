@@ -1,6 +1,6 @@
 from mindsdb.utilities import log
 
-logger = log.getLogger("MindsDB")
+logger = log.getLogger("mindsdb")
 logger.debug("Starting MindsDB...")
 
 import asyncio

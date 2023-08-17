@@ -1,5 +1,6 @@
 import logging
 from logging.config import dictConfig
+import os
 
 logging_initialized = False
 
@@ -27,6 +28,12 @@ class ColorFormatter(logging.Formatter):
         return log_fmt.format(record)
 
 def configure_logging():
+    mindsdb_level = os.environ.get("MINDSDB_LOG_LEVEL", None)
+    if mindsdb_level is not None:
+        mindsdb_level = getattr(logging, mindsdb_level)
+    else:
+        mindsdb_level = logging.INFO
+
     logging_config = dict(
         version=1,
         formatters={
@@ -48,11 +55,11 @@ def configure_logging():
             },
             "__main__": {
                 "handlers": ["console"],
-                "level": logging.DEBUG,
+                "level": mindsdb_level,
             },
             "mindsdb": {
                 "handlers": ["console"],
-                "level": logging.DEBUG,
+                "level": mindsdb_level,
             },
             "alembic": {
                 "handlers": ["console"],

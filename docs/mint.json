@@ -740,6 +740,7 @@
             "integrations/app-integrations/google-calendar",
             "integrations/app-integrations/shopify",
             "integrations/app-integrations/twitter",
+            "integrations/app-integrations/web-crawler",
             "integrations/app-integrations/youtube"
           ]
         },

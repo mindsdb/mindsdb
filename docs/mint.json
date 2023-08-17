@@ -762,6 +762,7 @@
           "group": "Applications",
           "pages": [
             "integrations/app-integrations/binance",
+            "integrations/app-integrations/email",
             "integrations/app-integrations/github",
             "integrations/app-integrations/gmail",
             "integrations/app-integrations/google-calendar",

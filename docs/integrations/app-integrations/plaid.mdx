@@ -7,7 +7,7 @@ This is the implementation of the Plaid app handler for MindsDB. It helps you au
 
 [Plaid](https://plaid.com/) helps all companies build fintech solutions by making it easy, safe and reliable for people to connect their financial data to apps and services.
 
-## Implementation
+## Connection
 
 The required arguments to establish a connection are as follows:
 
@@ -25,8 +25,6 @@ And [here](https://plaid.com/docs/api/tokens/#itempublic_tokenexchange) is how y
 If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/plaid_handler) and run this command: `pip install -r requirements.txt`.
 </Tip>
 
-## Usage
-
 In order to make use of this handler and connect the Plaid app to MindsDB, the following syntax can be used:
 
 ```sql
@@ -42,6 +40,8 @@ WITH
 ```
 
 It creates a database that comes with two tables: `transactions` and `balance`.
+
+## Usage
 
 Now you can query your data, like this:
 

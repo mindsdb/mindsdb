@@ -1,6 +1,6 @@
 from mindsdb.utilities import log
 
-logger = log.getLogger(__name__)
+logger = log.getLogger("MindsDB")
 logger.debug("Starting MindsDB...")
 
 import asyncio
@@ -132,10 +132,6 @@ if __name__ == "__main__":
     os.environ["MINDSDB_CONFIG_PATH"] = config_path
     mindsdb_config = Config()
 
-    logger.debug(f"Config path: {config_path}")
-    logger.debug(f"User config: {user_config}")
-    logger.debug(f"MindsDB config: {mindsdb_config}")
-
     create_dirs_recursive(mindsdb_config["paths"])
 
     if telemetry_file_exists(mindsdb_config["storage_dir"]):
@@ -161,7 +157,6 @@ if __name__ == "__main__":
 
     mp.freeze_support()
     config = Config()
-    logger.debug(f"Config {config}")
 
     environment = config.get("environment")
     if environment == "aws_marketplace":
@@ -177,7 +172,6 @@ if __name__ == "__main__":
             pass
 
     is_cloud = config.get("cloud", False)
-    logger.debug(f"is_cloud: {is_cloud}")
     # need configure migration behavior by env_variables
     # leave 'is_cloud' for now, but needs to be removed further
     run_migration_separately = os.environ.get("SEPARATE_MIGRATIONS", False)
@@ -228,6 +222,8 @@ if __name__ == "__main__":
     logger.info(f"Version: {mindsdb_version}")
     logger.info(f"Configuration file: {config.config_path}")
     logger.info(f"Storage path: {config['paths']['root']}")
+    logger.debug(f"User config: {user_config}")
+
 
 <<<<<<< HEAD
     for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():

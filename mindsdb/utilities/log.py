@@ -44,23 +44,19 @@ def configure_logging():
         loggers={
             "": {  # root logger
                 "handlers": ["console"],
+                "level": logging.WARNING,
+            },
+            "__main__": {
+                "handlers": ["console"],
                 "level": logging.DEBUG,
             },
-            "werkzeug": {
+            "mindsdb": {
                 "handlers": ["console"],
                 "level": logging.DEBUG,
             },
             "alembic": {
                 "handlers": ["console"],
                 "level": logging.DEBUG,
-            },
-            "sqlalchemy": {
-                "handlers": ["console"],
-                "level": logging.WARNING,
-            },
-            "lightwood": {
-                "handlers": ["console"],
-                "level": logging.INFO,
             },
         },
     )

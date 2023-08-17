@@ -189,7 +189,6 @@ def initialize_static():
 
 
 def initialize_app(config, no_studio, with_nlp):
-    logger.error("Initializing app..")
     static_root = config["paths"]["static"]
     logger.debug(f"Static route: {static_root}")
     gui_exists = Path(static_root).joinpath("index.html").is_file()
@@ -198,7 +197,6 @@ def initialize_app(config, no_studio, with_nlp):
     if no_studio is False and (
         config["gui"]["autoupdate"] is True or gui_exists is False
     ):
-        logger.debug("Init static thread..")
         init_static_thread = threading.Thread(target=initialize_static, name="GUI-Init")
         init_static_thread.start()
 

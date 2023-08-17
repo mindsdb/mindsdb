@@ -3,7 +3,7 @@ from typing import Dict, Optional
 import pandas as pd
 
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 from .ingest import Ingestor
 from .question_answer import QuestionAnswerer
@@ -15,8 +15,7 @@ from .settings import (
 
 # these require no additional arguments
 
-logger = get_log(logger_name=__name__)
-
+logger = log.getLogger(__name__)
 
 class WriterHandler(BaseMLEngine):
     """

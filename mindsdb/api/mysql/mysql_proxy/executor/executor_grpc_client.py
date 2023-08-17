@@ -3,10 +3,11 @@ import json
 import pickle
 from uuid import uuid4
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from mindsdb.utilities.context import context as ctx
 from mindsdb.integrations.libs.handler_helpers import action_logger
-logger = get_log("main")
+
+logger = log.getLogger(__name__)
 
 
 try:

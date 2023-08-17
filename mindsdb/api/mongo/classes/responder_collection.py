@@ -1,6 +1,7 @@
-from mindsdb.api.mongo.utilities import logger
-
 from .responder import Responder
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 class RespondersCollection():

@@ -1,7 +1,8 @@
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
-from mindsdb.api.mongo.utilities import logger
+from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 class Responce(Responder):
     when = {'saslStart': helpers.is_true}

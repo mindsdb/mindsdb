@@ -6,12 +6,11 @@ import pandas as pd
 from langchain.chains import RetrievalQA
 from langchain.llms import Writer
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 from .settings import DEFAULT_EMBEDDINGS_MODEL, ModelParameters, get_retriever
 
-logger = get_log(logger_name=__name__)
-
+logger = log.getLogger(__name__)
 
 class QuestionAnswerer:
     def __init__(self, args: dict, model_parameters: ModelParameters):

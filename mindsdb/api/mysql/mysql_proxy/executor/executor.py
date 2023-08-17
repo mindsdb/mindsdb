@@ -6,11 +6,12 @@ from mindsdb.api.mysql.mysql_proxy.classes.sql_query import Column, SQLQuery
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErBadDbError,
     SqlApiException,
-    logger,
 )
 import mindsdb.utilities.profiler as profiler
 from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 class Executor:
     """This class stores initial and intermediate params

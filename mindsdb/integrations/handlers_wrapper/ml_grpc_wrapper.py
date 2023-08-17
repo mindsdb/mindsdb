@@ -20,10 +20,10 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.integrations.libs.handler_helpers import get_handler
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 
-logger = get_log(logger_name="main")
+logger = log.getLogger(__name__)
 
 
 class MLServiceServicer(ml_pb2_grpc.MLServiceServicer):

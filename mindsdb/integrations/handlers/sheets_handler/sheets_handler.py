@@ -9,7 +9,7 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 
 from mindsdb_sql.parser.ast.base import ASTNode
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,

@@ -4,8 +4,8 @@ from threading import Thread
 
 import requests
 
-from mindsdb.utilities.log import get_log
-logger = get_log(logger_name="main")
+from mindsdb.utilities import log
+logger = log.getLogger(__name__)
 
 
 def action_logger(logger, loglevel="info"):

@@ -4,7 +4,7 @@ import pandas as pd
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 from .settings import (
     DEFAULT_EMBEDDINGS_MODEL,
@@ -13,8 +13,7 @@ from .settings import (
     load_embeddings_model,
 )
 
-logger = get_log(__name__)
-
+logger = log.getLogger(__name__)
 
 class Ingestor:
     def __init__(self, args: dict, df: pd.DataFrame):

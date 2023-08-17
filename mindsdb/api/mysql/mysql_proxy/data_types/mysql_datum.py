@@ -12,8 +12,9 @@ import math
 import struct
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import ONE_BYTE_ENC, TWO_BYTE_ENC, THREE_BYTE_ENC, NULL_VALUE, DEFAULT_CAPABILITIES
-from mindsdb.api.mysql.mysql_proxy.utilities import logger
+from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 class Datum():
     def __init__(self, type, value=None):

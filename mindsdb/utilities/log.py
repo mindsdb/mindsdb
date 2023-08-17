@@ -1,8 +1,6 @@
 import logging
 from logging.config import dictConfig
 
-from mindsdb.utilities.config import Config
-
 logging_initialized = False
 
 

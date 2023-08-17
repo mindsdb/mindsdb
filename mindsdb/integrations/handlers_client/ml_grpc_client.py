@@ -13,10 +13,10 @@ from mindsdb.integrations.libs.response import (
 # from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 from mindsdb.integrations.libs.handler_helpers import action_logger
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 
-logger = get_log(logger_name="main")
+logger = log.getLogger(__name__)
 
 
 class MLClientGRPC:

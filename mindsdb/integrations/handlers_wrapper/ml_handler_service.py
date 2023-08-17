@@ -4,13 +4,13 @@ import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.handlers_wrapper.ml_grpc_wrapper import MLServiceServicer
 from mindsdb.integrations.libs.handler_helpers import registry
 from mindsdb.utilities.config import Config
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 if __name__ == "__main__":
     config = Config()
     db.init()
-    logger = get_log(logger_name="main")
-
+    logger = log.getLogger(__name__)
+    
     app = MLServiceServicer()
     port = int(os.environ.get("PORT", 5001))
     host = os.environ.get("HOST")

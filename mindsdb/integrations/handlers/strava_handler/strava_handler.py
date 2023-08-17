@@ -4,7 +4,7 @@ from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
 import requests
@@ -15,7 +15,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 from stravalib.client import Client
 
-logger = get_log("integrations.strava_handler")
+logger = log.getLogger(__name__)
 
 class StravaHandler(APIHandler):
     """Strava handler implementation"""

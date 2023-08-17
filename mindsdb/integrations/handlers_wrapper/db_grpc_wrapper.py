@@ -11,10 +11,10 @@ from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.handler_helpers import get_handler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 
-logger = get_log(logger_name="main")
+logger = log.getLogger(__name__)
 
 
 class DBServiceServicer(db_pb2_grpc.DBServiceServicer):

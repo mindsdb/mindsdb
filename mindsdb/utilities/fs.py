@@ -128,24 +128,18 @@ def clean_unlinked_process_marks():
                 try:
                     next(t for t in threads if t.id == thread_id)
                 except StopIteration:
-                    from mindsdb.utilities.log import get_log
-
-                    get_log("main").warning(
+                    logger.warning(
                         f"We have mark for process/thread {process_id}/{thread_id} but it does not exists"
                     )
                     file.unlink()
 
             except psutil.AccessDenied:
-                from mindsdb.utilities.log import get_log
-
-                get_log("main").warning(f"access to {process_id} denied")
+                logger.warning(f"access to {process_id} denied")
 
                 continue
 
             except psutil.NoSuchProcess:
-                from mindsdb.utilities.log import get_log
-
-                get_log("main").warning(
+                logger.warning(
                     f"We have mark for process/thread {process_id}/{thread_id} but it does not exists"
                 )
                 file.unlink()

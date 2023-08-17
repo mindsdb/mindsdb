@@ -2,7 +2,7 @@ import struct
 from typing import List, Any, BinaryIO, Sequence, Dict
 
 from mindsdb.api.postgres.postgres_proxy.utilities import strip_null_byte
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 import time
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_fields import PostgresField
 
@@ -34,7 +34,7 @@ class PostgresPacketReader:
         self.fe_message_map = FE_MESSAGE_MAP
         self.supported_auth_types = SUPPORTED_AUTH_TYPES
         self.buffer = buffer
-        self.logger = get_log('postgres_proxy')
+        self.logger = log.getLogger(__name__)
 
     def read_byte(self):
         return self.read_bytes(1)
@@ -149,7 +149,7 @@ class PostgresPacketBuilder:
     pack_args: List[Any]
 
     def __init__(self):
-        self.logger = get_log('postgres_proxy')
+        self.logger = log.getLogger(__name__)
         self.reset()
 
     def reset(self):

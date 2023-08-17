@@ -9,9 +9,9 @@ from flask_restx import Resource
 
 from mindsdb.api.http.namespaces.configs.auth import ns_conf
 from mindsdb.utilities.config import Config
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
-logger = get_log("http")
+logger = log.getLogger(__name__)
 
 
 def get_access_token() -> str:

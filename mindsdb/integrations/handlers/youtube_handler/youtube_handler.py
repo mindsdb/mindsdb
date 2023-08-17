@@ -3,7 +3,7 @@ from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
 from collections import OrderedDict
@@ -12,7 +12,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-logger = get_log("integrations.youtube_handler")
+logger = log.getLogger(__name__)
 
 class YoutubeHandler(APIHandler):
     """Youtube handler implementation"""

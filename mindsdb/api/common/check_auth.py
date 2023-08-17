@@ -1,10 +1,11 @@
 import traceback
 
+from mindsdb.utilities import log
 
-def check_auth(username, password, scramble_func, salt, company_id, config, logger=None):
-    if logger is None:
-        from mindsdb.api.mysql.mysql_proxy.utilities import logger
+logger = log.getLogger(__name__)
 
+
+def check_auth(username, password, scramble_func, salt, company_id, config):
     try:
         hardcoded_user = config['auth'].get('username')
         hardcoded_password = config['auth'].get('password')

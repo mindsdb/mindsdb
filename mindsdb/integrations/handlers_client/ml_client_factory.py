@@ -1,9 +1,9 @@
 import os
 from mindsdb.integrations.libs.handler_helpers import discover_services
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 
-logger = get_log(logger_name="main")
+logger = log.getLogger(__name__)
 
 
 class MLClientFactory:

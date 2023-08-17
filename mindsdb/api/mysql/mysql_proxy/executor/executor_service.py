@@ -5,12 +5,12 @@ from mindsdb.api.mysql.mysql_proxy.executor.executor_grpc_wrapper import (
     ExecutorServiceServicer,
 )
 from mindsdb.utilities.config import Config
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 if __name__ == "__main__":
     config = Config()
     db.init()
-    logger = get_log(logger_name="main")
+    logger = log.getLogger(__name__)
     app = ExecutorServiceServicer()
     port = int(os.environ.get("PORT", 5500))
     host = os.environ.get("HOST", "0.0.0.0")

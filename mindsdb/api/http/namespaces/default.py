@@ -8,10 +8,7 @@ from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.namespaces.configs.default import ns_conf
 from mindsdb.api.http.utils import http_error
 from mindsdb.utilities.config import Config
-from mindsdb.utilities.log import get_log
 
-
-log = get_log('http')
 
 
 def check_auth() -> bool:

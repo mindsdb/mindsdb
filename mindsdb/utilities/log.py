@@ -42,7 +42,6 @@ def configure_logging():
             "console": {
                 "class": "logging.StreamHandler",
                 "formatter": "f",
-                "level": logging.DEBUG,
             }
         },
         loggers={

@@ -44,9 +44,18 @@ class TimeGPTHandler(BaseMLEngine):
 
         forecast_df = timegpt.forecast(
             prediction_df,
+            id_col='unique_id',
+            time_col='ds',
+            target_col='y',
             h=model_args["horizon"],
             freq='T',  # TimeGPT automatically infers the correct frequency
             level=[model_args["level"]],
+            finetune_steps=args.get('finetune_steps', 0),
+            validate_token=args.get('validate_token', False),
+            date_features=args.get('date_features', False),
+            date_features_to_one_hot=args.get('date_features_to_one_hot', True),
+            # X_df=None,  # TODO: enable support for exogenous variables
+            # add_history=False,  # TODO: do we want to support this?
         )
         results_df = forecast_df[['unique_id', 'ds', 'TimeGPT']]
         results_df = self._get_results_from_nixtla_df(results_df, model_args)

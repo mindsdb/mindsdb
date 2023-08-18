@@ -4,31 +4,29 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class Responce(Responder):
-    when = {'saslStart': helpers.is_true}
+    when = {"saslStart": helpers.is_true}
 
     def result(self, query, request_env, mindsdb_env, session):
         try:
-            payload = query['payload'].decode()
-            mechanism = query.get('mechanism', 'SCRAM-SHA-1')
-            if mechanism == 'SCRAM-SHA-1':
-                session.init_scram('sha1')
-            elif mechanism == 'SCRAM-SHA-256':
-                session.init_scram('sha256')
+            payload = query["payload"].decode()
+            mechanism = query.get("mechanism", "SCRAM-SHA-1")
+            if mechanism == "SCRAM-SHA-1":
+                session.init_scram("sha1")
+            elif mechanism == "SCRAM-SHA-256":
+                session.init_scram("sha256")
             responce = session.scram.process_client_first_message(payload)
 
             res = {
-                'conversationId': 1,
-                'done': False,
-                'payload': responce.encode(),
-                'ok': 1
+                "conversationId": 1,
+                "done": False,
+                "payload": responce.encode(),
+                "ok": 1,
             }
         except Exception as e:
             logger.warning(str(e))
-            res = {
-                'errmsg': str(e),
-                'ok': 0
-            }
+            res = {"errmsg": str(e), "ok": 0}
         return res
 
 

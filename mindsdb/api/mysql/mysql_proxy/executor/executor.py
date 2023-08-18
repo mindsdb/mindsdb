@@ -13,6 +13,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class Executor:
     """This class stores initial and intermediate params
     between different steps of query execution. And it is also

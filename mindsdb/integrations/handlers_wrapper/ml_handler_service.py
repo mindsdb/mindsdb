@@ -10,7 +10,7 @@ if __name__ == "__main__":
     config = Config()
     db.init()
     logger = log.getLogger(__name__)
-    
+
     app = MLServiceServicer()
     port = int(os.environ.get("PORT", 5001))
     host = os.environ.get("HOST")

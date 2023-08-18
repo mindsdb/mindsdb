@@ -23,6 +23,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class SessionController:
     """
     This class manages the server session
@@ -93,9 +94,13 @@ class ServerSessionContorller(SessionController):
         self.executor_url = os.environ.get("MINDSDB_EXECUTOR_URL", None)
         self.executor_host = os.environ.get("MINDSDB_EXECUTOR_SERVICE_HOST", None)
         self.executor_port = os.environ.get("MINDSDB_EXECUTOR_SERVICE_PORT", None)
-        if (self.executor_host is None or self.executor_port is None) and self.executor_url is None:
-            raise Exception(f"""{self.__class__.__name__} can be used only in modular mode of MindsDB.
-                            Use Executor as a service and specify MINDSDB_EXECUTOR_URL env variable""")
+        if (
+            self.executor_host is None or self.executor_port is None
+        ) and self.executor_url is None:
+            raise Exception(
+                f"""{self.__class__.__name__} can be used only in modular mode of MindsDB.
+                            Use Executor as a service and specify MINDSDB_EXECUTOR_URL env variable"""
+            )
         logger.info(
             "%s.__init__: executor url - %s", self.__class__.__name__, self.executor_url
         )

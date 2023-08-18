@@ -13,6 +13,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 def start(verbose, no_studio, with_nlp):
     logger.info("HTTP API is starting..")
     config = Config()

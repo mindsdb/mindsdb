@@ -16,8 +16,18 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class Packet:
-    def __init__(self, length=0, body='', packet_string=None, socket=None, session=None, proxy=None, **kwargs):
+    def __init__(
+        self,
+        length=0,
+        body="",
+        packet_string=None,
+        socket=None,
+        session=None,
+        proxy=None,
+        **kwargs,
+    ):
         self.mysql_socket = socket
         self.session = session
         self.proxy = proxy
@@ -42,49 +52,51 @@ class Packet:
         self._length = len(body_string)
 
     def load_from_packet_string(self, packet_string):
-        len_header = struct.unpack('i', packet_string[:3] + b'\x00')[0]
+        len_header = struct.unpack("i", packet_string[:3] + b"\x00")[0]
         count_header = int(packet_string[3])
         body = packet_string[4:]
         self.load_from_params(length=len_header, seq=count_header, body=body)
 
     def get_packet_string(self):
         body = self.body
-        len_header = struct.pack('<i', self.length)[:3]  # keep it 3 bytes
-        count_header = struct.pack('B', self.seq)
+        len_header = struct.pack("<i", self.length)[:3]  # keep it 3 bytes
+        count_header = struct.pack("B", self.seq)
         packet = len_header + count_header + body
         return packet
 
     def get(self):
-        self.session.logging.debug(f'Get packet: {self.__class__.__name__}')
+        self.session.logging.debug(f"Get packet: {self.__class__.__name__}")
 
         len_header = MAX_PACKET_SIZE
-        body = b''
+        body = b""
         count_header = 1
         while len_header == MAX_PACKET_SIZE:
             packet_string = self.mysql_socket.recv(4)
             if len(packet_string) < 4:
-                self.session.logging.debug(f'Packet with less than 4 bytes in length: {packet_string}')
+                self.session.logging.debug(
+                    f"Packet with less than 4 bytes in length: {packet_string}"
+                )
                 return False
                 break
-            len_header = struct.unpack('i', packet_string[:3] + b'\x00')[0]
+            len_header = struct.unpack("i", packet_string[:3] + b"\x00")[0]
             count_header = int(packet_string[3])
             if len_header == 0:
                 break
             body += self.mysql_socket.recv(len_header)
-        self.session.logging.debug(f'Got packet: {str(body)}')
+        self.session.logging.debug(f"Got packet: {str(body)}")
         self.session.packet_sequence_number = (int(count_header) + 1) % 256
         self.setup(len(body), count_header, body)
         return True
 
     def send(self):
         string = self.get_packet_string()
-        self.session.logging.debug(f'Sending packet: {self.__class__.__name__}')
+        self.session.logging.debug(f"Sending packet: {self.__class__.__name__}")
         self.session.logging.debug(string)
         self.mysql_socket.sendall(string)
 
     def accum(self):
         string = self.get_packet_string()
-        self.session.logging.debug(f'Accumulating packet: {self.__class__.__name__}')
+        self.session.logging.debug(f"Accumulating packet: {self.__class__.__name__}")
         self.session.logging.debug(string)
         return string
 
@@ -93,8 +105,12 @@ class Packet:
             body = self.body
         logger.info(str(self))
         for i, x in enumerate(body):
-            part = '[BODY]'
-            logger.info('''{part}{i}:{h} ({inte}:{actual})'''.format(part=part, i=i + 1, h=hex(ord(x)), inte=ord(x), actual=str(x)))
+            part = "[BODY]"
+            logger.info(
+                """{part}{i}:{h} ({inte}:{actual})""".format(
+                    part=part, i=i + 1, h=hex(ord(x)), inte=ord(x), actual=str(x)
+                )
+            )
 
     def isEOF(self):
         if self.length == 0:
@@ -138,13 +154,13 @@ class Packet:
         return ret
 
     def __str__(self):
-        return str({'body': self.body, 'length': self.length, 'seq': self.seq})
+        return str({"body": self.body, "length": self.length, "seq": self.seq})
 
 
 def test():
     import pprint
 
-    pprint.pprint(Packet.bodyStringToPackets('abdds')[0].get_packet_string())
+    pprint.pprint(Packet.bodyStringToPackets("abdds")[0].get_packet_string())
 
 
 # only run the test if this file is called from debugger

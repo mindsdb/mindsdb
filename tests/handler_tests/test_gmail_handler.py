@@ -6,7 +6,6 @@ from mindsdb_sql import parse_sql
 import unittest
 from unittest.mock import Mock, patch
 from unittest import mock
-import logging
 
 
 class GmailHandlerTest(unittest.TestCase):

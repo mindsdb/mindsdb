@@ -48,6 +48,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class Swagger_Api(Api):
     """
     This is a modification of the base Flask Restplus Api class due to the issue described here
@@ -57,7 +58,7 @@ class Swagger_Api(Api):
     @property
     def specs_url(self):
         return url_for(self.endpoint("specs"), _external=False)
-    
+
 
 def custom_output_json(data, code, headers=None):
     resp = make_response(dumps(data), code)

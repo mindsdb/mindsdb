@@ -509,6 +509,12 @@ class Test(BaseExecutorMockPredictor):
         else:
             raise Exception('SqlApiException expected')
 
+        # try if exists
+        ret = self.command_executor.execute_command(parse_sql('''
+                drop database if exists pg
+                ''', dialect='mindsdb'))
+        assert ret.error_code is None
+
         # try files
         try:
             self.command_executor.execute_command(parse_sql('''
@@ -926,6 +932,13 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
         # no error
         assert ret.error_code is None
 
+        # test create if not exists
+        ret = self.command_executor.execute_command(parse_sql(
+            'create view if not exists mindsdb.vtasks (select * from pg (select * from tasks))',
+            dialect='mindsdb')
+        )
+        assert ret.error_code is None
+
         # --- select from view ---
         ret = self.command_executor.execute_command(parse_sql(
             'select * from mindsdb.vtasks',
@@ -940,6 +953,19 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
         ret = self.command_executor.execute_command(parse_sql(
             '''
                 CREATE PREDICTOR task_model
+                FROM mindsdb
+                (select * from vtasks)
+                PREDICT a
+                using
+                join_learn_process=true
+            ''',
+            dialect='mindsdb'))
+        assert ret.error_code is None
+
+        # test creating with if not exists
+        ret = self.command_executor.execute_command(parse_sql(
+            '''
+                CREATE PREDICTOR IF NOT EXISTS task_model
                 FROM mindsdb
                 (select * from vtasks)
                 PREDICT a

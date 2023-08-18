@@ -1,4 +1,5 @@
 import datetime
+import re
 from typing import Optional
 from pathlib import Path
 from functools import reduce
@@ -650,8 +651,13 @@ class ExecuteCommands:
         job_name = name.parts[-1]
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
 
-        jobs_controller.add(job_name, project_name, statement.query_str,
-                            statement.start_str, statement.end_str, statement.repeat_str)
+        try:
+            jobs_controller.add(job_name, project_name, statement.query_str,
+                                statement.start_str, statement.end_str, statement.repeat_str)
+        except Exception as e:
+            if "already exists" in str(e) and statement.if_not_exists:
+                ExecuteAnswer(ANSWER_TYPE.OK)
+            raise e
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -661,7 +667,12 @@ class ExecuteCommands:
         name = statement.name
         job_name = name.parts[-1]
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
-        jobs_controller.delete(job_name, project_name)
+        try:
+            jobs_controller.delete(job_name, project_name)
+        except Exception as e:
+            if "Job not exists" in str(e) and statement.if_exists:
+                ExecuteAnswer(ANSWER_TYPE.OK)
+            raise e
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -942,7 +953,10 @@ class ExecuteCommands:
         name = statement.name.parts[-1]
         integrations = self.session.integration_controller.get_all()
         if name in integrations:
-            raise SqlApiException(f"Integration '{name}' already exists")
+            if not statement.if_not_exists:
+                raise SqlApiException(f"Integration '{name}' already exists")
+            else:
+                return ExecuteAnswer(ANSWER_TYPE.OK)
 
         handler_module_meta = (
             self.session.integration_controller.get_handlers_import_status().get(
@@ -997,7 +1011,10 @@ class ExecuteCommands:
         name = statement.name.parts[-1]
         integrations = self.session.integration_controller.get_all()
         if name not in integrations:
-            raise SqlApiException(f"Integration '{name}' does not exists")
+            if not statement.if_exists:
+                raise SqlApiException(f"Integration '{name}' does not exists")
+            else:
+                return ExecuteAnswer(ANSWER_TYPE.OK)
         self.session.integration_controller.delete(name)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -1020,7 +1037,13 @@ class ExecuteCommands:
         if engine == "mindsdb":
             ProjectController().add(database_name)
         else:
-            self._create_integration(database_name, engine, connection_args)
+            try:
+                self._create_integration(database_name, engine, connection_args)
+            except SqlApiException as e:
+                # check if the error is name already exists
+                # we choose to raise the error depends if if_not_exists is True or False
+                if "already exists" not in str(e) or statement.if_not_exists is False:
+                    raise e
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -1028,7 +1051,12 @@ class ExecuteCommands:
         if len(statement.name.parts) != 1:
             raise Exception("Database name should contain only 1 part.")
         db_name = statement.name.parts[0]
-        self.session.database_controller.delete(db_name)
+        try:
+            self.session.database_controller.delete(db_name)
+        except Exception as e:
+            if re.search(r"Database .* does not exists", str(e)) and statement.if_exists:
+                return ExecuteAnswer(ANSWER_TYPE.OK)
+            raise e
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_tables(self, statement):
@@ -1127,7 +1155,12 @@ class ExecuteCommands:
                 raise SqlApiException("Wrong view query")
 
         project = self.session.database_controller.get_project(project_name)
-        project.create_view(view_name, query=query_str)
+        try:
+            project.create_view(view_name, query=query_str)
+        except Exception as e:
+            if "View already exists" in str(e) and statement.if_not_exists:
+                return ExecuteAnswer(ANSWER_TYPE.OK)
+            raise e
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
     def answer_drop_view(self, statement):
@@ -1164,7 +1197,13 @@ class ExecuteCommands:
             ml_integration_name
         )
 
-        df = self.session.model_controller.create_model(statement, ml_handler)
+        try:
+            df = self.session.model_controller.create_model(statement, ml_handler)
+        except Exception as e:
+            # check if the error is name already exists
+            if re.search(r"model .* already exists", str(e)) and statement.if_not_exists:
+                return ExecuteAnswer(ANSWER_TYPE.OK)
+
         resp_dict = df.to_dict(orient='split')
 
         columns = [

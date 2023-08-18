@@ -225,16 +225,14 @@ if __name__ == "__main__":
     logger.debug(f"User config: {user_config}")
 
 
-<<<<<<< HEAD
     for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():
         import_meta = handler_meta.get('import', {})
         if import_meta.get('success', False) is not True:
-            print(dedent('''
+            logger.info(dedent('''
                 Some handlers cannot be imported. You can check list of available handlers by execute command in sql editor:
                     select * from information_schema.handlers;
             '''))
             break
-=======
     # @TODO Backwards compatibility for tests, remove later
     for (
         handler_name,
@@ -252,7 +250,6 @@ if __name__ == "__main__":
 
     # from mindsdb.utilities.fs import get_marked_processes_and_threads
     # marks = get_marked_processes_and_threads()
->>>>>>> 64c9b3257 (WIP logging)
 
     if not is_cloud:
         # region creating permanent integrations
@@ -305,27 +302,6 @@ if __name__ == "__main__":
             db.session.commit()
         # endregion
 
-<<<<<<< HEAD
-=======
-        for integration_name in config.get("integrations", {}):
-            try:
-                it = integration_controller.get(integration_name)
-                if it is not None:
-                    integration_controller.delete(integration_name)
-                logger.info(f"Adding: {integration_name}")
-                integration_data = config["integrations"][integration_name]
-                engine = integration_data.get("type")
-                if engine is not None:
-                    del integration_data["type"]
-                integration_controller.add(integration_name, engine, integration_data)
-            except Exception as e:
-                logger.error(
-                    f"\n\nError: {e} adding database integration {integration_name}\n\n"
-                )
-
-    # @TODO Backwards compatibility for tests, remove later
-
->>>>>>> 64c9b3257 (WIP logging)
     if args.api is None:
         api_arr = ["http", "mysql"]
     else:
@@ -342,37 +318,23 @@ if __name__ == "__main__":
     }
 
     start_functions = {
-<<<<<<< HEAD
-        'http': start_http,
-        'mysql': start_mysql,
-        'mongodb': start_mongo,
-        'postgres': start_postgres,
-        'jobs': start_scheduler,
-        'tasks': start_tasks
-=======
         "http": start_http,
         "mysql": start_mysql,
         "mongodb": start_mongo,
         "postgres": start_postgres,
         "jobs": start_scheduler,
-        "chatbot": start_chatbot,
->>>>>>> 64c9b3257 (WIP logging)
+        "tasks": start_tasks
     }
 
     if config.get("jobs", {}).get("disable") is not True:
         apis["jobs"] = {"process": None, "started": False}
 
     # disabled on cloud
-<<<<<<< HEAD
     if config.get('tasks', {}).get('disable') is not True:
         apis['tasks'] = {
             'process': None,
             'started': False
         }
-=======
-    if config.get("chatbot", {}).get("disable") is not True and not is_cloud:
-        apis["chatbot"] = {"process": None, "started": False}
->>>>>>> 64c9b3257 (WIP logging)
 
     # TODO this 'ctx' is eclipsing 'context' class imported as 'ctx'
     ctx = mp.get_context("spawn")

@@ -1,6 +1,6 @@
 import logging
-from logging.config import dictConfig
 import os
+from logging.config import dictConfig
 
 logging_initialized = False
 
@@ -20,12 +20,13 @@ class ColorFormatter(logging.Formatter):
         logging.INFO: logging.Formatter(default + format + reset),
         logging.WARNING: logging.Formatter(yellow + format + reset),
         logging.ERROR: logging.Formatter(red + format + reset),
-        logging.CRITICAL: logging.Formatter(bold_red + format + reset)
+        logging.CRITICAL: logging.Formatter(bold_red + format + reset),
     }
 
     def format(self, record):
         log_fmt = self.FORMATS.get(record.levelno)
         return log_fmt.format(record)
+
 
 def configure_logging():
     mindsdb_level = os.environ.get("MINDSDB_LOG_LEVEL", None)
@@ -36,11 +37,7 @@ def configure_logging():
 
     logging_config = dict(
         version=1,
-        formatters={
-            "f": {
-                "()": ColorFormatter
-            }
-        },
+        formatters={"f": {"()": ColorFormatter}},
         handlers={
             "console": {
                 "class": "logging.StreamHandler",
@@ -68,6 +65,7 @@ def configure_logging():
         },
     )
     dictConfig(logging_config)
+
 
 # I would prefer to leave code to use logging.getLogger(), but there are a lot of complicated situations
 # in MindsDB with processes being spawned that require logging to be configured again in a lot of cases.

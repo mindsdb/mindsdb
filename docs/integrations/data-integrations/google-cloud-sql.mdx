@@ -1,0 +1,62 @@
+---
+title: Google Cloud SQL
+sidebarTitle: Google Cloud SQL
+---
+
+This is the implementation of the Google Cloud SQL data handler for MindsDB.
+
+[Cloud SQL](https://cloud.google.com/sql) is a fully-managed database service that makes it easy to set up, maintain, manage, and administer your relational PostgreSQL, MySQL, and SQL Server databases in the cloud.
+## Implementation
+This handler was implemented using the existing MindsDB handlers for MySQL, PostgreSQL and SQL Server.
+
+The required arguments to establish a connection are,
+* `host`: the host name or IP address of the Google Cloud SQL instance.
+* `port`: the TCP/IP port of the Google Cloud SQL instance.
+* `user`: the username used to authenticate with the Google Cloud SQL instance.
+* `password`: the password to authenticate the user with the Google Cloud SQL instance.
+* `database`: the database name to use when connecting with the Google Cloud SQL instance.
+* `db_engine`: the database engine of the Google Cloud SQL instance. This can take one of three values: 'mysql', 'postgresql' or 'mssql'.
+
+
+<Tip>
+    If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the
+    handler's folder (mindsdb/integrations/handlers/cloud_sql_handler) and run this command: `pip install -r
+    requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the Google Cloud SQL instance, you need to create a datasource with the following syntax:
+
+```sql
+CREATE DATABASE cloud_sql_mysql_datasource
+WITH ENGINE = 'cloud_sql',
+PARAMETERS = {
+    "db_engine": "mysql",
+    "host": "53.170.61.16",
+    "port": 3306,
+    "user": "admin",
+    "password": "password",
+    "database": "example_db"
+};
+```
+To successfully connect to the Google Cloud SQL instance you have to make sure that the IP address of the machine you are using to connect is added to the authorized networks of the Google Cloud SQL instance. You can do this by following the steps below:
+
+1. Go to the [Cloud SQL Instances](https://console.cloud.google.com/sql/instances) page.
+2. Click on the instance you want to add authorized networks to.
+3. Click on the **Connections** tab.
+4. Click on **Networking** tab.
+5. Click on **Add network**.
+5. Enter the IP address of the machine you want to connect from.
+
+If you are using MindsDB cloud version you can use the following IP address: `
+18.220.205.95
+3.19.152.46
+52.14.91.162
+`
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT * FROM cloud_sql_mysql_datasource.example_tbl;
+```

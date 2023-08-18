@@ -1,0 +1,150 @@
+---
+title: CREATE VIEW Statement
+sidebarTitle: CREATE VIEW
+---
+
+## Description
+
+The `CREATE VIEW` statement creates a view, which is a great way to do data preparation in MindsDB. A VIEW is a saved `SELECT` statement, which is executed every time we call this view.
+
+## Syntax
+
+Here is the syntax:
+
+```sql
+CREATE VIEW project_name.view_name AS (
+    SELECT a.column_name, ...,
+           p.model_column AS model_column
+    FROM integration_name.table_name AS a
+    JOIN mindsdb.predictor_name AS p
+);
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
+Where:
+
+| Name                                  | Description                                                                              |
+| ------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `project_name`                        | Name of the project to store the view.                                                   |
+| `view_name`                           | Name of the view.                                                                        |
+| `a.column_name, ...`                  | Columns of the data source table that are the input for the model to make predictions.   |
+| `p.model_column`                      | Name of the target column to be predicted.                                               |
+| `integration_name.table_name`         | Data source table name along with the integration where it resides.                      |
+| `predictor_name`                      | Name of the model.                                                                       |
+
+## Example
+
+Below is the query that creates and trains the `home_rentals_model` model to predict the `rental_price` value. The inner `SELECT` statement provides all real estate listing data used to train the model.
+
+```sql
+CREATE MODEL mindsdb.home_rentals_model
+FROM integration
+    (SELECT * FROM house_rentals_data)
+PREDICT rental_price;
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
+Now, we can [`JOIN`](/sql/api/join/) the `home_rentals_data` table with the `home_rentals_model` model to make predictions. By creating a view (using the `CREATE VIEW` statement) that is based on the `SELECT` statement joining the data and model tables, we create an AI Table.
+
+Here, the `SELECT` statement joins the data source table and the model table. The input data for making predictions consists of the `sqft`, `number_of_bathrooms`, and `location` columns. These are joined with the `rental_price` column that stores predicted values.
+
+```sql
+CREATE VIEW mindsdb.home_rentals_predictions AS (
+    SELECT
+        a.sqft,
+        a.number_of_bathrooms,
+        a.location,
+        p.rental_price AS price
+    FROM integration.home_rentals_data AS a
+    JOIN mindsdb.home_rentals_model AS p
+);
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
+<Note>
+    **Dataset for Training and Dataset for Joining**
+
+    In this example, we used the same dataset (`integration.home_rentals_data`) for training the model (see the `CREATE MODEL` statement above) and for joining with the model to make predictions (see the `CREATE VIEW` statement above). It doesn't happen like that in real-world scenarios.
+    Normally, you use the old data to train the model, and then you join the new data with this model to make predictions.
+
+    Consider the `old_data` dataset that stores data from the years 2019-2021 and the `new_data` dataset that stores data from the year 2022.
+
+    We train the model with the `old_data` dataset like this:
+
+    ```sql
+    CREATE MODEL mindsdb.data_model
+    FROM integration
+        (SELECT * FROM old_data)
+    PREDICT column;
+    ```
+
+    Now, having the `data_model` model trained using the `old_data` dataset, we can join this model with the `new_data` dataset to make predictions like this:
+
+    ```sql
+    CREATE VIEW mindsdb.data_predictions AS (
+        SELECT
+            a.column1,
+            a.column2,
+            a.column3,
+            p.column AS predicted_column
+        FROM integration.new_data AS a
+        JOIN mindsdb.data_model AS p
+    );
+    ```
+</Note>
+
+## USING VIEW
+
+Examples to use view
+
+1. Complex select on view (it is grouping in this example).
+
+```sql
+SELECT type, last(bedrooms) 
+FROM mindsdb.house_v
+GROUP BY 1
+```
+
+2. Creating predictor from view
+
+```sql
+CREATE MODEL house_sales_model
+FROM mindsdb (
+  SELECT * FROM house_v
+) PREDICT ma
+ORDER BY saledate
+GROUP BY bedrooms, type
+WINDOW 1 HORIZON 4
+```
+
+3. Using predictor with view
+
+```sql
+SELECT * FROM mindsdb.house_v
+JOIN mindsdb.house_sales_model
+WHERE house_v.saledate > latest 
+```
+
+<Tip>
+**From Our Community**
+
+Check out the article created by our community:
+
+- Article on [Creating Views with MindsDB](https://dev.to/rutamhere/creating-views-with-mindsdb-1mnf)
+  by [Rutam Prita Mishra](https://community.ops.io/rutamhere)
+</Tip>

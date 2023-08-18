@@ -1,0 +1,48 @@
+---
+title: Microsoft SQL Server
+sidebarTitle: Microsoft SQL Server
+---
+
+This is the implementation of the Microsoft SQL Server data handler for MindsDB.
+
+[Microsoft SQL Server](https://www.microsoft.com/en-us/sql-server) is a relational database management system developed by Microsoft. As a database server, it stores and retrieves data as requested by other software applications, which may run either on the same computer or on another computer across a network.
+
+## Implementation
+
+This handler is implemented using `pymssql`, the Python language extension module that provides access to Microsoft SQL Server from Python scripts.
+
+The required arguments to establish a connection are as follows:
+
+* `host` is the host name or IP address.
+* `port` is the port used to make TCP/IP connection.
+* `database` is the database name.
+* `user` is the database user.
+* `password` is the database password.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/mssql_handler) and run this command:   `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the SQL Server database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE mssql_datasource
+WITH
+    engine = 'mssql',
+    parameters = {
+      "host": "127.0.0.1",
+      "port": 1433,
+      "database": "master",
+      "user": "sa",
+      "password": "password"
+    };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM mssql_datasource.example_tbl;
+```

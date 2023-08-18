@@ -1,0 +1,55 @@
+---
+title: SingleStore
+sidebarTitle: SingleStore
+---
+
+This is the implementation of the SingleStore data handler for MindsDB.
+
+[SingleStore](https://www.singlestore.com/) is a proprietary, cloud-native database designed for data-intensive applications. A distributed, relational, SQL database management system that features ANSI SQL support. It is known for speed in data ingest, transaction processing, and query processing.
+
+## Implementation
+
+This handler is implemented by extending the MySQL data handler.
+
+The required arguments to establish a connection are as follows:
+
+* `user` is the database user.
+* `password` is the database password.
+* `host` is the host name, IP address, or URL.
+* `port` is the port used to make TCP/IP connection.
+* `database` is the database name.
+
+There are several optional arguments that can be used as well.
+
+* `ssl` is the `ssl` parameter value that indicates whether SSL is enabled (`True`) or disabled (`False`).
+* `ssl_ca` is the SSL Certificate Authority.
+* `ssl_cert` stores SSL certificates.
+* `ssl_key` stores SSL keys.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/singlestore_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the SingleStore database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE singlestore_datasource
+WITH
+  ENGINE = 'singlestore',
+  PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": 3306,
+    "database": "singlestore",
+    "user": "root",
+    "password": "password"
+  };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM singlestore_datasource.example_table;
+```

@@ -1,0 +1,125 @@
+---
+title: AI Tables
+sidebarTitle: AI Tables
+---
+
+Let’s consider the following `income_table` table that stores the `income` and
+`debt` values.
+
+```sql
+SELECT income, debt
+FROM income_table;
+```
+
+On execution, we get:
+
+```sql
++------+-----+
+|income|debt |
++------+-----+
+|60000 |20000|
+|80000 |25100|
+|100000|30040|
+|120000|36010|
++------+-----+
+```
+
+A simple visualization of the data present in the `income_table` table is as
+follows:
+
+![Income vs Debt](/assets/sql/income_vs_debt.png)
+
+Querying the income table to get the `debt` value for a particular `income`
+value results in the following:
+
+```sql
+SELECT income, debt
+FROM income_table
+WHERE income = 80000;
+```
+
+On execution, we get:
+
+```sql
++------+-----+
+|income|debt |
++------+-----+
+|80000 |25100|
++------+-----+
+```
+
+And here is what we get:
+
+![Income vs Debt chart](/assets/sql/income_vs_debt_known_value.png)
+
+But what happens when querying the table for an `income` value that is not
+present there?
+
+```sql
+SELECT income, debt
+FROM income_table
+WHERE income = 90000;
+```
+
+On execution, we get:
+
+```sql
+Empty set (0.00 sec)
+```
+
+When the `WHERE` clause condition is not fulfilled for any of the rows, no
+value is returned.
+
+![Income vs Debt query](/assets/sql/income_vs_debt_unknown_value.png)
+
+When a table doesn’t have an exact match, the query returns an empty set or null
+value. This is where the AI Tables come into play!
+
+Let’s create a `debt_model` model that allows us to approximate the `debt` value
+for any `income` value. We train the `debt_model` model using the data from the
+`income_table` table.
+
+```sql
+CREATE MODEL mindsdb.debt_model
+FROM income_table
+PREDICT debt;
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
+MindsDB provides the [`CREATE MODEL`](/sql/create/model/)
+statement. On execution of this statement, the predictive model works in the
+background, automatically creating a vector representation of the data that can
+be visualized as follows:
+
+![Income vs Debt model](/assets/sql/income_vs_debt_predictor.png)
+
+Please note that `debt_model` is our AI Table.
+
+Let’s now look for the `debt` value of some random `income` value. To get the
+approximated `debt` value, we query the `mindsdb.debt_model` model instead
+of the `income_table` table.
+
+```sql
+SELECT income, debt
+FROM mindsdb.debt_model
+WHERE income = 90000;
+```
+
+On execution, we get:
+
+```sql
++------+-----+
+|income|debt |
++------+-----+
+|90000 |27820|
++------+-----+
+```
+
+And here is how it looks:
+
+![Income vs Debt model](/assets/sql/income_vs_debt_prediction.png)

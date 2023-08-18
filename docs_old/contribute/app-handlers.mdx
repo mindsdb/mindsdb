@@ -1,0 +1,199 @@
+---
+title: Building an Application Handler
+sidebarTitle: Building an Application Handler
+---
+
+In this section, you'll find how to add new application integrations to MindsDB.
+
+<Note>
+    **Prerequisite**
+
+    You should have the latest staging version of the MindsDB repository installed locally. Follow [this guide](/contribute/install/) to learn how to install MindsDB for development.
+</Note>
+
+## What are API Handlers?
+
+Application handlers act as a bridge between MindsDB and any application that provides APIs. You use application handlers to create databases using the [`CREATE DATABASE`](/sql/create/databases/) statement. So you can reach data from any application that has its handler implemented within MindsDB.
+
+<Note>
+    **Database Handlers**
+
+    To learn more about handlers and how to implement a database handler, visit our [doc page here](/contribute/data-handlers/).
+</Note>
+<Note>
+    **ML Handlers**
+
+    To learn more about handlers and how to implement a machine learning (ML) handler, visit our [doc page here](/contribute/ml-handlers/).
+</Note>
+
+## Creating a Application Handler
+
+You can create your own application handler within MindsDB by inheriting from the [`APIHandler`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/api_handler.py#L150) class.
+
+By providing the implementation for some or all of the methods contained in the [`APIHandler`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/api_handler.py#L150) class, you can interact with the application APIs.
+
+### Core Methods
+
+Apart from the `__init__()` method, there are five core methods that must be implemented. We recommend checking actual examples in the codebase to get an idea of what goes into each of these methods, as they can change a bit depending on the nature of the system being integrated.
+
+Let's review the purpose of each method.
+
+| Method                 | Purpose                                                                                                                                                                                                |
+|------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`_register_table()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/api_handler.py#L164)    | It registers the data resource in memory. For example, if you are using Twitter API it registers the `tweets` resource from `/api/v2/tweets`.                                                                                                                                   |
+| [`connect()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L23)       | It performs the necessary steps to connect/authenticate to the underlying system.                                                                                                                                   |
+| [`check_connection()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L39)   | It evaluates if the connection is alive and healthy.                                                                                                                 |
+| [`native_query()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L47)    | It parses any *native* statement string and acts upon it (for example, raw syntax commands).                                                                                                              |
+| `call_application_api()` | It calls the application API and maps the data to pandas DataFrame. This method handles the paggination and data mapping. |
+
+Authors can opt for adding private methods, new files and folders, or any combination of these to structure all the necessary work that will enable the core methods to work as intended.
+
+<Tip>
+    **Other Common Methods**
+
+    Under the  [`mindsdb.integrations.utilities`](staging/mindsdb/integrations/utilities) library, contributors can find various methods that may be useful while implementing new handlers.
+</Tip>
+
+### API Table
+
+Once the data returned from the API call is registered using the [`_register_table()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/api_handler.py#L164) method, you can use it to map to the [`APITable`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/api_handler.py#L93) class.
+The [`APITable`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/api_handler.py#L93) class provides CRUD methods.
+
+| Method                 | Purpose                                                                                                                                                                                                |
+|------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `select()`    | It implements the mappings from the ast.Select and calls the actual API through the `call_application_api`.                                                                                                                                   |
+| `insert()`   | It implements the mappings from the ast.Insert and calls the actual API through the `call_application_api`.                                                                                                                                                                                                                                                        |
+| `update()`   | It implements the mappings from the ast.Update and calls the actual API through the `call_application_api`.                                                                                                                                                                                                                                                        |                                                                                                                 |
+| `delete()`   | It implements the mappings from the ast.Delete and calls the actual API through the `call_application_api`.                                                                                                                                                                                                                                                        |                                                                                                              |
+| `get_columns()`   | It maps the data columns returned by the API.                                                                                                       |
+
+
+### Implementation
+
+Each application handler should inherit from the [`APIHandler`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/api_handler.py#L150) class.
+
+Here is a step-by-step guide:
+
+* Implementing the [`__init__()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/api_handler.py#L155) method:
+
+    This method initializes the handler.
+
+    ```py
+    def __init__(self, name: str):
+        super().__init__(name)
+        """ constructor
+        Args:
+            name (str): the handler name
+        """
+
+        self._tables = {}
+    ```
+
+* Implementing the [`_register_table()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/api_handler.py#L164) method:
+
+    The `_register_table()` method registers the data resource in memory.
+
+    ```python
+    def _register_table(self, table_name: str, table_class: Any):
+        """
+        Register the data resource. For e.g if you are using Twitter API it registers the `tweets` resource from `/api/v2/tweets`.
+        """
+        self._tables[table_name] = table_class
+    ```
+
+* Implementing the [`connect()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L23) method:
+
+    The `connect()` method sets up the connection.
+
+    ```py
+    def connect(self) -> HandlerStatusResponse:
+        """ Set up any connections required by the handler
+        Should return output of check_connection() method after attempting
+        connection. Should switch self.is_connected.
+        Returns:
+            HandlerStatusResponse
+        """
+    ```
+
+* Implementing the [`check_connection()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L39) method:
+
+    The `check_connection()` method performs the health check for the connection.
+
+    ```py
+    def check_connection(self) -> HandlerStatusResponse:
+        """ Check connection to the handler
+        Returns:
+            HandlerStatusResponse
+        """
+    ```
+
+* Implementing the [`native_query()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L47) method:
+
+    The `native_query()` method runs commands of the native API syntax.
+
+    ```py
+    def native_query(self, query: Any) -> HandlerResponse:
+        """Receive raw query and act upon it somehow.
+        Args:
+            query (Any): query in native format (str for sql databases,
+                dict for mongo, api's json etc)
+        Returns:
+            HandlerResponse
+        """
+    ```
+
+* Implementing the `call_application_api()` method:
+
+    This method makes the API calls.
+
+    ```py
+    def call_application_api(self, method_name:str = None, params:dict = None) -> DataFrame:
+        """Receive query as AST (abstract syntax tree) and act upon it somehow.
+        Args:
+            query (ASTNode): sql query represented as AST. May be any kind
+                of query: SELECT, INSERT, DELETE, etc
+        Returns:
+            DataFrame
+        """
+    ```
+
+
+### Exporting All Required Variables
+
+This is what should be exported in the `__init__.py` file:
+
+- The `Handler` class.
+- The `version` of the handler.
+- The `name` of the handler.
+- The `type` of the handler, either `DATA` handler or `ML` handler.
+- The `icon_path` to the file with the database icon.
+- The `title` of the handler or a short description.
+- The `description` of the handler.
+- The `connection_args` dictionary with the connection arguments.
+- The `connection_args_example` dictionary with an example of the connection arguments.
+- The `import_error` message that is used if the import of the `Handler` class fails.
+
+Let's look at an example of the `__init__.py` file.
+
+```py
+...
+title = 'Twitter'
+version = 0.1
+description = 'Twitter API integration'
+name = 'twitter'
+type = HANDLER_TYPE.DATA
+icon_path = 'icon.png'
+
+__all__ = [
+    'Handler', 'version', 'name', 'type', 'title',
+    'description', 'connection_args_example', 'icon_path'
+]
+```
+
+## Check out our Application Handlers!
+
+To see some integration handlers that are currently in use, we encourage you to check out the following handlers inside the MindsDB repository:
+
+* [TwitterHandler](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/twitter_handler/twitter_handler.py#L145)
+
+And here are [all the handlers available in the MindsDB repository](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers).

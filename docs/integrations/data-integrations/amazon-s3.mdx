@@ -1,0 +1,63 @@
+---
+title: Amazon S3
+sidebarTitle: Amazon S3
+---
+
+This is the implementation of the S3 data handler for MindsDB.
+
+[Amazon Simple Storage Service, or Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html), is an object storage service that offers industry-leading scalability, data availability, security, and performance. Customers of all sizes and industries can use Amazon S3 to store and protect any amount of data for a range of use cases, such as data lakes, websites, mobile applications, backup and restore, archive, enterprise applications, IoT devices, and big data analytics. Amazon S3 provides management features so that you can optimize, organize, and configure access to your data to meet your specific business, organizational, and compliance requirements.
+
+## Implementation
+
+This handler is implemented using `boto3`, the AWS SDK for Python.
+
+The required arguments to establish a connection are as follows:
+
+* `aws_access_key_id` is the AWS access key.
+* `aws_secret_access_key` is the AWS secret access key.
+* `region_name` is the AWS region.
+* `bucket` is the name of the S3 bucket.
+* `key` is the key of the object to be queried.
+* `input_serialization` is the format of the data in the object that is to be queried.
+
+<Tip>
+ 
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder
+   (mindsdb/integrations/handlers/s3_handler) and run this command: `pip install -r requirements.txt` .
+
+</Tip>
+
+## Usage
+   
+In order to make use of this handler and connect to an object in the S3 bucket from MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE s3_datasource
+WITH
+    engine = 's3',
+    parameters = {
+      "aws_access_key_id": "PCAQ2LJDOSWLNSQKOCPW",
+      "aws_secret_access_key": "U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i",
+      "region_name": "us-east-1",
+      "bucket": "mindsdb-bucket",
+      "key": "iris.csv",
+      "input_serialization": "{'CSV': {'FileHeaderInfo': 'NONE'}}"
+    };
+```
+
+You can use this established connection to query your object as follows:
+
+```sql
+SELECT *
+FROM s3_datasource.S3Object;
+```
+
+<Tip>
+Queries to objects in the S3 bucket are issued using [S3 Select](https://aws.amazon.com/blogs/aws/s3-glacier-select/).
+
+This feature is used in `boto3` as described [here](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.select_object_content).
+
+The required format of the `InputSerialization` parameter, which translates to the `input_serialization` parameter of the handler, is of special importance, as it describes how to specify the format of the data in the object that is to be queried.
+
+At the moment, [S3 Select](https://aws.amazon.com/blogs/aws/s3-glacier-select/) does not allow multiple files to be queried. Therefore, queries can be issued only to the object that is passed in the `key` parameter. This object should always be referred to as an S3Object when writing queries as shown in the example above.
+</Tip>

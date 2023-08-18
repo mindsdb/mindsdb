@@ -263,7 +263,9 @@ class TestCompanyIndependent:
                     'jobs',
                     'jobs_history',
                     'models',
-                    'models_versions'
+                    'models_versions',
+                    'mdb_triggers',
+                    'chatbots',
                 }
             )
         # endregion
@@ -325,6 +327,8 @@ class TestCompanyIndependent:
                     'jobs_history',
                     'models',
                     'models_versions',
+                    'mdb_triggers',
+                    'chatbots',
                     f'test_view_{char}'
                 }
             )
@@ -349,7 +353,9 @@ class TestCompanyIndependent:
                     'jobs',
                     'jobs_history',
                     'models',
-                    'models_versions'
+                    'models_versions',
+                    'mdb_triggers',
+                    'chatbots',
                 }
             )
 
@@ -425,6 +431,8 @@ class TestCompanyIndependent:
             'jobs_history',
             'models',
             'models_versions',
+            'mdb_triggers',
+            'chatbots',
             'test_mon_p_a',
             'model_a'
         })
@@ -434,5 +442,7 @@ class TestCompanyIndependent:
             'jobs_history',
             'models',
             'models_versions',
+            'mdb_triggers',
+            'chatbots',
             'model_b'
         })

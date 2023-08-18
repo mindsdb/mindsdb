@@ -1,3 +1,4 @@
+import datetime as dt
 import pandas as pd
 import dill
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -98,6 +99,11 @@ class StatsForecastHandler(BaseMLEngine):
         model_args["target"] = target
         model_args["horizon"] = time_settings["horizon"]
         model_args["order_by"] = time_settings["order_by"]
+        if 'group_by' not in time_settings:
+            # add group column
+            group_col = '__groupy_by'
+            time_settings["group_by"] = [group_col]
+
         model_args["group_by"] = time_settings["group_by"]
         model_args["frequency"] = (
             using_args["frequency"] if "frequency" in using_args else infer_frequency(df, time_settings["order_by"])
@@ -152,7 +158,12 @@ class StatsForecastHandler(BaseMLEngine):
         else:
             results_df = forecast_df[forecast_df.index.isin(groups_to_keep)]
 
-        return get_results_from_nixtla_df(results_df, model_args)
+        result = get_results_from_nixtla_df(results_df, model_args)
+
+        ts_col = model_args["order_by"]
+        if len(result) > 0 and isinstance(result.iloc[0][ts_col], dt.date):
+            result[ts_col] = result[ts_col].dt.date
+        return result
 
     def describe(self, attribute=None):
         model_args = self.model_storage.json_get("model_args")

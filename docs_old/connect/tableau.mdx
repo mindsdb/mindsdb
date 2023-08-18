@@ -1,0 +1,180 @@
+---
+title: MindsDB and Tableau
+sidebarTitle: Tableau
+---
+
+<iframe
+  className="w-full h-96"
+  width="613"
+  height="286"
+  src="https://www.youtube.com/embed/eUiBVrm85v4"
+  title="Connect using Tableau"
+  frameborder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowfullscreen
+></iframe>
+
+Tableau lets you visualize your data easily and intuitively. Now that MindsDB
+supports the MySQL binary protocol, you can connect it to Tableau and see the
+forecasts.
+
+## How to Connect
+
+Follow the steps below to connect your MindsDB to Tableau.
+
+First, create a new workbook in Tableau and open the _Connectors_ tab in the
+_Connect to Data_ window.
+
+<p align="center">
+  <img src="/assets/connect_tableau.png" />
+</p>
+
+Next, choose _MySQL_ and provide the details of your MindsDB connection, such as
+the IP, port, and database name. Optionally, you can provide a username and
+password. Then, click _Sign In_.
+
+<p align="center">
+  <img src="/assets/connect_tableau_2.png" />
+</p>
+
+Here are the connection parameters specific for your MindsDB installation type:
+
+<Tabs>
+    <Tab title="Local MindsDB">
+      ```text
+      Host: `localhost`
+      Port: `47335`
+      Database name: `mindsdb`
+      Username: `mindsdb`
+      Password: *leave it empty*
+      ```
+    </Tab>
+    <Tab title="MindsDB Cloud">
+      ```text
+      Host: `cloud.mindsdb.com`
+      Port: `3306`
+      Database name: `mindsdb`
+      Username: `<your MindsDB Cloud username>`
+      Password: `<your MindsDB Cloud password>`
+      ```
+    </Tab>
+    <Tab title="MindsDB Pro">
+      ```text
+      Host: `<dedicated instace ip>`
+      Port: 3306
+      Database name: `mindsdb`
+      Username: `<your MindsDB Cloud username>`
+      Password: `<your MindsDB Cloud password>`
+      ```
+    </Tab>
+</Tabs>
+
+Now you're connected!
+
+## Overview of MindsDB in Tableau
+
+The content of your MindsDB is visible in the right-side pane.
+
+<p align="center">
+  <img src="/assets/connect_tableau_3.png" />
+</p>
+
+All the predictors are listed under the _Table_ section. You can also switch
+between the integrations, such as _mindsdb_ or _files_, in the _Database_
+section using the drop-down.
+
+<p align="center">
+  <img src="/assets/connect_tableau_4.png" />
+</p>
+
+Now, let's run some examples!
+
+## Examples
+
+### Example 1
+
+Previewing one of the tables from the _mysql_ integration:
+
+<p align="center">
+  <img src="/assets/connect_tableau_5.png" />
+</p>
+
+### Example 2
+
+There is one technical limitation. Namely, we cannot join tables from different
+databases/integrations in Tableau. To overcome this challenge, you can use
+either views or custom SQL queries.
+
+- Previewing a view that joins a data table with a predictor table:
+
+<p align="center">
+  <img src="/assets/connect_tableau_6.png" />
+</p>
+
+- Using a custom SQL query by clicking the _New Custom SQL_ button in the
+  right-side pane:
+
+<p align="center">
+  <img src="/assets/connect_tableau_7.png" />
+</p>
+
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Tutorials** and
+**Community Tutorials** sections, where you'll find various examples of
+regression, classification, and time series predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on
+[MindsDB database structure](/sql/table-structure/). Also, don't miss out on the
+remaining pages from the **SQL API** section, as they explain a common SQL
+syntax with examples.
+
+<Tip>
+**From Our Community**
+
+Check out the articles and video guides created by our community:
+
+- Article on [Predicting & Visualizing Hourly Electricity Demand in the US with MindsDB and Tableau](https://teslimodus.medium.com/predicting-visualizing-hourly-electricity-demand-in-the-us-with-mindsdb-and-tableau-126d1c74d860)
+  by [Teslim Odumuyiwa](https://teslimodus.medium.com/)
+
+- Article on [Predicting & Visualizing Petroleum Production with MindsDB and Tableau](https://dev.to/tesprogram/predicting-visualizing-petroleum-production-with-mindsdb-and-tableau-373f)
+  by [Teslim Odumuyiwa](https://github.com/Tes-program)
+
+- Article on [Predicting & Visualizing Gas Prices with MindsDB and Tableau](https://dev.to/tesprogram/predicting-visualizing-gas-prices-with-mindsdb-and-tableau-d1p)
+  by [Teslim Odumuyiwa](https://github.com/Tes-program)
+
+- Article on [How To Visualize MindsDB Predictions with Tableau](https://dev.to/ephraimx/how-to-visualize-mindsdb-predictions-with-tableau-2bpd)
+  by [Ephraimx](https://dev.to/ephraimx)
+
+- Video guide on [Connecting MindsDB to Tableau](https://www.youtube.com/watch?v=eUiBVrm85v4)
+  by [Alissa Troiano](https://github.com/alissatroiano)
+
+- Video guide on [Visualizing prediction result in Tableau](https://youtu.be/4aio-8kNbOo) by
+  [Teslim Odumuyiwa](https://github.com/Tes-program)
+</Tip>
+
+Have fun!
+
+<Tip>
+**From Our Community**
+
+Check out the articles and video guides created by our community:
+
+- Article on [Predicting & Visualizing Hourly Electricity Demand in the US with MindsDB and Tableau](https://teslimodus.medium.com/predicting-visualizing-hourly-electricity-demand-in-the-us-with-mindsdb-and-tableau-126d1c74d860)
+  by [Teslim Odumuyiwa](https://teslimodus.medium.com/)
+
+- Article on [Predicting & Visualizing Petroleum Production with MindsDB and Tableau](https://dev.to/tesprogram/predicting-visualizing-petroleum-production-with-mindsdb-and-tableau-373f)
+  by [Teslim Odumuyiwa](https://github.com/Tes-program)
+
+- Article on [Predicting & Visualizing Gas Prices with MindsDB and Tableau](https://dev.to/tesprogram/predicting-visualizing-gas-prices-with-mindsdb-and-tableau-d1p)
+  by [Teslim Odumuyiwa](https://github.com/Tes-program)
+
+- Article on [How To Visualize MindsDB Predictions with Tableau](https://dev.to/ephraimx/how-to-visualize-mindsdb-predictions-with-tableau-2bpd)
+  by [Ephraimx](https://dev.to/ephraimx)
+
+- Video guide on [Connecting MindsDB to Tableau](https://www.youtube.com/watch?v=eUiBVrm85v4)
+  by [Alissa Troiano](https://github.com/alissatroiano)
+
+- Video guide on [Visualizing prediction result in Tableau](https://youtu.be/4aio-8kNbOo) by
+  [Teslim Odumuyiwa](https://github.com/Tes-program)
+</Tip>

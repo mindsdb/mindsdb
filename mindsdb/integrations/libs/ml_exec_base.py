@@ -16,6 +16,7 @@ In particular, three big components are included:
 
 """  # noqa
 
+import sys
 import time
 import threading
 import datetime as dt
@@ -47,11 +48,9 @@ from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 from mindsdb.utilities.context import context as ctx
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.integrations.handlers_client.ml_client_factory import MLClientFactory
-from mindsdb.integrations.libs.learn_process import learn_process
+from mindsdb.integrations.libs.learn_process import learn_process, predict_process
 from mindsdb.utilities.functions import mark_process
 import mindsdb.utilities.profiler as profiler
-
-from .ml_handler_proc import MLHandlerWrapper, MLHandlerPersistWrapper
 
 import torch.multiprocessing as mp
 mp_ctx = mp.get_context('spawn')
@@ -64,12 +63,16 @@ class MLEngineException(Exception):
 def init_ml_handler(module_path):
     import importlib  # noqa
 
-    from mindsdb.integrations.libs.learn_process import learn_process  # noqa
+    from mindsdb.integrations.libs.learn_process import learn_process, predict_process  # noqa
 
     importlib.import_module(module_path)
 
 
 def dummy_task():
+    return None
+
+
+def empty_callback(_task):
     return None
 
 
@@ -88,6 +91,8 @@ class WarmProcess:
                 initargs (tuple): the same as ProcessPoolExecutor initargs
         """
         self.pool = ProcessPoolExecutor(1, initializer=initializer, initargs=initargs)
+        self.last_usage_at = time.time()
+        self._markers = set()
         # region bacause of ProcessPoolExecutor does not start new process
         # untill it get a task, we need manually run dummy task to force init.
         self.task = self.pool.submit(dummy_task)
@@ -96,12 +101,26 @@ class WarmProcess:
         # endregion
 
     def __del__(self):
-        self.pool.shutdown(wait=False)
+        self.shutdown()
+
+    def shutdown(self):
+        # workaround for https://bugs.python.org/issue39098
+        if sys.version_info[0] == 3 and sys.version_info[1] <= 8:
+            t = threading.Thread(target=self._shutdown)
+            t.run()
+        else:
+            self.pool.shutdown(wait=False)
+
+    def _shutdown(self):
+        self.pool.shutdown(wait=True)
 
     def _init_done_callback(self, _task):
         """ callback for initial task
         """
         self._init_done = True
+
+    def _update_last_usage_at_callback(self, _task):
+        self.last_usage_at = time.time()
 
     def ready(self) -> bool:
         """ check is process ready to get a task or not
@@ -115,6 +134,36 @@ class WarmProcess:
         if self.task is None or self.task.done():
             return True
         return False
+
+    def add_marker(self, marker: tuple):
+        """ remember that that process processed task for that model
+
+            Args:
+                marker (tuple): identifier of model
+        """
+        if marker is not None:
+            self._markers.add(marker)
+
+    def has_marker(self, marker: tuple) -> bool:
+        """ check if that process processed task for model
+
+            Args:
+                marker (tuple): identifier of model
+
+            Returns:
+                bool
+        """
+        if marker is None:
+            return False
+        return marker in self._markers
+
+    def is_marked(self) -> bool:
+        """ check if process has any marker
+
+            Returns:
+                bool
+        """
+        return len(self._markers) > 0
 
     def apply_async(self, func: Callable, *args: tuple, **kwargs: dict) -> Future:
         """ Run new task
@@ -132,7 +181,14 @@ class WarmProcess:
         self.task = self.pool.submit(
             func, *args, **kwargs
         )
+        self.task.add_done_callback(self._update_last_usage_at_callback)
+        self.last_usage_at = time.time()
         return self.task
+
+
+def warm_function(func, context: str, *args, **kwargs):
+    ctx.load(context)
+    return func(*args, **kwargs)
 
 
 class ProcessCache:
@@ -185,18 +241,20 @@ class ProcessCache:
                     self._keep_alive[handler.__name__] = preload_handlers[handler]
                     self.cache[handler.__name__] = {
                         'last_usage_at': time.time(),
+                        'handler_module': handler.__module__,
                         'processes': [
                             WarmProcess(init_ml_handler, (handler.__module__,))
                             for _x in range(preload_handlers[handler])
                         ]
                     }
 
-    def apply_async(self, handler: object, func: Callable, *args, **kwargs) -> Future:
+    def apply_async(self, handler: object, func: Callable, model_marker: tuple = None, *args, **kwargs) -> Future:
         """ run new task. If possible - do it in existing process, if not - start new one.
 
             Args:
                 handler (object): handler class
                 func (Callable): function to run
+                model_marker (tuple): if any of processes processed task with same marker - new task will be sent to it
                 args (tuple): args to be passed to function
                 kwargs (dict): kwargs to be passed to function
 
@@ -209,17 +267,34 @@ class ProcessCache:
                 warm_process = WarmProcess(init_ml_handler, (handler.__module__,))
                 self.cache[handler_name] = {
                     'last_usage_at': None,
+                    'handler_module': handler.__module__,
                     'processes': [warm_process]
                 }
             else:
-                for warm_process in self.cache[handler_name]['processes']:
-                    if warm_process.ready():
-                        break
-                else:
+                warm_process = None
+                if model_marker is not None:
+                    try:
+                        warm_process = next(
+                            p for p in self.cache[handler_name]['processes']
+                            if p.ready() and p.has_marker(model_marker)
+                        )
+                    except StopIteration:
+                        pass
+                if warm_process is None:
+                    try:
+                        warm_process = next(
+                            p for p in self.cache[handler_name]['processes']
+                            if p.ready()
+                        )
+                    except StopIteration:
+                        pass
+                if warm_process is None:
                     warm_process = WarmProcess(init_ml_handler, (handler.__module__,))
                     self.cache[handler_name]['processes'].append(warm_process)
-            task = warm_process.apply_async(func, *args, **kwargs)
+
+            task = warm_process.apply_async(warm_function, func, ctx.dump(), *args, **kwargs)
             self.cache[handler_name]['last_usage_at'] = time.time()
+            warm_process.add_marker(model_marker)
         return task
 
     def _clean(self) -> None:
@@ -228,21 +303,29 @@ class ProcessCache:
         while self._stop_event.wait(timeout=10) is False:
             with self._lock:
                 for handler_name in self.cache.keys():
-                    last_usage_at = self.cache[handler_name]['last_usage_at']
                     processes = self.cache[handler_name]['processes']
-                    if (
-                        (
-                            handler_name not in self._keep_alive
-                            or self._keep_alive[handler_name] < len(processes)
+                    processes.sort(key=lambda x: x.is_marked())
+
+                    expected_count = 0
+                    if handler_name in self._keep_alive:
+                        expected_count = self._keep_alive[handler_name]
+
+                    # stop processes which was used, it needs to free memory
+                    for i, process in enumerate(processes):
+                        if (
+                            process.ready()
+                            and process.is_marked()
+                            and (time.time() - process.last_usage_at) > self._ttl
+                        ):
+                            processes.pop(i)
+                            # del process
+                            process.shutdown()
+                            break
+
+                    while expected_count > len(processes):
+                        processes.append(
+                            WarmProcess(init_ml_handler, (self.cache[handler_name]['handler_module'],))
                         )
-                        and last_usage_at is not None
-                        and (time.time() - last_usage_at) > self._ttl
-                    ):
-                        for i, process in enumerate(processes):
-                            if process.ready():
-                                processes.pop(i)
-                                del process
-                                break
 
 
 process_cache = ProcessCache()
@@ -281,32 +364,14 @@ class BaseMLEngineExec:
 
         integration_id = self.integration_id
 
-        class_path = [self.handler_class.__module__, self.handler_class.__name__]
+        handlerStorage = HandlerStorage(integration_id)
+        modelStorage = ModelStorage(predictor_id)
 
-        if self.execution_method == 'subprocess':
-            handler = MLHandlerWrapper()
-
-            handler.init_handler(class_path, integration_id, predictor_id, ctx.dump())
-            return handler
-
-        elif self.execution_method == 'subprocess_keep':
-            handler = MLHandlerPersistWrapper()
-
-            handler.init_handler(class_path, integration_id, predictor_id, ctx.dump())
-            return handler
-
-        elif self.execution_method == 'remote':
-            raise NotImplementedError()
-
-        else:
-            handlerStorage = HandlerStorage(integration_id)
-            modelStorage = ModelStorage(predictor_id)
-
-            ml_handler = self.handler_class(
-                engine_storage=handlerStorage,
-                model_storage=modelStorage,
-            )
-            return ml_handler
+        ml_handler = self.handler_class(
+            engine_storage=handlerStorage,
+            model_storage=modelStorage,
+        )
+        return ml_handler
 
     def get_tables(self) -> Response:
         """ Returns all models currently registered that belong to the ML engine."""
@@ -411,9 +476,9 @@ class BaseMLEngineExec:
         task = process_cache.apply_async(
             self.handler_class,
             learn_process,
+            (ctx.company_id, predictor_record.id),
             class_path,
             self.engine,
-            ctx.dump(),
             self.integration_id,
             predictor_record.id,
             problem_definition,
@@ -427,6 +492,8 @@ class BaseMLEngineExec:
             task.result()
             predictor_record = db.Predictor.query.get(predictor_record.id)
             db.session.refresh(predictor_record)
+        else:
+            task.add_done_callback(empty_callback)
 
         return predictor_record
 
@@ -456,41 +523,30 @@ class BaseMLEngineExec:
         if predictor_record.status != PREDICTOR_STATUS.COMPLETE:
             raise Exception("Error: model creation not completed")
 
-        ml_handler = self._get_ml_handler(predictor_record.id)
-
         args = {
             'pred_format': pred_format,
             'predict_params': {} if params is None else params
         }
-        # FIXME
-        # if self.handler_class.__name__ == 'LightwoodHandler':
-        if self.handler_class.__name__ == 'LightwoodHandler':
-            args['code'] = predictor_record.code
-            args['target'] = predictor_record.to_predict[0]
-            args['dtype_dict'] = predictor_record.dtype_dict
-            args['learn_args'] = predictor_record.learn_args
-
-        if self.handler_class.__name__ in ('LangChainHandler',):
-            from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
-            from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
-
-            sql_session = SessionController()
-            sql_session.database = 'mindsdb'
-
-            command_executor = ExecuteCommands(sql_session, executor=None)
-
-            args['executor'] = command_executor
 
         try:
-            predictions = ml_handler.predict(df, args)
+            task = process_cache.apply_async(
+                handler=self.handler_class,
+                func=predict_process,
+                model_marker=(ctx.company_id, predictor_record.id),
+                predictor_record=predictor_record,
+                integration_id=self.integration_id,
+                handler_class=self.handler_class,
+                ml_engine_name=self.handler_class.__name__,
+                df=df,
+                args=args
+            )
+            predictions = task.result()
         except Exception as e:
             msg = str(e).strip()
             if msg == '':
                 msg = e.__class__.__name__
             msg = f'[{self.name}/{model_name}]: {msg}'
             raise MLEngineException(msg) from e
-
-        ml_handler.close()
 
         # mdb indexes
         if '__mindsdb_row_id' not in predictions.columns and '__mindsdb_row_id' in df.columns:
@@ -506,7 +562,7 @@ class BaseMLEngineExec:
         return predictions
 
     @profiler.profile()
-    def update(
+    def finetune(
             self, model_name, project_name,
             base_model_version: int,
             data_integration_ref=None,
@@ -576,9 +632,9 @@ class BaseMLEngineExec:
             task = process_cache.apply_async(
                 self.handler_class,
                 learn_process,
+                (ctx.company_id, predictor_record.id),
                 class_path,
                 self.engine,
-                ctx.dump(),
                 self.integration_id,
                 predictor_record.id,
                 predictor_record.learn_args,
@@ -593,5 +649,9 @@ class BaseMLEngineExec:
                 task.result()
                 predictor_record = db.Predictor.query.get(predictor_record.id)
                 db.session.refresh(predictor_record)
+            else:
+                # return the base predictor record if process is not joined
+                predictor_record = db.Predictor.query.get(base_predictor_record.id)
+                task.add_done_callback(empty_callback)
 
         return predictor_record

@@ -1,0 +1,262 @@
+---
+title: JOIN ON Statement
+sidebarTitle: JOIN ON
+---
+
+## Description
+
+The `JOIN` statement joins two tables `ON` a defined column. It is a regular `JOIN` used throughout SQL.
+
+## Syntax
+
+Here is the syntax:
+
+```sql
+SELECT t1.column_name, t2.column_name, ...
+FROM integration_name.table_name [AS] t1
+JOIN integration_name.table_name [AS] t2
+ON t1.column_name = t2.column_name;
+```
+
+On execution, we get:
+
+```sql
++-----------------+-----------------+
+| t1.column_name  | t2.column_name  |
++-----------------+-----------------+
+| t1.value        | t2.value        |
++-----------------+-----------------+
+```
+
+Where:
+
+| Name                                | Description                                     |
+| ----------------------------------- | ----------------------------------------------- |
+| `t1.column_name`                    | Name of the column from the first table.        |
+| `t2.column_name`                    | Name of the column from the second table.       |
+| `integration_name.table_name`       | Name of the table used in the `JOIN` operation. |
+
+<Tip>
+
+**Nested `JOINs`**
+
+MindsDB provides you with two categories of `JOINs`. One is the `JOIN` statement which combines the data table with the model table in order to fetch bulk predictions. Another is the regular `JOIN` used throughout SQL. Please note that only the latter one requires the `ON` clause.
+
+You can nest these types of `JOINs` as follows:
+
+```sql
+SELECT * FROM (
+    SELECT *
+    FROM project_name.model_table AS m
+    JOIN integration_name.data_table AS d;
+) AS t1
+JOIN (
+    SELECT *
+    FROM project_name.model_table AS m
+    JOIN integration_name.data_table AS d;
+) AS t2
+ON t1.column_name = t2.column_name;
+```
+
+</Tip>
+
+## Example 1
+
+Let's use the following data to see how the different types of `JOINs` work.
+
+The `pets` table that stores pets:
+
+```sql
++------+-------+
+|pet_id|name   |
++------+-------+
+|1     |Moon   |
+|2     |Ripley |
+|3     |Bonkers|
+|4     |Star   |
+|5     |Luna   |
+|6     |Lake   |
++------+-------+
+```
+
+And the `owners` table that stores pets' owners:
+
+```sql
++--------+-------+------+
+|owner_id|name   |pet_id|
++--------+-------+------+
+|1       |Amy    |4     |
+|2       |Bob    |1     |
+|3       |Harry  |5     |
+|4       |Julia  |2     |
+|5       |Larry  |3     |
+|6       |Henry  |0     |
++--------+-------+------+
+```
+
+### `JOIN` or `INNER JOIN`
+
+The `JOIN` or `INNER JOIN` command joins the rows of the `owners` and `pets` tables wherever there is a match. For example, a pet named Lake does not have an owner, so it'll be left out.
+
+```sql
+SELECT *
+FROM files.owners o
+[INNER] JOIN files.pets p
+ON o.pet_id = p.pet_id;
+```
+
+On execution, we get:
+
+```sql
++--------+-------+------+------+-------+
+|owner_id|name   |pet_id|pet_id|name   |
++--------+-------+------+------+-------+
+|1       |Amy    |4     |4     |Star   |
+|2       |Bob    |1     |1     |Moon   |
+|3       |Harry  |5     |5     |Luna   |
+|4       |Julia  |2     |2     |Ripley |
+|5       |Larry  |3     |3     |Bonkers|
++--------+-------+------+------+-------+
+```
+
+As in standard SQL, you can use the `WHERE` clause to filter the output data.
+
+```sql
+SELECT *
+FROM files.owners o
+[INNER] JOIN files.pets p
+ON o.pet_id = p.pet_id
+WHERE o.name = 'Amy'
+OR o.name = 'Bob';
+```
+
+On execution, we get:
+
+```sql
++--------+-------+------+------+-------+
+|owner_id|name   |pet_id|pet_id|name   |
++--------+-------+------+------+-------+
+|1       |Amy    |4     |4     |Star   |
+|2       |Bob    |1     |1     |Moon   |
++--------+-------+------+------+-------+
+```
+
+### `LEFT JOIN`
+
+The `LEFT JOIN` command joins the rows of two tables such that all rows from the left table, even the ones with no match, show up. Here, the left table is the `owners` table.
+
+```sql
+SELECT *
+FROM files.owners o
+LEFT JOIN files.pets p
+ON o.pet_id = p.pet_id;
+```
+
+On execution, we get:
+
+```sql
++--------+-------+------+------+-------+
+|owner_id|name   |pet_id|pet_id|name   |
++--------+-------+------+------+-------+
+|1       |Amy    |4     |4     |Star   |
+|2       |Bob    |1     |1     |Moon   |
+|3       |Harry  |5     |5     |Luna   |
+|4       |Julia  |2     |2     |Ripley |
+|5       |Larry  |3     |3     |Bonkers|
+|6       |Henry  |0     |[NULL]|[NULL] |
++--------+-------+------+------+-------+
+```
+
+### `RIGHT JOIN`
+
+The `RIGHT JOIN` command joins the rows of two tables such that all rows from the right table, even the ones with no match, show up. Here, the right table is the `pets` table.
+
+```sql
+SELECT *
+FROM files.owners o
+RIGHT JOIN files.pets p
+ON o.pet_id = p.pet_id;
+```
+
+On execution, we get:
+
+```sql
++--------+-------+------+------+-------+
+|owner_id|name   |pet_id|pet_id|name   |
++--------+-------+------+------+-------+
+|2       |Bob    |1     |1     |Moon   |
+|4       |Julia  |2     |2     |Ripley |
+|5       |Larry  |3     |3     |Bonkers|
+|1       |Amy    |4     |4     |Star   |
+|3       |Harry  |5     |5     |Luna   |
+|[NULL]  |[NULL] |[NULL]|6     |Lake   |
++--------+-------+------+------+-------+
+```
+
+### `FULL JOIN` or `FULL OUTER JOIN`
+
+The `FULL [OUTER] JOIN` command joins the rows of two tables such that all rows from both tables, even the ones with no match, show up.
+
+```sql
+SELECT *
+FROM files.owners o
+FULL [OUTER] JOIN files.pets p
+ON o.pet_id = p.pet_id;
+```
+
+On execution, we get:
+
+```sql
++--------+------+------+------+-------+---------+
+|owner_id|name  |pet_id|pet_id|name   |animal_id|
++--------+------+------+------+-------+---------+
+|1       |Amy   |4     |4     |Star   |2        |
+|2       |Bob   |1     |1     |Moon   |1        |
+|3       |Harry |5     |5     |Luna   |2        |
+|4       |Julia |2     |2     |Ripley |1        |
+|5       |Larry |3     |3     |Bonkers|3        |
+|6       |Henry |0     |[NULL]|[NULL] |[NULL]   |
+|[NULL]  |[NULL]|[NULL]|6     |Lake   |4        |
++--------+------+------+------+-------+---------+
+```
+
+## Example 2
+
+More than two tables can be joined subsequently.
+
+Let's use another table called `animals`:
+
+```sql
++---------+-------+
+|animal_id|name   |
++---------+-------+
+|1        |Dog    |
+|2        |Cat    |
+|3        |Hamster|
+|4        |Fish   |
++---------+-------+
+```
+
+Now we can join all three tables.
+
+```sql
+SELECT *
+FROM files.owners o
+RIGHT JOIN files.pets p ON o.pet_id = p.pet_id
+JOIN files.animals a ON p.animal_id = a.animal_id;
+```
+
+On execution, we get:
+
+```sql
++--------+-------+------+------+-------+---------+---------+-------+
+|owner_id|name   |pet_id|pet_id|name   |animal_id|animal_id|name   |
++--------+-------+------+------+-------+---------+---------+-------+
+|2       |Bob    |1     |1     |Moon   |1        |1        |Dog    |
+|4       |Julia  |2     |2     |Ripley |1        |1        |Dog    |
+|5       |Larry  |3     |3     |Bonkers|3        |3        |Hamster|
+|1       |Amy    |4     |4     |Star   |2        |2        |Cat    |
+|3       |Harry  |5     |5     |Luna   |2        |2        |Cat    |
+|[NULL]  |[NULL] |[NULL]|6     |Lake   |4        |4        |Fish   |
++--------+-------+------+------+-------+---------+---------+-------+
+```

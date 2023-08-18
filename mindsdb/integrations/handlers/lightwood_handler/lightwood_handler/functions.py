@@ -190,7 +190,7 @@ def run_finetune(df: DataFrame, args: dict, model_storage):
         )
         predictor = lightwood.predictor_from_state(base_fs.folder_path / base_fs.folder_name,
                                                    base_predictor_record.code)
-        predictor.adjust(df, adjust_args=args)
+        predictor.adjust(df, adjust_args=args.get('using', {}))
 
         fs = FileStorage(
             resource_group=RESOURCE_GROUP.PREDICTOR,

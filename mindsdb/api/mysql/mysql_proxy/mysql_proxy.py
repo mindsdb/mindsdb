@@ -209,7 +209,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         handshake_resp = self.packet(HandshakeResponsePacket)
         handshake_resp.get()
         if handshake_resp.length == 0:
-            logger.warning('HandshakeResponsePacket empty')
+            logger.debug('HandshakeResponsePacket empty')
             self.packet(OkPacket).send()
             return False
         self.client_capabilities = ClentCapabilities(handshake_resp.capabilities.value)

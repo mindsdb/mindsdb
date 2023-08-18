@@ -63,7 +63,7 @@ class Packet:
         while len_header == MAX_PACKET_SIZE:
             packet_string = self.mysql_socket.recv(4)
             if len(packet_string) < 4:
-                self.session.logging.warning(f'Packet with less than 4 bytes in length: {packet_string}')
+                self.session.logging.debug(f'Packet with less than 4 bytes in length: {packet_string}')
                 return False
                 break
             len_header = struct.unpack('i', packet_string[:3] + b'\x00')[0]

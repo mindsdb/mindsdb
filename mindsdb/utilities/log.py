@@ -51,15 +51,12 @@ def configure_logging():
                 "level": logging.WARNING,
             },
             "__main__": {
-                "handlers": ["console"],
                 "level": mindsdb_level,
             },
             "mindsdb": {
-                "handlers": ["console"],
                 "level": mindsdb_level,
             },
             "alembic": {
-                "handlers": ["console"],
                 "level": logging.DEBUG,
             },
         },

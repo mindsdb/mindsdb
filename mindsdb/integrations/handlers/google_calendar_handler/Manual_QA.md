@@ -1,32 +1,29 @@
 # Welcome to the MindsDB Manual QA Testing for Google Calendar Handler
 
-> **Please submit your PR in the following format after the underline below `Results` section. Don't forget to add an underline after adding your changes i.e., at the end of your `Results` section.**
 
 ## Testing Google Calendar Handler with [Dataset Name](URL to the Dataset)
 
 **1. Testing CREATE DATABASE**
 
 ```
-COMMAND THAT YOU RAN TO CREATE DATABASE.
+CREATE
+DATABASE my_calendar2
+WITH  ENGINE = 'google_calendar',
+parameters = {
+    'credentials': '/home/marios/PycharmProjects/mindsdb/mindsdb/integrations/handlers/google_calendar_handler/creds.json'
+};
 ```
 
-![CREATE_DATABASE](Image URL of the screenshot)
+[![google-calendar-create-db.png](https://i.postimg.cc/gJS2rP6Q/google-calendar-create-db.png)](https://postimg.cc/Q973nwmJ)
 
-**2. Testing CREATE PREDICTOR**
-
-```
-COMMAND THAT YOU RAN TO CREATE PREDICTOR.
-```
-
-![CREATE_PREDICTOR](Image URL of the screenshot)
-
-**3. Testing SELECT FROM PREDICTOR**
+**2. Testing SELECT FROM Database**
 
 ```
-COMMAND THAT YOU RAN TO DO A SELECT FROM.
+SELECT *
+FROM my_calendar.events;
 ```
 
-![SELECT_FROM](Image URL of the screenshot)
+[![google-calendar-select-method.png](https://i.postimg.cc/wTH9HvPM/google-calendar-select-method.png)](https://postimg.cc/fkHGfwMQ)
 
 ### Results
 

@@ -8,7 +8,12 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.docstore.document import Document
 from langchain.document_loaders import DataFrameLoader
 from langchain.embeddings import HuggingFaceEmbeddings
+from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain.vectorstores import Chroma
+from llama_index import ServiceContext, SimpleDirectoryReader, VectorStoreIndex
+from llama_index.embeddings import LangchainEmbedding
+from llama_index.storage.storage_context import StorageContext
+from llama_index.vector_stores import ChromaVectorStore
 from pydantic import BaseModel
 
 DEFAULT_EMBEDDINGS_MODEL = "sentence-transformers/all-mpnet-base-v2"
@@ -24,6 +29,8 @@ USER_DEFINED_MODEL_PARAMS = (
     "writer_api_key",
     "base_url",
 )
+
+SUPPORTED_VECTOR_STORES = "chroma"
 
 
 class ModelParameters(BaseModel):
@@ -133,10 +140,18 @@ def get_chroma_settings(persist_directory):
     )
 
 
+def get_chroma_client(embeddings_model_name, persist_directory, collection_name):
+    chroma_settings = get_chroma_settings(persist_directory)
+    return load_chroma(
+        embeddings_model_name, persist_directory, collection_name, chroma_settings
+    )
+
+
 def get_retriever(embeddings_model_name, persist_directory, collection_name):
     chroma_settings = get_chroma_settings(persist_directory)
     db = load_chroma(
         embeddings_model_name, persist_directory, collection_name, chroma_settings
     )
+
     retriever = db.as_retriever()
     return retriever

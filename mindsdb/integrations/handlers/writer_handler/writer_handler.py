@@ -1,6 +1,10 @@
+import json
+import random
 from typing import Dict, Optional
 
 import pandas as pd
+from datasets import load_dataset
+from sklearn.metrics import average_precision_score
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities.log import get_log
@@ -9,6 +13,7 @@ from .ingest import Ingestor
 from .question_answer import QuestionAnswerer
 from .settings import (
     DEFAULT_EMBEDDINGS_MODEL,
+    SUPPORTED_VECTOR_STORES,
     USER_DEFINED_MODEL_PARAMS,
     ModelParameters,
 )
@@ -44,6 +49,13 @@ class WriterHandler(BaseMLEngine):
 
         if "prompt_template" not in args:
             raise Exception("Please provide a `prompt_template` for this engine.")
+
+        vector_store_name = args.get("vector_store_name", "chroma")
+
+        if vector_store_name not in SUPPORTED_VECTOR_STORES:
+            raise ValueError(
+                f"currently we only support {', '.join(str(v) for v in SUPPORTED_VECTOR_STORES)} vector store"
+            )
 
     def create(
         self,
@@ -110,8 +122,19 @@ class WriterHandler(BaseMLEngine):
         )
 
         # get question from sql query e.g. where question = 'What is the capital of France?'
-        question_answerer.query(df["question"].tolist()[0])
+        response = question_answerer.query(df["question"].tolist()[0])
 
-        # return results
+        results_df = pd.DataFrame(response)
 
-        return question_answerer.results_df
+        return results_df
+
+    def evaluate(self):
+
+        dataset_squad_v2 = load_dataset("squad_v2")
+        val_df = pd.DataFrame(dataset_squad_v2["validation"])
+        val_df["answers"] = val_df["answers"].apply(json.dumps)
+
+        random.seed(53)
+
+        sample_size = 100
+        sample_queries = random.sample(val_df["question"].tolist(), sample_size)

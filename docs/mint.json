@@ -823,7 +823,8 @@
           "pages": [
             "integrations/ai-engines/openai",
             "integrations/ai-engines/huggingface",
-            "integrations/ai-engines/langchain"
+            "integrations/ai-engines/langchain",
+            "integrations/ai-engines/monkeylearn"
           ]
         },
         {

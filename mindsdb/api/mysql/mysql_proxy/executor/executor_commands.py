@@ -656,7 +656,7 @@ class ExecuteCommands:
                                 statement.start_str, statement.end_str, statement.repeat_str)
         except Exception as e:
             if "already exists" in str(e) and statement.if_not_exists:
-                ExecuteAnswer(ANSWER_TYPE.OK)
+                return ExecuteAnswer(ANSWER_TYPE.OK)
             raise e
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -670,8 +670,8 @@ class ExecuteCommands:
         try:
             jobs_controller.delete(job_name, project_name)
         except Exception as e:
-            if "Job not exists" in str(e) and statement.if_exists:
-                ExecuteAnswer(ANSWER_TYPE.OK)
+            if "does not exist" in str(e) and statement.if_exists:
+                return ExecuteAnswer(ANSWER_TYPE.OK)
             raise e
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -1035,7 +1035,12 @@ class ExecuteCommands:
         connection_args = statement.parameters
 
         if engine == "mindsdb":
-            ProjectController().add(database_name)
+            try:
+                ProjectController().add(database_name)
+            except Exception as e:
+                if "already exists" in str(e) and statement.if_not_exists:
+                    return ExecuteAnswer(ANSWER_TYPE.OK)
+                raise e
         else:
             try:
                 self._create_integration(database_name, engine, connection_args)
@@ -1173,7 +1178,13 @@ class ExecuteCommands:
             else:
                 db_name = self.session.database
             project = self.session.database_controller.get_project(db_name)
-            project.drop_table(view_name)
+            try:
+                project.drop_table(view_name)
+            except Exception as e:
+                if "does not exist" in str(e) and statement.if_exists:
+                    ...
+                else:
+                    raise e
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
@@ -1199,19 +1210,19 @@ class ExecuteCommands:
 
         try:
             df = self.session.model_controller.create_model(statement, ml_handler)
+            resp_dict = df.to_dict(orient='split')
+
+            columns = [
+                Column(col)
+                for col in resp_dict['columns']
+            ]
+
+            return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
         except Exception as e:
             # check if the error is name already exists
             if re.search(r"model .* already exists", str(e)) and statement.if_not_exists:
                 return ExecuteAnswer(ANSWER_TYPE.OK)
-
-        resp_dict = df.to_dict(orient='split')
-
-        columns = [
-            Column(col)
-            for col in resp_dict['columns']
-        ]
-
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
+            raise e
 
     def answer_show_columns(
             self,

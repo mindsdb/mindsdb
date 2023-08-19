@@ -73,7 +73,7 @@ class Project:
     def drop_table(self, table_name: str):
         tables = self.get_tables()
         if table_name not in tables:
-            raise Exception(f"Table '{table_name}' do not exists")
+            raise Exception(f"Table '{table_name}' does not exist")
         table_meta = tables[table_name]
         if table_meta['type'] == 'model':
             ModelController().delete_model(

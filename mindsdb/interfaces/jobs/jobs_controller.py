@@ -165,7 +165,7 @@ class JobsController:
             deleted_at=sa.null()
         ).first()
         if record is None:
-            raise Exception(f'Job not exists: {name}')
+            raise Exception(f'Job does not exist: {name}')
 
         self._delete_record(record)
         db.session.commit()

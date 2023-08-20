@@ -5,7 +5,7 @@ sidebarTitle: House Sales with TimeGPT
 
 ## Introduction
 
-In this tutorial, we introduce Nixtla’s TimeGPT integration which offers the first foundational model for time series forecasting.. We’ll go through an example to predict the real estate sales.
+In this tutorial, we introduce Nixtla’s TimeGPT integration which offers the first foundational model for time series forecasting. We’ll go through an example to predict the real estate sales.
 
 ## Prerequisites
 
@@ -23,7 +23,14 @@ You can check the available engines with this command:
 SHOW ML_ENGINES;
 ```
 
-If you see the TimeGPT engine on the list, you are ready to follow the tutorials.
+If you see the TimeGPT engine on the list, you are ready to follow the tutorials. If you do not see TimeGPT on the list, you will have to create an instance of the engine first with this command:
+
+```sql
+CREATE ML_ENGINE timegpt FROM timegpt USING api_key = '...'
+```
+
+Notice that the `USING` clause is optional, but you must pass an API key eventually (either at model creation, engine creation, model usage, or in the mindsdb configuration file). The only exception to this is when using `cloud.mindsdb.com`. If you want your own token please register [here](https://www.nixtla.io/) (Submit Interest).
+
 
 ## Tutorial
 
@@ -83,7 +90,7 @@ HORIZON 4
 USING ENGINE = 'timegpt';
 ```
 
-The syntax is the same as in the original tutorial. But here, we add the `USING` clause that specifies the ML engine used to make predictions.
+The syntax is the same as in the [original tutorial](/sql/tutorials/house-sales-forecasting). But here, we add the `USING` clause that specifies the ML engine used to make predictions.
 
 We can check the training status with the following query:
 

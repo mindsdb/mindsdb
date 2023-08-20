@@ -2,17 +2,17 @@
     {
       "runs_on": "ubuntu-latest",
       "python-version": "3.11",
-      "runOnBranch": "refs/heads/staging"
+      "runOnBranch": "refs/heads/pre-stable"
     },
     {
       "runs_on": "ubuntu-latest",
       "python-version": "3.10",
-      "runOnBranch": "refs/heads/staging"
+      "runOnBranch": "refs/heads/pre-stable"
     },
     {
       "runs_on": "ubuntu-latest",
       "python-version": 3.9,
-      "runOnBranch": "refs/heads/staging"
+      "runOnBranch": "refs/heads/pre-stable"
     },
     {
       "runs_on": "ubuntu-latest",

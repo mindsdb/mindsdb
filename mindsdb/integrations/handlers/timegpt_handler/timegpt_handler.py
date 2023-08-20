@@ -106,7 +106,7 @@ class TimeGPTHandler(BaseMLEngine):
                 if mindate > pd.to_datetime('1970-01-01T00:00:00') and maxdate < pd.to_datetime('2050-12-31T23:59:59'):
                     unit = u
             df[date_column] = pd.to_datetime(df[date_column], unit=unit, origin='unix')
-        elif pd.api.types.is_string_dtype(df[date_column]):
+        else: 
             df[date_column] = pd.to_datetime(df[date_column])
         df[date_column] = df[date_column].dt.strftime('%Y-%m-%dT%H:%M:%S')  # convert to ISO 8601 format
         return df

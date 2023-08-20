@@ -146,9 +146,7 @@ class WriterHandler(BaseMLEngine):
         # e.g. where question = 'What is the capital of France?'
         response = question_answerer.query(df["question"].tolist()[0])
 
-        results_df = pd.DataFrame(response)
-
-        return results_df
+        return pd.DataFrame(response)
 
     # todo evaluation method on standardised 100-200 sample of squad_v2 - probs move to mindsdb_evaluator library
     def evaluate(self):

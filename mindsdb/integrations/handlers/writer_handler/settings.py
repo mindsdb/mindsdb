@@ -22,7 +22,7 @@ from pydantic import BaseModel, Extra, validator
 
 DEFAULT_EMBEDDINGS_MODEL = "sentence-transformers/all-mpnet-base-v2"
 USER_DEFINED_WRITER_LLM_PARAMS = (
-    "model_name",
+    "model_id",
     "max_tokens",
     "temperature",
     "top_p",
@@ -127,7 +127,6 @@ class VectorStoreLoader:
 class WriterLLMParameters(BaseModel):
     """Model parameters for the Writer LLM API interface"""
 
-    model_name: str = None
     writer_api_key: str = None
     writer_org_id: str = None
     base_url: str = None

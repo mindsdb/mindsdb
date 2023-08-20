@@ -6,17 +6,18 @@ import pandas as pd
 from datasets import load_dataset
 from sklearn.metrics import average_precision_score
 
-from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.utilities.log import get_log
-
-from .ingest import Ingestor
-from .question_answer import QuestionAnswerer
-from .settings import (
+from mindsdb.integrations.handlers.writer_handler.ingest import Ingestor
+from mindsdb.integrations.handlers.writer_handler.question_answer import (
+    QuestionAnswerer,
+)
+from mindsdb.integrations.handlers.writer_handler.settings import (
     DEFAULT_EMBEDDINGS_MODEL,
     SUPPORTED_VECTOR_STORES,
-    USER_DEFINED_MODEL_PARAMS,
-    ModelParameters,
+    USER_DEFINED_WRITER_LLM_PARAMS,
+    WriterHandlerParameters,
 )
+from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.utilities.log import get_log
 
 # these require no additional arguments
 
@@ -57,6 +58,18 @@ class WriterHandler(BaseMLEngine):
                 f"currently we only support {', '.join(str(v) for v in SUPPORTED_VECTOR_STORES)} vector store"
             )
 
+    def extract_llm_params(self, args):
+        """extract llm params from input query args"""
+
+        llm_params = {}
+        for param in USER_DEFINED_WRITER_LLM_PARAMS:
+            if param in args:
+                llm_params[param] = args.pop(param)
+
+        args["llm_params"] = llm_params
+
+        return args
+
     def create(
         self,
         target: str,
@@ -64,35 +77,43 @@ class WriterHandler(BaseMLEngine):
         args: Optional[Dict] = None,
     ):
         """
-        Dispatch is running embeddings and storing in Chroma VectorDB, unless user already has embeddings persisted
+        Dispatch is running embeddings and storing in a VectorDB, unless user already has embeddings persisted
         """
-        args = args["using"]
 
-        if not df.empty and args["run_embeddings"]:
+        input_args = self.extract_llm_params(args["using"])
+
+        args = WriterHandlerParameters(**input_args)
+
+        if not df.empty and args.run_embeddings:
             if "context_columns" not in args:
                 # if no context columns provided, use all columns in df
-                args["context_columns"] = df.columns.tolist()
+                args.context_columns = df.columns.tolist()
 
             if "embeddings_model_name" not in args:
                 logger.info(
                     f"No embeddings model provided in query, using default model: {DEFAULT_EMBEDDINGS_MODEL}"
                 )
 
-            chromadb_folder_name = args["chromadb_folder_name"]
-            # create folder for chromadb to persist embeddings
-            args["chromadb_storage_path"] = self.engine_storage.folder_get(
-                chromadb_folder_name
+            # create folder for vector store to persist embeddings
+            args.vector_store_storage_path = self.engine_storage.folder_get(
+                args.vector_store_folder_name
             )
+
             ingestor = Ingestor(df=df, args=args)
             ingestor.embeddings_to_vectordb()
 
-            # for mindsdb cloud, store data in shared file system for cloud version of mindsdb to make it be usable by all mindsdb nodes
-            self.engine_storage.folder_sync(chromadb_folder_name)
+            # for mindsdb cloud, store data in shared file system
+            # for cloud version of mindsdb to make it be usable by all mindsdb nodes
+            self.engine_storage.folder_sync(args.vector_store_folder_name)
 
         else:
             logger.info("Skipping embeddings and ingestion into Chroma VectorDB")
 
-        self.model_storage.json_set("args", args)
+        export_args = args.dict(exclude={"llm_params"})
+        # 'callbacks' aren't json serializable, we do this to avoid errors
+        export_args["llm_params"] = args.llm_params.dict(exclude={"callbacks"})
+
+        self.model_storage.json_set("args", export_args)
 
     def predict(self, df: pd.DataFrame = None, args: dict = None):
         """
@@ -102,32 +123,34 @@ class WriterHandler(BaseMLEngine):
 
         # get model parameters if defined by user - else use default values
 
-        args = self.model_storage.json_get("args")
-        args["chromadb_storage_path"] = self.engine_storage.folder_get(
-            args["chromadb_folder_name"], update=False
+        input_args = self.model_storage.json_get("args")
+        args = WriterHandlerParameters(**input_args)
+
+        args.vector_store_storage_path = self.engine_storage.folder_get(
+            args.vector_store_folder_name, update=False
         )
 
-        user_defined_model_params = list(
-            filter(lambda x: x in args, USER_DEFINED_MODEL_PARAMS)
-        )
-        args["model_params"] = {
-            model_param: args[model_param] for model_param in user_defined_model_params
-        }
-        model_parameters = ModelParameters(**args["model_params"])
+        # user_defined_model_params = list(
+        #     filter(lambda x: x in args, USER_DEFINED_WRITER_LLM_PARAMS)
+        # )
+        # args["llm_params"] = {
+        #     model_param: args[model_param] for model_param in user_defined_model_params
+        # }
+        #
+        # model_parameters = WriterLLMParameters(**args["llm_params"])
 
         # get question answering results
+        question_answerer = QuestionAnswerer(args=args)
 
-        question_answerer = QuestionAnswerer(
-            args=args, model_parameters=model_parameters
-        )
-
-        # get question from sql query e.g. where question = 'What is the capital of France?'
+        # get question from sql query
+        # e.g. where question = 'What is the capital of France?'
         response = question_answerer.query(df["question"].tolist()[0])
 
         results_df = pd.DataFrame(response)
 
         return results_df
 
+    # todo evaluation method on standardised 100-200 sample of squad_v2 - probs move to mindsdb_evaluator library
     def evaluate(self):
 
         dataset_squad_v2 = load_dataset("squad_v2")

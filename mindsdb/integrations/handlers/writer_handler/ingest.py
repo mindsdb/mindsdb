@@ -1,31 +1,59 @@
 import time
 
 import pandas as pd
+from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import Chroma
+from langchain.vectorstores import Chroma, VectorStore
 
-from mindsdb.utilities.log import get_log
-
-from .settings import (
-    DEFAULT_EMBEDDINGS_MODEL,
+from mindsdb.integrations.handlers.writer_handler.settings import (
+    VectorStoreFactory,
+    WriterHandlerParameters,
     df_to_documents,
     get_chroma_settings,
     load_embeddings_model,
 )
+from mindsdb.utilities.log import get_log
 
 logger = get_log(__name__)
 
 
+def validate_document(doc):
+    """Check an individual document."""
+    # Example checks
+    if not isinstance(doc, Document):
+        return False
+
+    if not doc.page_content:
+        return False
+
+    return True
+
+
+def validate_documents(documents):
+    """Validate document list format."""
+
+    if not isinstance(documents, list):
+        return False
+
+    if not documents:
+        return False
+
+    # Check fields/format of a document
+    return all([validate_document(doc) for doc in documents])
+
+
 class Ingestor:
-    def __init__(self, args: dict, df: pd.DataFrame):
+    def __init__(
+        self,
+        args: WriterHandlerParameters,
+        df: pd.DataFrame,
+        vector_store: str = "chroma",
+    ):
         self.args = args
         self.df = df
-        self.embeddings_model_name = args.get(
-            "embeddings_model_name", DEFAULT_EMBEDDINGS_MODEL
-        )
-        self.persist_directory = args["chromadb_storage_path"]
+        self.embeddings_model_name = args.embeddings_model_name
 
-        self.chroma_settings = get_chroma_settings(self.persist_directory)
+        self.vector_store = VectorStoreFactory.get_vectorstore(vector_store)
 
     def split_documents(self):
         # Load documents and split in chunks
@@ -33,7 +61,7 @@ class Ingestor:
 
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
         documents = df_to_documents(
-            df=self.df, page_content_columns=self.args["context_columns"]
+            df=self.df, page_content_columns=self.args.context_columns
         )
         texts = text_splitter.split_documents(documents)
         logger.info(f"Loaded {len(documents)} documents from input data")
@@ -41,25 +69,63 @@ class Ingestor:
 
         return texts
 
+    def create_db_from_documents(self, documents, embeddings_model):
+        """Create DB from documents."""
+
+        if self.args.vector_store_name == "chroma":
+
+            return self.vector_store.from_documents(
+                documents=documents,
+                embedding=embeddings_model,
+                persist_directory=self.args.vector_store_storage_path,
+                client_settings=get_chroma_settings(
+                    persist_directory=self.args.vector_store_storage_path
+                ),
+                collection_name=self.args.collection_or_index_name,
+            )
+        else:
+            return self.vector_store.from_documents(
+                documents=documents,
+                embeddings=embeddings_model,
+                collection_name=self.args.collection_or_index_name,
+            )
+
+    def create_db_from_texts(self, documents, embeddings_model):
+        """Create DB from text content."""
+
+        texts = [doc.page_content for doc in documents]
+        metadata = [doc.metadata for doc in documents]
+
+        return self.vector_store.from_texts(
+            texts=texts, embeddings=embeddings_model, metadatas=metadata
+        )
+
     def embeddings_to_vectordb(self):
         start_time = time.time()
 
         # Load documents and split in chunks
-        texts = self.split_documents()
+        documents = self.split_documents()
 
         # Load embeddings model
         embeddings_model = load_embeddings_model(self.embeddings_model_name)
 
         logger.info(f"Creating vectorstore from documents")
 
-        # Create and store locally vectorstore
-        db = Chroma.from_documents(
-            texts,
-            embedding=embeddings_model,
-            persist_directory=self.persist_directory,
-            client_settings=self.chroma_settings,
-            collection_name=self.args.get("collection_name", "langchain"),
-        )
+        if not validate_documents(documents):
+            raise ValueError("Invalid documents")
+
+        try:
+            db = self.create_db_from_documents(documents, embeddings_model)
+        except AttributeError as e:
+            logger.error(f"Error creating from documents: {e}")
+
+            try:
+                db = self.create_db_from_texts(documents, embeddings_model)
+
+            except Exception as e:
+                logger.error(f"Error creating from texts: {e}")
+                raise e
+
         db.persist()
         db = None
         end_time = time.time()

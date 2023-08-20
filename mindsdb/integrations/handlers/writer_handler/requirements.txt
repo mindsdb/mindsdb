@@ -1,4 +1,4 @@
-langchain==0.0.186
+langchain
 SQLAlchemy
 duckdb==0.7.1
 chromadb==0.3.25
@@ -7,4 +7,5 @@ pydantic==1.10.8
 sentence_transformers
 markupsafe == 2.0.1
 llama-index
+faiss-cpu #todo check support for 'faiss-gpu'
 datasets

@@ -1,0 +1,101 @@
+---
+title: Connecting Databases in Mongo
+sidebarTitle: databases.insertOne()
+---
+
+Integrations, or external databases, provide data to be used for making
+forecasts. Here, we use the databases.insertOne() method to connect the
+integrations to Mongo.
+
+## The `db.databases.insertOne()` Method
+
+### Description
+
+MindsDB enables adding databases to your Mongo instance using the
+`db.databases.insertOne()` method.
+
+Our MindsDB Mongo API supports creating a connection by passing the database
+credentials.
+
+### Syntax
+
+Here is the syntax:
+
+```sql
+db.databases.insertOne({
+    name: "mongo_int",
+    engine: "mongodb",
+    connection_args: {
+            "port": 27017,
+            "host": "mongodb+srv://admin:@localhost",
+            "database": "test_data"
+    }
+});
+```
+
+On execution, we get:
+
+```json
+{
+	"acknowledged" : true,
+	"insertedId" : ObjectId("62dff63c6cc2fa93e1d7f12c")
+}
+```
+
+Where:
+
+| Name              | Description                                                                              |
+| ----------------- | ---------------------------------------------------------------------------------------- |
+| `name`            | Identifier for the data source to be created.                                            |
+| `engine`          | Database engine to be selected.                                                          |
+| `connection_args` | `{"key":"value"}` object storing the connection parameters such as port, host, database. |
+
+## Example
+
+### Creating a New Connection
+
+Here is an example of how to connect to the local MongoDB.
+
+```sql
+db.databases.insertOne({
+    name: "mongo_local",
+    engine: "mongodb",
+    connection_args: {
+            "port": 27017,
+            "host": "mongodb+srv://admin:@localhost",
+            "database": "test_data"
+  }
+});
+```
+
+On execution, we get:
+
+```json
+{
+	"acknowledged" : true,
+	"insertedId" : ObjectId("62dff63c6cc2fa93e1d7f12c")
+}
+```
+
+### Listing Linked Databases
+
+You can list all the linked databases using the following command:
+
+```sql
+SHOW dbs;
+```
+
+On execution, we get:
+
+```sql
++--------------------+
+| Database           |
++--------------------+
+| admin              |
+| files              |
+| information_schema |
+| mindsdb            |
+| mongo_int          |
+| views              |
++--------------------+
+```

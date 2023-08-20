@@ -1,0 +1,132 @@
+---
+title: CREATE ML_ENGINE Statement
+sidebarTitle: CREATE ML_ENGINE
+---
+
+You can create machine learning (ML) engines based on the ML handlers available in MindsDB. If you can't find the ML handler of your interest, you can always contribute by [building a new ML handler](/contribute/ml-handlers/).
+
+## Description
+
+The `CREATE ML_ENGINE` command creates an ML engine that uses one of the available ML handlers.
+
+## Syntax
+
+Before creating an ML engine, make sure that the ML handler of your interest is available by querying for the ML handlers.
+
+```sql
+SELECT *
+FROM information_schema.handlers;
+-- or 
+SHOW HANDLERS;
+```
+
+<Info>
+If you can’t find the ML handler of your interest, you can contribute by [building a new ML handler](https://docs.mindsdb.com/contribute/ml_handlers).
+
+Please note that in the process of contributing new ML engines, ML engines and/or their tests will only run correctly if all dependencies listed in the `requirements.txt` file are installed beforehand.
+</Info>
+
+If you find the ML handler of your interest, then you can create an ML engine using this command:
+
+```sql
+CREATE ML_ENGINE ml_engine_name
+FROM handler_name
+[USING argument_key = argument_value];
+```
+
+Please replace `ml_engine_name`, `handler_name`, and optionally, `argument_key` and `argument_value` with the real values.
+
+To verify that your ML engine was successfully created, run the command below:
+
+```sql
+SELECT *
+FROM information_schema.ml_engines;
+-- or 
+SHOW ML_ENGINES;
+```
+
+If you want to drop an ML engine, run the command below:
+
+```sql
+DROP ML_ENGINE ml_engine_name;
+```
+
+## Example
+
+Let's check what ML handlers are currently available:
+
+```sql
+SHOW HANDLERS;
+```
+
+On execution, we get:
+
+```sql
++-------------------+--------------------+-------------------------------------------------------+---------+-----------------------------------------------------------------------------------------------------------------------------------------------------+----------------+-----------------------------------------------------------------------------+
+| NAME              | TITLE              | DESCRIPTION                                           | VERSION | CONNECTION_ARGS                                                                                                                                     | IMPORT_SUCCESS | IMPORT_ERROR                                                                |
++-------------------+--------------------+-------------------------------------------------------+---------+-----------------------------------------------------------------------------------------------------------------------------------------------------+----------------+-----------------------------------------------------------------------------+
+| "ray_serve"       | "RayServe"         | "MindsDB handler for Ray Serve"                       | "0.0.1" | "[NULL]"                                                                                                                                            | "true"         | "[NULL]"                                                                    |
+| "neuralforecast"  | "NeuralForecast"   | "MindsDB handler for Nixtla's NeuralForecast package" | "0.0.1" | "[NULL]"                                                                                                                                            | "true"         | "[NULL]"                                                                    |
+| "autosklearn"     | "Auto-Sklearn"     | "MindsDB handler for Auto-Sklearn"                    | "0.0.2" | "[NULL]"                                                                                                                                            | "false"        | "No module named 'autosklearn'"                                             |
+| "mlflow"          | "MLFlow"           | "MindsDB handler for MLflow"                          | "0.0.2" | "[NULL]"                                                                                                                                            | "false"        | "No module named 'mlflow'"                                                  |
+| "openai"          | "OpenAI"           | "MindsDB handler for OpenAI"                          | "0.0.1" | "[NULL]"                                                                                                                                            | "true"         | "[NULL]"                                                                    |
+| "merlion"         | "Merlion"          | "MindsDB handler for Merlion"                         | "0.0.1" | "[NULL]"                                                                                                                                            | "false"        | "object.__init__() takes exactly one argument (the instance to initialize)" |
+| "byom"            | "BYOM"             | "MindsDB handler for BYOM"                            | "0.0.1" | "{'code': {'type': 'path', 'description': 'The path to model code'}, 'modules': {'type': 'path', 'description': 'The path to model requirements'}}" | "true"         | "[NULL]"                                                                    |
+| "ludwig"          | "Ludwig"           | "MindsDB handler for Ludwig AutoML"                   | "0.0.2" | "[NULL]"                                                                                                                                            | "false"        | "No module named 'dask'"                                                    |
+| "lightwood"       | "Lightwood"        | "[NULL]"                                              | "1.0.0" | "[NULL]"                                                                                                                                            | "true"         | "[NULL]"                                                                    |
+| "huggingface_api" | "Hugging Face API" | "MindsDB handler for Auto-Sklearn"                    | "0.0.2" | "[NULL]"                                                                                                                                            | "false"        | "No module named 'hugging_py_face'"                                         |
+| "statsforecast"   | "StatsForecast"    | "MindsDB handler for Nixtla's StatsForecast package"  | "0.0.0" | "[NULL]"                                                                                                                                            | "true"         | "[NULL]"                                                                    |
+| "huggingface"     | "Hugging Face"     | "MindsDB handler for Higging Face"                    | "0.0.1" | "[NULL]"                                                                                                                                            | "true"         | "[NULL]"                                                                    |
+| "TPOT"            | "Tpot"             | "MindsDB handler for TPOT "                           | "0.0.2" | "[NULL]"                                                                                                                                            | "false"        | "No module named 'tpot'"                                                    |
+| "langchain"       | "LangChain"        | "MindsDB handler for LangChain"                       | "0.0.1" | "[NULL]"                                                                                                                                            | "true"         | "[NULL]"                                                                    |
+| "autokeras"       | "Autokeras"        | "MindsDB handler for Autokeras AutoML"                | "0.0.1" | "[NULL]"                                                                                                                                            | "false"        | "No module named 'autokeras'"                                               |
++-------------------+--------------------+-------------------------------------------------------+---------+-----------------------------------------------------------------------------------------------------------------------------------------------------+----------------+-----------------------------------------------------------------------------+
+```
+
+Here we create an ML engine using the OpenAI handler and providing an OpenAI API key in the `USING` clause.
+
+```sql
+CREATE ML_ENGINE my_openai_engine
+FROM openai
+USING
+    api_key = '<your opanai api key>';
+```
+
+On execution, we get:
+
+```sql
+Query successfully completed
+```
+
+Now let's verify that our ML engine exists.
+
+```sql
+SHOW ML_ENGINES;
+```
+
+On execution, we get:
+
+```sql
++-------------------+------------+-----------------------------------------------+
+|NAME               |HANDLER     |CONNECTION_DATA                                |
++-------------------+------------+-----------------------------------------------+
+|lightwood          |lightwood   |{"key":["password"],"value":[""]}              |
+|huggingface        |huggingface |{"key":["password"],"value":[""]}              |
+|openai             |openai      |{"key":["password"],"value":[""]}              |
+|my_openai_engine   |openai      |{"key":["api_key","password"],"value":["",""]} |
++-------------------+------------+-----------------------------------------------+
+```
+
+Please note that the `USING` clause is optional, as it depends on the ML handler whether it requires some arguments or not. Here, we created an OpenAI engine and provided own API key.
+
+After creating your ML engine, you can create a model like this:
+
+```sql
+CREATE MODEL my_model
+PREDICT answer
+USING 
+    engine = 'my_openai_engine',
+    prompt_template = 'ask a question to a model'
+```
+
+The `USING` clause specifies the ML engine to be used for creating a new model.

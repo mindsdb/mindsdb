@@ -1,0 +1,57 @@
+---
+title: ClickHouse
+sidebarTitle: ClickHouse
+---
+
+This is the implementation of the ClickHouse data handler for MindsDB.
+
+[ClickHouse](https://clickhouse.com/docs/en/intro/) is a column-oriented database management system (DBMS) for online analytical processing of queries (OLAP).
+
+## Implementation
+
+This handler was implemented using the standard `clickhouse-sqlalchemy` library.
+
+The required arguments to establish a connection are as follows:
+
+* `host` is the host name or IP address of the ClickHouse server.
+* `port` is the TCP/IP port of the ClickHouse server.
+* `user` is the username used to authenticate with the ClickHouse server.
+* `password` is the password to authenticate the user with the ClickHouse server.
+* `database` defaults to `default`. It is the database name to use when connecting with the ClickHouse server.
+* `protocol` defaults to `native`. It is an optional parameters. Its supported values are `http` and `https`.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/clickhouse_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the ClickHouse database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE clickhouse_datasource
+WITH
+    engine = 'clickhouse',
+    parameters = {
+      "host": "127.0.0.1",
+      "port": "9000",
+      "user": "root",
+      "password": "password",
+      "database": "test_db"
+    };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM clickhouse_datasource.example_table;
+```
+
+<Tip>
+If you want to swithc to different database instead the one you have connected, you can include it in the query as:
+```sql
+SELECT *
+FROM clickhouse_datasource.new_database.example_table;
+```
+</Tip>

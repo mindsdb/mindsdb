@@ -351,7 +351,7 @@ class LangChainHandler(BaseMLEngine):
                         # As a somewhat dirty workaround, we accept the output formatted incorrectly and use it as a response.
                         #
                         # Ideally, in the future, we would write a parser that is more robust and flexible than the one Langchain uses.
-                        response = response.removeprefix(_PARSING_ERROR_PREFIX).removesuffix('`')
+                        response = response.lstrip(_PARSING_ERROR_PREFIX).rstrip('`')
                         completions.append(response)
                 except Exception as e:
                     completions.append(f'agent failed with error:\n{str(e)[:50]}...')

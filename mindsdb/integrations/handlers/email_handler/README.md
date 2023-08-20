@@ -74,7 +74,7 @@ SELECT * FROM email_datasource.emails
 Run more advanced queries:
 
 ~~~~sql
-SELECT  to, subject, body
+SELECT  id, to, subject, body
 FROM email_datasource.emails
 WHERE subject = 'MindsDB'
 ORDER BY id

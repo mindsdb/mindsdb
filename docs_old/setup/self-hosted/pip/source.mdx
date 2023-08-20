@@ -1,0 +1,138 @@
+---
+title: Setup for Source Code via pip
+sidebarTitle: pip from Source
+---
+
+This section describes how to deploy MindsDB from the source code. It is the preferred way to use MindsDB if you want to contribute to our code or debug MindsDB.
+
+<Tip>
+To successfully install MindsDB, use **Python 64-bit version**. Also, make sure that **Python >= 3.8** and **pip >= 20.3**.
+</Tip>
+
+## Installation
+
+<Tip>
+Please note that this method of MindsDB installation requires a minimum of 6 GB free storage.
+</Tip>
+
+1. Clone the MindsDB repository:
+
+   ```bash
+   git clone git@github.com:mindsdb/mindsdb.git
+   ```
+
+2. Create a new virtual environment called `mindsdb-venv`:
+
+   ```bash
+   python -m venv mindsdb-venv
+   ```
+
+   Now, activate it:
+
+   ```bash
+   source mindsdb-venv/bin/activate
+   ```
+
+3. Install MindsDB prerequisites:
+
+   ```bash
+   cd mindsdb/requirements && pip install -r requirements.txt
+   ```
+
+4. Install MindsDB:
+
+   ```bash
+   cd .. && python setup.py develop
+   ```
+
+5. Verify MindsDB installation by starting the MindsDB server:
+
+   ```bash
+   python -m mindsdb
+   ```
+
+By default, MindsDB will always start the `http` and `mysql` APIs. If you want to use Mongo API, you will need to provide that as a parameter to `--api`. You can do it as following:
+
+   ```bash
+   python -m mindsdb --api=http,mongodb,mysql
+   ```
+
+6. Now, you can access the following:
+
+<CodeGroup>
+
+```bash MindsDB Studio
+http://127.0.0.1:47334/
+```
+
+```bash MindsDB using MySQL
+mysql -h 127.0.0.1 --port 3306 -u mindsdb -p
+```
+
+</CodeGroup>
+
+## Troubleshooting
+
+### Pip and Python Versions
+
+We suggest using **Python 3.8.x, or 3.9.x versions** for now.
+
+To successfully install MindsDB, use **Python 64-bit version**. Also, make sure
+that **Python >= 3.8** and **pip >= 20.3**. You can check the pip and python
+versions by running the `pip --version` and
+`python --version` commands.
+
+Please note that depending on your environment and installed pip and python
+packages, you might have to use **pip3** instead of **pip** or **python3.x**
+instead of **py**. For example, `pip3 install mindsdb` instead of
+`pip install mindsdb`.
+
+### How to Avoid Dependency Issues
+
+Install MindsDB in a virtual environment using **pip** to avoid dependency
+issues.
+
+### How to Avoid Common Errors
+
+MindsDB requires around 3 GB of free disk space to install all of its
+dependencies. Make sure to allocate min. 3 GB of disk space to avoid the
+`IOError: [Errno 28] No space left on device while installing MindsDB` error.
+
+Before anything, activate your virtual environment where your MindsDB is
+installed. It is to avoid the `No module named mindsdb` error.
+
+The `ImportError: No module named {dependency name}` error may occur if you skip
+step 3 of the [Installation](#installation) section. Make sure you install all
+of the prerequisites.
+
+If you encounter the `This site can’t be reached. 127.0.0.1 refused to connect.`
+error, please check the MindsDB server console to see if the server is still in
+the `starting` phase. But if the server has started and you still get this
+error, please report it on our
+[GitHub repository](https://github.com/mindsdb/mindsdb/issues).
+
+### How to Overcome `ImportError: failed to find libmagic`
+
+If you get the `ImportError: failed to find libmagic` error, you should install the `libmagic` manually by running one of the commands below:
+
+```bash
+pip install python-magic-bin
+brew install libmagic
+```
+
+## Further Issues?
+
+You can try to use
+[Docker setup](/setup/self-hosted/docker/) in case you are experiencing issues using pip.
+
+Also, please create an issue with detailed description in the
+[MindsDB GitHub repository](https://github.com/mindsdb/mindsdb/issues) so we can
+help you. Usually, we review issues and respond within a few hours.
+
+## What's Next
+
+Now that you installed and started MindsDB locally in your Docker container, go ahead and find out how to create and train a model using the [`CREATE MODEL`](/sql/create/model) statement. In the **MindsDB SQL** section, you'll find a comprehensive overview of the SQL syntax offered by MindsDB. We also provide Mongo-QL syntax documented in the **MindsDB Mongo-QL** section.
+
+You can connect MindsDB to different clients, including [PostgreSQL CLI](/connect/postgres-client) and [MySQL CLI](/connect/mysql-client).
+
+Check out the **Use Cases** section to follow tutorials that cover Large Language Models, Natural Language Processing, Time Series, Classification, and Regression models.

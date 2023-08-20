@@ -1,0 +1,29 @@
+## Testing: Hugging Face - Sentiment Tutorial
+
+Testing CREATE MODEL
+```sql
+CREATE MODEL mindsdb.hf_sentiment
+PREDICT PRED
+USING
+engine = 'huggingface',
+task = 'text-classification',
+model_name = 'cardiffnlp/twitter-roberta-base-sentiment',
+input_column = 'text',
+labels = ['neg', 'neu', 'pos'];
+```
+
+```sql
+![out 1](https://github.com/mindsdb/mindsdb/assets/96950453/10eb6b29-95fc-4f46-bbaa-92175b1d5d37)
+```
+
+Testing SELECT (making predictions)
+```sql
+SELECT *
+FROM mindsdb.hf_sentiment
+WHERE text = 'I like you. I love you.';
+```
+```sql
+![out 2](https://github.com/mindsdb/mindsdb/assets/96950453/4ff47e86-ca1d-411c-a216-0bdc954fcd47)
+```sql
+
+```

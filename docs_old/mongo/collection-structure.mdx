@@ -1,0 +1,144 @@
+---
+title: Collection Structure
+sidebarTitle: Collection Structure
+---
+
+## General Structure
+
+On start-up, the MindsDB project consists of 2 collections: `models` and `models_versions`.
+
+You can verify it by running the following MQL commands:
+
+1. First, switch to the `mindsdb` project.
+
+    ```bash
+    > use mindsdb
+    < 'switched to db mindsdb'
+    ```
+
+    <Tip>
+    Here is the [doc page on the `PROJECT` entity](/sql/project) to learn more.
+    </Tip>
+
+2. Then, query for the available collections.
+
+    ```bash
+    > show collections
+    < models
+      models_versions
+    ```
+
+## The `models` Collection
+
+The `models` collection stores information about the models, such as name, status, accuracy, and more.
+
+```bash
+> db.models.find({})
+< {
+    NAME: 'home_rentals_model',
+    ENGINE: 'lightwood',
+    PROJECT: 'mindsdb',
+    VERSION: 1,
+    STATUS: 'complete',
+    ACCURACY: 1,
+    PREDICT: 'rental_price',
+    UPDATE_STATUS: 'up_to_date',
+    MINDSDB_VERSION: '23.2.4.0',
+    ERROR: null,
+    SELECT_DATA_QUERY: 'db.home_rentals.find({})',
+    TRAINING_OPTIONS: "{'target': 'rental_price', 'using': {}}",
+    TAG: null,
+    CREATED_AT: 2023-02-24T16:05:43.248Z,
+    _id: ObjectId("000000000000007725907968")
+  }
+```
+
+Where:
+
+| Name                | Description                                                                     |
+| ------------------- | ------------------------------------------------------------------------------- |
+| `NAME`              | The name of the model.                                                          |
+| `ENGINE`            | The engine used to create the model.                                            |
+| `PROJECT`           | The project where the model resides.                                            |
+| `VERSION`           | The version of the model.                                                       |
+| `STATUS`            | Training status (`generating`, or `training`, or `complete`, or `error`).       |
+| `ACCURACY`          | The model accuracy (`0.999` is a sample accuracy value).                        |
+| `PREDICT`           | The name of the target column to be predicted.                                  |
+| `UPDATE_STATUS`     | Training update status (`up_to_date`, or `updating`, or `available`).           |
+| `MINDSDB_VERSION`   | The MindsDB version used while training (`22.8.2.1` is a sample version value). |
+| `ERROR`             | Error message stores a value in case of an error, otherwise, it is null.        |
+| `SELECT_DATA_QUERY` | It is a query that selects input data.                                          |
+| `TRAINING_OPTIONS`  | Additional training parameters.                                                 |
+| `TAG`               | The models can have tags to classify them into categories.                      |
+
+Check out [this doc page](/sql/project#working-with-models) to learn how to create, view, and drop models.
+
+## The `models_versions` Collection
+
+The `models_versions` collection stores information about all present and past versions of each model.
+
+<Tip>
+To learn more about managing models' versions, follow our [docs here](/sql/api/manage-models-versions).
+</Tip>
+
+```bash
+> db.models_versions.find({})
+< {
+    NAME: 'home_rentals_model',
+    ENGINE: 'lightwood',
+    PROJECT: 'mindsdb',
+    ACTIVE: true,
+    VERSION: 1,
+    STATUS: 'complete',
+    ACCURACY: 1,
+    PREDICT: 'rental_price',
+    UPDATE_STATUS: 'up_to_date',
+    MINDSDB_VERSION: '23.2.4.0',
+    ERROR: null,
+    SELECT_DATA_QUERY: 'db.home_rentals.find({})',
+    TRAINING_OPTIONS: "{'target': 'rental_price', 'using': {}}",
+    TAG: null,
+    CREATED_AT: 2023-02-24T16:05:43.248Z,
+    _id: ObjectId("000000000000007725907969")
+  }
+```
+
+Where:
+
+| Name                | Description                                                                     |
+| ------------------- | ------------------------------------------------------------------------------- |
+| `NAME`              | The name of the model.                                                          |
+| `ENGINE`            | The engine used to create the model.                                            |
+| `PROJECT`           | The project where the model resides.                                            |
+| `ACTIVE`            | The status of the model's version. The value of `true` if active, the value fo `false` if inactive.|
+| `VERSION`           | The version of the model.                                                       |
+| `STATUS`            | Training status (`generating`, or `training`, or `complete`, or `error`).       |
+| `ACCURACY`          | The model accuracy (`0.999` is a sample accuracy value).                        |
+| `PREDICT`           | The name of the target column to be predicted.                                  |
+| `UPDATE_STATUS`     | Training update status (`up_to_date`, or `updating`, or `available`).           |
+| `MINDSDB_VERSION`   | The MindsDB version used while training (`22.8.2.1` is a sample version value). |
+| `ERROR`             | Error message stores a value in case of an error, otherwise, it is null.        |
+| `SELECT_DATA_QUERY` | It is a query that selects input data.                                          |
+| `TRAINING_OPTIONS`  | Additional training parameters.                                                 |
+| `TAG`               | The models can have tags to classify them into categories.                      |
+
+Check out [this doc page](/sql/project#working-with-models-version) to learn how to work with models' versions.
+
+<Tip>
+To view all databases/projects, use the command below.
+
+```bash
+> show databases
+< admin               64.00 KiB
+  information_schema  64.00 KiB
+  mindsdb             64.00 KiB
+  files               64.00 KiB
+  mongo_demo_db       64.00 KiB
+```
+
+Please note that `mindsdb` is the default project. Here is the [doc page on the `PROJECT` entity](/sql/project) to learn more.
+</Tip>
+
+<Tip>
+Please follow the [MindsDB Information Schema doc page](/sql/table-structure) to learn more.
+</Tip>

@@ -1,0 +1,620 @@
+---
+title: Feature Engineering in MindsDB
+sidebarTitle: Feature Engineering
+---
+
+The more data you have, the more accurate predictions you get.
+
+We recommend you provide the predictor with as many historical data rows and data columns as possible to make your predictions even more accurate. The examples presented here prove this hypothesis.
+
+If you want to follow the examples, please [sign up for the MindsDB Cloud account here](https://cloud.mindsdb.com/register).
+
+## Prerequisites
+
+The base table is available in the `example_db` integration in the MindsDB Cloud Editor. In order to be able to use it, you must first create a database like this:
+
+```sql
+CREATE DATABASE example_db
+WITH ENGINE = "postgres",
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "3.220.66.106",
+    "port": "5432",
+    "database": "demo"
+};
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
+Once that's done, you can run the following commands with us.
+
+## Example: Adding More Data Columns
+
+### Introduction
+
+Here, we'll create several predictors using the same table, increasing the number of data columns with each step.
+
+We start with the base table and create a predictor based on it. Then we add two columns to our base table and again create a predictor based on the enhanced table. At last, we add another two columns and create a predictor.
+
+By comparing the accuracies of the predictors, we'll find that more data results in more accurate predictions.
+
+Let's get started.
+
+### Let's Run the Codes
+
+Here, we go through the codes for the base table and enhanced base tables simultaneously.
+
+#### Data Setup
+
+Let's prepare and verify the data. Here, we create the views and query them to ensure the input for the predictors is in order.
+
+<Tabs>
+  <Tab title="Using the Base Table">
+
+    Let's start by querying the data from the `example_db.demo_data.used_car_price` table, which is our base table.
+
+    ```sql
+    SELECT *
+    FROM example_db.demo_data.used_car_price
+    LIMIT 5;
+    ```
+
+    On execution, we get:
+
+    ```sql
+    +-----+----+-----+------------+-------+--------+---+----+----------+
+    |model|year|price|transmission|mileage|fueltype|tax|mpg |enginesize|
+    +-----+----+-----+------------+-------+--------+---+----+----------+
+    | A1  |2017|12500|Manual      |15735  |Petrol  |150|55.4|1.4       |
+    | A6  |2016|16500|Automatic   |36203  |Diesel  |20 |64.2|2         |
+    | A1  |2016|11000|Manual      |29946  |Petrol  |30 |55.4|1.4       |
+    | A4  |2017|16800|Automatic   |25952  |Diesel  |145|67.3|2         |
+    | A3  |2019|17300|Manual      |1998   |Petrol  |145|49.6|1         |
+    +-----+----+-----+------------+-------+--------+---+----+----------+
+    ```
+
+    Where:
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>model</code></td>
+          <td>Model of the car.</td>
+        </tr>
+        <tr>
+          <td><code>year</code></td>
+          <td>Year of production.</td>
+        </tr>
+        <tr>
+          <td><code>price</code></td>
+          <td>Price of the car.</td>
+        </tr>
+        <tr>
+          <td><code>transmission</code></td>
+          <td>Transmission (<code>Manual</code>, or <code>Automatic</code>, or <code>Semi-Auto</code>).</td>
+        </tr>
+        <tr>
+          <td><code>mileage</code></td>
+          <td>Mileage of the car.</td>
+        </tr>
+        <tr>
+          <td><code>fueltype</code></td>
+          <td>Fuel type of the car.</td>
+        </tr>
+        <tr>
+          <td><code>tax</code></td>
+          <td>Tax.</td>
+        </tr>
+        <tr>
+          <td><code>mpg</code></td>
+          <td>Miles per gallon.</td>
+        </tr>
+        <tr>
+          <td><code>enginesize</code></td>
+          <td>Engine size of the car.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <br />
+
+  </Tab>
+  <Tab title="Using the Base Table + 2 More Columns">
+
+    Let's create a view based on the `example_db.demo_data.used_car_price` table, and add two more columns. Please note that we replace the `mpg` column with the `kml` column.
+
+    The added columns are:<br></br>
+    - the `kml` column, calculated from the `mpg` column using the formula like in the query below, stands for `kilometers per liter`,<br></br>
+    - the `years_old` column, calculated by subtracting car's year from the current date, stands for car's age.<br></br>
+
+    ```sql
+    CREATE VIEW used_car_price_plus_2_columns (
+    SELECT * FROM example_db (
+        SELECT 
+        model, 
+        year, 
+        price, 
+        transmission, 
+        mileage, 
+        fueltype, 
+        tax,
+        enginesize, 
+        ROUND(CAST((mpg / 2.3521458) AS numeric), 1) AS kml, -- mpg (miles per galon) is replaced with kml (kilometers per liter)
+        (date_part('year', CURRENT_DATE)-year) AS years_old -- age of a car
+        FROM demo_data.used_car_price
+    )
+    );
+    ```
+
+    On execution, we get:
+
+    ```sql
+    Query OK, 0 rows affected (x.xxx sec)
+    ```
+
+    Let's query the newly created view.
+
+    ```sql
+    SELECT *
+    FROM mindsdb.used_car_price_plus_2_columns
+    LIMIT 5;
+    ```
+
+    On execution, we get:
+
+    ```sql
+    +-----+----+-----+------------+-------+--------+---+----+----------+----+---------+
+    |model|year|price|transmission|mileage|fueltype|tax|mpg |enginesize|kml |years_old|
+    +-----+----+-----+------------+-------+--------+---+----+----------+----+---------+
+    | A1  |2017|12500|Manual      |15735  |Petrol  |150|55.4|1.4       |23.6|5        |
+    | A6  |2016|16500|Automatic   |36203  |Diesel  |20 |64.2|2         |27.3|6        |
+    | A1  |2016|11000|Manual      |29946  |Petrol  |30 |55.4|1.4       |23.6|6        |
+    | A4  |2017|16800|Automatic   |25952  |Diesel  |145|67.3|2         |28.6|5        |
+    | A3  |2019|17300|Manual      |1998   |Petrol  |145|49.6|1         |21.1|3        |
+    +-----+----+-----+------------+-------+--------+---+----+----------+----+---------+
+    ```
+  </Tab>
+  <Tab title="Using the Base Table + 4 More Columns">
+
+    Let's create a view based on the `example_db.demo_data.used_car_price` table, and add four more columns. Please note that we replace the `mpg` column with the `kml` column.
+
+    The added columns are:<br></br>
+    - the `kml` column, calculated from the `mpg` column using the formula like in the query below, stands for `kilometers per liter`,<br></br>
+    - the `years_old` column, calculated by subtracting car's year from the current date, stands for car's age,<br></br>
+    - the `units_to_sell` column, calculated using the `OVER` and `PARTITION BY` clauses, indicates how many units of a certain car model are sold in a year,<br></br>
+    - the `tax_div_price` column, calculated by dividing the `tax` column by the `price` column.<br></br>
+
+    ```sql
+    CREATE VIEW used_car_price_plus_another_2_columns (
+    SELECT * FROM example_db (
+        SELECT 
+        model, 
+        year, 
+        price, 
+        transmission, 
+        mileage, 
+        fueltype, 
+        tax,
+        enginesize, 
+        ROUND(CAST((mpg / 2.3521458) AS numeric), 1) AS kml, -- mpg (miles per galon) is replaced with kml (kilometers per liter)
+        (date_part('year', CURRENT_DATE)-year) AS years_old, -- age of a car
+        COUNT(*) OVER (PARTITION BY model, year) AS units_to_sell, -- how many units of a certain model are sold in a year
+        ROUND((CAST(tax AS decimal) / price), 3) AS tax_div_price -- value of tax divided by price of a car
+        FROM demo_data.used_car_price
+    )
+    );
+    ```
+
+    On execution, we get:
+
+    ```sql
+    Query OK, 0 rows affected (x.xxx sec)
+    ```
+
+    Let's query the newly created view.
+
+    ```sql
+    SELECT *
+    FROM mindsdb.used_car_price_plus_another_2_columns
+    LIMIT 5;
+    ```
+
+    On execution, we get:
+
+    ```sql
+    +-----+----+-----+------------+-------+--------+---+----+----------+----+---------+-------------+-------------+
+    |model|year|price|transmission|mileage|fueltype|tax|mpg |enginesize|kml |years_old|units_to_sell|tax_div_price|
+    +-----+----+-----+------------+-------+--------+---+----+----------+----+---------+-------------+-------------+
+    | A1  |2010|9990 |Automatic   |38000  |Petrol  |125|53.3|1.4       |22.7|12       |1            |0.013        |
+    | A1  |2011|6995 |Manual      |65000  |Petrol  |125|53.3|1.4       |22.7|11       |5            |0.018        |
+    | A1  |2011|6295 |Manual      |107000 |Petrol  |125|53.3|1.4       |22.7|11       |5            |0.020        |
+    | A1  |2011|4250 |Manual      |116000 |Diesel  |20 |70.6|1.6       |30.0|11       |5            |0.005        |
+    | A1  |2011|6475 |Manual      |45000  |Diesel  |0  |70.6|1.6       |30.0|11       |5            |0.000        |
+    +-----+----+-----+------------+-------+--------+---+----+----------+----+---------+-------------+-------------+
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  **Dropping a View** If you want to drop a view, run the command `DROP VIEW view_name;`.
+</Note>
+
+#### Creating Predictors
+
+Now, we create predictors based on the `example_db.demo_data.used_car_price` table and its extensions.
+
+<Tabs>
+  <Tab title="Using the Base Table">
+
+    ```sql
+    CREATE MODEL mindsdb.price_predictor
+    FROM example_db
+    (SELECT * FROM demo_data.used_car_price)
+    PREDICT price;
+    ```
+
+    On execution, we get:
+
+    ```sql
+    Query OK, 0 rows affected (x.xxx sec)
+    ```
+  </Tab>
+  <Tab title="Using the Base Table + 2 More Columns">
+
+    ```sql
+
+    CREATE MODEL mindsdb.price_predictor_plus_2_columns
+    FROM mindsdb
+        (SELECT * FROM used_car_price_plus_2_columns)
+    PREDICT price;
+    ```
+
+    On execution, we get:
+
+    ```sql
+    Query OK, 0 rows affected (x.xxx sec)
+    ```
+  </Tab>
+  <Tab title="Using the Base Table + 4 More Columns">
+
+    ```sql
+    CREATE MODEL mindsdb.price_predictor_plus_another_2_columns
+    FROM mindsdb
+        (SELECT * FROM used_car_price_plus_another_2_columns)
+    PREDICT price;
+    ```
+
+    On execution, we get:
+
+    ```sql
+    Query OK, 0 rows affected (x.xxx sec)
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+    **Dropping a Predictor** If you want to drop a predictor, run the command `DROP MODEL predictor_name;`.
+</Note>
+
+#### Predictor Status
+
+Finally, let's check the predictor status whose value is `generating` at first, then `training`, and at last, `complete`.
+
+<Tabs>
+  <Tab title="Using the Base Table">
+
+    ```sql
+    DESCRIBE price_predictor;
+    ```
+
+    On execution, we get:
+
+    ```sql
+    +---------------+--------+--------+---------+-------------+---------------+------+--------------------------------------+----------------+
+    |name           |status  |accuracy|predict  |update_status|mindsdb_version|error |select_data_query                     |training_options|
+    +---------------+--------+--------+---------+-------------+---------------+------+--------------------------------------+----------------+
+    |price_predictor|complete|0.963   |price    |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM demo_data.used_car_price|                |
+    +---------------+--------+--------+---------+-------------+---------------+------+--------------------------------------+----------------+
+    ```
+  </Tab>
+  <Tab title="Using the Base Table + 2 More Columns">
+
+    ```sql
+    DESCRIBE price_predictor_plus_2_columns;
+    ```
+
+    On execution, we get:
+
+    ```sql
+    +------------------------------+--------+--------+---------+-------------+---------------+------+-------------------------------------------+----------------+
+    |name                          |status  |accuracy|predict  |update_status|mindsdb_version|error |select_data_query                          |training_options|
+    +------------------------------+--------+--------+---------+-------------+---------------+------+-------------------------------------------+----------------+
+    |price_predictor_plus_2_columns|complete|0.965   |price    |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM used_car_price_plus_2_columns|                |
+    +------------------------------+--------+--------+---------+-------------+---------------+------+-------------------------------------------+----------------+
+    ```
+  </Tab>
+  <Tab title="Using the Base Table + 4 More Columns">
+
+    ```sql
+    DESCRIBE price_predictor_plus_another_2_columns;
+    ```
+
+    On execution, we get:
+
+    ```sql
+    +--------------------------------------+--------+--------+---------+-------------+---------------+------+---------------------------------------------------+----------------+
+    |name                                  |status  |accuracy|predict  |update_status|mindsdb_version|error |select_data_query                                  |training_options|
+    +--------------------------------------+--------+--------+---------+-------------+---------------+------+---------------------------------------------------+----------------+
+    |price_predictor_plus_another_2_columns|complete|0.982   |price    |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM used_car_price_plus_another_2_columns|                |
+    +--------------------------------------+--------+--------+---------+-------------+---------------+------+---------------------------------------------------+----------------+
+    ```
+  </Tab>
+</Tabs>
+
+### Accuracy Comparison
+
+Once the training process of all three predictors completes, we see the accuracy values.
+
+* For the base table, we get an accuracy value of `0.963`.
+* For the base table with two more data columns, we get an accuracy value of `0.965`. The accuracy value increased, as expected.
+* For the base table with four more data columns, we get an accuracy value of `0.982`. The accuracy value increased again, as expected.
+
+### True vs Predicted Price Comparison
+
+Let's compare how close the predicted price values are to the true price.
+
+```sql
++-------+-------+---------------+-----------+-----------+--------------+----------------+----------------+---------------+
+| model | year  | transmission  | fueltype  | mileage   | true_price   | pred_price_1   | pred_price_2   | pred_price_3  |
++-------+-------+---------------+-----------+-----------+--------------+----------------+----------------+---------------+
+| A1    | 2017  | Manual        | Petrol    | 7620      | 14440        | 17268          | 17020          | 14278         |
+| A6    | 2016  | Automatic     | Diesel    | 20335     | 18982        | 17226          | 17935          | 19016         |
+| A3    | 2018  | Semi-Auto     | Diesel    | 9058      | 19900        | 25641          | 23008          | 21286         |
++-------+-------+---------------+-----------+-----------+--------------+----------------+----------------+---------------+
+```
+
+The prices predicted by the third predictor, having the highest accuracy value, are the closest to the true price, as expected.
+
+## Example: Joining Data Tables
+
+### Introduction
+
+We start by creating a predictor from the `car_sales` table. Then, we add more data by joining the `car_sales` and `car_info` tables. We create a predictor based on the `car_sales_info` view.
+
+Let's get started.
+
+### Let's Run the Codes
+
+Here, we go through the codes using partial tables and the full table after joining the data.
+
+#### Data Setup
+
+Here is the `car_sales` table:
+
+```sql
+SELECT *
+FROM example_db.demo_data.car_sales
+LIMIT 5;
+```
+
+On execution, we get:
+
+```sql
++-----+----+-----+------------+-------+--------+---+
+|model|year|price|transmission|mileage|fueltype|tax|
++-----+----+-----+------------+-------+--------+---+
+| A1  |2017|12500|Manual      |15735  |Petrol  |150|
+| A6  |2016|16500|Automatic   |36203  |Diesel  |20 |
+| A1  |2016|11000|Manual      |29946  |Petrol  |30 |
+| A4  |2017|16800|Automatic   |25952  |Diesel  |145|
+| A3  |2019|17300|Manual      |1998   |Petrol  |145|
++-----+----+-----+------------+-------+--------+---+
+```
+
+Where:
+
+| Name           | Description                                                 |
+|----------------|-------------------------------------------------------------|
+| `model`        | Model of the car.                                           |
+| `year`         | Year of production.                                         |
+| `price`        | Price of the car.                                           |
+| `transmission` | Transmission (`Manual`, or `Automatic`, or `Semi-Auto`).    |
+| `mileage`      | Mileage of the car.                                         |
+| `fueltype`     | Fuel type of the car.                                       |
+| `tax`          | Tax.                                                        |
+
+And here is the `car_info` table:
+
+```sql
+SELECT *
+FROM example_db.demo_data.car_info
+LIMIT 5;
+```
+
+On execution, we get:
+
+```sql
++-----+----+------------+---------+-----+----------+
+|model|year|transmission|fueltype |mpg  |enginesize|
++-----+----+------------+---------+-----+----------+
+| A1  |2010|Automatic   |Petrol   |53.3 |1.4       |
+| A1  |2011|Manual      |Diesel   |70.6 |1.6       |
+| A1  |2011|Manual      |Petrol   |53.3 |1.4       |
+| A1  |2012|Automatic   |Petrol   |50.6 |1.4       |
+| A1  |2012|Manual      |Diesel   |72.95|1.7       |
++-----+----+------------+---------+-----+----------+
+```
+
+Where:
+
+| Name           | Description                                                 |
+|----------------|-------------------------------------------------------------|
+| `model`        | Model of the car.                                           |
+| `year`         | Year of production.                                         |
+| `transmission` | Transmission (`Manual`, or `Automatic`, or `Semi-Auto`).    |
+| `fueltype`     | Fuel type of the car.                                       |
+| `mpg`          | Miles per gallon.                                           |
+| `enginesize`   | Engine size of the car.                                     |
+
+Let's join the `car_sales` and `car_info` tables on the `model`, `year`, `transmission`, and `fueltype` columns.
+
+```sql
+SELECT * FROM example_db
+(
+  SELECT s.*, i.mpg, i.enginesize
+  FROM demo_data.car_sales s
+  JOIN demo_data.car_info i
+  ON s.model=i.model
+  AND s.year=i.year
+  AND s.transmission=i.transmission
+  AND s.fueltype=i.fueltype
+)
+LIMIT 5;
+```
+
+<Note>
+    **Nested `SELECT` Statements** Please note that we use the nested `SELECT` statement in order to trigger native query at the MindsDB Cloud Editor. Here, the `example_db` database is a PostgreSQL database, so we trigger PostgreSQL-native syntax.
+</Note>
+
+On execution, we get:
+
+```sql
++-----+----+-----+------------+-------+--------+---+----+----------+
+|model|year|price|transmission|mileage|fueltype|tax|mpg |enginesize|
++-----+----+-----+------------+-------+--------+---+----+----------+
+| A1  |2010|9990 |Automatic   |38000  |Petrol  |125|53.3|1.4       |
+| A1  |2011|4250 |Manual      |116000 |Diesel  |20 |70.6|1.6       |
+| A1  |2011|6475 |Manual      |45000  |Diesel  |0  |70.6|1.6       |
+| A1  |2011|6295 |Manual      |107000 |Petrol  |125|53.3|1.4       |
+| A1  |2011|7495 |Manual      |60700  |Petrol  |125|53.3|1.4       |
++-----+----+-----+------------+-------+--------+---+----+----------+
+```
+
+Now, we create a view based on the `JOIN` query:
+
+```sql
+CREATE VIEW car_sales_info 
+(
+    SELECT * FROM example_db
+    (
+    SELECT s.*, i.mpg, i.enginesize
+    FROM demo_data.car_sales s
+    JOIN demo_data.car_info i
+    ON s.model=i.model
+    AND s.year=i.year
+    AND s.transmission=i.transmission
+    AND s.fueltype=i.fueltype
+    )
+);
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
+Let's verify the view by selecting from it.
+
+```sql
+SELECT *
+FROM mindsdb.car_sales_info
+LIMIT 5;
+```
+
+On execution, we get:
+
+```sql
++-----+----+-----+------------+-------+--------+---+----+----------+
+|model|year|price|transmission|mileage|fueltype|tax|mpg |enginesize|
++-----+----+-----+------------+-------+--------+---+----+----------+
+| A1  |2010|9990 |Automatic   |38000  |Petrol  |125|53.3|1.4       |
+| A1  |2011|4250 |Manual      |116000 |Diesel  |20 |70.6|1.6       |
+| A1  |2011|6475 |Manual      |45000  |Diesel  |0  |70.6|1.6       |
+| A1  |2011|6295 |Manual      |107000 |Petrol  |125|53.3|1.4       |
+| A1  |2011|7495 |Manual      |60700  |Petrol  |125|53.3|1.4       |
++-----+----+-----+------------+-------+--------+---+----+----------+
+```
+
+#### Creating Predictors
+
+Let's create a predictor with the `car_sales` table as input data.
+
+```sql
+CREATE MODEL mindsdb.price_predictor_car_sales
+FROM example_db
+  (SELECT * FROM demo_data.car_sales)
+PREDICT price;
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
+Now, let's create a predictor for the table that is a `JOIN` between the `car_sales` and `car_info` tables.
+
+```sql
+CREATE MODEL mindsdb.price_predictor_car_sales_info
+FROM mindsdb
+  (SELECT * FROM car_sales_info)
+PREDICT price;
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
+#### Predictor Status
+
+Next, we check the status of both predictors.
+
+We start with the predictor based on the partial table.
+
+```sql
+DESCRIBE price_predictor_car_sales;
+```
+
+On execution, we get:
+
+```sql
++-------------------------+--------+--------+---------+-------------+---------------+------+---------------------------------+----------------+
+|name                     |status  |accuracy|predict  |update_status|mindsdb_version|error |select_data_query                |training_options|
++-------------------------+--------+--------+---------+-------------+---------------+------+---------------------------------+----------------+
+|price_predictor_car_sales|complete|0.912   |price    |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM demo_data.car_sales|                |
++-------------------------+--------+--------+---------+-------------+---------------+------+---------------------------------+----------------+
+```
+
+And now, for the predictor based on the full table.
+
+```sql
+DESCRIBE price_predictor_car_sales_info;
+```
+
+On execution, we get:
+
+```sql
++------------------------------+--------+--------+---------+-------------+---------------+------+----------------------------+----------------+
+|name                          |status  |accuracy|predict  |update_status|mindsdb_version|error |select_data_query           |training_options|
++------------------------------+--------+--------+---------+-------------+---------------+------+----------------------------+----------------+
+|price_predictor_car_sales_info|complete|0.912   |price    |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM car_sales_info|                |
++------------------------------+--------+--------+---------+-------------+---------------+------+----------------------------+----------------+
+```
+
+### Accuracy Comparison
+
+The accuracy values are 0.912 for both the predictors. The predictor already learns how the combination of `model+year+transmission+fueltype` affects the price, so joining more data columns doesn't play a role in this particular example.

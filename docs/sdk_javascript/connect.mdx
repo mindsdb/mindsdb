@@ -1,0 +1,125 @@
+---
+title: Connect
+sidebarTitle: Connect
+---
+
+Before performing any operations, you must connect to MindsDB. By default, all operations will go through [MindsDB Cloud REST APIs](/rest/sql), but you can use a self-hosted version of MindsDB as well.
+
+<Tabs>
+  <Tab title="Local MindsDB">
+  Here is how to connect to your local MindsDB server:
+
+  ```
+  import MindsDB from 'mindsdb-js-sdk';
+  //alternative: const MindsDB = require("mindsdb-js-sdk").default;
+
+  try {
+
+    // No authentication needed for self-hosting
+    await MindsDB.connect({
+      host: 'http://127.0.0.1:47334'
+    });
+    console.log('connected');
+
+  } catch(error) {
+    // Failed to connect to local instance
+    console.log(error);
+  }
+  ```
+  </Tab>
+  <Tab title="MindsDB Cloud">
+  Here is how to connect to the MindsDB Cloud server:
+
+  ```
+  import MindsDB from 'mindsdb-js-sdk';
+  //alternative: const MindsDB = require("mindsdb-js-sdk").default;
+
+  try {
+
+    await MindsDB.connect({
+      user: 'user@email.com',
+      password: 'password'
+    });
+    console.log('connected');
+
+  } catch(error) {
+    // Failed to authenticate
+    console.log(error);
+  }
+  ```
+  </Tab>
+  <Tab title="MindsDB Pro">
+  Here is how to connect to the MindsDB Pro server:
+
+  ```
+  import MindsDB from 'mindsdb-js-sdk';
+  //alternative: const MindsDB = require("mindsdb-js-sdk").default;
+
+  try {
+
+    await MindsDB.connect({
+      host: 'http://<YOUR_INSTANCE_IP>',
+      user: 'mindsdbuser@gmail.com',
+      password: 'mypassword',
+      managed: true
+    });
+    console.log('connected');
+
+  } catch(error) {
+    // Failed to authenticate
+    console.log(error);
+  }
+  ```
+  </Tab>
+  <Tab title="Own Axios Instance">
+  Here is how to connect using your own Axios instance (see [details on the default instance](https://github.com/mindsdb/mindsdb-js-sdk/blob/main/src/util/http.ts)):
+
+  ```
+  import MindsDB from 'mindsdb-js-sdk';
+  //alternative: const MindsDB = require("mindsdb-js-sdk").default;
+  import axios from 'axios';
+
+  // Use 'host' option in MindsDB.connect to specify base URL override
+  const customAxios = axios.create({
+    timeout: 1000,
+  });
+
+  try {
+
+    await MindsDB.connect({
+      user: mindsdbuser@gmail.com,
+      password: mypassword,
+      httpClient: customAxios
+    });
+    console.log('connected');
+
+  } catch(error) {
+    // Failed to authenticate
+    console.log(error);
+  }
+  ```
+  </Tab>
+</Tabs>
+
+<Tip>
+Please note that all methods that use `await` must be wrapped in an `async` function, like this:
+
+```
+(async() => {
+
+  try {
+
+    // No authentication needed for self-hosting
+    await MindsDB.connect({
+      host: 'http://127.0.0.1:47334'
+    });
+    console.log('connected');
+
+  } catch(error) {
+    // Failed to connect to local instance
+    console.log(error);
+  }
+
+})();
+```
+</Tip>

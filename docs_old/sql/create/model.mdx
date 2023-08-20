@@ -1,0 +1,345 @@
+---
+title: CREATE MODEL Statement
+sidebarTitle: CREATE MODEL
+---
+
+## Description
+
+The `CREATE MODEL` statement creates and trains a machine learning (ML) model.
+
+<Info>
+    Please note that the `CREATE MODEL` statement is equivalent to the `CREATE PREDICTOR` statement.
+    We are transitioning to the `CREATE MODEL` statement, but the `CREATE PREDICTOR` statement still works.
+</Info>
+
+## Syntax
+
+### Overview
+
+Here is the full syntax:
+
+```sql
+CREATE MODEL project_name.predictor_name
+
+[FROM integration_name
+    (SELECT [sequential_column,] [partition_column,] column_name, ...
+     FROM table_name)]
+
+PREDICT target_column
+
+[ORDER BY sequential_column]
+[GROUP BY partition_column]
+[WINDOW int]
+[HORIZON int]
+
+[USING engine = 'engine_name',
+       tag = 'tag_name'];
+```
+
+Where:
+
+| Expressions                                     | Description                                                                                                                                     |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project_name`                                  | Name of the project where the model is created. By default, the `mindsdb` project is used.                                                      |
+| `predictor_name`                                | Name of the model to be created.                                                                                                                |
+| `integration_name`                              | Name of the integration created using the [`CREATE DATABASE`](/sql/create/databases/) statement or [file upload](/sql/create/file/).            |
+| `(SELECT column_name, ... FROM table_name)`     | Selecting data to be used for training and validation.                                                                                          |
+| `target_column`                                 | Column to be predicted.                                                                                                                         |
+| `ORDER BY sequential_column`                    | Used in time series models. The column by which time series is ordered. It can be a date or anything that defines the sequence of events.                                                                                                                                                                        |
+| `GROUP BY partition_column`                     | Used in time series models. It is optional. The column by which rows that make a partition are grouped. For example, if you want to forecast the inventory for all items in the store, you can partition the data by `product_id`, so each distinct `product_id` has its own time series.                        |
+| `WINDOW int`                                    | Used in time series models. The number of rows to look back at when making a prediction. It comes after the rows are ordered by the column defined in `ORDER BY` and split into groups by the column(s) defined in `GROUP BY`. The `WINDOW 10` syntax could be interpreted as "Always use the previous 10 rows". |
+| `HORIZON int`                                   | Used in time series models. It is optional. It defines the number of future predictions (it is 1 by default). However, the `HORIZON` parameter, besides defining the number of predictions, has an impact on the training procedure when using the Lightwood ML backend. For example, different mixers are selected depending on whether the `HORIZON` value is one or greater than one. |
+| `engine_name`                                   | You can optionally provide an ML engine, based on which the model is created.                                                                   |
+| `tag_name`                                      | You can optionally provide a tag that is visible in the `training_options` column of the `mindsdb.models` table.                                |
+
+### Regression Models
+
+Here is the syntax for regression models:
+
+```sql
+CREATE MODEL project_name.predictor_name
+FROM integration_name
+    (SELECT column_name, ... FROM table_name)
+PREDICT target_column
+[USING engine = 'engine_name',
+       tag = 'tag_name'];
+```
+
+<Note>
+Please note that the `FROM` clause is mandatory here.
+</Note>
+
+The `target_column` that will be predicted is a numerical value. The prediction values are not limited to a defined set of values, but can be any number from the given range of numbers.
+
+### Classification Models
+
+Here is the syntax for classification models:
+
+```sql
+CREATE MODEL project_name.predictor_name
+FROM integration_name
+    (SELECT column_name, ... FROM table_name)
+PREDICT target_column
+[USING engine = 'engine_name',
+       tag = 'tag_name'];
+```
+
+<Note>
+Please note that the `FROM` clause is mandatory here.
+</Note>
+
+The `target_column` that will be predicted is a string value. The prediction values are limited to a defined set of values, such as `Yes` and `No`.
+
+### Time Series Models
+
+Here is the syntax for time series models:
+
+```sql
+CREATE MODEL project_name.predictor_name
+FROM integration_name
+    (SELECT sequential_column, partition_column,
+            other_column, target_column
+     FROM table_name)
+PREDICT target_column
+
+ORDER BY sequential_column
+[GROUP BY partition_column]
+
+WINDOW int
+[HORIZON int]
+
+[USING engine = 'engine_name',
+       tag = 'tag_name'];
+```
+
+<Note>
+Please note that the `FROM` clause is mandatory here.
+</Note>
+
+Due to the nature of time series forecasting, you need to use the [`JOIN`](/sql/api/join) statement and join the data table with the model table to get predictions.
+
+### NLP Models
+
+Here is the syntax for using external models within MindsDB:
+
+```sql
+CREATE MODEL project_name.model_name
+PREDICT PRED
+USING
+  engine = 'engine_name',
+  task = 'task_name',
+  model_name = 'hub_model_name',
+  input_column = 'input_column_name',
+  labels = ['label1', 'label2'];
+```
+
+<Note>
+Please note that you don't need to define the `FROM` clause here. Instead, the `input_column` is defined in the `USING` clause.
+</Note>
+
+It allows you to bring an external model, for example, from the Hugging Face model hub, and use it within MindsDB.
+
+## Example
+
+### Regression Models
+
+Here is an example for regression models that uses data from a database:
+
+```sql
+CREATE MODEL mindsdb.home_rentals_model
+FROM example_db
+  (SELECT * FROM demo_data.home_rentals)
+PREDICT rental_price
+USING engine = 'lightwood',
+      tag = 'my home rentals model';
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
+Visit our [tutorial on regression models](/sql/tutorials/home-rentals/) to see the full example.
+
+### Classification Models
+
+Here is an example for classification models that uses data from a file:
+
+```sql
+CREATE MODEL mindsdb.customer_churn_predictor
+FROM files
+  (SELECT * FROM churn)
+PREDICT Churn
+USING engine = 'lightwood',
+      tag = 'my customers model';
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
+Visit our [tutorial on classification models](/sql/tutorials/customer-churn/) to see the full example.
+
+### Time Series Models
+
+Here is an example for time series models that uses data from a file:
+
+```sql
+CREATE MODEL mindsdb.house_sales_predictor
+FROM files
+  (SELECT * FROM house_sales)
+PREDICT MA
+ORDER BY saledate
+GROUP BY bedrooms
+-- the target column to be predicted stores one row per quarter
+WINDOW 8      -- using data from the last two years to make forecasts (last 8 rows)
+HORIZON 4;    -- making forecasts for the next year (next 4 rows)
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
+Visit our [tutorial on time series models](/sql/tutorials/house-sales-forecasting/) to see the full example.
+
+### NLP Models
+
+Here is an example for the Hugging Face model:
+
+```sql
+CREATE MODEL mindsdb.spam_classifier
+PREDICT PRED
+USING
+  engine = 'huggingface',
+  task = 'text-classification',
+  model_name = 'mrm8488/bert-tiny-finetuned-sms-spam-detection',
+  input_column = 'text_spammy',
+  labels = ['ham', 'spam'];
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```
+
+Visit our [page no how to bring Hugging Face models into MindsDB](/custom-model/huggingface/) for more details.
+
+<br></br>
+
+<Tip>
+    **Checking Model Status**
+    
+    After you run the `CREATE MODEL` statement, you can check the status of the training process by querying the `mindsdb.models` table.
+
+    ```sql
+    DESCRIBE predictor_name;
+    ```
+
+    On execution, we get:
+
+    ```sql
+    +---------------+-----------------------------------+----------------------------------------+-----------------------+-------------+---------------+-----+-----------------+----------------+
+    |name           |status                             |accuracy                                |predict                |update_status|mindsdb_version|error|select_data_query|training_options|
+    +---------------+-----------------------------------+----------------------------------------+-----------------------+-------------+---------------+-----+-----------------+----------------+
+    |predictor_name |generating or training or complete |number depending on the accuracy metric |column_to_be_predicted |up_to_date   |22.7.5.0       |     |                 |                |
+    +---------------+-----------------------------------+----------------------------------------+-----------------------+-------------+---------------+-----+-----------------+----------------+
+    ```
+</Tip>
+
+## Tuning the Lightwood ML Engine Features
+
+### Description
+
+In MindsDB, the underlying AutoML models are based on the [Lightwood](https://lightwood.io/) engine by default. This library generates models automatically based on the data and declarative problem definition. But the default configuration can be overridden using the `USING` statement that provides an option to configure specific parameters of the training process.
+
+In the upcoming version of MindsDB, it will be possible to choose from more ML frameworks. Please note that the Lightwood engine is used by default.
+
+### Syntax
+
+Here is the syntax:
+
+```sql
+CREATE MODEL project_name.predictor_name
+FROM integration_name
+    (SELECT column_name, ... FROM table_name)
+PREDICT target_column
+USING parameter_key = 'parameter_value';
+```
+
+#### `encoders` Key
+
+It grants access to configure how each column is encoded. By default, the AutoML engine tries to get the best match for the data.
+
+```sql
+...
+USING encoders.column_name.module = 'value';
+```
+
+To learn more about `encoders` and their options, visit the [Lightwood documentation page on encoders](https://lightwood.io/encoder.html).
+
+#### `model` Key
+
+It allows you to specify the type of machine learning algorithm to learn from the encoder data.
+
+```sql
+...
+USING model.args = {"key": value};
+```
+
+Here are the model options:
+
+| Model                                                               | Description                                                                                                                                                                                                                                                                         |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [BaseMixer](https://lightwood.io/mixer.html#mixer.BaseMixer)         | It is a base class for all mixers.                                                                                                                                                                                                                                                  |
+| [LightGBM](https://lightwood.io/mixer.html#mixer.LightGBM)           | This mixer configures and uses LightGBM for regression or classification tasks depending on the problem definition.                                                                                                                                                                 |
+| [LightGBMArray](https://lightwood.io/mixer.html#mixer.LightGBMArray) | This mixer consists of several LightGBM mixers in regression mode aimed at time series forecasting tasks.                                                                                                                                                                           |
+| [NHitsMixer](https://lightwood.io/mixer.html#mixer.NHitsMixer)       | This mixer is a wrapper around an MQN-HITS deep learning model.                                                                                                                                                                                                                     |
+| [Neural](https://lightwood.io/mixer.html#mixer.Neural)               | This mixer trains a fully connected dense network from concatenated encoded outputs of each feature in the dataset to predict the encoded output.                                                                                                                                   |
+| [NeuralTs](https://lightwood.io/mixer.html#mixer.NeuralTs)           | This mixer inherits from Neural mixer and should be used for time series forecasts.                                                                                                                                   |
+| [ProphetMixer](https://lightwood.io/mixer.html#mixer.ProphetMixer)   | This mixer is a wrapper around the popular time series library [Prophet](https://facebook.github.io/prophet/).                                                                                                                                                                      |                                        |
+| [RandomForest](https://lightwood.io/mixer.html#mixer.RandomForest)   | This mixer supports both regression and classification tasks. It inherits from sklearn.ensemble.RandomForestRegressor and sklearn.ensemble.RandomForestClassifier.                                                                                                                                            |
+| [Regression](https://lightwood.io/mixer.html#mixer.Regression)       | This mixer inherits from [scikit-learn’s Ridge class](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.Ridge.html).                                                                                                                                           |
+| [SkTime](https://lightwood.io/mixer.html#mixer.SkTime)               | This mixer is a wrapper around the popular time series library sktime.                                                                                                                                                                                                              |
+| [Unit](https://lightwood.io/mixer.html#mixer.Unit)                   | This is a special mixer that passes along whatever prediction is made by the target encoder without modifications. It is used for single-column predictive scenarios that may involve complex and/or expensive encoders (e.g. free-form text classification with transformers).     |
+| [XGBoostMixer](https://lightwood.io/mixer.html#mixer.XGBoostMixer)   | This mixer is a good all-rounder, due to the generally great performance of tree-based ML algorithms for supervised learning tasks with tabular data.     |
+
+To learn more about all the `model` options, visit the [Lightwood documentation page on mixers](https://lightwood.io/mixer.html).
+
+#### Other Keys Supported by Lightwood in JsonAI
+
+The most common use cases of configuring predictors use `encoders` and `model` keys explained above. To see all the available keys, check out the [Lightwood documentation page on JsonAI](https://lightwood.io/api/types.html#api.types.JsonAI).
+
+### Example
+
+Here we use the `home_rentals` dataset and specify particular `encoders` for some columns and a LightGBM `model`.
+
+```sql
+CREATE MODEL mindsdb.home_rentals_model
+FROM example_db
+    (SELECT * FROM demo_data.home_rentals)
+PREDICT rental_price
+USING
+    encoders.location.module = 'CategoricalAutoEncoder',
+    encoders.rental_price.module = 'NumericEncoder',
+    encoders.rental_price.args.positive_domain = 'True',
+    model.args = {"submodels": [
+                    {"module": "LightGBM",
+                     "args": {
+                          "stop_after": 12,
+                          "fit_on_dev": true
+                          }
+                    }
+                ]};
+```
+
+On execution, we get:
+
+```sql
+Query OK, 0 rows affected (x.xxx sec)
+```

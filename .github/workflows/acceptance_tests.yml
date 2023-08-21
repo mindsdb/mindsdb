@@ -25,6 +25,10 @@ jobs:
         pip install -r requirements_test.txt
         pip install 'openai >= 0.27.0'
         pip install 'tiktoken >= 0.3.0'
+        pip install 'accelerate>=0.20.1'
+        pip install 'datasets'
+        pip install 'evaluate'
+        pip install 'rouge-score'
       shell: bash
       env:
         ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}

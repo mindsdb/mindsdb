@@ -97,7 +97,7 @@ class TestLangchainEmbedding(BaseExecutorTest):
         # with multiple input columns
         self.run_sql(
             """
-            CREATE MODEL proj.test_dummy_embedding
+            CREATE MODEL proj.test_dummy_embedding_multiple_columns
             PREDICT embeddings
             USING
                 engine='langchain_embedding',
@@ -107,13 +107,13 @@ class TestLangchainEmbedding(BaseExecutorTest):
             """
         )
 
-        self.wait_predictor("proj", "test_dummy_embedding")
+        self.wait_predictor("proj", "test_dummy_embedding_multiple_columns")
 
         # predictions
         # one line
         ret = self.run_sql(
             """
-            SELECT * FROM proj.test_dummy_embedding
+            SELECT * FROM proj.test_dummy_embedding_multiple_columns
             WHERE content1='hello'
             AND content2='world'
             """
@@ -135,7 +135,7 @@ class TestLangchainEmbedding(BaseExecutorTest):
         # query
         ret = self.run_sql(
             """
-            SELECT * FROM proj.test_dummy_embedding
+            SELECT * FROM proj.test_dummy_embedding_multiple_columns
             JOIN pg.df
             """
         )
@@ -149,7 +149,7 @@ class TestLangchainEmbedding(BaseExecutorTest):
         with pytest.raises(Exception):
             self.run_sql(
                 """
-                SELECT * FROM proj.test_dummy_embedding
+                SELECT * FROM proj.test_dummy_embedding_multiple_columns
                 WHERE content1='hello'
                 """
             )
@@ -164,7 +164,7 @@ class TestLangchainEmbedding(BaseExecutorTest):
             self.set_handler(mock_handler, name="pg", tables={"df": df2})
             self.run_sql(
                 """
-                SELECT * FROM proj.test_dummy_embedding
+                SELECT * FROM proj.test_dummy_embedding_multiple_columns
                 JOIN pg.df2
                 """
             )
@@ -186,7 +186,7 @@ class TestLangchainEmbedding(BaseExecutorTest):
         # all columns when embedding the documents
         self.run_sql(
             """
-            CREATE MODEL proj.test_dummy_embedding2
+            CREATE MODEL proj.test_dummy_no_input_columns
             PREDICT embeddings
             USING
                 engine='langchain_embedding',
@@ -195,13 +195,13 @@ class TestLangchainEmbedding(BaseExecutorTest):
             """
         )
 
-        self.wait_predictor("proj", "test_dummy_embedding2")
+        self.wait_predictor("proj", "test_dummy_no_input_columns")
 
         # predictions
         # one line
         ret = self.run_sql(
             """
-            SELECT * FROM proj.test_dummy_embedding2
+            SELECT * FROM proj.test_dummy_no_input_columns
             WHERE content1='hello'
             AND content2='world'
             AND id = 1
@@ -216,7 +216,7 @@ class TestLangchainEmbedding(BaseExecutorTest):
         # multiple lines
         ret = self.run_sql(
             """
-            SELECT * FROM proj.test_dummy_embedding2
+            SELECT * FROM proj.test_dummy_no_input_columns
             JOIN pg.df
             """
         )
@@ -230,7 +230,7 @@ class TestLangchainEmbedding(BaseExecutorTest):
         # from the dataframe when embedding the documents
         ret = self.run_sql(
             """
-            CREATE MODEL proj.test_dummy_embedding3
+            CREATE MODEL proj.test_dummy_no_input_columns_from_df
             FROM pg (
                 SELECT *, NULL as embeddings FROM df  -- this requires an empty column called embeddings
             )
@@ -242,14 +242,14 @@ class TestLangchainEmbedding(BaseExecutorTest):
             """
         )
 
-        self.wait_predictor("proj", "test_dummy_embedding3")
+        self.wait_predictor("proj", "test_dummy_no_input_columns_from_df")
 
         # input columns == ['id', 'content1', 'content2']
         # predictions
         # one line
         ret = self.run_sql(
             """
-            SELECT * FROM proj.test_dummy_embedding3
+            SELECT * FROM proj.test_dummy_no_input_columns_from_df
             WHERE content1='hello'
             AND content2='world'
             AND id = 1  -- looks like 'id' will be quoted
@@ -260,7 +260,7 @@ class TestLangchainEmbedding(BaseExecutorTest):
         with pytest.raises(Exception):
             self.run_sql(
                 """
-                SELECT * FROM proj.test_dummy_embedding3
+                SELECT * FROM proj.test_dummy_no_input_columns_from_df
                 WHERE content1='hello'
                 AND content2='world'
                 """
@@ -278,7 +278,7 @@ class TestLangchainEmbedding(BaseExecutorTest):
         self.run_sql(
             """
             CREATE MODEL proj.test_openai_embedding
-            PREDICT content
+            PREDICT embeddings
             USING
                 engine='langchain_embedding',
                 class = 'openai'

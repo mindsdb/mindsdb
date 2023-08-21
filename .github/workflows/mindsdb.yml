@@ -68,7 +68,7 @@ jobs:
     - name: Install staging mdb libraries if it's not mindsdb/stable
       if: ${{ github.ref != 'refs/heads/stable' }}
       run: |
-          # pip install git+https://github.com/mindsdb/mindsdb_sql.git@staging --upgrade --no-cache-dir
+          pip install git+https://github.com/mindsdb/mindsdb_sql.git@staging --upgrade --no-cache-dir
           pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
           pip uninstall pycodestyle -y && pip install pycodestyle==2.9.1  # temp fix while exist conflict in last version with flake8
           pip install gluonts==0.11.4  # temp fix until next lightwood release (>23.1.2.1)

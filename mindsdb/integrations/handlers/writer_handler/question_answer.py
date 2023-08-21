@@ -4,9 +4,11 @@ from langchain.llms import Writer
 
 from mindsdb.integrations.handlers.writer_handler.settings import (
     VectorStoreConfig,
+    VectorStoreIndexConfig,
+    VectorStoreIndexLoader,
     VectorStoreLoader,
     WriterHandlerParameters,
-    WriterLLMParameters,
+    load_embeddings_model,
 )
 from mindsdb.utilities.log import get_log
 
@@ -18,25 +20,40 @@ class QuestionAnswerer:
 
         self.output_data = defaultdict(list)
 
-        self.embeddings_model_name = args.embeddings_model_name
+        self.args = args
+
+        self.embeddings_model = load_embeddings_model(args.embeddings_model_name)
 
         self.persist_directory = args.vector_store_storage_path
 
         self.collection_or_index_name = args.collection_or_index_name
 
-        config = VectorStoreConfig(
-            embeddings_model_name=self.embeddings_model_name,
+        vector_store_config = VectorStoreConfig(
+            vector_store_name=args.vector_store_name,
+            embeddings_model=self.embeddings_model,
             persist_directory=self.persist_directory,
             collection_or_index_name=self.collection_or_index_name,
         )
 
-        self.vector_store_loader = VectorStoreLoader(config)
+        vector_store_loader = VectorStoreLoader(vector_store_config)
 
-        self.vector_store_name = args.vector_store_name
+        self.vector_store = vector_store_loader.load_vector_store()
 
-        self.vector_store = self.vector_store_loader.load_vector_store(
-            self.vector_store_name
-        )
+        if args.use_index:
+
+            vector_store_index_config = VectorStoreIndexConfig(
+                vector_store_name=args.vector_store_name,
+                vector_store=self.vector_store,
+                embeddings_model=self.embeddings_model,
+                persist_directory=self.persist_directory,
+                collection_or_index_name=args.collection_or_index_name,
+                index_name=args.index_name,
+            )
+            vector_store_index_loader = VectorStoreIndexLoader(
+                vector_store_index_config
+            )
+
+            self.index = vector_store_index_loader.load_vector_store_index()
 
         self.prompt_template = args.prompt_template
 
@@ -52,10 +69,28 @@ class QuestionAnswerer:
 
         return self.prompt_template.format(question=question, context=combined_context)
 
+    def _query_index(self, question: str):
+
+        return self.index.query(
+            question,
+        )
+
+    def _query_vector_store(self, question: str):
+        return self.vector_store.similarity_search(
+            query=question,
+            k=self.args.top_k,
+        )
+
     def query(self, question: str):
         logger.debug(f"Querying: {question}")
 
-        vector_store_response = self.vector_store.similarity_search(query=question)
+        if not self.args.use_index:
+
+            vector_store_response = self._query_vector_store(question)
+
+        else:
+            vector_index_response = self._query_index(question)
+            # to do make parser for index response
 
         formatted_prompt = self._prepare_prompt(vector_store_response, question)
 

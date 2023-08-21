@@ -12,7 +12,6 @@ from mindsdb.integrations.handlers.writer_handler.question_answer import (
 )
 from mindsdb.integrations.handlers.writer_handler.settings import (
     DEFAULT_EMBEDDINGS_MODEL,
-    SUPPORTED_VECTOR_STORES,
     USER_DEFINED_WRITER_LLM_PARAMS,
     WriterHandlerParameters,
 )
@@ -22,6 +21,19 @@ from mindsdb.utilities.log import get_log
 # these require no additional arguments
 
 logger = get_log(logger_name=__name__)
+
+
+def extract_llm_params(args):
+    """extract llm params from input query args"""
+
+    llm_params = {}
+    for param in USER_DEFINED_WRITER_LLM_PARAMS:
+        if param in args:
+            llm_params[param] = args.pop(param)
+
+    args["llm_params"] = llm_params
+
+    return args
 
 
 class WriterHandler(BaseMLEngine):
@@ -45,30 +57,6 @@ class WriterHandler(BaseMLEngine):
             raise Exception(
                 "Writer engine requires a USING clause! Refer to its documentation for more details."
             )
-        else:
-            args = args["using"]
-
-        if "prompt_template" not in args:
-            raise Exception("Please provide a `prompt_template` for this engine.")
-
-        vector_store_name = args.get("vector_store_name", "chroma")
-
-        if vector_store_name not in SUPPORTED_VECTOR_STORES:
-            raise ValueError(
-                f"currently we only support {', '.join(str(v) for v in SUPPORTED_VECTOR_STORES)} vector store"
-            )
-
-    def extract_llm_params(self, args):
-        """extract llm params from input query args"""
-
-        llm_params = {}
-        for param in USER_DEFINED_WRITER_LLM_PARAMS:
-            if param in args:
-                llm_params[param] = args.pop(param)
-
-        args["llm_params"] = llm_params
-
-        return args
 
     def create(
         self,
@@ -80,13 +68,13 @@ class WriterHandler(BaseMLEngine):
         Dispatch is running embeddings and storing in a VectorDB, unless user already has embeddings persisted
         """
 
-        input_args = self.extract_llm_params(args["using"])
-
+        input_args = extract_llm_params(args["using"])
         args = WriterHandlerParameters(**input_args)
 
         if not df.empty and args.run_embeddings:
             if "context_columns" not in args:
                 # if no context columns provided, use all columns in df
+                logger.info("No context columns provided, using all columns in df")
                 args.context_columns = df.columns.tolist()
 
             if "embeddings_model_name" not in args:
@@ -129,15 +117,6 @@ class WriterHandler(BaseMLEngine):
         args.vector_store_storage_path = self.engine_storage.folder_get(
             args.vector_store_folder_name, update=False
         )
-
-        # user_defined_model_params = list(
-        #     filter(lambda x: x in args, USER_DEFINED_WRITER_LLM_PARAMS)
-        # )
-        # args["llm_params"] = {
-        #     model_param: args[model_param] for model_param in user_defined_model_params
-        # }
-        #
-        # model_parameters = WriterLLMParameters(**args["llm_params"])
 
         # get question answering results
         question_answerer = QuestionAnswerer(args=args)

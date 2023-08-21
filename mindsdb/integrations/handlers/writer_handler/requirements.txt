@@ -1,4 +1,5 @@
 langchain
+llama-cpp-python
 SQLAlchemy
 duckdb==0.7.1
 chromadb==0.3.25

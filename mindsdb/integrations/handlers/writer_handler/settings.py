@@ -6,14 +6,15 @@ from typing import List, Union
 import pandas as pd
 import torch
 from chromadb import Settings
+from langchain import FAISS
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.docstore.document import Document
 from langchain.document_loaders import DataFrameLoader
+from langchain.embeddings.base import Embeddings
 from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS, Chroma, VectorStore
-from llama_index import ServiceContext, SimpleDirectoryReader, VectorStoreIndex
-from llama_index.embeddings import LangchainEmbedding
-from llama_index.storage.storage_context import StorageContext
+from llama_index import ServiceContext, VectorStoreIndex
+from llama_index.indices.query.base import BaseQueryEngine
 from llama_index.vector_stores import ChromaVectorStore
 from pydantic import BaseModel, Extra, validator
 
@@ -35,6 +36,8 @@ USER_DEFINED_WRITER_LLM_PARAMS = (
 )
 
 SUPPORTED_VECTOR_STORES = ("chroma", "faiss")
+
+SUPPORTED_INDICES = ("llama",)
 
 
 def is_valid_store(name):
@@ -58,19 +61,20 @@ class VectorStoreFactory:
             return Chroma
 
 
-@dataclass
-class VectorStoreConfig:
-    embeddings_model_name: str
-    persist_directory: str
-    collection_or_index_name: str
-
-
-def get_chroma_settings(persist_directory: str = "chromadb"):
+def get_chroma_settings(persist_directory: str = "chromadb") -> Settings:
     return Settings(
         chroma_db_impl="duckdb+parquet",
         persist_directory=persist_directory,
         anonymized_telemetry=False,
     )
+
+
+@dataclass
+class VectorStoreConfig:
+    vector_store_name: str
+    embeddings_model: Embeddings
+    persist_directory: str
+    collection_or_index_name: str
 
 
 class VectorStoreLoader:
@@ -79,55 +83,91 @@ class VectorStoreLoader:
 
     def load_vector_store_client(
         self,
-        embeddings_model_name: str,
-        persist_directory: str,
-        collection_or_index_name: str,
         vector_store: str,
     ):
-
-        embeddings_model = load_embeddings_model(embeddings_model_name)
+        """Load vector store client from the persisted vector store"""
 
         if vector_store == "chroma":
 
             return Chroma(
-                collection_name=collection_or_index_name,
-                persist_directory=persist_directory,
-                embedding_function=embeddings_model,
+                collection_name=self.config.collection_or_index_name,
+                embedding_function=self.config.embeddings_model,
                 client_settings=get_chroma_settings(
-                    persist_directory=persist_directory
+                    persist_directory=self.config.persist_directory
                 ),
             )
 
         elif vector_store == "faiss":
 
             return FAISS.load_local(
-                folder_path=persist_directory,
-                embeddings=embeddings_model,
-                index_name=collection_or_index_name,
+                folder_path=self.config.persist_directory,
+                embeddings=self.config.embeddings_model,
+                index_name=self.config.collection_or_index_name,
             )
 
         else:
             raise NotImplementedError(f"{vector_store} client is not yet supported")
 
-    def load_vector_store(self, store_name: str) -> VectorStore:
-        method_name = f"load_{store_name}"
+    def load_vector_store(self):
+        method_name = f"load_{self.config.vector_store_name}"
         return getattr(self, method_name)()
 
     def load_chroma(self) -> Chroma:
-        return self.load_vector_store_client(
-            vector_store="chroma", **self.config.__dict__
-        )
+        return self.load_vector_store_client(vector_store="chroma")
 
     def load_faiss(self) -> FAISS:
-        return self.load_vector_store_client(
-            vector_store="faiss", **self.config.__dict__
+        return self.load_vector_store_client(vector_store="faiss")
+
+
+@dataclass
+class VectorStoreIndexConfig(VectorStoreConfig):
+    index_name: str
+    vector_store: VectorStore
+
+
+class VectorStoreIndexLoader:
+    def __init__(self, config):
+        self.config: VectorStoreIndexConfig = config
+
+    def load_vector_store_index(self):
+        method_name = (
+            f"load_{self.config.vector_store_name}_{self.config.index_name}_index"
         )
+        try:
+            return getattr(self, method_name)()
+        except AttributeError:
+            raise NotImplementedError(
+                f"{self.config.vector_store_name} vector store is not yet supported with {self.config.index_name} index"
+            )
+
+    def load_chroma_llama_index(self):
+        """Load Chroma index from the persisted vector store"""
+
+        collection = self.config.vector_store._client.get_collection(
+            self.config.collection_or_index_name
+        )
+        service_context = ServiceContext.from_defaults(
+            embed_model=self.config.embeddings_model
+        )
+
+        vector_store = ChromaVectorStore(chroma_collection=collection)
+        index = VectorStoreIndex.from_vector_store(
+            vector_store=vector_store,
+            service_context=service_context,
+        )
+
+        # Query Data from the persisted index
+        query_engine = index.as_query_engine(
+            service_context=service_context,
+        )
+
+        return query_engine
 
 
 class WriterLLMParameters(BaseModel):
     """Model parameters for the Writer LLM API interface"""
 
-    writer_api_key: str = None
+    writer_api_key: str
     writer_org_id: str = None
     base_url: str = None
     model_id: str = "palmyra-x"
@@ -144,13 +184,28 @@ class WriterLLMParameters(BaseModel):
         arbitrary_types_allowed = True
 
 
+class MissingPromptTemplate(Exception):
+    pass
+
+
+class UnsupportedVectorStore(Exception):
+    pass
+
+
+class MissingUseIndex(Exception):
+    pass
+
+
 class WriterHandlerParameters(BaseModel):
     """Model parameters for create model"""
 
-    run_embeddings: bool = True
-    embeddings_model_name: str = DEFAULT_EMBEDDINGS_MODEL
     prompt_template: str
-    llm_params: WriterLLMParameters = WriterLLMParameters()
+    use_index: bool
+    llm_params: WriterLLMParameters
+    run_embeddings: bool = True
+    index_name: str = "llama"
+    top_k: int = 4
+    embeddings_model_name: str = DEFAULT_EMBEDDINGS_MODEL
     context_columns: Union[List[str], str] = None
     vector_store_name: str = "chroma"
     vector_store: VectorStore = VectorStoreFactory.get_vectorstore(vector_store_name)
@@ -166,6 +221,28 @@ class WriterHandlerParameters(BaseModel):
     @validator("vector_store_name")
     def name_must_be_lower(cls, v):
         return v.lower()
+
+    @validator("prompt_template")
+    def prompt_template_must_be_provided(cls, v):
+        if not v:
+            raise MissingPromptTemplate(
+                "Please provide a `prompt_template` for this engine."
+            )
+        return v
+
+    @validator("use_index")
+    def use_index_must_be_provided(cls, v):
+        if not v:
+            raise MissingUseIndex("Please provide a `prompt_template` for this engine.")
+        return v
+
+    @validator("vector_store_name")
+    def vector_store_must_be_supported(cls, v):
+        if not is_valid_store(v):
+            raise UnsupportedVectorStore(
+                f"currently we only support {', '.join(str(v) for v in SUPPORTED_VECTOR_STORES)} vector store"
+            )
+        return v
 
 
 class DfLoader(DataFrameLoader):

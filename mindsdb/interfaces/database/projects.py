@@ -50,7 +50,7 @@ class Project:
 
         self.id = record.id
 
-    def save(sefl):
+    def save(self):
         db.session.commit()
 
     def delete(self):

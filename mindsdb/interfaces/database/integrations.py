@@ -257,7 +257,11 @@ class IntegrationController:
         db.session.commit()
 
     def _get_integration_record_data(self, integration_record, sensitive_info=True):
-        if integration_record is None or integration_record.data is None:
+        if (
+            integration_record is None
+            or integration_record.data is None
+            or isinstance(integration_record.data, dict) is False
+        ):
             return None
         data = deepcopy(integration_record.data)
         if data.get('password', None) is None:

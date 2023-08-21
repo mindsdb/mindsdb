@@ -116,6 +116,10 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="openai", data={}, engine="openai")
         db.session.add(r)
+        r = db.Integration(
+            name="langchain_embedding", data={}, engine="langchain_embedding"
+        )
+        db.session.add(r)
         # Lightwood should always be last (else tests break, why?)
         r = db.Integration(name="lightwood", data={}, engine="lightwood")
         db.session.add(r)

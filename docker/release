@@ -95,6 +95,7 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==23.1.2 &
 
 ARG VERSION=
 RUN pip install --no-cache-dir mindsdb${VERSION:+"==$VERSION"}
+RUN python3 -c 'import nltk; nltk.download("punkt");'
 
 COPY mindsdb_config.release.json /root/mindsdb_config.json
 COPY mindsdb_launcher.sh /root/

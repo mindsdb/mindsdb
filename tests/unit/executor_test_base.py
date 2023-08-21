@@ -33,7 +33,6 @@ class BaseUnitTest:
 
     @staticmethod
     def setup_class(cls):
-
         # remove imports of mindsdb in previous tests
         unload_module("mindsdb")
 
@@ -67,7 +66,6 @@ class BaseUnitTest:
 
     @staticmethod
     def teardown_class(cls):
-
         # remove tmp db file
         cls.db.session.close()
         os.unlink(cls.db_file)
@@ -100,25 +98,15 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="merlion", data={}, engine="merlion")
         db.session.add(r)
-        r = db.Integration(name="monkeylearn", data={}, engine="monkeylearn")
-        db.session.add(r)
         r = db.Integration(name="statsforecast", data={}, engine="statsforecast")
         db.session.add(r)
         r = db.Integration(name="dummy_ml", data={}, engine="dummy_ml")
         db.session.add(r)
         r = db.Integration(name="neuralforecast", data={}, engine="neuralforecast")
         db.session.add(r)
-        r = db.Integration(
-            name="popularity_recommender", data={}, engine="popularity_recommender"
-        )
-        db.session.add(r)
-        r = db.Integration(name="lightfm", data={}, engine="lightfm")
+        r = db.Integration(name="statsforecast", data={}, engine="statsforecast")
         db.session.add(r)
         r = db.Integration(name="openai", data={}, engine="openai")
-        db.session.add(r)
-        r = db.Integration(
-            name="langchain_embedding", data={}, engine="langchain_embedding"
-        )
         db.session.add(r)
         # Lightwood should always be last (else tests break, why?)
         r = db.Integration(name="lightwood", data={}, engine="lightwood")
@@ -160,6 +148,7 @@ class BaseExecutorTest(BaseUnitTest):
         from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import (
             SessionController,
         )
+
         from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import (
             ExecuteCommands,
         )
@@ -195,7 +184,7 @@ class BaseExecutorTest(BaseUnitTest):
 
         if mock_lightwood:
             predict_patcher = mock.patch(
-                'mindsdb.integrations.libs.ml_exec_base.BaseMLEngineExec.predict'
+                "mindsdb.integrations.handlers.lightwood_handler.Handler.predict"
             )
             self.mock_predict = predict_patcher.__enter__()
 
@@ -228,8 +217,10 @@ class BaseExecutorTest(BaseUnitTest):
         self.db.session.add(r)
         self.db.session.commit()
 
-        from mindsdb.integrations.libs.response import RESPONSE_TYPE
-        from mindsdb.integrations.libs.response import HandlerResponse as Response
+        from mindsdb.integrations.libs.response import (
+            HandlerResponse as Response,
+            RESPONSE_TYPE,
+        )
 
         def handler_response(df):
             response = Response(RESPONSE_TYPE.TABLE, df)
@@ -365,11 +356,10 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         self.db.session.add(r)
         self.db.session.commit()
 
-        def predict_f(_model_name, data, pred_format="dict", *args, **kargs):
+        def predict_f(data, pred_format="dict", *args, **kargs):
             dict_arr = []
             explain_arr = []
-            if isinstance(data, dict):
-                data = [data]
+            data = data.to_dict(orient="records")
 
             predicted_value = predictor["predicted_value"]
             target = predictor["predict"]

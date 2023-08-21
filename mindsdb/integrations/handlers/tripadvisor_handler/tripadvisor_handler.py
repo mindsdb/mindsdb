@@ -6,7 +6,6 @@ from collections import defaultdict
 from typing import Any
 
 import pandas as pd
-import tweepy
 
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
@@ -32,12 +31,13 @@ class TripAdvisorHandler(APIHandler):
 
     Attributes:
         api_key (str): The unique API key to access Tripadvisor content.
-        api (TripAdvisorAPI): The `TripAdvisorAPI` object for checking the connection to the Twitter API.
+        api (TripAdvisorAPI): The `TripAdvisorAPI` object for checking the connection to the TripAdvisor API.
     """
 
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
 
+        print("INPUT: ", kwargs)
         args = kwargs.get("connection_data", {})
         self._tables = {}
 
@@ -62,6 +62,8 @@ class TripAdvisorHandler(APIHandler):
 
         if self.is_connected is True:
             return self.api
+
+        print("CONNECTION ARGS: ", self.connection_args)
 
         self.api = TripAdvisorAPI(api_key=self.connection_args["api_key"])
 
@@ -93,171 +95,36 @@ class TripAdvisorHandler(APIHandler):
         """It registers the data resource in memory."""
         self._tables[table_name] = table_class
 
-    def call_twitter_api(
-        self, method_name: str = None, params: dict = None, filters: list = None
-    ):
-        # method > table > columns
-        expansions_map = {
-            "search_recent_tweets": {
-                "users": ["author_id", "in_reply_to_user_id"],
-            },
-            "search_all_tweets": {
-                "users": ["author_id"],
-            },
-        }
-
-        api = self.connect()
-        method = getattr(api, method_name)
-
-        # pagination handle
-
-        count_results = None
-        if "max_results" in params:
-            count_results = params["max_results"]
-
-        data = []
-        includes = defaultdict(list)
-
-        max_page_size = 100
-        min_page_size = 10
-        left = None
-
-        limit_exec_time = time.time() + 60
-
-        if filters:
-            # if we have filters: do big page requests
-            params["max_results"] = max_page_size
-
-        while True:
-            if time.time() > limit_exec_time:
-                raise RuntimeError("Handler request timeout error")
-
-            if count_results is not None:
-                left = count_results - len(data)
-                if left == 0:
-                    break
-                elif left < 0:
-                    # got more results that we need
-                    data = data[:left]
-                    break
-
-                if left > max_page_size:
-                    params["max_results"] = max_page_size
-                elif left < min_page_size:
-                    params["max_results"] = min_page_size
-                else:
-                    params["max_results"] = left
-
-            log.logger.debug(f">>>tripadvisor in: {method_name}({params})")
-            resp = method(**params)
-
-            if hasattr(resp, "includes"):
-                for table, records in resp.includes.items():
-                    includes[table].extend([r.data for r in records])
-
-            if isinstance(resp.data, list):
-                chunk = [r.data for r in resp.data]
-            else:
-                if isinstance(resp.data, dict):
-                    data.append(resp.data)
-                if hasattr(resp.data, "data") and isinstance(resp.data.data, dict):
-                    data.append(resp.data.data)
-                break
-
-            # unwind columns
-            for row in chunk:
-                if "referenced_tweets" in row:
-                    refs = row["referenced_tweets"]
-                    if isinstance(refs, list) and len(refs) > 0:
-                        if refs[0]["type"] == "replied_to":
-                            row["in_reply_to_tweet_id"] = refs[0]["id"]
-                        if refs[0]["type"] == "retweeted":
-                            row["in_retweeted_to_tweet_id"] = refs[0]["id"]
-                        if refs[0]["type"] == "quoted":
-                            row["in_quote_to_tweet_id"] = refs[0]["id"]
-
-            if filters:
-                chunk = self._apply_filters(chunk, filters)
-
-            # limit output
-            if left is not None:
-                chunk = chunk[:left]
-
-            data.extend(chunk)
-            # next page ?
-            if (
-                count_results is not None
-                and hasattr(resp, "meta")
-                and "next_token" in resp.meta
-            ):
-                params["next_token"] = resp.meta["next_token"]
-            else:
-                break
-
-        df = pd.DataFrame(data)
-
-        # enrich
-        expansions = expansions_map.get(method_name)
-        if expansions is not None:
-            for table, records in includes.items():
-                df_ref = pd.DataFrame(records)
-
-                if table not in expansions:
-                    continue
-
-                for col_id in expansions[table]:
-                    col = col_id[:-3]  # cut _id
-                    if col_id not in df.columns:
-                        continue
-
-                    col_map = {
-                        col_ref: f"{col}_{col_ref}" for col_ref in df_ref.columns
-                    }
-                    df_ref2 = df_ref.rename(columns=col_map)
-                    df_ref2 = df_ref2.drop_duplicates(col_id)
-
-                    df = df.merge(df_ref2, on=col_id, how="left")
-
-        return df
-
     def call_tripadvisor_searchlocation_api(
         self, method_name: str = None, params: dict = None
     ) -> pd.DataFrame:
-        # This will implement api base on the native query
-        # By processing native query to convert it to api callable parameters
         if self.is_connected is False:
             self.connect()
 
         locations = self.api.makeRequest(TripAdvisorAPICall.SEARCH_LOCATION, **params)
         result = []
+        print(locations)
 
         for loc in locations:
             data = {
-                "location_id": loc.location_id if loc.location_id else None,
-                "name": loc.name if loc.name else None,
-                "distance": loc.distance if loc.distance else None,
-                "rating": loc.rating if loc.rating else None,
-                "bearing": loc.bearing if loc.bearing else None,
-                "street1": loc.address_obj.street1 if loc.address_obj.street1 else None,
-                "street2": loc.address_obj.street2 if loc.address_obj.street2 else None,
-                "city": loc.address_obj.city if loc.address_obj.city else None,
-                "state": loc.address_obj.state if loc.address_obj.state else None,
-                "country": loc.address_obj.country if loc.address_obj.country else None,
-                "postalcode": loc.address_obj.postalcode
-                if loc.address_obj.postalcode
-                else None,
-                "address_string": loc.address_obj.address_string
-                if loc.address_obj.address_string
-                else None,
-                "phone": loc.address_obj.phone if loc.address_obj.phone else None,
-                "latitude": loc.address_obj.latitude
-                if loc.address_obj.latitude
-                else None,
-                "longitude": loc.address_obj.longitude
-                if loc.address_obj.longitude
-                else None,
+                "location_id": loc.get("location_id"),
+                "name": loc.get("name"),
+                "distance": loc.get("distance"),
+                "rating": loc.get("rating"),
+                "bearing": loc.get("bearing"),
+                "street1": loc.get("address_obj").get("street1"),
+                "street2": loc.get("address_obj").get("street2"),
+                "city": loc.get("address_obj").get("city"),
+                "state": loc.get("address_obj").get("state"),
+                "country": loc.get("address_obj").get("country"),
+                "postalcode": loc.get("address_obj").get("postalcode"),
+                "address_string": loc.get("address_obj").get("address_string"),
+                "phone": loc.get("address_obj").get("phone"),
+                "latitude": loc.get("address_obj").get("latitude"),
+                "longitude": loc.get("address_obj").get("longitude"),
             }
             result.append(data)
 
         result = pd.DataFrame(result)
+        print(result)
         return result

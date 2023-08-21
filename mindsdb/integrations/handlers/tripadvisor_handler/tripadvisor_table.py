@@ -74,7 +74,7 @@ class SearchLocationTable(APITable):
             # search not works without searchQuery, use 'London'
             params["searchQuery"] = "London"
 
-        result = self.handler.call_tripadvisor_searchlocation_api(
+        result = tripAdvisor.call_tripadvisor_searchlocation_api(
             params=params, filters=filters
         )
 

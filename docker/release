@@ -89,6 +89,7 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==23.1.2 &
     pip install --no-cache-dir 'pygithub' || true && \
     pip install --prefer-binary --no-cache-dir hugging_py_face || true && \
     pip install --no-cache-dir pyignite || true && \
+    pip install --no-cache-dir 'duckdb==0.6.1' || true && \
     pip install --prefer-binary --no-cache-dir ShopifyApi || true && \
     pip install --prefer-binary --no-cache-dir 'nixtlats>=0.1.4' || true
 

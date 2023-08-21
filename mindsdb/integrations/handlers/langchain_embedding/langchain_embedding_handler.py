@@ -88,6 +88,7 @@ class LangchainEmbeddingHandler(BaseMLEngine):
 
     def __init__(self, model_storage, engine_storage, **kwargs) -> None:
         super().__init__(model_storage, engine_storage, **kwargs)
+        self.generative = True
 
     def create(
         self,
@@ -180,8 +181,9 @@ class LangchainEmbeddingHandler(BaseMLEngine):
     def finetune(
         self, df: Union[DataFrame, None] = None, args: Union[Dict, None] = None
     ) -> None:
-        # re-save the model to the model storage
-        return self.create(df=df, args=args)
+        raise NotImplementedError(
+            "Finetuning is not supported for langchain embeddings"
+        )
 
     def describe(self, attribute: Union[str, None] = None) -> DataFrame:
         args = self.model_storage.json_get("args")

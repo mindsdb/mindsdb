@@ -21,15 +21,20 @@ def mock_handler_class():
             args["test_required"]
             args.get("test_optional", "default")
             args.get("test_optional2")
-            args["test_required2"] = "default"  # this should be ignored
-            args.setdefault("test_optional3", "default")  # this should be ignored
+            # assign a value to a key in args should be ignored
+            # since it does not require read access to the argument with the key
+            args["test_required2"] = "default"
+            # write access to the argument with the key should be ignored
+            args.setdefault("test_optional3", "default")
 
         def predict(self, args):
-            args["test_required"]
+            args["test_required_at_some_point"]
             args.get("test_optional", "default")
             args.get("test_optional2")
             args["test_required2"] = "default"  # this should be ignored
             args.setdefault("test_optional3", "default")  # this should be ignored
+            # this will trigger the tracking
+            args.get("test_required_at_some_point", "but_not_always")
 
     return MockHandler
 
@@ -62,7 +67,7 @@ def test_arg_probing(mock_handler_class):
             "required": False,
         },
         {
-            "name": "test_required",
+            "name": "test_required_at_some_point",
             "required": True,
         },
     ]

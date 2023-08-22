@@ -235,10 +235,18 @@ class ArgProbeMixin:
         visitor.visit(tree)
 
         # deduplicate the keys
-        unique_arg_keys = set([(r["name"], r["required"]) for r in visitor.arg_keys])
+        # if there two records with the same name but different required status
+        # we should keep the one with required == True
+        unique_arg_keys = {}
+        for r in visitor.arg_keys:
+            if r["name"] in unique_arg_keys:
+                if r["required"]:
+                    unique_arg_keys[r["name"]] = r["required"]
+            else:
+                unique_arg_keys[r["name"]] = r["required"]
 
         # convert back to list
-        visitor.arg_keys = [{"name": k, "required": v} for k, v in unique_arg_keys]
+        visitor.arg_keys = [{"name": k, "required": v} for k, v in unique_arg_keys.items()]
 
         # filter out record where name == "using"
         return [r for r in visitor.arg_keys if r["name"] != "using"]

@@ -269,9 +269,7 @@ class ModelDescribe(Resource):
                 'Model not found',
                 f'Model with name {model_name} not found')
 
-        attribute = None
-        if 'attribute' in request.json:
-            attribute = request.json['attribute']
+        attribute = request.args.get('attribute')
 
         try:
             description_df = session.model_controller.describe_model(

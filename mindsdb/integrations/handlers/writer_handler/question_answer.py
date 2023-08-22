@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import List
 
 from langchain.llms import Writer
 
@@ -39,7 +40,7 @@ class QuestionAnswerer:
 
         self.vector_store = vector_store_loader.load_vector_store()
 
-        if args.use_index:
+        if args.use_external_index:
 
             vector_store_index_config = VectorStoreIndexConfig(
                 vector_store_name=args.vector_store_name,
@@ -59,6 +60,9 @@ class QuestionAnswerer:
 
         self.llm = Writer(**args.llm_params.dict())
 
+    def __call__(self, question: str):
+        return self.query(question)
+
     def _prepare_prompt(self, vector_store_response, question):
 
         # todo ensure contexts don't exceed max length
@@ -75,7 +79,13 @@ class QuestionAnswerer:
             question,
         )
 
-    def _query_vector_store(self, question: str):
+    def extract_returned_text(self, question: str):
+
+        vector_store_response = self.query_vector_store(question)
+
+        return [doc.page_content for doc in vector_store_response][0]
+
+    def query_vector_store(self, question: str):
         return self.vector_store.similarity_search(
             query=question,
             k=self.args.top_k,
@@ -84,15 +94,17 @@ class QuestionAnswerer:
     def query(self, question: str):
         logger.debug(f"Querying: {question}")
 
-        if not self.args.use_index:
+        if not self.args.use_external_index:
 
-            vector_store_response = self._query_vector_store(question)
+            vector_store_response = self.query_vector_store(question)
+
+            formatted_prompt = self._prepare_prompt(vector_store_response, question)
 
         else:
             vector_index_response = self._query_index(question)
-            # to do make parser for index response
-
-        formatted_prompt = self._prepare_prompt(vector_store_response, question)
+            # todo make parser for index response
+            return NotImplementedError("Index response not yet supported")
+            # formatted_prompt = self._prepare_prompt(vector_index_response, question)
 
         llm_response = self.llm(prompt=formatted_prompt)
 

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum, unique
 from functools import lru_cache
-from typing import List, Union
+from typing import Dict, List, Union
 
 import pandas as pd
 import torch
@@ -38,6 +38,11 @@ USER_DEFINED_WRITER_LLM_PARAMS = (
 SUPPORTED_VECTOR_STORES = ("chroma", "faiss")
 
 SUPPORTED_INDICES = ("llama",)
+
+EVAL_COLUMN_NAMES = (
+    "question",
+    "context",
+)
 
 
 def is_valid_store(name):
@@ -200,9 +205,14 @@ class WriterHandlerParameters(BaseModel):
     """Model parameters for create model"""
 
     prompt_template: str
-    use_index: bool
     llm_params: WriterLLMParameters
+    chunk_size: int = 500
+    chunk_overlap: int = 50
+    evaluation: bool = False
+    accuracy_threshold: float = 0.6
+    evaluate_dataset: Union[pd.DataFrame, str] = None
     run_embeddings: bool = True
+    use_external_index: bool = False
     index_name: str = "llama"
     top_k: int = 4
     embeddings_model_name: str = DEFAULT_EMBEDDINGS_MODEL
@@ -212,6 +222,7 @@ class WriterHandlerParameters(BaseModel):
     collection_or_index_name: str = "langchain"
     vector_store_folder_name: str = "chromadb"
     vector_store_storage_path: str = None
+    evaluation_output: Dict = None
 
     class Config:
         extra = Extra.forbid
@@ -230,7 +241,7 @@ class WriterHandlerParameters(BaseModel):
             )
         return v
 
-    @validator("use_index")
+    @validator("use_external_index")
     def use_index_must_be_provided(cls, v):
         if not v:
             raise MissingUseIndex("Please provide a `prompt_template` for this engine.")

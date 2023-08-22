@@ -55,17 +55,24 @@ class Ingestor:
 
         self.vector_store = VectorStoreFactory.get_vectorstore(vector_store)
 
-    def split_documents(self):
+    def split_documents(self, chunk_size=500, chunk_overlap=50):
         # Load documents and split in chunks
         logger.info(f"Loading documents from input data")
 
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size, chunk_overlap=chunk_overlap
+        )
         documents = df_to_documents(
             df=self.df, page_content_columns=self.args.context_columns
         )
+
+        if self.args.evaluation:
+            return documents
+
+        # split documents into chunks of text
         texts = text_splitter.split_documents(documents)
         logger.info(f"Loaded {len(documents)} documents from input data")
-        logger.info(f"Split into {len(texts)} chunks of text (max. 500 tokens each)")
+        logger.info(f"Split into {len(texts)} chunks of text (tokens)")
 
         return texts
 
@@ -103,8 +110,10 @@ class Ingestor:
     def embeddings_to_vectordb(self):
         start_time = time.time()
 
-        # Load documents and split in chunks
-        documents = self.split_documents()
+        # Load documents and splits in chunks (if not in evaluation mode)
+        documents = self.split_documents(
+            chunk_size=self.args.chunk_size, chunk_overlap=self.args.chunk_overlap
+        )
 
         # Load embeddings model
         embeddings_model = load_embeddings_model(self.embeddings_model_name)

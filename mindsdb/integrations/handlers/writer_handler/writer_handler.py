@@ -3,19 +3,26 @@ import random
 from typing import Dict, Optional
 
 import pandas as pd
-from datasets import load_dataset
-from sklearn.metrics import average_precision_score
 
-from mindsdb.integrations.handlers.writer_handler.ingest import Ingestor
+from mindsdb.integrations.handlers.writer_handler.evaluator import (
+    accuracy,
+    calculate_cosine_similarity,
+)
+from mindsdb.integrations.handlers.writer_handler.ingestor import Ingestor
 from mindsdb.integrations.handlers.writer_handler.question_answer import (
     QuestionAnswerer,
 )
 from mindsdb.integrations.handlers.writer_handler.settings import (
     DEFAULT_EMBEDDINGS_MODEL,
+    EVAL_COLUMN_NAMES,
     USER_DEFINED_WRITER_LLM_PARAMS,
     WriterHandlerParameters,
 )
 from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.integrations.utilities.datasets.dataset import (
+    load_dataset,
+    validate_dataframe,
+)
 from mindsdb.utilities.log import get_log
 
 # these require no additional arguments
@@ -71,7 +78,12 @@ class WriterHandler(BaseMLEngine):
         input_args = extract_llm_params(args["using"])
         args = WriterHandlerParameters(**input_args)
 
-        if not df.empty and args.run_embeddings:
+        # create folder for vector store to persist embeddings
+        args.vector_store_storage_path = self.engine_storage.folder_get(
+            args.vector_store_folder_name
+        )
+
+        if not df.empty and args.run_embeddings and not args.evaluation:
             if "context_columns" not in args:
                 # if no context columns provided, use all columns in df
                 logger.info("No context columns provided, using all columns in df")
@@ -82,24 +94,22 @@ class WriterHandler(BaseMLEngine):
                     f"No embeddings model provided in query, using default model: {DEFAULT_EMBEDDINGS_MODEL}"
                 )
 
-            # create folder for vector store to persist embeddings
-            args.vector_store_storage_path = self.engine_storage.folder_get(
-                args.vector_store_folder_name
-            )
-
             ingestor = Ingestor(df=df, args=args)
             ingestor.embeddings_to_vectordb()
-
-            # for mindsdb cloud, store data in shared file system
-            # for cloud version of mindsdb to make it be usable by all mindsdb nodes
-            self.engine_storage.folder_sync(args.vector_store_folder_name)
 
         else:
             logger.info("Skipping embeddings and ingestion into Chroma VectorDB")
 
+        if args.evaluation:
+            args = self.evaluate(args)
+
         export_args = args.dict(exclude={"llm_params"})
         # 'callbacks' aren't json serializable, we do this to avoid errors
         export_args["llm_params"] = args.llm_params.dict(exclude={"callbacks"})
+
+        # for mindsdb cloud, store data in shared file system
+        # for cloud version of mindsdb to make it be usable by all mindsdb nodes
+        self.engine_storage.folder_sync(args.vector_store_folder_name)
 
         self.model_storage.json_set("args", export_args)
 
@@ -127,14 +137,61 @@ class WriterHandler(BaseMLEngine):
 
         return pd.DataFrame(response)
 
-    # todo evaluation method on standardised 100-200 sample of squad_v2 - probs move to mindsdb_evaluator library
-    def evaluate(self):
+    def evaluate(self, args: WriterHandlerParameters):
 
-        dataset_squad_v2 = load_dataset("squad_v2")
-        val_df = pd.DataFrame(dataset_squad_v2["validation"])
-        val_df["answers"] = val_df["answers"].apply(json.dumps)
+        if isinstance(args.evaluate_dataset, pd.DataFrame):
+            evaluate_df = validate_dataframe(args.evaluate_dataset, EVAL_COLUMN_NAMES)
+        else:
+            evaluate_df = load_dataset(
+                ml_task_type="question_answering", dataset_name=args.evaluate_dataset
+            )
 
-        random.seed(53)
+        ingestor = Ingestor(df=evaluate_df, args=args)
+        ingestor.embeddings_to_vectordb()
 
-        sample_size = 100
-        sample_queries = random.sample(val_df["question"].tolist(), sample_size)
+        question_answerer = QuestionAnswerer(args=args)
+
+        evaluate_df["retrieved_context"] = evaluate_df.apply(
+            lambda x: question_answerer.extract_returned_text(x["question"]), axis=1
+        )
+
+        # embed context and retrieved context
+        context_embeddings = question_answerer.embeddings_model.embed_documents(
+            evaluate_df["context"].tolist()
+        )
+        retrieved_context_embeddings = (
+            question_answerer.embeddings_model.embed_documents(
+                evaluate_df["retrieved_context"].tolist()
+            )
+        )
+
+        # calculate cosine similarity for each context and retrieved context pair for a given question
+        cosine_similarities = [
+            calculate_cosine_similarity(context_embedding, retrieved_context_embedding)
+            for context_embedding, retrieved_context_embedding in zip(
+                context_embeddings, retrieved_context_embeddings
+            )
+        ]
+
+        evaluate_df["cosine_similarity"] = cosine_similarities
+
+        # calculate accuracy
+        evaluate_df["accuracy"] = evaluate_df.apply(
+            lambda x: accuracy(
+                x["cosine_similarity"], threshold=args.accuracy_threshold
+            ),
+            axis=1,
+        )
+
+        _accuracy = evaluate_df["accuracy"].mean()
+        _cosine_similarity = evaluate_df["cosine_similarity"].mean()
+
+        evaluation_metrics = {
+            "accuracy": _accuracy,
+            "cosine_similarity": _cosine_similarity,
+        }
+        logger.info(f"Accuracy: {_accuracy}")
+        logger.info(f"Cosine Similarity: {_cosine_similarity}")
+
+        self.model_storage.json_set("evaluation_metrics", evaluation_metrics)
+        self.model_storage.json_set("evaluation_df", evaluate_df.to_dict())

@@ -101,7 +101,7 @@ class WriterHandler(BaseMLEngine):
             logger.info("Skipping embeddings and ingestion into Chroma VectorDB")
 
         if args.evaluation:
-            args = self.evaluate(args)
+            self.evaluate(args)
 
         export_args = args.dict(exclude={"llm_params"})
         # 'callbacks' aren't json serializable, we do this to avoid errors

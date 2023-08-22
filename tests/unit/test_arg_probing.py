@@ -36,6 +36,11 @@ def mock_handler_class():
             # this will trigger the tracking
             args.get("test_required_at_some_point", "but_not_always")
 
+            # a read access with default value
+            _ = args.get("this_is_actually_required", "default")
+            # a read access without default value
+            _ = args["this_is_actually_required"]
+
     return MockHandler
 
 
@@ -68,6 +73,10 @@ def test_arg_probing(mock_handler_class):
         },
         {
             "name": "test_required_at_some_point",
+            "required": True,
+        },
+        {
+            "name": "this_is_actually_required",
             "required": True,
         },
     ]

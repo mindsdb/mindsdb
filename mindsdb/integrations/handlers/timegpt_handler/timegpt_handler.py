@@ -31,6 +31,7 @@ class TimeGPTHandler(BaseMLEngine):
         model_args["order_by"] = time_settings["order_by"]
         model_args["group_by"] = time_settings["group_by"]
         model_args["level"] = using_args.get("level", 90)
+        model_args["freq"] = using_args.get("freq", None)
         model_args["frequency"] = (
             using_args["frequency"] if "frequency" in using_args else None
         )
@@ -45,7 +46,7 @@ class TimeGPTHandler(BaseMLEngine):
         forecast_df = timegpt.forecast(
             prediction_df,
             h=model_args["horizon"],
-            freq='T',  # TimeGPT automatically infers the correct frequency
+            freq=model_args["freq"],  # TimeGPT automatically infers the correct frequency if not provided by user
             level=[model_args["level"]],
         )
         results_df = forecast_df[['unique_id', 'ds', 'TimeGPT']]

@@ -98,7 +98,7 @@ class BYOMHandler(BaseMLEngine):
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         model_storage = self.model_storage
 
-        # TODO: should probably refactor as it shares a bunch of logic with e.g. lightwood's finetune logic
+        # TODO: should probably refactor at some point, as a bit of the logic is shared with lightwood's finetune logic
         try:
             base_predictor_id = args['base_model_id']
             base_predictor_record = db.Predictor.query.get(base_predictor_id)
@@ -108,8 +108,7 @@ class BYOMHandler(BaseMLEngine):
             predictor_id = model_storage.predictor_id
             predictor_record = db.Predictor.query.get(predictor_id)
 
-            # TODO move this to ModelStorage (don't work with database directly)
-            predictor_record.data = {'training_log': 'training'}
+            predictor_record.data = {'training_log': 'training'} # TODO move to ModelStorage (don't work w/ db directly)
             predictor_record.training_start_at = datetime.now()
             predictor_record.status = PREDICTOR_STATUS.FINETUNING  # TODO: parallel execution block
             db.session.commit()

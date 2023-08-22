@@ -282,7 +282,7 @@ class ModelWrapper:
             'args': args,
         }
 
-        model_state = self._run_command(params)  # TODO: we are not actually returning anything, maybe in order for this to work we need to return self, but that is a hack, the proper way is different
+        model_state = self._run_command(params)
         return model_state
 
 

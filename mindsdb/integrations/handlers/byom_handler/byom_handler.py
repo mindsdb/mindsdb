@@ -25,22 +25,30 @@ from mindsdb.integrations.utilities.utils import format_exception_error
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 from .proc_wrapper import pd_decode, pd_encode, encode, decode
+from .proc_wrapper import import_string, find_model_class
 
 
 class BYOMHandler(BaseMLEngine):
 
     name = 'byom'
 
+    def __init__(self, model_storage, engine_storage, **kwargs) -> None:
+        self.model_wrapper = None
+        super().__init__(model_storage, engine_storage, **kwargs)
+
     def _get_model_proxy(self):
         con_args = self.engine_storage.get_connection_args()
         code = self.engine_storage.file_get(con_args['code'])
         modules_str = self.engine_storage.file_get(con_args['modules'])
 
-        return ModelWrapper(
-            code=code,
-            modules_str=modules_str,
-            engine_id=self.engine_storage.integration_id
-        )
+        if self.model_wrapper is None:
+            self.model_wrapper = ModelWrapperuUsafe(
+                code=code,
+                modules_str=modules_str,
+                engine_id=self.engine_storage.integration_id
+            )
+
+        return self.model_wrapper
 
     def create(self, target, df=None, args=None, **kwargs):
         # is_cloud = Config().get('cloud', False)
@@ -83,21 +91,22 @@ class BYOMHandler(BaseMLEngine):
         return pred_df
 
     def create_engine(self, connection_args):
+        pass
         # check code and requirements
         # ADD
         # is_cloud = Config().get('cloud', False)
         # if is_cloud is True:
         #     raise RuntimeError('BYOM is disabled on cloud')
 
-        model_proxy = self._get_model_proxy()
+        # model_proxy = self._get_model_proxy()
 
-        try:
-            model_proxy.check()
-        except Exception as e:
-            # remove venv
-            model_proxy.remove_venv()
+        # try:
+        #     model_proxy.check()
+        # except Exception as e:
+        #     # remove venv
+        #     model_proxy.remove_venv()
 
-            raise e
+        #     raise e
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         model_storage = self.model_storage
@@ -119,7 +128,7 @@ class BYOMHandler(BaseMLEngine):
 
             model_proxy = self._get_model_proxy()
             model_state = self.base_model_storage.file_get('model')
-            model_proxy.finetune(df, model_state, args=args.get('using', {}))
+            model_state = model_proxy.finetune(df, model_state, args=args.get('using', {}))  # WRONG
             self.model_storage.file_set('model', model_state)
 
             predictor_record.update_status = 'up_to_date'
@@ -142,6 +151,43 @@ class BYOMHandler(BaseMLEngine):
             if predictor_record.training_stop_at is None:
                 predictor_record.training_stop_at = datetime.now()
                 db.session.commit()
+
+
+class ModelWrapperuUsafe:
+    def __init__(self, code, modules_str, engine_id):
+        module = import_string(code)
+        model_class = find_model_class(module)
+        self.model_class = model_class
+        self.model_instance = self.model_class()
+
+    def train(self, df, target, args):
+        # call_args = [df, target]
+        # if args:
+        #     call_args.append(args)
+        self.model_instance.train(df, target, args)
+        print('done training')
+        return pickle.dumps(self.model_instance.__dict__, protocol=5)
+
+    def predict(self, df, model_state, args):
+        model_state = pickle.loads(model_state)
+        self.model_instance.__dict__ = model_state
+        try:
+            result = self.model_instance.predict(df, args)
+        except:
+            result = self.model_instance.predict(df)
+        return result
+
+    def finetune(self, df, model_state, args):
+        self.model_instance.__dict__ = pickle.loads(model_state)
+
+        call_args = [df]
+        if args:
+            call_args.append(args)
+
+        self.model_instance.finetune(df, args)
+
+        return pickle.dumps(self.model_instance.__dict__, protocol=5)
+
 
 class ModelWrapper:
     def __init__(self, code, modules_str, engine_id):

@@ -88,13 +88,13 @@ class Ingestor:
                 client_settings=get_chroma_settings(
                     persist_directory=self.args.vector_store_storage_path
                 ),
-                collection_name=self.args.collection_or_index_name,
+                collection_name=self.args.collection_name,
             )
         else:
             return self.vector_store.from_documents(
                 documents=documents,
                 embeddings=embeddings_model,
-                collection_name=self.args.collection_or_index_name,
+                collection_name=self.args.collection_name,
             )
 
     def create_db_from_texts(self, documents, embeddings_model):

@@ -27,13 +27,13 @@ class QuestionAnswerer:
 
         self.persist_directory = args.vector_store_storage_path
 
-        self.collection_or_index_name = args.collection_or_index_name
+        self.collection_or_index_name = args.collection_name
 
         vector_store_config = VectorStoreConfig(
             vector_store_name=args.vector_store_name,
             embeddings_model=self.embeddings_model,
             persist_directory=self.persist_directory,
-            collection_or_index_name=self.collection_or_index_name,
+            collection_name=self.collection_or_index_name,
         )
 
         vector_store_loader = VectorStoreLoader(vector_store_config)
@@ -47,7 +47,7 @@ class QuestionAnswerer:
                 vector_store=self.vector_store,
                 embeddings_model=self.embeddings_model,
                 persist_directory=self.persist_directory,
-                collection_or_index_name=args.collection_or_index_name,
+                collection_name=args.collection_name,
                 index_name=args.external_index_name,
             )
             vector_store_index_loader = VectorStoreIndexLoader(

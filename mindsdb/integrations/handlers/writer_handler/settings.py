@@ -79,7 +79,7 @@ class VectorStoreConfig:
     vector_store_name: str
     embeddings_model: Embeddings
     persist_directory: str
-    collection_or_index_name: str
+    collection_name: str
 
 
 class VectorStoreLoader:
@@ -95,7 +95,7 @@ class VectorStoreLoader:
         if vector_store == "chroma":
 
             return Chroma(
-                collection_name=self.config.collection_or_index_name,
+                collection_name=self.config.collection_name,
                 embedding_function=self.config.embeddings_model,
                 client_settings=get_chroma_settings(
                     persist_directory=self.config.persist_directory
@@ -107,7 +107,7 @@ class VectorStoreLoader:
             return FAISS.load_local(
                 folder_path=self.config.persist_directory,
                 embeddings=self.config.embeddings_model,
-                index_name=self.config.collection_or_index_name,
+                index_name=self.config.collection_name,
             )
 
         else:
@@ -149,7 +149,7 @@ class VectorStoreIndexLoader:
         """Load Chroma index from the persisted vector store"""
 
         collection = self.config.vector_store._client.get_collection(
-            self.config.collection_or_index_name
+            self.config.collection_name
         )
         service_context = ServiceContext.from_defaults(
             embed_model=self.config.embeddings_model
@@ -218,7 +218,7 @@ class WriterHandlerParameters(BaseModel):
     context_columns: Union[List[str], str] = None
     vector_store_name: str = "chroma"
     vector_store: VectorStore = VectorStoreFactory.get_vectorstore(vector_store_name)
-    collection_or_index_name: str = "langchain"
+    collection_name: str = "langchain"
     vector_store_folder_name: str = "chromadb"
     vector_store_storage_path: str = None
     evaluation_output: Dict = None

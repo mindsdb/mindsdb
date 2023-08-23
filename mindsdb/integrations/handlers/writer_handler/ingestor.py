@@ -3,9 +3,10 @@ import time
 import pandas as pd
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import Chroma, VectorStore
 
 from mindsdb.integrations.handlers.writer_handler.settings import (
+    PersistedVectorStoreSaver,
+    PersistedVectorStoreSaverConfig,
     VectorStoreFactory,
     WriterHandlerParameters,
     df_to_documents,
@@ -47,13 +48,14 @@ class Ingestor:
         self,
         args: WriterHandlerParameters,
         df: pd.DataFrame,
-        vector_store: str = "chroma",
     ):
         self.args = args
         self.df = df
         self.embeddings_model_name = args.embeddings_model_name
 
-        self.vector_store = VectorStoreFactory.get_vectorstore(vector_store)
+        self.vector_store = VectorStoreFactory.get_vectorstore_class(
+            args.vector_store_name
+        )
 
     def split_documents(self, chunk_size=500, chunk_overlap=50):
         # Load documents and split in chunks
@@ -66,7 +68,7 @@ class Ingestor:
             df=self.df, page_content_columns=self.args.context_columns
         )
 
-        if self.args.evaluation:
+        if self.args.evaluation_type:
             return documents
 
         # split documents into chunks of text
@@ -93,7 +95,7 @@ class Ingestor:
         else:
             return self.vector_store.from_documents(
                 documents=documents,
-                embeddings=embeddings_model,
+                embedding=embeddings_model,
                 collection_name=self.args.collection_name,
             )
 
@@ -104,13 +106,13 @@ class Ingestor:
         metadata = [doc.metadata for doc in documents]
 
         return self.vector_store.from_texts(
-            texts=texts, embeddings=embeddings_model, metadatas=metadata
+            texts=texts, embedding=embeddings_model, metadatas=metadata
         )
 
     def embeddings_to_vectordb(self):
         start_time = time.time()
 
-        # Load documents and splits in chunks (if not in evaluation mode)
+        # Load documents and splits in chunks (if not in evaluation_type mode)
         documents = self.split_documents(
             chunk_size=self.args.chunk_size, chunk_overlap=self.args.chunk_overlap
         )
@@ -125,9 +127,8 @@ class Ingestor:
 
         try:
             db = self.create_db_from_documents(documents, embeddings_model)
-        except AttributeError as e:
+        except Exception as e:
             logger.error(f"Error creating from documents: {e}")
-
             try:
                 db = self.create_db_from_texts(documents, embeddings_model)
 
@@ -135,7 +136,17 @@ class Ingestor:
                 logger.error(f"Error creating from texts: {e}")
                 raise e
 
-        db.persist()
+        config = PersistedVectorStoreSaverConfig(
+            vector_store_name=self.args.vector_store_name,
+            vector_store=db,
+            persist_directory=self.args.vector_store_storage_path,
+            collection_name=self.args.collection_name,
+        )
+
+        vector_store_saver = PersistedVectorStoreSaver(config)
+
+        vector_store_saver.save_vector_store(db)
+
         db = None
         end_time = time.time()
         elapsed_time = end_time - start_time

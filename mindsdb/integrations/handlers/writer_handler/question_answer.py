@@ -4,10 +4,10 @@ from typing import List
 from langchain.llms import Writer
 
 from mindsdb.integrations.handlers.writer_handler.settings import (
-    VectorStoreConfig,
-    VectorStoreIndexConfig,
+    PersistedVectorStoreIndexConfig,
+    PersistedVectorStoreLoader,
+    PersistedVectorStoreLoaderConfig,
     VectorStoreIndexLoader,
-    VectorStoreLoader,
     WriterHandlerParameters,
     load_embeddings_model,
 )
@@ -27,24 +27,24 @@ class QuestionAnswerer:
 
         self.persist_directory = args.vector_store_storage_path
 
-        self.collection_or_index_name = args.collection_name
+        self.collection_name = args.collection_name
 
-        vector_store_config = VectorStoreConfig(
+        vector_store_config = PersistedVectorStoreLoaderConfig(
             vector_store_name=args.vector_store_name,
             embeddings_model=self.embeddings_model,
             persist_directory=self.persist_directory,
-            collection_name=self.collection_or_index_name,
+            collection_name=self.collection_name,
         )
 
-        vector_store_loader = VectorStoreLoader(vector_store_config)
+        self.vector_store_loader = PersistedVectorStoreLoader(vector_store_config)
 
-        self.vector_store = vector_store_loader.load_vector_store()
+        self.persisted_vector_store = self.vector_store_loader.load_vector_store()
 
         if args.external_index_name:
 
-            vector_store_index_config = VectorStoreIndexConfig(
+            vector_store_index_config = PersistedVectorStoreIndexConfig(
                 vector_store_name=args.vector_store_name,
-                vector_store=self.vector_store,
+                vector_store=self.persisted_vector_store,
                 embeddings_model=self.embeddings_model,
                 persist_directory=self.persist_directory,
                 collection_name=args.collection_name,
@@ -65,13 +65,28 @@ class QuestionAnswerer:
 
     def _prepare_prompt(self, vector_store_response, question):
 
-        # todo ensure contexts don't exceed max length
-        # todo maybe use a selector model, summarizer or otherwise truncate contexts
         context = [doc.page_content for doc in vector_store_response]
 
         combined_context = "\n\n".join(context)
 
+        if self.args.summarize_context:
+            return self._summarize_context(combined_context, question)
+
         return self.prompt_template.format(question=question, context=combined_context)
+
+    def _summarize_context(self, combined_context: str, question: str):
+
+        summarization_prompt_template = self.args.summarization_prompt_template
+
+        summarization_prompt = summarization_prompt_template.format(
+            context=combined_context, question=question
+        )
+
+        summarized_context = self.llm(prompt=summarization_prompt)
+
+        return self.prompt_template.format(
+            question=question, context=summarized_context
+        )
 
     def _query_index(self, question: str):
 
@@ -79,14 +94,9 @@ class QuestionAnswerer:
             question,
         )
 
-    def extract_returned_text(self, question: str):
-
-        vector_store_response = self.query_vector_store(question)
-
-        return [doc.page_content for doc in vector_store_response][0]
-
     def query_vector_store(self, question: str):
-        return self.vector_store.similarity_search(
+
+        return self.persisted_vector_store.similarity_search(
             query=question,
             k=self.args.top_k,
         )

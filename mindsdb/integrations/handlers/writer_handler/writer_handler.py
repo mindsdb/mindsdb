@@ -4,10 +4,7 @@ from typing import Dict, Optional
 
 import pandas as pd
 
-from mindsdb.integrations.handlers.writer_handler.evaluator import (
-    accuracy,
-    calculate_cosine_similarity,
-)
+from mindsdb.integrations.handlers.writer_handler.evaluator import Evaluator
 from mindsdb.integrations.handlers.writer_handler.ingestor import Ingestor
 from mindsdb.integrations.handlers.writer_handler.question_answer import (
     QuestionAnswerer,
@@ -83,7 +80,7 @@ class WriterHandler(BaseMLEngine):
             args.vector_store_folder_name
         )
 
-        if not df.empty and args.run_embeddings and not args.evaluation:
+        if not df.empty and args.run_embeddings and not args.evaluation_type:
             if "context_columns" not in args:
                 # if no context columns provided, use all columns in df
                 logger.info("No context columns provided, using all columns in df")
@@ -94,13 +91,13 @@ class WriterHandler(BaseMLEngine):
                     f"No embeddings model provided in query, using default model: {DEFAULT_EMBEDDINGS_MODEL}"
                 )
 
-            ingestor = Ingestor(df=df, args=args)
+            ingestor = Ingestor(args=args, df=df)
             ingestor.embeddings_to_vectordb()
 
         else:
             logger.info("Skipping embeddings and ingestion into Chroma VectorDB")
 
-        if args.evaluation:
+        if args.evaluation_type:
             self.evaluate(args)
 
         export_args = args.dict(exclude={"llm_params"})
@@ -129,7 +126,7 @@ class WriterHandler(BaseMLEngine):
         )
 
         # get question answering results
-        question_answerer = QuestionAnswerer(args=args)
+        question_answerer = QuestionAnswerer(args=args, df=df)
 
         # get question from sql query
         # e.g. where question = 'What is the capital of France?'
@@ -149,49 +146,8 @@ class WriterHandler(BaseMLEngine):
         ingestor = Ingestor(df=evaluate_df, args=args)
         ingestor.embeddings_to_vectordb()
 
-        question_answerer = QuestionAnswerer(args=args)
-
-        evaluate_df["retrieved_context"] = evaluate_df.apply(
-            lambda x: question_answerer.extract_returned_text(x["question"]), axis=1
-        )
-
-        # embed context and retrieved context
-        context_embeddings = question_answerer.embeddings_model.embed_documents(
-            evaluate_df["context"].tolist()
-        )
-        retrieved_context_embeddings = (
-            question_answerer.embeddings_model.embed_documents(
-                evaluate_df["retrieved_context"].tolist()
-            )
-        )
-
-        # calculate cosine similarity for each context and retrieved context pair for a given question
-        cosine_similarities = [
-            calculate_cosine_similarity(context_embedding, retrieved_context_embedding)
-            for context_embedding, retrieved_context_embedding in zip(
-                context_embeddings, retrieved_context_embeddings
-            )
-        ]
-
-        evaluate_df["cosine_similarity"] = cosine_similarities
-
-        # calculate accuracy
-        evaluate_df["accuracy"] = evaluate_df.apply(
-            lambda x: accuracy(
-                x["cosine_similarity"], threshold=args.accuracy_threshold
-            ),
-            axis=1,
-        )
-
-        _accuracy = evaluate_df["accuracy"].mean()
-        _cosine_similarity = evaluate_df["cosine_similarity"].mean()
-
-        evaluation_metrics = {
-            "accuracy": _accuracy,
-            "cosine_similarity": _cosine_similarity,
-        }
-        logger.info(f"Accuracy: {_accuracy}")
-        logger.info(f"Cosine Similarity: {_cosine_similarity}")
+        evaluator = Evaluator(args=args, df=evaluate_df)
+        evaluation_metrics, evaluate_df = evaluator.evaluate()
 
         self.model_storage.json_set("evaluation_metrics", evaluation_metrics)
         self.model_storage.json_set("evaluation_df", evaluate_df.to_dict())

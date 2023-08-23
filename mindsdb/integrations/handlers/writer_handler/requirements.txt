@@ -10,3 +10,6 @@ markupsafe == 2.0.1
 llama-index
 faiss-cpu #todo check support for 'faiss-gpu'
 datasets
+nltk
+rouge-score
+```

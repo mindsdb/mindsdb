@@ -44,6 +44,17 @@ EVAL_COLUMN_NAMES = (
     "context",
 )
 
+SUPPORTED_EVALUATION_TYPES = ("retrieval", "e2e")
+
+
+SUMMARIZATION_PROMPT_TEMPLATE = """
+Summarize the following texts for me:
+{context}
+
+When summarizing, please keep the following in mind the following question:
+{question}
+"""
+
 
 def is_valid_store(name):
     return name in SUPPORTED_VECTOR_STORES
@@ -51,7 +62,7 @@ def is_valid_store(name):
 
 class VectorStoreFactory:
     @staticmethod
-    def get_vectorstore(name):
+    def get_vectorstore_class(name):
 
         if not isinstance(name, str):
             raise TypeError("name must be a string")
@@ -75,15 +86,41 @@ def get_chroma_settings(persist_directory: str = "chromadb") -> Settings:
 
 
 @dataclass
-class VectorStoreConfig:
+class PersistedVectorStoreSaverConfig:
+    vector_store_name: str
+    persist_directory: str
+    collection_name: str
+    vector_store: VectorStore
+
+
+@dataclass
+class PersistedVectorStoreLoaderConfig:
     vector_store_name: str
     embeddings_model: Embeddings
     persist_directory: str
     collection_name: str
 
 
-class VectorStoreLoader:
-    def __init__(self, config: VectorStoreConfig):
+class PersistedVectorStoreSaver:
+    def __init__(self, config: PersistedVectorStoreSaverConfig):
+        self.config = config
+
+    def save_vector_store(self, vector_store: VectorStore):
+        method_name = f"save_{self.config.vector_store_name}"
+        getattr(self, method_name)(vector_store)
+
+    def save_chroma(self, vector_store: Chroma):
+        vector_store.persist()
+
+    def save_faiss(self, vector_store: FAISS):
+        vector_store.save_local(
+            folder_path=self.config.persist_directory,
+            index_name=self.config.collection_name,
+        )
+
+
+class PersistedVectorStoreLoader:
+    def __init__(self, config: PersistedVectorStoreLoaderConfig):
         self.config = config
 
     def load_vector_store_client(
@@ -125,14 +162,14 @@ class VectorStoreLoader:
 
 
 @dataclass
-class VectorStoreIndexConfig(VectorStoreConfig):
+class PersistedVectorStoreIndexConfig(PersistedVectorStoreLoaderConfig):
     index_name: str
     vector_store: VectorStore
 
 
 class VectorStoreIndexLoader:
     def __init__(self, config):
-        self.config: VectorStoreIndexConfig = config
+        self.config: PersistedVectorStoreIndexConfig = config
 
     def load_vector_store_index(self):
         method_name = (
@@ -208,8 +245,9 @@ class WriterHandlerParameters(BaseModel):
     llm_params: WriterLLMParameters
     chunk_size: int = 500
     chunk_overlap: int = 50
-    evaluation: bool = False
-    accuracy_threshold: float = 0.6
+    evaluation_type: str = "retrieval"
+    retriever_accuracy_threshold: float = 0.6
+    e2e_accuracy_threshold: float = 0.8
     evaluate_dataset: Union[pd.DataFrame, str] = "squad_v2_val_100_sample"
     run_embeddings: bool = True
     external_index_name: str = None
@@ -217,8 +255,11 @@ class WriterHandlerParameters(BaseModel):
     embeddings_model_name: str = DEFAULT_EMBEDDINGS_MODEL
     context_columns: Union[List[str], str] = None
     vector_store_name: str = "chroma"
-    vector_store: VectorStore = VectorStoreFactory.get_vectorstore(vector_store_name)
+    vector_store: VectorStore = None
     collection_name: str = "langchain"
+    summarize_context: bool = False
+    summarization_prompt_template: str = SUMMARIZATION_PROMPT_TEMPLATE
+    use_external_index: bool = False
     vector_store_folder_name: str = "chromadb"
     vector_store_storage_path: str = None
     evaluation_output: Dict = None
@@ -227,6 +268,14 @@ class WriterHandlerParameters(BaseModel):
         extra = Extra.forbid
         arbitrary_types_allowed = True
         use_enum_values = True
+
+    @validator("evaluation_type")
+    def evaluation_type_must_be_supported(cls, v):
+        if v not in SUPPORTED_EVALUATION_TYPES:
+            raise ValueError(
+                f"evaluation_type must be one of `retrieval` or `e2e`, got {v}"
+            )
+        return v
 
     @validator("vector_store_name")
     def name_must_be_lower(cls, v):

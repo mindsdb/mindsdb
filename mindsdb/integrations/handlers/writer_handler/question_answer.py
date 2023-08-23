@@ -40,7 +40,7 @@ class QuestionAnswerer:
 
         self.vector_store = vector_store_loader.load_vector_store()
 
-        if args.use_external_index:
+        if args.external_index_name:
 
             vector_store_index_config = VectorStoreIndexConfig(
                 vector_store_name=args.vector_store_name,
@@ -48,7 +48,7 @@ class QuestionAnswerer:
                 embeddings_model=self.embeddings_model,
                 persist_directory=self.persist_directory,
                 collection_or_index_name=args.collection_or_index_name,
-                index_name=args.index_name,
+                index_name=args.external_index_name,
             )
             vector_store_index_loader = VectorStoreIndexLoader(
                 vector_store_index_config

@@ -210,10 +210,9 @@ class WriterHandlerParameters(BaseModel):
     chunk_overlap: int = 50
     evaluation: bool = False
     accuracy_threshold: float = 0.6
-    evaluate_dataset: Union[pd.DataFrame, str] = None
+    evaluate_dataset: Union[pd.DataFrame, str] = "squad_v2_val_100_sample"
     run_embeddings: bool = True
-    use_external_index: bool = False
-    index_name: str = "llama"
+    external_index_name: str = None
     top_k: int = 4
     embeddings_model_name: str = DEFAULT_EMBEDDINGS_MODEL
     context_columns: Union[List[str], str] = None

@@ -129,6 +129,7 @@ def learn_process(class_path, engine, integration_id,
                 model_storage=modelStorage,
                 **kwargs
             )
+            handlers_cacher[predictor_record.id] = ml_handler
 
             if not ml_handler.generative:
                 if training_data_df is not None and target not in training_data_df.columns:

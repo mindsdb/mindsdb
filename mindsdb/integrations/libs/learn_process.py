@@ -19,17 +19,24 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.config import Config
 
 
+handlers_cacher = {}
+
+
 @mark_process(name='learn')
 def predict_process(predictor_record, ml_engine_name, handler_class, integration_id, df, args):
     db.init()
 
-    handlerStorage = HandlerStorage(integration_id)
-    modelStorage = ModelStorage(predictor_record.id)
+    if predictor_record.id not in handlers_cacher:
+        handlerStorage = HandlerStorage(integration_id)
+        modelStorage = ModelStorage(predictor_record.id)
+        ml_handler = handler_class(
+            engine_storage=handlerStorage,
+            model_storage=modelStorage,
+        )
+        handlers_cacher[predictor_record.id] = ml_handler
+    else:
+        ml_handler = handlers_cacher[predictor_record.id]
 
-    ml_handler = handler_class(
-        engine_storage=handlerStorage,
-        model_storage=modelStorage,
-    )
 
     if ml_engine_name == 'LightwoodHandler':
         args['code'] = predictor_record.code

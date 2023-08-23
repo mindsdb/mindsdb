@@ -1,19 +1,28 @@
 import sys
 import os
 import re
+import shutil
 import pickle
 import subprocess
-from collections import OrderedDict
+import traceback
+
 from pathlib import Path
-import shutil
+from datetime import datetime
+from typing import Optional, Dict
+from collections import OrderedDict
 
 import numpy as np
+import pandas as pd
 from pandas.api import types as pd_types
 
-from mindsdb.utilities.config import Config
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
-from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
+from mindsdb.utilities.config import Config
+from mindsdb.interfaces.storage import db
+from mindsdb.interfaces.storage.fs import FileStorage, RESOURCE_GROUP
+from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.integrations.libs.const import PREDICTOR_STATUS
+from mindsdb.integrations.utilities.utils import format_exception_error
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 from .proc_wrapper import pd_decode, pd_encode, encode, decode
 
@@ -90,6 +99,49 @@ class BYOMHandler(BaseMLEngine):
 
             raise e
 
+    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        model_storage = self.model_storage
+
+        # TODO: should probably refactor at some point, as a bit of the logic is shared with lightwood's finetune logic
+        try:
+            base_predictor_id = args['base_model_id']
+            base_predictor_record = db.Predictor.query.get(base_predictor_id)
+            if base_predictor_record.status != PREDICTOR_STATUS.COMPLETE:
+                raise Exception("Base model must be in status 'complete'")
+
+            predictor_id = model_storage.predictor_id
+            predictor_record = db.Predictor.query.get(predictor_id)
+
+            predictor_record.data = {'training_log': 'training'} # TODO move to ModelStorage (don't work w/ db directly)
+            predictor_record.training_start_at = datetime.now()
+            predictor_record.status = PREDICTOR_STATUS.FINETUNING  # TODO: parallel execution block
+            db.session.commit()
+
+            model_proxy = self._get_model_proxy()
+            model_state = self.base_model_storage.file_get('model')
+            model_proxy.finetune(df, model_state, args=args.get('using', {}))
+            self.model_storage.file_set('model', model_state)
+
+            predictor_record.update_status = 'up_to_date'
+            predictor_record.status = PREDICTOR_STATUS.COMPLETE
+            predictor_record.training_stop_at = datetime.now()
+            db.session.commit()
+
+        except Exception as e:
+            log.logger.error(e)
+            predictor_id = model_storage.predictor_id
+            predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
+            print(traceback.format_exc())
+            error_message = format_exception_error(e)
+            predictor_record.data = {"error": error_message}
+            predictor_record.status = PREDICTOR_STATUS.ERROR
+            db.session.commit()
+            raise
+
+        finally:
+            if predictor_record.training_stop_at is None:
+                predictor_record.training_stop_at = datetime.now()
+                db.session.commit()
 
 class ModelWrapper:
     def __init__(self, code, modules_str, engine_id):
@@ -224,6 +276,18 @@ class ModelWrapper:
         }
         pred_df = self._run_command(params)
         return pd_decode(pred_df)
+
+    def finetune(self, df, model_state, args):
+        params = {
+            'method': 'finetune',
+            'model_state': model_state,
+            'df': pd_encode(df),
+            'code': self.code,
+            'args': args,
+        }
+
+        model_state = self._run_command(params)
+        return model_state
 
 
 connection_args = OrderedDict(

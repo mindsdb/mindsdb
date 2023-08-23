@@ -31,6 +31,10 @@ def transform_to_nixtla_df(df, settings_dict, exog_vars=[]):
     else:
         group_col = settings_dict["group_by"][0]
 
+    if group_col not in df.columns:
+        # add to dataframe
+        nixtla_df[group_col] = '1'
+
     # Rename columns to statsforecast names
     nixtla_df = nixtla_df.rename(
         {settings_dict["target"]: "y", settings_dict["order_by"]: "ds", group_col: "unique_id"}, axis=1

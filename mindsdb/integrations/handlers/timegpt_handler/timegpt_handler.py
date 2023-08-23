@@ -14,15 +14,16 @@ class TimeGPTHandler(BaseMLEngine):
     zero-shot time series forecasting.
     """
 
-    name = "nixtla"
+    name = "timegpt"
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """
-        Create the Nixtla Handler.
+        Create the TimeGPT Handler.
         Requires specifying the target column and usual time series arguments. Saves model config for later usage.
         """
         time_settings = args["timeseries_settings"]
         using_args = args["using"]
+
         assert time_settings["is_timeseries"], "Specify time series settings in your query"
         model_args = {}
         model_args['token'] = get_api_key('TIMEGPT_TOKEN', using_args, self.engine_storage, strict=True)
@@ -30,10 +31,11 @@ class TimeGPTHandler(BaseMLEngine):
         model_args["horizon"] = time_settings["horizon"]
         model_args["order_by"] = time_settings["order_by"]
         model_args["group_by"] = time_settings["group_by"]
-        model_args["level"] = using_args.get("level", 90)
-        model_args["frequency"] = (
-            using_args["frequency"] if "frequency" in using_args else None
-        )
+        model_args["level"] = using_args.get("level", [90])
+        assert isinstance(model_args["level"], list), "`level` must be a list of integers"
+        assert all([isinstance(l, int) for l in model_args["level"]]), "`level` must be a list of integers"
+        model_args["freq"] = using_args.get("frequency", None)
+
         self.model_storage.json_set("model_args", model_args)  # persist changes to handler folder
 
     def predict(self, df, args={}):
@@ -45,17 +47,23 @@ class TimeGPTHandler(BaseMLEngine):
         forecast_df = timegpt.forecast(
             prediction_df,
             h=model_args["horizon"],
-            freq='T',  # TimeGPT automatically infers the correct frequency
-            level=[model_args["level"]],
+            freq=model_args["freq"],  # TimeGPT automatically infers the correct frequency if not provided by user
+            level=model_args["level"],
         )
         results_df = forecast_df[['unique_id', 'ds', 'TimeGPT']]
         results_df = self._get_results_from_nixtla_df(results_df, model_args)
 
-        # add confidence
-        level = model_args['level']
-        results_df['confidence'] = level/100
-        results_df['lower'] = forecast_df[f'TimeGPT-lo-{level}']
-        results_df['upper'] = forecast_df[f'TimeGPT-hi-{level}']
+        # add prediction intervals
+        levels = sorted(model_args['level'], reverse=True)
+        for i, level in enumerate(levels):
+            if i == 0:
+                # NOTE: this should be simplified once we refactor the expected time series output within MindsDB
+                results_df['confidence'] = level/100  # we report the highest level as the overall confidence
+                results_df['lower'] = forecast_df[f'TimeGPT-lo-{level}']
+                results_df['upper'] = forecast_df[f'TimeGPT-hi-{level}']
+            else:
+                results_df[f'lower_{level}'] = forecast_df[f'TimeGPT-lo-{level}']
+                results_df[f'upper_{level}'] = forecast_df[f'TimeGPT-hi-{level}']
 
         return results_df
 
@@ -63,7 +71,7 @@ class TimeGPTHandler(BaseMLEngine):
         model_args = self.model_storage.json_get("model_args")
 
         if attribute == "model":
-            return pd.DataFrame({k: [model_args[k]] for k in ["frequency"]})
+            return pd.DataFrame({k: [model_args[k]] for k in ["freq"]})
 
         elif attribute == "features":
             return pd.DataFrame(
@@ -106,7 +114,7 @@ class TimeGPTHandler(BaseMLEngine):
                 if mindate > pd.to_datetime('1970-01-01T00:00:00') and maxdate < pd.to_datetime('2050-12-31T23:59:59'):
                     unit = u
             df[date_column] = pd.to_datetime(df[date_column], unit=unit, origin='unix')
-        elif pd.api.types.is_string_dtype(df[date_column]):
+        else: 
             df[date_column] = pd.to_datetime(df[date_column])
         df[date_column] = df[date_column].dt.strftime('%Y-%m-%dT%H:%M:%S')  # convert to ISO 8601 format
         return df

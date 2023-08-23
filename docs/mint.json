@@ -180,6 +180,7 @@
         {
           "group": "Chatbots",
           "pages": [
+            "sql/tutorials/llm-chatbot-ui",
             "sql/tutorials/slack-chatbot",
             "sql/tutorials/twitterbot-mariadb-enterprise-server-skysql"
           ]
@@ -367,24 +368,27 @@
             {
               "group": "SQL",
               "pages": [
+                "sql/list-data-handlers",
                 "sql/create/database",
                 "sql/drop/database",
-                "sql/api/use",
-                "sql/show-databases"
+                "sql/show-databases",
+                "sql/api/use"
               ]
             },
             {
               "group": "Mongo-QL",
               "pages": [
+                "mongo/databases/list-data-handlers",
                 "mongo/databases/insertOne",
                 "mongo/databases/deleteOne",
-                "mongo/databases/use",
-                "mongo/databases/find"
+                "mongo/databases/find",
+                "mongo/databases/use"
               ]
             },
             {
               "group": "Python",
               "pages": [
+                "sdk_python/list_data_handlers",
                 "sdk_python/create_database",
                 "sdk_python/drop_database",
                 "sdk_python/list_databases"
@@ -393,7 +397,9 @@
             {
               "group": "JavaScript",
               "pages": [
+                "sdk_javascript/list_data_handlers",
                 "sdk_javascript/create_database",
+                "sdk_javascript/get_database",
                 "sdk_javascript/drop_database",
                 "sdk_javascript/list_databases"
               ]
@@ -401,11 +407,11 @@
             {
               "group": "REST API",
               "pages": [
-                "rest/databases/list-databases",
-                "rest/databases/list-database",
                 "rest/databases/create-databases",
                 "rest/databases/update-databases",
-                "rest/databases/delete-databases"
+                "rest/databases/delete-databases",
+                "rest/databases/list-databases",
+                "rest/databases/list-database"
               ]
             }
           ]
@@ -416,6 +422,7 @@
             {
               "group": "SQL",
               "pages": [
+                "sql/list-ml-handlers",
                 "sql/create/ml-engine",
                 "sql/drop/ml-engine",
                 "sql/show-ml-engines"
@@ -424,6 +431,7 @@
             {
               "group": "Mongo-QL",
               "pages": [
+                "mongo/ml_engines/list-ml-handlers",
                 "mongo/ml_engines/insertOne",
                 "mongo/ml_engines/deleteOne",
                 "mongo/ml_engines/find"
@@ -432,6 +440,7 @@
             {
               "group": "Python",
               "pages": [
+                "sdk_python/list_ml_handlers",
                 "sdk_python/create_ml_engine",
                 "sdk_python/drop_ml_engine",
                 "sdk_python/list_ml_engines"
@@ -440,6 +449,7 @@
             {
               "group": "JavaScript",
               "pages": [
+                "sdk_javascript/list_ml_handlers",
                 "sdk_javascript/create_ml_engine",
                 "sdk_javascript/drop_ml_engine",
                 "sdk_javascript/list_ml_engines"
@@ -462,14 +472,16 @@
               "group": "SQL",
               "pages": [
                 "sql/create/project",
-                "sql/drop/project"
+                "sql/drop/project",
+                "sql/list-projects"
               ]
             },
             {
               "group": "Mongo-QL",
               "pages": [
                 "mongo/projects/insertOne",
-                "mongo/projects/deleteOne"
+                "mongo/projects/deleteOne",
+                "mongo/projects/list-projects"
               ]
             },
             {
@@ -509,7 +521,6 @@
                 "sql/create/model",
                 "sql/drop/model",
                 "sql/show-models",
-                "sql/api/join",
                 "sql/api/describe",
                 "sql/api/retrain",
                 "sql/api/finetune",
@@ -558,11 +569,11 @@
             {
               "group": "REST API",
               "pages": [
-                "rest/models/list-models",
-                "rest/models/list-model",
                 "rest/models/train-model",
-                "rest/models/describe-model",
                 "rest/models/delete-model",
+                "rest/models/list-models",
+                "rest/models/describe-model",
+                "rest/models/list-model",
                 "rest/models/retrain",
                 "rest/models/finetune",
                 "rest/models/manage-model-versions"
@@ -576,19 +587,23 @@
             {
               "group": "SQL",
               "pages": [
-                "sql/api/select-predictions"
+                "sql/get-single-prediction",
+                "sql/get-batch-predictions",
+                "sql/api/join"
               ]
             },
             {
               "group": "Mongo-QL",
               "pages": [
-                "mongo/models/make-predictions"
+                "mongo/models/get-single-prediction",
+                "mongo/models/get-batch-predictions"
               ]
             },
             {
               "group": "Python",
               "pages": [
-                "sdk_python/predict"
+                "sdk_python/get-single-prediction",
+                "sdk_python/get-batch-predictions"
               ]
             },
             {
@@ -615,17 +630,18 @@
               "pages": [
                 "sql/create/table",
                 "sql/drop/table",
-                "sql/create/view",
-                "sql/drop/view",
-                "sql/create/file",
-                "sql/drop/file",
                 "sql/api/select",
-                "sql/api/select-files",
                 "sql/native-queries",
                 "sql/api/update",
                 "sql/api/insert",
                 "sql/api/join-on",
-                "sql/api/delete"
+                "sql/api/delete",
+                "sql/create/view",
+                "sql/drop/view",
+                "sql/api/select-view",
+                "sql/create/file",
+                "sql/drop/file",
+                "sql/api/select-files"
               ]
             },
             {
@@ -634,10 +650,14 @@
                 "sdk_python/create_table",
                 "sdk_python/delete_table",
                 "sdk_python/query_table",
+                "sdk_python/native_queries",
                 "sdk_python/update_table",
                 "sdk_python/insert_into_table",
+                "sdk_python/join_on",
+                "sdk_python/delete_from",
                 "sdk_python/create_view",
                 "sdk_python/drop_view",
+                "sdk_python/query_view",
                 "sdk_python/list_views",
                 "sdk_python/upload_file",
                 "sdk_python/delete_file",
@@ -650,10 +670,14 @@
                 "sdk_javascript/create_table",
                 "sdk_javascript/delete_table",
                 "sdk_javascript/query_table",
+                "sdk_javascript/native_queries",
                 "sdk_javascript/update_table",
                 "sdk_javascript/insert_into_table",
+                "sdk_javascript/join_on",
+                "sdk_javascript/delete_from",
                 "sdk_javascript/create_view",
                 "sdk_javascript/drop_view",
+                "sdk_javascript/query_view",
                 "sdk_javascript/list_views",
                 "sdk_javascript/upload_file",
                 "sdk_javascript/delete_file",
@@ -663,17 +687,18 @@
             {
               "group": "REST API",
               "pages": [
-                "rest/tables/list-tables",
-                "rest/tables/list-table",
                 "rest/tables/create-table",
                 "rest/tables/delete-table",
+                "rest/tables/list-tables",
+                "rest/tables/list-table",
                 "rest/tables/update",
                 "rest/tables/insert",
+                "rest/tables/delete",
+                "rest/views/create-view",
+                "rest/views/delete-views",
+                "rest/views/update-view",             
                 "rest/views/list-views",
                 "rest/views/list-view",
-                "rest/views/create-view",
-                "rest/views/update-view",
-                "rest/views/delete-views",
                 "rest/files/upload",
                 "rest/files/delete",
                 "rest/sql"
@@ -696,7 +721,8 @@
               "group": "Mongo-QL",
               "pages": [
                 "mongo/jobs/insertOne",
-                "mongo/jobs/deleteOne"
+                "mongo/jobs/deleteOne",
+                "mongo/jobs/query-jobs"
               ]
             },
             {
@@ -713,14 +739,16 @@
               "group": "JavaScript",
               "pages": [
                 "sdk_javascript/create_job",
-                "sdk_javascript/drop_job"
+                "sdk_javascript/drop_job",
+                "sdk_javascript/query_jobs"
               ]
             },
             {
               "group": "REST API",
               "pages": [
                 "rest/jobs/create",
-                "rest/jobs/delete"
+                "rest/jobs/delete",
+                "rest/jobs/query"
               ]
             }
           ]
@@ -734,11 +762,15 @@
         {
           "group": "Applications",
           "pages": [
+            "integrations/app-integrations/binance",
+            "integrations/app-integrations/email",
             "integrations/app-integrations/github",
             "integrations/app-integrations/gmail",
             "integrations/app-integrations/google-calendar",
             "integrations/app-integrations/shopify",
+            "integrations/app-integrations/slack",
             "integrations/app-integrations/twitter",
+            "integrations/app-integrations/web-crawler",
             "integrations/app-integrations/youtube"
           ]
         },
@@ -822,7 +854,8 @@
           "pages": [
             "integrations/ai-engines/openai",
             "integrations/ai-engines/huggingface",
-            "integrations/ai-engines/langchain"
+            "integrations/ai-engines/langchain",
+            "integrations/ai-engines/monkeylearn"
           ]
         },
         {
@@ -868,7 +901,8 @@
       "group": "FAQs",
       "pages": [
         "faqs/whitelist-ips",
-        "faqs/persist-predictions"
+        "faqs/persist-predictions",
+        "faqs/mindsdb-with-php"
       ]
     }
   ],

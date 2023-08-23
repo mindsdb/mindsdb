@@ -99,6 +99,11 @@ class StatsForecastHandler(BaseMLEngine):
         model_args["target"] = target
         model_args["horizon"] = time_settings["horizon"]
         model_args["order_by"] = time_settings["order_by"]
+        if 'group_by' not in time_settings:
+            # add group column
+            group_col = '__groupy_by'
+            time_settings["group_by"] = [group_col]
+
         model_args["group_by"] = time_settings["group_by"]
         model_args["frequency"] = (
             using_args["frequency"] if "frequency" in using_args else infer_frequency(df, time_settings["order_by"])

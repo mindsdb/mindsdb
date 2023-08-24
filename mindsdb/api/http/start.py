@@ -7,9 +7,9 @@ from mindsdb.api.http.initialize import initialize_app
 from mindsdb.integrations.libs.ml_exec_base import process_cache
 from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.storage import db
+from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import init_lexer_parsers
-from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
@@ -30,15 +30,15 @@ def start(verbose, no_studio, with_nlp):
     # region preload ml handlers
     preload_hendlers = {}
 
-    lightwood_handler = integration_controller.handler_modules['lightwood']
+    lightwood_handler = integration_controller.handler_modules["lightwood"]
     if lightwood_handler.Handler is not None:
         preload_hendlers[lightwood_handler.Handler] = 4 if is_cloud else 1
 
-    huggingface_handler = integration_controller.handler_modules['huggingface']
+    huggingface_handler = integration_controller.handler_modules["huggingface"]
     if huggingface_handler.Handler is not None:
         preload_hendlers[huggingface_handler.Handler] = 1 if is_cloud else 0
 
-    openai_handler = integration_controller.handler_modules['openai']
+    openai_handler = integration_controller.handler_modules["openai"]
     if openai_handler.Handler is not None:
         preload_hendlers[openai_handler.Handler] = 1 if is_cloud else 0
 

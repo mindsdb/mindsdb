@@ -2,13 +2,10 @@ import mindsdb_sql
 from mindsdb_sql import parse_sql
 from mindsdb_sql.planner import utils as planner_utils
 
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import Column, SQLQuery
-from mindsdb.api.mysql.mysql_proxy.utilities import (
-    ErBadDbError,
-    SqlApiException,
-)
 import mindsdb.utilities.profiler as profiler
+from mindsdb.api.mysql.mysql_proxy.classes.sql_query import Column, SQLQuery
 from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+from mindsdb.api.mysql.mysql_proxy.utilities import ErBadDbError, SqlApiException
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)

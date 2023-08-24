@@ -1,8 +1,7 @@
 import time
 
 from flask import request, session
-from flask_restx import Resource
-from flask_restx import fields
+from flask_restx import Resource, fields
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.namespaces.configs.default import ns_conf

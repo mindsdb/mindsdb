@@ -1,13 +1,13 @@
-import os
 import json
-from pathlib import Path
+import os
 import shutil
+from pathlib import Path
 
-from mindsdb.interfaces.storage import db
 from mindsdb.integrations.handlers.file_handler import Handler as FileHandler
+from mindsdb.interfaces.storage import db
+from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.context import context as ctx
 
 logger = log.getLogger(__name__)

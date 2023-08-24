@@ -1,19 +1,19 @@
 import traceback
 
-from flask_restx import Resource
 from flask import request
+from flask_restx import Resource
 
+import mindsdb.utilities.hooks as hooks
+import mindsdb.utilities.profiler as profiler
 from mindsdb.api.http.namespaces.configs.sql import ns_conf
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import (
     RESPONSE_TYPE as SQL_RESPONSE_TYPE,
 )
 from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiException, SqlApiUnknownError
-import mindsdb.utilities.hooks as hooks
-from mindsdb.utilities.context import context as ctx
-import mindsdb.utilities.profiler as profiler
-from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
+from mindsdb.utilities.config import Config
+from mindsdb.utilities.context import context as ctx
 
 logger = log.getLogger(__name__)
 

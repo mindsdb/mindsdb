@@ -1,98 +1,98 @@
 import datetime
-from typing import Optional
-from pathlib import Path
 from functools import reduce
+from pathlib import Path
 from textwrap import dedent
+from typing import Optional
 
 import pandas as pd
+from mindsdb_evaluator.accuracy.general import evaluate_accuracy
+from mindsdb_sql import parse_sql
+from mindsdb_sql.parser.ast import (
+    Alter,
+    ASTNode,
+    BinaryOperation,
+    CommitTransaction,
+    Constant,
+    CreateTable,
+    Delete,
+    Describe,
+    DropDatabase,
+    DropTables,
+    DropView,
+    Explain,
+    Function,
+    Identifier,
+    Insert,
+    NativeQuery,
+    NullConstant,
+    Operation,
+    RollbackTransaction,
+    Select,
+    Set,
+    Show,
+    Star,
+    StartTransaction,
+    Union,
+    Update,
+    Use,
+)
 from mindsdb_sql.parser.dialects.mindsdb import (
+    CreateChatBot,
     CreateDatabase,
-    RetrainPredictor,
-    CreatePredictor,
-    FinetunePredictor,
-    CreateMLEngine,
-    DropMLEngine,
-    DropDatasource,
-    DropPredictor,
-    CreateView,
     CreateJob,
-    DropJob,
+    CreateMLEngine,
+    CreatePredictor,
     CreateTrigger,
+    CreateView,
+    DropChatBot,
+    DropDatasource,
+    DropJob,
+    DropMLEngine,
+    DropPredictor,
     DropTrigger,
     Evaluate,
-    CreateChatBot,
-    DropChatBot,
+    FinetunePredictor,
+    RetrainPredictor,
 )
-from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.dialects.mysql import Variable
-from mindsdb_sql.parser.ast import (
-    RollbackTransaction,
-    CommitTransaction,
-    StartTransaction,
-    BinaryOperation,
-    DropDatabase,
-    NullConstant,
-    NativeQuery,
-    Describe,
-    Constant,
-    Function,
-    Explain,
-    Delete,
-    Insert,
-    Select,
-    Star,
-    Show,
-    Set,
-    Use,
-    Alter,
-    Update,
-    CreateTable,
-    Identifier,
-    DropTables,
-    Operation,
-    ASTNode,
-    DropView,
-    Union,
-)
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
-from mindsdb_evaluator.accuracy.general import evaluate_accuracy
-
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
-from mindsdb.utilities import log
-from mindsdb.api.mysql.mysql_proxy.utilities import (
-    SqlApiException,
-    ErBadDbError,
-    ErBadTableError,
-    ErTableExistError,
-    ErNotSupportedYet,
-    ErSqlWrongArguments,
-)
-from mindsdb.api.mysql.mysql_proxy.utilities.functions import download_file
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery, Column
+import mindsdb.utilities.profiler as profiler
+from mindsdb.api.mysql.mysql_proxy.classes.sql_query import Column, SQLQuery
+from mindsdb.api.mysql.mysql_proxy.executor.data_types import ANSWER_TYPE, ExecuteAnswer
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,
-    TYPES,
     SERVER_VARIABLES,
+    TYPES,
 )
-from mindsdb.api.mysql.mysql_proxy.executor.data_types import ExecuteAnswer, ANSWER_TYPE
+from mindsdb.api.mysql.mysql_proxy.utilities import (
+    ErBadDbError,
+    ErBadTableError,
+    ErNotSupportedYet,
+    ErSqlWrongArguments,
+    ErTableExistError,
+    SqlApiException,
+)
+from mindsdb.api.mysql.mysql_proxy.utilities.functions import download_file
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.integrations.libs.const import (
+    HANDLER_CONNECTION_ARG_TYPE,
+    PREDICTOR_STATUS,
+)
 from mindsdb.integrations.libs.response import HandlerStatusResponse
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE
+from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
+from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.model.functions import (
     get_model_record,
     get_model_records,
     get_predictor_integration,
 )
-from mindsdb.integrations.libs.const import PREDICTOR_STATUS
-from mindsdb.interfaces.database.projects import ProjectController
-from mindsdb.interfaces.jobs.jobs_controller import JobsController
-from mindsdb.interfaces.triggers.triggers_controller import TriggersController
-from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
+from mindsdb.interfaces.triggers.triggers_controller import TriggersController
+from mindsdb.utilities import log
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.functions import resolve_model_identifier
-import mindsdb.utilities.profiler as profiler
-from mindsdb.utilities.functions import mark_process
+from mindsdb.utilities.functions import mark_process, resolve_model_identifier
 
 logger = log.getLogger(__name__)
 
@@ -425,7 +425,11 @@ class ExecuteCommands:
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
             elif "show create table" in sql_lower:
                 # SHOW CREATE TABLE `MINDSDB`.`predictors`
-                table = sql[sql.rfind(".") + 1:].strip(" .;\n\t").replace("`", "")
+                table = (
+                    sql[sql.rfind(".") + 1 :]  # noqa: E203
+                    .strip(" .;\n\t")
+                    .replace("`", "")
+                )
                 return self.answer_show_create_table(table)
             elif sql_category in ("character set", "charset"):
                 new_statement = Select(
@@ -505,7 +509,7 @@ class ExecuteCommands:
             if category == "" and type(statement.arg) == BinaryOperation:
                 if isinstance(statement.arg.args[0], Variable):
                     return ExecuteAnswer(ANSWER_TYPE.OK)
-                if statement.arg.args[0].parts[0].lower() == 'profiling':
+                if statement.arg.args[0].parts[0].lower() == "profiling":
                     if statement.arg.args[1].value in (1, True):
                         profiler.enable()
                         self.session.profiling = True
@@ -629,7 +633,13 @@ class ExecuteCommands:
         trigger_name = statement.name.parts[-1]
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
 
-        triggers_controller.add(trigger_name, project_name, statement.table, statement.query_str, statement.columns)
+        triggers_controller.add(
+            trigger_name,
+            project_name,
+            statement.table,
+            statement.query_str,
+            statement.columns,
+        )
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_trigger(self, statement):
@@ -972,17 +982,21 @@ class ExecuteCommands:
         if handler_module_meta is None:
             raise SqlApiException(f"There is no engine '{statement.handler}'")
         if handler_module_meta.get("import", {}).get("success") is not True:
-            msg = dedent(f'''\
+            msg = dedent(
+                f"""\
                 Handler '{handler_module_meta['name']}' cannot be used. Reason is:
                     {handler_module_meta['import']['error_message']}
-            ''')
-            is_cloud = self.session.config.get('cloud', False)
+            """
+            )
+            is_cloud = self.session.config.get("cloud", False)
             if is_cloud is False:
-                msg += dedent(f'''
+                msg += dedent(
+                    f"""
 
                 If error is related to missing dependencies, then try to run command in shell and restart mindsdb:
                     pip install mindsdb[{handler_module_meta['name']}]
-                ''')
+                """
+                )
             logger.info(msg)
             raise SqlApiException(msg)
 

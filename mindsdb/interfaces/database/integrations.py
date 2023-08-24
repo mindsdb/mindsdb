@@ -1,43 +1,40 @@
-import os
-import sys
 import base64
-import shutil
-import tempfile
 import importlib
-import threading
 import inspect
 import multiprocessing
-from time import time
-from pathlib import Path
-from copy import deepcopy
-from typing import Optional
-from textwrap import dedent
+import os
+import shutil
+import sys
+import tempfile
+import threading
 from collections import OrderedDict
+from copy import deepcopy
+from pathlib import Path
+from textwrap import dedent
+from time import time
+from typing import Optional
 
 from sqlalchemy import func
 
+import mindsdb.utilities.profiler as profiler
+from mindsdb.integrations.handlers_client.db_client_factory import DBClient
+from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.base import BaseMLEngine, DatabaseHandler
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from mindsdb.integrations.libs.const import HANDLER_TYPE
+from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
+from mindsdb.interfaces.file.file_controller import FileController
+from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.interfaces.storage import db
-from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import (
-    FsStore,
+    RESOURCE_GROUP,
     FileStorage,
     FileStorageFactory,
-    RESOURCE_GROUP,
+    FsStore,
 )
-from mindsdb.interfaces.file.file_controller import FileController
-from mindsdb.integrations.libs.base import DatabaseHandler
-from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.integrations.libs.api_handler import APIHandler
-from mindsdb.integrations.libs.const import (
-    HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE,
-    HANDLER_TYPE,
-)
-from mindsdb.integrations.handlers_client.db_client_factory import DBClient
-from mindsdb.interfaces.model.functions import get_model_records
-from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
-from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
-import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.config import Config
+from mindsdb.utilities.context import context as ctx
 
 logger = log.getLogger(__name__)
 
@@ -421,18 +418,22 @@ class IntegrationController:
                 f"to use {handler_type} please install 'pip install mindsdb[{handler_type}]'"
             )
 
-        logger.debug("%s.create_tmp_handler: connection args - %s", self.__class__.__name__, connection_data)
+        logger.debug(
+            "%s.create_tmp_handler: connection args - %s",
+            self.__class__.__name__,
+            connection_data,
+        )
         integration_id = int(time() * 10000)
         fs_store = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
             resource_id=integration_id,
-            root_dir='tmp',
-            sync=False
+            root_dir="tmp",
+            sync=False,
         )
         handler_ars = self._make_handler_args(handler_type, connection_data)
         handler_ars["fs_store"] = fs_store
         handler_ars = dict(
-            name='tmp_handler',
+            name="tmp_handler",
             fs_store=fs_store,
             connection_data=connection_data,
             integration_id=integration_id,
@@ -489,17 +490,21 @@ class IntegrationController:
 
         integration_meta = self.handlers_import_status[integration_engine]
         if integration_meta["import"]["success"] is False:
-            msg = dedent(f'''\
+            msg = dedent(
+                f"""\
                 Handler '{integration_engine}' cannot be used. Reason is:
                     {integration_meta['import']['error_message']}
-            ''')
-            is_cloud = Config().get('cloud', False)
+            """
+            )
+            is_cloud = Config().get("cloud", False)
             if is_cloud is False:
-                msg += dedent(f'''
+                msg += dedent(
+                    f"""
 
                 If error is related to missing dependencies, then try to run command in shell and restart mindsdb:
                     pip install mindsdb[{integration_engine}]
-                ''')
+                """
+                )
             logger.debug(msg)
             raise Exception(msg)
 
@@ -629,7 +634,9 @@ class IntegrationController:
             icon_path = handler_dir.joinpath(module.icon_path)
             handler_meta["icon"] = {
                 "name": icon_path.name,
-                "type": icon_path.name[icon_path.name.rfind(".") + 1:].lower(),
+                "type": icon_path.name[
+                    icon_path.name.rfind(".") + 1 :  # noqa: E203
+                ].lower(),  # noqa: E203
             }
             if handler_meta["icon"]["type"] == "svg":
                 with open(str(icon_path), "rt") as f:

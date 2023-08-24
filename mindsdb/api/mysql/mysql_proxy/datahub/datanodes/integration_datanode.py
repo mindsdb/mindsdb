@@ -1,21 +1,20 @@
 import numpy as np
-from numpy import dtype as np_dtype
 import pandas as pd
-from pandas.api import types as pd_types
-from sqlalchemy.types import Integer, Float, Text
-
 from mindsdb_sql.parser.ast import (
-    Insert,
-    Identifier,
     CreateTable,
-    TableColumn,
     DropTables,
+    Identifier,
+    Insert,
+    TableColumn,
 )
+from numpy import dtype as np_dtype
+from pandas.api import types as pd_types
+from sqlalchemy.types import Float, Integer, Text
 
+import mindsdb.utilities.profiler as profiler
+from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
-import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)

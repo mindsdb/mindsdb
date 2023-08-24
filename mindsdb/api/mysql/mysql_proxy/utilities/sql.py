@@ -3,11 +3,10 @@ import copy
 import duckdb
 import numpy as np
 import pandas as pd
-
 from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql.parser.ast import Constant, Function, Identifier, Select
 from mindsdb_sql.planner.utils import query_traversal
-from mindsdb_sql.parser.ast import Select, Identifier, Function, Constant
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.utilities import log
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
@@ -93,16 +92,20 @@ def query_df(df, query, session=None):
         query_str = render.get_string(query_ast, with_failback=True)
 
     # workaround to prevent duckdb.TypeMismatchException
-    if len(df) > 0 and table_name.lower() in ('models', 'predictors', 'models_versions'):
-        if 'TRAINING_OPTIONS' in df.columns:
-            df = df.astype({'TRAINING_OPTIONS': 'string'})
+    if len(df) > 0 and table_name.lower() in (
+        "models",
+        "predictors",
+        "models_versions",
+    ):
+        if "TRAINING_OPTIONS" in df.columns:
+            df = df.astype({"TRAINING_OPTIONS": "string"})
 
-    con = duckdb.connect(database=':memory:')
+    con = duckdb.connect(database=":memory:")
 
     # lets make sure we have the right types, pandas sucks at type inference
     df = infer_and_convert_types(df)
 
-    con.register('df_table', df)
+    con.register("df_table", df)
     result_df = con.execute(query_str).fetchdf()
     result_df = result_df.replace({np.nan: None})
     description = con.description

@@ -9,27 +9,25 @@
  *******************************************************
 """
 
+import atexit
+import base64
 import os
-import sys
+import select
+import socket
 import socketserver as SocketServer
 import ssl
-import traceback
-import atexit
-import tempfile
-import socket
 import struct
+import sys
+import tempfile
+import traceback
 from functools import partial
-import select
-import base64
-from typing import List, Dict
+from typing import Dict, List
 
 from numpy import dtype as np_dtype
 from pandas.api import types as pd_types
 
-from mindsdb.utilities.wizards import make_ssl_cert
-from mindsdb.utilities.config import Config
-from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
-from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
+import mindsdb.utilities.hooks as hooks
+import mindsdb.utilities.profiler as profiler
 from mindsdb.api.mysql.mysql_proxy.classes.client_capabilities import ClentCapabilities
 from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import (
     server_capabilities,
@@ -37,52 +35,50 @@ from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import (
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import (
     SqlStatementParser,
 )
-from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
-from mindsdb.utilities import log
-from mindsdb.api.mysql.mysql_proxy.utilities import (
-    SqlApiException,
-    ErWrongCharset,
-    SqlApiUnknownError,
+from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
+from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
+from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
+    BinaryResultsetRowPacket,
+    ColumnCountPacket,
+    ColumnDefenitionPacket,
+    CommandPacket,
+    EofPacket,
+    ErrPacket,
+    FastAuthFail,
+    HandshakePacket,
+    HandshakeResponsePacket,
+    OkPacket,
+    PasswordAnswer,
+    ResultsetRowPacket,
+    STMTPrepareHeaderPacket,
+    SwitchOutPacket,
+    SwitchOutResponse,
 )
-
+from mindsdb.api.mysql.mysql_proxy.executor import Executor
 from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import (
     scramble as scramble_func,
 )
-
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
-    getConstName,
+    CAPABILITIES,
     CHARSET_NUMBERS,
-    ERR,
     COMMANDS,
     DEFAULT_AUTH_METHOD,
+    ERR,
     SERVER_STATUS,
-    CAPABILITIES,
     TYPES,
+    getConstName,
 )
-
-from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
-    ErrPacket,
-    HandshakePacket,
-    FastAuthFail,
-    PasswordAnswer,
-    HandshakeResponsePacket,
-    OkPacket,
-    SwitchOutPacket,
-    SwitchOutResponse,
-    CommandPacket,
-    ColumnCountPacket,
-    ColumnDefenitionPacket,
-    ResultsetRowPacket,
-    EofPacket,
-    STMTPrepareHeaderPacket,
-    BinaryResultsetRowPacket,
+from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.utilities import (
+    ErWrongCharset,
+    SqlApiException,
+    SqlApiUnknownError,
 )
-
-from mindsdb.api.mysql.mysql_proxy.executor import Executor
+from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
+from mindsdb.utilities import log
+from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
-import mindsdb.utilities.hooks as hooks
-import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.wizards import make_ssl_cert
 
 logger = log.getLogger(__name__)
 

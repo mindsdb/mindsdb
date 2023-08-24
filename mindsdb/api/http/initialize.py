@@ -39,12 +39,12 @@ from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.interfaces.storage import db
+from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
-from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 

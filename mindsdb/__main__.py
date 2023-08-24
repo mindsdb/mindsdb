@@ -11,9 +11,9 @@ import secrets
 import signal
 import sys
 import threading
-from textwrap import dedent
 import time
 import traceback
+from textwrap import dedent
 
 import psutil
 import torch.multiprocessing as mp
@@ -25,18 +25,11 @@ from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mongo.start import start as start_mongo
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.postgres.start import start as start_postgres
-from mindsdb.interfaces.tasks.task_monitor import start as start_tasks
-from mindsdb.interfaces.jobs.scheduler import start as start_scheduler
-from mindsdb.utilities.config import Config
-from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
-from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
-from mindsdb.utilities import log
-from mindsdb.interfaces.database.integrations import integration_controller
-import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
-from mindsdb.interfaces.chatbot.chatbot_monitor import start as start_chatbot
 from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.jobs.scheduler import start as start_scheduler
+from mindsdb.interfaces.tasks.task_monitor import start as start_tasks
+from mindsdb.utilities import log
 from mindsdb.utilities.auth import get_aws_meta_data, register_oauth_client
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
@@ -224,14 +217,20 @@ if __name__ == "__main__":
     logger.info(f"Storage path: {config['paths']['root']}")
     logger.debug(f"User config: {user_config}")
 
-
-    for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():
-        import_meta = handler_meta.get('import', {})
-        if import_meta.get('success', False) is not True:
-            logger.info(dedent('''
+    for (
+        handler_name,
+        handler_meta,
+    ) in integration_controller.get_handlers_import_status().items():
+        import_meta = handler_meta.get("import", {})
+        if import_meta.get("success", False) is not True:
+            logger.info(
+                dedent(
+                    """
                 Some handlers cannot be imported. You can check list of available handlers by execute command in sql editor:
                     select * from information_schema.handlers;
-            '''))
+            """
+                )
+            )
             break
     # @TODO Backwards compatibility for tests, remove later
     for (
@@ -323,18 +322,15 @@ if __name__ == "__main__":
         "mongodb": start_mongo,
         "postgres": start_postgres,
         "jobs": start_scheduler,
-        "tasks": start_tasks
+        "tasks": start_tasks,
     }
 
     if config.get("jobs", {}).get("disable") is not True:
         apis["jobs"] = {"process": None, "started": False}
 
     # disabled on cloud
-    if config.get('tasks', {}).get('disable') is not True:
-        apis['tasks'] = {
-            'process': None,
-            'started': False
-        }
+    if config.get("tasks", {}).get("disable") is not True:
+        apis["tasks"] = {"process": None, "started": False}
 
     # TODO this 'ctx' is eclipsing 'context' class imported as 'ctx'
     ctx = mp.get_context("spawn")

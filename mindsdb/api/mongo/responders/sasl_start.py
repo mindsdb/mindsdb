@@ -1,5 +1,5 @@
-from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
+from mindsdb.api.mongo.classes import Responder
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)

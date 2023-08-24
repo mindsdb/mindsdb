@@ -15,11 +15,11 @@ from uuid import uuid4
 import requests
 
 from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
-from mindsdb.utilities.config import Config
-from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.database.integrations import integration_controller
+from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.utilities import log
+from mindsdb.utilities.config import Config
 
 logger = log.getLogger(__name__)
 

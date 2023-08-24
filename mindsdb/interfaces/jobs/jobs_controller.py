@@ -1,16 +1,15 @@
-import re
 import datetime as dt
-from dateutil.relativedelta import relativedelta
+import re
 
 import sqlalchemy as sa
+from dateutil.relativedelta import relativedelta
+from mindsdb_sql import ParsingException, parse_sql
 
-from mindsdb_sql import parse_sql, ParsingException
-
-from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
-from mindsdb.utilities.context import context as ctx
+from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.context import context as ctx
 
 logger = log.getLogger(__name__)
 
@@ -26,7 +25,7 @@ def calc_next_date(schedule_str, base_date: dt.datetime):
 
     repeat_prefix = "every "
     if schedule_str.startswith(repeat_prefix):
-        repeat_str = schedule_str[len(repeat_prefix):]
+        repeat_str = schedule_str[len(repeat_prefix) :]  # noqa: E203
     else:
         # TODO cron format
         raise NotImplementedError(f"Schedule: {schedule_str}")
@@ -405,8 +404,8 @@ class JobsExecutor:
             self.update_task_schedule(record)
         except Exception as e:
             db.session.rollback()
-            logger.error(f'Error to update schedule: {e}')
-            error += f'Error to update schedule: {e}'
+            logger.error(f"Error to update schedule: {e}")
+            error += f"Error to update schedule: {e}"
 
             # stop scheduling
             record.next_run_at = None

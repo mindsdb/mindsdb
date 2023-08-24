@@ -1,8 +1,8 @@
 from threading import Thread
 
+import mindsdb.interfaces.storage.db as db
 from mindsdb.interfaces.stream.utilities import STOP_THREADS_EVENT
 from mindsdb.utilities import log
-import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.context import context as ctx
 
 logger = log.getLogger(__name__)

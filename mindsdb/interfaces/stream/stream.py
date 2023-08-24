@@ -1,6 +1,6 @@
+from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.utilities.context import context as ctx
 
 logger = log.getLogger(__name__)

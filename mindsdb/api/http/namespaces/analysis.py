@@ -1,16 +1,16 @@
 import time
 
 import pandas as pd
+from dataprep_ml.insights import analyze_dataset
 from flask import request
 from flask_restx import Resource
-from pandas.core.frame import DataFrame
-from dataprep_ml.insights import analyze_dataset
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Constant, Identifier
 from mindsdb_sql.planner.utils import query_traversal
+from pandas.core.frame import DataFrame
 
-from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.analysis import ns_conf
+from mindsdb.api.http.utils import http_error
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import (
     RESPONSE_TYPE as SQL_RESPONSE_TYPE,

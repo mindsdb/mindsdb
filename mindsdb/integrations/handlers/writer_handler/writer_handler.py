@@ -97,9 +97,6 @@ class WriterHandler(BaseMLEngine):
         else:
             logger.info("Skipping embeddings and ingestion into Chroma VectorDB")
 
-        if args.evaluation_type:
-            self.evaluate(args)
-
         export_args = args.dict(exclude={"llm_params"})
         # 'callbacks' aren't json serializable, we do this to avoid errors
         export_args["llm_params"] = args.llm_params.dict(exclude={"callbacks"})
@@ -116,17 +113,27 @@ class WriterHandler(BaseMLEngine):
         is supported.
         """
 
-        # get model parameters if defined by user - else use default values
-
         input_args = self.model_storage.json_get("args")
         args = WriterHandlerParameters(**input_args)
+
+        # todo add support for input evaluation_df
+
+        if args.evaluation_type:
+            # if user adds a WHERE clause with 'run_evaluation = true', run evaluation
+            if "run_evaluation" in df.columns and df["run_evaluation"].tolist()[0]:
+                return self.evaluate(args)
+            else:
+                logger.info(
+                    "Skipping evaluation, running prediction only. "
+                    "to run evaluation, add a WHERE clause with 'run_evaluation = true'"
+                )
 
         args.vector_store_storage_path = self.engine_storage.folder_get(
             args.vector_store_folder_name, update=False
         )
 
         # get question answering results
-        question_answerer = QuestionAnswerer(args=args, df=df)
+        question_answerer = QuestionAnswerer(args=args)
 
         # get question from sql query
         # e.g. where question = 'What is the capital of France?'
@@ -147,7 +154,10 @@ class WriterHandler(BaseMLEngine):
         ingestor.embeddings_to_vectordb()
 
         evaluator = Evaluator(args=args, df=evaluate_df)
-        evaluation_metrics, evaluate_df = evaluator.evaluate()
+        df = evaluator.evaluate()
 
-        self.model_storage.json_set("evaluation_metrics", evaluation_metrics)
-        self.model_storage.json_set("evaluation_df", evaluate_df.to_dict())
+        # todo fix this
+        # evaluation_metrics = evaluator.mean_metrics_to_dict()
+        # self.model_storage.json_set("evaluation_metrics", evaluation_metrics)
+
+        return df

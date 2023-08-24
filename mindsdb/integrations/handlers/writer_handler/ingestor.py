@@ -68,9 +68,6 @@ class Ingestor:
             df=self.df, page_content_columns=self.args.context_columns
         )
 
-        if self.args.evaluation_type:
-            return documents
-
         # split documents into chunks of text
         texts = text_splitter.split_documents(documents)
         logger.info(f"Loaded {len(documents)} documents from input data")

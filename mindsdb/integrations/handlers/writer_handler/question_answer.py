@@ -70,11 +70,11 @@ class QuestionAnswerer:
         combined_context = "\n\n".join(context)
 
         if self.args.summarize_context:
-            return self._summarize_context(combined_context, question)
+            return self.summarize_context(combined_context, question)
 
         return self.prompt_template.format(question=question, context=combined_context)
 
-    def _summarize_context(self, combined_context: str, question: str):
+    def summarize_context(self, combined_context: str, question: str):
 
         summarization_prompt_template = self.args.summarization_prompt_template
 

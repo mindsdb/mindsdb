@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum, unique
 from functools import lru_cache
-from typing import Dict, List, Union
+from typing import Dict, Iterable, List, Union
 
 import pandas as pd
 import torch
@@ -46,7 +46,6 @@ EVAL_COLUMN_NAMES = (
 
 SUPPORTED_EVALUATION_TYPES = ("retrieval", "e2e")
 
-
 SUMMARIZATION_PROMPT_TEMPLATE = """
 Summarize the following texts for me:
 {context}
@@ -54,6 +53,9 @@ Summarize the following texts for me:
 When summarizing, please keep the following in mind the following question:
 {question}
 """
+
+GENERATION_METRICS = ("rouge", "meteor", "cosine_similarity", "accuracy")
+RETRIEVAL_METRICS = ("cosine_similarity", "accuracy")
 
 
 def is_valid_store(name):
@@ -238,6 +240,10 @@ class MissingUseIndex(Exception):
     pass
 
 
+# todo make a separate class for evaluation parameters
+# todo use enum clases instead of iterable to control the values
+
+
 class WriterHandlerParameters(BaseModel):
     """Model parameters for create model"""
 
@@ -245,9 +251,11 @@ class WriterHandlerParameters(BaseModel):
     llm_params: WriterLLMParameters
     chunk_size: int = 500
     chunk_overlap: int = 50
-    evaluation_type: str = "retrieval"
+    generation_evaluation_metrics: Iterable[str] = GENERATION_METRICS
+    retrieval_evaluation_metrics: Iterable[str] = RETRIEVAL_METRICS
+    evaluation_type: str = "e2e"
     retriever_accuracy_threshold: float = 0.6
-    e2e_accuracy_threshold: float = 0.8
+    generator_accuracy_threshold: float = 0.8
     evaluate_dataset: Union[pd.DataFrame, str] = "squad_v2_val_100_sample"
     run_embeddings: bool = True
     external_index_name: str = None
@@ -262,12 +270,29 @@ class WriterHandlerParameters(BaseModel):
     use_external_index: bool = False
     vector_store_folder_name: str = "chromadb"
     vector_store_storage_path: str = None
-    evaluation_output: Dict = None
 
     class Config:
         extra = Extra.forbid
         arbitrary_types_allowed = True
         use_enum_values = True
+
+    @validator("generation_evaluation_metrics")
+    def generation_evaluation_metrics_must_be_supported(cls, v):
+        for metric in v:
+            if metric not in GENERATION_METRICS:
+                raise ValueError(
+                    f"generation_evaluation_metrics must be one of {', '.join(str(v) for v in GENERATION_METRICS)}, got {metric}"
+                )
+        return v
+
+    @validator("retrieval_evaluation_metrics")
+    def retrieval_evaluation_metrics_must_be_supported(cls, v):
+        for metric in v:
+            if metric not in GENERATION_METRICS:
+                raise ValueError(
+                    f"retrieval_evaluation_metrics must be one of {', '.join(str(v) for v in RETRIEVAL_METRICS)}, got {metric}"
+                )
+        return v
 
     @validator("evaluation_type")
     def evaluation_type_must_be_supported(cls, v):
@@ -287,12 +312,6 @@ class WriterHandlerParameters(BaseModel):
             raise MissingPromptTemplate(
                 "Please provide a `prompt_template` for this engine."
             )
-        return v
-
-    @validator("use_external_index")
-    def use_index_must_be_provided(cls, v):
-        if not v:
-            raise MissingUseIndex("Please provide a `prompt_template` for this engine.")
         return v
 
     @validator("vector_store_name")

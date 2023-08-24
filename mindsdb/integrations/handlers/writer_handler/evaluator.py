@@ -1,5 +1,5 @@
 import ast
-from time import sleep
+import json
 from typing import List
 
 import nltk
@@ -7,20 +7,21 @@ import pandas as pd
 from integrations.handlers.writer_handler.question_answer import QuestionAnswerer
 from integrations.handlers.writer_handler.settings import WriterHandlerParameters
 from nltk import word_tokenize
-from nltk.translate.bleu_score import sentence_bleu
+from nltk.translate.bleu_score import (  # todo investigate why this always returns 0, not used for now
+    sentence_bleu,
+)
 from nltk.translate.meteor_score import meteor_score
-from rouge_score import rouge_scorer
+from rouge_score import rouge_scorer, scoring
 from scipy.spatial import distance
 
 from mindsdb.utilities.log import get_log
 
-# todo cache or store to avoid downloading every time
-
+# todo use polars for this for speed
+# todo refactor metric calculations operate on df columns
+# todo remove remove repitition in metric calculations
+# todo allow users to select subset of metrics to calculate
 
 logger = get_log(logger_name=__name__)
-
-
-MAX_REQUESTS_PER_MINUTE = 60
 
 
 class Evaluator:
@@ -30,7 +31,23 @@ class Evaluator:
         self.df = df
         self.question_answerer = QuestionAnswerer(args)
 
+        if args.evaluation_type == "e2e":
+            # todo check if this is fine for cloud, better to download once and load from disk
+            nltk.download("wordnet")
+
+    @property
+    def metrics(self):
+        """Get evaluation metrics"""
+        return list(self.args.retrieval_evaluation_metrics) + list(
+            self.args.generation_evaluation_metrics
+        )
+
+    def embed_texts(self, texts: List[str]) -> List[list]:
+        """Embed a list of texts"""
+        return self.question_answerer.embeddings_model.embed_documents(texts)
+
     def extract_returned_text(self, question: str):
+        # todo: this is a hack, we need to fix this so it works with multiple context ie top_k>1
 
         vector_store_response = self.question_answerer.query_vector_store(question)
 
@@ -40,7 +57,8 @@ class Evaluator:
         """Create prompt for evaluating RAG"""
 
         if self.args.summarize_context:
-            return self.question_answerer._summarize_context(
+
+            return self.question_answerer.summarize_context(
                 question=question, combined_context=context
             )
 
@@ -55,30 +73,52 @@ class Evaluator:
             for question, context in zip(df["question"], df["retrieved_context"])
         ]
 
-    def get_reference_answers(self, df: pd.DataFrame) -> List[str]:
+    @staticmethod
+    def extract_generated_text(responses: List[str]):
+        """Extract generated text from LLM response"""
+
+        results = []
+        for i, item in enumerate(responses):
+            try:
+                data = json.loads(item)
+                if "choices" in data:
+                    text = data["choices"][0]["text"]
+                    results.append(text)
+            except Exception as e:
+                raise Exception(
+                    f"{e} Error extracting generated text: failed to parse response {item}"
+                )
+        return results
+
+    def mean_metrics_to_dict(self, df: pd.DataFrame):
+        """get mean metric from df column to a dictionary"""
+
+        return {
+            metric: df[metric].mean() for metric in self.metrics if metric != "rouge"
+        }
+
+    def calculate_metrics(self, df: pd.DataFrame):
+        """Calculate metrics for each question in the dataframe"""
+        metrics = self.metrics
+        ...
+
+    @staticmethod
+    def extract_reference_answers(df: pd.DataFrame) -> List[str]:
         """Get reference answers for each question in the dataframe"""
 
-        return df.apply(
-            lambda x: ast.literal_eval(x["reference_answers"])["text"][0], axis=1
-        ).tolist()
+        # todo: this is a hack, we need to fix this so it works with multiple answers ie top_k>1
+        answers = df["answers"].tolist()
+        extracted_answers = []
 
-    def rate_limited_llm_requests(self, prompts: list[str]):
-        """Make LLM requests respecting rate limit."""
-        llm_responses = []
-        requests_this_minute = 0
+        for answer in answers:
+            try:
+                extracted_answers.append(ast.literal_eval(answer)["text"][0])
+            except IndexError as e:
+                logger.error(e)
+                extracted_answers.append("")
+                continue
 
-        for prompt in prompts:
-            if requests_this_minute < MAX_REQUESTS_PER_MINUTE:
-                response = self.question_answerer.llm(prompt)
-                llm_responses.append(response)
-                requests_this_minute += 1
-            else:
-                wait_time = 60 - requests_this_minute
-                logger.info(f"Rate limit reached. Waiting {wait_time} seconds.")
-                sleep(wait_time)
-                requests_this_minute = 0
-
-        return llm_responses
+        return extracted_answers
 
     @staticmethod
     def _calculate_cosine_similarity(
@@ -104,19 +144,36 @@ class Evaluator:
         ]
 
     @staticmethod
-    def accuracy(cosine_similarity: float, threshold: float = 0.7) -> bool:
-        return cosine_similarity >= threshold
+    def check_match(cosine_similarity: float, threshold: float = 0.7) -> int:
+
+        return int(cosine_similarity >= threshold)
 
     @staticmethod
-    def tokenize(text: str) -> List[str]:
-        nltk.download("wordnet")
+    def _tokenize(text: str) -> List[str]:
+        """Tokenize a text"""
         return word_tokenize(text)
 
     @staticmethod
     def calculate_rouge(generated: str, reference: str) -> dict:
+
         scorer = rouge_scorer.RougeScorer(["rouge1", "rougeL"], use_stemmer=True)
         score = scorer.score(generated, reference)
         return score
+
+    @staticmethod
+    def extract_rogue_scores(df: pd.DataFrame, rogue_scores_col: str = "rouge_scores"):
+        """Extract rouge scores from dataframe"""
+        rouge_metrics = ["rouge1", "rougeL"]
+        supported_metrics = ["precision", "recall", "fmeasure"]
+
+        for rouge_metric in rouge_metrics:
+            for supported_metric in supported_metrics:
+                df[f"{rouge_metric}_{supported_metric}"] = df.apply(
+                    lambda x: getattr(
+                        x[rogue_scores_col][rouge_metric], supported_metric
+                    ),
+                    axis=1,
+                )
 
     @staticmethod
     def calculate_bleu(
@@ -132,6 +189,7 @@ class Evaluator:
 
     def evaluate_retrieval(self):
         """Evaluate the retrieval model"""
+        # todo clean up
 
         df = self.df.copy(deep=True)
 
@@ -141,124 +199,102 @@ class Evaluator:
         )
 
         # embed context and retrieved context
-        context_embeddings = self.question_answerer.embeddings_model.embed_documents(
-            df["context"].tolist()
-        )
-        retrieved_context_embeddings = (
-            self.question_answerer.embeddings_model.embed_documents(
-                df["retrieved_context"].tolist()
-            )
+        context_embeddings = self.embed_texts(df["context"].tolist())
+        retrieved_context_embeddings = self.embed_texts(
+            df["retrieved_context"].tolist()
         )
 
-        df["retrival_cosine_similarity"] = self.calculate_cosine_similarities(
+        df["retrieval_cosine_similarity"] = self.calculate_cosine_similarities(
             context_embeddings, retrieved_context_embeddings
         )
 
         # calculate accuracy
-        df["retrieval_accuracy"] = df.apply(
-            lambda x: self.accuracy(
-                x["retrival_cosine_similarity"],
+        df["retrieval_match"] = df.apply(
+            lambda x: self.check_match(
+                x["retrieval_cosine_similarity"],
                 threshold=self.args.retriever_accuracy_threshold,
             ),
             axis=1,
         )
 
-        retrieval_accuracy = df["retrieval_accuracy"].mean()
-        retrieval_cosine_similarity = df["retrival_cosine_similarity"].mean()
+        retrieval_accuracy = df["retrieval_match"].mean()
+        retrieval_cosine_similarity = df["retrieval_cosine_similarity"].mean()
 
-        evaluation_metrics = {
-            "retrieval_accuracy": retrieval_accuracy,
-            "retrieval_cosine_similarity": retrieval_cosine_similarity,
-        }
         logger.info(f"Retrieval Accuracy: {retrieval_accuracy}")
         logger.info(f"Retrieval Cosine Similarity: {retrieval_cosine_similarity}")
 
-        return evaluation_metrics, df
+        return df
 
-    def evaluate_e2e(self):
+    def evaluate_generation(self, df: pd.DataFrame):
+        """Evaluate the generation model, given the retrieval results df"""
 
-        evaluation_metrics, evaluation_df = self.evaluate_retrieval()
+        # todo clean up
 
-        prompts = self.get_evaluation_prompts(evaluation_df)
+        prompts = self.get_evaluation_prompts(df)
 
-        generated_answers = self.rate_limited_llm_requests(prompts)
-        reference_answers = self.get_reference_answers(evaluation_df)
+        raw_generated_answers = [
+            self.question_answerer.llm(prompt) for prompt in prompts
+        ]
+
+        generated_answers = self.extract_generated_text(raw_generated_answers)
+        reference_answers = self.extract_reference_answers(df)
+
+        df["generated_answers"] = generated_answers
+        df["reference_answers"] = reference_answers
+
+        # tokenize generated and reference answers
+        df["tokenized_generated_answers"] = df.apply(
+            lambda x: self._tokenize(x["generated_answers"]), axis=1
+        )
+        df["tokenized_reference_answers"] = df.apply(
+            lambda x: self._tokenize(x["reference_answers"]), axis=1
+        )
 
         # embed generated answers and reference answers
-        generated_answer_embeddings = (
-            self.question_answerer.embeddings_model.embed_documents(generated_answers)
-        )
+        generated_answer_embeddings = self.embed_texts(generated_answers)
 
-        reference_answer_embeddings = (
-            self.question_answerer.embeddings_model.embed_documents(reference_answers)
-        )
+        reference_answer_embeddings = self.embed_texts(reference_answers)
 
         # calculate cosine similarity between generated and reference answers
-        evaluation_df[
-            "generated_cosine_similarity"
-        ] = self.calculate_cosine_similarities(
+        df["generator_cosine_similarity"] = self.calculate_cosine_similarities(
             generated_answer_embeddings, reference_answer_embeddings
         )
 
-        # calculate rouge scores
-        evaluation_df["rouge_scores"] = evaluation_df.apply(
-            lambda x: self.calculate_rouge(x["answer"], x["reference_answers"]), axis=1
-        )
-
-        # calculate bleu scores
-        evaluation_df["bleu_scores"] = evaluation_df.apply(
-            lambda x: self.calculate_bleu(
-                self.tokenize(x["answer"]), self.tokenize(x["reference_answers"])
+        # calculate accuracy
+        df["generator_match"] = df.apply(
+            lambda x: self.check_match(
+                x["generator_cosine_similarity"],
+                threshold=self.args.generator_accuracy_threshold,
             ),
             axis=1,
         )
+
+        # calculate rouge scores
+        df["rouge_scores"] = df.apply(
+            lambda x: self.calculate_rouge(
+                x["generated_answers"], x["reference_answers"]
+            ),
+            axis=1,
+        )
+
+        self.extract_rogue_scores(df)
 
         # calculate meteor scores
-        evaluation_df["meteor_scores"] = evaluation_df.apply(
+        df["meteor_scores"] = df.apply(
             lambda x: self.calculate_meteor(
-                self.tokenize(x["answer"]), self.tokenize(x["reference_answers"])
+                x["tokenized_generated_answers"], x["tokenized_reference_answers"]
             ),
             axis=1,
         )
 
-        # calculate accuracy
-        evaluation_df["accuracy"] = evaluation_df.apply(
-            lambda x: self.accuracy(
-                x["generated_cosine_similarity"],
-                threshold=self.args.e2e_accuracy_threshold,
-            ),
-            axis=1,
-        )
+        return df
 
-        evaluation_metrics["generated_accuracy"] = evaluation_df["accuracy"].mean()
-        evaluation_metrics["generated_cosine_similarity"] = evaluation_df[
-            "generated_cosine_similarity"
-        ].mean()
-        evaluation_metrics["generated_rouge_scores"] = evaluation_df[
-            "rouge_scores"
-        ].mean()
-        evaluation_metrics["generated_bleu_scores"] = evaluation_df[
-            "bleu_scores"
-        ].mean()
-        evaluation_metrics["generated_meteor_scores"] = evaluation_df[
-            "meteor_scores"
-        ].mean()
+    def evaluate_e2e(self):
+        """Evaluate the end-to-end evaluation"""
+        retrieval_df = self.evaluate_retrieval()
+        e2e_df = self.evaluate_generation(retrieval_df)
 
-        logger.info(f"Generated Accuracy: {evaluation_metrics['generated_accuracy']}")
-        logger.info(
-            f"Generated Cosine Similarity: {evaluation_metrics['generated_cosine_similarity']}"
-        )
-        logger.info(
-            f"Generated Rouge Scores: {evaluation_metrics['generated_rouge_scores']}"
-        )
-        logger.info(
-            f"Generated Bleu Scores: {evaluation_metrics['generated_bleu_scores']}"
-        )
-        logger.info(
-            f"Generated Meteor Scores: {evaluation_metrics['generated_meteor_scores']}"
-        )
-
-        return evaluation_metrics, evaluation_df
+        return e2e_df
 
     def evaluate(self):
         if self.args.evaluation_type == "retrieval":

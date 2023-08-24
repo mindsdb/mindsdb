@@ -1,17 +1,17 @@
-import time
-import socket
-import os
 import datetime as dt
+import os
+import socket
+import time
 
 import sqlalchemy as sa
 
-from mindsdb.utilities import log
-from mindsdb.utilities.log import initialize_log
-
-from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage import db
+from mindsdb.utilities import log
+from mindsdb.utilities.config import Config
 
 from .task_thread import TaskThread
+
+logger = log.getLogger(__name__)
 
 
 class TaskMonitor:
@@ -25,7 +25,6 @@ class TaskMonitor:
     def start(self):
         config = Config()
         db.init()
-        initialize_log(config, 'jobs', wrap_print=True)
         self.config = config
 
         while True:
@@ -40,7 +39,7 @@ class TaskMonitor:
                 return
 
             except Exception as e:
-                log.logger.error(e)
+                logger.error(e)
                 db.session.rollback()
 
     def stop_all_tasks(self):
@@ -52,7 +51,7 @@ class TaskMonitor:
     def check_tasks(self):
         allowed_tasks = set()
 
-        for task in db.session.query(db.Tasks).filter(db.Tasks.active == True): # noqa
+        for task in db.session.query(db.Tasks).filter(db.Tasks.active == True):  # noqa
             allowed_tasks.add(task.id)
 
             # start new tasks
@@ -82,7 +81,7 @@ class TaskMonitor:
                     self._set_alive(task_id)
 
     def _lock_task(self, task):
-        run_by = f'{socket.gethostname()} {os.getpid()}'
+        run_by = f"{socket.gethostname()} {os.getpid()}"
         db_date = db.session.query(sa.func.current_timestamp()).first()[0]
         if task.run_by == run_by:
             # already locked
@@ -93,7 +92,9 @@ class TaskMonitor:
             task.run_by = run_by
             task.alive_time = db_date
 
-        elif db_date - task.alive_time > dt.timedelta(seconds=self.LOCK_EXPIRED_SECONDS):
+        elif db_date - task.alive_time > dt.timedelta(
+            seconds=self.LOCK_EXPIRED_SECONDS
+        ):
             # lock expired
             task.run_by = run_by
             task.alive_time = db_date
@@ -145,5 +146,5 @@ def start(verbose=False):
     monitor.start()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     start()

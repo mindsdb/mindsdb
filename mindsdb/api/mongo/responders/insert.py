@@ -213,7 +213,7 @@ class Responce(Responder):
             )
             run_sql_command(request_env, ast_query)
 
-    def _insert_ml_enine(self, query, request_env, mindsdb_env):
+    def _insert_ml_engine(self, query, request_env, mindsdb_env):
         for doc in query["documents"]:
 
             ast_query = CreateMLEngine(

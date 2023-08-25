@@ -121,6 +121,9 @@ def get_hierarchy_from_df(df, model_args):
     nixtla_df = df.rename({model_args["order_by"]: "ds", model_args["target"]: "y"}, axis=1)
     nixtla_df["ds"] = pd.to_datetime(nixtla_df["ds"])
     for col in model_args["group_by"]:
+        # add to dataframe if it doesn't exist
+        if col not in nixtla_df.columns:
+            nixtla_df[col] = '1'
         nixtla_df[col] = nixtla_df[col].astype(str)  # grouping columns need to be string format
     nixtla_df.insert(0, "Total", "total")
 

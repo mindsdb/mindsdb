@@ -1,6 +1,5 @@
 import ast
 import json
-from collections import defaultdict
 from typing import List
 
 import nltk
@@ -18,9 +17,6 @@ from scipy.spatial import distance
 from mindsdb.utilities.log import get_log
 
 # todo use polars for this for speed
-# todo refactor metric calculations operate on df columns
-# todo remove remove repitition in metric calculations
-# todo allow users to select subset of metrics to calculate
 
 logger = get_log(logger_name=__name__)
 
@@ -142,7 +138,8 @@ class Evaluator:
         """Query the vector store"""
         return self.question_answerer.query_vector_store(question)
 
-    def extract_returned_text(self, vector_store_response: List) -> List:
+    @staticmethod
+    def extract_returned_text(vector_store_response: List) -> List:
         # todo: this is a hack, we need to fix this so it works with multiple context ie top_k>1
         return [doc.page_content for doc in vector_store_response][0]
 
@@ -203,10 +200,10 @@ class Evaluator:
 
     @staticmethod
     def _calculate_cosine_similarity(
-        context_embeddings: List[float], retrieved_embeddings: List[float]
+        gt_embeddings: List[float], test_embeddings: List[float]
     ) -> float:
         """Calculate cosine similarity between a context and retrieved context embedding"""
-        cosine_sim = 1 - distance.cosine(context_embeddings, retrieved_embeddings)
+        cosine_sim = 1 - distance.cosine(gt_embeddings, test_embeddings)
 
         return cosine_sim
 
@@ -226,7 +223,8 @@ class Evaluator:
             )
         ]
 
-    def check_match(self, cosine_similarity: float, threshold: float = 0.7) -> int:
+    @staticmethod
+    def check_match(cosine_similarity: float, threshold: float = 0.7) -> int:
         return int(cosine_similarity >= threshold)
 
     def get_matches(
@@ -290,7 +288,6 @@ class Evaluator:
 
     def evaluate_retrieval(self):
         """Evaluate the retrieval model"""
-        # todo clean up
 
         df = self.df.copy(deep=True)
 
@@ -311,19 +308,6 @@ class Evaluator:
         df = self.calculate_retrieval_metrics(
             df, context_embeddings, retrieved_context_embeddings
         )
-
-        # df["retrieval_cosine_similarity"] = self.calculate_cosine_similarities(
-        #     context_embeddings, retrieved_context_embeddings
-        # )
-        #
-        # # calculate accuracy
-        # df["retrieval_match"] = df.apply(
-        #     lambda x: self.check_match(
-        #         x["retrieval_cosine_similarity"],
-        #         threshold=self.args.retriever_accuracy_threshold,
-        #     ),
-        #     axis=1,
-        # )
 
         return df
 

@@ -156,24 +156,27 @@ class WriterHandler(BaseMLEngine):
         evaluator = Evaluator(args=args, df=evaluate_df)
         df = evaluator.evaluate()
 
-        args.dict()["evaluation_metrics"] = evaluator.mean_evaluation_metrics
+        evaluation_metrics = dict(
+            mean_evaluation_metrics=evaluator.mean_evaluation_metrics,
+            evaluation_df=df.to_dict(orient="records"),
+        )
 
-        self.model_storage.json_set("args", args)
+        self.model_storage.json_set("evaluation", evaluation_metrics)
 
         return df
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         """
         Describe the model, or a specific attribute of the model
-        :param attribute: The attribute to describe
-        :return: A dataframe with the description
         """
-        args = self.model_storage.json_get("args")
 
-        if attribute is None:
-            return pd.DataFrame(args, index=[0])
-
-        elif attribute == "info":
-            return pd.DataFrame(args["evaluation_metrics"], index=[0])
+        if attribute == "evaluation_metrics":
+            evaluation = self.model_storage.json_get("evaluation")
+            return pd.DataFrame(evaluation["evaluation_df"])
+        elif attribute == "mean_evaluation_metrics":
+            evaluation = self.model_storage.json_get("evaluation")
+            return pd.DataFrame(evaluation["mean_evaluation_metrics"])
         else:
-            raise ValueError(f"Attribute {attribute} not supported")
+            raise ValueError(
+                f"Attribute {attribute} not supported, try 'evaluation_metrics' or 'mean_evaluation_metrics'"
+            )

@@ -1,5 +1,6 @@
 import ast
 import json
+from collections import defaultdict
 from typing import List
 
 import nltk
@@ -39,7 +40,7 @@ class Evaluator:
         self.retrieval_metrics = self.args.retrieval_evaluation_metrics
         self.generator_metrics = self.args.generation_evaluation_metrics
 
-        self.mean_evaluation_metrics = {}
+        self.mean_evaluation_metrics = defaultdict(list)
 
         if args.evaluation_type == "e2e":
             # todo check if this is fine for cloud, better to download once and load from disk
@@ -70,7 +71,7 @@ class Evaluator:
             else:
                 raise ValueError(f"metric {metric} not supported")
 
-            self.mean_evaluation_metrics[f"mean_{col_name}"] = df[col_name].mean()
+            self.store_mean_metric(col_name=col_name, mean_metric=df[col_name].mean())
 
         return df
 
@@ -126,7 +127,9 @@ class Evaluator:
 
             if metric != "rouge":
 
-                self.mean_evaluation_metrics[f"mean_{col_name}"] = df[col_name].mean()
+                self.store_mean_metric(
+                    col_name=col_name, mean_metric=df[col_name].mean()
+                )
 
         return df
 
@@ -272,7 +275,14 @@ class Evaluator:
                     axis=1,
                 )
 
-                self.mean_evaluation_metrics[f"mean_{col_name}"] = df[col_name].mean()
+                self.store_mean_metric(
+                    col_name=col_name, mean_metric=df[col_name].mean()
+                )
+
+    def store_mean_metric(self, col_name: str, mean_metric: float):
+        """Calculate mean metric for each metric"""
+
+        self.mean_evaluation_metrics[f"mean_{col_name}"].append(mean_metric)
 
     @staticmethod
     def calculate_bleu(

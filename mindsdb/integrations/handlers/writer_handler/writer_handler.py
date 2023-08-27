@@ -170,7 +170,7 @@ class WriterHandler(BaseMLEngine):
         Describe the model, or a specific attribute of the model
         """
 
-        if attribute == "evaluation_metrics":
+        if attribute == "evaluation_output":
             evaluation = self.model_storage.json_get("evaluation")
             return pd.DataFrame(evaluation["evaluation_df"])
         elif attribute == "mean_evaluation_metrics":

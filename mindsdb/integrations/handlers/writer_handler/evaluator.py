@@ -34,7 +34,7 @@ class Evaluator:
 
         self.metric_map = {
             "cosine_similarity": self.calculate_cosine_similarities,
-            "accuracy": self.check_match,
+            "accuracy": self.get_matches,
             "rouge": self.calculate_rouge,
             "bleu": self.calculate_bleu,
             "meteor": self.calculate_meteor,
@@ -60,19 +60,17 @@ class Evaluator:
 
         for metric in self.retrieval_metrics:
             col_name = f"{prefix}{metric}"
-            if metric == "cosine_similarity" or metric == "accuracy":
+            if metric == "cosine_similarity":
                 df[col_name] = self.metric_map[metric](
                     context_embeddings, retrieved_context_embeddings
                 )
-                if metric == "accuracy":
-                    col_name = f"{prefix}match"
-                    df[col_name] = df.apply(
-                        lambda x: self.metric_map[metric](
-                            x[f"{prefix}cosine_similarity"],
-                            threshold=self.args.retriever_accuracy_threshold,
-                        ),
-                        axis=1,
-                    )
+            elif metric == "accuracy":
+                col_name = f"{prefix}match"
+                df[col_name] = self.get_matches(
+                    gt_embeddings=context_embeddings,
+                    test_embeddings=retrieved_context_embeddings,
+                    threshold=self.args.retriever_accuracy_threshold,
+                )
             else:
                 raise ValueError(f"metric {metric} not supported")
 
@@ -91,19 +89,18 @@ class Evaluator:
 
         for metric in self.generator_metrics:
             col_name = f"{prefix}{metric}"
-            if metric == "cosine_similarity" or metric == "accuracy":
+            if metric == "cosine_similarity":
+
                 df[col_name] = self.calculate_cosine_similarities(
                     generated_answer_embeddings, reference_answer_embeddings
                 )
-                if metric == "accuracy":
-                    col_name = f"{prefix}match"
-                    df[col_name] = df.apply(
-                        lambda x: self.metric_map[metric](
-                            x[f"{prefix}cosine_similarity"],
-                            threshold=self.args.generator_accuracy_threshold,
-                        ),
-                        axis=1,
-                    )
+            elif metric == "accuracy":
+                col_name = f"{prefix}match"
+                df[col_name] = self.get_matches(
+                    gt_embeddings=reference_answer_embeddings,
+                    test_embeddings=generated_answer_embeddings,
+                    threshold=self.args.generator_accuracy_threshold,
+                )
             elif metric == "rouge":
                 df[col_name] = df.apply(
                     lambda x: self.metric_map[metric](
@@ -215,24 +212,38 @@ class Evaluator:
 
     def calculate_cosine_similarities(
         self,
-        context_embeddings: List[List[float]],
-        retrieved_context_embeddings: List[List[float]],
+        gt_embeddings: List[List[float]],
+        test_embeddings: List[List[float]],
     ):
-        """Calculate cosine similarity for each context and retrieved context pair for a given question"""
+        """Calculate cosine similarity for each ground truth and retrieved/generated pair for a given question"""
 
         return [
             self._calculate_cosine_similarity(
                 context_embedding, retrieved_context_embedding
             )
             for context_embedding, retrieved_context_embedding in zip(
-                context_embeddings, retrieved_context_embeddings
+                gt_embeddings, test_embeddings
             )
         ]
 
-    @staticmethod
-    def check_match(cosine_similarity: float, threshold: float = 0.7) -> int:
-
+    def check_match(self, cosine_similarity: float, threshold: float = 0.7) -> int:
         return int(cosine_similarity >= threshold)
+
+    def get_matches(
+        self, gt_embeddings, test_embeddings, threshold: float = 0.7
+    ) -> List[int]:
+        """Get matches for each ground truth and retrieved/generated pair for a given question"""
+
+        cosine_similarities = self.calculate_cosine_similarities(
+            gt_embeddings=gt_embeddings, test_embeddings=test_embeddings
+        )
+
+        matches = [
+            self.check_match(cosine_similarity, threshold=threshold)
+            for cosine_similarity in cosine_similarities
+        ]
+
+        return matches
 
     @staticmethod
     def _tokenize(text: str) -> List[str]:

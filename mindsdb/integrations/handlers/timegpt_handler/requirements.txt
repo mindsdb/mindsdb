@@ -1,1 +1,1 @@
-nixtlats>=0.1.4
+nixtlats>=0.1.10

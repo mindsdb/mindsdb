@@ -1,6 +1,6 @@
 ---
-title: db.predictors.find()
-sidebarTitle: db.predictors.find()
+title: List Models
+sidebarTitle: List Models
 ---
 
 ## Description
@@ -40,4 +40,11 @@ On execution, we get:
     "select_data_query": "",
     "training_options": ""
 }
+```
+
+Alternatively, you can query the `models` and `models_versions` tables.
+
+```sql
+> db.models.find()
+> db.models_versions.find()
 ```

@@ -55,14 +55,12 @@ class EmailHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            connection = self.connect()
-            # TODO: check connection
-
+            self.connect()
             response.success = True
 
         except Exception as e:
-            log.logger.error(f'Error connecting to email api: {e}!')
-            response.error_message = e
+            response.error_message = f'Error connecting to Email: {e}. '
+            log.logger.error(response.error_message)
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False

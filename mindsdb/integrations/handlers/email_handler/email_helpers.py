@@ -4,6 +4,7 @@ import email
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import pandas as pd
+from datetime import datetime, timedelta
 
 
 class EmailClient:
@@ -35,16 +36,26 @@ class EmailClient:
         query_parts = []
         if subject is not None:
             query_parts.append(f'(SUBJECT "{subject}")')
+
         if to is not None:
             query_parts.append(f'(TO "{to}")')
+
         if from_ is not None:
             query_parts.append(f'(FROM "{from_}")')
+
         if since_date is not None:
             since_date_str = since_date.strftime("%d-%b-%Y")
-            query_parts.append(f'(SINCE "{since_date_str}")')
+        else:
+            since_date = datetime.today() - timedelta(days=10)
+            since_date_str = since_date.strftime("%d-%b-%Y")
+        query_parts.append(f'(SINCE "{since_date_str}")')
+
         if until_date is not None:
             until_date_str = until_date.strftime("%d-%b-%Y")
-            query_parts.append(f'(BEFORE "{until_date_str}")')
+        else:
+            until_date_str = datetime.today().strftime("%d-%b-%Y")
+        query_parts.append(f'(BEFORE "{until_date_str}")')
+
         if since_emailid is not None:
             query_parts.append(f'(UID {since_emailid}:*)')
 
@@ -69,7 +80,10 @@ class EmailClient:
             email_line["subject"] = str(email_message['Subject'])
             email_line["created_at"] = email_message['Date']
             resp, email_data = self.imap_server.uid('fetch', emailid, '(BODY[TEXT])')
-            email_line["body"] = email_data[0][1].decode('utf-8')
+            try:
+                email_line["body"] = email_data[0][1].decode('utf-8')
+            except UnicodeDecodeError:
+                ValueError(f"Could not decode email body with id {emailid}")
 
             ret.append(email_line)
 

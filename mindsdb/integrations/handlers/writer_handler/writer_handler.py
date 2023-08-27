@@ -148,7 +148,7 @@ class WriterHandler(BaseMLEngine):
         else:
             evaluate_df = load_dataset(
                 ml_task_type="question_answering", dataset_name=args.evaluate_dataset
-            ).head(5)
+            )
 
         ingestor = Ingestor(df=evaluate_df, args=args)
         ingestor.embeddings_to_vectordb()

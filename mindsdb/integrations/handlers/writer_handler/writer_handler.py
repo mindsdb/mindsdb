@@ -148,7 +148,7 @@ class WriterHandler(BaseMLEngine):
         else:
             evaluate_df = load_dataset(
                 ml_task_type="question_answering", dataset_name=args.evaluate_dataset
-            )
+            ).head(5)
 
         ingestor = Ingestor(df=evaluate_df, args=args)
         ingestor.embeddings_to_vectordb()
@@ -156,8 +156,7 @@ class WriterHandler(BaseMLEngine):
         evaluator = Evaluator(args=args, df=evaluate_df)
         df = evaluator.evaluate()
 
-        # todo fix this
-        # evaluation_metrics = evaluator.mean_metrics_to_dict()
-        # self.model_storage.json_set("evaluation_metrics", evaluation_metrics)
+        evaluation_metrics = evaluator.mean_evaluation_metrics
+        self.model_storage.json_set("evaluation_metrics", evaluation_metrics)
 
         return df

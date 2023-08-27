@@ -94,7 +94,7 @@ class QuestionAnswerer:
             question,
         )
 
-    def query_vector_store(self, question: str):
+    def query_vector_store(self, question: str) -> List:
 
         return self.persisted_vector_store.similarity_search(
             query=question,

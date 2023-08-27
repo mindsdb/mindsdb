@@ -187,6 +187,8 @@ class VectorStoreIndexLoader:
     def load_chroma_llama_index(self):
         """Load Chroma index from the persisted vector store"""
 
+        # todo test this
+
         collection = self.config.vector_store._client.get_collection(
             self.config.collection_name
         )
@@ -251,8 +253,8 @@ class WriterHandlerParameters(BaseModel):
     llm_params: WriterLLMParameters
     chunk_size: int = 500
     chunk_overlap: int = 50
-    generation_evaluation_metrics: Iterable[str] = GENERATION_METRICS
-    retrieval_evaluation_metrics: Iterable[str] = RETRIEVAL_METRICS
+    generation_evaluation_metrics: List[str] = list(GENERATION_METRICS)
+    retrieval_evaluation_metrics: List[str] = list(RETRIEVAL_METRICS)
     evaluation_type: str = "e2e"
     retriever_accuracy_threshold: float = 0.6
     generator_accuracy_threshold: float = 0.8

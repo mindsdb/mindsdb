@@ -1,12 +1,10 @@
 from dataclasses import dataclass
-from enum import Enum, unique
 from functools import lru_cache
-from typing import Dict, Iterable, List, Union
+from typing import List, Union
 
 import pandas as pd
 import torch
 from chromadb import Settings
-from langchain import FAISS
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.docstore.document import Document
 from langchain.document_loaders import DataFrameLoader
@@ -14,7 +12,6 @@ from langchain.embeddings.base import Embeddings
 from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS, Chroma, VectorStore
 from llama_index import ServiceContext, VectorStoreIndex
-from llama_index.indices.query.base import BaseQueryEngine
 from llama_index.vector_stores import ChromaVectorStore
 from pydantic import BaseModel, Extra, validator
 
@@ -256,6 +253,7 @@ class WriterHandlerParameters(BaseModel):
     generation_evaluation_metrics: List[str] = list(GENERATION_METRICS)
     retrieval_evaluation_metrics: List[str] = list(RETRIEVAL_METRICS)
     evaluation_type: str = "e2e"
+    n_rows_evaluation: int = None  # if None, evaluate on all rows
     retriever_match_threshold: float = 0.7
     generator_match_threshold: float = 0.8
     evaluate_dataset: Union[pd.DataFrame, str] = "squad_v2_val_100_sample"

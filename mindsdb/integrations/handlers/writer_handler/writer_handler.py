@@ -147,6 +147,9 @@ class WriterHandler(BaseMLEngine):
             evaluate_df = load_dataset(
                 ml_task_type="question_answering", dataset_name=args.evaluate_dataset
             )
+            if args.n_rows_evaluation:
+                # if user specifies n_rows_evaluation in create, only use that many rows
+                evaluate_df = evaluate_df.head(args.n_rows_evaluation)
 
         ingestor = Ingestor(df=evaluate_df, args=args)
         ingestor.embeddings_to_vectordb()

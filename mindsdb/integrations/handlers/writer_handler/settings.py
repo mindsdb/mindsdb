@@ -256,7 +256,7 @@ class WriterHandlerParameters(BaseModel):
     n_rows_evaluation: int = None  # if None, evaluate on all rows
     retriever_match_threshold: float = 0.7
     generator_match_threshold: float = 0.8
-    evaluate_dataset: Union[dict, str] = None
+    evaluate_dataset: Union[List[dict], str] = None
     run_embeddings: bool = True
     external_index_name: str = None
     top_k: int = 4
@@ -304,7 +304,7 @@ class WriterHandlerParameters(BaseModel):
 
     @validator("evaluate_dataset")
     def evaluate_dataset_must_be_supported(cls, v):
-        if not isinstance(v, pd.DataFrame):
+        if not isinstance(v, dict):
             if v not in SUPPORTED_EVALUATION_TYPES:
                 raise ValueError(
                     f"evaluate_dataset must be a pandas dataframe or in {SUPPORTED_EVALUATION_TYPES}, got {v}"

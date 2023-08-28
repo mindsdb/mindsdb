@@ -92,6 +92,7 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==23.1.2 &
     pip install --no-cache-dir 'duckdb==0.6.1' || true && \
     pip install --prefer-binary --no-cache-dir ShopifyApi || true && \
     pip install --no-cache-dir 'binance-connector==2.0.0' || true && \
+    pip install --prefer-binary --no-cache-dir 'monkeylearn==3.6.0' || true && \
     pip install --prefer-binary --no-cache-dir 'nixtlats>=0.1.4' || true
 
 ARG VERSION=

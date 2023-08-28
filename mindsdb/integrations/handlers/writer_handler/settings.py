@@ -256,8 +256,8 @@ class WriterHandlerParameters(BaseModel):
     generation_evaluation_metrics: List[str] = list(GENERATION_METRICS)
     retrieval_evaluation_metrics: List[str] = list(RETRIEVAL_METRICS)
     evaluation_type: str = "e2e"
-    retriever_accuracy_threshold: float = 0.6
-    generator_accuracy_threshold: float = 0.8
+    retriever_match_threshold: float = 0.7
+    generator_match_threshold: float = 0.8
     evaluate_dataset: Union[pd.DataFrame, str] = "squad_v2_val_100_sample"
     run_embeddings: bool = True
     external_index_name: str = None

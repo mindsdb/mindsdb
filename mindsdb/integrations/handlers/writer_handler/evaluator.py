@@ -66,7 +66,7 @@ class Evaluator:
                 df[col_name] = self.get_matches(
                     gt_embeddings=context_embeddings,
                     test_embeddings=retrieved_context_embeddings,
-                    threshold=self.args.retriever_accuracy_threshold,
+                    threshold=self.args.retriever_match_threshold,
                 )
             else:
                 raise ValueError(f"metric {metric} not supported")
@@ -96,7 +96,7 @@ class Evaluator:
                 df[col_name] = self.get_matches(
                     gt_embeddings=reference_answer_embeddings,
                     test_embeddings=generated_answer_embeddings,
-                    threshold=self.args.generator_accuracy_threshold,
+                    threshold=self.args.generator_match_threshold,
                 )
             elif metric == "rouge":
                 df[col_name] = df.apply(

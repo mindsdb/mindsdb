@@ -42,6 +42,8 @@ class QuestionAnswerer:
 
         if args.external_index_name:
 
+            # todo fix this - for llamaindex not sure how to decouple retrieval from generation
+
             vector_store_index_config = PersistedVectorStoreIndexConfig(
                 vector_store_name=args.vector_store_name,
                 vector_store=self.persisted_vector_store,
@@ -112,9 +114,9 @@ class QuestionAnswerer:
 
         else:
             vector_index_response = self._query_index(question)
-            # todo make parser for index response
-            return NotImplementedError("Index response not yet supported")
+            # todo make parser for llamaindexresponse
             # formatted_prompt = self._prepare_prompt(vector_index_response, question)
+            raise NotImplementedError("llamaindexresponse parser not implemented")
 
         llm_response = self.llm(prompt=formatted_prompt)
 

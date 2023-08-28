@@ -80,7 +80,7 @@ class WriterHandler(BaseMLEngine):
             args.vector_store_folder_name
         )
 
-        if not df.empty and args.run_embeddings and not args.evaluation_type:
+        if not df.empty and args.run_embeddings:
             if "context_columns" not in args:
                 # if no context columns provided, use all columns in df
                 logger.info("No context columns provided, using all columns in df")
@@ -178,5 +178,5 @@ class WriterHandler(BaseMLEngine):
             return pd.DataFrame(evaluation["mean_evaluation_metrics"])
         else:
             raise ValueError(
-                f"Attribute {attribute} not supported, try 'evaluation_metrics' or 'mean_evaluation_metrics'"
+                f"Attribute {attribute} not supported, try 'evaluation_output' or 'mean_evaluation_metrics'"
             )

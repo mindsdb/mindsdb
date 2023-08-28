@@ -73,7 +73,9 @@ class WriterHandler(BaseMLEngine):
         input_args = extract_llm_params(args["using"])
         # if user doesn't provide a dataset key, use the input in FROM clause in model creation
         input_args["evaluate_dataset"] = (
-            input_args["evaluate_dataset"] if "evaluate_dataset" in input_args else df
+            input_args["evaluate_dataset"]
+            if "evaluate_dataset" in input_args
+            else df.to_dict(orient="records")
         )
         args = WriterHandlerParameters(**input_args)
 
@@ -145,8 +147,10 @@ class WriterHandler(BaseMLEngine):
 
     def evaluate(self, args: WriterHandlerParameters):
 
-        if isinstance(args.evaluate_dataset, pd.DataFrame):
-            evaluate_df = validate_dataframe(args.evaluate_dataset, EVAL_COLUMN_NAMES)
+        if isinstance(args.evaluate_dataset, dict):
+            evaluate_df = validate_dataframe(
+                pd.DataFrame(args.evaluate_dataset), EVAL_COLUMN_NAMES
+            )
         else:
             evaluate_df = load_dataset(
                 ml_task_type="question_answering", dataset_name=args.evaluate_dataset

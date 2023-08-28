@@ -256,7 +256,7 @@ class WriterHandlerParameters(BaseModel):
     n_rows_evaluation: int = None  # if None, evaluate on all rows
     retriever_match_threshold: float = 0.7
     generator_match_threshold: float = 0.8
-    evaluate_dataset: Union[pd.DataFrame, str] = "squad_v2_val_100_sample"
+    evaluate_dataset: Union[pd.DataFrame, str] = None
     run_embeddings: bool = True
     external_index_name: str = None
     top_k: int = 4
@@ -300,6 +300,15 @@ class WriterHandlerParameters(BaseModel):
             raise ValueError(
                 f"evaluation_type must be one of `retrieval` or `e2e`, got {v}"
             )
+        return v
+
+    @validator("evaluate_dataset")
+    def evaluate_dataset_must_be_supported(cls, v):
+        if not isinstance(v, pd.DataFrame):
+            if v not in SUPPORTED_EVALUATION_TYPES:
+                raise ValueError(
+                    f"evaluate_dataset must be a pandas dataframe or in {SUPPORTED_EVALUATION_TYPES}, got {v}"
+                )
         return v
 
     @validator("vector_store_name")

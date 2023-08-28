@@ -71,6 +71,10 @@ class WriterHandler(BaseMLEngine):
         """
 
         input_args = extract_llm_params(args["using"])
+        # if user doesn't provide a dataset key, use the input in FROM clause in model creation
+        input_args["evaluate_dataset"] = (
+            input_args["evaluate_dataset"] if "evaluate_dataset" in input_args else df
+        )
         args = WriterHandlerParameters(**input_args)
 
         # create folder for vector store to persist embeddings

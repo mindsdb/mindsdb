@@ -147,7 +147,8 @@ class WriterHandler(BaseMLEngine):
 
     def evaluate(self, args: WriterHandlerParameters):
 
-        if isinstance(args.evaluate_dataset, dict):
+        if isinstance(args.evaluate_dataset, list):
+            # if user provides a list of dicts, convert to dataframe and validate
             evaluate_df = validate_dataframe(
                 pd.DataFrame(args.evaluate_dataset), EVAL_COLUMN_NAMES
             )

@@ -5,14 +5,13 @@ from typing import List
 
 import nltk
 import pandas as pd
-from integrations.handlers.writer_handler.question_answer import QuestionAnswerer
 from integrations.handlers.writer_handler.settings import WriterHandlerParameters
 from nltk import word_tokenize
 from nltk.translate.bleu_score import (  # todo investigate why this always returns 0, not used for now
     sentence_bleu,
 )
 from nltk.translate.meteor_score import meteor_score
-from rouge_score import rouge_scorer, scoring
+from rouge_score import rouge_scorer
 from scipy.spatial import distance
 
 from mindsdb.utilities.log import get_log
@@ -22,12 +21,12 @@ from mindsdb.utilities.log import get_log
 logger = get_log(logger_name=__name__)
 
 
-class Evaluator:
-    def __init__(self, args: WriterHandlerParameters, df: pd.DataFrame):
+class WriterEvaluator:
+    def __init__(self, args: WriterHandlerParameters, df: pd.DataFrame, rag):
 
         self.args = args
         self.df = df
-        self.question_answerer = QuestionAnswerer(args)
+        self.rag = rag(self.args)
 
         self.metric_map = {
             "cosine_similarity": self.calculate_cosine_similarities,
@@ -135,11 +134,11 @@ class Evaluator:
 
     def embed_texts(self, texts: List[str]) -> List[list]:
         """Embed a list of texts"""
-        return self.question_answerer.embeddings_model.embed_documents(texts)
+        return self.rag.embeddings_model.embed_documents(texts)
 
     def query_vector_store(self, question: str) -> List:
         """Query the vector store"""
-        return self.question_answerer.query_vector_store(question)
+        return self.rag.query_vector_store(question)
 
     @staticmethod
     def extract_returned_text(vector_store_response: List) -> List:
@@ -151,13 +150,11 @@ class Evaluator:
 
         if self.args.summarize_context:
 
-            return self.question_answerer.summarize_context(
+            return self.rag.summarize_context(
                 question=question, combined_context=context
             )
 
-        return self.question_answerer.prompt_template.format(
-            question=question, context=context
-        )
+        return self.rag.prompt_template.format(question=question, context=context)
 
     def get_evaluation_prompts(self, df: pd.DataFrame) -> List[str]:
         """Create prompts for each question and context pair in the dataframe"""
@@ -326,9 +323,7 @@ class Evaluator:
 
         prompts = self.get_evaluation_prompts(df)
 
-        raw_generated_answers = [
-            self.question_answerer.llm(prompt) for prompt in prompts
-        ]
+        raw_generated_answers = [self.rag.llm(prompt) for prompt in prompts]
 
         generated_answers = self.extract_generated_text(raw_generated_answers)
         reference_answers = self.extract_reference_answers(df)

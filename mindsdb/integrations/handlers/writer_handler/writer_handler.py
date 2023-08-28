@@ -4,11 +4,9 @@ from typing import Dict, Optional
 
 import pandas as pd
 
-from mindsdb.integrations.handlers.writer_handler.evaluator import Evaluator
-from mindsdb.integrations.handlers.writer_handler.ingestor import Ingestor
-from mindsdb.integrations.handlers.writer_handler.question_answer import (
-    QuestionAnswerer,
-)
+from mindsdb.integrations.handlers.writer_handler.evaluate import WriterEvaluator
+from mindsdb.integrations.handlers.writer_handler.ingest import Ingestor
+from mindsdb.integrations.handlers.writer_handler.rag import QuestionAnswerer
 from mindsdb.integrations.handlers.writer_handler.settings import (
     DEFAULT_EMBEDDINGS_MODEL,
     EVAL_COLUMN_NAMES,
@@ -153,7 +151,7 @@ class WriterHandler(BaseMLEngine):
         ingestor = Ingestor(df=evaluate_df, args=args)
         ingestor.embeddings_to_vectordb()
 
-        evaluator = Evaluator(args=args, df=evaluate_df)
+        evaluator = WriterEvaluator(args=args, df=evaluate_df, rag=QuestionAnswerer)
         df = evaluator.evaluate()
 
         evaluation_metrics = dict(

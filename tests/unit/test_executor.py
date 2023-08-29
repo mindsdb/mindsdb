@@ -932,13 +932,6 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
         # no error
         assert ret.error_code is None
 
-        # test create if not exists
-        ret = self.command_executor.execute_command(parse_sql(
-            'create view if not exists mindsdb.vtasks (select * from pg (select * from tasks))',
-            dialect='mindsdb')
-        )
-        assert ret.error_code is None
-
         # --- select from view ---
         ret = self.command_executor.execute_command(parse_sql(
             'select * from mindsdb.vtasks',

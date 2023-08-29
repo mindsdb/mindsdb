@@ -655,7 +655,7 @@ class ExecuteCommands:
             jobs_controller.add(job_name, project_name, statement.query_str,
                                 statement.start_str, statement.end_str, statement.repeat_str)
         except Exception as e:
-            if "already exists" in str(e) and statement.if_not_exists:
+            if "already exists" in str(e) and getattr(statement, "if_not_exists", False):
                 return ExecuteAnswer(ANSWER_TYPE.OK)
             raise e
 
@@ -953,7 +953,7 @@ class ExecuteCommands:
         name = statement.name.parts[-1]
         integrations = self.session.integration_controller.get_all()
         if name in integrations:
-            if not statement.if_not_exists:
+            if not getattr(statement, "if_not_exists", False):
                 raise SqlApiException(f"Integration '{name}' already exists")
             else:
                 return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -1038,7 +1038,7 @@ class ExecuteCommands:
             try:
                 ProjectController().add(database_name)
             except Exception as e:
-                if "already exists" in str(e) and statement.if_not_exists:
+                if "already exists" in str(e) and getattr(statement, "if_not_exists", False):
                     return ExecuteAnswer(ANSWER_TYPE.OK)
                 raise e
         else:
@@ -1047,7 +1047,7 @@ class ExecuteCommands:
             except SqlApiException as e:
                 # check if the error is name already exists
                 # we choose to raise the error depends if if_not_exists is True or False
-                if "already exists" not in str(e) or statement.if_not_exists is False:
+                if "already exists" not in str(e) or getattr(statement, "if_not_exists", False) is False:
                     raise e
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -1163,7 +1163,7 @@ class ExecuteCommands:
         try:
             project.create_view(view_name, query=query_str)
         except Exception as e:
-            if "View already exists" in str(e) and statement.if_not_exists:
+            if "View already exists" in str(e) and getattr(statement, "if_not_exists", False):
                 return ExecuteAnswer(ANSWER_TYPE.OK)
             raise e
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
@@ -1220,7 +1220,7 @@ class ExecuteCommands:
             return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
         except Exception as e:
             # check if the error is name already exists
-            if re.search(r"model .* already exists", str(e)) and statement.if_not_exists:
+            if re.search(r"model .* already exists", str(e)) and getattr(statement, "if_not_exists", False):
                 return ExecuteAnswer(ANSWER_TYPE.OK)
             raise e
 

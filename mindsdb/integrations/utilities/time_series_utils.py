@@ -51,13 +51,15 @@ def get_results_from_nixtla_df(nixtla_df, model_args):
     This will return the dataframe to the original format supplied by the MindsDB query.
     """
     return_df = nixtla_df.reset_index(drop=True if 'ds' in nixtla_df.columns else False)
-    return_df.columns = ["unique_id", "ds", model_args["target"]]
-    if len(model_args["group_by"]) > 1:
-        for i, group in enumerate(model_args["group_by"]):
-            return_df[group] = return_df["unique_id"].apply(lambda x: x.split("/")[i])
-    else:
-        group_by_col = model_args["group_by"][0]
-        return_df[group_by_col] = return_df["unique_id"]
+    if len(model_args["group_by"]) > 0:
+        return_df.columns = ["unique_id", "ds", model_args["target"]]
+        if len(model_args["group_by"]) > 1:
+            for i, group in enumerate(model_args["group_by"]):
+                return_df[group] = return_df["unique_id"].apply(lambda x: x.split("/")[i])
+        else:
+            group_by_col = model_args["group_by"][0]
+            return_df[group_by_col] = return_df["unique_id"]
+
     return return_df.drop(["unique_id"], axis=1).rename({"ds": model_args["order_by"]}, axis=1)
 
 

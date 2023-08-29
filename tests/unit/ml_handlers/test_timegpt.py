@@ -104,5 +104,4 @@ class TestTimeGPT(BaseExecutorTest):
         """
         )
 
-        # assert "stockholm" in result_df["answer"].iloc[0].lower()
-        # assert "venus" in result_df["answer"].iloc[1].lower()
+        # asserts

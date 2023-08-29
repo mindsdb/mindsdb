@@ -26,7 +26,7 @@ class TestOpenAI(BaseExecutorTest):
                     done = True
                     break
                 elif ret["STATUS"][0] == "error":
-                    break
+                    raise RuntimeError("predictor failed", ret["ERROR"][0])
             time.sleep(0.5)
         if not done:
             raise RuntimeError("predictor wasn't created")
@@ -48,7 +48,7 @@ class TestOpenAI(BaseExecutorTest):
                   predict answer
                   using
                     engine='openai',
-                    openai_api_key='{OPEN_AI_API_KEY}';
+                    api_key='{OPEN_AI_API_KEY}';
                """
             )
 
@@ -63,7 +63,7 @@ class TestOpenAI(BaseExecutorTest):
                 engine='openai',
                 question_column='question',
                 model_name='this-gpt-does-not-exist',
-                openai_api_key='{OPEN_AI_API_KEY}';
+                api_key='{OPEN_AI_API_KEY}';
            """
         )
         with pytest.raises(Exception):
@@ -79,7 +79,7 @@ class TestOpenAI(BaseExecutorTest):
                 using
                     engine='openai',
                     question_column='question',
-                    openai_api_key='{OPEN_AI_API_KEY}',
+                    api_key='{OPEN_AI_API_KEY}',
                     evidently_wrong_argument='wrong value';  --- this is a wrong argument name
             """
             )
@@ -101,7 +101,7 @@ class TestOpenAI(BaseExecutorTest):
            using
              engine='openai',
              question_column='question',
-             openai_api_key='{OPEN_AI_API_KEY}';
+             api_key='{OPEN_AI_API_KEY}';
         """
         )
         self.wait_predictor("proj", "test_openai_qa_no_context")
@@ -143,7 +143,7 @@ class TestOpenAI(BaseExecutorTest):
              engine='openai',
              question_column='question',
              context_column='context',
-             openai_api_key='{OPEN_AI_API_KEY}';
+             api_key='{OPEN_AI_API_KEY}';
         """
         )
         self.wait_predictor("proj", "test_openai_qa_context")
@@ -189,7 +189,7 @@ class TestOpenAI(BaseExecutorTest):
            using
              engine='openai',
              prompt_template='Answer this question and add "Boom!" to the end of the answer: {{{{question}}}}',
-             openai_api_key='{OPEN_AI_API_KEY}';
+             api_key='{OPEN_AI_API_KEY}';
         """
         )
         self.wait_predictor("proj", "test_openai_prompt_template")
@@ -237,7 +237,7 @@ class TestOpenAI(BaseExecutorTest):
            using
              engine='openai',
              prompt_template='What is the sentiment of the following phrase? Answer either "positive" or "negative": {{{{input}}}}',
-             openai_api_key='{OPEN_AI_API_KEY}';
+             api_key='{OPEN_AI_API_KEY}';
         """  # noqa
         )
         self.wait_predictor("proj", "test_openai_bulk_normal_completion")

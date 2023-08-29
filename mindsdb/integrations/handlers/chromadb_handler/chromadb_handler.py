@@ -7,11 +7,12 @@ import numpy as np
 import pandas as pd
 from chromadb import API
 from chromadb.config import Settings
-from mindsdb_sql import ASTNode, CreateTable, Insert, Select, Star
+from mindsdb_sql import ASTNode, CreateTable, DropTables, Insert, Select, Star
 
 from mindsdb.integrations.libs.base import VectorStoreHandler
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
+from mindsdb.integrations.libs.response import HandlerResponse
 from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.utilities import log
@@ -37,7 +38,8 @@ class ChromaDBHandler(VectorStoreHandler):
             ),
         }
 
-        self._client = chromadb.Client(Settings(**self._client_config))
+        # self._client = chromadb.Client(Settings(**self._client_config))
+        self._client = chromadb.PersistentClient()
         self.is_connected = True
 
         VectorStoreHandler.__init__(self, name)
@@ -57,7 +59,8 @@ class ChromaDBHandler(VectorStoreHandler):
             return self._client
 
         try:
-            self._client = chromadb.Client(Settings(**self._client_config))
+            # self._client = chromadb.Client(Settings(**self._client_config))
+            self._client = chromadb.PersistentClient()
             self.is_connected = True
         except Exception as e:
             log.logger.error(f"Error connecting to ChromaDB client, {e}!")
@@ -128,6 +131,8 @@ class ChromaDBHandler(VectorStoreHandler):
                 collection_data = self._collection.peek(
                     limit=query.limit.value if query.limit else 10
                 )
+                result["id"] = collection_data["ids"]
+                result["documents"] = collection_data["documents"]
                 result["embeddings"] = collection_data["embeddings"]
 
             elif query.where.args[0].parts[-1] == "search_embedding":
@@ -137,14 +142,17 @@ class ChromaDBHandler(VectorStoreHandler):
                 collection_data = self._collection.query(
                     query_embeddings=search_embedding,
                     n_results=query.limit.value if query.limit else 5,
-                    include=["embeddings", "distances"],
+                    include=["embeddings", "distances", "documents"],
                 )
 
                 embeddings_arr = np.array(collection_data["embeddings"][0])
                 distance_arr = np.array(collection_data["distances"][0])
 
-                indices = np.where(distance_arr > 0.5)[0]
-                result["embeddings"] = embeddings_arr[indices].tolist()
+                # indices = np.where(distance_arr > 0.5)[0]
+                result["id"] = collection_data["ids"][0]
+                result["documents"] = collection_data["documents"][0]
+                result["embeddings"] = embeddings_arr.tolist()
+                result["distances"] = distance_arr.tolist()
 
             else:
 
@@ -164,17 +172,63 @@ class ChromaDBHandler(VectorStoreHandler):
 
         return Response(resp_type=RESPONSE_TYPE.OK)
 
-    def add_embeddings(self, query):
+    def add_embeddings(self, query: Insert):
         """
         Run an insert query on the ChromaDB database.
         """
         collection_name = query.table.parts[-1]
+        columns = [column.name for column in query.columns]
 
-        embeddings = [ast.literal_eval(embedding[0]) for embedding in query.values]
-        ids = [str(uuid.uuid1()) for _ in embeddings]
+        # supported columns name are
+        # "embeddings", "content", "id"
+        if not set(columns).issubset({"embeddings", "content", "id"}):
+            raise Exception(
+                "Only 'embeddings', 'content' and 'id' columns are supported!"
+            )
+
+        # get id column if it is present
+        if "id" in columns:
+            id_col_index = columns.index("id")
+            ids = [row[id_col_index] for row in query.values]
+        else:
+            ids = [str(uuid.uuid1()) for _ in query.values]
+
+        # get content column if it is present
+        if "content" in columns:
+            content_col_index = columns.index("content")
+            content = [row[content_col_index] for row in query.values]
+        else:
+            content = [None for _ in query.values]
+
+        # get embeddings column if it is present
+        if "embeddings" in columns:
+            embeddings_col_index = columns.index("embeddings")
+            embeddings = [
+                ast.literal_eval(row[embeddings_col_index]) for row in query.values
+            ]
+        else:
+            raise Exception("Embeddings column is required!")
 
         # Add new embeddings to Chroma collection
-        self._client.get_collection(collection_name).add(ids=ids, embeddings=embeddings)
+        self._client.get_collection(collection_name).add(
+            ids=ids,
+            documents=content,
+            embeddings=embeddings,
+        )
+
+        return Response(resp_type=RESPONSE_TYPE.OK)
+
+    def drop_table(self, query: DropTables) -> Response:
+        """
+        Delete a table from the ChromaDB database.
+        """
+        collection_name = query.name.parts[-1]
+        # check if collection exists
+        if collection_name not in self._client.list_collections():
+            raise Exception(f"Collection {collection_name} does not exist!")
+
+        # delete collection
+        self._client.delete_collection(collection_name)
 
         return Response(resp_type=RESPONSE_TYPE.OK)
 
@@ -193,6 +247,9 @@ class ChromaDBHandler(VectorStoreHandler):
 
             elif isinstance(query, Insert):
                 return self.add_embeddings(query)
+
+            elif isinstance(query, DropTables):
+                return self.delete(query)
 
             else:
                 raise NotImplementedError(
@@ -232,6 +289,41 @@ class ChromaDBHandler(VectorStoreHandler):
         return Response(
             resp_type=RESPONSE_TYPE.TABLE,
             data_frame=collections_name,
+        )
+
+    def get_columns(self, table_name: str) -> HandlerResponse:
+        """Get the list of columns in the vectorDB.
+
+        Args:
+            table_name (str): The name of the table.
+
+        Returns:
+            Response: The response object.
+        """
+
+        try:
+            self.connect()
+            _ = self._client.get_collection(table_name)
+            columns = pd.DataFrame(
+                columns=["column_name", "data_type"],
+                data=[
+                    ["id", "uuid"],
+                    ["content", "str"],
+                    ["embeddings", "list"],
+                ],
+            )
+        except Exception as e:
+            log.logger.error(
+                f'Error getting columns from ChromaDB client {self._connection_data["chroma_server_host"]}, {e}!'
+            )
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f'Error getting columns from ChromaDB client {self._connection_data["chroma_server_host"]}, {e}!',
+            )
+
+        return Response(
+            resp_type=RESPONSE_TYPE.TABLE,
+            data_frame=columns,
         )
 
 

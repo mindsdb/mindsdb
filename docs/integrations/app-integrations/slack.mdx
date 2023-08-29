@@ -16,18 +16,24 @@ The Slack handler is initialized with the following parameters:
 * `token` is a Slack API token to use for authentication.
 
 <Accordion title="How to Generate a Slack API Token" icon="slack" iconType="thin">
-1. Follow [this link](https://api.slack.com/apps) and sign in with your Slack account.
-2. Create a new App/Bot or select an existing App.
-3. Go to the *OAuth & Permissions* section.
-4. Under the *Scopes* section, add the *Bot Token Scopes* necessary for your application. You can add more later as well.
-5. Install the bot to your workspace.
-6. Under the *OAuth Tokens for Your Workspace* section, copy the the *Bot User OAuth Token* value.
-7. Open your Slack application and add the App/Bot to one of the channels:
-    - Go to the channel where you want to use the bot.
-    - Right-click on the channel and select *View Channel Details*.
-    - Select *Integrations*.
-    - Click on *Add an App*.
-8. Now you can use the token from step 6 to initialize the Slack handler in MindsDB, and use the channel name to query and write messages.
+  1. Follow [this link](https://api.slack.com/apps) and sign in with your Slack account.
+  2. Create a new App/Bot or select an existing App.
+  3. Go to the *OAuth & Permissions* section.
+  4. Under the *Scopes* section, add the *Bot Token Scopes* necessary for your application. You can add more later as well.
+      - channels:history
+      - channels:read
+      - chat:write
+      - groups:read
+      - im:read
+      - mpim:read
+  5. Install the bot to your workspace.
+  6. Under the *OAuth Tokens for Your Workspace* section, copy the the *Bot User OAuth Token* value.
+  7. Open your Slack application and add the App/Bot to one of the channels:
+      - Go to the channel where you want to use the bot.
+      - Right-click on the channel and select *View Channel Details*.
+      - Select *Integrations*.
+      - Click on *Add an App*.
+  8. Now you can use the token from step 6 to initialize the Slack handler in MindsDB, and use the channel name to query and write messages.
 </Accordion>
 
 <Tip>

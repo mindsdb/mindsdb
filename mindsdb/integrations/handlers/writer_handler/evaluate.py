@@ -143,6 +143,7 @@ class WriterEvaluator:
     @staticmethod
     def extract_returned_text(vector_store_response: List) -> List:
         # todo: this is a hack, we need to fix this so it works with multiple context ie top_k>1
+        # todo handle empty response
         return [doc.page_content for doc in vector_store_response][0]
 
     def evaluation_prompt(self, question: str, context: str):

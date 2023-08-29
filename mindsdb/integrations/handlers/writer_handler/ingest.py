@@ -93,7 +93,7 @@ class Ingestor:
             return self.vector_store.from_documents(
                 documents=documents,
                 embedding=embeddings_model,
-                collection_name=self.args.collection_name,
+                index_name=self.args.collection_name,
             )
 
     def create_db_from_texts(self, documents, embeddings_model):

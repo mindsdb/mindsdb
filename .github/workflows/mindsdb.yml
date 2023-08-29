@@ -85,8 +85,6 @@ jobs:
           # need fix in LW. not working yet
           env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
 
-          # env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_lightwood.py
-
           env PYTHONPATH=./ pytest tests/unit/test_predictor_params.py
 
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
@@ -113,6 +111,14 @@ jobs:
           # Company independent
           echo -e "\n===============test company independent===============\n"
           pytest -vx tests/integration_tests/flows/test_company_independent.py
+
+          # First-tier ML engines
+          echo -e "\n===============test ML engines===============\n"
+          pytest -vx tests/unit/ml_handlers/test_statsforecast.py
+          pytest -vx tests/unit/ml_handlers/test_openai.py
+          pytest -vx tests/unit/ml_handlers/test_huggingface.py
+          pytest -vx tests/unit/ml_handlers/test_timegpt.py
+          env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_lightwood.py
         fi
       shell: bash
       env:

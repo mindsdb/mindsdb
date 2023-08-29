@@ -8,7 +8,7 @@ import pandas as pd
 from mindsdb_sql import parse_sql
 
 from tests.unit.executor_test_base import BaseExecutorTest
-from mindsdb.integrations.handlers.timegpt_handler.timegpt_handler import TimeGPTHandler
+# from mindsdb.integrations.handlers.timegpt_handler.timegpt_handler import TimeGPTHandler
 
 
 TIME_GPT_API_KEY = os.environ.get("TIME_GPT_API_KEY")
@@ -44,7 +44,7 @@ class TestTimeGPT(BaseExecutorTest):
         self.run_sql(f"""create ml_engine timegpt from timegpt using api_key='{TIME_GPT_API_KEY}';""")
         # with pytest.raises(Exception):
         self.run_sql(
-            f"""
+            """
               create model proj.test_timegpt_missing_required_keys
               predict answer
               using
@@ -95,7 +95,7 @@ class TestTimeGPT(BaseExecutorTest):
         )
         self.wait_predictor("proj", "test_timegpt_forecast")
 
-        result_df = self.run_sql(
+        self.run_sql(
             """
             SELECT p.answer
             FROM proj.test_timegpt_forecast as p

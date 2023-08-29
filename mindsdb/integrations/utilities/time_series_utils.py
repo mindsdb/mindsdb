@@ -50,7 +50,7 @@ def get_results_from_nixtla_df(nixtla_df, model_args):
 
     This will return the dataframe to the original format supplied by the MindsDB query.
     """
-    return_df = nixtla_df.reset_index(drop=True if 'ds' in nixtla_df.columns else False)
+    return_df = nixtla_df.reset_index(drop=True if 'unique_id' in nixtla_df.columns else False)
     if len(model_args["group_by"]) > 0:
         return_df.columns = ["unique_id", "ds", model_args["target"]]
         if len(model_args["group_by"]) > 1:

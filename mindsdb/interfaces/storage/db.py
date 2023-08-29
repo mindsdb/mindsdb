@@ -167,6 +167,7 @@ class Predictor(Base):
     training_phase_current = Column(Integer)
     training_phase_total = Column(Integer)
     training_phase_name = Column(String)
+    hostname = Column(String)
 
     @staticmethod
     def get_name_and_version(full_name):

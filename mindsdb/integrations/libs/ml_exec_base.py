@@ -18,6 +18,7 @@ In particular, three big components are included:
 
 import sys
 import time
+import socket
 import threading
 import datetime as dt
 from typing import Optional, Callable
@@ -457,6 +458,7 @@ class BaseMLEngineExec:
             training_start_at=dt.datetime.now(),
             status=PREDICTOR_STATUS.GENERATING,
             label=label,
+            hostname=socket.gethostname(),
             version=(
                 db.session.query(
                     coalesce(func.max(db.Predictor.version), 1) + (1 if is_retrain else 0)
@@ -611,6 +613,7 @@ class BaseMLEngineExec:
             training_start_at=dt.datetime.now(),
             status=PREDICTOR_STATUS.GENERATING,
             label=label,
+            hostname=socket.gethostname(),
             version=(
                 db.session.query(
                     coalesce(func.max(db.Predictor.version), 1) + 1

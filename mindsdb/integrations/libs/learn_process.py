@@ -37,7 +37,6 @@ def predict_process(predictor_record, ml_engine_name, handler_class, integration
     else:
         ml_handler = handlers_cacher[predictor_record.id]
 
-
     if ml_engine_name == 'LightwoodHandler':
         args['code'] = predictor_record.code
         args['target'] = predictor_record.to_predict[0]

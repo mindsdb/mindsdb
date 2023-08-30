@@ -174,11 +174,15 @@ class WriterEvaluator:
                 data = json.loads(item)
                 if "choices" in data:
                     text = data["choices"][0]["text"]
-                    results.append(text)
+                else:
+                    text = "answer not parsed"
+
             except Exception as e:
                 raise Exception(
                     f"{e} Error extracting generated text: failed to parse response {item}"
                 )
+
+            results.append(text)
         return results
 
     @staticmethod

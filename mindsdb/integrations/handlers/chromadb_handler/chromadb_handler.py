@@ -1,20 +1,20 @@
-import ast
-import uuid
 from collections import OrderedDict
+from typing import List, Optional
 
 import chromadb
-import numpy as np
 import pandas as pd
-from chromadb import API
-from chromadb.config import Settings
-from mindsdb_sql import ASTNode, CreateTable, DropTables, Insert, Select, Star
 
-from mindsdb.integrations.libs.base import VectorStoreHandler
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse
 from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
+from mindsdb.integrations.libs.vectordatabase_handler import (
+    FilterCondition,
+    FilterOperator,
+    TableField,
+    VectorStoreHandler,
+)
 from mindsdb.utilities import log
 
 
@@ -24,11 +24,11 @@ class ChromaDBHandler(VectorStoreHandler):
     name = "chromadb"
 
     def __init__(self, name: str, **kwargs):
+        super().__init__(name)
 
         self._connection_data = kwargs.get("connection_data")
 
-        self._client_config = self._client_config = {
-            "chroma_api_impl": self._connection_data.get("chroma_api_impl"),
+        self._client_config = {
             "chroma_server_host": self._connection_data.get("chroma_server_host"),
             "chroma_server_http_port": self._connection_data.get(
                 "chroma_server_http_port"
@@ -38,29 +38,50 @@ class ChromaDBHandler(VectorStoreHandler):
             ),
         }
 
-        # self._client = chromadb.Client(Settings(**self._client_config))
-        self._client = chromadb.PersistentClient()
-        self.is_connected = True
+        # either host + port or persist_directory is required
+        # but not both
+        if (
+            self._client_config["chroma_server_host"] is None
+            or self._client_config["chroma_server_http_port"] is None
+        ) and self._client_config["persist_directory"] is None:
+            raise Exception(
+                "Either host + port or persist_directory is required for ChromaDB connection!"
+            )
+        elif (
+            self._client_config["chroma_server_host"] is not None
+            and self._client_config["chroma_server_http_port"] is not None
+        ) and self._client_config["persist_directory"] is not None:
+            raise Exception(
+                "Either host + port or persist_directory is required for ChromaDB connection, but not both!"
+            )
 
-        VectorStoreHandler.__init__(self, name)
+        self.connect()
+
+    def _get_client(self):
+        client_config = self._client_config
+        if client_config is None:
+            raise Exception("Client config is not set!")
+
+        # decide the client type to be used, either persistent or httpclient
+        if client_config["persist_directory"] is not None:
+            return chromadb.PersistentClient(path=client_config["persist_directory"])
+        else:
+            return chromadb.HttpClient(
+                host=client_config["chroma_server_host"],
+                port=client_config["chroma_server_http_port"],
+            )
 
     def __del__(self):
         if self.is_connected is True:
             self.disconnect()
 
-    def connect(self) -> API:
-        """Connect to a ChromaDB database.
-
-        Returns:
-            API: The ChromaDB _client.
-        """
-
+    def connect(self):
+        """Connect to a ChromaDB database."""
         if self.is_connected is True:
             return self._client
 
         try:
-            # self._client = chromadb.Client(Settings(**self._client_config))
-            self._client = chromadb.PersistentClient()
+            self._client = self._get_client()
             self.is_connected = True
         except Exception as e:
             log.logger.error(f"Error connecting to ChromaDB client, {e}!")
@@ -78,276 +99,287 @@ class ChromaDBHandler(VectorStoreHandler):
 
     def check_connection(self):
         """Check the connection to the ChromaDB database."""
-
-        responseCode = StatusResponse(False)
+        response_code = StatusResponse(False)
         need_to_close = self.is_connected is False
 
         try:
             self._client.heartbeat()
-            responseCode.success = True
+            response_code.success = True
         except Exception as e:
             log.logger.error(f"Error connecting to ChromaDB , {e}!")
-            responseCode.error_message = str(e)
+            response_code.error_message = str(e)
         finally:
-            if responseCode.success is True and need_to_close:
+            if response_code.success is True and need_to_close:
                 self.disconnect()
-            if responseCode.success is False and self.is_connected is True:
+            if response_code.success is False and self.is_connected is True:
                 self.is_connected = False
 
-        return responseCode
+        return response_code
 
-    def count(self, query: ASTNode):
+    def _get_chromadb_operator(self, operator: FilterOperator) -> str:
+        mapping = {
+            FilterOperator.EQUAL: "$eq",
+            FilterOperator.NOT_EQUAL: "$ne",
+            FilterOperator.LESS_THAN: "$lt",
+            FilterOperator.LESS_THAN_OR_EQUAL: "$lte",
+            FilterOperator.GREATER_THAN: "$gt",
+            FilterOperator.GREATER_THAN_OR_EQUAL: "$gte",
+        }
 
-        # if count is used, return the count of the collection
-        if not isinstance(query.targets[0].args[0], Star):
-            # if count is not using '*' argument, raise error
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message="Count only supports '*' argument",
+        if operator not in mapping:
+            raise Exception(f"Operator {operator} is not supported by ChromaDB!")
+
+        return mapping[operator]
+
+    def _translate_metadata_condition(
+        self, conditions: List[FilterCondition]
+    ) -> Optional[dict]:
+        """
+        Translate a list of FilterCondition objects a dict that can be used by ChromaDB.
+        E.g.,
+        [
+            FilterCondition(
+                column="metadata.created_at",
+                op=FilterOperator.LESS_THAN,
+                value="2020-01-01",
+            ),
+            FilterCondition(
+                column="metadata.created_at",
+                op=FilterOperator.GREATER_THAN,
+                value="2019-01-01",
+            )
+        ]
+        -->
+        {
+            "$and": [
+                {"created_at": {"$lt": "2020-01-01"}},
+                {"created_at": {"$gt": "2019-01-01"}}
+            ]
+        }
+        """
+        # we ignore all non-metadata conditions
+        if conditions is None:
+            return None
+        metadata_conditions = [
+            condition
+            for condition in conditions
+            if condition.column.startswith(TableField.METADATA.value)
+        ]
+        if len(metadata_conditions) == 0:
+            return None
+
+        # we translate each metadata condition into a dict
+        chroma_db_conditions = []
+        for condition in metadata_conditions:
+            metadata_key = condition.column.split(".")[-1]
+            chroma_db_conditions.append(
+                {
+                    metadata_key: {
+                        self._get_chromadb_operator(condition.op): condition.value
+                    }
+                }
             )
 
-        collection_data = self._collection.count()
-        return pd.DataFrame(columns=["count"], data=[[collection_data]])
+        # we combine all metadata conditions into a single dict
+        metadata_condition = (
+            {"$and": chroma_db_conditions}
+            if len(chroma_db_conditions) > 1
+            else chroma_db_conditions[0]
+        )
+        return metadata_condition
 
-    def similarity_search(self, query: ASTNode) -> Response:
+    def select(
+        self,
+        table_name: str,
+        columns: List[str] = None,
+        conditions: List[FilterCondition] = None,
+        offset: int = None,
+        limit: int = None,
+    ) -> HandlerResponse:
+        collection = self._client.get_collection(table_name)
+        filters = self._translate_metadata_condition(conditions)
+        # check if embedding vector filter is present
+        vector_filter = (
+            []
+            if conditions is None
+            else [
+                condition
+                for condition in conditions
+                if condition.column == TableField.EMBEDDINGS.value
+            ]
+        )
+        if len(vector_filter) > 0:
+            vector_filter = vector_filter[0]
+        else:
+            vector_filter = None
+        id_filters = None
+        if conditions is not None:
+            id_filters = [
+                condition.value
+                for condition in conditions
+                if condition.column == TableField.ID.value
+            ] or None
+
+        if vector_filter is not None:
+            # similarity search
+            query_payload = {
+                "where": filters,
+                "query_embeddings": vector_filter.value
+                if vector_filter is not None
+                else None,
+                "include": ["metadatas", "documents", "distances"],
+            }
+            if limit is not None:
+                query_payload["n_results"] = limit
+
+            result = collection.query(**query_payload)
+            ids = result["ids"][0]
+            documents = result["documents"][0]
+            metadatas = result["metadatas"][0]
+            distances = result["distances"][0]
+        else:
+            # general get query
+            result = collection.get(
+                ids=id_filters,
+                where=filters,
+                limit=limit,
+                offset=offset,
+            )
+            ids = result["ids"]
+            documents = result["documents"]
+            metadatas = result["metadatas"]
+            distances = None
+
+        # project based on columns
+        payload = {
+            TableField.ID.value: ids,
+            TableField.CONTENT.value: documents,
+            TableField.METADATA.value: metadatas,
+        }
+
+        if columns is not None:
+            payload = {
+                column: payload[column]
+                for column in columns
+                if column != TableField.EMBEDDINGS.value
+            }
+
+        # always include distance
+        if distances is not None:
+            payload[TableField.DISTANCE.value] = distances
+        result_df = pd.DataFrame(payload)
+        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=result_df)
+
+    def insert(
+        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
+    ) -> HandlerResponse:
         """
-        Run a query on a chroma database
+        Insert data into the ChromaDB database.
         """
+        collection = self._client.get_collection(table_name)
+        embeddings = data[TableField.EMBEDDINGS.value].tolist()
+        ids = data[TableField.ID.value].tolist()
+        documents = data[TableField.CONTENT.value].tolist()
+        metadata = data[TableField.METADATA.value].tolist()
 
-        collection_name = query.from_table.parts[-1]
-        self._collection = self._client.get_collection(collection_name)
+        collection.add(
+            ids=ids, documents=documents, embeddings=embeddings, metadatas=metadata
+        )
 
-        if hasattr(query.targets[0], "op") and query.targets[0].op == "count":
-            # get count of embeddings in a collection
+        return Response(resp_type=RESPONSE_TYPE.OK)
 
-            return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=self.count(query))
+    def update(
+        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
+    ) -> HandlerResponse:
+        """
+        Update data in the ChromaDB database.
+        TODO: not implemented yet
+        """
+        return super().update(table_name, data, columns)
 
-        elif isinstance(query.targets[0], Star):
+    def delete(
+        self, table_name: str, conditions: List[FilterCondition] = None
+    ) -> HandlerResponse:
+        filters = self._translate_metadata_condition(conditions)
+        # get id filters
+        id_filters = [
+            condition.value
+            for condition in conditions
+            if condition.column == TableField.ID.value
+        ] or None
 
-            result = pd.DataFrame()
+        if filters is None and id_filters is None:
+            raise Exception("Delete query must have at least one condition!")
+        collection = self._client.get_collection(table_name)
+        collection.delete(ids=id_filters, where=filters)
+        return Response(resp_type=RESPONSE_TYPE.OK)
 
-            if not query.where:
-                # return data for select * without where - NB max results is 10
-                collection_data = self._collection.peek(
-                    limit=query.limit.value if query.limit else 10
-                )
-                result["id"] = collection_data["ids"]
-                result["documents"] = collection_data["documents"]
-                result["embeddings"] = collection_data["embeddings"]
+    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
+        """
+        Create a collection with the given name in the ChromaDB database.
+        """
+        self._client.create_collection(table_name, get_or_create=if_not_exists)
+        return Response(resp_type=RESPONSE_TYPE.OK)
 
-            elif query.where.args[0].parts[-1] == "search_embedding":
-                # return data based on similarity search from input embeddings
-                search_embedding = query.where.args[1].items[0].value
-
-                collection_data = self._collection.query(
-                    query_embeddings=search_embedding,
-                    n_results=query.limit.value if query.limit else 5,
-                    include=["embeddings", "distances", "documents"],
-                )
-
-                embeddings_arr = np.array(collection_data["embeddings"][0])
-                distance_arr = np.array(collection_data["distances"][0])
-
-                # indices = np.where(distance_arr > 0.5)[0]
-                result["id"] = collection_data["ids"][0]
-                result["documents"] = collection_data["documents"][0]
-                result["embeddings"] = embeddings_arr.tolist()
-                result["distances"] = distance_arr.tolist()
-
+    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
+        """
+        Delete a collection from the ChromaDB database.
+        """
+        try:
+            self._client.delete_collection(table_name)
+        except ValueError:
+            if if_exists:
+                return Response(resp_type=RESPONSE_TYPE.OK)
             else:
-
                 return Response(
                     resp_type=RESPONSE_TYPE.ERROR,
-                    error_message="SELECT only supports COUNT(*), SELECT * or WHERE with 'search_embeddings' parameter",
+                    error_message=f"Table {table_name} does not exist!",
                 )
 
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=result)
-
-    def create_or_get_collection(self, query: ASTNode) -> Response:
-        """
-        Run a create table query on the ChromaDB database.
-        """
-        collection_name = query.name.parts[-1]
-        self._client.get_or_create_collection(collection_name)
-
         return Response(resp_type=RESPONSE_TYPE.OK)
 
-    def add_embeddings(self, query: Insert):
+    def get_tables(self) -> HandlerResponse:
         """
-        Run an insert query on the ChromaDB database.
+        Get the list of collections in the ChromaDB database.
         """
-        collection_name = query.table.parts[-1]
-        columns = [column.name for column in query.columns]
-
-        # supported columns name are
-        # "embeddings", "content", "id"
-        if not set(columns).issubset({"embeddings", "content", "id"}):
-            raise Exception(
-                "Only 'embeddings', 'content' and 'id' columns are supported!"
-            )
-
-        # get id column if it is present
-        if "id" in columns:
-            id_col_index = columns.index("id")
-            ids = [row[id_col_index] for row in query.values]
-        else:
-            ids = [str(uuid.uuid1()) for _ in query.values]
-
-        # get content column if it is present
-        if "content" in columns:
-            content_col_index = columns.index("content")
-            content = [row[content_col_index] for row in query.values]
-        else:
-            content = [None for _ in query.values]
-
-        # get embeddings column if it is present
-        if "embeddings" in columns:
-            embeddings_col_index = columns.index("embeddings")
-            embeddings = [
-                ast.literal_eval(row[embeddings_col_index]) for row in query.values
-            ]
-        else:
-            raise Exception("Embeddings column is required!")
-
-        # Add new embeddings to Chroma collection
-        self._client.get_collection(collection_name).add(
-            ids=ids,
-            documents=content,
-            embeddings=embeddings,
+        collections = self._client.list_collections()
+        collections_name = pd.DataFrame(
+            columns=["table_name"],
+            data=[collection.name for collection in collections],
         )
-
-        return Response(resp_type=RESPONSE_TYPE.OK)
-
-    def drop_table(self, query: DropTables) -> Response:
-        """
-        Delete a table from the ChromaDB database.
-        """
-        collection_name = query.name.parts[-1]
-        # check if collection exists
-        if collection_name not in self._client.list_collections():
-            raise Exception(f"Collection {collection_name} does not exist!")
-
-        # delete collection
-        self._client.delete_collection(collection_name)
-
-        return Response(resp_type=RESPONSE_TYPE.OK)
-
-    def query(self, query: ASTNode) -> Response:
-        """
-        Execute a query on the ChromaDB database.
-        """
-        try:
-            self.connect()
-
-            if isinstance(query, Select):
-                return self.similarity_search(query)
-
-            elif isinstance(query, CreateTable):
-                return self.create_or_get_collection(query)
-
-            elif isinstance(query, Insert):
-                return self.add_embeddings(query)
-
-            elif isinstance(query, DropTables):
-                return self.delete(query)
-
-            else:
-                raise NotImplementedError(
-                    f"Unsupported query type {query.__class__.__name__}!"
-                )
-
-        except Exception as e:
-            log.logger.error(f"Error executing query on ChromaDB client, {e}!")
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error executing query on ChromaDB client, {e}!",
-            )
-
-    def get_tables(self) -> Response:
-        """Get the list of indexes/collections in the vectorDB.
-
-        Returns:
-           Response: The response object.
-        """
-
-        try:
-            self.connect()
-            collections = self._client.list_collections()
-            collections_name = pd.DataFrame(
-                columns=["table_name"],
-                data=[collection.name for collection in collections],
-            )
-        except Exception as e:
-            log.logger.error(
-                f'Error getting tables from ChromaDB client {self._connection_data["chroma_server_host"]}, {e}!'
-            )
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f'Error getting tables from ChromaDB client {self._connection_data["chroma_server_host"]}, {e}!',
-            )
-
-        return Response(
-            resp_type=RESPONSE_TYPE.TABLE,
-            data_frame=collections_name,
-        )
+        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=collections_name)
 
     def get_columns(self, table_name: str) -> HandlerResponse:
-        """Get the list of columns in the vectorDB.
-
-        Args:
-            table_name (str): The name of the table.
-
-        Returns:
-            Response: The response object.
-        """
-
+        # check if collection exists
         try:
-            self.connect()
             _ = self._client.get_collection(table_name)
-            columns = pd.DataFrame(
-                columns=["column_name", "data_type"],
-                data=[
-                    ["id", "uuid"],
-                    ["content", "str"],
-                    ["embeddings", "list"],
-                ],
-            )
-        except Exception as e:
-            log.logger.error(
-                f'Error getting columns from ChromaDB client {self._connection_data["chroma_server_host"]}, {e}!'
-            )
+        except ValueError:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f'Error getting columns from ChromaDB client {self._connection_data["chroma_server_host"]}, {e}!',
+                error_message=f"Table {table_name} does not exist!",
             )
-
-        return Response(
-            resp_type=RESPONSE_TYPE.TABLE,
-            data_frame=columns,
-        )
+        return super().get_columns(table_name)
 
 
 connection_args = OrderedDict(
-    chroma_api_impl={
-        "type": ARG_TYPE.STR,
-        "description": "chromadb api implementation",
-    },
     chroma_server_host={
         "type": ARG_TYPE.STR,
         "description": "chromadb server host",
+        "required": False,
     },
     chroma_server_http_port={
         "type": ARG_TYPE.INT,
         "description": "chromadb server port",
+        "required": False,
     },
     persist_directory={
         "type": ARG_TYPE.STR,
         "description": "persistence directory for chroma",
+        "required": False,
     },
 )
 
 connection_args_example = OrderedDict(
-    chroma_api_impl="rest",
     chroma_server_host="localhost",
     chroma_server_http_port=8000,
     persist_directoryn="chroma",

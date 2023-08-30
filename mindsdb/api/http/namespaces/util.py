@@ -49,7 +49,7 @@ class Ping(Resource):
 
 
 @ns_conf.route('/readiness')
-def ReadinessProbe(Resource):
+class ReadinessProbe(Resource):
     @ns_conf.doc('get_ready')
     def get(self):
         '''Checks server is ready for work'''

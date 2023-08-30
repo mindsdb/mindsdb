@@ -18,7 +18,7 @@ from mindsdb_sql.parser.ast import (
 )
 from mindsdb_sql.parser.ast.base import ASTNode
 
-from mindsdb.integrations.libs.response import HandlerResponse
+from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse
 from mindsdb.utilities.log import get_log
 
 from ..utilities.sql_utils import query_traversal
@@ -117,6 +117,12 @@ class VectorStoreHandler(BaseHandler):
     def __init__(self, name: str):
         super().__init__(name)
 
+    def _value_or_self(self, value):
+        if isinstance(value, Constant):
+            return value.value
+        else:
+            return value
+
     def _extract_conditions(self, where_statement) -> Optional[List[FilterCondition]]:
         conditions = []
         # parse conditions
@@ -129,7 +135,7 @@ class VectorStoreHandler(BaseHandler):
                         return
                     op = FilterOperator(node.op.upper())
                     # unquote the left hand side
-                    left_hand = node.args[0].to_string().strip("`")
+                    left_hand = node.args[0].parts[-1].strip("`")
                     if isinstance(node.args[1], Constant):
                         if left_hand == TableField.SEARCH_VECTOR.value:
                             right_hand = ast.literal_eval(node.args[1].value)
@@ -182,7 +188,7 @@ class VectorStoreHandler(BaseHandler):
         # parse key arguments
         table_name = query.name.parts[-1]
         if_not_exists = getattr(query, "if_not_exists", False)
-        self.create_table(table_name, if_not_exists=if_not_exists)
+        return self.create_table(table_name, if_not_exists=if_not_exists)
 
     def _dispatch_drop_table(self, query: DropTables) -> HandlerResponse:
         """
@@ -193,6 +199,7 @@ class VectorStoreHandler(BaseHandler):
         if_exists = getattr(query, "if_exists", False)
         for table_name in table_names:
             self.drop_table(table_name, if_exists=if_exists)
+        return HandlerResponse(resp_type=RESPONSE_TYPE.OK)
 
     def _dispatch_insert(self, query: Insert) -> HandlerResponse:
         """
@@ -211,14 +218,16 @@ class VectorStoreHandler(BaseHandler):
         # get id column if it is present
         if "id" in columns:
             id_col_index = columns.index("id")
-            ids = [row[id_col_index] for row in query.values]
+            ids = [self._value_or_self(row[id_col_index]) for row in query.values]
         else:
             ids = [str(uuid.uuid1()) for _ in query.values]
 
         # get content column if it is present
         if TableField.CONTENT.value in columns:
             content_col_index = columns.index("content")
-            content = [row[content_col_index].value for row in query.values]
+            content = [
+                self._value_or_self(row[content_col_index]) for row in query.values
+            ]
         else:
             content = [None for _ in query.values]
 
@@ -226,7 +235,7 @@ class VectorStoreHandler(BaseHandler):
         if TableField.EMBEDDINGS.value in columns:
             embeddings_col_index = columns.index("embeddings")
             embeddings = [
-                ast.literal_eval(row[embeddings_col_index].value)
+                ast.literal_eval(self._value_or_self(row[embeddings_col_index]))
                 for row in query.values
             ]
         else:
@@ -235,7 +244,8 @@ class VectorStoreHandler(BaseHandler):
         if TableField.METADATA.value in columns:
             metadata_col_index = columns.index("metadata")
             metadata = [
-                ast.literal_eval(row[metadata_col_index].value) for row in query.values
+                ast.literal_eval(self._value_or_self(row[metadata_col_index]))
+                for row in query.values
             ]
         else:
             metadata = [None for _ in query.values]
@@ -251,7 +261,7 @@ class VectorStoreHandler(BaseHandler):
         )
 
         # dispatch insert
-        self.insert(table_name, data, columns=columns)
+        return self.insert(table_name, data, columns=columns)
 
     def _dispatch_update(self, query: Update) -> HandlerResponse:
         """
@@ -271,7 +281,7 @@ class VectorStoreHandler(BaseHandler):
             raise Exception(f"Conditions {conditions} not allowed.")
 
         # dispatch delete
-        self.delete(table_name, conditions=conditions)
+        return self.delete(table_name, conditions=conditions)
 
     def _dispatch_select(self, query: Select) -> HandlerResponse:
         """
@@ -302,7 +312,7 @@ class VectorStoreHandler(BaseHandler):
         limit = query.limit.value if query.limit is not None else None
 
         # dispatch select
-        self.select(
+        return self.select(
             table_name,
             columns=columns,
             conditions=conditions,
@@ -326,6 +336,19 @@ class VectorStoreHandler(BaseHandler):
             return dispatch_router[type(query)](query)
         else:
             raise NotImplementedError(f"Query type {type(query)} not implemented.")
+
+    def query(self, query: ASTNode) -> HandlerResponse:
+        """
+        Receive query as AST (abstract syntax tree) and act upon it somehow.
+
+        Args:
+            query (ASTNode): sql query represented as AST. May be any kind
+                of query: SELECT, INSERT, DELETE, etc
+
+        Returns:
+            HandlerResponse
+        """
+        return self._dispatch(query)
 
     def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
         """Create table

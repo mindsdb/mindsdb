@@ -321,7 +321,9 @@ class ModelController():
         project_name = statement.name.parts[0].lower()
         model_name = statement.name.parts[1].lower()
 
-        problem_definition = {}
+        problem_definition = {
+            '__mdb_sql_task': str(statement.task),
+        }
         if statement.targets is not None:
             problem_definition['target'] = statement.targets[0].parts[-1]
 

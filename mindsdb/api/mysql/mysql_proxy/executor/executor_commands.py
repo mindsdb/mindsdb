@@ -23,6 +23,10 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     CreateChatBot,
     DropChatBot,
 )
+# typed models
+from mindsdb_sql.parser.dialects.mindsdb import (
+    CreateAnomalyDetectionModel,
+)
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.dialects.mysql import Variable
 from mindsdb_sql.parser.ast import (
@@ -550,7 +554,10 @@ class ExecuteCommands:
             db_name = statement.value.parts[-1]
             self.change_default_db(db_name)
             return ExecuteAnswer(ANSWER_TYPE.OK)
-        elif type(statement) == CreatePredictor:
+        elif type(statement) in (
+                CreatePredictor,
+                CreateAnomalyDetectionModel,  # we may want to specialize these in the future
+        ):
             return self.answer_create_predictor(statement)
         elif type(statement) == CreateView:
             return self.answer_create_view(statement)
@@ -1147,13 +1154,9 @@ class ExecuteCommands:
     @mark_process('learn')
     def answer_create_predictor(self, statement):
         integration_name = self.session.database
-        if len(statement.name.parts) > 1:
-            integration_name = statement.name.parts[0]
-        else:
-            statement.name.parts = [integration_name, statement.name.parts[-1]]
-        integration_name = integration_name.lower()
+        statement.name.parts = [integration_name, statement.name.parts[-1]]
 
-        ml_integration_name = "lightwood"
+        ml_integration_name = "lightwood"  # default
         if statement.using is not None:
             # repack using with lower names
             statement.using = {k.lower(): v for k, v in statement.using.items()}

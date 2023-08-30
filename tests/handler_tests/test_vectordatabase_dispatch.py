@@ -246,9 +246,28 @@ def test_unsupported_ops(vector_store_handler):
         AND unknown_column = 'some_value'
     """
     query = parse_sql(sql, dialect="mindsdb")
-    with pytest.raises(Exception) as e:
-        vector_store_handler._dispatch(query)
-    assert "not allowed" in str(e.value)
+    # reset the mock
+    vector_store_handler.select.reset_mock()
+    vector_store_handler._dispatch(query)
+    vector_store_handler.select.assert_called_once()
+    vector_store_handler.select.assert_called_with(
+        "test_table",
+        columns=["id", "content", "embeddings", "metadata"],
+        conditions=[
+            FilterCondition(
+                column="metadata.created_at",
+                op=FilterOperator.GREATER_THAN,
+                value="2021-01-01",
+            ),
+            FilterCondition(
+                column="metadata.unknown_column",  # we will treat this as a metadata filter
+                op=FilterOperator.EQUAL,
+                value="some_value",
+            ),
+        ],
+        limit=None,
+        offset=None,
+    )
 
 
 @pytest.mark.xfail(reason="not implemented yet")

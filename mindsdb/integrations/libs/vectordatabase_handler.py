@@ -151,6 +151,13 @@ class VectorStoreHandler(BaseHandler):
 
             query_traversal(where_statement, _extract_comparison_conditions)
 
+            # try to treat conditions that are not in TableField as metadata conditions
+            for condition in conditions:
+                if not self._is_condition_allowed(condition):
+                    condition.column = (
+                        TableField.METADATA.value + "." + condition.column
+                    )
+
         else:
             conditions = None
 
@@ -163,23 +170,16 @@ class VectorStoreHandler(BaseHandler):
         allowed_columns = set([col["name"] for col in self.SCHEMA])
         return set(columns).issubset(allowed_columns)
 
-    def _is_conditions_allowed(self, conditions: List[FilterCondition]) -> bool:
-        """
-        Check if conditions are allowed.
-        """
-        if conditions is None:
-            return True
+    def _is_condition_allowed(self, condition: FilterCondition) -> bool:
         allowed_field_values = set([field.value for field in TableField])
-        for condition in conditions:
-            # if condition is not in TableField, return False
-            if condition.column not in allowed_field_values:
-                # check if column is a metadata column
-                if condition.column.startswith(TableField.METADATA.value):
-                    continue
-
+        if condition.column in allowed_field_values:
+            return True
+        else:
+            # check if column is a metadata column
+            if condition.column.startswith(TableField.METADATA.value):
+                return True
+            else:
                 return False
-
-        return True
 
     def _dispatch_create_table(self, query: CreateTable) -> HandlerResponse:
         """
@@ -277,8 +277,6 @@ class VectorStoreHandler(BaseHandler):
         table_name = query.table.parts[-1]
         where_statement = query.where
         conditions = self._extract_conditions(where_statement)
-        if not self._is_conditions_allowed(conditions):
-            raise Exception(f"Conditions {conditions} not allowed.")
 
         # dispatch delete
         return self.delete(table_name, conditions=conditions)
@@ -304,8 +302,6 @@ class VectorStoreHandler(BaseHandler):
         # check if columns are allowed
         where_statement = query.where
         conditions = self._extract_conditions(where_statement)
-        if not self._is_conditions_allowed(conditions):
-            raise Exception(f"Conditions {conditions} not allowed.")
 
         # get offset and limit
         offset = query.offset.value if query.offset is not None else None

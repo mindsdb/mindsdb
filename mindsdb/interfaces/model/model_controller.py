@@ -5,6 +5,7 @@ import base64
 import datetime as dt
 from copy import deepcopy
 from multiprocessing.pool import ThreadPool
+from collections import defaultdict
 
 import pandas as pd
 from dateutil.parser import parse as parse_datetime
@@ -544,26 +545,40 @@ class ModelController():
 
         db.session.commit()
 
-    def delete_model_version(self, models):
-        if len(models) == 0:
+    def delete_model_version(self, models_meta: list):
+        if len(models_meta) == 0:
             raise Exception(f"Version to delete is not found")
 
-        for model in models:
-            model_record = get_model_record(
-                name=model['NAME'],
-                project_name=model['PROJECT'],
-                version=model['VERSION'],
-                active=None
+        models_records_groups = defaultdict(list)
+        for model_meta in models_meta:
+            models_records_groups[(model_meta['PROJECT'], model_meta['NAME'])].append(
+                get_model_record(
+                    name=model_meta['NAME'],
+                    project_name=model_meta['PROJECT'],
+                    version=model_meta['VERSION'],
+                    active=None
+                )
             )
-            if model_record.active:
-                raise Exception(f"Can't remove active version: {model['PROJECT']}.{model['NAME']}.{model['VERSION']}")
 
-            is_cloud = self.config.get('cloud', False)
-            if is_cloud:
-                model_record.deleted_at = dt.datetime.now()
-            else:
-                db.session.delete(model_record)
-            modelStorage = ModelStorage(model_record.id)
-            modelStorage.delete()
+        for group_name, group_data in models_records_groups.items():
+            if any(record.active is True for record in group_data):
+                model_records = get_model_records(
+                    name=model_meta['NAME'],
+                    project_name=model_meta['PROJECT'],
+                    active=None
+                )
+                if len(model_records) != len(group_data):
+                    raise Exception(f"Can't remove active version of model: {group_name['PROJECT']}.{group_name['NAME']}")
+
+        is_cloud = self.config.get('cloud', False)
+        for group_data in models_records_groups.values():
+            group_data.sort(key=lambda x: x.active)  # active version must be deleted last
+            for model_record in group_data:
+                modelStorage = ModelStorage(model_record.id)
+                if is_cloud:
+                    model_record.deleted_at = dt.datetime.now()
+                else:
+                    db.session.delete(model_record)
+                modelStorage.delete()
 
         db.session.commit()

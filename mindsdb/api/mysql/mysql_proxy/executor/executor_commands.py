@@ -795,7 +795,7 @@ class ExecuteCommands:
 
             if shortest_training is not None and shortest_training < datetime.timedelta(hours=1):
                 raise SqlApiException(
-                    f"Can't start {phase_name} process while predictor is in status 'training' or 'generating'"
+                    f"Can't start {phase_name} process while any other predictor is in status 'training' or 'generating'"
                 )
 
     def answer_retrain_predictor(self, statement):

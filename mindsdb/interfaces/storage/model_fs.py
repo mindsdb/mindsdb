@@ -1,3 +1,4 @@
+import os
 import re
 
 import mindsdb.interfaces.storage.db as db
@@ -131,6 +132,10 @@ class HandlerStorage:
         self.fileStorage = storageFactory(integration_id)
         self.integration_id = integration_id
 
+    def __convert_name(self, name):
+        name = name.lower().replace(' ', '_')
+        return re.sub(r'([^a-z^A-Z^_\d]+)', '_', name)
+
     def get_connection_args(self):
         rec = db.Integration.query.get(self.integration_id)
         return rec.data
@@ -153,18 +158,32 @@ class HandlerStorage:
 
     # folder
 
-    def folder_get(self, name, update=True):
-        # pull folder and return path
-        name = name.lower().replace(' ', '_')
-        name = re.sub(r'([^a-z^A-Z^_\d]+)', '_', name)
+    def folder_get(self, name, update=True, not_empty=False):
+        '''
+        Copies folder from remote to local file system and returns its path
+
+        :param name: name of the folder
+        :param update: update from source even folder exists in content folder
+        :param not_empty: return None if folder is empty
+        :return: path to local folder
+        '''
+
+        name = self.__convert_name(name)
 
         self.fileStorage.pull_path(name, update=update)
-        return str(self.fileStorage.get_path(name))
+        path = str(self.fileStorage.get_path(name))
+        if not_empty:
+            files = os.listdir(path)
+            # remove lock
+            if 'dir.lock' in files:
+                files.remove('dir.lock')
+            if len(files) == 0:
+                return None
+        return path
 
     def folder_sync(self, name):
         # sync abs path
-        name = name.lower().replace(' ', '_')
-        name = re.sub(r'([^a-z^A-Z^_\d]+)', '_', name)
+        name = self.__convert_name(name)
 
         self.fileStorage.push_path(name)
 

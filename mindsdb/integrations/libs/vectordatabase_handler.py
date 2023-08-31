@@ -88,6 +88,7 @@ class TableField(Enum):
     EMBEDDINGS = "embeddings"
     METADATA = "metadata"
     SEARCH_VECTOR = "search_vector"
+    DISTANCE = "distance"
 
 
 class VectorStoreHandler(BaseHandler):
@@ -131,6 +132,7 @@ class VectorStoreHandler(BaseHandler):
             def _extract_comparison_conditions(node, **kwargs):
                 if isinstance(node, BinaryOperation):
                     # if the op is and, continue
+                    # TODO: need to handle the OR case
                     if node.op.upper() == "AND":
                         return
                     op = FilterOperator(node.op.upper())
@@ -220,7 +222,7 @@ class VectorStoreHandler(BaseHandler):
             id_col_index = columns.index("id")
             ids = [self._value_or_self(row[id_col_index]) for row in query.values]
         else:
-            ids = [str(uuid.uuid1()) for _ in query.values]
+            ids = [uuid.uuid4().hex for _ in query.values]
 
         # get content column if it is present
         if TableField.CONTENT.value in columns:

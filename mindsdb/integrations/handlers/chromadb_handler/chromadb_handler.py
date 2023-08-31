@@ -205,7 +205,7 @@ class ChromaDBHandler(VectorStoreHandler):
             else [
                 condition
                 for condition in conditions
-                if condition.column == TableField.EMBEDDINGS.value
+                if condition.column == TableField.SEARCH_VECTOR.value
             ]
         )
         if len(vector_filter) > 0:

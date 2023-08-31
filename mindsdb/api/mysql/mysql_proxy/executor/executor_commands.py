@@ -888,7 +888,7 @@ class ExecuteCommands:
                 raise SqlApiException(f"Handler '{engine}' can not be used")
 
             accept_connection_args = handler_meta.get("connection_args")
-            if accept_connection_args is not None:
+            if accept_connection_args is not None and connection_args is not None:
                 for arg_name, arg_value in connection_args.items():
                     if arg_name == "as_service":
                         continue

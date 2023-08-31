@@ -31,7 +31,7 @@ class TimeGPTHandler(BaseMLEngine):
             "target": target,
             "horizon": time_settings["horizon"],
             "order_by": time_settings["order_by"],
-            "group_by": time_settings["group_by"],
+            "group_by": time_settings.get("group_by", []),
             "freq": using_args.get("frequency", None),
             "finetune_steps": using_args.get("finetune_steps", 0),
             "validate_token": using_args.get("validate_token", False),
@@ -70,6 +70,7 @@ class TimeGPTHandler(BaseMLEngine):
         )
         results_df = forecast_df[['unique_id', 'ds', 'TimeGPT']]
         results_df = get_results_from_nixtla_df(results_df, model_args)
+        results_df = results_df.rename({'TimeGPT': model_args['target']}, axis=1)
 
         # add prediction intervals
         levels = sorted(model_args['level'], reverse=True)
@@ -93,15 +94,19 @@ class TimeGPTHandler(BaseMLEngine):
             return df
 
         elif attribute == "features":
-            return pd.DataFrame({
+            df = pd.DataFrame({
                 "order by": [model_args["order_by"]],
-                "target": model_args["target"],
-                "group by": [model_args["group_by"]]
+                "target": model_args["target"]
             })
+            if model_args["group_by"]:
+                df["group by"] = [model_args["group_by"]]
+            return df
 
         elif attribute == 'info':
             outputs = model_args["target"]
-            inputs = [model_args["target"], model_args["order_by"], model_args["group_by"]]
+            inputs = [model_args["target"], model_args["order_by"]]
+            if model_args["group_by"]:
+                inputs.append(model_args["group_by"])
             return pd.DataFrame({"output": outputs, "input": [inputs]})
 
         else:
@@ -130,13 +135,17 @@ class TimeGPTHandler(BaseMLEngine):
     def _transform_to_nixtla_df(self, df, settings_dict, exog_vars=[]):
         nixtla_df = df.copy()
         # Transform group columns into single unique_id column
-        if len(settings_dict["group_by"]) > 1:
-            for col in settings_dict["group_by"]:
+        gby = settings_dict["group_by"]
+        if len(gby) > 1:
+            for col in gby:
                 nixtla_df[col] = nixtla_df[col].astype(str)
-            nixtla_df["unique_id"] = nixtla_df[settings_dict["group_by"]].agg("/".join, axis=1)
+            nixtla_df["unique_id"] = nixtla_df[gby].agg("/".join, axis=1)
             group_col = "ignore this"
-        else:
+        elif len(gby) == 1:
             group_col = settings_dict["group_by"][0]
+        else:
+            group_col = '__unique_id'
+            nixtla_df[group_col] = '1'
 
         # Rename columns to statsforecast names
         nixtla_df = nixtla_df.rename(

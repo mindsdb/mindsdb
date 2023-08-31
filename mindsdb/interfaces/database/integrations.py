@@ -179,7 +179,7 @@ class IntegrationController:
         logger.debug("%s: accept_connection_args - %s", self.__class__.__name__, accept_connection_args)
 
         files_dir = None
-        if accept_connection_args is not None:
+        if accept_connection_args is not None and connection_args is not None:
             for arg_name, arg_value in connection_args.items():
                 if (
                     arg_name in accept_connection_args

@@ -306,3 +306,12 @@ class ChatBotsHistory(Base):
     destination = Column(String)
     sent_at = Column(DateTime, default=datetime.datetime.now)
     error = Column(String)
+
+
+class Skills(Base):
+    __tablename__ = 'skills'
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    project_id = Column(Integer, nullable=False)
+    type = Column(String, nullable=False)
+    params = Column(JSON)

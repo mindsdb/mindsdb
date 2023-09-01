@@ -141,36 +141,40 @@ class FileLock:
         works as context
     """
 
-    def __init__(self, local_path: Path):
+    def __init__(self, local_path: Path, mode: str = 'w'):
         """ Args:
             local_path (Path): path to directory
+            mode (str): lock for read (r) or write (w)
         """
         self._local_path = local_path
-        self._local_file_name = 'dir.lock'
-        self._lock_file_path = local_path / self._local_file_name
+        self._lock_file_name = 'dir.lock'
+        self._lock_file_path = local_path / self._lock_file_name
+        self._mode = fcntl.LOCK_EX if mode == 'w' else fcntl.LOCK_SH
+
+        if self._lock_file_name.is_file() is False:
+            self._local_path.mkdir(parents=True, exist_ok=True)
+            try:
+                self._lock_file_name.write_text('')
+            except Exception:
+                pass
 
     def __enter__(self):
         if os.name != 'posix':
             return
-        if self._lock_file_path.is_file() is False:
-            try:
-                self._local_path.mkdir(parents=True, exist_ok=True)
-                self._lock_file_path.write_text('')
-            except Exception:
-                pass
+
         try:
             # On at least some systems, LOCK_EX can only be used if the file
             # descriptor refers to a file opened for writing.
             self._file = open(self._lock_file_path, 'w')
             fd = self._file.fileno()
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            fcntl.flock(fd, self._mode | fcntl.LOCK_NB)
         except (ValueError, FileNotFoundError):
             # file probably was deleted between open and lock
             print(f'Cant accure lock on {self._local_path}')
             raise FileNotFoundError
         except BlockingIOError:
             print(f'Directory is locked by another process: {self._local_path}')
-            fcntl.flock(fd, fcntl.LOCK_EX)
+            fcntl.flock(fd, self._mode)
 
     def __exit__(self, exc_type, exc_value, traceback):
         if os.name != 'posix':
@@ -455,12 +459,10 @@ class FileStorage:
 
     @profiler.profile()
     def file_get(self, name):
-        with FileLock(self.folder_path):
-            if self.sync is True:
-                self._pull_no_lock()
-
+        if self.sync is True:
+            self.pull()
+        with FileLock(self.folder_path, mode='r'):
             dest_abs_path = self.folder_path / name
-
             with open(dest_abs_path, 'rb') as fd:
                 return fd.read()
 

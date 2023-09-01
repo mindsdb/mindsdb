@@ -334,7 +334,6 @@ class ChatBotsHistory(Base):
     error = Column(String)
 
 
-
 class Triggers(Base):
     __tablename__ = 'triggers'
     id = Column(Integer, primary_key=True)
@@ -372,7 +371,7 @@ class Tasks(Base):
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
-    
+
 class Skills(Base):
     __tablename__ = 'skills'
     id = Column(Integer, primary_key=True)

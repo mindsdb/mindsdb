@@ -21,6 +21,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     DropTrigger,
     Evaluate,
     CreateChatBot,
+    UpdateChatBot,
     DropChatBot,
 )
 # typed models
@@ -620,6 +621,8 @@ class ExecuteCommands:
         # -- chatbots --
         elif type(statement) == CreateChatBot:
             return self.answer_create_chatbot(statement)
+        elif type(statement) == UpdateChatBot:
+            return self.answer_update_chatbot(statement)
         elif type(statement) == DropChatBot:
             return self.answer_drop_chatbot(statement)
         elif type(statement) == Evaluate:
@@ -677,18 +680,56 @@ class ExecuteCommands:
 
         name = statement.name
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+        is_running = statement.params.pop('is_running', True)
 
         database = self.session.integration_controller.get(statement.database.parts[-1])
         if database is None:
             raise SqlApiException(f'Database not found: {statement.database}')
 
+        # Database ID cannot be null
+        database_id = database['id'] if database is not None else -1
+
         chatbot_controller.add_chatbot(
             name.parts[-1],
             project_name=project_name,
             model_name=statement.model.parts[-1],
-            database_id=database['id'],
+            database_id=database_id,
+            is_running=is_running,
             params=statement.params
         )
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_update_chatbot(self, statement):
+        chatbot_controller = ChatBotController()
+
+        name = statement.name
+        name_no_project = name.parts[-1]
+        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+
+        # From SET keyword parameters
+        updated_name = statement.params.pop('name', None)
+        model_name = statement.params.pop('model', None)
+        database_name = statement.params.pop('database', None)
+        is_running = statement.params.pop('is_running', None)
+
+        database_id = None
+        if database_name is not None:
+            database = self.session.integration_controller.get(database_name)
+            if database is None:
+                raise SqlApiException(f'Database with name {database_name} not found')
+            database_id = database['id']
+
+        updated_chatbot = chatbot_controller.update_chatbot(
+            name_no_project,
+            project_name=project_name,
+            name=updated_name,
+            model_name=model_name,
+            database_id=database_id,
+            is_running=is_running,
+            params=statement.params
+        )
+        if updated_chatbot is None:
+            raise SqlApiException(f'Chatbot with name {name_no_project} not found')
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_chatbot(self, statement):
@@ -802,7 +843,7 @@ class ExecuteCommands:
 
             if shortest_training is not None and shortest_training < datetime.timedelta(hours=1):
                 raise SqlApiException(
-                    f"Can't start {phase_name} process while predictor is in status 'training' or 'generating'"
+                    f"Can't start {phase_name} process while any other predictor is in status 'training' or 'generating'"
                 )
 
     def answer_retrain_predictor(self, statement):

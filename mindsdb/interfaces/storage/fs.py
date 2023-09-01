@@ -1,11 +1,19 @@
 import os
+import io
 import shutil
+import tarfile
 import hashlib
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Union, Optional
 from dataclasses import dataclass
+from datetime import datetime
+import threading
 
+if os.name == 'posix':
+    import fcntl
+
+import psutil
 from checksumdir import dirhash
 try:
     import boto3
@@ -13,8 +21,10 @@ except Exception:
     # Only required for remote storage on s3
     pass
 
+
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
+import mindsdb.utilities.profiler as profiler
 
 
 @dataclass(frozen=True)
@@ -83,6 +93,17 @@ class BaseFSStore(ABC):
         pass
 
 
+def get_dir_size(path: str):
+    total = 0
+    with os.scandir(path) as it:
+        for entry in it:
+            if entry.is_file():
+                total += entry.stat().st_size
+            elif entry.is_dir():
+                total += get_dir_size(entry.path)
+    return total
+
+
 class LocalFSStore(BaseFSStore):
     """Storage that stores files locally
     """
@@ -94,10 +115,10 @@ class LocalFSStore(BaseFSStore):
         remote_name = local_name
         src = os.path.join(self.storage, remote_name)
         dest = os.path.join(base_dir, local_name)
-        if not os.path.exists(dest) or os.path.getsize(src) != os.path.getsize(dest):
+        if not os.path.exists(dest) or get_dir_size(src) != get_dir_size(dest):
             copy(src, dest)
 
-    def put(self, local_name, base_dir):
+    def put(self, local_name, base_dir, compression_level=9):
         remote_name = local_name
         copy(
             os.path.join(base_dir, local_name),
@@ -105,12 +126,67 @@ class LocalFSStore(BaseFSStore):
         )
 
     def delete(self, remote_name):
-        pass
+        path = Path(self.storage).joinpath(remote_name)
+        try:
+            if path.is_file():
+                path.unlink()
+            else:
+                shutil.rmtree(path)
+        except FileNotFoundError:
+            pass
+
+
+class FileLock:
+    """ file lock to make safe concurrent access to directory
+        works as context
+    """
+
+    def __init__(self, local_path: Path):
+        """ Args:
+            local_path (Path): path to directory
+        """
+        self._local_path = local_path
+        self._local_file_name = 'dir.lock'
+        self._lock_file_path = local_path / self._local_file_name
+
+    def __enter__(self):
+        if os.name != 'posix':
+            return
+        if self._lock_file_path.is_file() is False:
+            try:
+                self._local_path.mkdir(parents=True, exist_ok=True)
+                self._lock_file_path.write_text('')
+            except Exception:
+                pass
+        try:
+            # On at least some systems, LOCK_EX can only be used if the file
+            # descriptor refers to a file opened for writing.
+            self._file = open(self._lock_file_path, 'w')
+            fd = self._file.fileno()
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except (ValueError, FileNotFoundError):
+            # file probably was deleted between open and lock
+            print(f'Cant accure lock on {self._local_path}')
+            raise FileNotFoundError
+        except BlockingIOError:
+            print(f'Directory is locked by another process: {self._local_path}')
+            fcntl.flock(fd, fcntl.LOCK_EX)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if os.name != 'posix':
+            return
+        try:
+            fcntl.flock(self._file.fileno(), fcntl.LOCK_UN)
+            self._file.close()
+        except Exception:
+            pass
 
 
 class S3FSStore(BaseFSStore):
     """Storage that stores files in amazon s3
     """
+
+    dt_format = '%d.%m.%y %H:%M:%S.%f'
 
     def __init__(self):
         super().__init__()
@@ -119,35 +195,163 @@ class S3FSStore(BaseFSStore):
         else:
             self.s3 = boto3.client('s3')
         self.bucket = self.config['permanent_storage']['bucket']
+        self._thread_lock = threading.Lock()
 
+    def _get_remote_last_modified(self, object_name: str) -> datetime:
+        """ get time when object was created/modified
+
+            Args:
+                object_name (str): name if file in bucket
+
+            Returns:
+                datetime
+        """
+        last_modified = self.s3.get_object_attributes(
+            Bucket=self.bucket,
+            Key=object_name,
+            ObjectAttributes=['Checksum']
+        )['LastModified']
+        last_modified = last_modified.replace(tzinfo=None)
+        return last_modified
+
+    @profiler.profile()
+    def _get_local_last_modified(self, base_dir: str, local_name: str) -> datetime:
+        """ get 'last_modified' that saved locally
+
+            Args:
+                base_dir (str): path to base folder
+                local_name (str): folder name
+
+            Returns:
+                datetime | None
+        """
+        last_modified_file_path = Path(base_dir) / local_name / 'last_modified.txt'
+        if last_modified_file_path.is_file() is False:
+            return None
+        try:
+            last_modified_text = last_modified_file_path.read_text()
+            last_modified_datetime = datetime.strptime(last_modified_text, self.dt_format)
+        except Exception:
+            return None
+        return last_modified_datetime
+
+    @profiler.profile()
+    def _save_local_last_modified(self, base_dir: str, local_name: str, last_modified: datetime):
+        """ Save 'last_modified' to local folder
+
+            Args:
+                base_dir (str): path to base folder
+                local_name (str): folder name
+                last_modified (datetime)
+        """
+        last_modified_file_path = Path(base_dir) / local_name / 'last_modified.txt'
+        last_modified_text = last_modified.strftime(self.dt_format)
+        last_modified_file_path.write_text(last_modified_text)
+
+    @profiler.profile()
+    def _download(self, base_dir: str, remote_ziped_name: str,
+                  local_ziped_path: str, last_modified: datetime = None):
+        """ download file to s3 and unarchive it
+
+            Args:
+                base_dir (str)
+                remote_ziped_name (str)
+                local_ziped_path (str)
+                last_modified (datetime, optional)
+        """
+        os.makedirs(base_dir, exist_ok=True)
+
+        remote_size = self.s3.get_object_attributes(
+            Bucket=self.bucket,
+            Key=remote_ziped_name,
+            ObjectAttributes=['ObjectSize']
+        )['ObjectSize']
+        if (remote_size * 2) > psutil.virtual_memory().available:
+            fh = io.BytesIO()
+            self.s3.download_fileobj(self.bucket, remote_ziped_name, fh)
+            with tarfile.open(fileobj=fh) as tar:
+                tar.extractall(path=base_dir)
+        else:
+            self.s3.download_file(self.bucket, remote_ziped_name, local_ziped_path)
+            shutil.unpack_archive(local_ziped_path, base_dir)
+            os.remove(local_ziped_path)
+
+        # os.system(f'chmod -R 777 {base_dir}')
+
+        if last_modified is None:
+            last_modified = self._get_remote_last_modified(remote_ziped_name)
+        self._save_local_last_modified(
+            base_dir,
+            remote_ziped_name.replace('.tar.gz', ''),
+            last_modified
+        )
+
+    @profiler.profile()
     def get(self, local_name, base_dir):
         remote_name = local_name
         remote_ziped_name = f'{remote_name}.tar.gz'
         local_ziped_name = f'{local_name}.tar.gz'
         local_ziped_path = os.path.join(base_dir, local_ziped_name)
-        os.makedirs(base_dir, exist_ok=True)
-        self.s3.download_file(self.bucket, remote_ziped_name, local_ziped_path)
-        shutil.unpack_archive(local_ziped_path, base_dir)
-        os.system(f'chmod -R 777 {base_dir}')
-        os.remove(local_ziped_path)
 
-    def put(self, local_name, base_dir):
+        local_last_modified = self._get_local_last_modified(base_dir, local_name)
+        remote_last_modified = self._get_remote_last_modified(remote_ziped_name)
+        if (
+            local_last_modified is not None
+            and local_last_modified == remote_last_modified
+        ):
+            return
+
+        self._download(
+            base_dir,
+            remote_ziped_name,
+            local_ziped_path,
+            last_modified=remote_last_modified
+        )
+
+    @profiler.profile()
+    def put(self, local_name, base_dir, compression_level=9):
         # NOTE: This `make_archive` function is implemente poorly and will create an empty archive file even if
         # the file/dir to be archived doesn't exist or for some other reason can't be archived
         remote_name = local_name
-        shutil.make_archive(
-            os.path.join(base_dir, remote_name),
-            'gztar',
-            root_dir=base_dir,
-            base_dir=local_name
-        )
-        self.s3.upload_file(
-            os.path.join(base_dir, f'{remote_name}.tar.gz'),
-            self.bucket,
-            f'{remote_name}.tar.gz'
-        )
-        os.remove(os.path.join(base_dir, remote_name + '.tar.gz'))
+        remote_zipped_name = f'{remote_name}.tar.gz'
 
+        dir_path = Path(base_dir) / remote_name
+        dir_size = sum(f.stat().st_size for f in dir_path.glob('**/*') if f.is_file())
+        if (dir_size * 2) < psutil.virtual_memory().available:
+            old_cwd = os.getcwd()
+            fh = io.BytesIO()
+            with self._thread_lock:
+                os.chdir(base_dir)
+                with tarfile.open(fileobj=fh, mode='w:gz', compresslevel=compression_level) as tar:
+                    for path in dir_path.iterdir():
+                        if path.is_file() and path.name in ('dir.lock', 'last_modified.txt'):
+                            continue
+                        tar.add(path.relative_to(base_dir))
+                os.chdir(old_cwd)
+            fh.seek(0)
+            self.s3.upload_fileobj(
+                fh,
+                self.bucket,
+                remote_zipped_name
+            )
+        else:
+            shutil.make_archive(
+                os.path.join(base_dir, remote_name),
+                'gztar',
+                root_dir=base_dir,
+                base_dir=local_name
+            )
+            self.s3.upload_file(
+                os.path.join(base_dir, remote_zipped_name),
+                self.bucket,
+                remote_zipped_name
+            )
+            os.remove(os.path.join(base_dir, remote_zipped_name))
+
+        last_modified = self._get_remote_last_modified(remote_zipped_name)
+        self._save_local_last_modified(base_dir, local_name, last_modified)
+
+    @profiler.profile()
     def delete(self, remote_name):
         self.s3.delete_object(Bucket=self.bucket, Key=remote_name)
 
@@ -188,51 +392,75 @@ class FileStorage:
         if self.folder_path.exists() is False:
             self.folder_path.mkdir(parents=True, exist_ok=True)
 
-    def push(self):
-        self.fs_store.put(str(self.folder_name), str(self.resource_group_path))
+    @profiler.profile()
+    def push(self, compression_level=9):
+        with FileLock(self.folder_path):
+            self._push_no_lock(compression_level=compression_level)
 
+    @profiler.profile()
+    def _push_no_lock(self, compression_level=9):
+        self.fs_store.put(
+            str(self.folder_name),
+            str(self.resource_group_path),
+            compression_level=compression_level
+        )
+
+    @profiler.profile()
     def push_path(self, path):
-        self.fs_store.put(os.path.join(self.folder_name, path), str(self.resource_group_path))
+        with FileLock(self.folder_path):
+            self.fs_store.put(os.path.join(self.folder_name, path), str(self.resource_group_path))
 
+    @profiler.profile()
     def pull(self):
+        with FileLock(self.folder_path):
+            self._pull_no_lock()
+
+    @profiler.profile()
+    def _pull_no_lock(self):
         try:
             self.fs_store.get(str(self.folder_name), str(self.resource_group_path))
         except Exception:
             pass
 
+    @profiler.profile()
     def pull_path(self, path, update=True):
-        if update is False:
-            # not pull from source if object is exists
-            if os.path.exists(self.resource_group_path / self.folder_name / path):
-                return
-        try:
-            # TODO not sync if not changed?
-            self.fs_store.get(os.path.join(self.folder_name, path), str(self.resource_group_path))
-        except Exception:
-            pass
+        with FileLock(self.folder_path):
+            if update is False:
+                # not pull from source if object is exists
+                if os.path.exists(self.resource_group_path / self.folder_name / path):
+                    return
+            try:
+                # TODO not sync if not changed?
+                self.fs_store.get(os.path.join(self.folder_name, path), str(self.resource_group_path))
+            except Exception:
+                pass
 
+    @profiler.profile()
     def file_set(self, name, content):
-        if self.sync is True:
-            self.pull()
+        with FileLock(self.folder_path):
+            if self.sync is True:
+                self._pull_no_lock()
 
-        dest_abs_path = self.folder_path / name
+            dest_abs_path = self.folder_path / name
 
-        with open(dest_abs_path, 'wb') as fd:
-            fd.write(content)
+            with open(dest_abs_path, 'wb') as fd:
+                fd.write(content)
 
-        if self.sync is True:
-            self.push()
+            if self.sync is True:
+                self._push_no_lock()
 
+    @profiler.profile()
     def file_get(self, name):
+        with FileLock(self.folder_path):
+            if self.sync is True:
+                self._pull_no_lock()
 
-        if self.sync is True:
-            self.pull()
+            dest_abs_path = self.folder_path / name
 
-        dest_abs_path = self.folder_path / name
+            with open(dest_abs_path, 'rb') as fd:
+                return fd.read()
 
-        with open(dest_abs_path, 'rb') as fd:
-            return fd.read()
-
+    @profiler.profile()
     def add(self, path: Union[str, Path], dest_rel_path: Optional[Union[str, Path]] = None):
         """Copy file/folder to persist storage
 
@@ -253,26 +481,28 @@ class FileStorage:
             path (Union[str, Path]): path to the resource
             dest_rel_path (Optional[Union[str, Path]]): relative path in storage to file or folder
         """
-        if self.sync is True:
-            self.pull()
+        with FileLock(self.folder_path):
+            if self.sync is True:
+                self._pull_no_lock()
 
-        path = Path(path)
-        if isinstance(dest_rel_path, str):
-            dest_rel_path = Path(dest_rel_path)
+            path = Path(path)
+            if isinstance(dest_rel_path, str):
+                dest_rel_path = Path(dest_rel_path)
 
-        if dest_rel_path is None:
-            dest_abs_path = self.folder_path / path.name
-        else:
-            dest_abs_path = self.folder_path / dest_rel_path
+            if dest_rel_path is None:
+                dest_abs_path = self.folder_path / path.name
+            else:
+                dest_abs_path = self.folder_path / dest_rel_path
 
-        copy(
-            str(path),
-            str(dest_abs_path)
-        )
+            copy(
+                str(path),
+                str(dest_abs_path)
+            )
 
-        if self.sync is True:
-            self.push()
+            if self.sync is True:
+                self._push_no_lock()
 
+    @profiler.profile()
     def get_path(self, relative_path: Union[str, Path]) -> Path:
         """ Return path to file or folder
 
@@ -287,52 +517,55 @@ class FileStorage:
         Returns:
             Path: path to requested file or folder
         """
-        if self.sync is True:
-            self.pull()
+        with FileLock(self.folder_path):
+            if self.sync is True:
+                self._pull_no_lock()
 
-        if isinstance(relative_path, str):
-            relative_path = Path(relative_path)
-        # relative_path = relative_path.resolve()
+            if isinstance(relative_path, str):
+                relative_path = Path(relative_path)
+            # relative_path = relative_path.resolve()
 
-        if relative_path.is_absolute():
-            raise TypeError('FSStorage.get_path() got absolute path as argument')
+            if relative_path.is_absolute():
+                raise TypeError('FSStorage.get_path() got absolute path as argument')
 
-        ret_path = self.folder_path / relative_path
-        if not ret_path.exists():
-            # raise Exception('Path does not exists')
-            os.makedirs(ret_path)
+            ret_path = self.folder_path / relative_path
+            if not ret_path.exists():
+                # raise Exception('Path does not exists')
+                os.makedirs(ret_path)
 
         return ret_path
 
-    def delete(self, relative_path: Union[str, Path] = '.') -> Path:
-        if isinstance(relative_path, str):
-            relative_path = Path(relative_path)
+    def delete(self, relative_path: Union[str, Path] = '.'):
+        with FileLock(self.folder_path):
+            if isinstance(relative_path, str):
+                relative_path = Path(relative_path)
 
-        if relative_path.is_absolute():
-            raise TypeError('FSStorage.delete() got absolute path as argument')
+            if relative_path.is_absolute():
+                raise TypeError('FSStorage.delete() got absolute path as argument')
 
-        path = (self.folder_path / relative_path).resolve()
+            path = (self.folder_path / relative_path).resolve()
 
-        if path == self.folder_path.resolve():
-            return self.complete_removal()
+            if path == self.folder_path.resolve():
+                self._complete_removal()
+                return
 
-        if self.sync is True:
-            self.pull()
+            if self.sync is True:
+                self._pull_no_lock()
 
-        if path.exists() is False:
-            raise Exception('Path does not exists')
+            if path.exists() is False:
+                raise Exception('Path does not exists')
 
-        if path.is_file():
-            path.unlink()
-        else:
-            path.rmdir()
+            if path.is_file():
+                path.unlink()
+            else:
+                path.rmdir()
 
-        if self.sync is True:
-            self.push()
+            if self.sync is True:
+                self._push_no_lock()
 
-    def complete_removal(self):
-        shutil.rmtree(str(self.folder_path))
+    def _complete_removal(self):
         self.fs_store.delete(self.folder_name)
+        shutil.rmtree(str(self.folder_path))
 
 
 class FileStorageFactory:

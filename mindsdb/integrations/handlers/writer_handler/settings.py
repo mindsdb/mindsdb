@@ -1,4 +1,3 @@
-import os
 from functools import lru_cache
 from typing import List, Union
 
@@ -12,8 +11,6 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import Chroma
 from pydantic import BaseModel
 
-check_path_exists = lambda path: os.makedirs(path, exist_ok=True)
-
 DEFAULT_EMBEDDINGS_MODEL = "sentence-transformers/all-mpnet-base-v2"
 USER_DEFINED_MODEL_PARAMS = (
     "model_name",
@@ -25,6 +22,7 @@ USER_DEFINED_MODEL_PARAMS = (
     "verbose",
     "writer_org_id",
     "writer_api_key",
+    "base_url",
 )
 
 
@@ -33,6 +31,7 @@ class ModelParameters(BaseModel):
 
     writer_api_key: str = None
     writer_org_id: str = None
+    base_url: str = None
     model_id: str = "palmyra-x"
     callbacks: List[StreamingStdOutCallbackHandler] = [StreamingStdOutCallbackHandler()]
     max_tokens: int = 1024
@@ -63,11 +62,18 @@ class DfLoader(DataFrameLoader):
         for n_row, frame in self._data_frame[self._page_content_column].iteritems():
             if pd.notnull(frame):
                 # ignore rows with None values
+                column_name = self._page_content_column
+
+                document_contents = frame
 
                 documents.append(
                     Document(
-                        page_content=frame,
-                        metadata={"source": "dataframe", "row": n_row},
+                        page_content=document_contents,
+                        metadata={
+                            "source": "dataframe",
+                            "row": n_row,
+                            "column": column_name,
+                        },
                     )
                 )
         return documents
@@ -108,8 +114,11 @@ def load_embeddings_model(embeddings_model_name):
     return embedding_model
 
 
-def load_chroma(embeddings_model_name, persist_directory, chroma_settings):
+def load_chroma(
+    embeddings_model_name, persist_directory, collection_name, chroma_settings
+):
     return Chroma(
+        collection_name=collection_name,
         persist_directory=persist_directory,
         embedding_function=load_embeddings_model(embeddings_model_name),
         client_settings=chroma_settings,
@@ -124,8 +133,10 @@ def get_chroma_settings(persist_directory):
     )
 
 
-def get_retriever(embeddings_model_name, persist_directory):
+def get_retriever(embeddings_model_name, persist_directory, collection_name):
     chroma_settings = get_chroma_settings(persist_directory)
-    db = load_chroma(embeddings_model_name, persist_directory, chroma_settings)
+    db = load_chroma(
+        embeddings_model_name, persist_directory, collection_name, chroma_settings
+    )
     retriever = db.as_retriever()
     return retriever

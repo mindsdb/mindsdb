@@ -26,6 +26,7 @@ class QuestionAnswerer:
         retriever = get_retriever(
             embeddings_model_name=self.embeddings_model_name,
             persist_directory=self.persist_directory,
+            collection_name=args.get("collection_name", "langchain"),
         )
 
         self.qa = RetrievalQA.from_chain_type(
@@ -52,7 +53,8 @@ class QuestionAnswerer:
 
         for idx, document in enumerate(res["source_documents"]):
             sources["sources_document"].append(document.metadata["source"])
-            sources["sources_row"].append(document.metadata.get("row", None))
+            sources["column"].append(document.metadata.get("column"))
+            sources["sources_row"].append(document.metadata.get("row"))
             sources["sources_content"].append(document.page_content)
 
         self.output_data["source_documents"].append(dict(sources))

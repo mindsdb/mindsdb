@@ -1,0 +1,99 @@
+---
+title: db.model_name.find()
+sidebarTitle: db.model_name.find()
+---
+
+## Description
+
+The `db.model_name.find()` function fetches predictions from the model table. The data is returned on the fly and the result set is not persisted. If you want to save your predictions, you can utilize a view or a table.
+
+## Syntax
+
+### Single Prediction
+
+Here is the syntax for making a single prediction:
+
+```sql
+db.predictor_name.find({column: "value", column: "value"});
+```
+
+On execution, we get:
+
+```json
+{
+    "column_name1" : "value",
+    "column_name2": "value",
+    ...columns
+    "select_data_query": null,
+    "when_data": null,
+    "target_name_original": "value",
+    "target_name_confidence": "value",
+    "target_name_explain": "{\"predicted_value\": value, \"confidence\": value, \"anomaly\": null, \"truth\": null, \"confidence_lower_bound\": value \"confidence_upper_bound\": value}",
+    "target_name_anomaly": "value",
+    "target_name_min": "value",
+    "target_name_max": "value"
+}
+```
+
+Where:
+
+| Expressions                | Description                                                                                                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `"target_name_original"`   | The real value of the target variable from the collection.                                                                                                         |
+| `"target_name_confidence"` | Model confidence.                                                                                                                                                  |
+| `"target_name_explain"`    | JSON object that contains additional information, such as `predicted_value`, `confidence`, `anomaly`, `truth`, `confidence_lower_bound`, `confidence_upper_bound`. |
+| `"target_name_anomaly"`    | Model anomaly.                                                                                                                                                     |
+| `"target_name_min"`        | Lower bound value.                                                                                                                                                 |
+| `"target_name_max"`        | Upper bound value.                                                                                                                                                 |
+
+### Batch Predictions
+
+Here is the syntax for making a batch predictions:
+
+```sql
+db.model_name.find({"collection": "integration_name.collection_name","query": {'column': 'value',"date": {"$gt": ISODate("2018-03-31T00:00:00.000Z")}}})
+```
+
+This command returns predictions made for all data rows from `integration_name.collection_name`.
+
+## Example
+
+### Single Prediction
+
+The following MQL statement fetches the predicted value of the `rental_price`
+column from the `home_rentals_model` model. The predicted value is the rental
+price of a property with attributes listed as a parameter to the `find()`
+method.
+
+```sql
+db.home_rentals_model.find({sqft: "823", location: "good", neighborhood: "downtown", days_on_market: "10"});
+```
+
+On execution, we get:
+
+```json
+{
+  "sqft": 823,
+  "location": "good",
+  "neighborhood": "downtown",
+  "days_on_market": 10,
+  "number_of_rooms": null,
+  "number_of_bathrooms": null,
+  "initial_price": null,
+  "rental_price": 1431.323795180614,
+  "select_data_query": null,
+  "when_data": null,
+  "rental_price_original": null,
+  "rental_price_confidence": 0.99,
+  "rental_price_explain": "{\"predicted_value\": 1431.323795180614, \"confidence\": 0.99, \"anomaly\": null, \"truth\": null, \"confidence_lower_bound\": 1379.4387560440227, \"confidence_upper_bound\": 1483.2088343172054}",
+  "rental_price_anomaly": null,
+  "rental_price_min": 1379.4387560440227,
+  "rental_price_max": 1483.2088343172054
+}
+```
+
+### Batch Predictions
+
+<Warning> 
+This example is a work in progress.
+</Warning>

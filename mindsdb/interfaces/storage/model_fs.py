@@ -66,6 +66,21 @@ class ModelStorage:
     def file_set(self, name, content):
         self.fileStorage.file_set(name, content)
 
+    def folder_get(self, name, update=True):
+        # pull folder and return path
+        name = name.lower().replace(' ', '_')
+        name = re.sub(r'([^a-z^A-Z^_\d]+)', '_', name)
+
+        self.fileStorage.pull_path(name, update=update)
+        return str(self.fileStorage.get_path(name))
+
+    def folder_sync(self, name):
+        # sync abs path
+        name = name.lower().replace(' ', '_')
+        name = re.sub(r'([^a-z^A-Z^_\d]+)', '_', name)
+
+        self.fileStorage.push_path(name)
+
     def file_list(self):
         ...
 
@@ -96,7 +111,11 @@ class ModelStorage:
 
     def delete(self):
         self.fileStorage.delete()
-        # TODO delete json
+        json_storage = get_json_storage(
+            resource_id=self.predictor_id,
+            resource_group=RESOURCE_GROUP.PREDICTOR
+        )
+        json_storage.clean()
 
 
 class HandlerStorage:

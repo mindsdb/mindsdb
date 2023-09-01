@@ -1,0 +1,65 @@
+---
+title: Web Crawler
+sidebarTitle: Web Crawler
+---
+
+In this section, we present how to build a web crawler with MindsDB.
+
+## Connection
+
+This handler does not require any connection parameters.
+
+Here is how to initialize a web crawler:
+
+```sql
+CREATE DATABASE my_web 
+WITH ENGINE = 'web';
+```
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/web_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+### Get Websites Content
+
+Here is how to get the content of `docs.mindsdb.com`:
+
+```sql
+SELECT * 
+FROM my_web.crawler 
+WHERE url = 'docs.mindsdb.com' 
+LIMIT 1;
+```
+
+You can also get the content of subwebsites. Here is how to fetch the content from 10 subwebsites:
+
+```sql
+SELECT * 
+FROM my_web.crawler 
+WHERE url = 'docs.mindsdb.com' 
+LIMIT 10;
+```
+
+Another option is to get the content from multiple webistes.
+
+```sql
+SELECT * 
+FROM my_web.crawler 
+WHERE url IN ('docs.mindsdb.com', 'docs.python.org') 
+LIMIT 1;
+```
+
+### Get PDF Content
+
+MindsDB accepts [file uploads](/sql/create/file) of `csv`, `xlsx`, `xls`, `sheet`, `json`, and `parquet`. However, you can utilize the web crawler to fetch data from `pdf` files.
+
+```sql
+SELECT * 
+FROM my_web.crawler 
+WHERE url = '<link-to-pdf-file>' 
+LIMIT 1;
+```
+
+For example, you can provide a link to a `pdf` file stores in Amazon S3.

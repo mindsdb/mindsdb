@@ -54,13 +54,39 @@ def extract_comparison_conditions(binary_op: ASTNode):
 
 
 def project_dataframe(df, targets, table_columns):
+    '''
+        case-insensitive projection
+        'select A' and 'select a' return different column case but with the same content
+    '''
+
     columns = []
+    df_cols_idx = {
+        col.lower(): col
+        for col in df.columns
+    }
+    df_col_rename = {}
+
     for target in targets:
         if isinstance(target, ast.Star):
-            columns = table_columns
+            for col in table_columns:
+                col_df = df_cols_idx.get(col.lower())
+                if col_df is not None:
+                    df_col_rename[col_df] = col
+                columns.append(col)
+
             break
         elif isinstance(target, ast.Identifier):
-            columns.append(target.parts[-1])
+            col = target.parts[-1]
+            col_df = df_cols_idx.get(col.lower())
+            if col_df is not None:
+                if (
+                    hasattr(target, 'alias')
+                    and isinstance(target.alias, ast.Identifier)
+                ):
+                    df_col_rename[col_df] = target.alias.parts[0]
+                else:
+                    df_col_rename[col_df] = col
+            columns.append(col)
         else:
             raise NotImplementedError
 
@@ -73,4 +99,26 @@ def project_dataframe(df, targets, table_columns):
 
         # filter by columns
         df = df[columns]
+
+    # adapt column names to projection
+    if len(df_col_rename) > 0:
+        df = df.rename(columns=df_col_rename)
+    return df
+
+
+def sort_dataframe(df, order_by: list):
+    cols = []
+    ascending = []
+    for order in order_by:
+        if not isinstance(order, ast.OrderBy):
+            continue
+
+        col = order.field.parts[-1]
+        if col not in df.columns:
+            continue
+
+        cols.append(col)
+        ascending.append(False if order.direction.lower() == 'desc' else True)
+    if len(cols) > 0:
+        df = df.sort_values(by=cols, ascending=ascending)
     return df

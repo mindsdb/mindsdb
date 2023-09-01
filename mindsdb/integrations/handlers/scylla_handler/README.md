@@ -1,40 +1,45 @@
-# ScyllaDB Handler
+# MindsDB ScyllaDB Handler
 
-This is the implementation of the ScyllaDB handler for MindsDB.
+This README provides details on the ScyllaDB handler integration for MindsDB.
 
-## ScyllaDB
+## Introduction to ScyllaDB
 
-Scylla is an open-source distributed NoSQL wide-column data store. It was designed to be compatible with Apache Cassandra while achieving significantly higher throughputs and lower latencies. For more info check https://www.scylladb.com/.
+ScyllaDB is an open-source distributed NoSQL wide-column data store. It was purposefully designed to offer compatibility with Apache Cassandra while outperforming it with higher throughputs and reduced latencies. For a comprehensive understanding of ScyllaDB, visit ScyllaDB's official website.
 
-## Implementation
+### Integration Implementation
 
-This handler was implemented using the python `scylla-driver` library.
+The ScyllaDB handler for MindsDB was developed using the scylla-driver library for Python.
+Connection Parameters:
 
-The required arguments to establish a connection are:
+* host: Host name or IP address of ScyllaDB.
+* port: Connection port.
+* user: Authentication username.
+* password: Authentication password.
+* keyspace: The specific keyspace (top-level container for tables) to connect to.
+* protocol_version: Optional. Defaults to 4.
+* secure_connect_bundle: Optional. Needed only for connections to DataStax Astra.
 
-* `host`: the host name or IP address of the ScyllaDB 
-* `port`: the port to use when connecting 
-* `user`: the user to authenticate 
-* `password`: the password to authenticate the user
-* `keyspace`: the keyspace to connect to(top level container for tables)
-* `protocol_version`: not required, default to 4
+## Usage Guide
 
-## Usage
-
-In order to make use of this handler and connect to a Scylla server in MindsDB, the following syntax can be used:
+To set up a connection between MindsDB and a Scylla server, utilize the following SQL syntax:
 
 ```sql
+
 CREATE DATABASE scylladb_datasource
 WITH ENGINE='scylladb',
 PARAMETERS={
   "user":"user@mindsdb.com",
   "password": "pass",
-  "secure_connect_bundle": "/home/zoran/Downloads/secure-connect.zip"
+  "host": "127.0.0.1",
+  "port": "9042",
+  "keyspace": "test_data"
 };
 ```
-> Note protocol version is 4 by default. If you want to change it add "protocol_version": 5 to the above query.
+> ℹ️ Tip: The protocol version is set to 4 by default. Should you wish to modify it, simply include "protocol_version": 5 within the PARAMETERS dictionary in the query above.
 
-Now, you can use this established connection to query your database as follows:
+## Querying the Keyspace:
+
+With the connection established, you can execute queries on your keyspace as demonstrated below:
 
 ```sql
 SELECT * FROM scylladb_datasource.keystore.example_table LIMIT 10;

@@ -11,6 +11,7 @@ from time import time
 from pathlib import Path
 from copy import deepcopy
 from typing import Optional
+from textwrap import dedent
 from collections import OrderedDict
 
 from sqlalchemy import func
@@ -27,7 +28,8 @@ from mindsdb.integrations.handlers_client.db_client_factory import DBClient
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.log import get_log
-
+from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
+import mindsdb.utilities.profiler as profiler
 
 logger = get_log()
 
@@ -177,7 +179,7 @@ class IntegrationController:
         logger.debug("%s: accept_connection_args - %s", self.__class__.__name__, accept_connection_args)
 
         files_dir = None
-        if accept_connection_args is not None:
+        if accept_connection_args is not None and connection_args is not None:
             for arg_name, arg_value in connection_args.items():
                 if (
                     arg_name in accept_connection_args
@@ -255,7 +257,11 @@ class IntegrationController:
         db.session.commit()
 
     def _get_integration_record_data(self, integration_record, sensitive_info=True):
-        if integration_record is None or integration_record.data is None:
+        if (
+            integration_record is None
+            or integration_record.data is None
+            or isinstance(integration_record.data, dict) is False
+        ):
             return None
         data = deepcopy(integration_record.data)
         if data.get('password', None) is None:
@@ -382,10 +388,10 @@ class IntegrationController:
             logger.info(f"to use {handler_type} please install 'pip install mindsdb[{handler_type}]'")
 
         logger.debug("%s.create_tmp_handler: connection args - %s", self.__class__.__name__, connection_data)
-        resource_id = int(time() * 10000)
+        integration_id = int(time() * 10000)
         fs_store = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
-            resource_id=resource_id,
+            resource_id=integration_id,
             root_dir='tmp',
             sync=False
         )
@@ -394,12 +400,14 @@ class IntegrationController:
         handler_ars = dict(
             name='tmp_handler',
             fs_store=fs_store,
-            connection_data=connection_data
+            connection_data=connection_data,
+            integration_id=integration_id,
         )
 
         logger.debug("%s.create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
         return DBClient(handler_type, self.handler_modules[handler_type].Handler, **handler_ars)
 
+    @profiler.profile()
     def get_handler(self, name, case_sensitive=False):
         handler = self.handlers_cache.get(name)
         if handler is not None:
@@ -425,8 +433,18 @@ class IntegrationController:
             raise Exception(f"Can't find handler for '{integration_name}' ({integration_engine})")
 
         integration_meta = self.handlers_import_status[integration_engine]
-        if not integration_meta["import"]["success"]:
-            msg = f"to use {integration_engine} please install 'pip install mindsdb[{integration_engine}]'"
+        if integration_meta["import"]["success"] is False:
+            msg = dedent(f'''\
+                Handler '{integration_engine}' cannot be used. Reason is:
+                    {integration_meta['import']['error_message']}
+            ''')
+            is_cloud = Config().get('cloud', False)
+            if is_cloud is False:
+                msg += dedent(f'''
+
+                If error is related to missing dependencies, then try to run command in shell and restart mindsdb:
+                    pip install mindsdb[{integration_engine}]
+                ''')
             logger.debug(msg)
             raise Exception(msg)
 
@@ -460,8 +478,6 @@ class IntegrationController:
                 resource_group=RESOURCE_GROUP.PREDICTOR,
                 sync=True
             )
-        from mindsdb.integrations.libs.base import BaseMLEngine
-        from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 
         HandlerClass = self.handler_modules[integration_engine].Handler
 
@@ -522,6 +538,21 @@ class IntegrationController:
         if import_error is not None:
             handler_meta['import']['error_message'] = str(import_error)
 
+        # for ml engines, patch the connection_args from the argument probing
+        if hasattr(module, 'Handler'):
+            handler_class = module.Handler
+            try:
+                prediction_args = handler_class.prediction_args()
+                creation_args = handler_class.creation_args()
+                connection_args = {
+                    "prediction": prediction_args,
+                    "creation_args": creation_args
+                }
+                setattr(module, 'connection_args', connection_args)
+                logger.debug("Patched connection_args for %s", handler_folder_name)
+            except Exception as e:
+                # do nothing
+                logger.debug("Failed to patch connection_args for %s, reason: %s", handler_folder_name, str(e))
         module_attrs = [attr for attr in [
             'connection_args_example',
             'connection_args',
@@ -530,6 +561,7 @@ class IntegrationController:
             'type',
             'title'
         ] if hasattr(module, attr)]
+
         for attr in module_attrs:
             handler_meta[attr] = getattr(module, attr)
 

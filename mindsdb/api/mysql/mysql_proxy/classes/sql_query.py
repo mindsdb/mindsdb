@@ -57,6 +57,7 @@ from mindsdb_sql.planner.steps import (
     GroupByStep,
     SubSelectStep,
     DeleteStep,
+    DataStep,
 )
 
 from mindsdb_sql.exceptions import PlanningException
@@ -79,6 +80,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
 )
 from mindsdb.utilities.cache import get_cache, json_checksum
 import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.fs import create_process_mark, delete_process_mark
 
 
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
@@ -93,12 +95,10 @@ def get_preditor_alias(step, mindsdb_database):
 def get_table_alias(table_obj, default_db_name):
     # (database, table, alias)
     if isinstance(table_obj, Identifier):
-        if len(table_obj.parts) > 2:
-            raise ErSqlWrongArguments(f'Table name must contain no more than 2 parts. Got name: {table_obj.parts}')
-        elif len(table_obj.parts) == 1:
+        if len(table_obj.parts) == 1:
             name = (default_db_name, table_obj.parts[0])
         else:
-            name = tuple(table_obj.parts)
+            name = (table_obj.parts[0], table_obj.parts[-1])
     elif isinstance(table_obj, Select):
         # it is subquery
         if table_obj.alias is None:
@@ -667,8 +667,14 @@ class SQLQuery():
             return
 
         steps_data = []
+        process_mark = None
         try:
-            for step in self.planner.execute_steps(params):
+            steps = list(self.planner.execute_steps(params))
+            steps_classes = (x.__class__ for x in steps)
+            predict_steps = (ApplyPredictorRowStep, ApplyPredictorStep, ApplyTimeseriesPredictorStep)
+            if any(s in predict_steps for s in steps_classes):
+                process_mark = create_process_mark('predict')
+            for step in steps:
                 with profiler.Context(f'step: {step.__class__.__name__}'):
                     data = self.execute_step(step, steps_data)
                 step.set_result(data)
@@ -677,6 +683,9 @@ class SQLQuery():
             raise ErLogicError(e)
         except Exception as e:
             raise e
+        finally:
+            if process_mark is not None:
+                delete_process_mark('predict', process_mark)
 
         # save updated query
         self.query = self.planner.query
@@ -705,7 +714,7 @@ class SQLQuery():
                 result = steps_data[-1]
                 self.fetched_data = result
         except Exception as e:
-            raise SqlApiUnknownError("error in preparing result quiery step") from e
+            raise SqlApiUnknownError("error in preparing result query step") from e
 
         try:
             if hasattr(self, 'columns_list') is False:
@@ -985,7 +994,6 @@ class SQLQuery():
                             predictor_cache.set(key, data)
                     else:
                         columns_dtypes = {}
-
                     if len(data) > 0:
                         cols = list(data[0].keys())
                         for col in cols:
@@ -996,11 +1004,9 @@ class SQLQuery():
                                 database=table_name[0],
                                 type=columns_dtypes.get(col)
                             ))
-
                     # apply filter
                     if is_timeseries:
                         data = self.apply_ts_filter(data, where_data, step, predictor_metadata)
-
                     result.add_records(data)
 
                 data = result
@@ -1232,6 +1238,21 @@ class SQLQuery():
             query = step.query
             query.from_table = Identifier('df_table')
 
+            if step.add_absent_cols and isinstance(query, Select):
+                query_cols = set()
+
+                def f_all_cols(node, **kwargs):
+                    if isinstance(node, Identifier):
+                        query_cols.add(node.parts[-1])
+
+                query_traversal(query.where, f_all_cols)
+
+                result_cols = [col.name for col in result.columns]
+
+                for col_name in query_cols:
+                    if col_name not in result_cols:
+                        result.add_column(Column(col_name))
+
             df = result.to_df()
             res = query_df(df, query)
 
@@ -1312,48 +1333,95 @@ class SQLQuery():
         elif type(step) == UpdateToTable:
             data = ResultSet()
 
-            integration_name = step.table.parts[0]
-            table_name_parts = step.table.parts[1:]
+            if len(step.table.parts) > 1:
+                integration_name = step.table.parts[0]
+                table_name_parts = step.table.parts[1:]
+            else:
+                integration_name = self.database
+                table_name_parts = step.table.parts
 
             dn = self.datahub.get(integration_name)
 
-            # make command
-            update_query = Update(
-                table=Identifier(parts=table_name_parts),
-                update_columns=step.update_command.update_columns,
-                where=step.update_command.where
-            )
-
             result = step.dataframe
-            if result is None:
-                # run as is
-                dn.query(query=update_query, session=self.session)
-                return data
-
-            result_data = result.result_data
-
-            # link nodes with parameters for fast replacing with values
-            input_table_alias = step.update_command.from_select_alias
-            if input_table_alias is None:
-                raise ErSqlWrongArguments('Subselect in update requires alias')
 
             params_map_index = []
 
-            def prepare_map_index(node, is_table, **kwargs):
-                if isinstance(node, Identifier) and not is_table:
-                    # is input table field
-                    if node.parts[0] == input_table_alias.parts[0]:
-                        node2 = Constant(None)
-                        param_name = node.parts[-1]
-                        params_map_index.append([param_name, node2])
-                        # replace node with constant
-                        return node2
-                    elif node.parts[0] == table_name_parts[0]:
-                        # remove updated table alias
-                        node.parts = node.parts[1:]
+            if step.update_command.keys is not None:
+                result_data = result.result_data
 
-            # do mapping
-            query_traversal(update_query, prepare_map_index)
+                where = None
+                update_columns = {}
+
+                key_columns = [i.to_string() for i in step.update_command.keys]
+                if len(key_columns) == 0:
+                    raise ErSqlWrongArguments('No key columns in update statement')
+                for col in result_data.columns:
+                    name = col.name
+                    value = Constant(None)
+
+                    if name in key_columns:
+                        # put it to where
+
+                        condition = BinaryOperation(
+                            op='=',
+                            args=[Identifier(name), value]
+                        )
+                        if where is None:
+                            where = condition
+                        else:
+                            where = BinaryOperation(
+                                op='and',
+                                args=[where, condition]
+                            )
+                    else:
+                        # put to update
+                        update_columns[name] = value
+
+                    params_map_index.append([name, value])
+
+                if len(update_columns) is None:
+                    raise ErSqlWrongArguments(f'No columns for update found in: {result_data.columns}')
+
+                update_query = Update(
+                    table=Identifier(parts=table_name_parts),
+                    update_columns=update_columns,
+                    where=where
+                )
+
+            else:
+                # make command
+                update_query = Update(
+                    table=Identifier(parts=table_name_parts),
+                    update_columns=step.update_command.update_columns,
+                    where=step.update_command.where
+                )
+
+                if result is None:
+                    # run as is
+                    dn.query(query=update_query, session=self.session)
+                    return data
+                result_data = result.result_data
+
+                # link nodes with parameters for fast replacing with values
+                input_table_alias = step.update_command.from_select_alias
+                if input_table_alias is None:
+                    raise ErSqlWrongArguments('Subselect in update requires alias')
+
+                def prepare_map_index(node, is_table, **kwargs):
+                    if isinstance(node, Identifier) and not is_table:
+                        # is input table field
+                        if node.parts[0] == input_table_alias.parts[0]:
+                            node2 = Constant(None)
+                            param_name = node.parts[-1]
+                            params_map_index.append([param_name, node2])
+                            # replace node with constant
+                            return node2
+                        elif node.parts[0] == table_name_parts[0]:
+                            # remove updated table alias
+                            node.parts = node.parts[1:]
+
+                # do mapping
+                query_traversal(update_query, prepare_map_index)
 
             # check all params is input data:
             data_header = [col.alias for col in result_data.columns]
@@ -1397,6 +1465,11 @@ class SQLQuery():
 
             data = ResultSet()
 
+        elif type(step) == DataStep:
+            # create resultset
+            df = pd.DataFrame(step.data)
+            data = ResultSet().from_df(df, database='', table_name='')
+
         else:
             raise ErLogicError(F'Unknown planner step: {step}')
         return data
@@ -1427,6 +1500,7 @@ class SQLQuery():
             for date_format, pattern in (
                 ('%Y-%m-%d', r'[\d]{4}-[\d]{2}-[\d]{2}'),
                 ('%Y-%m-%d %H:%M:%S', r'[\d]{4}-[\d]{2}-[\d]{2} [\d]{2}:[\d]{2}:[\d]{2}'),
+                # ('%Y-%m-%d %H:%M:%S%z', r'[\d]{4}-[\d]{2}-[\d]{2} [\d]{2}:[\d]{2}:[\d]{2}\+[\d]{2}:[\d]{2}'),
                 # ('%Y', '[\d]{4}')
             ):
                 if re.match(pattern, samples[0]):

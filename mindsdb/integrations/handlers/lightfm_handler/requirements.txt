@@ -1,0 +1,4 @@
+lightfm==1.17
+scipy>=1.10.1
+pydantic>=1.10.7
+dataprep_ml>=0.0.15

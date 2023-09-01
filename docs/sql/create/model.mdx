@@ -1,6 +1,6 @@
 ---
-title: CREATE MODEL Statement
-sidebarTitle: CREATE MODEL
+title: Create, Train, and Deploy a Model
+sidebarTitle: Create, Train, and Deploy a Model
 ---
 
 ## Description
@@ -238,9 +238,7 @@ Visit our [page no how to bring Hugging Face models into MindsDB](/custom-model/
     After you run the `CREATE MODEL` statement, you can check the status of the training process by querying the `mindsdb.models` table.
 
     ```sql
-    SELECT *
-    FROM mindsdb.models
-    WHERE name = 'predictor_name';
+    DESCRIBE predictor_name;
     ```
 
     On execution, we get:

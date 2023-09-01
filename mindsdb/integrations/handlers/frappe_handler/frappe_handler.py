@@ -52,7 +52,7 @@ class FrappeHandler(APIHandler):
             'check_company_exists': 'useful to check the company is exist. Input is company',
             'check_expense_type': 'useful to check the expense_type is exist. Input is expense_type',
             'check_customer':  'useful to check the customer is exist. Input is customer',
-
+            'check_item_code':  'have to be used to check the item code. Input is item_code',
         }
         return {
             'tools': tools,
@@ -80,9 +80,7 @@ class FrappeHandler(APIHandler):
 
         for item in invoice['items']:
             # rename column
-            item['item_name'] = item['name']
             item['qty'] = item['quantity']
-            del item['name']
             del item['quantity']
 
             # add required fields
@@ -98,6 +96,13 @@ class FrappeHandler(APIHandler):
         except Exception as e:
             return f"Error: {e}"
         return f"Success"
+
+    def check_item_code(self, item_code):
+        self.connect()
+        result = self.client.get_documents('Item', filters=[['item_code', '=', item_code]])
+        if len(result) == 1:
+            return True
+        return "Item doesn't exist: please use different name"
 
     def check_company_exists(self, name):
         self.connect()

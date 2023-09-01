@@ -51,6 +51,9 @@ class MySQLHandler(DatabaseHandler):
             'password': self.connection_data.get('password'),
             'database': self.connection_data.get('database')
         }
+        
+        if 'conn_attrs' in self.connection_data:
+            config['conn_attrs'] = self.connection_data['conn_attrs']
 
         ssl = self.connection_data.get('ssl')
         if ssl is True:
@@ -193,7 +196,8 @@ connection_args = OrderedDict(
     port={
         'type': ARG_TYPE.INT,
         'description': 'The TCP/IP port of the MySQL server. Must be an integer.',
-        'required': True
+        'required': True,
+        'label': 'Port'
     },
     ssl={
         'type': ARG_TYPE.BOOL,

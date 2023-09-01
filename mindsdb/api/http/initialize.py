@@ -233,7 +233,7 @@ def initialize_app(config, no_studio, with_nlp):
 
     @app.teardown_appcontext
     def remove_session(*args, **kwargs):
-        db.session.close()
+        db.session.remove()
 
     @app.before_request
     def before_request():
@@ -255,6 +255,11 @@ def initialize_app(config, no_studio, with_nlp):
         company_id = request.headers.get('company-id')
         user_class = request.headers.get('user-class')
 
+        try:
+            email_confirmed = int(request.headers.get('email-confirmed', 1))
+        except ValueError:
+            email_confirmed = 1
+
         if company_id is not None:
             try:
                 company_id = int(company_id)
@@ -273,6 +278,7 @@ def initialize_app(config, no_studio, with_nlp):
 
         ctx.company_id = company_id
         ctx.user_class = user_class
+        ctx.email_confirmed = email_confirmed
 
     # Wait for static initialization.
     if not no_studio and init_static_thread is not None:

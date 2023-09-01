@@ -79,56 +79,59 @@ def learn_process(class_path, engine, integration_id,
             target = problem_definition['target']
 
             if data_integration_ref is not None:
-                database_controller = DatabaseController()
-                sql_session = make_sql_session()
-                if data_integration_ref['type'] == 'integration':
-                    integration_name = database_controller.get_integration(data_integration_ref['id'])['name']
-                    query = Select(
-                        targets=[Star()],
-                        from_table=NativeQuery(
-                            integration=Identifier(integration_name),
-                            query=fetch_data_query
+                with profiler.Context('fetch_data'):
+                    database_controller = DatabaseController()
+                    sql_session = make_sql_session()
+                    if data_integration_ref['type'] == 'integration':
+                        integration_name = database_controller.get_integration(data_integration_ref['id'])['name']
+                        query = Select(
+                            targets=[Star()],
+                            from_table=NativeQuery(
+                                integration=Identifier(integration_name),
+                                query=fetch_data_query
+                            )
                         )
-                    )
-                    sqlquery = SQLQuery(query, session=sql_session)
-                elif data_integration_ref['type'] == 'view':
-                    project = database_controller.get_project(project_name)
-                    query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
-                    view_query_ast = project.query_view(query_ast)
-                    sqlquery = SQLQuery(view_query_ast, session=sql_session)
+                        sqlquery = SQLQuery(query, session=sql_session)
+                    elif data_integration_ref['type'] == 'view':
+                        project = database_controller.get_project(project_name)
+                        query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
+                        view_query_ast = project.query_view(query_ast)
+                        sqlquery = SQLQuery(view_query_ast, session=sql_session)
 
-                result = sqlquery.fetch(view='dataframe')
-                training_data_df = result['result']
+                    result = sqlquery.fetch(view='dataframe')
+                    training_data_df = result['result']
 
             training_data_columns_count, training_data_rows_count = 0, 0
             if training_data_df is not None:
                 training_data_columns_count = len(training_data_df.columns)
                 training_data_rows_count = len(training_data_df)
 
-            predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
-            predictor_record.training_data_columns_count = training_data_columns_count
-            predictor_record.training_data_rows_count = training_data_rows_count
-            db.session.commit()
+            with profiler.Context('get_model_record'):
+                predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
+                predictor_record.training_data_columns_count = training_data_columns_count
+                predictor_record.training_data_rows_count = training_data_rows_count
+                db.session.commit()
 
-            module_name, class_name = class_path
-            module = importlib.import_module(module_name)
-            HandlerClass = getattr(module, class_name)
-            HandlerClass = MLClientFactory(handler_class=HandlerClass, engine=engine)
+            with profiler.Context('prepare_handler'):
+                module_name, class_name = class_path
+                module = importlib.import_module(module_name)
+                HandlerClass = getattr(module, class_name)
+                HandlerClass = MLClientFactory(handler_class=HandlerClass, engine=engine)
 
-            handlerStorage = HandlerStorage(integration_id)
-            modelStorage = ModelStorage(predictor_id)
+                handlerStorage = HandlerStorage(integration_id)
+                modelStorage = ModelStorage(predictor_id)
 
-            kwargs = {}
-            if base_predictor_id is not None:
-                kwargs['base_model_storage'] = ModelStorage(base_predictor_id)
-                kwargs['base_model_storage'].fileStorage.pull()
+                kwargs = {}
+                if base_predictor_id is not None:
+                    kwargs['base_model_storage'] = ModelStorage(base_predictor_id)
+                    kwargs['base_model_storage'].fileStorage.pull()
 
-            ml_handler = HandlerClass(
-                engine_storage=handlerStorage,
-                model_storage=modelStorage,
-                **kwargs
-            )
-            handlers_cacher[predictor_record.id] = ml_handler
+                ml_handler = HandlerClass(
+                    engine_storage=handlerStorage,
+                    model_storage=modelStorage,
+                    **kwargs
+                )
+                handlers_cacher[predictor_record.id] = ml_handler
 
             if not ml_handler.generative:
                 if training_data_df is not None and target not in training_data_df.columns:
@@ -137,17 +140,20 @@ def learn_process(class_path, engine, integration_id,
 
             # create new model
             if base_predictor_id is None:
-                ml_handler.create(target, df=training_data_df, args=problem_definition)
+                with profiler.Context('create'):
+                    ml_handler.create(target, df=training_data_df, args=problem_definition)
 
             # fine-tune (partially train) existing model
             else:
                 # load model from previous version, use it as starting point
-                problem_definition['base_model_id'] = base_predictor_id
-                ml_handler.finetune(df=training_data_df, args=problem_definition)
+                with profiler.Context('finetune'):
+                    problem_definition['base_model_id'] = base_predictor_id
+                    ml_handler.finetune(df=training_data_df, args=problem_definition)
 
-            predictor_record.status = PREDICTOR_STATUS.COMPLETE
-            predictor_record.active = set_active
-            db.session.commit()
+            with profiler.Context('set_model_complete'):
+                predictor_record.status = PREDICTOR_STATUS.COMPLETE
+                predictor_record.active = set_active
+                db.session.commit()
             # if retrain and set_active after success creation
             with profiler.Context('learn_process update active'):
                 if set_active is True:
@@ -170,5 +176,6 @@ def learn_process(class_path, engine, integration_id,
             predictor_record.status = PREDICTOR_STATUS.ERROR
             db.session.commit()
 
-        predictor_record.training_stop_at = dt.datetime.now()
-        db.session.commit()
+        with profiler.Context('set_model_treaining_stop_at'):
+            predictor_record.training_stop_at = dt.datetime.now()
+            db.session.commit()

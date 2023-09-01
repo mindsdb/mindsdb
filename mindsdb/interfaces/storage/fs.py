@@ -318,34 +318,38 @@ class S3FSStore(BaseFSStore):
         dir_path = Path(base_dir) / remote_name
         dir_size = sum(f.stat().st_size for f in dir_path.glob('**/*') if f.is_file())
         if (dir_size * 2) < psutil.virtual_memory().available:
-            old_cwd = os.getcwd()
-            fh = io.BytesIO()
-            with self._thread_lock:
-                os.chdir(base_dir)
-                with tarfile.open(fileobj=fh, mode='w:gz', compresslevel=compression_level) as tar:
-                    for path in dir_path.iterdir():
-                        if path.is_file() and path.name in ('dir.lock', 'last_modified.txt'):
-                            continue
-                        tar.add(path.relative_to(base_dir))
-                os.chdir(old_cwd)
-            fh.seek(0)
-            self.s3.upload_fileobj(
-                fh,
-                self.bucket,
-                remote_zipped_name
-            )
+            with profiler.Context('fs_make_archive_mem'):
+                old_cwd = os.getcwd()
+                fh = io.BytesIO()
+                with self._thread_lock:
+                    os.chdir(base_dir)
+                    with tarfile.open(fileobj=fh, mode='w:gz', compresslevel=compression_level) as tar:
+                        for path in dir_path.iterdir():
+                            if path.is_file() and path.name in ('dir.lock', 'last_modified.txt'):
+                                continue
+                            tar.add(path.relative_to(base_dir))
+                    os.chdir(old_cwd)
+                fh.seek(0)
+            with profiler.Context('fs_upload_archive_mem'):
+                self.s3.upload_fileobj(
+                    fh,
+                    self.bucket,
+                    remote_zipped_name
+                )
         else:
-            shutil.make_archive(
-                os.path.join(base_dir, remote_name),
-                'gztar',
-                root_dir=base_dir,
-                base_dir=local_name
-            )
-            self.s3.upload_file(
-                os.path.join(base_dir, remote_zipped_name),
-                self.bucket,
-                remote_zipped_name
-            )
+            with profiler.Context('fs_make_archive'):
+                shutil.make_archive(
+                    os.path.join(base_dir, remote_name),
+                    'gztar',
+                    root_dir=base_dir,
+                    base_dir=local_name
+                )
+            with profiler.Context('fs_upload_archive'):
+                self.s3.upload_file(
+                    os.path.join(base_dir, remote_zipped_name),
+                    self.bucket,
+                    remote_zipped_name
+                )
             os.remove(os.path.join(base_dir, remote_zipped_name))
 
         last_modified = self._get_remote_last_modified(remote_zipped_name)

@@ -47,14 +47,14 @@ class ChatBotController:
         bot, task = query.first()
         if bot is None or task is None:
             return None
-        
+
         # Include DB and Task information in response.
         session = SessionController()
         database_names = {
             i['id']: i['name']
             for i in session.database_controller.get_list()
         }
-        bot_obj =  {
+        bot_obj = {
             'id': bot.id,
             'name': bot.name,
             'project': project_name,

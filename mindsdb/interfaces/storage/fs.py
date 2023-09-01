@@ -461,10 +461,11 @@ class FileStorage:
     def file_get(self, name):
         if self.sync is True:
             self.pull()
-        with FileLock(self.folder_path, mode='r'):
-            dest_abs_path = self.folder_path / name
-            with open(dest_abs_path, 'rb') as fd:
-                return fd.read()
+        # with FileLock(self.folder_path, mode='r'):
+        # FIXME
+        dest_abs_path = self.folder_path / name
+        with open(dest_abs_path, 'rb') as fd:
+            return fd.read()
 
     @profiler.profile()
     def add(self, path: Union[str, Path], dest_rel_path: Optional[Union[str, Path]] = None):

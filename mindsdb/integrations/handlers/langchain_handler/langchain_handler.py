@@ -210,9 +210,9 @@ class LangChainHandler(BaseMLEngine):
         # fill memory
 
         # system prompt
-        prompt = args['prompt']
-        if 'prompt' in pred_args and pred_args['prompt'] is not None:
-            prompt = pred_args['prompt']
+        prompt = args['prompt_template']
+        if 'prompt_template' in pred_args and pred_args['prompt_template'] is not None:
+            prompt = pred_args['prompt_template']
         if 'context' in pred_args:
             prompt += '\n\n' + 'Useful information:\n' + pred_args['context'] + '\n'
         memory.chat_memory.messages.insert(0, SystemMessage(content=prompt))

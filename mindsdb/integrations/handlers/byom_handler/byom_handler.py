@@ -129,7 +129,14 @@ class BYOMHandler(BaseMLEngine):
             model_proxy = self._get_model_proxy()
             model_state = self.base_model_storage.file_get('model')
             model_state = model_proxy.finetune(df, model_state, args=args.get('using', {}))  # WRONG
-            self.model_storage.file_set('model', model_state)
+            # compression_level=0
+            # region FIXME
+            # self.model_storage.file_set('model', model_state)
+            dest_abs_path = self.model_storage.fileStorage.folder_path / 'model'
+            with open(dest_abs_path, 'wb') as fd:
+                fd.write(model_state)
+            self.model_storage.fileStorage.push(compression_level=0)
+            # endregion
 
             predictor_record.update_status = 'up_to_date'
             predictor_record.status = PREDICTOR_STATUS.COMPLETE

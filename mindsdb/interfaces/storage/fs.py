@@ -151,10 +151,10 @@ class FileLock:
         self._lock_file_path = local_path / self._lock_file_name
         self._mode = fcntl.LOCK_EX if mode == 'w' else fcntl.LOCK_SH
 
-        if self._lock_file_name.is_file() is False:
+        if self._lock_file_path.is_file() is False:
             self._local_path.mkdir(parents=True, exist_ok=True)
             try:
-                self._lock_file_name.write_text('')
+                self._lock_file_path.write_text('')
             except Exception:
                 pass
 

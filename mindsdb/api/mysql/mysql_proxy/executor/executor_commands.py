@@ -1195,7 +1195,11 @@ class ExecuteCommands:
     @mark_process('learn')
     def answer_create_predictor(self, statement):
         integration_name = self.session.database
-        statement.name.parts = [integration_name, statement.name.parts[-1]]
+
+        # allow creation in non-active projects, e.g. 'create mode proj.model' works whether `proj` is active or not
+        if len(statement.name.parts) > 1:
+            integration_name = statement.name.parts[0]
+        statement.name.parts = [integration_name.lower(), statement.name.parts[-1]]
 
         ml_integration_name = "lightwood"  # default
         if statement.using is not None:

@@ -95,6 +95,8 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
                         num = int(num)
                         labels_map[value] = args['labels'][num]
             args['labels_map'] = labels_map
+            if 'task_specific_params' in config:
+                args['task_specific_params'] = config['task_specific_params']
 
         # for summarization
         if 'min_output_length' in args:
@@ -187,15 +189,31 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
             )
 
         elif args['task'] == 'translation':
+            lang_in = args['lang_input']
+            lang_out = args['lang_output']
+
+            input_origin = None
+            if 'task_specific_params' in args:
+                task = f"translation_{lang_in}_to_{lang_out}"
+                if task in args['task_specific_params'] and 'prefix' in args['task_specific_params'][task]:
+                    # inject prefix to data
+                    prefix = args['task_specific_params'][task]['prefix']
+                    input_origin = df[input_column]
+                    df[input_column] = prefix + input_origin
+                    # don't pick up model in hugging_py_face
+                    lang_in = lang_out = None
+
             nlp = NLP(api_key, endpoint)
             result_df = nlp.translation_in_df(
                 df,
                 input_column,
-                args['lang_input'],
-                args['lang_output'],
+                lang_in,
+                lang_out,
                 options,
                 model_name
             )
+            if input_origin is not None:
+                df[input_column] = input_origin
 
         elif args['task'] == 'image-classification':
             cp = ComputerVision(api_key, endpoint)

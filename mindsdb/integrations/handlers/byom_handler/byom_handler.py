@@ -23,6 +23,7 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.integrations.utilities.utils import format_exception_error
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+import mindsdb.utilities.profiler as profiler
 
 from .proc_wrapper import pd_decode, pd_encode, encode, decode
 from .proc_wrapper import import_string, find_model_class
@@ -110,6 +111,7 @@ class BYOMHandler(BaseMLEngine):
 
         #     raise e
 
+    @profiler.profile('byom finetune')
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         model_storage = self.model_storage
 
@@ -130,8 +132,8 @@ class BYOMHandler(BaseMLEngine):
 
             model_proxy = self._get_model_proxy()
             model_state = self.base_model_storage.file_get('model')
-            model_state = model_proxy.finetune(df, model_state, args=args.get('using', {}))  # WRONG
-            # compression_level=0
+            with profiler.Context('finetune-byom-itself'):
+                model_state = model_proxy.finetune(df, model_state, args=args.get('using', {}))  # WRONG
             # region FIXME
             # self.model_storage.file_set('model', model_state)
             dest_abs_path = self.model_storage.fileStorage.folder_path / 'model'

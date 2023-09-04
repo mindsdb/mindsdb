@@ -221,6 +221,9 @@ class ChatBotController:
             task.reload = True
 
         if params is not None:
+            # Merge params on update
+            existing_params = {} if not existing_chatbot.params else existing_chatbot.params
+            params.update(existing_params)
             existing_chatbot.params = params
         db.session.commit()
 

@@ -1,6 +1,8 @@
+import time
 import importlib
 import traceback
 import datetime as dt
+from collections import UserDict
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Identifier, Select, Star, NativeQuery
@@ -19,7 +21,30 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.config import Config
 
 
-handlers_cacher = {}
+class HandlersCache(UserDict):
+    def __init__(self, max_size: int = 5) -> None:
+        self._max_size = max_size
+        super().__init__()
+
+    def __setitem__(self, key, value) -> None:
+        if len(self.data) > self._max_size:
+            sorted_elements = sorted(
+                self.data.items(),
+                key=lambda x: x[1]['last_usage_at']
+            )
+            del self.data[sorted_elements[0][0]]
+        self.data[key] = {
+            'last_usage_at': time.time(),
+            'handler': value
+        }
+
+    def __getitem__(self, key: int) -> object:
+        el = super().__getitem__(key)
+        el['last_usage_at'] = time.time()
+        return el['handler']
+
+
+handlers_cacher = HandlersCache()
 
 
 @mark_process(name='learn')

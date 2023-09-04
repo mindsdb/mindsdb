@@ -41,7 +41,7 @@ class BYOMHandler(BaseMLEngine):
 
         self.engine_storage.fileStorage.pull()
         code = self.engine_storage.fileStorage.file_get(con_args['code'])
-        modules_str = self.engine_storage.fileStorage.file_get(con_args['code'])
+        modules_str = self.engine_storage.fileStorage.file_get(con_args['modules'])
 
         if self.model_wrapper is None:
             self.model_wrapper = ModelWrapperuUsafe(

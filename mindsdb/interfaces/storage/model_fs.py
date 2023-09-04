@@ -66,12 +66,12 @@ class ModelStorage:
     def file_set(self, name, content):
         self.fileStorage.file_set(name, content)
 
-    def folder_get(self, name, update=True):
+    def folder_get(self, name):
         # pull folder and return path
         name = name.lower().replace(' ', '_')
         name = re.sub(r'([^a-z^A-Z^_\d]+)', '_', name)
 
-        self.fileStorage.pull_path(name, update=update)
+        self.fileStorage.pull_path(name)
         return str(self.fileStorage.get_path(name))
 
     def folder_sync(self, name):
@@ -153,12 +153,12 @@ class HandlerStorage:
 
     # folder
 
-    def folder_get(self, name, update=True):
+    def folder_get(self, name):
         # pull folder and return path
         name = name.lower().replace(' ', '_')
         name = re.sub(r'([^a-z^A-Z^_\d]+)', '_', name)
 
-        self.fileStorage.pull_path(name, update=update)
+        self.fileStorage.pull_path(name)
         return str(self.fileStorage.get_path(name))
 
     def folder_sync(self, name):

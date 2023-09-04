@@ -92,7 +92,7 @@ class WriterHandler(BaseMLEngine):
 
         args = self.model_storage.json_get("args")
         args["chromadb_storage_path"] = self.engine_storage.folder_get(
-            args["chromadb_folder_name"], update=False
+            args["chromadb_folder_name"]
         )
 
         user_defined_model_params = list(

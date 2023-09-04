@@ -267,7 +267,7 @@ class VectorStoreHandler(BaseHandler):
         data.dropna(axis=1, inplace=True)
 
         # dispatch insert
-        return self.insert(table_name, data, columns=data.columns)
+        return self.insert(table_name, data, columns=columns)
 
     def _dispatch_update(self, query: Update) -> HandlerResponse:
         """

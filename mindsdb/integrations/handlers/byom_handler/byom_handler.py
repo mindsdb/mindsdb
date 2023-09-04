@@ -117,35 +117,39 @@ class BYOMHandler(BaseMLEngine):
 
         # TODO: should probably refactor at some point, as a bit of the logic is shared with lightwood's finetune logic
         try:
-            base_predictor_id = args['base_model_id']
-            base_predictor_record = db.Predictor.query.get(base_predictor_id)
-            if base_predictor_record.status != PREDICTOR_STATUS.COMPLETE:
-                raise Exception("Base model must be in status 'complete'")
+            with profiler.Context('finetune-byom-prepare'):
+                base_predictor_id = args['base_model_id']
+                base_predictor_record = db.Predictor.query.get(base_predictor_id)
+                if base_predictor_record.status != PREDICTOR_STATUS.COMPLETE:
+                    raise Exception("Base model must be in status 'complete'")
 
-            predictor_id = model_storage.predictor_id
-            predictor_record = db.Predictor.query.get(predictor_id)
+                predictor_id = model_storage.predictor_id
+                predictor_record = db.Predictor.query.get(predictor_id)
 
-            predictor_record.data = {'training_log': 'training'} # TODO move to ModelStorage (don't work w/ db directly)
-            predictor_record.training_start_at = datetime.now()
-            predictor_record.status = PREDICTOR_STATUS.FINETUNING  # TODO: parallel execution block
-            db.session.commit()
+                predictor_record.data = {'training_log': 'training'} # TODO move to ModelStorage (don't work w/ db directly)
+                predictor_record.training_start_at = datetime.now()
+                predictor_record.status = PREDICTOR_STATUS.FINETUNING  # TODO: parallel execution block
+                db.session.commit()
 
-            model_proxy = self._get_model_proxy()
-            model_state = self.base_model_storage.file_get('model')
+            with profiler.Context('finetune-byom_get_model_proxy'):
+                model_proxy = self._get_model_proxy()
+            with profiler.Context('finetune-byom_get_model'):
+                model_state = self.base_model_storage.file_get('model')
             with profiler.Context('finetune-byom-itself'):
                 model_state = model_proxy.finetune(df, model_state, args=args.get('using', {}))  # WRONG
             # region FIXME
             # self.model_storage.file_set('model', model_state)
-            dest_abs_path = self.model_storage.fileStorage.folder_path / 'model'
-            with open(dest_abs_path, 'wb') as fd:
-                fd.write(model_state)
-            self.model_storage.fileStorage.push(compression_level=0)
+            with profiler.Context('finetune-byom-write-file'):
+                dest_abs_path = self.model_storage.fileStorage.folder_path / 'model'
+                with open(dest_abs_path, 'wb') as fd:
+                    fd.write(model_state)
+                self.model_storage.fileStorage.push(compression_level=0)
             # endregion
-
-            predictor_record.update_status = 'up_to_date'
-            predictor_record.status = PREDICTOR_STATUS.COMPLETE
-            predictor_record.training_stop_at = datetime.now()
-            db.session.commit()
+            with profiler.Context('finetune-byom-complete'):
+                predictor_record.update_status = 'up_to_date'
+                predictor_record.status = PREDICTOR_STATUS.COMPLETE
+                predictor_record.training_stop_at = datetime.now()
+                db.session.commit()
 
         except Exception as e:
             log.logger.error(e)
@@ -159,9 +163,10 @@ class BYOMHandler(BaseMLEngine):
             raise
 
         finally:
-            if predictor_record.training_stop_at is None:
-                predictor_record.training_stop_at = datetime.now()
-                db.session.commit()
+            with profiler.Context('finetune-byom-finally'):
+                if predictor_record.training_stop_at is None:
+                    predictor_record.training_stop_at = datetime.now()
+                    db.session.commit()
 
 
 class ModelWrapperuUsafe:

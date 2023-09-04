@@ -165,23 +165,23 @@ class FileLock:
         try:
             # On at least some systems, LOCK_EX can only be used if the file
             # descriptor refers to a file opened for writing.
-            self._file = open(self._lock_file_path, 'w')
-            fd = self._file.fileno()
-            fcntl.flock(fd, self._mode | fcntl.LOCK_NB)
+            self._lock_fd = os.open(self._lock_file_path, os.O_RDWR | os.O_CREAT)
+            fcntl.lockf(self._lock_fd, self._mode | fcntl.LOCK_NB)
         except (ValueError, FileNotFoundError):
             # file probably was deleted between open and lock
             print(f'Cant accure lock on {self._local_path}')
             raise FileNotFoundError
         except BlockingIOError:
             print(f'Directory is locked by another process: {self._local_path}')
-            fcntl.flock(fd, self._mode)
+            fcntl.lockf(self._lock_fd, self._mode)
 
     def __exit__(self, exc_type, exc_value, traceback):
         if os.name != 'posix':
             return
+
         try:
-            fcntl.flock(self._file.fileno(), fcntl.LOCK_UN)
-            self._file.close()
+            fcntl.lockf(self._lock_fd, fcntl.LOCK_UN)
+            os.close(self._lock_fd)
         except Exception:
             pass
 
@@ -401,12 +401,12 @@ class FileStorage:
             self.folder_path.mkdir(parents=True, exist_ok=True)
 
     @profiler.profile()
-    def push(self, compression_level=9):
-        with FileLock(self.folder_path):
+    def push(self, compression_level: int = 9):
+        with FileLock(self.folder_path, mode='r'):
             self._push_no_lock(compression_level=compression_level)
 
     @profiler.profile()
-    def _push_no_lock(self, compression_level=9):
+    def _push_no_lock(self, compression_level: int = 9):
         self.fs_store.put(
             str(self.folder_name),
             str(self.resource_group_path),
@@ -414,38 +414,30 @@ class FileStorage:
         )
 
     @profiler.profile()
-    def push_path(self, path):
-        with FileLock(self.folder_path):
-            self.fs_store.put(os.path.join(self.folder_name, path), str(self.resource_group_path))
+    def push_path(self, path, compression_level: int = 9):
+        # TODO implement push per element
+        self.push(compression_level=compression_level)
 
     @profiler.profile()
     def pull(self):
-        with FileLock(self.folder_path):
+        with FileLock(self.folder_path, mode='w'):
             self._pull_no_lock()
 
     @profiler.profile()
     def _pull_no_lock(self):
-        try:
-            self.fs_store.get(str(self.folder_name), str(self.resource_group_path))
-        except Exception:
-            pass
+        self.fs_store.get(
+            str(self.folder_name),
+            str(self.resource_group_path)
+        )
 
     @profiler.profile()
-    def pull_path(self, path, update=True):
-        with FileLock(self.folder_path):
-            if update is False:
-                # not pull from source if object is exists
-                if os.path.exists(self.resource_group_path / self.folder_name / path):
-                    return
-            try:
-                # TODO not sync if not changed?
-                self.fs_store.get(os.path.join(self.folder_name, path), str(self.resource_group_path))
-            except Exception:
-                pass
+    def pull_path(self, path):
+        # TODO implement pull per element
+        self.pull()
 
     @profiler.profile()
     def file_set(self, name, content):
-        with FileLock(self.folder_path):
+        with FileLock(self.folder_path, mode='w'):
             if self.sync is True:
                 self._pull_no_lock()
 
@@ -461,11 +453,10 @@ class FileStorage:
     def file_get(self, name):
         if self.sync is True:
             self.pull()
-        # with FileLock(self.folder_path, mode='r'):
-        # FIXME
         dest_abs_path = self.folder_path / name
-        with open(dest_abs_path, 'rb') as fd:
-            return fd.read()
+        with FileLock(self.folder_path, mode='r'):
+            with open(dest_abs_path, 'rb') as fd:
+                return fd.read()
 
     @profiler.profile()
     def add(self, path: Union[str, Path], dest_rel_path: Optional[Union[str, Path]] = None):
@@ -488,7 +479,7 @@ class FileStorage:
             path (Union[str, Path]): path to the resource
             dest_rel_path (Optional[Union[str, Path]]): relative path in storage to file or folder
         """
-        with FileLock(self.folder_path):
+        with FileLock(self.folder_path, mode='w'):
             if self.sync is True:
                 self._pull_no_lock()
 
@@ -524,10 +515,10 @@ class FileStorage:
         Returns:
             Path: path to requested file or folder
         """
-        with FileLock(self.folder_path):
-            if self.sync is True:
-                self._pull_no_lock()
+        if self.sync is True:
+            self.pull()
 
+        with FileLock(self.folder_path, mode='r'):
             if isinstance(relative_path, str):
                 relative_path = Path(relative_path)
             # relative_path = relative_path.resolve()
@@ -552,13 +543,13 @@ class FileStorage:
 
         # complete removal
         if path == self.folder_path.resolve():
-            with FileLock(self.folder_path):
+            with FileLock(self.folder_path, mode='w'):
                 self.fs_store.delete(self.folder_name)
             # NOTE on some fs .rmtree is not working if any file is open
             shutil.rmtree(str(self.folder_path))
             return
 
-        with FileLock(self.folder_path):
+        with FileLock(self.folder_path, mode='w'):
             if self.sync is True:
                 self._pull_no_lock()
 

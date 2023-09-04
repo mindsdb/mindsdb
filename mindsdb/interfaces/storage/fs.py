@@ -297,20 +297,23 @@ class S3FSStore(BaseFSStore):
         local_ziped_name = f'{local_name}.tar.gz'
         local_ziped_path = os.path.join(base_dir, local_ziped_name)
 
-        local_last_modified = self._get_local_last_modified(base_dir, local_name)
-        remote_last_modified = self._get_remote_last_modified(remote_ziped_name)
-        if (
-            local_last_modified is not None
-            and local_last_modified == remote_last_modified
-        ):
-            return
+        folder_path = Path(base_dir) / local_name
+        with FileLock(folder_path, mode='r'):
+            local_last_modified = self._get_local_last_modified(base_dir, local_name)
+            remote_last_modified = self._get_remote_last_modified(remote_ziped_name)
+            if (
+                local_last_modified is not None
+                and local_last_modified == remote_last_modified
+            ):
+                return
 
-        self._download(
-            base_dir,
-            remote_ziped_name,
-            local_ziped_path,
-            last_modified=remote_last_modified
-        )
+        with FileLock(folder_path, mode='w'):
+            self._download(
+                base_dir,
+                remote_ziped_name,
+                local_ziped_path,
+                last_modified=remote_last_modified
+            )
 
     @profiler.profile()
     def put(self, local_name, base_dir, compression_level=9):
@@ -420,11 +423,6 @@ class FileStorage:
 
     @profiler.profile()
     def pull(self):
-        with FileLock(self.folder_path, mode='w'):
-            self._pull_no_lock()
-
-    @profiler.profile()
-    def _pull_no_lock(self):
         self.fs_store.get(
             str(self.folder_name),
             str(self.resource_group_path)
@@ -437,9 +435,10 @@ class FileStorage:
 
     @profiler.profile()
     def file_set(self, name, content):
+        if self.sync is True:
+            self.pull()
+
         with FileLock(self.folder_path, mode='w'):
-            if self.sync is True:
-                self._pull_no_lock()
 
             dest_abs_path = self.folder_path / name
 
@@ -479,9 +478,9 @@ class FileStorage:
             path (Union[str, Path]): path to the resource
             dest_rel_path (Optional[Union[str, Path]]): relative path in storage to file or folder
         """
+        if self.sync is True:
+            self.pull()
         with FileLock(self.folder_path, mode='w'):
-            if self.sync is True:
-                self._pull_no_lock()
 
             path = Path(path)
             if isinstance(dest_rel_path, str):

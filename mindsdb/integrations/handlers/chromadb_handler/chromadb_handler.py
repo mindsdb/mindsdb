@@ -33,9 +33,7 @@ class ChromaDBHandler(VectorStoreHandler):
             "chroma_server_http_port": self._connection_data.get(
                 "chroma_server_http_port"
             ),
-            "persist_directory": self._connection_data.get(
-                "persist_directory", "chroma"
-            ),
+            "persist_directory": self._connection_data.get("persist_directory"),
         }
 
         # either host + port or persist_directory is required
@@ -55,6 +53,8 @@ class ChromaDBHandler(VectorStoreHandler):
                 "Either host + port or persist_directory is required for ChromaDB connection, but not both!"
             )
 
+        self._client = None
+        self.is_connected = False
         self.connect()
 
     def _get_client(self):
@@ -83,10 +83,10 @@ class ChromaDBHandler(VectorStoreHandler):
         try:
             self._client = self._get_client()
             self.is_connected = True
+            return self._client
         except Exception as e:
             log.logger.error(f"Error connecting to ChromaDB client, {e}!")
-
-        return self._client
+            self.is_connected = False
 
     def disconnect(self):
         """Close the database connection."""
@@ -276,14 +276,16 @@ class ChromaDBHandler(VectorStoreHandler):
         """
         Insert data into the ChromaDB database.
         """
+
         collection = self._client.get_collection(table_name)
-        embeddings = data[TableField.EMBEDDINGS.value].tolist()
-        ids = data[TableField.ID.value].tolist()
-        documents = data[TableField.CONTENT.value].tolist()
-        metadata = data[TableField.METADATA.value].tolist()
+
+        data = data.to_dict(orient="list")
 
         collection.add(
-            ids=ids, documents=documents, embeddings=embeddings, metadatas=metadata
+            ids=data[TableField.ID.value],
+            documents=data.get(TableField.CONTENT.value),
+            embeddings=data[TableField.EMBEDDINGS.value],
+            metadatas=data.get(TableField.METADATA.value),
         )
 
         return Response(resp_type=RESPONSE_TYPE.OK)

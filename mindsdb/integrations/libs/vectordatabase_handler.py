@@ -231,7 +231,7 @@ class VectorStoreHandler(BaseHandler):
                 self._value_or_self(row[content_col_index]) for row in query.values
             ]
         else:
-            content = [None for _ in query.values]
+            content = None
 
         # get embeddings column if it is present
         if TableField.EMBEDDINGS.value in columns:
@@ -250,7 +250,7 @@ class VectorStoreHandler(BaseHandler):
                 for row in query.values
             ]
         else:
-            metadata = [None for _ in query.values]
+            metadata = None
 
         # create dataframe
         data = pd.DataFrame(
@@ -262,8 +262,12 @@ class VectorStoreHandler(BaseHandler):
             }
         )
 
+        # drop columns with all None values
+
+        data.dropna(axis=1, inplace=True)
+
         # dispatch insert
-        return self.insert(table_name, data, columns=columns)
+        return self.insert(table_name, data, columns=data.columns)
 
     def _dispatch_update(self, query: Update) -> HandlerResponse:
         """

@@ -16,9 +16,9 @@ jobs:
   code_checking:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+    - uses: actions/checkout@v3.5.3
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v4.7.0
       with:
         python-version: 3.9
     - name: Install flake8
@@ -35,11 +35,11 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.5.3
       - id: set-matrix
-        uses: JoshuaTheMiller/conditional-build-matrix@0.0.1
+        uses: JoshuaTheMiller/conditional-build-matrix@v1.0.1
         with:
-          filter: '[?runOn==`${{ github.ref }}` || runOn==`always`]'
+          filter: '[?runOnBranch==`${{ github.ref }}` || runOnBranch==`always`]'
   test:
     needs: matrix_prep
     strategy:
@@ -48,16 +48,16 @@ jobs:
     runs-on: ${{ matrix.runs_on }}
     if: github.ref_type == 'branch'
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3.5.3
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4.7.0
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        #python -m pip install --upgrade pip==21.0.1
-        pip install 'pymssql >= 2.1.4'
-        pip install boto3
+        pip install --upgrade pip
+        # temp
+        pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
         pip install --no-cache-dir .
         pip install -r requirements_test.txt
         pip uninstall pycodestyle -y && pip install pycodestyle==2.9.1  # temp fix while exist conflict in last version with flake8
@@ -82,21 +82,18 @@ jobs:
 
           env PYTHONPATH=./ pytest tests/unit/test_executor.py
 
-          # need fix in LW. not working yet 
+          # need fix in LW. not working yet
           env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
-          
+
           # env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_lightwood.py
 
           env PYTHONPATH=./ pytest tests/unit/test_predictor_params.py
-        
+
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
 
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
 
           env PYTHONPATH=./ pytest tests/unit/test_cache.py
-
-          # it is too early for such tests
-          # env PYTHONPATH=./ pytest tests/unit/test_interfaces_consistency.py
 
           # MySQL API
           echo -e "\n===============test MySQL API===============\n"
@@ -128,9 +125,9 @@ jobs:
     needs: test
     if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3.5.3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4.7.0
       with:
         python-version: '3.7'
     - name: Install dependencies
@@ -155,9 +152,9 @@ jobs:
     needs: test
     if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3.5.3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4.7.0
       with:
         python-version: '3.7'
     - name: Create version files
@@ -175,4 +172,3 @@ jobs:
         AWS_REGION: 'us-west-2'
         SOURCE_DIR: 'distributions/ver/dist'
         DEST_DIR: 'mindsdb-installer/ver'
-

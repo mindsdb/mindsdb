@@ -5,64 +5,20 @@ sidebarTitle: pip from Source
 
 This section describes how to deploy MindsDB from the source code. It is the preferred way to use MindsDB if you want to contribute to our code or debug MindsDB.
 
-## Before You Start
-
-There are some points that you should consider before jumping into the
-installation. Please have a look at them below.
-
-### Pip and Python Versions
-
-We suggest using **Python 3.8.x, or 3.9.x versions** for now.
-
-To successfully install MindsDB, use **Python 64-bit version**. Also, make sure
-that **Python >= 3.8** and **pip >= 20.3**. You can check the pip and python
-versions by running the `pip --version` and
-`python --version` commands.
-
-Please note that depending on your environment and installed pip and python
-packages, you might have to use **pip3** instead of **pip** or **python3.x**
-instead of **py**. For example, `pip3 install mindsdb` instead of
-`pip install mindsdb`.
-
-### How to Avoid Dependency Issues
-
-Install MindsDB in a virtual environment using **pip** to avoid dependency
-issues.
-
-### How to Avoid Common Errors
-
-MindsDB requires around 3 GB of free disk space to install all of its
-dependencies. Make sure to allocate min. 3 GB of disk space to avoid the
-`IOError: [Errno 28] No space left on device while installing MindsDB` error.
-
-Before anything, activate your virtual environment where your MindsDB is
-installed. It is to avoid the `No module named mindsdb` error.
-
-The `ImportError: No module named {dependency name}` error may occur if you skip
-step 3 of the [Installation](#installation) section. Make sure you install all
-of the prerequisites.
-
-If you encounter the `This site can’t be reached. 127.0.0.1 refused to connect.`
-error, please check the MindsDB server console to see if the server is still in
-the `starting` phase. But if the server has started and you still get this
-error, please report it on our
-[GitHub repository](https://github.com/mindsdb/mindsdb/issues).
-
-### How to Overcome `ImportError: failed to find libmagic`
-
-If you get the `ImportError: failed to find libmagic` error, you should install the `libmagic` manually by running one of the commands below:
-
-```bash
-pip install python-magic-bin
-brew install libmagic
-```
+<Tip>
+To successfully install MindsDB, use **Python 64-bit version**. Also, make sure that **Python >= 3.8** and **pip >= 20.3**.
+</Tip>
 
 ## Installation
+
+<Tip>
+Please note that this method of MindsDB installation requires a minimum of 6 GB free storage.
+</Tip>
 
 1. Clone the MindsDB repository:
 
    ```bash
-   git clone git@github.com:mindsdb/mindsdb.git
+   git clone https://github.com/mindsdb/mindsdb.git
    ```
 
 2. Create a new virtual environment called `mindsdb-venv`:
@@ -114,6 +70,55 @@ mysql -h 127.0.0.1 --port 3306 -u mindsdb -p
 ```
 
 </CodeGroup>
+
+## Troubleshooting
+
+### Pip and Python Versions
+
+We suggest using **Python 3.8.x, or 3.9.x versions** for now.
+
+To successfully install MindsDB, use **Python 64-bit version**. Also, make sure
+that **Python >= 3.8** and **pip >= 20.3**. You can check the pip and python
+versions by running the `pip --version` and
+`python --version` commands.
+
+Please note that depending on your environment and installed pip and python
+packages, you might have to use **pip3** instead of **pip** or **python3.x**
+instead of **py**. For example, `pip3 install mindsdb` instead of
+`pip install mindsdb`.
+
+### How to Avoid Dependency Issues
+
+Install MindsDB in a virtual environment using **pip** to avoid dependency
+issues.
+
+### How to Avoid Common Errors
+
+MindsDB requires around 3 GB of free disk space to install all of its
+dependencies. Make sure to allocate min. 3 GB of disk space to avoid the
+`IOError: [Errno 28] No space left on device while installing MindsDB` error.
+
+Before anything, activate your virtual environment where your MindsDB is
+installed. It is to avoid the `No module named mindsdb` error.
+
+The `ImportError: No module named {dependency name}` error may occur if you skip
+step 3 of the [Installation](#installation) section. Make sure you install all
+of the prerequisites.
+
+If you encounter the `This site can’t be reached. 127.0.0.1 refused to connect.`
+error, please check the MindsDB server console to see if the server is still in
+the `starting` phase. But if the server has started and you still get this
+error, please report it on our
+[GitHub repository](https://github.com/mindsdb/mindsdb/issues).
+
+### How to Overcome `ImportError: failed to find libmagic`
+
+If you get the `ImportError: failed to find libmagic` error, you should install the `libmagic` manually by running one of the commands below:
+
+```bash
+pip install python-magic-bin
+brew install libmagic
+```
 
 ## Further Issues?
 

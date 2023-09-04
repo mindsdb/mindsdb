@@ -610,6 +610,10 @@ class TestJobs(BaseExecutorDummyML):
         assert len(ret) == 2  # was executed
 
 
+class TestTriggers(BaseExecutorDummyML):
+    def test_triggers(self):
+        # TODO
+        ...
 
 
 

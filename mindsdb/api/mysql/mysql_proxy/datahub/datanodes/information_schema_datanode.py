@@ -35,11 +35,13 @@ class InformationSchemaDataNode(DataNode):
         # MindsDB specific:
         'MODELS': ['NAME', 'ENGINE', 'PROJECT', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'CURRENT_TRAINING_PHASE', 'TOTAL_TRAINING_PHASES', 'TRAINING_PHASE_NAME', 'TAG', 'CREATED_AT', 'TRAINING_TIME'],
         'MODELS_VERSIONS': ['NAME', 'ENGINE', 'PROJECT', 'ACTIVE', 'VERSION', 'STATUS', 'ACCURACY', 'PREDICT', 'UPDATE_STATUS', 'MINDSDB_VERSION', 'ERROR', 'SELECT_DATA_QUERY', 'TRAINING_OPTIONS', 'TAG', 'CREATED_AT', 'TRAINING_TIME'],
-        'DATABASES': ['NAME', 'TYPE', 'ENGINE'],
+        'DATABASES': ['NAME', 'TYPE', 'ENGINE', 'CONNECTION_DATA'],
         'ML_ENGINES': ['NAME', 'HANDLER', 'CONNECTION_DATA'],
-        'HANDLERS': ['NAME', 'TITLE', 'DESCRIPTION', 'VERSION', 'CONNECTION_ARGS', 'IMPORT_SUCCESS', 'IMPORT_ERROR'],
+        'HANDLERS': ['NAME', 'TYPE', 'TITLE', 'DESCRIPTION', 'VERSION', 'CONNECTION_ARGS', 'IMPORT_SUCCESS', 'IMPORT_ERROR'],
         'JOBS': ['NAME', 'PROJECT', 'START_AT', 'END_AT', 'NEXT_RUN_AT', 'SCHEDULE_STR', 'QUERY'],
-        'JOBS_HISTORY': ['NAME', 'PROJECT', 'RUN_START', 'RUN_END', 'ERROR', 'QUERY']
+        'MDB_TRIGGERS': ['NAME', 'PROJECT', 'DATABASE', 'TABLE', 'QUERY', 'LAST_ERROR'],
+        'JOBS_HISTORY': ['NAME', 'PROJECT', 'RUN_START', 'RUN_END', 'ERROR', 'QUERY'],
+        'CHATBOTS': ['NAME', 'PROJECT', 'DATABASE', 'MODEL_NAME', 'PARAMS', 'IS_RUNNING', 'LAST_ERROR'],
     }
 
     def __init__(self, session):
@@ -72,6 +74,8 @@ class InformationSchemaDataNode(DataNode):
             'HANDLERS': self._get_handlers,
             'JOBS': self._get_jobs,
             'JOBS_HISTORY': self._get_jobs_history,
+            'MDB_TRIGGERS': self._get_triggers,
+            'CHATBOTS': self._get_chatbots,
         }
         for table_name in self.information_schema:
             if table_name not in self.get_dataframe_funcs:
@@ -156,20 +160,16 @@ class InformationSchemaDataNode(DataNode):
         columns = self.information_schema['HANDLERS']
 
         handlers = self.integration_controller.get_handlers_import_status()
-        ml_handlers = {
-            key: val for key, val in handlers.items()
-            if val.get('type') == 'ml'
-        }
 
         data = []
-        for _key, val in ml_handlers.items():
+        for _key, val in handlers.items():
             connection_args = val.get('connection_args')
             if connection_args is not None:
                 connection_args = str(dict(connection_args))
             import_success = val.get('import', {}).get('success')
             import_error = val.get('import', {}).get('error_message')
             data.append([
-                val['name'], val.get('title'), val.get('description'), val.get('version'),
+                val['name'], val.get('type'), val.get('title'), val.get('description'), val.get('version'),
                 connection_args, import_success, import_error
             ])
 
@@ -312,12 +312,72 @@ class InformationSchemaDataNode(DataNode):
 
         return pd.DataFrame(data, columns=columns)
 
+    def _get_triggers(self, query: ASTNode = None):
+        from mindsdb.interfaces.triggers.triggers_controller import TriggersController
+        triggers_controller = TriggersController()
+
+        project_name = None
+        if (
+                isinstance(query, Select)
+                and type(query.where) == BinaryOperation
+                and query.where.op == '='
+                and query.where.args[0].parts == ['project']
+                and isinstance(query.where.args[1], Constant)
+        ):
+            project_name = query.where.args[1].value
+
+        data = triggers_controller.get_list(project_name)
+
+        columns = self.information_schema['MDB_TRIGGERS']
+        columns_lower = [col.lower() for col in columns]
+
+        # to list of lists
+        data = [
+            [
+                row[k]
+                for k in columns_lower
+            ]
+            for row in data
+        ]
+
+        return pd.DataFrame(data, columns=columns)
+
+    def _get_chatbots(self, query: ASTNode = None):
+        from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
+        chatbot_controller = ChatBotController()
+
+        project_name = None
+        if (
+                isinstance(query, Select)
+                and type(query.where) == BinaryOperation
+                and query.where.op == '='
+                and query.where.args[0].parts == ['project']
+                and isinstance(query.where.args[1], Constant)
+        ):
+            project_name = query.where.args[1].value
+
+        data = chatbot_controller.get_chatbots(project_name)
+
+        columns = self.information_schema['CHATBOTS']
+        columns_lower = [col.lower() for col in columns]
+
+        # to list of lists
+        data = [
+            [
+                row[k]
+                for k in columns_lower
+            ]
+            for row in data
+        ]
+
+        return pd.DataFrame(data, columns=columns)
+
     def _get_databases(self, query: ASTNode = None):
         columns = self.information_schema['DATABASES']
 
         project = self.database_controller.get_list()
         data = [
-            [x['name'], x['type'], x['engine']]
+            [x['name'], x['type'], x['engine'], str(x.get('connection_data'))]
             for x in project
         ]
 

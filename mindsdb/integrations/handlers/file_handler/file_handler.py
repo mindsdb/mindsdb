@@ -6,8 +6,8 @@ import codecs
 import traceback
 import tempfile
 from urllib.parse import urlparse
+from pathlib import Path
 
-       
 import magic
 import requests
 import pandas as pd
@@ -26,15 +26,10 @@ from mindsdb.integrations.libs.response import (
 )
 
 
-def clean_row(row):
-    n_row = []
-    for cell in row:
-        if str(cell) in ['', ' ', '  ', 'NaN', 'nan', 'NA']:
-            n_row.append(None)
-        else:
-            n_row.append(cell)
-
-    return n_row
+def clean_cell(val):
+    if str(val) in ['', ' ', '  ', 'NaN', 'nan', 'NA']:
+        return None
+    return val
 
 
 class FileHandler(DatabaseHandler):
@@ -104,41 +99,84 @@ class FileHandler(DatabaseHandler):
 
         if custom_parser:
             header, file_data = custom_parser(data, fmt)
+            df = pd.DataFrame(file_data, columns=header)
 
         elif fmt == 'parquet':
             df = pd.read_parquet(data)
-            header = df.columns.values.tolist()
-            file_data = df.values.tolist()
 
         elif fmt == 'csv':
-            df = pd.read_csv(data, sep=dialect.delimiter)
-            header = df.columns.values.tolist()
-            file_data = df.values.tolist()
+            df = pd.read_csv(data, sep=dialect.delimiter, index_col=False)
 
         elif fmt in ['xlsx', 'xls']:
             data.seek(0)
             df = pd.read_excel(data)
-            header = df.columns.values.tolist()
-            file_data = df.values.tolist()
 
         elif fmt == 'json':
             data.seek(0)
             json_doc = json.loads(data.read())
             df = pd.json_normalize(json_doc, max_level=0)
-            header = df.columns.values.tolist()
-            file_data = df.values.tolist()
 
         else:
             raise ValueError('Could not load file into any format, supported formats are csv, json, xls, xlsx')
 
-        if clean_rows:
-            file_list_data = [clean_row(row) for row in file_data]
-        else:
-            file_list_data = file_data
+        header = df.columns.values.tolist()
+
+        df = df.rename(columns={
+            key: key.strip() for key in header
+        })
+        df = df.applymap(clean_cell)
 
         header = [x.strip() for x in header]
         col_map = dict((col, col) for col in header)
-        return pd.DataFrame(file_list_data, columns=header), col_map
+        return df, col_map
+
+    @staticmethod
+    def is_it_parquet(data: BytesIO) -> bool:
+        # Check first and last 4 bytes equal to PAR1.
+        # Refer: https://parquet.apache.org/docs/file-format/
+        parquet_sig = b'PAR1'
+        data.seek(0, 0)
+        start_meta = data.read(4)
+        data.seek(-4, 2)
+        end_meta = data.read()
+        data.seek(0)
+        if start_meta == parquet_sig and end_meta == parquet_sig:
+            return True
+        return False
+
+    @staticmethod
+    def is_it_xlsx(file_path: str) -> bool:
+        file_type = magic.from_file(file_path, mime=True)
+        if file_type in ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel']:
+            return True
+        return False
+
+    @staticmethod
+    def is_it_json(data_str: StringIO) -> bool:
+        # see if its JSON
+        text = data_str.read(100).strip()
+        data_str.seek(0)
+        if len(text) > 0:
+            # it it looks like a json, then try to parse it
+            if text.startswith('{') or text.startswith('['):
+                try:
+                    json.loads(data_str.read())
+                    return True
+                except Exception:
+                    return False
+                finally:
+                    data_str.seek(0)
+        return False
+
+    @staticmethod
+    def is_it_csv(data_str: StringIO) -> bool:
+        sample = data_str.readline()  # trying to get dialect from header
+        data_str.seek(0)
+        try:
+            csv.Sniffer().sniff(sample)
+            return True
+        except Exception:
+            return False
 
     @staticmethod
     def _get_data_io(file_path):
@@ -149,13 +187,9 @@ class FileHandler(DatabaseHandler):
         :return: data_io, format, dialect
         """
 
-        ############
-        # get file as io object
-        ############
-
-        # file_path = self._get_file_path()
-
         data = BytesIO()
+        data_str = None
+        dialect = None
 
         try:
             with open(file_path, 'rb') as fp:
@@ -165,38 +199,25 @@ class FileHandler(DatabaseHandler):
             print(error)
             raise ValueError(error)
 
-        dialect = None
+        suffix = Path(file_path).suffix.strip('.').lower()
+        if suffix not in ('csv', 'json', 'xlsx', 'parquet'):
+            if FileHandler.is_it_parquet(data):
+                suffix = 'parquet'
+            elif FileHandler.is_it_xlsx(file_path):
+                suffix = 'xlsx'
 
-        ############
-        # check for file type
-        ############
+        if suffix == 'parquet':
+            return data, 'parquet', dialect
 
-        # Check first and last 4 bytes equal to PAR1.
-        # Refer: https://parquet.apache.org/docs/file-format/
-        parquet_sig = b'PAR1'
-        data.seek(0, 0)
-        start_meta = data.read(4)
-        data.seek(-4, 2)
-        end_meta = data.read()
-        data.seek(0)
-        if start_meta == parquet_sig and end_meta == parquet_sig:
-            return data, 'parquet', None
-        else:
-            print("It's not parquet file. Checking for other formats")
-
-        file_type = magic.from_file(file_path, mime=True)
-        if file_type in ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel']:
-            #for now we send xlsx for all excel types since we use pd.read_excel
+        if suffix == 'xlsx':
             return data, 'xlsx', dialect
-       
-        # if not excel it can be a json file or a CSV, convert from binary to stringio
 
         byte_str = data.read()
         # Move it to StringIO
         try:
             # Handle Microsoft's BOM "special" UTF-8 encoding
             if byte_str.startswith(codecs.BOM_UTF8):
-                data = StringIO(byte_str.decode('utf-8-sig'))
+                data_str = StringIO(byte_str.decode('utf-8-sig'))
             else:
                 file_encoding_meta = from_bytes(
                     byte_str[:32 * 1024],
@@ -208,43 +229,46 @@ class FileHandler(DatabaseHandler):
                 errors = 'strict'
                 if best_meta is not None:
                     encoding = file_encoding_meta.best().encoding
+
+                    try:
+                        data_str = StringIO(byte_str.decode(encoding, errors))
+                    except UnicodeDecodeError:
+                        encoding = 'utf-8'
+                        errors = 'replace'
+
+                        data_str = StringIO(byte_str.decode(encoding, errors))
                 else:
                     encoding = 'utf-8'
                     errors = 'replace'
-                data = StringIO(byte_str.decode(encoding, errors))
+
+                    data_str = StringIO(byte_str.decode(encoding, errors))
         except Exception:
             print(traceback.format_exc())
             print('Could not load into string')
 
-        # see if its JSON
-        buffer = data.read(100)
-        data.seek(0)
-        text = buffer.strip()
-        # analyze first n characters
-        if len(text) > 0:
-            text = text.strip()
-            # it it looks like a json, then try to parse it
-            if text.startswith('{') or text.startswith('['):
-                try:
-                    json.loads(data.read())
-                    data.seek(0)
-                    return data, 'json', dialect
-                except Exception:
-                    data.seek(0)
-                    return data, None, dialect
+        if suffix not in ('csv', 'json'):
+            if FileHandler.is_it_json(data_str):
+                suffix = 'json'
+            elif FileHandler.is_it_csv(data_str):
+                suffix = 'csv'
 
-        # lets try to figure out if its a csv
-        try:
-            dialect = FileHandler._get_csv_dialect(data)
-            if dialect:
-                return data, 'csv', dialect
-            return data, None, dialect
-        except Exception:
-            data.seek(0)
-            print('Could not detect format for this file')
-            print(traceback.format_exc())
-            # No file type identified
-            return data, None, dialect
+        if suffix == 'json':
+            return data_str, suffix, dialect
+
+        if suffix == 'csv':
+            try:
+                dialect = FileHandler._get_csv_dialect(data_str)
+                if dialect:
+                    return data_str, 'csv', dialect
+            except Exception:
+                print('Could not detect format for this file')
+                print(traceback.format_exc())
+
+        data_str.seek(0)
+        data.seek(0)
+
+        # No file type identified
+        return data, None, dialect
 
     @staticmethod
     def _get_file_path(path) -> str:
@@ -264,8 +288,14 @@ class FileHandler(DatabaseHandler):
             if isinstance(sample, bytes):
                 sample = sample.decode()
             accepted_csv_delimiters = [',', '\t', ';']
-            dialect = csv.Sniffer().sniff(sample, delimiters=accepted_csv_delimiters)
-            dialect.doublequote = True  # assume that all csvs have " as string escape
+            try:
+                dialect = csv.Sniffer().sniff(sample, delimiters=accepted_csv_delimiters)
+                dialect.doublequote = True  # assume that all csvs have " as string escape
+            except Exception:
+                dialect = csv.reader(sample).dialect
+                if dialect.delimiter not in accepted_csv_delimiters:
+                    raise Exception(f"CSV delimeter '{dialect.delimiter}' is not supported")
+
         except csv.Error:
             dialect = None
         return dialect

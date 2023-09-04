@@ -45,7 +45,7 @@ def upgrade():
 
     conn.execute(sa.sql.text('''
         update predictor set project_id = :project_id
-    '''), project_id=project_record.id)
+    '''), {'project_id': project_record.id})
 
     with op.batch_alter_table('predictor', schema=None) as batch_op:
         batch_op.alter_column(
@@ -60,7 +60,7 @@ def upgrade():
 
     conn.execute(sa.sql.text('''
         update view set project_id = :project_id
-    '''), project_id=project_record.id)
+    '''), {'project_id': project_record.id})
 
     with op.batch_alter_table('view', schema=None) as batch_op:
         batch_op.alter_column(
@@ -69,10 +69,10 @@ def upgrade():
             nullable=False
         )
 
-    views = conn.execute('''
+    views = conn.execute(sa.text('''
         select id, name from view
         where exists (select 1 from predictor where view.name = predictor.name)
-    ''').fetchall()
+    ''')).fetchall()
 
     for row in views:
         conn.execute(

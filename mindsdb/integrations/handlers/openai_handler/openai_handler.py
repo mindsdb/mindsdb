@@ -16,12 +16,12 @@ import pandas as pd
 
 from mindsdb.utilities.hooks import before_openai_query, after_openai_query
 from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff, \
     truncate_msgs_for_token_limit
+from mindsdb.integrations.utilities.handler_utils import get_api_key
 
-CHAT_MODELS = ('gpt-3.5-turbo', 'gpt-3.5-turbo-0301', 'gpt-4', 'gpt-4-0314', 'gpt-4-32k', 'gpt-4-32k-0314')
+CHAT_MODELS = ('gpt-3.5-turbo', 'gpt-3.5-turbo-16k', 'gpt-4', 'gpt-4-32k')
 
 
 class OpenAIHandler(BaseMLEngine):
@@ -32,7 +32,7 @@ class OpenAIHandler(BaseMLEngine):
         self.generative = True
         self.default_model = 'gpt-3.5-turbo'
         self.default_mode = 'default'  # can also be 'conversational' or 'conversational-full'
-        self.supported_modes = ['default', 'conversational', 'conversational-full', 'image']
+        self.supported_modes = ['default', 'conversational', 'conversational-full', 'image', 'embedding']
         self.rate_limit = 60  # requests per minute
         self.max_batch_size = 20
         self.default_max_tokens = 100
@@ -65,11 +65,43 @@ class OpenAIHandler(BaseMLEngine):
                         4) a `prompt' and 'user_column' and 'assistant_column`
                 '''))
 
+        # for all args that are not expected, raise an error
+        known_args = set()
+        # flatten of keys_collection
+        for keys in keys_collection:
+            known_args = known_args.union(set(keys))
+
+        # TODO: need a systematic way to maintain a list of known args
+        known_args = known_args.union(
+            {
+                "target",
+                "model_name",
+                "mode",
+                "predict_params",
+                "input_text",
+                "ft_api_info",
+                "ft_result_stats",
+                "runtime",
+                "max_tokens",
+                "temperature",
+                "api_key",
+                "openai_api_key",
+            }
+        )
+
+        unknown_args = set(args.keys()) - known_args
+        if unknown_args:
+            # return a list of unknown args as a string
+            raise Exception(
+                f"Unknown arguments: {', '.join(unknown_args)}.\n Known arguments are: {', '.join(known_args)}"
+            )
+
     def create(self, target, args=None, **kwargs):
         args = args['using']
 
         args['target'] = target
-        available_models = [m.openai_id for m in openai.Model.list(api_key=self._get_openai_api_key(args)).data]
+        api_key = get_api_key('openai', args, self.engine_storage)
+        available_models = [m.openai_id for m in openai.Model.list(api_key=api_key).data]
         if not args.get('model_name'):
             args['model_name'] = self.default_model
         elif args['model_name'] not in available_models:
@@ -82,34 +114,6 @@ class OpenAIHandler(BaseMLEngine):
 
         self.model_storage.json_set('args', args)
 
-    def _get_openai_api_key(self, args, strict=True):
-        """ 
-        API_KEY preference order:
-            1. provided at model creation
-            2. provided at engine creation
-            3. OPENAI_API_KEY env variable
-            4. openai.api_key setting in config.json
-        """  # noqa
-        # 1
-        if 'api_key' in args:
-            return args['api_key']
-        # 2
-        connection_args = self.engine_storage.get_connection_args()
-        if 'api_key' in connection_args:
-            return connection_args['api_key']
-        # 3
-        api_key = os.getenv('OPENAI_API_KEY')
-        if api_key is not None:
-            return api_key
-        # 4
-        config = Config()
-        openai_cfg = config.get('openai', {})
-        if 'api_key' in openai_cfg:
-            return openai_cfg['api_key']
-
-        if strict:
-            raise Exception(f'Missing API key "api_key". Either re-create this ML_ENGINE specifying the `api_key` parameter,\
-                 or re-create this model and pass the API key with `USING` syntax.')  # noqa
 
     def predict(self, df, args=None):
         """
@@ -134,8 +138,22 @@ class OpenAIHandler(BaseMLEngine):
         else:
             base_template = None
 
+        # Embedding Mode
+        if args.get('mode', self.default_mode) == 'embedding':
+            api_args = {
+                'question_column': pred_args.get('question_column', None),
+                'model': pred_args.get('model_name', 'text-embedding-ada-002')
+            }
+            model_name = 'embedding'
+            if args.get('question_column'):
+                prompts = list(df[args['question_column']].apply(lambda x: str(x)))
+                empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
+            else:
+                raise Exception('Embedding mode needs a question_column')
+
         # Image mode
-        if args.get('mode', self.default_mode) == 'image':
+
+        elif args.get('mode', self.default_mode) == 'image':
             api_args = {
                 'n': pred_args.get('n', None),
                 'size': pred_args.get('size', None),
@@ -232,7 +250,7 @@ class OpenAIHandler(BaseMLEngine):
         # remove prompts without signal from completion queue
         prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
 
-        api_key = self._get_openai_api_key(args)
+        api_key = get_api_key('openai', args, self.engine_storage)
         api_args = {k: v for k, v in api_args.items() if v is not None}  # filter out non-specified api args
         completion = self._completion(model_name, prompts, api_key, api_args, args, df)
 
@@ -284,6 +302,8 @@ class OpenAIHandler(BaseMLEngine):
             }
             if model_name == 'image':
                 return _submit_image_completion(kwargs, prompts, api_args)
+            elif model_name == 'embedding':
+                return _submit_embedding_completion(kwargs, prompts, api_args)
             elif model_name in self.chat_completion_models:
                 return _submit_chat_completion(kwargs, prompts, api_args, df, mode=args.get('mode', 'conversational'))
             else:
@@ -310,6 +330,22 @@ class OpenAIHandler(BaseMLEngine):
 
             before_openai_query(kwargs)
             resp = _tidy(openai.Completion.create(**kwargs))
+            _log_api_call(kwargs, resp)
+            return resp
+
+        def _submit_embedding_completion(kwargs, prompts, api_args):
+            def _tidy(comp):
+                tidy_comps = []
+                for c in comp['data']:
+                    if 'embedding' in c:
+                        tidy_comps.append([c['embedding']])
+                return tidy_comps
+
+            kwargs['input'] = prompts
+            kwargs = {**kwargs, **api_args}
+
+            before_openai_query(kwargs)
+            resp = _tidy(openai.Embedding.create(**kwargs))
             _log_api_call(kwargs, resp)
             return resp
 
@@ -452,7 +488,7 @@ class OpenAIHandler(BaseMLEngine):
         if attribute == 'args':
             return pd.DataFrame(args.items(), columns=['key', 'value'])
         elif attribute == 'metadata':
-            api_key = self._get_openai_api_key(args)
+            api_key = get_api_key('openai', args, self.engine_storage)
             model_name = args.get('model_name', self.default_model)
             meta = openai.Model.retrieve(model_name, api_key=api_key)
             return pd.DataFrame(meta.items(), columns=['key', 'value'])
@@ -490,7 +526,7 @@ class OpenAIHandler(BaseMLEngine):
         if prev_model_name not in self.supported_ft_models:
             raise Exception(f"This model cannot be finetuned. Supported base models are {self.supported_ft_models}")
 
-        openai.api_key = self._get_openai_api_key(args)
+        openai.api_key = get_api_key('openai', args, self.engine_storage)
         finetune_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
         temp_storage_path = tempfile.mkdtemp()

@@ -254,7 +254,7 @@ To learn more about MindsDB projects, visit [our docs here](/sql/project).
 
 ### Training & Querying Models
 
-Training a model requires various parameters, depending on the model type. Here we present examples of regression and time series models.
+Training a model requires various parameters, depending on the model type. Here we present examples of regression, time series, and OpenAI models.
 
 <Tip>
 Here are some useful links:
@@ -262,6 +262,8 @@ Here are some useful links:
 - [query options](https://mindsdb.github.io/mindsdb-js-sdk/interfaces/models_queryOptions.QueryOptions.html),
 - [batch query options](https://mindsdb.github.io/mindsdb-js-sdk/interfaces/models_queryOptions.BatchQueryOptions.html).
 </Tip>
+
+#### Regression Model
 
 Let's look at an example of how to create and train a simple regression model, and then, use it for making predictions.
 
@@ -316,6 +318,8 @@ try {
   console.log(error);
 }
 ```
+
+#### Time Series Model
 
 As time series models require more parameters, let's go over an example of how to create and train a time series model, and then, use it for making batch predictions.
 
@@ -375,6 +379,57 @@ try {
   
 } catch (error) {
   // Something went wrong training or predicting.
+  console.log(error);
+}
+```
+
+#### OpenAI Model
+
+Here is how to create and deploy an OpenAI model from JavaScript code:
+
+```
+// Defining training options
+const trainingOptions = {
+  using: {engine: 'openai', prompt_template: 'describe the sentiment of the reviews strictly as "positive", "neutral", or "negative". "I love the product":positive "It is a scam":negative "{{review}}.":'}
+};
+
+try {
+
+  // Creating and training a model
+  let openai_js = await MindsDB.Models.trainModel(
+    'openai_js',
+    'sentiment',
+    'mindsdb',
+    trainingOptions);
+  
+  console.log('created a model');
+
+  // Waiting for the training to be complete
+  while (openai_js.status !== 'complete' && openai_js.status !== 'error') {
+    openai_js = await MindsDB.Models.getModel('openai_js', 'mindsdb');
+  }
+  
+  // Checking model's status
+  console.log('Model status: ' + openai_js.status);
+
+  // Defining query options
+  const queryOptions = {
+    where: [
+      'review = \'It is ok.\''
+    ]
+  }
+
+  // Querying for a single prediction
+  openai_js = await openai_js.query(queryOptions);
+  console.log('Predicted value:');
+  console.log(openai_js.value);
+  console.log('Prediction insights:');
+  console.log(openai_js.explain);
+  console.log('Input data:');
+  console.log(openai_js.data);
+
+} catch (error) {
+  // Something went wrong training or querying
   console.log(error);
 }
 ```

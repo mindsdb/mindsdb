@@ -4,6 +4,7 @@ import json
 import base64
 import datetime as dt
 from copy import deepcopy
+from multiprocessing.pool import ThreadPool
 
 import pandas as pd
 from dateutil.parser import parse as parse_datetime
@@ -27,6 +28,15 @@ from mindsdb.utilities.functions import resolve_model_identifier
 import mindsdb.utilities.profiler as profiler
 
 IS_PY36 = sys.version_info[1] <= 6
+
+
+def delete_model_storage(model_id, ctx_dump):
+    try:
+        ctx.load(ctx_dump)
+        modelStorage = ModelStorage(model_id)
+        modelStorage.delete()
+    except Exception as e:
+        print(f'Something went wrong during deleting storage of model {model_id}: {e}')
 
 
 class ModelController():
@@ -73,7 +83,7 @@ class ModelController():
         full_model_data = self.get_model_data(name=name, predictor_record=predictor_record, ml_handler_name=ml_handler_name)
         reduced_model_data = {}
         for k in ['id', 'name', 'version', 'is_active', 'predict', 'status',
-                  'current_phase', 'accuracy', 'data_source', 'update', 'active',
+                  'problem_definition', 'current_phase', 'accuracy', 'data_source', 'update', 'active',
                   'mindsdb_version', 'error', 'created_at', 'fetch_data_query']:
             reduced_model_data[k] = full_model_data.get(k, None)
 
@@ -112,11 +122,15 @@ class ModelController():
         if not hasattr(ml_handler, 'describe'):
             raise Exception("ML handler doesn't support description")
 
-        df = ml_handler.describe(attribute)
 
         if attribute is None:
             # show model record
             model_info = self.get_model_info(model_record)
+
+            try:
+                df = ml_handler.describe(attribute)
+            except NotImplementedError:
+                df = pd.DataFrame()
 
             # expecting list of attributes in first column df
             attributes = []
@@ -129,7 +143,7 @@ class ModelController():
             model_info.insert(0, 'tables', [attributes])
             return model_info
         else:
-            return df
+            return ml_handler.describe(attribute)
 
     def get_model(self, name, version=None, ml_handler_name=None, project_name=None):
         show_active = True if version is None else None
@@ -198,9 +212,17 @@ class ModelController():
                 predictor_record.deleted_at = dt.datetime.now()
             else:
                 db.session.delete(predictor_record)
-            modelStorage = ModelStorage(predictor_record.id)
-            modelStorage.delete()
         db.session.commit()
+
+        # region delete storages
+        if len(predictors_records) > 1:
+            ctx_dump = ctx.dump()
+            with ThreadPool(min(len(predictors_records), 100)) as pool:
+                pool.starmap(delete_model_storage, [(record.id, ctx_dump) for record in predictors_records])
+        else:
+            modelStorage = ModelStorage(predictors_records[0].id)
+            modelStorage.delete()
+        # endregion
 
     def rename_model(self, old_name, new_name):
         model_record = get_model_record(name=new_name)
@@ -440,8 +462,26 @@ class ModelController():
     @profiler.profile()
     def finetune_model(self, statement, ml_handler):
         params = self.prepare_finetune_statement(statement, ml_handler.database_controller)
-        predictor_record = ml_handler.update(**params)
+        predictor_record = ml_handler.finetune(**params)
         return self.get_model_info(predictor_record)
+
+    def update_model(self, session, project_name: str, model_name: str, problem_definition, version=None):
+
+        model_record = get_model_record(
+            name=model_name,
+            version=version,
+            project_name=project_name,
+            except_absent=True
+        )
+        integration_record = db.Integration.query.get(model_record.integration_id)
+
+        ml_handler_base = session.integration_controller.get_handler(integration_record.name)
+
+        ml_handler = ml_handler_base._get_ml_handler(model_record.id)
+        if not hasattr(ml_handler, 'update'):
+            raise Exception("ML handler doesn't updating")
+
+        ml_handler.update(args=problem_definition)
 
     def get_model_info(self, predictor_record):
         from mindsdb.interfaces.database.projects import ProjectController
@@ -516,7 +556,7 @@ class ModelController():
                 active=None
             )
             if model_record.active:
-                raise Exception(f"Can't remove active version: f{model['PROJECT']}.{model['NAME']}.{model['VERSION']}")
+                raise Exception(f"Can't remove active version: {model['PROJECT']}.{model['NAME']}.{model['VERSION']}")
 
             is_cloud = self.config.get('cloud', False)
             if is_cloud:

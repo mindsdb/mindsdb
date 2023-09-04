@@ -2,6 +2,7 @@ import datetime
 from typing import Optional
 from pathlib import Path
 from functools import reduce
+from textwrap import dedent
 
 import pandas as pd
 from mindsdb_sql.parser.dialects.mindsdb import (
@@ -16,8 +17,11 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     CreateView,
     CreateJob,
     DropJob,
+    CreateTrigger,
+    DropTrigger,
     Evaluate,
     CreateChatBot,
+    UpdateChatBot,
     DropChatBot,
 )
 from mindsdb_sql import parse_sql
@@ -83,6 +87,7 @@ from mindsdb.interfaces.model.functions import (
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
+from mindsdb.interfaces.triggers.triggers_controller import TriggersController
 from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities.context import context as ctx
@@ -499,6 +504,8 @@ class ExecuteCommands:
         elif type(statement) == Set:
             category = (statement.category or "").lower()
             if category == "" and type(statement.arg) == BinaryOperation:
+                if isinstance(statement.arg.args[0], Variable):
+                    return ExecuteAnswer(ANSWER_TYPE.OK)
                 if statement.arg.args[0].parts[0].lower() == 'profiling':
                     if statement.arg.args[1].value in (1, True):
                         profiler.enable()
@@ -599,9 +606,16 @@ class ExecuteCommands:
             return self.answer_create_job(statement)
         elif type(statement) == DropJob:
             return self.answer_drop_job(statement)
+        # -- triggers --
+        elif type(statement) == CreateTrigger:
+            return self.answer_create_trigger(statement)
+        elif type(statement) == DropTrigger:
+            return self.answer_drop_trigger(statement)
         # -- chatbots --
         elif type(statement) == CreateChatBot:
             return self.answer_create_chatbot(statement)
+        elif type(statement) == UpdateChatBot:
+            return self.answer_update_chatbot(statement)
         elif type(statement) == DropChatBot:
             return self.answer_drop_chatbot(statement)
         elif type(statement) == Evaluate:
@@ -610,6 +624,27 @@ class ExecuteCommands:
         else:
             log.logger.warning(f"Unknown SQL statement: {sql}")
             raise ErNotSupportedYet(f"Unknown SQL statement: {sql}")
+
+    def answer_create_trigger(self, statement):
+        triggers_controller = TriggersController()
+
+        name = statement.name
+        trigger_name = statement.name.parts[-1]
+        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+
+        triggers_controller.add(trigger_name, project_name, statement.table, statement.query_str, statement.columns)
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_drop_trigger(self, statement):
+        triggers_controller = TriggersController()
+
+        name = statement.name
+        trigger_name = statement.name.parts[-1]
+        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+
+        triggers_controller.delete(trigger_name, project_name)
+
+        return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_create_job(self, statement):
         jobs_controller = JobsController()
@@ -638,18 +673,56 @@ class ExecuteCommands:
 
         name = statement.name
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+        is_running = statement.params.pop('is_running', True)
 
         database = self.session.integration_controller.get(statement.database.parts[-1])
         if database is None:
             raise SqlApiException(f'Database not found: {statement.database}')
 
+        # Database ID cannot be null
+        database_id = database['id'] if database is not None else -1
+
         chatbot_controller.add_chatbot(
             name.parts[-1],
             project_name=project_name,
             model_name=statement.model.parts[-1],
-            database_id=database['id'],
+            database_id=database_id,
+            is_running=is_running,
             params=statement.params
         )
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_update_chatbot(self, statement):
+        chatbot_controller = ChatBotController()
+
+        name = statement.name
+        name_no_project = name.parts[-1]
+        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+
+        # From SET keyword parameters
+        updated_name = statement.params.pop('name', None)
+        model_name = statement.params.pop('model', None)
+        database_name = statement.params.pop('database', None)
+        is_running = statement.params.pop('is_running', None)
+
+        database_id = None
+        if database_name is not None:
+            database = self.session.integration_controller.get(database_name)
+            if database is None:
+                raise SqlApiException(f'Database with name {database_name} not found')
+            database_id = database['id']
+
+        updated_chatbot = chatbot_controller.update_chatbot(
+            name_no_project,
+            project_name=project_name,
+            name=updated_name,
+            model_name=model_name,
+            database_id=database_id,
+            is_running=is_running,
+            params=statement.params
+        )
+        if updated_chatbot is None:
+            raise SqlApiException(f'Chatbot with name {name_no_project} not found')
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_chatbot(self, statement):
@@ -763,7 +836,7 @@ class ExecuteCommands:
 
             if shortest_training is not None and shortest_training < datetime.timedelta(hours=1):
                 raise SqlApiException(
-                    f"Can't start {phase_name} process while predictor is in status 'training' or 'generating'"
+                    f"Can't start {phase_name} process while any other predictor is in status 'training' or 'generating'"
                 )
 
     def answer_retrain_predictor(self, statement):
@@ -856,7 +929,7 @@ class ExecuteCommands:
                 raise SqlApiException(f"Handler '{engine}' can not be used")
 
             accept_connection_args = handler_meta.get("connection_args")
-            if accept_connection_args is not None:
+            if accept_connection_args is not None and connection_args is not None:
                 for arg_name, arg_value in connection_args.items():
                     if arg_name == "as_service":
                         continue
@@ -920,8 +993,19 @@ class ExecuteCommands:
         if handler_module_meta is None:
             raise SqlApiException(f"There is no engine '{statement.handler}'")
         if handler_module_meta.get("import", {}).get("success") is not True:
-            log.logger.info(f"to use {statement.handler} please install it 'pip install mindsdb[{statement.handler}]'")
-            raise SqlApiException(f"Can't import engine '{statement.handler}'. to use it please install it 'pip install mindsdb[{statement.handler}]'")
+            msg = dedent(f'''\
+                Handler '{handler_module_meta['name']}' cannot be used. Reason is:
+                    {handler_module_meta['import']['error_message']}
+            ''')
+            is_cloud = self.session.config.get('cloud', False)
+            if is_cloud is False:
+                msg += dedent(f'''
+
+                If error is related to missing dependencies, then try to run command in shell and restart mindsdb:
+                    pip install mindsdb[{handler_module_meta['name']}]
+                ''')
+            log.logger.info(msg)
+            raise SqlApiException(msg)
 
         integration_id = self.session.integration_controller.add(
             name=name,

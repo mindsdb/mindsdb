@@ -6,9 +6,6 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities.log import get_log
 from mindsdb_sql import parse_sql
 
-import requests
-import pandas as pd
-import json
 from collections import OrderedDict
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
@@ -95,8 +92,10 @@ class YoutubeHandler(APIHandler):
 connection_args = OrderedDict(
     youtube_access_token={
         'type': ARG_TYPE.STR,
-        'description': 'API Token for accessing Youtube Application API'
-    }
+        'description': 'API Token for accessing Youtube Application API',
+        'required': True,
+        'label': 'Youtube access token',
+    }   
 )
 
 connection_args_example = OrderedDict(

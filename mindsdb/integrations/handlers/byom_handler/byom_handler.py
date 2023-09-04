@@ -194,13 +194,15 @@ class ModelWrapperuUsafe:
         return result
 
     def finetune(self, df, model_state, args):
-        self.model_instance.__dict__ = pickle.loads(model_state)
+        with profiler.Context('finetune-load'):
+            self.model_instance.__dict__ = pickle.loads(model_state)
 
         call_args = [df]
         if args:
             call_args.append(args)
 
-        self.model_instance.finetune(df, args)
+        with profiler.Context('finetune-finetune'):
+            self.model_instance.finetune(df, args)
 
         return pickle.dumps(self.model_instance.__dict__, protocol=5)
 

@@ -1,5 +1,6 @@
-import evaluate
 import nltk
+import torch
+import evaluate
 import numpy as np
 from datasets import Dataset
 from transformers import (
@@ -11,11 +12,15 @@ from transformers import (
     Seq2SeqTrainingArguments,
     Trainer,
     TrainingArguments,
+    BitsAndBytesConfig,
+    AutoModelForCausalLM,
 )
+from accelerate import Accelerator
+from peft import LoraConfig
+from trl import SFTTrainer
 
 # todo add support for question answering task
 # todo add support for fill mask
-# todo add support for text_generation (causal language model)
 # todo add support for text_2_text generation
 
 
@@ -208,7 +213,80 @@ def _finetune_fill_mask(df, args):
 
 
 def _finetune_text_generation(df, args):
-    raise NotImplementedError("Finetuning text-generation models is not yet supported.")
+    dataset = Dataset.from_pandas(df)
+    model_name = args['model_name']
+    bnb_kwargs = {}
+    q_mode = args.get('quantize_mode', '16bit')
+    assert q_mode in ('4bit', '8bit', '16bit'), f'Invalid quantization mode: {q_mode}'
+
+    if q_mode == "4bit":
+        bnb_kwargs['load_in_4bit'] = True
+        bnb_kwargs['bnb_4bit_quant_type'] = "nf4"
+        bnb_kwargs['bnb_4bit_compute_dtype'] = torch.float16
+    elif q_mode == "8bit":
+        bnb_kwargs['load_in_8bit'] = True
+
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        quantization_config=BitsAndBytesConfig(**bnb_kwargs),
+        device_map={"": Accelerator().process_index},
+        trust_remote_code=True  # TODO: safe?
+    )
+    model.config.use_cache = False
+
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    tokenizer.pad_token = tokenizer.eos_token
+
+    peft_config = LoraConfig(
+        lora_alpha=16,
+        lora_dropout=0.1,
+        r=64,
+        bias="none",
+        task_type="CAUSAL_LM",
+        target_modules=[
+            "query_key_value",
+            "dense",
+            "dense_h_to_4h",
+            "dense_4h_to_h",
+        ]
+    )
+
+    training_arguments = TrainingArguments(
+        output_dir="./output/falcon-7b-instruct",  # TODO: modify, set to self.storage_dir('./')
+        per_device_train_batch_size=32, # TODO: automated? user-passed?
+        gradient_accumulation_steps=1,
+        gradient_checkpointing=False,
+        optim="paged_adamw_32bit",
+        save_steps=False,  # TODO: True?
+        logging_steps=10,
+        learning_rate=2e-4,
+        fp16=True,
+        max_grad_norm=0.3,
+        max_steps=10, # TODO: value?
+        warmup_ratio=0.03,
+        group_by_length=True,
+        lr_scheduler_type="constant",
+        ddp_find_unused_parameters=False,
+    )
+
+    trainer = SFTTrainer(
+        model=model,
+        train_dataset=dataset,
+        peft_config=peft_config,
+        dataset_text_field="output",
+        max_seq_length=512,
+        tokenizer=tokenizer,
+        args=training_arguments,
+    )
+
+    # TODO: needed?
+    for name, module in trainer.model.named_modules():
+        if "norm" in name:
+            module.to(torch.float32)
+
+    trainer.train()  # TODO: needed?
+
+    return tokenizer, trainer
 
 
 def _finetune_question_answering(df, args):

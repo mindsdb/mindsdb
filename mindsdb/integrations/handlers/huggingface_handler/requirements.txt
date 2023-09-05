@@ -1,5 +1,5 @@
 pandas >=2.0.0, <2.1.0
-transformers==4.31.0
+transformers==4.32.1
 sentencepiece==0.1.97
 accelerate>=0.20.1
 datasets
@@ -8,3 +8,5 @@ torch
 tqdm
 rouge-score
 nltk
+peft
+trl

@@ -181,6 +181,7 @@
           "group": "Chatbots",
           "pages": [
             "sql/tutorials/llm-chatbot-ui",
+            "sql/tutorials/create-chatbot",
             "sql/tutorials/slack-chatbot",
             "sql/tutorials/twitterbot-mariadb-enterprise-server-skysql"
           ]

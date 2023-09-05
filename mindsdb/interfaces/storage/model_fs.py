@@ -123,10 +123,14 @@ class HandlerStorage:
     This class deals with all handler-related storage requirements, from storing metadata to synchronizing folders
     across instances.
     """
-    def __init__(self, integration_id):
+    def __init__(self, integration_id: int, root_dir: str = None):
+        args = {}
+        if root_dir is not None:
+            args['root_dir'] = root_dir
         storageFactory = FileStorageFactory(
             resource_group=RESOURCE_GROUP.INTEGRATION,
-            sync=False
+            sync=False,
+            **args
         )
         self.fileStorage = storageFactory(integration_id)
         self.integration_id = integration_id

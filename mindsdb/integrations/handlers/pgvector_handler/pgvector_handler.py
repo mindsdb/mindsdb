@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from typing import List
 
 import pandas as pd
 import psycopg
@@ -7,10 +8,16 @@ from mindsdb_sql import ASTNode, CreateTable, Insert, Select
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import (
     PostgresHandler,
 )
-from mindsdb.integrations.libs.base import VectorStoreHandler
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
+from mindsdb.integrations.libs.response import HandlerResponse
 from mindsdb.integrations.libs.response import HandlerResponse as Response
+from mindsdb.integrations.libs.vectordatabase_handler import (
+    FilterCondition,
+    FilterOperator,
+    TableField,
+    VectorStoreHandler,
+)
 from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
 
@@ -29,29 +36,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         """
         Handles the connection to a PostgreSQL database instance.
         """
-        if self.is_connected is True:
-            return self.connection
-
-        config = {
-            "host": self.connection_args.get("host"),
-            "port": self.connection_args.get("port"),
-            "user": self.connection_args.get("user"),
-            "password": self.connection_args.get("password"),
-            "dbname": self.connection_args.get("database"),
-        }
-
-        if self.connection_args.get("sslmode"):
-            config["sslmode"] = self.connection_args.get("sslmode")
-
-        if self.connection_args.get("schema"):
-            config[
-                "options"
-            ] = f'-c search_path={self.connection_args.get("schema")},public'
-
-        connection = psycopg.connect(**config, connect_timeout=10)
-
-        self.is_connected = True
-        self.connection = connection
+        self.connection = super().connect()
 
         with self.connection.cursor() as cur:
             try:
@@ -66,12 +51,14 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
         return self.connection
 
-    def similarity_search(self, query: ASTNode) -> Response:
-        """
-        Run a select query on the vectorpg database using the <-> operator.
-        """
-
-        collection_name = query.from_table.parts[-1]
+    def select(
+        self,
+        table_name: str,
+        columns: List[str] = None,
+        conditions: List[FilterCondition] = None,
+        offset: int = None,
+        limit: int = None,
+    ) -> HandlerResponse:
 
         with self.connection.cursor() as cur:
             try:
@@ -82,7 +69,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
                 # we need to use the <-> operator to search for similar vectors,
                 # so we need to convert the string to a vector and also use a threshold (e.g. 0.5)
                 cur.execute(
-                    f"SELECT * FROM {collection_name} WHERE embedding <-> '{string_embeddings_search}' < 0.5 LIMIT {limit}"
+                    f"SELECT * FROM {table_name} WHERE embedding <-> '{string_embeddings_search}' < 0.5 LIMIT {limit}"
                 )
                 self.connection.commit()
                 result = cur.fetchall()
@@ -117,35 +104,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         """
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
         """
-
-        try:
-            self.connect()
-
-            if isinstance(query, Select):
-                if query.where:
-                    return self.similarity_search(query)
-                else:
-                    query_str = self.renderer.get_string(query, with_failback=True)
-                    return self.native_query(query_str)
-
-            elif isinstance(query, CreateTable):
-                return self.create_collection(query)
-
-            elif isinstance(query, Insert):
-                query_str = self.renderer.get_string(query, with_failback=True)
-                return self.native_query(query_str)
-
-            else:
-                raise NotImplementedError(
-                    f"Unsupported query type {query.__class__.__name__}!"
-                )
-
-        except Exception as e:
-            log.logger.error(f"Error executing query on pgvector db, {e}!")
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error executing query on pgvector db, {e}!",
-            )
+        return VectorStoreHandler.query(self, query)  # to avoid diamond problem
 
 
 connection_args = OrderedDict(

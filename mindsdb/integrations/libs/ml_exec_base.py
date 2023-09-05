@@ -650,8 +650,6 @@ class BaseMLEngineExec:
                 predictor_record = db.Predictor.query.get(predictor_record.id)
                 db.session.refresh(predictor_record)
             else:
-                # return the base predictor record if process is not joined
-                predictor_record = db.Predictor.query.get(base_predictor_record.id)
                 task.add_done_callback(empty_callback)
 
         return predictor_record

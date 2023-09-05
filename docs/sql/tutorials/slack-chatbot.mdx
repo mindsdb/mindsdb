@@ -30,23 +30,26 @@ If you already have the API token of a Slack Bot, feel free to skip the followin
 If you have a Slack Account, you have to generate the API token, please follow below instructions:
 
 <Accordion title="How to Generate API Keys" icon="slack" iconType="thin">
-
     Here are the steps to generate the Slack API token:
 
-    1. Follow this [Link](https://api.slack.com/apps) and sign in with your Slack Account
-    2. Create a new `App` or select an existing `App`.
-    3. In the app settings, go to the `OAuth & Permissions` section.
-    4. Under the `Bot Token Scopes` section, add the necessary scopes for your application. You can add more later as well.
+    1. Follow [this link](https://api.slack.com/apps) and sign in with your Slack account.
+    2. Create a new App/Bot or select an existing App.
+    3. Go to the *OAuth & Permissions* section.
+    4. Under the *Scopes* section, add the *Bot Token Scopes* necessary for your application. You can add more later as well.
+        - channels:history
+        - channels:read
+        - chat:write
+        - groups:read
+        - im:read
+        - mpim:read
     5. Install the bot to your workspace.
-    6. In the `OAuth Tokens & Redirect URLs` Section, copy the the `Bot User OAuth Access Token` (This is the API token which we need).
-    7. Open your Slack, in order to use the bot which we created, we have to add the bot into the channel where we want to use this.
+    6. Under the *OAuth Tokens for Your Workspace* section, copy the the *Bot User OAuth Token* value.
+    7. Open your Slack application and add the App/Bot to one of the channels:
         - Go to the channel where you want to use the bot.
-        - Right Click on the `channel` and select `View Channel Details`.
-        - Select `Integrations`.
-        - Click on `Add an App`.
-        - You can see the name of the bot under the `In your workspace` Section, Go ahead and add the app to the channel.
-
-    Now, we can use the token from step 6 to initialize the Slack Handler in MindsDB.
+        - Right-click on the channel and select *View Channel Details*.
+        - Select *Integrations*.
+        - Click on *Add an App*.
+    8. Now you can use the token from step 6 to initialize the Slack handler in MindsDB, and use the channel name to query and write messages.
 </Accordion>
 
 Now, let's establish a connection to our Slack using MindsDB SQL Editor:

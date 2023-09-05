@@ -179,7 +179,7 @@ class IntegrationController:
         logger.debug("%s: accept_connection_args - %s", self.__class__.__name__, accept_connection_args)
 
         files_dir = None
-        if accept_connection_args is not None:
+        if accept_connection_args is not None and connection_args is not None:
             for arg_name, arg_value in connection_args.items():
                 if (
                     arg_name in accept_connection_args
@@ -257,7 +257,11 @@ class IntegrationController:
         db.session.commit()
 
     def _get_integration_record_data(self, integration_record, sensitive_info=True):
-        if integration_record is None or integration_record.data is None:
+        if (
+            integration_record is None
+            or integration_record.data is None
+            or isinstance(integration_record.data, dict) is False
+        ):
             return None
         data = deepcopy(integration_record.data)
         if data.get('password', None) is None:
@@ -534,6 +538,21 @@ class IntegrationController:
         if import_error is not None:
             handler_meta['import']['error_message'] = str(import_error)
 
+        # for ml engines, patch the connection_args from the argument probing
+        if hasattr(module, 'Handler'):
+            handler_class = module.Handler
+            try:
+                prediction_args = handler_class.prediction_args()
+                creation_args = handler_class.creation_args()
+                connection_args = {
+                    "prediction": prediction_args,
+                    "creation_args": creation_args
+                }
+                setattr(module, 'connection_args', connection_args)
+                logger.debug("Patched connection_args for %s", handler_folder_name)
+            except Exception as e:
+                # do nothing
+                logger.debug("Failed to patch connection_args for %s, reason: %s", handler_folder_name, str(e))
         module_attrs = [attr for attr in [
             'connection_args_example',
             'connection_args',
@@ -542,6 +561,7 @@ class IntegrationController:
             'type',
             'title'
         ] if hasattr(module, attr)]
+
         for attr in module_attrs:
             handler_meta[attr] = getattr(module, attr)
 

@@ -114,7 +114,7 @@ class TestMongoDBServer(BaseUnitTest):
 
         expected_sql = '''
           SELECT * FROM 
-             (SELECT * FROM mongo.fish WHERE Species = 'Pike')
+             (SELECT * FROM mongo.fish WHERE Species = 'Pike') as fish
              JOIN mindsdb.fish_model1
         '''
         assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
@@ -146,7 +146,7 @@ class TestMongoDBServer(BaseUnitTest):
                SELECT * FROM example_mongo.house_sales2
                 WHERE saledate > latest
                and type = 'house' and bedrooms=2
-             )
+             ) as house_sales2
              JOIN mindsdb.house_sales_model_h1w4
         '''
         assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()

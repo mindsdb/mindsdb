@@ -19,6 +19,7 @@ from sqlalchemy import func
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore, FileStorage, FileStorageFactory, RESOURCE_GROUP
+from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -359,13 +360,14 @@ class IntegrationController:
             connections[integration_name] = status.get('success', False)
         return connections
 
-    def _make_handler_args(self, name: str, handler_type: str, connection_data: dict,
-                           integration_id: int = None, file_storage: FileStorage = None):
+    def _make_handler_args(self, name: str, handler_type: str, connection_data: dict, integration_id: int = None,
+                           file_storage: FileStorage = None, handler_storage: HandlerStorage = None):
         handler_ars = dict(
             name=name,
             integration_id=integration_id,
             connection_data=connection_data,
-            file_storage=file_storage
+            file_storage=file_storage,
+            handler_storage=handler_storage
         )
 
         if handler_type == 'files':
@@ -398,12 +400,14 @@ class IntegrationController:
             root_dir='tmp',
             sync=False
         )
+        handler_storage = HandlerStorage(integration_id, root_dir='tmp')
         handler_ars = self._make_handler_args(
             name='tmp_handler',
             handler_type=handler_type,
             connection_data=connection_data,
             integration_id=integration_id,
-            file_storage=file_storage
+            file_storage=file_storage,
+            handler_storage=handler_storage
         )
 
         logger.debug("%s.create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
@@ -458,6 +462,7 @@ class IntegrationController:
             resource_id=integration_record.id,
             sync=True,
         )
+        handler_storage = HandlerStorage(integration_record.id)
 
         if isinstance(connection_args, (dict, OrderedDict)):
             files_to_get = {
@@ -474,7 +479,8 @@ class IntegrationController:
             handler_type=integration_engine,
             connection_data=connection_data,
             integration_id=integration_data['id'],
-            file_storage=file_storage
+            file_storage=file_storage,
+            handler_storage=handler_storage
         )
 
         handler_type = self.handler_modules[integration_engine].type

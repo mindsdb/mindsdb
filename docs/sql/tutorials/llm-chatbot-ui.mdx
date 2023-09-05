@@ -83,9 +83,14 @@ In the *Publish* tab, click on the *Connect* button.
 
 Publishing the chatbot to Slack requires two tokens: `Bot User OAuth Token` and `App-Level Token`.
 
-<Accordion title="How to setup Slack app and generate tokens" icon="slack" iconType="thin">
+### Slack App Setup
+
+Follow the instructions below to set up the Slack app and generate required tokens.
+
   1. Follow [this link](https://api.slack.com/apps) and sign in with your Slack account.
-  2. Create a new app or select an existing app.
+  2. Create a new app `From scratch` or select an existing app.
+      - Please note that the following instructions support apps created `From scratch`.
+      - For apps created `From an app manifest`, please follow the [Slack docs here](https://api.slack.com/reference/manifests).
   3. Go to *Basic Information* under *Settings*.
       - Under *App-Level Tokens*, click on *Generate Token and Scopes*.
       - Name the token `socket` and add the `connections:write` scope.
@@ -109,7 +114,6 @@ Publishing the chatbot to Slack requires two tokens: `Bot User OAuth Token` and 
       - Toggle the button to *Enable Events*.
       - Under *Subscribe to bot events*, click on *Add Bot User Event* and add `message.im`.
       - Click on *Save Changes*.
-</Accordion>
 
 Use tokens generated in points 3 and 5 to publish the chatbot to Slack.
 

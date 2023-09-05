@@ -491,7 +491,9 @@ class IntegrationController:
         else:
 
             logger.info("%s.get_handler: create a client to db service of %s type, args - %s", self.__class__.__name__, integration_engine, handler_ars)
-            handler = DBClient(integration_engine, HandlerClass, **handler_ars)
+            handler = HandlerClass(**handler_ars)
+            # handler = DBClient(integration_engine, HandlerClass, **handler_ars)
+            self.handlers_cache.set(handler)
 
         return handler
 

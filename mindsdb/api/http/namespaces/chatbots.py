@@ -139,7 +139,7 @@ class ChatBotResource(Resource):
                     'Chatbot not found',
                     f'Chatbot with name {chatbot_name} does not exist'
                 )
-            return existing_chatbot.as_dict()
+            return existing_chatbot
         except NoResultFound:
             # Project needs to exist.
             return http_error(

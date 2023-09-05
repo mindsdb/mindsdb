@@ -1,5 +1,7 @@
 import os
+import zipfile
 import re
+import io
 
 import mindsdb.interfaces.storage.db as db
 
@@ -207,3 +209,37 @@ class HandlerStorage:
 
     def json_del(self, name):
         ...
+
+    def export_files(self) -> bytes:
+        folder_path = self.folder_get('', not_empty=True)
+        if folder_path is None:
+            return None
+
+        # parent_folder = os.path.dirname(folder_path)
+
+        zip_fd = io.BytesIO()
+
+        with zipfile.ZipFile(zip_fd, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, dirs, files in os.walk(folder_path):
+                for file in files:
+                    if file == 'dir.lock':
+                        continue
+                    abs_path = os.path.join(root, file)
+                    zipf.write(abs_path, os.path.relpath(abs_path, folder_path))
+
+        zip_fd.seek(0)
+        return zip_fd.read()
+
+    def import_files(self, content: bytes):
+
+        folder_path = self.folder_get('')
+
+        zip_fd = io.BytesIO()
+        zip_fd.write(content)
+        zip_fd.seek(0)
+
+        with zipfile.ZipFile(zip_fd, 'r') as zip_ref:
+            zip_ref.extractall(folder_path)
+
+        self.folder_sync('')
+

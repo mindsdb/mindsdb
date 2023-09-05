@@ -400,14 +400,14 @@ class IntegrationController:
             root_dir='tmp',
             sync=False
         )
-        handler_storage = HandlerStorage(integration_id, root_dir='tmp')
+        handler_storage = HandlerStorage(integration_id, root_dir='tmp', is_temporal=True)
         handler_ars = self._make_handler_args(
             name='tmp_handler',
             handler_type=handler_type,
             connection_data=connection_data,
             integration_id=integration_id,
             file_storage=file_storage,
-            handler_storage=handler_storage
+            handler_storage=handler_storage,
         )
 
         logger.debug("%s.create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)

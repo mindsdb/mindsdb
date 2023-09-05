@@ -12,6 +12,7 @@ from flask import current_app as ca
 from dateutil.tz import tzlocal
 
 from mindsdb.utilities import log
+from mindsdb.utilities.functions import encrypt, decrypt
 from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.utilities.log_controller import get_logs
 from mindsdb.utilities.config import Config
@@ -135,14 +136,20 @@ class Integration(Resource):
                 handler_type=handler_type,
                 connection_data=params
             )
-            handler = info['handler']
 
             status = handler.check_connection()
             if temp_dir is not None:
                 shutil.rmtree(temp_dir)
 
             resp = status.to_json()
-            resp['integration_id'] = info['args']['integration_id']
+            if status.success and hasattr(handler, 'handler_storage'):
+                # attach storage if exists
+                export = handler.handler_storage.export_files()
+                if export:
+                    # encrypt with flask secret key
+                    encrypted = encrypt(export, ca.secret_key)
+                    resp['storage'] = encrypted.decode()
+
             return resp, 200
 
         integration = ca.integration_controller.get(name, sensitive_info=False)
@@ -154,11 +161,14 @@ class Integration(Resource):
             if engine is not None:
                 del params['type']
             params.pop('publish', False)
-            integration_id = ca.integration_controller.add(name, engine, params)
+            ca.integration_controller.add(name, engine, params)
 
             # copy storage
-            if params.get('copy_integration_id'):
-                ca.integration_controller.copy_integration_storage(params['copy_integration_id'], integration_id)
+            if params.get('storage'):
+                handler = ca.integration_controller.get_handler(name)
+
+                export = decrypt(params['storage'].encode(), ca.secret_key)
+                handler.handler_storage.import_files(export)
 
         except Exception as e:
             log.logger.error(str(e))

@@ -13,7 +13,6 @@ from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb_sql.parser import ast
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
-from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities.config import Config
 
 import os
@@ -303,7 +302,7 @@ class GmailHandler(APIHandler):
         self.service = None
         self.is_connected = False
 
-        self.storage = HandlerStorage(kwargs['integration_id'])
+        self.handler_storage = kwargs['handler_storage']
 
         emails = EmailsTable(self)
         self.emails = emails
@@ -329,7 +328,7 @@ class GmailHandler(APIHandler):
         creds = None
 
         # Get the current dir, we'll check for Token & Creds files in this dir
-        curr_dir = self.storage.folder_get('config')
+        curr_dir = self.handler_storage.folder_get('config')
 
         creds_file = os.path.join(curr_dir, 'creds.json')
         secret_file = os.path.join(curr_dir, 'secret.json')
@@ -343,7 +342,7 @@ class GmailHandler(APIHandler):
 
             if self._download_secret_file(secret_file):
                 # save to storage
-                self.storage.folder_sync('config')
+                self.handler_storage.folder_sync('config')
             else:
                 # try to get from config
                 config = Config()
@@ -368,7 +367,7 @@ class GmailHandler(APIHandler):
                     token.write(json.dumps(data))
 
                 # save to storage
-                self.storage.folder_sync('config')
+                self.handler_storage.folder_sync('config')
 
             else:
                 auth_url = flow.authorization_url()[0]

@@ -132,7 +132,7 @@ class Integration(Resource):
 
             handler_type = params.pop('type', None)
             params.pop('publish', None)
-            info = ca.integration_controller.create_tmp_handler_args(
+            handler = ca.integration_controller.create_tmp_handler(
                 handler_type=handler_type,
                 connection_data=params
             )

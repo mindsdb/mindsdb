@@ -378,7 +378,7 @@ class IntegrationController:
 
         return handler_ars
 
-    def create_tmp_handler_args(self, handler_type: str, connection_data: dict) -> object:
+    def create_tmp_handler(self, handler_type: str, connection_data: dict):
         """ Returns temporary handler. That handler does not exist in database.
 
             Args:
@@ -411,10 +411,7 @@ class IntegrationController:
         )
 
         logger.debug("%s.create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
-        return {
-            'handler': DBClient(handler_type, self.handler_modules[handler_type].Handler, **handler_ars),
-            'args': handler_ars
-        }
+        return DBClient(handler_type, self.handler_modules[handler_type].Handler, **handler_ars)
 
     def copy_integration_storage(self, integration_id_from, integration_id_to):
         storage_from = HandlerStorage(integration_id_from)
@@ -429,11 +426,9 @@ class IntegrationController:
         shutil.copytree(folder_from, folder_to, dirs_exist_ok=True)
         storage_to.folder_sync(root_path)
 
-    def create_tmp_handler(self, handler_type: str, connection_data: dict) -> object:
-        return self.create_tmp_handler_args(handler_type, connection_data)['handler']
 
     @profiler.profile()
-    def get_handler(self, name, case_sensitive=False, conn_args=None):
+    def get_handler(self, name, case_sensitive=False):
         handler = self.handlers_cache.get(name)
         if handler is not None:
             return handler
@@ -492,9 +487,6 @@ class IntegrationController:
 
                 for file_name, file_path in files_to_get.items():
                     connection_data[file_name] = file_storage.get_path(file_path)
-
-        if conn_args is not None:
-            connection_data.update(conn_args)
 
         handler_ars = self._make_handler_args(
             name=name,

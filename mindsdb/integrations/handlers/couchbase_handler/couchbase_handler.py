@@ -195,6 +195,7 @@ class CouchbaseHandler(DatabaseHandler):
         for _scope in bucket.collections().get_all_scopes():
                 for __collections in _scope.collections:
                     collections.append(__collections.name)
+        collections = list(set(collections))
         collections_ar = [
             [i] for i in collections
         ]

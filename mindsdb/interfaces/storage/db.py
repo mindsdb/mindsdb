@@ -370,3 +370,12 @@ class Tasks(Base):
 
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
+
+
+class Skills(Base):
+    __tablename__ = 'skills'
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    project_id = Column(Integer, nullable=False)
+    type = Column(String, nullable=False)
+    params = Column(JSON)

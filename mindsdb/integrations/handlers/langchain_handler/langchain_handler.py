@@ -210,9 +210,9 @@ class LangChainHandler(BaseMLEngine):
         # fill memory
 
         # system prompt
-        prompt = args['prompt']
-        if 'prompt' in pred_args and pred_args['prompt'] is not None:
-            prompt = pred_args['prompt']
+        prompt = args['prompt_template']
+        if 'prompt_template' in pred_args and pred_args['prompt_template'] is not None:
+            prompt = pred_args['prompt_template']
         if 'context' in pred_args:
             prompt += '\n\n' + 'Useful information:\n' + pred_args['context'] + '\n'
         memory.chat_memory.messages.insert(0, SystemMessage(content=prompt))
@@ -302,12 +302,12 @@ class LangChainHandler(BaseMLEngine):
 
     def run_agent(self, df, agent, args, pred_args):
         # TODO abstract prompt templating into a common utility method, this is also used in vanilla OpenAI
-        if args.get('prompt_template', False):
-            base_template = args['prompt_template']  # override with predict-time template if available
-        elif 'prompt_template' in pred_args:
-            base_template = pred_args['prompt_template']
+        if 'prompt_template' in pred_args:
+            base_template = pred_args['prompt_template']   # override with predict-time template if available
+        elif 'prompt_template' in args:
+            base_template = args['prompt_template']  # use create-time template if not
         else:
-            base_template = '{{question}}'
+            base_template = '{{question}}'  # default template otherwise
 
         input_variables = []
         matches = list(re.finditer("{{(.*?)}}", base_template))
@@ -343,7 +343,7 @@ class LangChainHandler(BaseMLEngine):
                     # Handle parsing errors ourselves instead of using handle_parsing_errors=True in initialize_agent.
                     response = str(e)
                     if not response.startswith(_PARSING_ERROR_PREFIX):
-                        completions.append(f'agent failed with error:\n{str(e)[:50]}...')
+                        completions.append(f'agent failed with error:\n{str(e)}...')
                     else:
                         # By far the most common error is a Langchain parsing error. Some OpenAI models
                         # always output a response formatted correctly. Anthropic, and others, sometimes just output
@@ -354,7 +354,7 @@ class LangChainHandler(BaseMLEngine):
                         response = response.lstrip(_PARSING_ERROR_PREFIX).rstrip('`')
                         completions.append(response)
                 except Exception as e:
-                    completions.append(f'agent failed with error:\n{str(e)[:50]}...')
+                    completions.append(f'agent failed with error:\n{str(e)}...')
             return [c for c in completions]
 
         completion = _completion(agent, prompts)

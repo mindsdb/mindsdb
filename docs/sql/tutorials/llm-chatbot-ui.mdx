@@ -83,16 +83,20 @@ In the *Publish* tab, click on the *Connect* button.
 
 Publishing the chatbot to Slack requires two tokens: `Bot User OAuth Token` and `App-Level Token`.
 
-<Accordion title="How to setup Slack app and generate tokens" icon="slack" iconType="thin">
+### Slack App Setup
+
+Follow the instructions below to set up the Slack app and generate required tokens.
+
   1. Follow [this link](https://api.slack.com/apps) and sign in with your Slack account.
-  2. Create a new app or select an existing app.
+  2. Create a new app `From scratch` or select an existing app.
+      - Please note that the following instructions support apps created `From scratch`.
+      - For apps created `From an app manifest`, please follow the [Slack docs here](https://api.slack.com/reference/manifests).
   3. Go to *Basic Information* under *Settings*.
       - Under *App-Level Tokens*, click on *Generate Token and Scopes*.
       - Name the token `socket` and add the `connections:write` scope.
       - **Copy and save the `xapp-...` token - you'll need it to publish the chatbot.**
   4. Go to *Socket Mode* under *Settings* and toggle the button to *Enable Socket Mode*.
-  5. Go to *App Home* under *Features* and click on the checkbox to *Allow users to send Slash commands and messages from the messages tab*.
-  6. Go to *OAuth & Permissions* under *Features*.
+  5. Go to *OAuth & Permissions* under *Features*.
       - Add the following *Bot Token Scopes*:
         - channels:history
         - channels:read
@@ -105,13 +109,13 @@ Publishing the chatbot to Slack requires two tokens: `Bot User OAuth Token` and 
         - users.profile:read
       - In the *OAuth Tokens for Your Workspace* section, click on *Install to Workspace* and then *Allow*.
       - **Copy and save the `xoxb-...` token - you'll need it to publish the chatbot.**
+  6. Go to *App Home* under *Features* and click on the checkbox to *Allow users to send Slash commands and messages from the messages tab*.
   7. Go to *Event Subscriptions* under *Features*.
       - Toggle the button to *Enable Events*.
       - Under *Subscribe to bot events*, click on *Add Bot User Event* and add `message.im`.
       - Click on *Save Changes*.
-</Accordion>
 
-Use tokens generated in points 3 and 6 to publish the chatbot to Slack.
+Use tokens generated in points 3 and 5 to publish the chatbot to Slack.
 
 <p align="center">
   <img src="/assets/tutorials/llm-chatbot-ui/slack.png" />

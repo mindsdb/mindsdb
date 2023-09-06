@@ -1,9 +1,11 @@
-from collections import OrderedDict
-from typing import List
+from collections import OrderedDict, defaultdict
+from typing import List, Optional
 
+import numpy as np
 import pandas as pd
 import psycopg
 from mindsdb_sql import ASTNode, CreateTable, Insert, Select
+from pgvector.psycopg import register_vector
 
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import (
     PostgresHandler,
@@ -21,6 +23,8 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
 
+# todo add support for different indexes and search algorithms e.g. cosine similarity or L2 norm
+
 
 class PgVectorHandler(PostgresHandler, VectorStoreHandler):
     """This handler handles connection and execution of the PostgreSQL with pgvector extension statements."""
@@ -30,6 +34,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
     def __init__(self, name: str, **kwargs):
 
         super().__init__(name=name, **kwargs)
+        self.connect()
 
     @profiler.profile()
     def connect(self):
@@ -42,14 +47,74 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             try:
                 # load pg_vector extension
                 cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
-                self.connection.commit()
+                log.logger.info("pg_vector extension loaded")
 
             except psycopg.Error as e:
                 log.logger.error(
                     f"Error loading pg_vector extension, ensure you have installed it before running, {e}!"
                 )
+                return Response(resp_type=RESPONSE_TYPE.ERROR, error_message=str(e))
+
+        # register vector type with psycopg2 connection
+        register_vector(self.connection)
 
         return self.connection
+
+    def _translate_conditions(self, conditions: List[FilterCondition]) -> dict | None:
+
+        if conditions is None:
+            return None
+
+        return {
+            condition.column.split(".")[-1]: {
+                "op": condition.op.value,
+                "value": condition.value,
+            }
+            for condition in conditions
+        }
+
+    def _build_select_query(
+        self,
+        table_name: str,
+        conditions: List[FilterCondition] = None,
+        offset: int = None,
+        limit: int = None,
+    ) -> str:
+        """
+        given inputs, build string query
+        """
+
+        limit_clause = f"LIMIT {limit}" if limit else ""
+        offset_clause = f"OFFSET {offset}" if offset else ""
+        filter_conditions = self._translate_conditions(conditions)
+
+        if filter_conditions:
+            where_clauses = [
+                f'{key} {value["op"]} {value["value"]}'
+                for key, value in filter_conditions.items()
+                if key not in "embeddings"
+            ]
+            after_where_clauses = ""
+            if where_clauses:
+                after_where_clauses = (
+                    f"WHERE{' AND '.join(where_clauses)} {offset_clause} {limit_clause}"
+                    if len(where_clauses) > 1
+                    else f"WHERE {where_clauses[0]} {offset_clause} {limit_clause}"
+                )
+
+            if "embeddings" in filter_conditions:
+                # if search vector, return similar rows, apply other filters after if any
+                search_vector = filter_conditions["embeddings"]["value"][0]
+                filter_conditions.pop("embeddings")
+                query = f"SELECT * FROM {table_name} ORDER BY embeddings <=> '{search_vector}' {after_where_clauses}"
+            else:
+                # if filter conditions, return filtered rows
+                query = f"SELECT * FROM {table_name} {after_where_clauses}"
+        else:
+            # if no filter conditions, return all rows
+            query = f"SELECT * FROM {table_name} {offset_clause} {limit_clause}"
+
+        return query
 
     def select(
         self,
@@ -59,52 +124,122 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         offset: int = None,
         limit: int = None,
     ) -> HandlerResponse:
+        """
+        Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
+        """
+        with self.connection.cursor() as cur:
+            try:
+
+                query = self._build_select_query(table_name, conditions, offset, limit)
+                cur.execute(query)
+
+                self.connection.commit()
+                result = cur.fetchall()
+            except psycopg.Error as e:
+                log.logger.error(f"Error creating table {table_name}, {e}!")
+                return Response(resp_type=RESPONSE_TYPE.ERROR, error_message=str(e))
+
+        result = pd.DataFrame(
+            result, columns=["id", "content", "embeddings", "metadata"]
+        )
+        # ensure embeddings are returned as string so they can be parsed by mindsdb
+        result["embeddings"] = result["embeddings"].astype(str)
+
+        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=result)
+
+    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
+        """
+        Run a create table query on the pgvector database.
+        """
+        with self.connection.cursor() as cur:
+            try:
+                cur.execute(
+                    f"CREATE TABLE IF NOT EXISTS {table_name} (id text PRIMARY KEY, content text, embeddings vector, metadata jsonb)"
+                )
+                self.connection.commit()
+            except psycopg.Error as e:
+                log.logger.error(f"Error creating table {table_name}, {e}!")
+                return Response(resp_type=RESPONSE_TYPE.ERROR, error_message=str(e))
+
+        return Response(resp_type=RESPONSE_TYPE.OK)
+
+    def insert(
+        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
+    ) -> HandlerResponse:
+        """
+        Insert data into the pgvector table database.
+        """
+        data_dict = data.to_dict(orient="list")
+        transposed_data = list(zip(*data_dict.values()))
+
+        columns = ", ".join(data.keys())
+        values = ", ".join(["%s"] * len(data.keys()))
+
+        insert_statement = f"INSERT INTO {table_name} ({columns}) VALUES ({values})"
+
+        with self.connection.cursor() as cur:
+            try:
+                cur.executemany(insert_statement, transposed_data)
+                self.connection.commit()
+            except psycopg.Error as e:
+                log.logger.error(f"Error inserting into table {table_name}, {e}!")
+                return Response(resp_type=RESPONSE_TYPE.ERROR, error_message=str(e))
+
+        return Response(resp_type=RESPONSE_TYPE.OK)
+
+    def delete(
+        self, table_name: str, conditions: List[FilterCondition] = None
+    ) -> HandlerResponse:
+
+        filter_conditions = self._translate_conditions(conditions)
+        search_vector = filter_conditions["embedding"]["value"]
 
         with self.connection.cursor() as cur:
             try:
                 # convert search embedding to string
-                string_embeddings_search = str(query.where.args[1].items[0].value)
-                # get limit from query
-                limit = query.limit.value if query.limit else 5
+
                 # we need to use the <-> operator to search for similar vectors,
                 # so we need to convert the string to a vector and also use a threshold (e.g. 0.5)
-                cur.execute(
-                    f"SELECT * FROM {table_name} WHERE embedding <-> '{string_embeddings_search}' < 0.5 LIMIT {limit}"
+
+                query = (
+                    f"DELETE FROM {table_name} WHERE embeddings <=> '{search_vector}'"
                 )
-                self.connection.commit()
-                result = cur.fetchall()
-            except psycopg.Error as e:
-                log.logger.error(f"Error creating table {collection_name}, {e}!")
-                return Response(resp_type=RESPONSE_TYPE.ERROR, error_message=e)
-
-        result = pd.DataFrame(result, columns=["id", "embeddings"])
-
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=result)
-
-    def create_collection(self, query: ASTNode) -> Response:
-        """
-        Run a create table query on the pgvector database.
-        """
-        collection_name = query.name.parts[-1]
-
-        with self.connection.cursor() as cur:
-            try:
-                cur.execute(
-                    f"CREATE TABLE IF NOT EXISTS {collection_name} (id bigserial PRIMARY KEY, embedding vector)"
-                )
+                cur.execute(query)
                 self.connection.commit()
             except psycopg.Error as e:
-                log.logger.error(f"Error creating table {collection_name}, {e}!")
-                return Response(resp_type=RESPONSE_TYPE.ERROR, error_message=e)
+                log.logger.error(f"Error creating table {table_name}, {e}!")
+                return Response(resp_type=RESPONSE_TYPE.ERROR, error_message=str(e))
 
         return Response(resp_type=RESPONSE_TYPE.OK)
 
-    @profiler.profile()
+    def get_tables(self) -> Response:
+        """
+        List all tables in PostgreSQL without the system tables information_schema and pg_catalog
+        """
+        return PostgresHandler.get_tables(self)
+
+    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
+        """
+        Run a drop table query on the pgvector database.
+        """
+        with self.connection.cursor() as cur:
+            try:
+                cur.execute(f"DROP TABLE IF EXISTS {table_name}")
+                self.connection.commit()
+            except psycopg.Error as e:
+                log.logger.error(f"Error dropping table {table_name}, {e}!")
+                return Response(resp_type=RESPONSE_TYPE.ERROR, error_message=str(e))
+
+        return Response(resp_type=RESPONSE_TYPE.OK)
+
+    def get_columns(self, table_name: str) -> HandlerResponse:
+        """
+        get columns in a given table
+        """
+        return VectorStoreHandler.get_columns(table_name)
+
     def query(self, query: ASTNode) -> Response:
-        """
-        Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
-        """
-        return VectorStoreHandler.query(self, query)  # to avoid diamond problem
+        return VectorStoreHandler.query(self, query)
 
 
 connection_args = OrderedDict(

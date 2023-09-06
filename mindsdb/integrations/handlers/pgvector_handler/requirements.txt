@@ -1,1 +1,1 @@
-psycopg[binary]
+pgvector

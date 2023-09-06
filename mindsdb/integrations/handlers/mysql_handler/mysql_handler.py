@@ -44,9 +44,13 @@ class MySQLHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
+        port = self.connection_data.get('port')
+        if port is None or not port.is_integer() or port == 0:
+            port = 3306
+
         config = {
             'host': self.connection_data.get('host'),
-            'port': self.connection_data.get('port'),
+            'port': port,
             'user': self.connection_data.get('user'),
             'password': self.connection_data.get('password'),
             'database': self.connection_data.get('database')

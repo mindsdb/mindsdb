@@ -1,7 +1,7 @@
 """update_project_names
 
 Revision ID: 607709e1615b
-Revises: b5bf593ba659
+Revises: 4c26ad04eeaa
 Create Date: 2023-06-27 18:33:29.436607
 
 """
@@ -12,7 +12,7 @@ import mindsdb.interfaces.storage.db  # noqa
 
 # revision identifiers, used by Alembic.
 revision = '607709e1615b'
-down_revision = 'b5bf593ba659'
+down_revision = '4c26ad04eeaa'
 branch_labels = None
 depends_on = None
 

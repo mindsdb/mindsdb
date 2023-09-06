@@ -60,7 +60,11 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
         return self.connection
 
-    def _translate_conditions(self, conditions: List[FilterCondition]) -> dict | None:
+    @staticmethod
+    def _translate_conditions(conditions: List[FilterCondition]) -> dict | None:
+        """
+        Translate filter conditions to a dictionary
+        """
 
         if conditions is None:
             return None
@@ -73,48 +77,74 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             for condition in conditions
         }
 
+    @staticmethod
+    def _construct_where_clause(filter_conditions):
+        """
+        Construct where clauses from filter conditions
+        """
+
+        where_clauses = [
+            f'{key} {value["op"]} {value["value"]}'
+            for key, value in filter_conditions.items()
+            if key not in "embeddings"
+        ]
+
+        if len(where_clauses) > 1:
+            return f"WHERE{' AND '.join(where_clauses)}"
+        elif len(where_clauses) == 1:
+            return f"WHERE {where_clauses[0]}"
+        else:
+            return ""
+
+    @staticmethod
+    def _construct_full_after_from_clause(
+        offset_clause: str,
+        limit_clause: str,
+        where_clause: str,
+    ) -> str:
+
+        return f"{where_clause} {offset_clause} {limit_clause}"
+
     def _build_select_query(
         self,
         table_name: str,
         conditions: List[FilterCondition] = None,
-        offset: int = None,
         limit: int = None,
+        offset: int = None,
     ) -> str:
         """
         given inputs, build string query
         """
-
         limit_clause = f"LIMIT {limit}" if limit else ""
         offset_clause = f"OFFSET {offset}" if offset else ""
+
+        # translate filter conditions to dictionary
         filter_conditions = self._translate_conditions(conditions)
 
-        if filter_conditions:
-            where_clauses = [
-                f'{key} {value["op"]} {value["value"]}'
-                for key, value in filter_conditions.items()
-                if key not in "embeddings"
-            ]
-            after_where_clauses = ""
-            if where_clauses:
-                after_where_clauses = (
-                    f"WHERE{' AND '.join(where_clauses)} {offset_clause} {limit_clause}"
-                    if len(where_clauses) > 1
-                    else f"WHERE {where_clauses[0]} {offset_clause} {limit_clause}"
-                )
+        # check if search vector is in filter conditions
+        embedding_search = filter_conditions.get("embeddings", None)
 
-            if "embeddings" in filter_conditions:
+        # given filter conditions, construct where clause
+        where_clause = self._construct_where_clause(filter_conditions)
+
+        # construct full after from clause, where clause + offset clause + limit clause
+        after_from_clause = self._construct_full_after_from_clause(
+            where_clause, offset_clause, limit_clause
+        )
+
+        if filter_conditions:
+
+            if embedding_search:
                 # if search vector, return similar rows, apply other filters after if any
                 search_vector = filter_conditions["embeddings"]["value"][0]
                 filter_conditions.pop("embeddings")
-                query = f"SELECT * FROM {table_name} ORDER BY embeddings <=> '{search_vector}' {after_where_clauses}"
+                return f"SELECT * FROM {table_name} ORDER BY embeddings <=> '{search_vector}' {after_from_clause}"
             else:
                 # if filter conditions, return filtered rows
-                query = f"SELECT * FROM {table_name} {after_where_clauses}"
+                return f"SELECT * FROM {table_name} {after_from_clause}"
         else:
             # if no filter conditions, return all rows
-            query = f"SELECT * FROM {table_name} {offset_clause} {limit_clause}"
-
-        return query
+            return f"SELECT * FROM {table_name} {after_from_clause}"
 
     def select(
         self,

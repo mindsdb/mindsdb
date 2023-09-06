@@ -142,13 +142,14 @@ class Integration(Resource):
                 shutil.rmtree(temp_dir)
 
             resp = status.to_json()
-            if status.success and hasattr(handler, 'handler_storage'):
-                # attach storage if exists
-                export = handler.handler_storage.export_files()
-                if export:
-                    # encrypt with flask secret key
-                    encrypted = encrypt(export, ca.secret_key)
-                    resp['storage'] = encrypted.decode()
+            if status.success and 'code' in params:
+                if hasattr(handler, 'handler_storage'):
+                    # attach storage if exists
+                    export = handler.handler_storage.export_files()
+                    if export:
+                        # encrypt with flask secret key
+                        encrypted = encrypt(export, ca.secret_key)
+                        resp['storage'] = encrypted.decode()
 
             return resp, 200
 

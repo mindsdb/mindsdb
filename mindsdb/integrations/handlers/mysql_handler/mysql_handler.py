@@ -151,10 +151,21 @@ class MySQLHandler(DatabaseHandler):
 
     def get_tables(self) -> Response:
         """
-        Get a list with all of the tabels in MySQL
+        Get a list with all of the tabels in MySQL selected database
         """
-        q = "SHOW TABLES;"
-        result = self.native_query(q)
+        sql = """
+            SELECT
+                TABLE_SCHEMA AS table_schema,
+                TABLE_NAME AS table_name,
+                TABLE_TYPE AS table_type
+            FROM
+                information_schema.TABLES
+            WHERE
+                TABLE_TYPE IN ('BASE TABLE', 'VIEW') 
+                AND TABLE_SCHEMA = DATABASE()
+            ;
+        """
+        result = self.native_query(sql)
         df = result.data_frame
         result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
         return result

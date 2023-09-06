@@ -163,6 +163,7 @@ class MySQLHandler(DatabaseHandler):
             WHERE
                 TABLE_TYPE IN ('BASE TABLE', 'VIEW') 
                 AND TABLE_SCHEMA = DATABASE()
+            ORDER BY 2
             ;
         """
         result = self.native_query(sql)

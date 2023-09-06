@@ -12,7 +12,7 @@ import mindsdb.interfaces.storage.db  # noqa
 
 # revision identifiers, used by Alembic.
 revision = '607709e1615b'
-down_revision = '4c26ad04eeaa'
+down_revision = 'b5bf593ba659'
 branch_labels = None
 depends_on = None
 

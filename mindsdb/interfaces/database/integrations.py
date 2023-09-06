@@ -378,7 +378,7 @@ class IntegrationController:
 
         return handler_ars
 
-    def create_tmp_handler(self, handler_type: str, connection_data: dict):
+    def create_tmp_handler(self, handler_type: str, connection_data: dict) -> object:
         """ Returns temporary handler. That handler does not exist in database.
 
             Args:

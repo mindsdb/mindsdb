@@ -242,4 +242,3 @@ class HandlerStorage:
             zip_ref.extractall(folder_path)
 
         self.folder_sync('')
-

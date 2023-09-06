@@ -426,7 +426,6 @@ class IntegrationController:
         shutil.copytree(folder_from, folder_to, dirs_exist_ok=True)
         storage_to.folder_sync(root_path)
 
-
     @profiler.profile()
     def get_handler(self, name, case_sensitive=False):
         handler = self.handlers_cache.get(name)

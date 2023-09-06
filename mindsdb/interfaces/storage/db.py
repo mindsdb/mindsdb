@@ -393,7 +393,7 @@ class Skills(Base):
 class Agents(Base):
     __tablename__ = 'agents'
     id = Column(Integer, primary_key=True)
-    skills: Mapped[list['Skills']] = relationship(secondary=agent_skills_table, back_populates='agents')
+    skills: Mapped[List['Skills']] = relationship(secondary=agent_skills_table, back_populates='agents')
     company_id = Column(Integer, nullable=True)
     user_class = Column(Integer, nullable=True)
 

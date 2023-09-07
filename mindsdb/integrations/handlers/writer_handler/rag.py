@@ -4,10 +4,8 @@ from typing import List
 from langchain.llms import Writer
 
 from mindsdb.integrations.handlers.writer_handler.settings import (
-    PersistedVectorStoreIndexConfig,
     PersistedVectorStoreLoader,
     PersistedVectorStoreLoaderConfig,
-    VectorStoreIndexLoader,
     WriterHandlerParameters,
     load_embeddings_model,
 )

@@ -355,7 +355,7 @@ class GmailHandler(APIHandler):
 
             # get host url from flask
             from flask import request
-            flow.redirect_uri = request.headers['ORIGIN'] + '/editor'
+            flow.redirect_uri = request.headers['ORIGIN'] + '/verify-auth'
 
             if self.connection_args.get('code'):
                 flow.fetch_token(code=self.connection_args['code'])

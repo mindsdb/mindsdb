@@ -49,13 +49,13 @@ class TimeGPTHandler(BaseMLEngine):
         if time_settings:
             model_args["horizon"] = time_settings["horizon"]
             model_args["order_by"] = time_settings["order_by"]
-            model_args["group_by"] = time_settings.get("group_by", []),
+            model_args["group_by"] = time_settings.get("group_by", [])
 
         if mode == 'anomalydetection':
             model_args["target"] = using_args['target'] if target is None else target
-            model_args["horizon"] = 1
+            model_args["horizon"] = using_args.get('horizon', 1)
             model_args["order_by"] = using_args['order_by']
-            model_args["group_by"] = using_args.get("group_by", []),
+            model_args["group_by"] = using_args.get("group_by", [])
             model_args['add_history'] = True
 
         assert isinstance(model_args["level"], list), "`level` must be a list of integers"
@@ -95,11 +95,11 @@ class TimeGPTHandler(BaseMLEngine):
             results_df = get_results_from_nixtla_df(results_df, model_args)
         elif model_args['mode'] == 'anomalydetection':
             forecast_df['ds'] = pd.to_datetime(forecast_df['ds'])
-            results_df = forecast_df.merge(prediction_df, how='inner')   # TODO: outer?
+            results_df = forecast_df.merge(prediction_df, how='inner')  # some rows drop because of TimeGPT's cold start
             results_df['anomaly'] = (results_df['y'] > results_df[f'TimeGPT-hi-{model_args["level"][0]}']) | (results_df['y'] < results_df[f'TimeGPT-lo-{model_args["level"][0]}'])
 
             forecast_df = results_df  # rewrite forecast_df so that we can reuse code below for prediction intervals
-            results_df = results_df[['unique_id', 'ds', 'TimeGPT', 'y', 'anomaly']]
+            results_df = get_results_from_nixtla_df(results_df, model_args)
             results_df = results_df.rename({'y': f'observed_{model_args["target"]}'}, axis=1)
         else:
             raise Exception(f'Unsupported prediction mode: {model_args["mode"]}')
@@ -175,7 +175,7 @@ class TimeGPTHandler(BaseMLEngine):
                 nixtla_df[col] = nixtla_df[col].astype(str)
             nixtla_df["unique_id"] = nixtla_df[gby].agg("/".join, axis=1)
             group_col = "ignore this"
-        elif len(gby) == 1:
+        elif len(gby) == 1 and gby[0] is not None:
             group_col = settings_dict["group_by"][0]
         else:
             group_col = '__unique_id'

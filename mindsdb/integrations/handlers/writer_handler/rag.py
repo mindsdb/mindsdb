@@ -1,3 +1,4 @@
+import json
 from collections import defaultdict
 from typing import List
 
@@ -77,6 +78,23 @@ class QuestionAnswerer:
             k=self.args.top_k,
         )
 
+    @staticmethod
+    def extract_generated_text(response: str):
+        """Extract generated text from LLM response"""
+        try:
+            data = json.loads(response)
+            if "choices" in data:
+                return data["choices"][0]["text"]
+            else:
+                logger.info(
+                    f"Error extracting generated text: failed to parse response {response}"
+                )
+                return response
+        except Exception as e:
+            raise Exception(
+                f"{e} Error extracting generated text: failed to parse response {response}"
+            )
+
     def query(self, question: str):
         logger.debug(f"Querying: {question}")
 
@@ -89,7 +107,7 @@ class QuestionAnswerer:
         result = defaultdict(list)
 
         result["question"].append(question)
-        result["answer"].append(llm_response)
+        result["answer"].append(self.extract_generated_text(llm_response))
 
         sources = defaultdict(list)
 

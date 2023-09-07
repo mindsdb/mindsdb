@@ -164,23 +164,13 @@ class WriterEvaluator:
             for question, context in zip(df["question"], df["retrieved_context"])
         ]
 
-    @staticmethod
-    def extract_generated_text(responses: List[str]):
+    def extract_generated_texts(self, responses: List[str]):
         """Extract generated text from LLM response"""
 
         results = []
         for i, item in enumerate(responses):
-            try:
-                data = json.loads(item)
-                if "choices" in data:
-                    text = data["choices"][0]["text"]
-                else:
-                    text = "answer not parsed"
 
-            except Exception as e:
-                raise Exception(
-                    f"{e} Error extracting generated text: failed to parse response {item}"
-                )
+            text = self.rag.extract_generated_text(item)
 
             results.append(text)
         return results

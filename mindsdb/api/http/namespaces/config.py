@@ -127,6 +127,10 @@ class Integration(Resource):
                 params[key] = file_path
 
         is_test = params.get('test', False)
+
+        config = Config()
+        secret_key = config.get('secret_key', 'dummy-key')
+
         if is_test:
             del params['test']
 
@@ -148,7 +152,6 @@ class Integration(Resource):
                     export = handler.handler_storage.export_files()
                     if export:
                         # encrypt with flask secret key
-                        secret_key = request.headers.get('gw-secret', 'dummy-key')
                         encrypted = encrypt(export, secret_key)
                         resp['storage'] = encrypted.decode()
 
@@ -169,7 +172,6 @@ class Integration(Resource):
             if params.get('storage'):
                 handler = ca.integration_controller.get_handler(name)
 
-                secret_key = request.headers.get('gw-secret', 'dummy-key')
                 export = decrypt(params['storage'].encode(), secret_key)
                 handler.handler_storage.import_files(export)
 

@@ -12,6 +12,7 @@ from flask import current_app as ca
 from dateutil.tz import tzlocal
 
 from mindsdb.utilities import log
+from mindsdb.utilities.functions import encrypt, decrypt
 from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.utilities.log_controller import get_logs
 from mindsdb.utilities.config import Config
@@ -135,10 +136,22 @@ class Integration(Resource):
                 handler_type=handler_type,
                 connection_data=params
             )
+
             status = handler.check_connection()
             if temp_dir is not None:
                 shutil.rmtree(temp_dir)
-            return status, 200
+
+            resp = status.to_json()
+            if status.success and 'code' in params:
+                if hasattr(handler, 'handler_storage'):
+                    # attach storage if exists
+                    export = handler.handler_storage.export_files()
+                    if export:
+                        # encrypt with flask secret key
+                        encrypted = encrypt(export, ca.secret_key)
+                        resp['storage'] = encrypted.decode()
+
+            return resp, 200
 
         integration = ca.integration_controller.get(name, sensitive_info=False)
         if integration is not None:
@@ -151,6 +164,13 @@ class Integration(Resource):
             params.pop('publish', False)
             ca.integration_controller.add(name, engine, params)
 
+            # copy storage
+            if params.get('storage'):
+                handler = ca.integration_controller.get_handler(name)
+
+                export = decrypt(params['storage'].encode(), ca.secret_key)
+                handler.handler_storage.import_files(export)
+
         except Exception as e:
             log.logger.error(str(e))
             if temp_dir is not None:
@@ -159,7 +179,7 @@ class Integration(Resource):
 
         if temp_dir is not None:
             shutil.rmtree(temp_dir)
-        return '', 200
+        return {}, 200
 
     @ns_conf.doc('delete_integration')
     def delete(self, name):

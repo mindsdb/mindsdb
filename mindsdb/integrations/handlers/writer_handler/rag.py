@@ -68,7 +68,7 @@ class QuestionAnswerer:
         summarized_context = self.llm(prompt=summarization_prompt)
 
         return self.prompt_template.format(
-            question=question, context=summarized_context
+            question=question, context=self.extract_generated_text(summarized_context)
         )
 
     def query_vector_store(self, question: str) -> List:

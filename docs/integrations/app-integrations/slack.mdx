@@ -117,6 +117,12 @@ It comes with the `channels` table.
 
 ## Usage
 
+<Warning>
+The following usage applies when **Connection Method 2** was used to connect Slack.
+
+The usage for **Connection Method 1** is through the LLM UI. More details [here](/sql/tutorials/llm-chatbot-ui).
+</Warning>
+
 You can select all messages from the channel using the below query.
 
 ```sql
@@ -128,7 +134,7 @@ WHERE channel="<channel-name>";
 Also, you can post messages to the channel like this:
 
 ```sql
-INSERT INTO mindsdb_slack.channels (channel, message)
+INSERT INTO mindsdb_slack.channels (channel, text)
 VALUES("<channel-name>", "Hey MindsDB, Thanks to you! Now I can respond to my Slack messages through SQL Queries.");
 ```
 

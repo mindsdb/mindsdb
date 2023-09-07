@@ -53,7 +53,6 @@ class CouchbaseHandler(DatabaseHandler):
         Should return output of check_connection() method after attempting
         connection. Should switch self.is_connected.
         """
-        print("Hello")
         if self.is_connected is True:
             return self.cluster
 
@@ -76,7 +75,6 @@ class CouchbaseHandler(DatabaseHandler):
             # We strongly reccomend this for production use.
             # cert_path=cert_path
         )
-        print(f'Connecting to {endpoint} as {username}...')
         cluster = Cluster.connect(
             f'couchbase://{endpoint}',
             ClusterOptions(

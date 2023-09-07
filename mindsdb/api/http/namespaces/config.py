@@ -148,7 +148,8 @@ class Integration(Resource):
                     export = handler.handler_storage.export_files()
                     if export:
                         # encrypt with flask secret key
-                        encrypted = encrypt(export, ca.secret_key)
+                        secret_key = request.headers.get('gw-secret', 'dummy-key')
+                        encrypted = encrypt(export, secret_key)
                         resp['storage'] = encrypted.decode()
 
             return resp, 200
@@ -168,7 +169,8 @@ class Integration(Resource):
             if params.get('storage'):
                 handler = ca.integration_controller.get_handler(name)
 
-                export = decrypt(params['storage'].encode(), ca.secret_key)
+                secret_key = request.headers.get('gw-secret', 'dummy-key')
+                export = decrypt(params['storage'].encode(), secret_key)
                 handler.handler_storage.import_files(export)
 
         except Exception as e:

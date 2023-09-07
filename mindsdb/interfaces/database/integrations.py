@@ -19,6 +19,7 @@ from sqlalchemy import func
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.storage.fs import FsStore, FileStorage, FileStorageFactory, RESOURCE_GROUP
+from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -359,10 +360,14 @@ class IntegrationController:
             connections[integration_name] = status.get('success', False)
         return connections
 
-    def _make_handler_args(self, handler_type: str, connection_data: dict, integration_id: int = None):
+    def _make_handler_args(self, name: str, handler_type: str, connection_data: dict, integration_id: int = None,
+                           file_storage: FileStorage = None, handler_storage: HandlerStorage = None):
         handler_ars = dict(
+            name=name,
+            integration_id=integration_id,
             connection_data=connection_data,
-            integration_id=integration_id
+            file_storage=file_storage,
+            handler_storage=handler_storage
         )
 
         if handler_type == 'files':
@@ -374,7 +379,7 @@ class IntegrationController:
         return handler_ars
 
     def create_tmp_handler(self, handler_type: str, connection_data: dict) -> object:
-        """ Returns temporary handler. That handler does not exists in database.
+        """ Returns temporary handler. That handler does not exist in database.
 
             Args:
                 handler_type (str)
@@ -389,23 +394,38 @@ class IntegrationController:
 
         logger.debug("%s.create_tmp_handler: connection args - %s", self.__class__.__name__, connection_data)
         integration_id = int(time() * 10000)
-        fs_store = FileStorage(
+        file_storage = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
             resource_id=integration_id,
             root_dir='tmp',
             sync=False
         )
-        handler_ars = self._make_handler_args(handler_type, connection_data)
-        handler_ars['fs_store'] = fs_store
-        handler_ars = dict(
+        handler_storage = HandlerStorage(integration_id, root_dir='tmp')
+        handler_ars = self._make_handler_args(
             name='tmp_handler',
-            fs_store=fs_store,
+            handler_type=handler_type,
             connection_data=connection_data,
             integration_id=integration_id,
+            file_storage=file_storage,
+            handler_storage=handler_storage,
         )
 
         logger.debug("%s.create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
         return DBClient(handler_type, self.handler_modules[handler_type].Handler, **handler_ars)
+
+    def copy_integration_storage(self, integration_id_from, integration_id_to):
+        storage_from = HandlerStorage(integration_id_from)
+        root_path = ''
+
+        if storage_from.is_empty():
+            return None
+        folder_from = storage_from.folder_get(root_path)
+
+        storage_to = HandlerStorage(integration_id_to)
+        folder_to = storage_to.folder_get(root_path)
+
+        shutil.copytree(folder_from, folder_to, dirs_exist_ok=True)
+        storage_to.folder_sync(root_path)
 
     @profiler.profile()
     def get_handler(self, name, case_sensitive=False):
@@ -451,11 +471,12 @@ class IntegrationController:
         connection_args = integration_meta.get('connection_args')
         logger.debug("%s.get_handler: connection args - %s", self.__class__.__name__, connection_args)
 
-        fs_store = FileStorage(
+        file_storage = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
             resource_id=integration_record.id,
             sync=True,
         )
+        handler_storage = HandlerStorage(integration_record.id)
 
         if isinstance(connection_args, (dict, OrderedDict)):
             files_to_get = {
@@ -465,12 +486,16 @@ class IntegrationController:
             if len(files_to_get) > 0:
 
                 for file_name, file_path in files_to_get.items():
-                    connection_data[file_name] = fs_store.get_path(file_path)
+                    connection_data[file_name] = file_storage.get_path(file_path)
 
-        handler_ars = self._make_handler_args(integration_engine, connection_data)
-        handler_ars['name'] = name
-        handler_ars['file_storage'] = fs_store
-        handler_ars['integration_id'] = integration_data['id']
+        handler_ars = self._make_handler_args(
+            name=name,
+            handler_type=integration_engine,
+            connection_data=connection_data,
+            integration_id=integration_data['id'],
+            file_storage=file_storage,
+            handler_storage=handler_storage
+        )
 
         handler_type = self.handler_modules[integration_engine].type
         if handler_type == 'ml':
@@ -491,7 +516,9 @@ class IntegrationController:
         else:
 
             logger.info("%s.get_handler: create a client to db service of %s type, args - %s", self.__class__.__name__, integration_engine, handler_ars)
-            handler = DBClient(integration_engine, HandlerClass, **handler_ars)
+            handler = HandlerClass(**handler_ars)
+            # handler = DBClient(integration_engine, HandlerClass, **handler_ars)
+            self.handlers_cache.set(handler)
 
         return handler
 

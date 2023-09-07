@@ -37,6 +37,11 @@ class RESOURCE_GROUP:
 RESOURCE_GROUP = RESOURCE_GROUP()
 
 
+DIR_LOCK_FILE_NAME = 'dir.lock'
+DIR_LAST_MODIFIED_FILE_NAME = 'last_modified.txt'
+SERVICE_FILES_NAMES = (DIR_LOCK_FILE_NAME, DIR_LAST_MODIFIED_FILE_NAME)
+
+
 def copy(src, dst):
     if os.path.isdir(src):
         if os.path.exists(dst):
@@ -147,7 +152,7 @@ class FileLock:
             mode (str): lock for read (r) or write (w)
         """
         self._local_path = local_path
-        self._lock_file_name = 'dir.lock'
+        self._lock_file_name = DIR_LOCK_FILE_NAME
         self._lock_file_path = local_path / self._lock_file_name
         self._mode = fcntl.LOCK_EX if mode == 'w' else fcntl.LOCK_SH
 
@@ -229,7 +234,7 @@ class S3FSStore(BaseFSStore):
             Returns:
                 datetime | None
         """
-        last_modified_file_path = Path(base_dir) / local_name / 'last_modified.txt'
+        last_modified_file_path = Path(base_dir) / local_name / DIR_LAST_MODIFIED_FILE_NAME
         if last_modified_file_path.is_file() is False:
             return None
         try:
@@ -248,7 +253,7 @@ class S3FSStore(BaseFSStore):
                 local_name (str): folder name
                 last_modified (datetime)
         """
-        last_modified_file_path = Path(base_dir) / local_name / 'last_modified.txt'
+        last_modified_file_path = Path(base_dir) / local_name / DIR_LAST_MODIFIED_FILE_NAME
         last_modified_text = last_modified.strftime(self.dt_format)
         last_modified_file_path.write_text(last_modified_text)
 
@@ -332,7 +337,7 @@ class S3FSStore(BaseFSStore):
                     os.chdir(base_dir)
                     with tarfile.open(fileobj=fh, mode='w:gz', compresslevel=compression_level) as tar:
                         for path in dir_path.iterdir():
-                            if path.is_file() and path.name in ('dir.lock', 'last_modified.txt'):
+                            if path.is_file() and path.name in SERVICE_FILES_NAMES:
                                 continue
                             tar.add(path.relative_to(base_dir))
                     os.chdir(old_cwd)

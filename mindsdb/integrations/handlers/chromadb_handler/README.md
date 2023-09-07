@@ -8,14 +8,14 @@ Chroma is the open-source embedding database. Chroma makes it easy to build LLM 
 
 ## Implementation
 
-This handler uses `chromadbd` python library connect to a chromadb instance, it uses langchain to make use of their pre-existing semantic search functionality
+This handler uses `chromadb` python library connect to a chromadb instance, it uses langchain to make use of their pre-existing semantic search functionality
 
 The required arguments to establish a connection are:
 
-* `chroma_api_impl`: the api implementation, likely should be `rest`
+* `chroma_api_impl`: the api implementation, likely should be `rest` or `local`
 * `chroma_server_host`: the host name or IP address of the ChromaDB instance
 * `chroma_server_http_port`: the port to use when connecting
-* `embedding_function`: the embedding function to use to get embeddings from input text or search text
+* `persist_directory`: the directory to use for persisting data, this should only be used when `chroma_api_impl` is set to `local`
 
 
 ## Usage
@@ -29,7 +29,6 @@ PARAMETERS = {
    "chroma_api_impl": "rest",
    "chroma_server_host": "localhost",
    "chroma_server_http_port": 8000,
-   "embedding_function": "sentence-transformers/all-mpnet-base-v2"
     }
 ```
 

@@ -41,9 +41,9 @@ It also only support collaborative filtering
 - Support for user-user recommendations
 
 
-## Please provide a minimal SQL example that uses this ML engine (pointers to integration tests in the PR also valid)
+## Example usage of lightFM Handler
 ```sql
--- Create Writer engine
+-- Create lightfm engine
 CREATE ML_ENGINE lightfm
 FROM lightfm;
 

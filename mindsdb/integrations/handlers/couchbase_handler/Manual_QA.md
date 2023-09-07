@@ -14,9 +14,11 @@ WITH
         "user": "admin",
         "password": "password"
     };
+
 ```
 
 [![couchbase-create-database.png](https://i.postimg.cc/MKwHdRCB/couchbase-create-database.png)](https://postimg.cc/RqPv03VC)
+
 
 **2. Testing SELECT FROM DATABASE**
 
@@ -30,6 +32,4 @@ SELECT * FROM couchbase_datasource.airport;
 
 Drop a remark based on your observation.
 - [X] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
-- [X] There's a Bug 🪲 [Issue Title](URL To the Issue you created) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
-
----
+- [] There's a Bug 🪲 [Issue Title](URL To the Issue you created) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)

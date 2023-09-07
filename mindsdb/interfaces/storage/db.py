@@ -379,3 +379,19 @@ class Skills(Base):
     project_id = Column(Integer, nullable=False)
     type = Column(String, nullable=False)
     params = Column(JSON)
+
+
+class Agents(Base):
+    __tablename__ = 'agents'
+    id = Column(Integer, primary_key=True)
+    company_id = Column(Integer, nullable=True)
+    user_class = Column(Integer, nullable=True)
+
+    name = Column(String, nullable=False)
+    project_id = Column(Integer, nullable=False)
+
+    model_name = Column(String, nullable=False)
+    params = Column(JSON)
+
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.now)

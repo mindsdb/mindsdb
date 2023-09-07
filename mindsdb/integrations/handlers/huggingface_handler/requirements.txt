@@ -8,3 +8,4 @@ torch
 tqdm
 rouge-score
 nltk
+huggingface-hub

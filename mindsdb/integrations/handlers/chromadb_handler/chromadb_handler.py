@@ -1,97 +1,92 @@
 from collections import OrderedDict
-from typing import Dict
+from typing import List, Optional
 
 import chromadb
 import pandas as pd
-from chromadb import API
-from chromadb.config import Settings
-from integrations.handlers.chromadb_handler.settings import DEFAULT_EMBEDDINGS_MODEL
-from langchain.vectorstores import Chroma
-from mindsdb_sql import ASTNode, CreateTable, Insert, Select, Star
 
-from mindsdb.integrations.handlers.chromadb_handler.helpers import (
-    documents_to_df,
-    extract_collection_name,
-    get_metadata_filter,
-    load_embeddings_model,
-    split_documents,
-)
-from mindsdb.integrations.libs.base import VectorStoreHandler
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
+from mindsdb.integrations.libs.response import HandlerResponse
 from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
+from mindsdb.integrations.libs.vectordatabase_handler import (
+    FilterCondition,
+    FilterOperator,
+    TableField,
+    VectorStoreHandler,
+)
 from mindsdb.utilities import log
 
-# todo create separate util dir for vectorstore
 
-
-class ChromaDBHandler(Chroma, VectorStoreHandler):
+class ChromaDBHandler(VectorStoreHandler):
     """This handler handles connection and execution of the ChromaDB statements."""
 
     name = "chromadb"
 
     def __init__(self, name: str, **kwargs):
+        super().__init__(name)
 
         self._connection_data = kwargs.get("connection_data")
 
-        self._client_config = self._client_config = {
-            "chroma_api_impl": self._connection_data.get("chroma_api_impl"),
+        self._client_config = {
             "chroma_server_host": self._connection_data.get("chroma_server_host"),
             "chroma_server_http_port": self._connection_data.get(
                 "chroma_server_http_port"
             ),
+            "persist_directory": self._connection_data.get("persist_directory"),
         }
 
-        self._collection_name = self._connection_data.get(
-            "collection_name", "default_collection"
-        )
-        self._embedding_model_name = self._connection_data.get(
-            "embedding_function", DEFAULT_EMBEDDINGS_MODEL
-        )
+        # either host + port or persist_directory is required
+        # but not both
+        if (
+            self._client_config["chroma_server_host"] is None
+            or self._client_config["chroma_server_http_port"] is None
+        ) and self._client_config["persist_directory"] is None:
+            raise Exception(
+                "Either host + port or persist_directory is required for ChromaDB connection!"
+            )
+        elif (
+            self._client_config["chroma_server_host"] is not None
+            and self._client_config["chroma_server_http_port"] is not None
+        ) and self._client_config["persist_directory"] is not None:
+            raise Exception(
+                "Either host + port or persist_directory is required for ChromaDB connection, but not both!"
+            )
 
-        self._embedding_function = load_embeddings_model(self._embedding_model_name)
+        self._client = None
+        self.is_connected = False
+        self.connect()
 
-        self._persist_directory = self._connection_data.get("persist_directory")
-        self._collection_metadata = self._connection_data.get("collection_metadata")
+    def _get_client(self):
+        client_config = self._client_config
+        if client_config is None:
+            raise Exception("Client config is not set!")
 
-        self._client = chromadb.Client()
-        self.is_connected = True
-
-        VectorStoreHandler.__init__(self, name)
-
-        Chroma.__init__(
-            self,
-            client=self._client,
-            client_settings=self._connection_data,
-            embedding_function=self._embedding_function,
-            collection_name=self._collection_name,
-            collection_metadata=self._collection_metadata,
-            persist_directory=self._persist_directory,
-        )
+        # decide the client type to be used, either persistent or httpclient
+        if client_config["persist_directory"] is not None:
+            return chromadb.PersistentClient(path=client_config["persist_directory"])
+        else:
+            return chromadb.HttpClient(
+                host=client_config["chroma_server_host"],
+                port=client_config["chroma_server_http_port"],
+            )
 
     def __del__(self):
         if self.is_connected is True:
             self.disconnect()
 
-    def connect(self) -> API:
-        """Connect to a ChromaDB database.
-
-        Returns:
-            API: The ChromaDB _client.
-        """
-
+    def connect(self):
+        """Connect to a ChromaDB database."""
         if self.is_connected is True:
             return self._client
 
         try:
-
-            self._client = chromadb.Client(Settings(**self._client_config))
+            self._client = self._get_client()
             self.is_connected = True
+            return self._client
         except Exception as e:
             log.logger.error(f"Error connecting to ChromaDB client, {e}!")
-
-        return self._client
+            self.is_connected = False
 
     def disconnect(self):
         """Close the database connection."""
@@ -104,265 +99,290 @@ class ChromaDBHandler(Chroma, VectorStoreHandler):
 
     def check_connection(self):
         """Check the connection to the ChromaDB database."""
-
-        responseCode = StatusResponse(False)
+        response_code = StatusResponse(False)
         need_to_close = self.is_connected is False
 
         try:
             self._client.heartbeat()
-            responseCode.success = True
+            response_code.success = True
         except Exception as e:
             log.logger.error(f"Error connecting to ChromaDB , {e}!")
-            responseCode.error_message = str(e)
+            response_code.error_message = str(e)
         finally:
-            if responseCode.success is True and need_to_close:
+            if response_code.success is True and need_to_close:
                 self.disconnect()
-            if responseCode.success is False and self.is_connected is True:
+            if response_code.success is False and self.is_connected is True:
                 self.is_connected = False
 
-        return responseCode
+        return response_code
 
-    def filter_query(self, query: ASTNode) -> Dict:
-        """Converts WHERE clause to ChromaDB query syntax to filter Chromadb collection.
+    def _get_chromadb_operator(self, operator: FilterOperator) -> str:
+        mapping = {
+            FilterOperator.EQUAL: "$eq",
+            FilterOperator.NOT_EQUAL: "$ne",
+            FilterOperator.LESS_THAN: "$lt",
+            FilterOperator.LESS_THAN_OR_EQUAL: "$lte",
+            FilterOperator.GREATER_THAN: "$gt",
+            FilterOperator.GREATER_THAN_OR_EQUAL: "$gte",
+        }
 
-        Args:
-            query (ASTNode): The query to filter.
+        if operator not in mapping:
+            raise Exception(f"Operator {operator} is not supported by ChromaDB!")
 
-        Returns:
-            Dict: filter for collection.
+        return mapping[operator]
+
+    def _translate_metadata_condition(
+        self, conditions: List[FilterCondition]
+    ) -> Optional[dict]:
         """
+        Translate a list of FilterCondition objects a dict that can be used by ChromaDB.
+        E.g.,
+        [
+            FilterCondition(
+                column="metadata.created_at",
+                op=FilterOperator.LESS_THAN,
+                value="2020-01-01",
+            ),
+            FilterCondition(
+                column="metadata.created_at",
+                op=FilterOperator.GREATER_THAN,
+                value="2019-01-01",
+            )
+        ]
+        -->
+        {
+            "$and": [
+                {"created_at": {"$lt": "2020-01-01"}},
+                {"created_at": {"$gt": "2019-01-01"}}
+            ]
+        }
+        """
+        # we ignore all non-metadata conditions
+        if conditions is None:
+            return None
+        metadata_conditions = [
+            condition
+            for condition in conditions
+            if condition.column.startswith(TableField.METADATA.value)
+        ]
+        if len(metadata_conditions) == 0:
+            return None
 
-        where = {}
-        if query.where.op == "and":
-            for arg in query.where.args:
-                if arg.op == "=":
-
-                    if arg.args[0].parts[-1] == "meta_data_filter":
-                        # filters on metadata
-                        where["meta_data_filter"] = get_metadata_filter(
-                            arg.args[1].value
-                        )
-
-                    elif arg.args[0].parts[-1] == "search_query":
-                        # extract the search query
-                        where["search_query"] = arg.args[1].value
-                    else:
-                        raise NotImplementedError(
-                            f"where clause parameter {arg.args[0].parts[-1]} is not supported, "
-                            f"only 'meta_data_filter' and 'search_query' are supported"
-                        )
-                else:
-                    raise NotImplementedError(
-                        f"Unsupported where clause {arg.op} operator, only '=' is supported"
-                    )
-
-        elif query.where.op == "=":
-            # requires separate handling as the where clause is not a list when single condition
-            if query.where.args[0].parts[-1] == "meta_data_filter":
-                # filters on metadata
-                where["meta_data_filter"] = get_metadata_filter(
-                    query.where.args[1].value
-                )
-
-            elif query.where.args[0].parts[-1] == "search_query":
-                # extract the search query
-                where["search_query"] = query.where.args[1].value
-            else:
-                raise NotImplementedError(
-                    f"where clause parameter {query.where.args[0].parts[-1]} is not supported, "
-                    f"only 'meta_data_filter' and 'search_query' are supported"
-                )
-
-        else:
-            raise NotImplementedError(
-                f"Unsupported where clause {query.where.op} operator, only '=' and 'and' is supported"
+        # we translate each metadata condition into a dict
+        chroma_db_conditions = []
+        for condition in metadata_conditions:
+            metadata_key = condition.column.split(".")[-1]
+            chroma_db_conditions.append(
+                {
+                    metadata_key: {
+                        self._get_chromadb_operator(condition.op): condition.value
+                    }
+                }
             )
 
-        return where
+        # we combine all metadata conditions into a single dict
+        metadata_condition = (
+            {"$and": chroma_db_conditions}
+            if len(chroma_db_conditions) > 1
+            else chroma_db_conditions[0]
+        )
+        return metadata_condition
 
-    def query_collection(self, query: ASTNode) -> Response:
+    def select(
+        self,
+        table_name: str,
+        columns: List[str] = None,
+        conditions: List[FilterCondition] = None,
+        offset: int = None,
+        limit: int = None,
+    ) -> HandlerResponse:
+        collection = self._client.get_collection(table_name)
+        filters = self._translate_metadata_condition(conditions)
+        # check if embedding vector filter is present
+        vector_filter = (
+            []
+            if conditions is None
+            else [
+                condition
+                for condition in conditions
+                if condition.column == TableField.SEARCH_VECTOR.value
+            ]
+        )
+        if len(vector_filter) > 0:
+            vector_filter = vector_filter[0]
+        else:
+            vector_filter = None
+        id_filters = None
+        if conditions is not None:
+            id_filters = [
+                condition.value
+                for condition in conditions
+                if condition.column == TableField.ID.value
+            ] or None
+
+        if vector_filter is not None:
+            # similarity search
+            query_payload = {
+                "where": filters,
+                "query_embeddings": vector_filter.value
+                if vector_filter is not None
+                else None,
+                "include": ["metadatas", "documents", "distances"],
+            }
+            if limit is not None:
+                query_payload["n_results"] = limit
+
+            result = collection.query(**query_payload)
+            ids = result["ids"][0]
+            documents = result["documents"][0]
+            metadatas = result["metadatas"][0]
+            distances = result["distances"][0]
+        else:
+            # general get query
+            result = collection.get(
+                ids=id_filters,
+                where=filters,
+                limit=limit,
+                offset=offset,
+            )
+            ids = result["ids"]
+            documents = result["documents"]
+            metadatas = result["metadatas"]
+            distances = None
+
+        # project based on columns
+        payload = {
+            TableField.ID.value: ids,
+            TableField.CONTENT.value: documents,
+            TableField.METADATA.value: metadatas,
+        }
+
+        if columns is not None:
+            payload = {
+                column: payload[column]
+                for column in columns
+                if column != TableField.EMBEDDINGS.value
+            }
+
+        # always include distance
+        if distances is not None:
+            payload[TableField.DISTANCE.value] = distances
+        result_df = pd.DataFrame(payload)
+        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=result_df)
+
+    def insert(
+        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
+    ) -> HandlerResponse:
         """
-        Run a select query on the ChromaDB database, filter collection (if where clause)
-        and return result. NB Limit will define the number of documents returned, not the number of rows.
+        Insert data into the ChromaDB database.
         """
 
-        collection_name = query.from_table.parts[-1]
-        self._collection = self._client.get_collection(collection_name)
+        collection = self._client.get_collection(table_name)
 
-        if hasattr(query.targets[0], "op") and query.targets[0].op == "count":
+        data = data.to_dict(orient="list")
 
-            # if count is used, return the count of the collection
-            if not isinstance(query.targets[0].args[0], Star):
-                # if count is not using '*' argument, raise error
+        collection.add(
+            ids=data[TableField.ID.value],
+            documents=data.get(TableField.CONTENT.value),
+            embeddings=data[TableField.EMBEDDINGS.value],
+            metadatas=data.get(TableField.METADATA.value),
+        )
+
+        return Response(resp_type=RESPONSE_TYPE.OK)
+
+    def update(
+        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
+    ) -> HandlerResponse:
+        """
+        Update data in the ChromaDB database.
+        TODO: not implemented yet
+        """
+        return super().update(table_name, data, columns)
+
+    def delete(
+        self, table_name: str, conditions: List[FilterCondition] = None
+    ) -> HandlerResponse:
+        filters = self._translate_metadata_condition(conditions)
+        # get id filters
+        id_filters = [
+            condition.value
+            for condition in conditions
+            if condition.column == TableField.ID.value
+        ] or None
+
+        if filters is None and id_filters is None:
+            raise Exception("Delete query must have at least one condition!")
+        collection = self._client.get_collection(table_name)
+        collection.delete(ids=id_filters, where=filters)
+        return Response(resp_type=RESPONSE_TYPE.OK)
+
+    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
+        """
+        Create a collection with the given name in the ChromaDB database.
+        """
+        self._client.create_collection(table_name, get_or_create=if_not_exists)
+        return Response(resp_type=RESPONSE_TYPE.OK)
+
+    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
+        """
+        Delete a collection from the ChromaDB database.
+        """
+        try:
+            self._client.delete_collection(table_name)
+        except ValueError:
+            if if_exists:
+                return Response(resp_type=RESPONSE_TYPE.OK)
+            else:
                 return Response(
                     resp_type=RESPONSE_TYPE.ERROR,
-                    error_message="Count only supports '*' argument",
+                    error_message=f"Table {table_name} does not exist!",
                 )
-
-            collection_data = self._collection.count()
-            result = pd.DataFrame(columns=["count"], data=[[collection_data]])
-
-        else:
-
-            # if there is a where clause, parse it to Chromadb query syntax
-            where = self.filter_query(query) if query.where else {}
-
-            if where.get("search_query"):
-                # if 'search_query' provided, run similarity search
-
-                collection_data = self.similarity_search(
-                    filter=where.get(
-                        "meta_data_filter"
-                    ),  # filters on metadata, for now only column name
-                    query=where.get("search_query"),
-                    k=query.limit.value if query.limit else 5,
-                )
-                result = documents_to_df(collection_data)
-
-            else:
-                # if no 'search_query' provided, run a regular query and filter on metadata if provided
-                collection_data = self._collection.get(
-                    where=where.get("meta_data_filter")
-                )
-                result = pd.DataFrame(collection_data)[
-                    ["ids", "documents", "metadatas"]
-                ]
-
-        if query.limit:
-            # if there is a limit clause, limit the result.
-            result = result.head(query.limit.value)
-
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=result)
-
-    def run_create_table(self, query: ASTNode) -> Response:
-        """
-        Run a create table query on the ChromaDB database.
-        """
-        collection_name = query.name.parts[-1]
-        self._client.create_collection(collection_name)
 
         return Response(resp_type=RESPONSE_TYPE.OK)
 
-    def run_insert(self, query):
+    def get_tables(self) -> HandlerResponse:
         """
-        Run an insert query on the ChromaDB database.
+        Get the list of collections in the ChromaDB database.
         """
-        collection_name = query.table.parts[-1]
-        columns = [column.name for column in query.columns]
-        df = pd.DataFrame(data=query.values, columns=columns)
-        documents = split_documents(df, columns)
-
-        # converts list of Documents to embedding vectors and stores them in a ChromaDB collection
-        Chroma.from_documents(
-            documents=documents,
-            embedding=self._embedding_function,
-            persist_directory=self._persist_directory,
-            client_settings=Settings(**self._client_config),
-            collection_name=collection_name,
+        collections = self._client.list_collections()
+        collections_name = pd.DataFrame(
+            columns=["table_name"],
+            data=[collection.name for collection in collections],
         )
+        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=collections_name)
 
-        return Response(resp_type=RESPONSE_TYPE.OK)
-
-    def query(self, query: ASTNode) -> Response:
-        """
-        Execute a query on the ChromaDB database.
-        """
+    def get_columns(self, table_name: str) -> HandlerResponse:
+        # check if collection exists
         try:
-            self.connect()
-
-            if isinstance(query, Select):
-                return self.query_collection(query)
-
-            elif isinstance(query, CreateTable):
-                return self.run_create_table(query)
-
-            elif isinstance(query, Insert):
-                return self.run_insert(query)
-
-            else:
-                raise NotImplementedError(
-                    f"Unsupported query type {query.__class__.__name__}!"
-                )
-
-        except Exception as e:
-            log.logger.error(f"Error executing query on ChromaDB client, {e}!")
+            _ = self._client.get_collection(table_name)
+        except ValueError:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error executing query on ChromaDB client, {e}!",
+                error_message=f"Table {table_name} does not exist!",
             )
-
-    def native_query(self, query: str) -> Response:
-        """
-        Execute a native query on the ChromaDB database.
-        """
-
-        # todo fix this - not sure if we need this?
-        try:
-            self.connect()
-            # parse query and extract collection name and any conditions
-            collection_name = extract_collection_name(query)
-            self._collection = self._client.get_collection(collection_name)
-
-        except Exception as e:
-            log.logger.error(
-                f'Error executing native query on ChromaDB client {self._connection_data["chroma_server_host"]}, {e}!'
-            )
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f'Error executing native query on ChromaDB client {self._connection_data["chroma_server_host"]}, {e}!',
-            )
-
-    def get_tables(self) -> Response:
-        """Get the list of indexes/collections in the vectorDB.
-
-        Returns:
-           Response: The response object.
-        """
-
-        try:
-            self.connect()
-            collections = self._client.list_collections()
-            collections_name = pd.DataFrame(
-                columns=["table_name"],
-                data=[collection.name for collection in collections],
-            )
-        except Exception as e:
-            log.logger.error(
-                f'Error getting tables from ChromaDB client {self._connection_data["chroma_server_host"]}, {e}!'
-            )
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f'Error getting tables from ChromaDB client {self._connection_data["chroma_server_host"]}, {e}!',
-            )
-
-        return Response(
-            resp_type=RESPONSE_TYPE.TABLE,
-            data_frame=collections_name,
-        )
+        return super().get_columns(table_name)
 
 
 connection_args = OrderedDict(
-    chroma_api_impl={
-        "type": ARG_TYPE.STR,
-        "description": "chromadb api implementation",
-    },
     chroma_server_host={
         "type": ARG_TYPE.STR,
         "description": "chromadb server host",
+        "required": False,
     },
     chroma_server_http_port={
         "type": ARG_TYPE.INT,
         "description": "chromadb server port",
+        "required": False,
     },
-    embedding_function={
+    persist_directory={
         "type": ARG_TYPE.STR,
-        "description": "embedding function to use (optional)",
+        "description": "persistence directory for chroma",
+        "required": False,
     },
 )
 
 connection_args_example = OrderedDict(
-    chroma_api_impl="rest",
     chroma_server_host="localhost",
     chroma_server_http_port=8000,
-    embedding_function="sentence-transformers/all-mpnet-base-v2",
+    persist_directoryn="chroma",
 )

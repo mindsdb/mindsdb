@@ -44,9 +44,10 @@ class ChatBotController:
             db.Tasks.company_id == ctx.company_id,
         )
 
-        bot, task = query.first()
-        if bot is None or task is None:
+        query_result = query.first()
+        if query_result is None:
             return None
+        bot, task = query_result
 
         # Include DB and Task information in response.
         session = SessionController()

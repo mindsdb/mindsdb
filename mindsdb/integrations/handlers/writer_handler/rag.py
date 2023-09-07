@@ -40,24 +40,6 @@ class QuestionAnswerer:
 
         self.persisted_vector_store = self.vector_store_loader.load_vector_store()
 
-        if args.external_index_name:
-
-            # todo fix this - for llamaindex not sure how to decouple retrieval from generation
-
-            vector_store_index_config = PersistedVectorStoreIndexConfig(
-                vector_store_name=args.vector_store_name,
-                vector_store=self.persisted_vector_store,
-                embeddings_model=self.embeddings_model,
-                persist_directory=self.persist_directory,
-                collection_name=args.collection_name,
-                index_name=args.external_index_name,
-            )
-            vector_store_index_loader = VectorStoreIndexLoader(
-                vector_store_index_config
-            )
-
-            self.index = vector_store_index_loader.load_vector_store_index()
-
         self.prompt_template = args.prompt_template
 
         self.llm = Writer(**args.llm_params.dict())
@@ -90,12 +72,6 @@ class QuestionAnswerer:
             question=question, context=summarized_context
         )
 
-    def _query_index(self, question: str):
-
-        return self.index.query(
-            question,
-        )
-
     def query_vector_store(self, question: str) -> List:
 
         return self.persisted_vector_store.similarity_search(
@@ -106,17 +82,9 @@ class QuestionAnswerer:
     def query(self, question: str):
         logger.debug(f"Querying: {question}")
 
-        if not self.args.use_external_index:
+        vector_store_response = self.query_vector_store(question)
 
-            vector_store_response = self.query_vector_store(question)
-
-            formatted_prompt = self._prepare_prompt(vector_store_response, question)
-
-        else:
-            vector_index_response = self._query_index(question)
-            # todo make parser for llamaindexresponse
-            # formatted_prompt = self._prepare_prompt(vector_index_response, question)
-            raise NotImplementedError("llamaindexresponse parser not implemented")
+        formatted_prompt = self._prepare_prompt(vector_store_response, question)
 
         llm_response = self.llm(prompt=formatted_prompt)
 

@@ -3,7 +3,6 @@ from functools import lru_cache
 from typing import List, Union
 
 import pandas as pd
-import torch
 from chromadb import Settings
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.docstore.document import Document
@@ -11,12 +10,7 @@ from langchain.document_loaders import DataFrameLoader
 from langchain.embeddings.base import Embeddings
 from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS, Chroma, VectorStore
-from llama_index import ServiceContext, VectorStoreIndex
-from llama_index.vector_stores import ChromaVectorStore
 from pydantic import BaseModel, Extra, validator
-
-# todo llama index from chroma vector store
-
 
 DEFAULT_EMBEDDINGS_MODEL = "sentence-transformers/all-mpnet-base-v2"
 USER_DEFINED_WRITER_LLM_PARAMS = (
@@ -33,8 +27,6 @@ USER_DEFINED_WRITER_LLM_PARAMS = (
 )
 
 SUPPORTED_VECTOR_STORES = ("chroma", "faiss")
-
-SUPPORTED_INDICES = ("llama",)
 
 EVAL_COLUMN_NAMES = (
     "question",
@@ -161,53 +153,6 @@ class PersistedVectorStoreLoader:
         return self.load_vector_store_client(vector_store="faiss")
 
 
-@dataclass
-class PersistedVectorStoreIndexConfig(PersistedVectorStoreLoaderConfig):
-    index_name: str
-    vector_store: VectorStore
-
-
-class VectorStoreIndexLoader:
-    def __init__(self, config):
-        self.config: PersistedVectorStoreIndexConfig = config
-
-    def load_vector_store_index(self):
-        method_name = (
-            f"load_{self.config.vector_store_name}_{self.config.index_name}_index"
-        )
-        try:
-            return getattr(self, method_name)()
-        except AttributeError:
-            raise NotImplementedError(
-                f"{self.config.vector_store_name} vector store is not yet supported with {self.config.index_name} index"
-            )
-
-    def load_chroma_llama_index(self):
-        """Load Chroma index from the persisted vector store"""
-
-        # todo test this
-
-        collection = self.config.vector_store._client.get_collection(
-            self.config.collection_name
-        )
-        service_context = ServiceContext.from_defaults(
-            embed_model=self.config.embeddings_model
-        )
-
-        vector_store = ChromaVectorStore(chroma_collection=collection)
-        index = VectorStoreIndex.from_vector_store(
-            vector_store=vector_store,
-            service_context=service_context,
-        )
-
-        # Query Data from the persisted index
-        query_engine = index.as_query_engine(
-            service_context=service_context,
-        )
-
-        return query_engine
-
-
 class WriterLLMParameters(BaseModel):
     """Model parameters for the Writer LLM API interface"""
 
@@ -268,7 +213,6 @@ class WriterHandlerParameters(BaseModel):
     collection_name: str = "langchain"
     summarize_context: bool = False
     summarization_prompt_template: str = SUMMARIZATION_PROMPT_TEMPLATE
-    use_external_index: bool = False
     vector_store_folder_name: str = "chromadb"
     vector_store_storage_path: str = None
 
@@ -379,10 +323,12 @@ def df_to_documents(
     return documents
 
 
+# todo hard coding device to cpu, add support for gpu later on
+# e.g. {"device": "gpu" if torch.cuda.is_available() else "cpu"}
 @lru_cache()
 def load_embeddings_model(embeddings_model_name):
     try:
-        model_kwargs = {"device": "gpu" if torch.cuda.is_available() else "cpu"}
+        model_kwargs = {"device": "cpu"}
         embedding_model = HuggingFaceEmbeddings(
             model_name=embeddings_model_name, model_kwargs=model_kwargs
         )

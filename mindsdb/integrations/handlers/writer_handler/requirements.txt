@@ -1,5 +1,4 @@
 langchain==0.0.267
-llama-cpp-python==0.1.78
 SQLAlchemy
 duckdb==0.7.1
 chromadb==0.3.25
@@ -7,7 +6,6 @@ requests==2.28.0
 pydantic>=1.10.8
 sentence_transformers==2.2.2
 markupsafe == 2.0.1
-llama-index>=0.8.1
 faiss-cpu>=1.7.4 #todo check support for 'faiss-gpu'
 datasets>=2.14.4
 nltk>=3.8.1

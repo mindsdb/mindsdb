@@ -74,6 +74,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         if self.is_cloud:
             # We already have a connection started through the gateway.
             started = True
+            self.handshake()
         else:
             started = self.start_connection()
         if started:

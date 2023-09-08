@@ -1,11 +1,11 @@
 import os
 import json
 import datetime
-from typing import Dict
+from typing import Dict, List
 
 import numpy as np
-from sqlalchemy import create_engine, types, UniqueConstraint
-from sqlalchemy.orm import scoped_session, sessionmaker, declarative_base
+from sqlalchemy import create_engine, types, Table, UniqueConstraint
+from sqlalchemy.orm import relationship, scoped_session, sessionmaker, declarative_base, Mapped
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index, text
 from sqlalchemy.sql.schema import ForeignKey
 from sqlalchemy import JSON
@@ -372,10 +372,36 @@ class Tasks(Base):
     created_at = Column(DateTime, default=datetime.datetime.now)
 
 
+agent_skills_table = Table(
+    'agent_skills',
+    Base.metadata,
+    Column('agent_id', ForeignKey('agents.id'), primary_key=True),
+    Column('skill_id', ForeignKey('skills.id'), primary_key=True),
+)
+
+
 class Skills(Base):
     __tablename__ = 'skills'
     id = Column(Integer, primary_key=True)
+    agents: Mapped[List['Agents']] = relationship(secondary=agent_skills_table, back_populates='skills')
     name = Column(String, nullable=False)
     project_id = Column(Integer, nullable=False)
     type = Column(String, nullable=False)
     params = Column(JSON)
+
+
+class Agents(Base):
+    __tablename__ = 'agents'
+    id = Column(Integer, primary_key=True)
+    skills: Mapped[List['Skills']] = relationship(secondary=agent_skills_table, back_populates='agents')
+    company_id = Column(Integer, nullable=True)
+    user_class = Column(Integer, nullable=True)
+
+    name = Column(String, nullable=False)
+    project_id = Column(Integer, nullable=False)
+
+    model_name = Column(String, nullable=False)
+    params = Column(JSON)
+
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.now)

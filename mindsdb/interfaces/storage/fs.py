@@ -407,6 +407,8 @@ class FileStorage:
 
     @profiler.profile()
     def push_path(self, path):
+        if self.sync:
+            return
         with FileLock(self.folder_path):
             self.fs_store.put(os.path.join(self.folder_name, path), str(self.resource_group_path))
 
@@ -426,7 +428,7 @@ class FileStorage:
     def pull_path(self, path, update=True):
         with FileLock(self.folder_path):
             if update is False:
-                # not pull from source if object is exists
+                # not pull from source if object is exist
                 if os.path.exists(self.resource_group_path / self.folder_name / path):
                     return
             try:

@@ -379,7 +379,7 @@ class IntegrationController:
         return handler_ars
 
     def create_tmp_handler(self, handler_type: str, connection_data: dict) -> object:
-        """ Returns temporary handler. That handler does not exists in database.
+        """ Returns temporary handler. That handler does not exist in database.
 
             Args:
                 handler_type (str)
@@ -407,11 +407,24 @@ class IntegrationController:
             connection_data=connection_data,
             integration_id=integration_id,
             file_storage=file_storage,
-            handler_storage=handler_storage
+            handler_storage=handler_storage,
         )
 
         logger.debug("%s.create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
         return DBClient(handler_type, self.handler_modules[handler_type].Handler, **handler_ars)
+
+    def copy_integration_storage(self, integration_id_from, integration_id_to):
+        storage_from = HandlerStorage(integration_id_from)
+        root_path = ''
+        folder_from = storage_from.folder_get(root_path, not_empty=True)
+        if folder_from is None:
+            return
+
+        storage_to = HandlerStorage(integration_id_to)
+        folder_to = storage_to.folder_get(root_path)
+
+        shutil.copytree(folder_from, folder_to, dirs_exist_ok=True)
+        storage_to.folder_sync(root_path)
 
     @profiler.profile()
     def get_handler(self, name, case_sensitive=False):

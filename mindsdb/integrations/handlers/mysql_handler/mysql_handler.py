@@ -45,7 +45,7 @@ class MySQLHandler(DatabaseHandler):
             return self.connection
 
         port = self.connection_data.get('port')
-        if port is None or isinstance(port, int):
+        if port is None:
             port = 3306
 
         config = {

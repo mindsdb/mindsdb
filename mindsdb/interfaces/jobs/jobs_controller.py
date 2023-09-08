@@ -10,7 +10,6 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
 
 
 def split_sql(sql):

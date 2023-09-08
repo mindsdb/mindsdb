@@ -302,3 +302,19 @@ class TestKnowledgeBase(BaseExecutorTest):
         """
         with pytest.raises(Exception):
             self.run_sql(sql)
+
+    def test_show_knowledge_bases(self):
+        # create the knowledge base
+        sql = f"""
+            CREATE KNOWLEDGE BASE test_kb
+            MODEL {self.embedding_model_name}
+            STORAGE {self.vector_database_name}.{self.vector_database_table_name}
+        """
+        self.run_sql(sql)
+
+        # show knowledge bases
+        sql = """
+            SHOW KNOWLEDGE BASES
+        """
+        df = self.run_sql(sql)
+        assert df.shape[0] == 1

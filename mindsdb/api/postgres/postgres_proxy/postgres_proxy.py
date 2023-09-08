@@ -461,7 +461,9 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
     @staticmethod
     def startProxy():
         config = Config()
-        server = TcpServer(("localhost", 55432), PostgresProxyHandler)
+        host = config['api']['postgres']['host']
+        port = int(config['api']['postgres']['port'])
+        server = TcpServer((host, port), PostgresProxyHandler)
         server.connection_id = 0
         server.mindsdb_config = config
         server.check_auth = partial(check_auth, config=config)

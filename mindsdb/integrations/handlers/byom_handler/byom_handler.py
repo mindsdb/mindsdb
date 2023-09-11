@@ -5,7 +5,6 @@ import shutil
 import pickle
 import subprocess
 import traceback
-
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict
@@ -94,7 +93,17 @@ class BYOMHandler(BaseMLEngine):
         return pred_df
 
     def create_engine(self, connection_args):
-        pass
+        self.engine_storage.fileStorage.file_set(
+            'code',
+            Path(connection_args['code']).read_bytes()
+        )
+
+        self.engine_storage.fileStorage.file_set(
+            'modules',
+            Path(connection_args['modules']).read_bytes()
+        )
+
+        self.engine_storage.fileStorage.push()
         # check code and requirements
         # ADD
         # is_cloud = Config().get('cloud', False)

@@ -145,6 +145,7 @@ def learn_process(class_path, engine, integration_id,
 
                 handlerStorage = HandlerStorage(integration_id)
                 modelStorage = ModelStorage(predictor_id)
+                modelStorage.fileStorage.push()     # FIXME
 
                 kwargs = {}
                 if base_predictor_id is not None:

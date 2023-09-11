@@ -37,7 +37,7 @@ First lets look at the data that we have. In this case, imagine that you have a 
 
 ```sql
 SELECT message_id, customer_message
-FROM postgres_demo_db.cutomer_messages;
+FROM postgres_demo_db.customer_messages;
 ```
 
 On execution, we get:
@@ -86,7 +86,7 @@ Now that we generated our AI-Table, we can query for messages and their generate
 
 ```sql
 SELECT i.message_id,  m.response, i.customer_message
-FROM postgres_demo_db.cutomer_messages AS i
+FROM postgres_demo_db.customer_messages AS i
 JOIN ai_response_model AS m;
 ```
 
@@ -263,7 +263,7 @@ MindsDB's integration with enterprise databases ensures robust data governance a
 
 7. Automated AI Workflows
 
-With MindsDB, you can automate the entire AI workflow in the production environment. The workflow usually includes fetching new data, retraining the model with new data to improve its accuracy, and updating predictions. Another example of an AI workflow is a [Twitter chatbot](/sql/tutorials/twitterbot-mariadb-enterprise-server-skysql) that fetches new tweets, prepares responses with the help of the model, and sends replies. MindsDB enables you to create your own AI workflow and schedule it to execute periodically using the [Jobs feature](/automation).
+With MindsDB, you can automate the entire AI workflow in the production environment. The workflow usually includes fetching new data, retraining the model with new data to improve its accuracy, and updating predictions. Another example of an AI workflow is a [Twitter/ X chatbot](/sql/tutorials/twitterbot-mariadb-enterprise-server-skysql) that fetches new tweets, prepares responses with the help of the model, and sends replies. MindsDB enables you to create your own AI workflow and schedule it to execute periodically using the [Jobs feature](/automation).
 
 
 

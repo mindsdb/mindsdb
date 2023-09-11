@@ -13,4 +13,4 @@ jobs:
       - uses: actions/add-to-project@v0.5.0
         with:
           project-url: https://github.com/orgs/mindsdb/projects/65
-          github-token: ${{ secrets.CLA_TOKEN }}
+          github-token: ${{ secrets.ADD_TO_PR }}

@@ -40,8 +40,8 @@ class BYOMHandler(BaseMLEngine):
         con_args = self.engine_storage.get_connection_args()
 
         self.engine_storage.fileStorage.pull()
-        code = self.engine_storage.fileStorage.file_get(con_args['code'])
-        modules_str = self.engine_storage.fileStorage.file_get(con_args['modules'])
+        code = self.engine_storage.fileStorage.file_get('code')
+        modules_str = self.engine_storage.fileStorage.file_get('modules')
 
         if self.model_wrapper is None:
             self.model_wrapper = ModelWrapperuUsafe(

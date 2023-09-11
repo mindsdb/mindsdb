@@ -15,7 +15,7 @@ The required arguments to establish a connection are as follows:
 
 * `user` is the user to authenticate.
 * `password` is the password to authenticate the user.
-* `secure_connection_bundle` is the path to the `secure_connection_bundle` zip file.
+* `secure_connection_bundle` is the path to the `secure_connect_bundle` zip file.
 
 <Tip>
 If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/datastax_handler) and run this command: `pip install -r requirements.txt`.
@@ -32,8 +32,21 @@ WITH
     parameters = {
         "user": "user",
         "password": "pass",
-        "secure_connection_bundle": "/home/Downloads/file.zip"
+        "secure_connect_bundle": "/home/Downloads/file.zip"
     };
+```
+
+
+or, reference the bundle from Datastax s3 as:
+
+```sql
+CREATE DATABASE astra_connection
+WITH ENGINE = "astra",
+PARAMETERS = {
+    "user": "user",
+    "password": "pass",
+    "secure_connect_bundle": "https://datastax-cluster-config-prod.s3.us-east-2.amazonaws.com/32312-b9eb-4e09-a641-213eaesa12-1/secure-connect-demo.zip?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AK..."
+}  
 ```
 
 You can use this established connection to query your table as follows:

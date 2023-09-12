@@ -4,7 +4,16 @@ This is the implementation of the PGVector for MindsDB.
 
 ## PGVector
 
-Chroma is the open-source embedding database. Chroma makes it easy to build LLM apps by making knowledge, facts, and skills pluggable for LLMs.
+Open-source vector similarity search for Postgres
+
+Store your vectors with the rest of your data. 
+
+Supports:
+
+exact and approximate nearest neighbor search
+L2 distance, inner product, and cosine distance
+any language with a Postgres client
+Plus ACID compliance, point-in-time recovery, JOINs, and all of the other great features of Postgres
 
 ## Implementation
 

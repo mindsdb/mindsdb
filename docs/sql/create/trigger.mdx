@@ -1,0 +1,48 @@
+---
+title: Create a Trigger
+sidebarTitle: Create a Trigger
+---
+
+## Description
+
+Triggers enable users to define event-based actions. For example, if a table is updated, then run a query to update predictions.
+
+<Info>
+Currently, you can create triggers on MongoDB data sources.
+</Info>
+
+## Syntax
+
+Here is the syntax for creating a trigger:
+
+```sql
+CREATE TRIGGER trigger_name
+ON integration_name.table_name
+[COLUMNS column_name1, column_name2, ...]
+(
+    sql_code
+) 
+```
+
+By creating a trigger on a data source, every time this data source is updated or new data is inserted, the `sql_code` provided in the statement will be executed.
+
+You can create a trigger either on a table...
+
+```sql
+CREATE TRIGGER trigger_name
+ON integration_name.table_name
+(
+    sql_code
+) 
+```
+
+...or on one or more columns of a table.
+
+```sql
+CREATE TRIGGER trigger_name
+ON integration_name.table_name
+COLUMNS column_name1, column_name2
+(
+    sql_code
+) 
+```

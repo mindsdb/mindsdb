@@ -113,15 +113,6 @@ class DatabaseHandler(BaseHandler):
         super().__init__(name)
 
 
-class VectorStoreHandler(BaseHandler):
-    """
-    Base class for handlers associated to vector databases.
-    """
-
-    def __init__(self, name: str):
-        super().__init__(name)
-
-
 class PredictiveHandler(BaseHandler):
     """
     DEPRECATED. Please refer to BaseMLEngine for integrations with machine learning frameworks.

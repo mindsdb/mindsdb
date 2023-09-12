@@ -181,6 +181,7 @@
           "group": "Chatbots",
           "pages": [
             "sql/tutorials/llm-chatbot-ui",
+            "sql/tutorials/create-chatbot",
             "sql/tutorials/slack-chatbot",
             "sql/tutorials/twitterbot-mariadb-enterprise-server-skysql"
           ]
@@ -714,7 +715,10 @@
               "pages": [
                 "sql/create/jobs",
                 "sql/drop/jobs",
-                "sql/query-jobs"
+                "sql/query-jobs",
+                "sql/create/trigger",
+                "sql/drop/trigger",
+                "sql/query-triggers"
               ]
             },
             {
@@ -846,7 +850,7 @@
       ]
     },
     {
-      "group": "ML Engines",
+      "group": "AI Engines",
       "pages": [
         "integrations/ml-engines-overview",
         {
@@ -875,7 +879,9 @@
         {
           "group": "Time Series Models",
           "pages": [
-            "integrations/ai-engines/statsforecast"
+            "integrations/ai-engines/statsforecast",
+            "integrations/ai-engines/neuralforecast",
+            "integrations/ai-engines/timegpt"
           ]
         }
       ]

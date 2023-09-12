@@ -39,7 +39,7 @@ You can also create a database by giving the credentials file from a s3 pre sign
 CREATE DATABASE mindsdb_gmail
 WITH ENGINE = 'gmail',
 parameters = {
-    "s3_credentials_file": "https://s3.amazonaws.com/your_bucket/credentials.json?AWSAccessKeyId=your_access_key&Expires=your_expiry&Signature=your_signature",
+    "credentials_url": "https://s3.amazonaws.com/your_bucket/credentials.json?AWSAccessKeyId=your_access_key&Expires=your_expiry&Signature=your_signature",
     -- "scopes": ['SCOPE_1', 'SCOPE_2', ...] -- Optional scopes. By default 'https://.../gmail.compose' & 'https://.../gmail.readonly' scopes are used
 };
 ~~~~

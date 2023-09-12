@@ -34,7 +34,7 @@ class ChatBotController:
         project = self.project_controller.get(name=project_name)
 
         query = db.session.query(
-            db.ChatBots
+            db.ChatBots, db.Tasks
         ).join(
             db.Tasks, db.ChatBots.id == db.Tasks.object_id
         ).filter(
@@ -44,7 +44,30 @@ class ChatBotController:
             db.Tasks.company_id == ctx.company_id,
         )
 
-        return query.first()
+        query_result = query.first()
+        if query_result is None:
+            return None
+        bot, task = query_result
+
+        # Include DB and Task information in response.
+        session = SessionController()
+        database_names = {
+            i['id']: i['name']
+            for i in session.database_controller.get_list()
+        }
+        bot_obj = {
+            'id': bot.id,
+            'name': bot.name,
+            'project': project_name,
+            'database_id': bot.database_id,  # TODO remove in future
+            'database': database_names.get(bot.database_id, '?'),
+            'model_name': bot.model_name,
+            'params': bot.params,
+            'created_at': bot.created_at,
+            'is_running': task.active,
+            'last_error': task.last_error,
+        }
+        return bot_obj
 
     def get_chatbots(self, project_name: str = 'mindsdb') -> List[dict]:
         '''
@@ -221,6 +244,9 @@ class ChatBotController:
             task.reload = True
 
         if params is not None:
+            # Merge params on update
+            existing_params = {} if not existing_chatbot.params else existing_chatbot.params
+            params.update(existing_params)
             existing_chatbot.params = params
         db.session.commit()
 
@@ -239,15 +265,17 @@ class ChatBotController:
         if bot is None:
             raise Exception(f"Chat bot doesn't exist: {chatbot_name}")
 
+        bot_rec = db.ChatBots.query.get(bot['id'])
+
         task = db.Tasks.query.filter(
             db.Tasks.object_type == self.OBJECT_TYPE,
-            db.Tasks.object_id == bot.id,
+            db.Tasks.object_id == bot_rec.id,
             db.Tasks.company_id == ctx.company_id,
         ).first()
 
         if task is not None:
             db.session.delete(task)
 
-        db.session.delete(bot)
+        db.session.delete(bot_rec)
 
         db.session.commit()

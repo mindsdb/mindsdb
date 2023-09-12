@@ -34,7 +34,18 @@ To ensure that the model is created based on the TimeGPT engine, include the `US
 
 ## Example
 
-Let's go through an example of how to use Nixtla's TimeGPT with MindsDB to forecast monthly expenditures based on historical data.
+Nixtla's TimeGPT model can be used to obtain real-time forecasts of the trading data from Binance.
+
+<Tip>
+Follow [this link](https://www.youtube.com/watch?v=8LfpFocdyEo&list=PLq3sJIV6w5BoHJ9gFSedwtb_pqk--4K89&index=3) to watch a video on integrating TimeGPT model with Binance data.
+</Tip>
+
+First, connect to Binance from MindsDB executing this command:
+
+```sql
+CREATE DATABASE my_binance
+WITH ENGINE = 'binance';
+```
 
 Please note that before using the TimeGPT engine, you should create it from the MindsDB editor, or other clients through which you interact with MindsDB, with the below command:
 
@@ -51,98 +62,50 @@ SHOW ML_ENGINES;
 
 If you see the TimeGPT engine on the list, you are ready to follow the tutorials.
 
-We use a table from our MySQL public demo database, so let’s start by connecting MindsDB to it:
+Now let's create a TimeGPT model and train it with data from Binance.
 
 ```sql
-CREATE DATABASE mysql_demo_db
-WITH ENGINE = 'mysql',
-PARAMETERS = {
-    "user": "user",
-    "password": "MindsDBUser123!",
-    "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
-    "port": "3306",
-    "database": "public"
-};
-```
-
-Now that we’ve connected our database to MindsDB, let’s query the data to be used in the example:
-
-```sql
-SELECT *
-FROM mysql_demo_db.historical_expenditures
-LIMIT 3;
-```
-
-Here is the output:
-
-```sql
-+------------+----------+-------------+
-| month      | category | expenditure |
-+------------+----------+-------------+
-| 1982-04-01 | industry | 3396.4      |
-| 1982-05-01 | industry | 3497.9      |
-| 1982-06-01 | industry | 3357.8      |
-+------------+----------+-------------+
-```
-
-The `historical_expenditures` table stores monthly expenditure data for various categories, such as `food`, `clothing`, `industry`, and more.
-
-Let's create a model table to predict the expenditures:
-
-```sql
-CREATE MODEL quarterly_expenditure_forecaster
-FROM mysql_demo_db
-  (SELECT * FROM historical_expenditures)
-PREDICT expenditure
-ORDER BY month
-GROUP BY category
-WINDOW 12
-HORIZON 3
+CREATE MODEL cryptocurrency_forecast_model
+FROM my_binance
+  (
+    SELECT *
+    FROM aggregated_trade_data
+    WHERE symbol = 'BTCUSDT'
+  )
+PREDICT open_price
+ORDER BY open_time
+WINDOW 100
+HORIZON 10
 USING ENGINE = 'timegpt';
 ```
 
-The `CREATE MODEL` statement creates, trains, and deploys the model. Here, we predict the `expenditure` column values. As it is a time series model, we order the data by the `month` column. Additionally, we group data by the `category` column - the predictions are made for each group independently (here, for each category).
+Use the `CREATE MODEL` statement to create, train, and deploy a model. The `FROM` clause defines the training data used to train the model - here, the latest Binance data is used. The `PREDICT` clause specifies the column to be predicted - here, the open price of the BTC/USDT trading pair is to be forecasted.
 
-Next, we define the `WINDOW` and `HORIZON` clauses. The `WINDOW` clause specifies the number of rows we look back at (here, we look back at sets of 12 rows). And the `HORIZON` clause defines for how many rows the predictions are made (here, for the next 3 rows).
+As it is a time-series model, you should order the data by a date column - here, it is the open time when the open price takes effect. Finally, the `WINDOW` clause defines the window the model looks back at while making forecasts - here, the model looks back at sets of 100 rows (intervals of 100 minutes, as the interval between Binance data rows is one minute). The `HORIZON` clause defines how many rows into the future the model will forecast - here, it forecasts the next 10 rows (the next 10 minutes, as the interval between Binance data rows is one minute).
 
-<Tip>
-Please visit our docs on the [`CREATE MODEL`](/sql/create/model) statement to learn more.
-</Tip>
-
-The `ENGINE` parameter in the `USING` clause specifies the ML engine used to make predictions.
-
-We can check the training status with the following query:
+Before proceeding, make sure that the model status reads `complete`.
 
 ```sql
-DESCRIBE quarterly_expenditure_forecaster;
+DESCRIBE cryptocurrency_forecast_model;
 ```
 
-Once the model status is `complete`, the behavior is the same as with any other AI table – you can query for batch predictions by joining it with a data table:
+To make forecasts, you must save the Binance data into a view:
 
 ```sql
-SELECT m.month as month, m.expenditure as forecasted
-FROM mindsdb.quarterly_expenditure_forecaster as m
-JOIN mysql_demo_db.historical_expenditures as t
-WHERE t.month > LATEST
-AND t.category = 'industry';
+CREATE VIEW btcusdt_recent AS (
+  SELECT *
+  FROM my_binance.aggregated_trade_data
+  WHERE symbol = 'BTCUSDT'
+);
 ```
 
-Here is the output data:
+This view is going to be joined with the model to get forecasts:
 
 ```sql
-+----------------------------+-----------------+
-| month                      | forecasted      |
-+----------------------------+-----------------+
-| 2017-10-01 00:00:00.000000 | 10256.251953125 |
-| 2017-11-01 00:00:00.000000 | 10182.58984375  |
-| 2017-12-01 00:00:00.000000 | 10316.259765625 |
-+----------------------------+-----------------+
+SELECT to_timestamp(cast(m.open_time as bigint)) AS open_time,
+       m.open_price,
+       m.open_price_explain
+FROM btcusdt_recent AS d
+JOIN cryptocurrency_forecast_model AS m
+WHERE d.open_time > LATEST;
 ```
-
-The `historical_expenditures` table is used to make batch predictions. Upon joining the `quarterly_expenditure_forecaster` model with the `historical_expenditures` table, we get predictions for the next quarter as defined by the `HORIZON 3` clause.
-
-Please note that the output `month` column contains both the date and timestamp. This format is used by default, as the timestamp is required when dealing with the hourly frequency of data.
-
-MindsDB provides the `LATEST` keyword that marks the latest training data point. In the `WHERE` clause, we specify the `month > LATEST` condition to ensure the predictions are made for data after the latest training data point.
-
-Let’s consider our `quarterly_expenditure_forecaster` model. We train the model using data until the third quarter of 2017, and the predictions come for the fourth quarter of 2017 (as defined by `HORIZON 3`).

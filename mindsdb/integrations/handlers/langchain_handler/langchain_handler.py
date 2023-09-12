@@ -15,6 +15,13 @@ from langchain.utilities import GoogleSerperAPIWrapper
 from langchain.agents.agent_toolkits import SQLDatabaseToolkit
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
 
+from langchain.chains.llm import LLMChain
+from langchain.chains.mapreduce import MapReduceChain
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.chains.summarize import load_summarize_chain
+from langchain.chains.combine_documents.stuff import StuffDocumentsChain
+from langchain.chains import ReduceDocumentsChain, MapReduceDocumentsChain
+
 from mindsdb.integrations.handlers.openai_handler.openai_handler import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -199,10 +206,10 @@ class LangChainHandler(BaseMLEngine):
 
         # langchain tool setup
         model_kwargs = self._get_chat_model_params(args, pred_args)
-        tools = self._setup_tools(model_kwargs, pred_args, args['executor'])
-
-        max_tokens = pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens))
         llm = self._create_chat_model(args, pred_args)
+        max_tokens = pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens))
+        tools = self._setup_tools(llm, model_kwargs, pred_args, args['executor'])
+
         memory = ConversationSummaryBufferMemory(llm=llm,
                                                  max_token_limit=max_tokens,
                                                  memory_key="chat_history")
@@ -269,12 +276,12 @@ class LangChainHandler(BaseMLEngine):
         pred_args['tools'] = args.get('tools') if 'tools' not in pred_args else pred_args.get('tools', [])
 
         # langchain tool setup
-        model_kwargs = self._get_chat_model_params(args, pred_args)
-        tools = self._setup_tools(model_kwargs, pred_args, args['executor'])
-
-        # langchain agent setup
         llm = self._create_chat_model(args, pred_args)
         max_tokens = pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens))
+        model_kwargs = self._get_chat_model_params(args, pred_args)
+        tools = self._setup_tools(llm, model_kwargs, pred_args, args['executor'])
+
+        # langchain agent setup
         memory = ConversationSummaryBufferMemory(llm=llm, max_token_limit=max_tokens)
         agent_name = pred_args.get('agent_name', args.get('agent_name', self.default_agent_model))
         agent = initialize_agent(
@@ -370,7 +377,7 @@ class LangChainHandler(BaseMLEngine):
 
         return pred_df
 
-    def _setup_tools(self, model_kwargs, pred_args, executor):
+    def _setup_tools(self, llm, model_kwargs, pred_args, executor):
         def _mdb_exec_call(query: str) -> str:
             """ We define it like this to pass the executor through the closure, as custom classes don't allow custom field assignment. """  # noqa
             try:
@@ -386,6 +393,50 @@ class LangChainHandler(BaseMLEngine):
                 ])
             except Exception as e:
                 data = f"mindsdb tool failed with error:\n{str(e)}"   # let the agent know
+
+            # map-reduce given token budget
+            if len(data) > model_kwargs['max_tokens']:  # TODO: bring down to tokens
+                # map
+                map_template = """The following is a set of documents
+                {docs}
+                Based on this list of docs, please identify the main themes
+                Helpful Answer:"""
+                map_prompt = PromptTemplate.from_template(map_template)
+                map_chain = LLMChain(llm=llm, prompt=map_prompt)
+
+                # reduce
+                reduce_template = """The following is set of summaries:
+                {doc_summaries}
+                Take these and distill it into a final, consolidated summary of the main themes.
+                Helpful Answer:"""
+                reduce_prompt = PromptTemplate.from_template(reduce_template)
+                reduce_chain = LLMChain(llm=llm, prompt=reduce_prompt)
+                combine_documents_chain = StuffDocumentsChain(
+                    llm_chain=reduce_chain, document_variable_name="doc_summaries"
+                )
+                reduce_documents_chain = ReduceDocumentsChain(
+                    combine_documents_chain=combine_documents_chain,
+                    collapse_documents_chain=combine_documents_chain,
+                    token_max=model_kwargs['max_tokens'],
+                )
+                map_reduce_chain = MapReduceDocumentsChain(
+                    # Map chain
+                    llm_chain=map_chain,
+                    # Reduce chain
+                    reduce_documents_chain=reduce_documents_chain,
+                    # The variable name in the llm_chain to put the documents in
+                    document_variable_name="docs",
+                    # Return the results of the map steps in the output
+                    return_intermediate_steps=False,
+                )
+
+                text_splitter = CharacterTextSplitter.from_tiktoken_encoder(
+                    chunk_size=1000, chunk_overlap=0
+                )
+                docs = text_splitter.create_documents([data])
+                split_docs = text_splitter.split_documents(docs)
+                data = map_reduce_chain.run(split_docs)
+
             return data
 
         def _mdb_exec_metadata_call(query: str) -> str:

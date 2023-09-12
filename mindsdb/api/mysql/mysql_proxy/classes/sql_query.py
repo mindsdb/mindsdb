@@ -1012,8 +1012,6 @@ class SQLQuery():
                 data = result
 
             except Exception as e:
-                import traceback
-                m = traceback.format_exc()
                 raise SqlApiUnknownError(f'error in apply predictor step: {e}\n{m}') from e
         elif type(step) == JoinStep:
             try:

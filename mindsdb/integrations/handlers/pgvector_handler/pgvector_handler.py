@@ -24,8 +24,7 @@ from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
 
 
-# todo add support for different indexes and search algorithms e.g. cosine similarity or L2 norm
-# todo perhaps migrate to sqlalchemy in place of raw queries
+# todo Issue #7316 add support for different indexes and search algorithms e.g. cosine similarity or L2 norm
 class PgVectorHandler(PostgresHandler, VectorStoreHandler):
     """This handler handles connection and execution of the PostgreSQL with pgvector extension statements."""
 

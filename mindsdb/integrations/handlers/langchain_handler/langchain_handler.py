@@ -329,7 +329,7 @@ class LangChainHandler(BaseMLEngine):
                 prompts.append(prompt.format(**kwargs))
             elif row.get(args['user_column']):
                 # just add prompt
-                prompts.append(base_template)
+                prompts.append(row[args['user_column']])
 
         def _completion(agent, prompts):
             # TODO: ensure that agent completion plus prompt match the maximum allowed by the user

@@ -49,8 +49,6 @@ class ChatBotController:
             return None
         bot, task = query_result
 
-        bot, task = rec
-
         # Include DB and Task information in response.
         session = SessionController()
         database_names = {

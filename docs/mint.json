@@ -715,7 +715,10 @@
               "pages": [
                 "sql/create/jobs",
                 "sql/drop/jobs",
-                "sql/query-jobs"
+                "sql/query-jobs",
+                "sql/create/trigger",
+                "sql/drop/trigger",
+                "sql/query-triggers"
               ]
             },
             {

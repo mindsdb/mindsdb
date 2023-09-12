@@ -146,15 +146,24 @@ class FileLock:
         works as context
     """
 
-    def __init__(self, relative_path: Path, mode: str = 'w'):
+    @staticmethod
+    def lock_folder_path(relative_path: Path) -> Path:
         """ Args:
-            relative_path (Path): path to directory relative to storage root
-            mode (str): lock for read (r) or write (w)
+                relative_path (Path): path to resource directory relative to storage root
+
+            Returns:
+                Path: abs path to folder with lock file
         """
         config = Config()
         root_storage_path = Path(config.paths['root'])
-        self._local_path = config.paths['locks'] / relative_path.relative_to(root_storage_path)
+        return config.paths['locks'] / relative_path.relative_to(root_storage_path)
 
+    def __init__(self, relative_path: Path, mode: str = 'w'):
+        """ Args:
+                relative_path (Path): path to resource directory relative to storage root
+                mode (str): lock for read (r) or write (w)
+        """
+        self._local_path = FileLock.lock_folder_path(relative_path)
         self._lock_file_name = DIR_LOCK_FILE_NAME
         self._lock_file_path = self._local_path / self._lock_file_name
         self._mode = fcntl.LOCK_EX if mode == 'w' else fcntl.LOCK_SH
@@ -552,8 +561,13 @@ class FileStorage:
         if path == self.folder_path.resolve():
             with FileLock(self.folder_path, mode='w'):
                 self.fs_store.delete(self.folder_name)
-            # NOTE on some fs .rmtree is not working if any file is open
-            shutil.rmtree(str(self.folder_path))
+                # NOTE on some fs .rmtree is not working if any file is open
+                shutil.rmtree(str(self.folder_path))
+
+            # region del file lock
+            lock_folder_path = FileLock.lock_folder_path(self.folder_path)
+            shutil.rmtree(lock_folder_path)
+            # endregion
             return
 
         with FileLock(self.folder_path, mode='w'):

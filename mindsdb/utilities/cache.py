@@ -139,9 +139,12 @@ class FileCache(BaseCache):
             cur_count = len(os.listdir(self.path))
 
             if cur_count > self.max_size + buffer_size:
-                files = sorted(Path(self.path).iterdir(), key=os.path.getmtime)
-                for file in files[:cur_count - self.max_size]:
-                    self.delete_file(file)
+                try:
+                    files = sorted(Path(self.path).iterdir(), key=os.path.getmtime)
+                    for file in files[:cur_count - self.max_size]:
+                        self.delete_file(file)
+                except FileNotFoundError:
+                    pass
 
     def file_path(self, name):
         return self.path / name

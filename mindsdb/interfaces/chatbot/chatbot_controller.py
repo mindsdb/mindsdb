@@ -265,15 +265,17 @@ class ChatBotController:
         if bot is None:
             raise Exception(f"Chat bot doesn't exist: {chatbot_name}")
 
+        bot_rec = db.ChatBots.query.get(bot['id'])
+
         task = db.Tasks.query.filter(
             db.Tasks.object_type == self.OBJECT_TYPE,
-            db.Tasks.object_id == bot.id,
+            db.Tasks.object_id == bot_rec.id,
             db.Tasks.company_id == ctx.company_id,
         ).first()
 
         if task is not None:
             db.session.delete(task)
 
-        db.session.delete(bot)
+        db.session.delete(bot_rec)
 
         db.session.commit()

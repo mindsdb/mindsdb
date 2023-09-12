@@ -36,7 +36,7 @@ To ensure that the model is created based on the StatsForecast engine, include t
 
 Let's go through an example of how to use Nixtla's StatsForecast with MindsDB to forecast monthly expenditures.
 
-Please note that before using the StatsForecast engine, you should create it from the MindsDB Cloud editor with the below command:
+Please note that before using the StatsForecast engine, you should create it from the MindsDB editor, or other clients through which you interact with MindsDB, with the below command:
 
 ```sql
 CREATE ML_ENGINE statsforecast
@@ -325,6 +325,8 @@ USING
   ENGINE = 'statsforecast',
   HIERARCHY = [‘category’];
 ```
+
+The `CREATE MODEL` statement creates, trains, and deploys the model. Here, we predict the `expenditure` column values. As it is a time series model, we order the data by the `month` column. Additionally, we group data by the `category` column - the predictions are made for each group independently (here, for each category). The `HORIZON` clause defines for how many rows the predictions are made (here, for the next 3 rows).
 
 You can use the `DESCRIBE [MODEL]` command to check for details:
 

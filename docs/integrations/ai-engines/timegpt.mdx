@@ -36,7 +36,7 @@ To ensure that the model is created based on the TimeGPT engine, include the `US
 
 Let's go through an example of how to use Nixtla's TimeGPT with MindsDB to forecast monthly expenditures based on historical data.
 
-Please note that before using the TimeGPT engine, you should create it from the MindsDB Cloud editor with the below command:
+Please note that before using the TimeGPT engine, you should create it from the MindsDB editor, or other clients through which you interact with MindsDB, with the below command:
 
 ```sql
 CREATE ML_ENGINE timegpt
@@ -79,9 +79,9 @@ Here is the output:
 +------------+----------+-------------+
 | month      | category | expenditure |
 +------------+----------+-------------+
-| 1982-04-01 | food     | 1162.6      |
-| 1982-05-01 | food     | 1150.9      |
-| 1982-06-01 | food     | 1160        |
+| 1982-04-01 | industry | 3396.4      |
+| 1982-05-01 | industry | 3497.9      |
+| 1982-06-01 | industry | 3357.8      |
 +------------+----------+-------------+
 ```
 
@@ -100,6 +100,10 @@ WINDOW 12
 HORIZON 3
 USING ENGINE = 'timegpt';
 ```
+
+The `CREATE MODEL` statement creates, trains, and deploys the model. Here, we predict the `expenditure` column values. As it is a time series model, we order the data by the `month` column. Additionally, we group data by the `category` column - the predictions are made for each group independently (here, for each category).
+
+Next, we define the `WINDOW` and `HORIZON` clauses. The `WINDOW` clause specifies the number of rows we look back at (here, we look back at sets of 12 rows). And the `HORIZON` clause defines for how many rows the predictions are made (here, for the next 3 rows).
 
 <Tip>
 Please visit our docs on the [`CREATE MODEL`](/sql/create/model) statement to learn more.
@@ -120,7 +124,7 @@ SELECT m.month as month, m.expenditure as forecasted
 FROM mindsdb.quarterly_expenditure_forecaster as m
 JOIN mysql_demo_db.historical_expenditures as t
 WHERE t.month > LATEST
-AND t.category = 'food';
+AND t.category = 'industry';
 ```
 
 Here is the output data:

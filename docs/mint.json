@@ -850,7 +850,7 @@
       ]
     },
     {
-      "group": "ML Engines",
+      "group": "AI Engines",
       "pages": [
         "integrations/ml-engines-overview",
         {
@@ -879,7 +879,9 @@
         {
           "group": "Time Series Models",
           "pages": [
-            "integrations/ai-engines/statsforecast"
+            "integrations/ai-engines/statsforecast",
+            "integrations/ai-engines/neuralforecast",
+            "integrations/ai-engines/timegpt"
           ]
         }
       ]

@@ -3,42 +3,43 @@ title: Introduction to MindsDB
 sidebarTitle: Introduction
 ---
 
-MindsDB is a virtual AI database that integrates data sources and AI frameworks. With MindsDB, you can create and automate elaborate AI workflows that include input data setup, model deployment, and predictions output.
-
-![What is MindsDB](/assets/what_is_mindsdb2.png)
+MindsDB is an AI Automation platform for building AI/ML powered features and applications. It works by connecting any source of data with any AI/ML model or framework and automating how real-time data flows between them.
 
 MindsDB allows you to easily:
 
- - Connect any store of data or end-user application.
- - Deploy an AI model as a virtual table.
+ - Connect to any store of data or end-user application.
  - Pass data to an AI model from any store of data or end-user application.
- - Plug the output of an AI model (that is, predictions or forecasts) into any store of data or end-user application.
+ - Plug the output of an AI model into any store of data or end-user application.
  - Fully automate these workflows to build AI-powered features and applications.
+
+![What is MindsDB](/assets/what_is_mindsdb2.png)
 
 ## Build with MindsDB
 
-As you can connect any data source with any AI model, you can build and automate any AI use case.
+As you can connect any data source with any AI/ML model, you can build and automate any AI/ML use case.
 
-- Here are some LLM use cases:
-      - Semantic Search and Q&A
-      - Chatbots
-      - Classification
-      - Sentiment Analysis
-      - Summarisation
-      - Translation
+Here are some AI/LLM use cases:
+      - [Semantic Search and Q&A/RAG](/nlp/question-answering-inside-mysql-with-openai)
+      - [Chatbots](/sql/tutorials/twitterbot-mariadb-enterprise-server-skysql)
+      - [Classification](/nlp/nlp-extended-examples#text-classification)
+      - [Sentiment Analysis](/nlp/sentiment-analysis-inside-mysql-with-openai)
+      - [Summarisation](/nlp/text-summarization-inside-mysql-with-openai)
+      - [Translation](/nlp/nlp-extended-examples#translation)
 
-- And some classic AI use cases:
-      - Forecasting
-      - Classification
-      - Regression
+You can use MindsDB for the following machine learning use cases:
+      - [Forecasting](/sql/tutorials/eeg-forecasting)
+      - [Classification](/sql/tutorials/customer-churn)
+      - [Regression](/sql/tutorials/home-rentals)
       - Anomaly Detection
       - Recommenders
 
-- Here is a common AI workflow that can be automated with Jobs:
+You can use one of MindsDB’s AutoMLs or you can bring your own, pre-trained model.
+
+Here is a common AI workflow that can be automated with Jobs:
       - Get data from a data source connected to MindsDB.
       - Optionally, retrain or finetune an AI model with new data.
       - Process data using one or more AI models.
-      - Send predictions or forecasts to a data source connected to MindsDB.
+      - Send LLM output, predictions or forecasts to a data source connected to MindsDB.
 
 Check out the Use Cases section for more examples and tutorials.
 
@@ -51,32 +52,16 @@ To find out about AI frameworks available in MindsDB, follow [this link](/integr
 ## Benefits of MindsDB
 
 1. Unified AI Deployment and Management
+    MindsDB integrates directly with the database, warehouse, or stream. This eliminates the need to build and maintain custom, complex data pipelines or separate systems for AI/ML deployment.
 
-MindsDB simplifies the deployment and management of AI models by providing a comprehensive cloud platform that integrates and serves your AI models, eliminating the need for complex infrastructure setup and management.
+2. Automated AI Workflows
+    MindsDB automates the entire AI workflow to execute on time-based or event-based triggers. No need to build custom automation logic to get predictions, move data, or (re)train models.
 
-2. Simplified Integration of AI with Data
+3. Turn every developer into an AI Engineer
+    MindsDB enables developers to leverage their existing SQL skills, accelerating the adoption of AI across teams and departments, turning every developer into an AI Engineer.
 
-With MindsDB, you can leverage the power of AI directly within the data environment and integrate AI into an existing data infrastructure, eliminating the need for complex data pipelines or separate systems for AI deployment by treating machine learning models as virtual tables.
-
-3. Increased Accessibility and Adoption
-
-Abstracting AI models as [Generative AI Tables](/generative-ai-tables), MindsDB enables developers and data scientists to collaborate seamlessly, leveraging their existing SQL skills and, at the same time, accelerating the adoption of AI across teams and departments, leading to faster innovation and decision-making.
-
-4. Predictive Analytics at Scale
-
-By storing AI models directly within the data environment, MindsDB leverages the full power of your data infrastructure, allowing for efficient and real-time predictions and eliminating the need for expensive data transfers or separate model deployment.
-
-5. Enhanced Scalability and Performance
-
-Leveraging the cloud's elastic resources, MindsDB enables you to handle large-scale AI workloads efficiently. Whether you need to process massive amounts of data or serve predictions in real time, MindsDB's infrastructure can scale to meet your demands, ensuring optimal performance and responsiveness.
-
-6. Improved Data Governance and Security
-
-Leveraging existing data security measures, MindsDB enables you to control access, permissions, and auditing for AI models, ensuring compliance with data privacy regulations and providing a secure and trusted environment for AI-powered applications.
-
-7. Automated AI Workflows
-
-With MindsDB, you can automate the entire AI workflow in the production environment. MindsDB enables you to create your own AI workflow, utilizing numerous integrations with data sources and AI frameworks, and schedule it to execute periodically using the [Jobs feature](/automation).
+4. Enhanced Scalability and Performance
+    Whether in your private cloud or using MindsDB’s managed service, MindsDB enables you to handle large-scale AI/ML workloads efficiently. MindsDB can scale to meet the demands of your use case, ensuring optimal performance and responsiveness.
 
 ## Democratize AI with MindsDB
 

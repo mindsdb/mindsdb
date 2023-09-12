@@ -146,14 +146,17 @@ class FileLock:
         works as context
     """
 
-    def __init__(self, local_path: Path, mode: str = 'w'):
+    def __init__(self, relative_path: Path, mode: str = 'w'):
         """ Args:
-            local_path (Path): path to directory
+            relative_path (Path): path to directory relative to storage root
             mode (str): lock for read (r) or write (w)
         """
-        self._local_path = local_path
+        config = Config()
+        root_storage_path = Path(config.paths['root'])
+        self._local_path = config.paths['locks'] / relative_path.relative_to(root_storage_path)
+
         self._lock_file_name = DIR_LOCK_FILE_NAME
-        self._lock_file_path = local_path / self._lock_file_name
+        self._lock_file_path = self._local_path / self._lock_file_name
         self._mode = fcntl.LOCK_EX if mode == 'w' else fcntl.LOCK_SH
 
         if self._lock_file_path.is_file() is False:

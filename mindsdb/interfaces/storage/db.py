@@ -389,6 +389,16 @@ class Skills(Base):
     type = Column(String, nullable=False)
     params = Column(JSON)
 
+    def as_dict(self) -> Dict:
+        return {
+            'id': self.id,
+            'name': self.name,
+            'project_id': self.project_id,
+            'agent_ids': self.agents,
+            'type': self.type,
+            'params': self.params
+        }
+
 
 class Agents(Base):
     __tablename__ = 'agents'

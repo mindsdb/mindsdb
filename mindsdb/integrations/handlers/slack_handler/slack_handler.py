@@ -59,7 +59,7 @@ class SlackChannelsTable(APITable):
         
         # Extract comparison conditions from the query
         conditions = extract_comparison_conditions(query.where)
-        channel_name = conditions[0][2];
+        channel_name = conditions[0][2]
         filters = []
         params = {}
         order_by_conditions = {}

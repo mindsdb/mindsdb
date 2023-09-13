@@ -262,10 +262,6 @@ class VectorStoreHandler(BaseHandler):
             }
         )
 
-        # drop columns with all None values
-
-        data.dropna(axis=1, inplace=True)
-
         # dispatch insert
         return self.insert(table_name, data, columns=columns)
 

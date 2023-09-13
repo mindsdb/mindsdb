@@ -415,7 +415,9 @@ class Agents(Base):
     model_name = Column(String, nullable=False)
     params = Column(JSON)
 
-    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    updated_at = Column(
+        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
+    )
     created_at = Column(DateTime, default=datetime.datetime.now)
 
     def as_dict(self) -> Dict:
@@ -429,3 +431,43 @@ class Agents(Base):
             'updated_at': self.updated_at,
             'created_at': self.created_at
         }
+
+
+class KnowledgeBase(Base):
+    __tablename__ = "knowledge_base"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    project_id = Column(Integer, nullable=False)
+    params = Column(JSON)
+
+    vector_database_id = Column(
+        ForeignKey("integration.id", name="fk_knowledge_base_vector_database_id"),
+        doc="fk to the vector database integration",
+    )
+    vector_database = relationship(
+        "Integration",
+        foreign_keys=[vector_database_id],
+        doc="vector database integration",
+    )
+
+    vector_database_table = Column(String, doc="table name in the vector database")
+
+    embedding_model_id = Column(
+        ForeignKey("predictor.id", name="fk_knowledge_base_embedding_model_id"),
+        doc="fk to the embedding model",
+    )
+
+    embedding_model = relationship(
+        "Predictor", foreign_keys=[embedding_model_id], doc="embedding model"
+    )
+
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    updated_at = Column(
+        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "name", "project_id", name="unique_knowledge_base_name_project_id"
+        ),
+    )

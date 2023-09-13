@@ -158,6 +158,7 @@
             "data_sources",
             "ml_engines",
             "sql/project",
+            "generative-ai-tables",
             "model-types",
             "tables_views_files"
           ]

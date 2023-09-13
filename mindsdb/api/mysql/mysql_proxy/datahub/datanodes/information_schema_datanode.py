@@ -42,6 +42,7 @@ class InformationSchemaDataNode(DataNode):
         'MDB_TRIGGERS': ['NAME', 'PROJECT', 'DATABASE', 'TABLE', 'QUERY', 'LAST_ERROR'],
         'JOBS_HISTORY': ['NAME', 'PROJECT', 'RUN_START', 'RUN_END', 'ERROR', 'QUERY'],
         'CHATBOTS': ['NAME', 'PROJECT', 'DATABASE', 'MODEL_NAME', 'PARAMS', 'IS_RUNNING', 'LAST_ERROR'],
+        'KNOWLEDGE_BASES': ['NAME', 'PROJECT', 'MODEL', 'STORAGE'],
     }
 
     def __init__(self, session):
@@ -76,6 +77,7 @@ class InformationSchemaDataNode(DataNode):
             'JOBS_HISTORY': self._get_jobs_history,
             'MDB_TRIGGERS': self._get_triggers,
             'CHATBOTS': self._get_chatbots,
+            'KNOWLEDGE_BASES': self._get_knowledge_bases,
         }
         for table_name in self.information_schema:
             if table_name not in self.get_dataframe_funcs:
@@ -368,6 +370,38 @@ class InformationSchemaDataNode(DataNode):
                 for k in columns_lower
             ]
             for row in data
+        ]
+
+        return pd.DataFrame(data, columns=columns)
+
+    def _get_knowledge_bases(self, query: ASTNode = None):
+        from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
+        controller = KnowledgeBaseController()
+        project_name = None
+        if (
+                isinstance(query, Select)
+                and type(query.where) == BinaryOperation
+                and query.where.op == '='
+                and query.where.args[0].parts == ['project']
+                and isinstance(query.where.args[1], Constant)
+        ):
+            project_name = query.where.args[1].value
+
+        # get the project id from the project name
+        project_controller = ProjectController()
+        project_id = project_controller.get(name=project_name).id
+        kb_list = controller.list(project_id=project_id)
+
+        columns = self.information_schema['KNOWLEDGE_BASES']
+
+        # columns: NAME, PROJECT, MODEL, STORAGE
+        data = [
+            (
+                kb.name,
+                project_name,
+                kb.embedding_model.name,
+                kb.vector_database.name + '.' + kb.vector_database_table
+            ) for kb in kb_list
         ]
 
         return pd.DataFrame(data, columns=columns)

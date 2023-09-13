@@ -20,6 +20,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.database.integrations import integration_controller
+from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
 
 
 class SessionController:
@@ -42,6 +43,7 @@ class SessionController:
         self.model_controller = ModelController()
         self.integration_controller = integration_controller
         self.database_controller = DatabaseController()
+        self.kb_controller = KnowledgeBaseController()
 
         self.datahub = init_datahub(self)
 

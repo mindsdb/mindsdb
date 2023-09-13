@@ -23,6 +23,8 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     CreateChatBot,
     UpdateChatBot,
     DropChatBot,
+    CreateKnowledgeBase,
+    DropKnowledgeBase,
 )
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.dialects.mysql import Variable
@@ -90,6 +92,7 @@ from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.triggers.triggers_controller import TriggersController
 from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
+from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import resolve_model_identifier
 import mindsdb.utilities.profiler as profiler
@@ -493,6 +496,14 @@ class ExecuteCommands:
                     statement.like,
                     is_full=is_full,
                 )
+            elif sql_category == "knowledge_bases" or sql_category == "knowledge bases":
+                select_statement = Select(
+                    targets=[Star()],
+                    from_table=Identifier(parts=["information_schema", "knowledge_bases"]),
+                    where=_get_show_where(statement, like_name="name"),
+                )
+                query = SQLQuery(select_statement, session=self.session)
+                return self.answer_select(query)
             else:
                 raise ErNotSupportedYet(f"Statement not implemented: {sql}")
         elif type(statement) in (
@@ -611,13 +622,17 @@ class ExecuteCommands:
             return self.answer_create_trigger(statement)
         elif type(statement) == DropTrigger:
             return self.answer_drop_trigger(statement)
-        # -- chatbots --
+        # -- chatbots
         elif type(statement) == CreateChatBot:
             return self.answer_create_chatbot(statement)
         elif type(statement) == UpdateChatBot:
             return self.answer_update_chatbot(statement)
         elif type(statement) == DropChatBot:
             return self.answer_drop_chatbot(statement)
+        elif type(statement) == CreateKnowledgeBase:
+            return self.answer_create_kb(statement)
+        elif type(statement) == DropKnowledgeBase:
+            return self.anwser_drop_kb(statement)
         elif type(statement) == Evaluate:
             statement.data = parse_sql(statement.query_str, dialect='mindsdb')
             return self.answer_evaluate_metric(statement)
@@ -1182,6 +1197,89 @@ class ExecuteCommands:
                 db_name = self.session.database
             project = self.session.database_controller.get_project(db_name)
             project.drop_table(view_name)
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def answer_create_kb(self, statement: CreateKnowledgeBase):
+        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else self.session.database
+        # get project id
+        try:
+            project = self.session.database_controller.get_project(project_name)
+        except ValueError:
+            raise SqlApiException(f'Project not found: {project_name}')
+        project_id = project.id
+
+        kb_name = statement.name.parts[-1]
+
+        # search for the model
+        # verify the model exists and get its id
+        model_identifier = statement.model
+        try:
+            model_record = self._get_model_info(
+                identifier=model_identifier,
+                except_absent=True
+            )
+
+        except PredictorRecordNotFound:
+            raise SqlApiException(f'Model not found: {model_identifier.to_string()}')
+
+        embedding_model_id = model_record['model_record'].id
+
+        # search for the vector database table
+        if len(statement.storage.parts) < 2:
+            raise SqlApiException(
+                f"Invalid vectordatabase table name: {statement.storage}"
+                "Need the form 'database_name.table_name'"
+            )
+
+        vector_db_name = statement.storage.parts[0]
+        vector_table_name = statement.storage.parts[-1]
+
+        # verify the vector database exists and get its id
+        database_records = self.session.database_controller.get_dict()
+        is_database_exist = vector_db_name in database_records
+        if not is_database_exist:
+            raise SqlApiException(f"Database not found: {vector_db_name}")
+
+        vector_database_id = database_records[vector_db_name]['id']
+
+        if statement.from_query is not None:
+            # TODO: implement this
+            raise SqlApiException("Create a knowledge base from a select is not supported yet")
+
+        params = statement.params
+
+        # create the knowledge base
+        _ = self.session.kb_controller.add(
+            name=kb_name,
+            project_id=project_id,
+            vector_database_id=vector_database_id,
+            vector_database_table_name=vector_table_name,
+            embedding_model_id=embedding_model_id,
+            params=params,
+            if_not_exists=statement.if_not_exists,
+        )
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def anwser_drop_kb(self, statement: DropKnowledgeBase):
+        name = statement.name.parts[-1]
+        project_name = statement.name.parts[0] if len(statement.name.parts) > 1 else self.session.database
+
+        # get project id
+        try:
+            project = self.session.database_controller.get_project(project_name)
+        except ValueError:
+            raise SqlApiException(f'Project not found: {project_name}')
+
+        project_id = project.id
+
+        # delete the knowledge base
+        self.session.kb_controller.delete(
+            name=name,
+            project_id=project_id,
+            if_exists=statement.if_exists,
+        )
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 

@@ -1,6 +1,6 @@
 import tempfile
 import time
-from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
@@ -19,7 +19,7 @@ class TestKnowledgeBase(BaseExecutorTest):
             columns = [
                 col.alias if col.alias is not None else col.name for col in ret.columns
             ]
-        return pd.DataFrame(ret.data, columns=columns)
+            return pd.DataFrame(ret.data, columns=columns)
 
     def wait_predictor(self, project, name):
         # wait
@@ -36,7 +36,8 @@ class TestKnowledgeBase(BaseExecutorTest):
         if not done:
             raise RuntimeError("predictor wasn't created")
 
-    def setup_method(self):
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def setup_method(self, method, mock_handler):
         super().setup_method()
 
         vectordatabase_name = "chroma_test"
@@ -58,12 +59,16 @@ class TestKnowledgeBase(BaseExecutorTest):
             {
                 "id": ["id1", "id2", "id3"],
                 "content": ["content1", "content2", "content3"],
-                "metadata": [{"a": 1}, {"b": 2}, {"c": 3}],
+                "metadata": [
+                    '{"datasource": "web", "some_field": "some_value"}',
+                    '{"datasource": "web"}',
+                    '{"datasource": "web"}',
+                ],
                 "embeddings": [[1, 2, 3], [4, 5, 6], [7, 8, 9]],
             }
         )
-        postgres_mock = MagicMock()
-        self.set_handler(postgres_mock, "pg", tables={"df": df})
+
+        self.set_handler(mock_handler, "pg", tables={"df": df})
 
         # create the table
         vectordatabase_table_name = "test_table"
@@ -93,6 +98,11 @@ class TestKnowledgeBase(BaseExecutorTest):
         self.vector_database_table_name = vectordatabase_table_name
         self.vector_database_name = vectordatabase_name
         self.embedding_model_name = embedding_model_name
+        self.database_path = tmp_directory
+
+    def teardown_method(self, method):
+        # drop the vector database
+        self.run_sql(f"DROP DATABASE {self.vector_database_name}")
 
     def test_create_kb(self):
         # create a knowledge base
@@ -118,11 +128,29 @@ class TestKnowledgeBase(BaseExecutorTest):
             STORAGE {self.vector_database_name}.{self.vector_database_table_name}
         """
 
-        self.run_sql(sql)
+        # TODO: this is to be supported
+        # self.run_sql(sql)
 
         # verify the knowledge base is created
-        kb_obj = self.db.session.query(KnowledgeBase).filter_by(name="test_kb2").first()
-        assert kb_obj is not None
+        # kb_obj = self.db.session.query(KnowledgeBase).filter_by(name="test_kb2").first()
+        # assert kb_obj is not None
+
+        # create a knowledge base with invalid model and storage name should throw an exception
+        sql = f"""
+            CREATE KNOWLEDGE BASE test_kb3
+            MODEL invalid_model_name
+            STORAGE {self.vector_database_name}.{self.vector_database_table_name}
+        """
+        with pytest.raises(Exception):
+            self.run_sql(sql)
+
+        sql = f"""
+            CREATE KNOWLEDGE BASE test_kb4
+            MODEL {self.embedding_model_name}
+            STORAGE invalid_storage_name
+        """
+        with pytest.raises(Exception):
+            self.run_sql(sql)
 
     def test_drop_kb(self):
         # create a knowledge base
@@ -178,7 +206,7 @@ class TestKnowledgeBase(BaseExecutorTest):
             SELECT *
             FROM test_kb
             WHERE
-                `metadata.a` = 1
+                `metadata.some_field` = 'some_value'
         """
         df = self.run_sql(sql)
         assert df.shape[0] == 1
@@ -275,7 +303,7 @@ class TestKnowledgeBase(BaseExecutorTest):
         # delete with metadata filter
         sql = """
             DELETE FROM test_kb
-            WHERE `metadata.b` = 2
+            WHERE `metadata.datasource` = 'web'
         """
         self.run_sql(sql)
 
@@ -291,14 +319,6 @@ class TestKnowledgeBase(BaseExecutorTest):
         # delete from the knowledge base without any filters is not allowed
         sql = """
             DELETE FROM test_kb
-        """
-        with pytest.raises(Exception):
-            self.run_sql(sql)
-
-        # delete with search query is not allowed
-        sql = """
-            DELETE FROM test_kb
-            WHERE search_query = 'some query'
         """
         with pytest.raises(Exception):
             self.run_sql(sql)

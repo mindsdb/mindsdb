@@ -1,0 +1,86 @@
+## LlamaIndex
+
+LlamaIndex is a data framework for your LLM application that allows you to work with private or domain-specific data and simplifies the interface between your data source and LLM.
+
+Developers can use LlamaIndex to build chatbots, applications, private set-ups, and Q&A over documents and web pages. The implemented features for LlamaIndex is [Support Web Page Reader](https://gpt-index.readthedocs.io/en/latest/examples/data_connectors/WebPageDemo.html) and [Support Database Reader](https://gpt-index.readthedocs.io/en/latest/examples/data_connectors/DatabaseReaderDemo.html)
+
+For this use case, you will be creating a question-answering model that retrieves answers from a webpage. OpenAI will be used as the LLM and Blackrock's investment webpage will be used as the datasource.
+
+### How to bring LlamaIndex to MindsDB
+
+The `CREATE ML_ENGINE` syntax is used to create the engine for LlamaIndex.
+
+```sql
+CREATE ML_ENGINE llamaindex
+FROM llama_index
+```
+
+On execution you get:
+<img src="/assets/tutorials/llamaindex/1.ml_engine.png" />
+
+Use the `CREATE MODEL` syntax to create a model with Llamaindex.
+
+```sql
+CREATE MODEL qa_blackrock
+FROM files
+    (SELECT * FROM about_blackrock)
+PREDICT Answers
+USING 
+  engine = 'llamaindex', 
+  index_class = 'GPTVectorStoreIndex',
+  reader = 'DFReader',
+  source_url_link = 'https://www.blackrock.com/za/individual/about-us',
+  input_column = 'Questions',
+  openai_api_key = 'your_api_key';
+  ```
+
+Where:
+
+| Expression                             | Description                                |
+|----------------------------------------|--------------------------------------------| 
+| `qa_blackrock`                         | The name provided to the model.            |
+| `engine`                               | The engine used,which is Llamaindex.       |
+| `index_class`                          | The vector store index used.               |
+| `reader`                               |The reader that reads the data/webpage.     |
+| `input_column`                         | prompt provided as a question to the model.|
+| `openai_api_key`                       | API key of the LLM OpenAI.                 |
+
+
+On execution you get:
+
+<img src="/assets/tutorials/llamaindex/2.create_model.png" />
+
+The status of the model can be verified that it has trained successfully into a complete status by using the `DESCRIBE` syntax.
+
+```sql
+DESCRIBE qa_blackrock```
+On execution you get:
+<img src="/assets/tutorials/llamaindex/3.describe.png" />
+### Q&A prompting.
+The model can be queried by providing it with a question using the `SELECT` syntax.
+```sql
+SELECT Questions,Answers
+FROM mindsdb.qa_blackrock
+WHERE Questions = 'What is the best long term investment with minimal risks for private investors';
+```
+
+On execution you get:
+
+<img src="/assets/tutorials/llamaindex/4.select_model.png" />
+
+Answer:
+`The best long term investment with minimal risks for private investors is a diversified portfolio of low-cost index funds. These funds typically track a broad market index, such as the S&P 500, and provide exposure to a wide variety of publicly traded companies with minimal risk. Blackrock is one of the largest asset management companies in the world, and offers a range of index funds, exchange-traded funds, and other investment products for private investors.`
+
+You can also query batch predictions using the `JOIN` clause.
+
+```sql
+SELECT a.Questions,b.Answers
+FROM mindsdb.qa_blackrock as b
+JOIN files.about_blackrock as a;
+```
+
+On execution you get:
+
+<img src="/assets/tutorials/llamaindex/5.batch.png" />
+
+The LlamaIndex integtration made it possible to use OpenAI to seamlessly query a webpage of a site and obtain answers to questions.

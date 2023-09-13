@@ -239,6 +239,8 @@ if __name__ == '__main__':
 
     if args.api is None:
         api_arr = ['http', 'mysql']
+    elif args.api == "":
+        api_arr = []
     else:
         api_arr = args.api.split(',')
 

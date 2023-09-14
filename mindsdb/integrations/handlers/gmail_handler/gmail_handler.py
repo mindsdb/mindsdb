@@ -301,6 +301,15 @@ class GmailHandler(APIHandler):
         self.credentials_file = self.connection_args.get('credentials_file', None)
         if self.connection_args.get('credentials'):
             self.credentials_file = self.connection_args.pop('credentials')
+        if not self.credentials_file and not self.credentials_url:
+            # try to get from config
+            gm_config = Config().get('handlers', {}).get('gmail', {})
+            secret_file = gm_config.get('credentials_file')
+            secret_url = gm_config.get('credentials_url')
+            if secret_file:
+                self.credentials_file = secret_file
+            elif secret_url:
+                self.credentials_url = secret_url
 
         self.scopes = self.connection_args.get('scopes', DEFAULT_SCOPES)
         self.token_file = None
@@ -351,11 +360,7 @@ class GmailHandler(APIHandler):
                 # save to storage
                 self.handler_storage.folder_sync('config')
             else:
-                # try to get from config
-                config = Config()
-                secret_file = config.get('handlers', {}).get('gmail', {}).get('credentials_file')
-                if secret_file is None or not os.path.isfile(secret_file):
-                    raise ValueError('No valid Gmail Credentials filepath or S3 url found.')
+                raise ValueError('No valid Gmail Credentials filepath or S3 url found.')
 
             # initialise flow
             flow = Flow.from_client_secrets_file(secret_file, self.scopes)

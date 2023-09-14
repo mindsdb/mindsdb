@@ -107,7 +107,14 @@ DESCRIBE qa_blackrock
 ```
 
 On execution you get:
-<img src="/assets/tutorials/llamaindex/3.describe.png" />
+
+```sql
++-------+-------------+-------------+-----------+---------+-----------+------------+-----------+-----------+---------------+-----------------+---------+------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------+
+| table | NAME        | ENGINE      | PROJECT   | ACTIVE  | VERSION   | STATUS     | ACCURACY  | PREDICT   | UPDATE_STATUS | MINDSDB_VERSION | ERROR   | SELECT_DATA_QUERY            | TRAINING_OPTIONS                                                                                                                                                                                                                   | TAG  |
++-------+---------------------------+-----------+---------+-----------+------------+-----------+-----------+---------------+-----------------+---------+------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------+
++   []  |qa_blackrock | llama_index | mindsdb   | true    | 	1       | generating | NULL      | Answers   | up_to_date    | 23.9.1.1        | NULL    | SELECT * FROM about_blackrock| {'target': 'Answers', 'using': {'index_class': 'GPTVectorStoreIndex', 'reader': 'DFReader', 'source_url_link': 'https://www.blackrock.com/za/individual/about-us', 'input_column': 'Questions', 'openai_api_key': 'your_api_key'}} | NULL |
++-------+----------------------------+----------+---------+-----------+------------+-----------+-----------+---------------+-----------------+---------+------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------+
+```
 
 ### Q&A prompting.
 
@@ -121,11 +128,17 @@ WHERE Questions = 'What is the best long term investment with minimal risks for 
 
 On execution you get:
 
-<img src="/assets/tutorials/llamaindex/4.select_model.png" />
-
-Answer:
 ```sql
-The best long term investment with minimal risks for private investors is a diversified portfolio of low-cost index funds. These funds typically track a broad market index, such as the S&P 500, and provide exposure to a wide variety of publicly traded companies with minimal risk. Blackrock is one of the largest asset management companies in the world, and offers a range of index funds, exchange-traded funds, and other investment products for private investors.
++---------------------------------------------+-----------------------------------------------------------------------------------------------------+
+| Questions                                   | Answer                                                                                              |
++---------------------------------------------+-----------------------------------------------------------------------------------------------------+
+| What is the best long term investment       | The best long term investment with minimal risks for private investors is a diversified.            |
+| with minimal risks for private investors    | portfolio of low-cost index funds. These funds typically.                                           |
+|                                             | track a broad market index, such as the S&P 500, and provide exposure to a wide variety.            |
+|                                             | of publicly traded companies with minimal risk.                                                     |
+|                                             | Blackrock is one of the largest asset management companies in the world, and offers.                | 
+|                                             | a range of index funds, exchange-traded funds, and other investment products for private investors. |
++---------------------------------------------+-----------------------------------------------------------------------------------------------------+
 ```
 
 You can also query batch predictions using the `JOIN` clause.
@@ -133,11 +146,32 @@ You can also query batch predictions using the `JOIN` clause.
 ```sql
 SELECT a.Questions,b.Answers
 FROM mindsdb.qa_blackrock as b
-JOIN files.about_blackrock as a;
-```
+JOIN files.about_blackrock as a
+LIMIT 4;
+``` 
 
 On execution you get:
 
-<img src="/assets/tutorials/llamaindex/5.batch.png" />
++---------------------------------------------+---------------------------------------------------------------------+
+| Questions                                   | Answer                                                              |
++---------------------------------------------+---------------------------------------------------------------------+
+| When was Blackrock founded?                 | Blackrock was founded in 1988.                                      |
++---------------------------------------------+---------------------------------------------------------------------+
+| What does Blackrock do?                     | Blackrock is a global investment management firm that provides      |
+|                                             | investment and financial services for clients around the world.     |
+|                                             | It offers a range of services, such as portfolio management,        |
+|                                             | retirement planning, and risk management. It also provides          |
+|                                             | investment advice and solutions to individuals, companies,          |
+|                                             | and institutions.                                                   |
++---------------------------------------------+---------------------------------------------------------------------+
+| Why should investors choose Blackrock?      | Investors should choose Blackrock because it is one of the          |
+|                                             | world's largest asset management companies, managing over           |
+|                                             | $7.4 trillion in assets. Blackrock offers a wide range of           |
+|                                             | investment solutions, including mutual funds, retirement            |
+|                                             | accounts, exchange-traded funds (ETFs), and more, to help           |
+|                                             | investors reach their financial goals. They also have a             |
+|                                             | team of experienced professionals who are dedicated to              |
+|                                             | providing the best possible outcomes for their clients.             |
++---------------------------------------------+---------------------------------------------------------------------+
 
 The LlamaIndex integtration made it possible to use OpenAI to seamlessly query a webpage of a site and obtain answers to questions.

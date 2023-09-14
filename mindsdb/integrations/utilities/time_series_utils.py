@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from pandas.tseries.frequencies import to_offset
 from sklearn.metrics import r2_score
 from hierarchicalforecast.core import HierarchicalReconciliation
 from hierarchicalforecast.methods import BottomUp
@@ -65,10 +66,8 @@ def get_results_from_nixtla_df(nixtla_df, model_args):
 
 def infer_frequency(df, time_column, default=DEFAULT_FREQUENCY):
     try:  # infer frequency from time column
-        date_series = pd.to_datetime(df[time_column]).unique()
-        if isinstance(date_series, np.ndarray):
-            date_series.sort()
-        inferred_freq = pd.infer_freq(date_series)
+        df = df.sort_values(by=time_column)
+        inferred_freq = to_offset(pd.to_timedelta(np.diff(df[time_column]).min())).freqstr
     except TypeError:
         inferred_freq = default
     return inferred_freq if inferred_freq is not None else default

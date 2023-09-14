@@ -186,6 +186,8 @@ class IntegrationController:
                     arg_name in accept_connection_args
                     and accept_connection_args[arg_name]['type'] == ARG_TYPE.PATH
                 ):
+                    if arg_value is None or arg_value == '':
+                        continue
                     if files_dir is None:
                         files_dir = tempfile.mkdtemp(prefix='mindsdb_files_')
                     shutil.copy(arg_value, files_dir)

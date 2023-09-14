@@ -66,8 +66,10 @@ def get_results_from_nixtla_df(nixtla_df, model_args):
 
 def infer_frequency(df, time_column, default=DEFAULT_FREQUENCY):
     try:  # infer frequency from time column
-        df = df.sort_values(by=time_column)
-        inferred_freq = to_offset(pd.to_timedelta(np.diff(df[time_column]).min())).freqstr
+        date_series = pd.to_datetime(df.sort_values(by=time_column)[time_column]).unique()
+        values, counts = np.unique(np.diff(date_series), return_counts=True)
+        delta = values[np.argmax(counts)]
+        inferred_freq = to_offset(pd.to_timedelta(delta)).freqstr
     except TypeError:
         inferred_freq = default
     return inferred_freq if inferred_freq is not None else default

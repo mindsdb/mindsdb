@@ -3,10 +3,143 @@ title: Lightwood
 sidebarTitle: Lightwood
 ---
 
-<Note>
-This page is a work in progress.
+Lightwood is the default AI engine used in MindsDB. It deals with [classification](/sql/tutorials/customer-churn), [regression](/sql/tutorials/home-rentals), and [time-series](/sql/tutorials/house-sales-forecasting) problems in machine learninig.
 
-Please visit the [Lightwood docs here](https://lightwood.io/).
+By providing it with the input data and problem definition, Lightwood generates predictions following three core steps that include *Data pre-processing and cleaning*, *Feature engineering*, and *Model building and training*. The input data ranges from numbers, dates, categories, text, quantities, arrays, matrices, up to images, audios, and videos (passed as URLs).
+
+## How It Works
+
+Here is the algorithm followed by Lightwood starting from the input data setup, through model building and training, up to getting predictions.
+
+<p align="center">
+  <img src="/assets/lightwood.png" />
+</p>
+
+The input data is pre-processed and each column is assigned a data type. Next, data is converted into features via *encoders* that transform data into numerical representation used by the model. Finally, a predictive model takes the encoded feature data and outputs a prediction for the target.
+
+Under the hood, the model splits data into the training and testing sets, having an 80-20 ratio. The split is done using random sampling without replacement, stratified on the target column. Doing so, it determines the accuracy of the model.
+
+Users can either use [Lightwood’s default mixers/models](/integrations/ai-engines/lightwood#model-key) or create their own approaches inherited from the `BaseMixer` class.
+
+To learn more about Lightwood philosophy, follow [this link](https://lightwood.io/lightwood_philosophy.html).
+
+## Accuracy Metrics
+
+Lightwood provides ways to score the accuracy of the model using one of the accuracy functions.
+
+The accuracy functions include `mean_absolute_error`, `mean_squared_error`, `precision_score`, `recall_score`, and `f1_score`.
+
+```sql
+CREATE MODEL model_name
+FROM data_source
+  (SELECT * FROM table_name)
+PREDICT target_column
+USING
+  accuracy_functions="['accuracy_function']";
+```
+
+You can define the accuracy function of choice in the `USING` clause of the `CREATE MODEL` statement.
+
+<Note>
+Here are the accuracy functions used by default:
+
+- the `r2_score` value for regression predictions.
+- the `balanced_accuracy_score` value for classification predictions.
+- the `complementary_smape_array_accuracy` value for time series predictions.
+
+The values vary between 0 and 1, where 1 indicates a perfect predictor, based on results obtained for a held-out portion of data (i.e. testing set).
+
+You can check accuracy values for models using the [`DESCRIBE`](/sql/api/describe) statement.
+</Note>
+
+## Tuning the Lightwood ML Engine Features
+
+### Description
+
+In MindsDB, the underlying AutoML models are based on the [Lightwood](https://lightwood.io/) engine by default. This library generates models automatically based on the data and declarative problem definition. But the default configuration can be overridden using the `USING` statement that provides an option to configure specific parameters of the training process.
+
+In the upcoming version of MindsDB, it will be possible to choose from more ML frameworks. Please note that the Lightwood engine is used by default.
+
+### Syntax
+
+Here is the syntax:
+
+```sql
+CREATE MODEL project_name.model_name
+FROM data_source
+    (SELECT column_name, ... FROM table_name)
+PREDICT target_column
+USING parameter_key = 'parameter_value';
+```
+
+#### `encoders` Key
+
+It grants access to configure how each column is encoded. By default, the AutoML engine tries to get the best match for the data.
+
+```sql
+...
+USING encoders.column_name.module = 'value';
+```
+
+To learn more about `encoders` and their options, visit the [Lightwood documentation page on encoders](https://lightwood.io/encoder.html).
+
+#### `model` Key
+
+It allows you to specify the type of machine learning algorithm to learn from the encoder data.
+
+```sql
+...
+USING model.args = {"key": value};
+```
+
+Here are the model options:
+
+| Model                                                               | Description                                                                                                                                                                                                                                                                         |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [BaseMixer](https://lightwood.io/mixer.html#mixer.BaseMixer)         | It is a base class for all mixers.                                                                                                                                                                                                                                                  |
+| [LightGBM](https://lightwood.io/mixer.html#mixer.LightGBM)           | This mixer configures and uses LightGBM for regression or classification tasks depending on the problem definition.                                                                                                                                                                 |
+| [LightGBMArray](https://lightwood.io/mixer.html#mixer.LightGBMArray) | This mixer consists of several LightGBM mixers in regression mode aimed at time series forecasting tasks.                                                                                                                                                                           |
+| [NHitsMixer](https://lightwood.io/mixer.html#mixer.NHitsMixer)       | This mixer is a wrapper around an MQN-HITS deep learning model.                                                                                                                                                                                                                     |
+| [Neural](https://lightwood.io/mixer.html#mixer.Neural)               | This mixer trains a fully connected dense network from concatenated encoded outputs of each feature in the dataset to predict the encoded output.                                                                                                                                   |
+| [NeuralTs](https://lightwood.io/mixer.html#mixer.NeuralTs)           | This mixer inherits from Neural mixer and should be used for time series forecasts.                                                                                                                                   |
+| [ProphetMixer](https://lightwood.io/mixer.html#mixer.ProphetMixer)   | This mixer is a wrapper around the popular time series library [Prophet](https://facebook.github.io/prophet/).                                                                                                                                                                      |                                        |
+| [RandomForest](https://lightwood.io/mixer.html#mixer.RandomForest)   | This mixer supports both regression and classification tasks. It inherits from sklearn.ensemble.RandomForestRegressor and sklearn.ensemble.RandomForestClassifier.                                                                                                                                            |
+| [Regression](https://lightwood.io/mixer.html#mixer.Regression)       | This mixer inherits from [scikit-learn’s Ridge class](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.Ridge.html).                                                                                                                                           |
+| [SkTime](https://lightwood.io/mixer.html#mixer.SkTime)               | This mixer is a wrapper around the popular time series library sktime.                                                                                                                                                                                                              |
+| [Unit](https://lightwood.io/mixer.html#mixer.Unit)                   | This is a special mixer that passes along whatever prediction is made by the target encoder without modifications. It is used for single-column predictive scenarios that may involve complex and/or expensive encoders (e.g. free-form text classification with transformers).     |
+| [XGBoostMixer](https://lightwood.io/mixer.html#mixer.XGBoostMixer)   | This mixer is a good all-rounder, due to the generally great performance of tree-based ML algorithms for supervised learning tasks with tabular data.     |
+
+To learn more about all the `model` options, visit the [Lightwood documentation page on mixers](https://lightwood.io/mixer.html).
+
+#### Other Keys Supported by Lightwood in JsonAI
+
+The most common use cases of configuring predictors use `encoders` and `model` keys explained above. To see all the available keys, check out the [Lightwood documentation page on JsonAI](https://lightwood.io/api/types.html#api.types.JsonAI).
+
+### Example
+
+Here we use the `home_rentals` dataset and specify particular `encoders` for some columns and a LightGBM `model`.
+
+```sql
+CREATE MODEL mindsdb.home_rentals_model
+FROM example_db
+    (SELECT * FROM demo_data.home_rentals)
+PREDICT rental_price
+USING
+    encoders.location.module = 'CategoricalAutoEncoder',
+    encoders.rental_price.module = 'NumericEncoder',
+    encoders.rental_price.args.positive_domain = 'True',
+    model.args = {"submodels": [
+                    {"module": "LightGBM",
+                     "args": {
+                          "stop_after": 12,
+                          "fit_on_dev": true
+                          }
+                    }
+                ]};
+```
+
+<Note>
+You can visit the comprehensive [Lightwood docs here](https://lightwood.io/).
 </Note>
 
 <Tip>

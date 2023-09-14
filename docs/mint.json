@@ -158,6 +158,7 @@
             "data_sources",
             "ml_engines",
             "sql/project",
+            "generative-ai-tables",
             "model-types",
             "tables_views_files"
           ]
@@ -715,7 +716,10 @@
               "pages": [
                 "sql/create/jobs",
                 "sql/drop/jobs",
-                "sql/query-jobs"
+                "sql/query-jobs",
+                "sql/create/trigger",
+                "sql/drop/trigger",
+                "sql/query-triggers"
               ]
             },
             {
@@ -847,7 +851,7 @@
       ]
     },
     {
-      "group": "ML Engines",
+      "group": "AI Engines",
       "pages": [
         "integrations/ml-engines-overview",
         {
@@ -876,7 +880,9 @@
         {
           "group": "Time Series Models",
           "pages": [
-            "integrations/ai-engines/statsforecast"
+            "integrations/ai-engines/statsforecast",
+            "integrations/ai-engines/neuralforecast",
+            "integrations/ai-engines/timegpt"
           ]
         }
       ]

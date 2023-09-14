@@ -420,16 +420,11 @@ class LangChainHandler(BaseMLEngine):
                     token_max=model_kwargs['max_tokens'],
                 )
                 map_reduce_chain = MapReduceDocumentsChain(
-                    # Map chain
                     llm_chain=map_chain,
-                    # Reduce chain
                     reduce_documents_chain=reduce_documents_chain,
-                    # The variable name in the llm_chain to put the documents in
                     document_variable_name="docs",
-                    # Return the results of the map steps in the output
                     return_intermediate_steps=False,
                 )
-
                 text_splitter = CharacterTextSplitter.from_tiktoken_encoder(
                     chunk_size=1000, chunk_overlap=0
                 )

@@ -3,7 +3,7 @@ title: Lightwood
 sidebarTitle: Lightwood
 ---
 
-Lightwood is the default AI engine used in MindsDB. It deals with [classification](/sql/tutorials/customer-churn), [regression](/sql/tutorials/home-rentals), and [time-series](/sql/tutorials/house-sales-forecasting) problems in machine learninig.
+Lightwood is the default AI engine used in MindsDB. It deals mainly with [classification](/sql/tutorials/customer-churn), [regression](/sql/tutorials/home-rentals), and [time-series](/sql/tutorials/house-sales-forecasting) problems in machine learning.
 
 By providing it with the input data and problem definition, Lightwood generates predictions following three core steps that include *Data pre-processing and cleaning*, *Feature engineering*, and *Model building and training*. The input data ranges from numbers, dates, categories, text, quantities, arrays, matrices, up to images, audios, and videos (passed as URLs).
 
@@ -17,7 +17,7 @@ Here is the algorithm followed by Lightwood starting from the input data setup, 
 
 The input data is pre-processed and each column is assigned a data type. Next, data is converted into features via *encoders* that transform data into numerical representation used by the model. Finally, a predictive model takes the encoded feature data and outputs a prediction for the target.
 
-Under the hood, the model splits data into the training and testing sets, having an 80-20 ratio. The split is done using random sampling without replacement, stratified on the target column. Doing so, it determines the accuracy of the model.
+Under the hood, the model splits data into the training, validation, and testing sets, with ratios that are dynamic but usually an 80-10-10 ratio. The split is done by default using random sampling without replacement, stratified on the target column. Doing so, it determines the accuracy of the model by evaluating on the held out test set.
 
 Users can either use [Lightwood’s default mixers/models](/integrations/ai-engines/lightwood#model-key) or create their own approaches inherited from the `BaseMixer` class.
 
@@ -109,6 +109,10 @@ Here are the model options:
 | [Unit](https://lightwood.io/mixer.html#mixer.Unit)                   | This is a special mixer that passes along whatever prediction is made by the target encoder without modifications. It is used for single-column predictive scenarios that may involve complex and/or expensive encoders (e.g. free-form text classification with transformers).     |
 | [XGBoostMixer](https://lightwood.io/mixer.html#mixer.XGBoostMixer)   | This mixer is a good all-rounder, due to the generally great performance of tree-based ML algorithms for supervised learning tasks with tabular data.     |
 
+<Note>
+Please note that not all mixers are available in our cloud environment. In particular, LightGBM, LightGBMArray, NHITS, and Prophet.
+</Note>
+
 To learn more about all the `model` options, visit the [Lightwood documentation page on mixers](https://lightwood.io/mixer.html).
 
 #### Other Keys Supported by Lightwood in JsonAI
@@ -143,10 +147,5 @@ You can visit the comprehensive [Lightwood docs here](https://lightwood.io/).
 </Note>
 
 <Tip>
-**From Our Community**
-
-Check out the article created by our community:
-
-- Article on [How to Design a custom mixer model in Lightwood](https://medium.com/@teslimodus/introduction-e2f933c40f4c)
-  by [Teslim Odumuyiwa](https://github.com/Tes-program)
+Check out the Lightwood tutorials [here](https://lightwood.io/tutorials.html).
 </Tip>

@@ -1,0 +1,177 @@
+## LlamaIndex
+
+LlamaIndex is a data framework for your LLM application that allows you to work with private or domain-specific data and simplifies the interface between your data source and LLM.
+
+Developers can use LlamaIndex to build chatbots, applications, private set-ups, and Q&A over documents and web pages. The implemented features for LlamaIndex is [Support Web Page Reader](https://gpt-index.readthedocs.io/en/latest/examples/data_connectors/WebPageDemo.html) and [Support Database Reader](https://gpt-index.readthedocs.io/en/latest/examples/data_connectors/DatabaseReaderDemo.html)
+
+### How to bring LlamaIndex to MindsDB
+
+Before creating a model, you will need to create an ML engine for LlamaIndex using the `CREATE ML_ENGINE` statement:
+
+```sql
+CREATE ML_ENGINE llamaindex
+FROM llamaindex
+```
+
+You can check the available engines with this command:
+
+```sql
+SHOW ML_ENGINES;
+``
+
+If you see the LlamaIndex engine on the list, you are ready to follow the tutorials.
+
+Once the ML engine is created, we use the `CREATE MODEL` statement to create the LlamaIndex model in MindsDB.
+
+```sql
+CREATE MODEL model_name
+FROM datasource
+    (SELECT * FROM table_name)
+PREDICT column_to_be_predicted
+USING 
+  engine = 'llamaindex', 
+  index_class = 'vector_store_index',
+  reader = 'reader_type',
+  source_url_link = 'source_url_link',
+  input_column = 'column_name',
+  openai_api_key = 'your_api_key';
+  ```
+
+To ensure that the model is created based on the LlamaIndex engine, the `USING` clause is used to include the `engine` which is the ml_engine LlamaIndex, `index_class` is used to define the type of index class used, `reader` to define the type of reader for the data scrapping, `source_url_link` defines the url link used to get the answers from, `input_column` defines the column used to prompt the model, and `openai_api_key` is defined with your OPENAI key to gain access to the LLM OPENAI.
+
+### Example
+
+Let's explore a usecase where you will be creating a question-answering model that retrieves answers from a webpage. OpenAI will be used as the LLM and Blackrock's investment webpage will be used as the datasource.
+
+The `CREATE ML_ENGINE` syntax is used to create the engine for LlamaIndex. The name of the ML_ENGINE will be named `llamaindex`.
+
+```sql
+CREATE ML_ENGINE llamaindex
+FROM llama_index
+```
+
+On execution you get:
+```sql
+Query successfully completed.
+```
+
+Use the `CREATE MODEL` syntax to create a model with Llamaindex.
+
+The datasource will be from a file we have uploaded that consists of questions. If you want to know how to upload a file you can check out the documentation [here.](https://docs.mindsdb.com/sql/create/file)
+
+```sql
+CREATE MODEL qa_blackrock
+FROM files
+    (SELECT * FROM about_blackrock)
+PREDICT Answers
+USING 
+  engine = 'llamaindex', 
+  index_class = 'GPTVectorStoreIndex',
+  reader = 'DFReader',
+  source_url_link = 'https://www.blackrock.com/za/individual/about-us',
+  input_column = 'Questions',
+  openai_api_key = 'your_api_key';
+  ```
+
+Where:
+
+| Expression                             | Description                                |
+|----------------------------------------|--------------------------------------------| 
+| `qa_blackrock`                         | The name provided of the model.            |
+| `engine`                               | The engine name - here, llamaindex.        |
+| `index_class`                          | The vector store index used.               |
+| `reader`                               |The reader that reads the data/webpage.     |
+| `source_url_link`                      | The webpage link.                          |
+| `input_column`                         | The column that stores prompt to the model.|
+| `openai_api_key`                       | OpenAI API key.                            |
+
+
+On execution you get:
+
+```sql
++-------------+-------------+-----------+---------+-----------+------------+-----------+-----------+---------------+-----------------+---------+------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------+
+| NAME        | ENGINE      | PROJECT   | ACTIVE  | VERSION   | STATUS     | ACCURACY  | PREDICT   | UPDATE_STATUS | MINDSDB_VERSION | ERROR   | SELECT_DATA_QUERY            | TRAINING_OPTIONS                                                                                                                                                                                                                   | TAG  |
++---------------------------+-----------+---------+-----------+------------+-----------+-----------+---------------+-----------------+---------+------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------+
+|qa_blackrock | llama_index | mindsdb   | true    | 	1       | generating | NULL      | Answers   | up_to_date    | 23.9.1.1        | NULL    | SELECT * FROM about_blackrock| {'target': 'Answers', 'using': {'index_class': 'GPTVectorStoreIndex', 'reader': 'DFReader', 'source_url_link': 'https://www.blackrock.com/za/individual/about-us', 'input_column': 'Questions', 'openai_api_key': 'your_api_key'}} | NULL |
++----------------------------+----------+---------+-----------+------------+-----------+-----------+---------------+-----------------+---------+------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------+
+```
+
+<Tip>
+Please visit our docs on the [`CREATE MODEL`](/sql/create/model) statement to learn more.
+</Tip>
+
+The status of the model can be verified that it has trained successfully into a complete status by using the `DESCRIBE` syntax.
+
+```sql
+DESCRIBE qa_blackrock
+```
+
+On execution you get:
+
+```sql
++-------+-------------+-------------+-----------+---------+-----------+------------+-----------+-----------+---------------+-----------------+---------+------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------+
+| table | NAME        | ENGINE      | PROJECT   | ACTIVE  | VERSION   | STATUS     | ACCURACY  | PREDICT   | UPDATE_STATUS | MINDSDB_VERSION | ERROR   | SELECT_DATA_QUERY            | TRAINING_OPTIONS                                                                                                                                                                                                                   | TAG  |
++-------+---------------------------+-----------+---------+-----------+------------+-----------+-----------+---------------+-----------------+---------+------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------+
++   []  |qa_blackrock | llama_index | mindsdb   | true    | 	1       | generating | NULL      | Answers   | up_to_date    | 23.9.1.1        | NULL    | SELECT * FROM about_blackrock| {'target': 'Answers', 'using': {'index_class': 'GPTVectorStoreIndex', 'reader': 'DFReader', 'source_url_link': 'https://www.blackrock.com/za/individual/about-us', 'input_column': 'Questions', 'openai_api_key': 'your_api_key'}} | NULL |
++-------+----------------------------+----------+---------+-----------+------------+-----------+-----------+---------------+-----------------+---------+------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------+
+```
+
+### Q&A prompting.
+
+The model can be queried by providing it with a question using the `SELECT` syntax.
+
+```sql
+SELECT Questions,Answers
+FROM mindsdb.qa_blackrock
+WHERE Questions = 'What is the best long term investment with minimal risks for private investors';
+```
+
+On execution you get:
+
+```sql
++---------------------------------------------+-----------------------------------------------------------------------------------------------------+
+| Questions                                   | Answer                                                                                              |
++---------------------------------------------+-----------------------------------------------------------------------------------------------------+
+| What is the best long term investment       | The best long term investment with minimal risks for private investors is a diversified.            |
+| with minimal risks for private investors    | portfolio of low-cost index funds. These funds typically.                                           |
+|                                             | track a broad market index, such as the S&P 500, and provide exposure to a wide variety.            |
+|                                             | of publicly traded companies with minimal risk.                                                     |
+|                                             | Blackrock is one of the largest asset management companies in the world, and offers.                | 
+|                                             | a range of index funds, exchange-traded funds, and other investment products for private investors. |
++---------------------------------------------+-----------------------------------------------------------------------------------------------------+
+```
+
+You can also query batch predictions using the `JOIN` clause.
+
+```sql
+SELECT a.Questions,b.Answers
+FROM mindsdb.qa_blackrock as b
+JOIN files.about_blackrock as a
+LIMIT 4;
+``` 
+
+On execution you get:
+
++---------------------------------------------+---------------------------------------------------------------------+
+| Questions                                   | Answer                                                              |
++---------------------------------------------+---------------------------------------------------------------------+
+| When was Blackrock founded?                 | Blackrock was founded in 1988.                                      |
++---------------------------------------------+---------------------------------------------------------------------+
+| What does Blackrock do?                     | Blackrock is a global investment management firm that provides      |
+|                                             | investment and financial services for clients around the world.     |
+|                                             | It offers a range of services, such as portfolio management,        |
+|                                             | retirement planning, and risk management. It also provides          |
+|                                             | investment advice and solutions to individuals, companies,          |
+|                                             | and institutions.                                                   |
++---------------------------------------------+---------------------------------------------------------------------+
+| Why should investors choose Blackrock?      | Investors should choose Blackrock because it is one of the          |
+|                                             | world's largest asset management companies, managing over           |
+|                                             | $7.4 trillion in assets. Blackrock offers a wide range of           |
+|                                             | investment solutions, including mutual funds, retirement            |
+|                                             | accounts, exchange-traded funds (ETFs), and more, to help           |
+|                                             | investors reach their financial goals. They also have a             |
+|                                             | team of experienced professionals who are dedicated to              |
+|                                             | providing the best possible outcomes for their clients.             |
++---------------------------------------------+---------------------------------------------------------------------+
+
+The LlamaIndex integtration made it possible to use OpenAI to seamlessly query a webpage of a site and obtain answers to questions.

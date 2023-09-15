@@ -47,7 +47,7 @@ def create_agent(project_name, name, agent):
             'Agent already exists',
             f'Agent with name {name} already exists. Please choose a different one.'
         )
-    
+
     try:
         created_agent = agents_controller.add_agent(
             name,
@@ -87,7 +87,7 @@ class AgentsResource(Resource):
                 HTTPStatus.NOT_FOUND,
                 'Project not found',
                 f'Project with name {project_name} does not exist')
-        return all_agents
+        return [a.as_dict() for a in all_agents]
 
     @ns_conf.doc('create_agent')
     def post(self, project_name):
@@ -123,7 +123,7 @@ class AgentResource(Resource):
                     'Agent not found',
                     f'Agent with name {agent_name} does not exist'
                 )
-            return existing_agent
+            return existing_agent.as_dict()
         except ValueError:
             # Project needs to exist.
             return http_error(

@@ -1,6 +1,6 @@
 from typing import Dict, List
-from build.lib.mindsdb.interfaces.model.functions import PredictorRecordNotFound
-from build.lib.mindsdb.interfaces.storage.db import Predictor
+from mindsdb.interfaces.model.functions import PredictorRecordNotFound
+from mindsdb.interfaces.storage.db import Predictor
 
 from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.interfaces.storage import db
@@ -107,8 +107,7 @@ class AgentsController:
         try:
             session_controller.model_controller.get_model(model_name_no_version, version=model_version, project_name=project_name)
         except PredictorRecordNotFound:
-            return ValueError(f'Model with name does not exist: {model_name}')
-        
+            raise ValueError(f'Model with name does not exist: {model_name}')
 
         agent = db.Agents(
             name=name,
@@ -126,7 +125,6 @@ class AgentsController:
                 raise ValueError(f'Skill with name does not exist: {skill}')
             skills_to_add.append(existing_skill)
         agent.skills = skills_to_add
-            
 
         db.session.add(agent)
         db.session.commit()
@@ -170,7 +168,7 @@ class AgentsController:
             agent_with_new_name = self.get_agent(name, project_name=project_name)
             if agent_with_new_name is not None:
                 raise ValueError(f'Agent with updated name already exists: {name}')
-            
+
         # Check if model exists.
         if model_name is not None:
             session_controller = SessionController()
@@ -179,7 +177,7 @@ class AgentsController:
                 session_controller.model_controller.get_model(model_name_no_version, version=model_version, project_name=project_name)
             except PredictorRecordNotFound:
                 return ValueError(f'Model with name does not exist: {model_name}')
-            
+
         # Check if given skills exist.
         new_skills = []
         for skill in skills_to_add:
@@ -200,6 +198,8 @@ class AgentsController:
             # Merge params on update
             existing_params = existing_agent.params or {}
             existing_params.update(params)
+            # Remove None values entirely.
+            params = {k: v for k, v in existing_params.items() if v is not None}
             existing_agent.params = params
         db.session.commit()
 

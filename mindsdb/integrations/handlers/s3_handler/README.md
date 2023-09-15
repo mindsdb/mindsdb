@@ -10,8 +10,8 @@ https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html
 This handler was implemented using the `boto3`, the AWS SDK for Python.
 
 The required arguments to establish a connection are,
-* `aws_access_key_id`: the AWS access key
-* `aws_secret_access_key`: the AWS secret access key
+* `aws_access_key_id`: the AWS access key that identifies the user or IAM role
+* `aws_secret_access_key`: the AWS secret access key that identifies the user or IAM role
 * `region_name`: the AWS region
 * `bucket`: the name of the S3 bucket
 * `key`: the key of the object to be queried
@@ -22,15 +22,15 @@ In order to make use of this handler and connect to an object in a S3 bucket thr
 ~~~~sql
 CREATE DATABASE s3_datasource
 WITH
-engine='s3',
-parameters={
-    "aws_access_key_id": "PCAQ2LJDOSWLNSQKOCPW",
-    "aws_secret_access_key": "U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i",
-    "region_name": "us-east-1",
-    "bucket": "mindsdb-bucket",
-    "key": "iris.csv",
-    "input_serialization": "{'CSV': {'FileHeaderInfo': 'NONE'}}"
-};
+    engine = 's3',
+    parameters = {
+      "aws_access_key_id": "aws_access_key_id_value",
+      "aws_secret_access_key": "aws_secret_access_key_value",
+      "region_name": "region_name",
+      "bucket": "bucket_name",
+      "key": "fine_name.csv",
+      "input_serialization": "{'CSV': {'FileHeaderInfo': 'NONE'}}"
+    };
 ~~~~
 
 Now, you can use this established connection to query your object as follows,

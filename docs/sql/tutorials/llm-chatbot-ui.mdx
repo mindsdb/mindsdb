@@ -1,0 +1,128 @@
+---
+title: Build a No-Code Chatbot with MindsDB
+sidebarTitle: Chatbot Interface
+---
+
+MindsDB enables you to build a chatbot, train it using your data, and integrate it into a chat application. All of this can be achieved through a user-friendly interface that doesn't require coding.
+
+This guide will walk you through the process of building and training a chatbot using MindsDB's LLM UI.
+
+## Getting Started
+
+To access the LLM UI, click on the robot icon on the left menu. You'll see a welcome screen.
+
+<p align="center">
+  <img src="/assets/tutorials/llm-chatbot-ui/welcome.png" />
+</p>
+
+Click on *Create AI Agent* to start.
+
+There are three tabs that ask for information to build your chatbot:
+
+1. In the *Settings* tab, under *Model*, you can choose engine, model, and provide an API key. And, under *Data*, you can provide a URL to be used for training the chatbot.
+2. In the *Prompt* tab, you can set *Temperature* and *Max tokens* parameters, and provide *Prompt template* message to the model. Once you completed up to this point, you can chat with your bot.
+3. In the *Publish* tab, you can publish your chatbot to a chat application like Slack.
+
+Let's go over all the tabs in detail.
+
+## Settings
+
+In the *Settings* tab, you can provide information about engine and model that you want to use.
+
+<Note>
+Currently, we offer OpenAI models that require you to provide an API key.
+</Note>
+
+Optionally you can provide data in form of a URL to be used for training the chatbot.
+
+Click *Save* to create, train, and deploy the chatbot.
+
+<p align="center">
+  <img src="/assets/tutorials/llm-chatbot-ui/settings.png" />
+</p>
+
+On completion, you'll see the `Model saved` message as below.
+
+<p align="center">
+  <img src="/assets/tutorials/llm-chatbot-ui/settings2.png" />
+</p>
+
+## Prompt
+
+In the *Prompt* tab, you can set up a prompt message to give general directions to the chatbot. You can also define the `temperature` and `max_tokens` values that affect responses.
+
+<p align="center">
+  <img src="/assets/tutorials/llm-chatbot-ui/prompt.png" />
+</p>
+
+Low `temperature` values indicate that the model takes fewer risks and completions are more accurate and deterministic. On the other hand, high `temperature` values result in more diverse completions. And `max_tokens` value should be as close to the expected response size as possible.
+
+Now we are ready to talk with the chatbot.
+
+The right half of the screen is a chat interface where you can submit messages and receive replies.
+
+<p align="center">
+  <img src="/assets/tutorials/llm-chatbot-ui/chat.png" />
+</p>
+
+Now you can tweak the prompt parameters and test the responses.
+
+## Publish
+
+You can integrate this chatbot into chat applications.
+
+<Note>
+Currently, we support the Slack app.
+</Note>
+
+In the *Publish* tab, click on the *Connect* button.
+
+<p align="center">
+  <img src="/assets/tutorials/llm-chatbot-ui/publish.png" />
+</p>
+
+Publishing the chatbot to Slack requires two tokens: `Bot User OAuth Token` and `App-Level Token`.
+
+### Slack App Setup
+
+Follow the instructions below to set up the Slack app and generate required tokens.
+
+  1. Follow [this link](https://api.slack.com/apps) and sign in with your Slack account.
+  2. Create a new app `From scratch` or select an existing app.
+      - Please note that the following instructions support apps created `From scratch`.
+      - For apps created `From an app manifest`, please follow the [Slack docs here](https://api.slack.com/reference/manifests).
+  3. Go to *Basic Information* under *Settings*.
+      - Under *App-Level Tokens*, click on *Generate Token and Scopes*.
+      - Name the token `socket` and add the `connections:write` scope.
+      - **Copy and save the `xapp-...` token - you'll need it to publish the chatbot.**
+  4. Go to *Socket Mode* under *Settings* and toggle the button to *Enable Socket Mode*.
+  5. Go to *OAuth & Permissions* under *Features*.
+      - Add the following *Bot Token Scopes*:
+        - channels:history
+        - channels:read
+        - chat:write
+        - groups:read
+        - im:history
+        - im:read
+        - im:write
+        - mpim:read
+        - users.profile:read
+      - In the *OAuth Tokens for Your Workspace* section, click on *Install to Workspace* and then *Allow*.
+      - **Copy and save the `xoxb-...` token - you'll need it to publish the chatbot.**
+  6. Go to *App Home* under *Features* and click on the checkbox to *Allow users to send Slash commands and messages from the messages tab*.
+  7. Go to *Event Subscriptions* under *Features*.
+      - Toggle the button to *Enable Events*.
+      - Under *Subscribe to bot events*, click on *Add Bot User Event* and add `message.im`.
+      - Click on *Save Changes*.
+
+Use tokens generated in points 3 and 5 to publish the chatbot to Slack.
+
+<p align="center">
+  <img src="/assets/tutorials/llm-chatbot-ui/slack.png" />
+</p>
+
+Now you can talk with the chatbot on Slack by directly messaging the app you created and configured with the above steps.
+
+<p align="center">
+  <img src="/assets/tutorials/llm-chatbot-ui/slack-chat.png" />
+</p>

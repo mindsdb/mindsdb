@@ -2,7 +2,6 @@ from http import HTTPStatus
 
 from flask import request
 from flask_restx import Resource
-from sqlalchemy.exc import NoResultFound
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
@@ -60,7 +59,14 @@ def create_chatbot(project_name, name, chatbot):
     # Chatbot can't already exist.
     # TODO all checks should be inside of controller
 
-    existing_chatbot = chatbot_controller.get_chatbot(name, project_name=project_name)
+    try:
+        existing_chatbot = chatbot_controller.get_chatbot(name, project_name=project_name)
+    except ValueError:
+        # Project must exist.
+        return http_error(
+            HTTPStatus.NOT_FOUND,
+            'Project not found',
+            f'Project with name {project_name} does not exist')
     if existing_chatbot is not None:
         return http_error(
             HTTPStatus.CONFLICT,
@@ -97,7 +103,7 @@ class ChatBotsResource(Resource):
         chatbot_controller = ChatBotController()
         try:
             all_bots = chatbot_controller.get_chatbots(project_name)
-        except NoResultFound:
+        except ValueError:
             # Project needs to exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,
@@ -139,8 +145,8 @@ class ChatBotResource(Resource):
                     'Chatbot not found',
                     f'Chatbot with name {chatbot_name} does not exist'
                 )
-            return existing_chatbot.as_dict()
-        except NoResultFound:
+            return existing_chatbot
+        except ValueError:
             # Project needs to exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,
@@ -234,7 +240,7 @@ class ChatBotResource(Resource):
                     'Chatbot not found',
                     f'Chatbot with name {chatbot_name} does not exist'
                 )
-        except NoResultFound:
+        except ValueError:
             # Project needs to exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,

@@ -28,6 +28,7 @@ from mindsdb.api.http.namespaces.file import ns_conf as file_ns
 from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
 from mindsdb.api.http.namespaces.models import ns_conf as models_ns
 from mindsdb.api.http.namespaces.projects import ns_conf as projects_ns
+from mindsdb.api.http.namespaces.skills import ns_conf as skills_ns
 from mindsdb.api.http.namespaces.sql import ns_conf as sql_ns
 from mindsdb.api.http.namespaces.tab import ns_conf as tab_ns
 from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
@@ -212,7 +213,8 @@ def initialize_app(config, no_studio, with_nlp):
         databases_ns,
         views_ns,
         models_ns,
-        chatbots_ns
+        chatbots_ns,
+        skills_ns
     ]
     if with_nlp:
         protected_namespaces.append(nlp_ns)

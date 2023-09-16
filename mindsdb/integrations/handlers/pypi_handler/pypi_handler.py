@@ -1,8 +1,6 @@
-from types import ModuleType
-
-import pypistats
 from mindsdb_sql import parse_sql
 
+from mindsdb.integrations.handlers.pypi_handler.api import PyPI
 from mindsdb.integrations.handlers.pypi_handler.pypi_tables import (
     PyPIOverallTable,
     PyPIPythonMajorTable,
@@ -24,6 +22,7 @@ class PyPIHandler(APIHandler):
         super().__init__(name)
 
         self.connection = None
+        self.is_connected = False
 
         _tables = [
             PyPIOverallTable,
@@ -36,11 +35,25 @@ class PyPIHandler(APIHandler):
         for Table in _tables:
             self._register_table(Table.name, Table(self))
 
-    def check_connection(self):
-        return StatusResponse(True)
+    def check_connection(self) -> StatusResponse:
+        response = StatusResponse(False)
+        checking = PyPI.is_connected()
+        if checking["status"]:
+            response.success = True
+        else:
+            response.error_message = checking["message"]
 
-    def connect(self) -> ModuleType:
-        self.connection = pypistats
+        self.is_connected = True
+
+        return response
+
+    def connect(self) -> PyPI:
+        """making the connectino object
+
+        Returns:
+            PyPI: pypi class as the returned value
+        """
+        self.connection = PyPI
         return self.connection
 
     def native_query(self, query: str) -> StatusResponse:

@@ -7,11 +7,36 @@ Nixtla’s StatsForecast integration offers univariate time series forecasting m
 
 You can learn more about its features [here](https://nixtla.github.io/statsforecast/).
 
-## Example: StatsForecast
+## How to bring StatsForecast Models to MindsDB
+
+Before creating a model, you will need to create an ML engine for StatsForecast using the `CREATE ML_ENGINE` statement:
+
+```sql
+CREATE ML_ENGINE statsforecast
+FROM statsforecast;
+```
+
+Once the ML engine is created, we use the `CREATE MODEL` statement to create the StatsForecast model in MindsDB.
+
+```sql
+CREATE MODEL model_name
+FROM data_source
+  (SELECT * FROM table_name)
+PREDICT column_to_be_predicted
+ORDER BY date_column
+GROUP BY column_name, column_name, ...
+WINDOW 12 -- model looks back at sets of 12 rows each
+HORIZON 3 -- model forecasts the next 3 rows
+USING ENGINE = 'statsforecast';
+```
+
+To ensure that the model is created based on the StatsForecast engine, include the `USING` clause at the end.
+
+## Example
 
 Let's go through an example of how to use Nixtla's StatsForecast with MindsDB to forecast monthly expenditures.
 
-Please note that before using the StatsForecast engine, you should create it from the MindsDB Cloud editor with the below command:
+Please note that before using the StatsForecast engine, you should create it from the MindsDB editor, or other clients through which you interact with MindsDB, with the below command:
 
 ```sql
 CREATE ML_ENGINE statsforecast
@@ -257,7 +282,7 @@ MindsDB provides the `latest` keyword that marks the latest training data point.
 
 Let’s consider our `quarterly_expenditure_forecaster` model. We train the model using data until the third quarter of 2017, and the predictions come for the fourth quarter of 2017 (as defined by `horizon: 3`).
 
-## Example: StatsForecast + HierarchicalForecast
+## StatsForecast + HierarchicalForecast
 
 The StatsForecast handler also supports hierarchical reconciliation via Nixtla’s [HierarchicalForecast package](https://nixtla.github.io/hierarchicalforecast/). Hierarchical reconciliation may improve prediction accuracy when the data has a hierarchical structure.
 
@@ -300,6 +325,8 @@ USING
   ENGINE = 'statsforecast',
   HIERARCHY = [‘category’];
 ```
+
+The `CREATE MODEL` statement creates, trains, and deploys the model. Here, we predict the `expenditure` column values. As it is a time series model, we order the data by the `month` column. Additionally, we group data by the `category` column - the predictions are made for each group independently (here, for each category). The `HORIZON` clause defines for how many rows the predictions are made (here, for the next 3 rows).
 
 You can use the `DESCRIBE [MODEL]` command to check for details:
 

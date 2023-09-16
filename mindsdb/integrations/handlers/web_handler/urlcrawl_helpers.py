@@ -151,7 +151,7 @@ def get_readable_text_from_soup(soup):
         elif tag.name == 'p':
             markdown_output += tag.get_text().strip() + "\n\n"
         elif tag.name == 'a':
-            markdown_output += f"[{tag.get_text().strip()}]({tag['href']})\n\n"
+            markdown_output += f"[{tag.get_text().strip()}]({tag.get('href')})\n\n"
         elif tag.name == 'ul':
             for li in tag.find_all('li'):
                 markdown_output += f"* {li.get_text().strip()}\n"
@@ -223,6 +223,10 @@ def get_all_websites(urls, limit=1, html=False):
     # reviewd_urls = fetch_url(urls[0])
     # Define a helper function that will be run in parallel.
     def fetch_url(url):
+        # Allow URLs to be passed wrapped in quotation marks so they can be used
+        # directly from the SQL editor.
+        if url.startswith("'") and url.endswith("'"):
+            url = url[1:-1]
         url = url.rstrip('/')
         if urlparse(url).scheme == "":
             # Try HTTPS first

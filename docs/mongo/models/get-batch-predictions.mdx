@@ -1,0 +1,18 @@
+---
+title: Get Batch Predictions
+sidebarTitle: Get Batch Predictions
+---
+
+## Description
+
+The `db.model_name.find()` function fetches predictions from the model table. The data is returned on the fly and the result set is not persisted. If you want to save your predictions, you can utilize a view or a table.
+
+## Syntax
+
+Here is the syntax for making a batch predictions:
+
+```sql
+db.model_name.find({"collection": "integration_name.collection_name","query": {'column': 'value',"date": {"$gt": ISODate("2018-03-31T00:00:00.000Z")}}})
+```
+
+This command returns predictions made for all data rows from `integration_name.collection_name`.

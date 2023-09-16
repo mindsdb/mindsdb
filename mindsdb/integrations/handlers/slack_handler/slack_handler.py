@@ -59,7 +59,7 @@ class SlackChannelsTable(APITable):
         
         # Extract comparison conditions from the query
         conditions = extract_comparison_conditions(query.where)
-        channel_name = conditions[0][2];
+        channel_name = conditions[0][2]
         filters = []
         params = {}
         order_by_conditions = {}
@@ -116,6 +116,7 @@ class SlackChannelsTable(APITable):
             conversation_history = result["messages"]
         except SlackApiError as e:
             log.logger.error("Error creating conversation: {}".format(e))
+            raise e
 
         # Get columns for the query and convert SlackResponse object to pandas DataFrame
         columns = []

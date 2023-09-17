@@ -237,11 +237,11 @@ if __name__ == '__main__':
             db.session.commit()
         # endregion
 
-    if args.api is None:
+    if args.api is None:  # If "--api" option is not specified, start the default APIs
         api_arr = ['http', 'mysql']
-    elif args.api == "":
+    elif args.api == "":  # If "--api=" (blank) is specified, don't start any APIs
         api_arr = []
-    else:
+    else:  # The user has provided a list of APIs to start
         api_arr = args.api.split(',')
 
     with_nlp = False

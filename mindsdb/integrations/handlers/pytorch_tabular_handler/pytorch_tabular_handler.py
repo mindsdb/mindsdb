@@ -2,6 +2,7 @@ from typing import Optional
 from Optional import Dict
 import pandas as pd
 import ast
+import torch
 
 from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig
 from pytorch_tabular.models import CategoryEmbeddingModelConfig
@@ -33,16 +34,25 @@ class Pytorch_TabularHandler(BaseMLEngine):
             raise Exception("Please provide the target column")
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
+        train_data = df
         args = args["using"]
         categorical_columns = None
         dropout = 0.0
+        epochs = 3
         continuous_columns = None
+        batch_size = 32
+        if not train_data:
+            raise Exception("Please provide data for the model to train on")
         if 'categorical_cols' in args:
             categorical_columns = ast.literal_eval(args["categorical"])
         if 'continuous_cols' in args:
             continuous_columns = ast.literal_eval(args['continous_cols'])
         if 'drop_out' in args:
             dropout = int(args['drop_out'])
+        if 'epochs' in args:
+            epochs = int(args['epochs'])
+        if 'batch_size' in args:
+            batch_size = int(args['batch_size'])
         data_config = DataConfig(
             target = target,
             continuous_cols = continuous_columns,
@@ -54,8 +64,27 @@ class Pytorch_TabularHandler(BaseMLEngine):
             layers='', dropout=dropout, initialization=args['initialization']
             # No additional layer in head, just a mapping layer to output_dim
         ).__dict__
+        model_config = CategoryEmbeddingModelConfig(
+            task = args["task"],
+        )
+        trainer_config = TrainerConfig(auto_lr_find=True,
+                                       fast_dev_run=False,
+                                       max_epochs=epochs,
+                                       batch_size=batch_size)
 
+        optimizer_config = OptimizerConfig()
 
+        # Create the tabular model
+        tabular_model = TabularModel(
+            data_config=data_config,
+            model_config=model_config,
+            optimizer_config=optimizer_config,
+            trainer_config=trainer_config,
+        )
+        tabular_model.fit(train=train_data)
+
+        # Save the trained model
+        torch.save(tabular_model,"pytorch_tabular.pt")
 
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:

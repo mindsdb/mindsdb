@@ -3,6 +3,7 @@ from Optional import Dict
 import pandas as pd
 import ast
 import torch
+import os
 
 from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig
 from pytorch_tabular.models import CategoryEmbeddingModelConfig
@@ -13,7 +14,7 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 
 class Pytorch_TabularHandler(BaseMLEngine):
     """
-    Implements pytorch tabular to train deep neural networks on tabular dataset
+    Implements pytorch tabular to train deep neural networks.
     """
     name = 'pytorch_tabular'
 
@@ -66,6 +67,7 @@ class Pytorch_TabularHandler(BaseMLEngine):
         ).__dict__
         model_config = CategoryEmbeddingModelConfig(
             task = args["task"],
+            head_config = head_config
         )
         trainer_config = TrainerConfig(auto_lr_find=True,
                                        fast_dev_run=False,
@@ -88,6 +90,12 @@ class Pytorch_TabularHandler(BaseMLEngine):
 
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
-        raise TypeError("Not implemented yet")
+        file_path = 'pytorch_tabular_handler.py'
+        if os.path.isfile(file_path):
+            tabular_model = torch.load(file_path)
+        else:
+            raise Exception("Trained Model not loaded successfully, Please check if a trained model exists")
 
+        predictions = tabular_model.predict(df)
+        return predictions
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:

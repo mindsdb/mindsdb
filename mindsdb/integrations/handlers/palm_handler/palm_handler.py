@@ -62,7 +62,7 @@ class PalmHandler(BaseMLEngine):
             ["question_column", "context_column"],
             ["prompt", "user_column", "assistant_column"],
         ]
-        for keys in keys_collection:chat
+        for keys in keys_collection:
             if keys[0] in args and any(
                 x[0] in args for x in keys_collection if x != keys
             ):

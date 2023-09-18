@@ -498,13 +498,6 @@ class IntegrationController:
             handler_storage=handler_storage
         )
 
-        # handler_type = self.handler_modules[integration_engine].type
-        # if handler_type == 'ml':
-        #     handler_ars['storage_factory'] = FileStorageFactory(
-        #         resource_group=RESOURCE_GROUP.PREDICTOR,
-        #         sync=True
-        #     )
-
         HandlerClass = self.handler_modules[integration_engine].Handler
 
         if isinstance(HandlerClass, type) and issubclass(HandlerClass, BaseMLEngine):

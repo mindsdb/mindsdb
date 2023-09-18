@@ -7,11 +7,6 @@ import grpc
 from mindsdb.microservices_grpc.ml import ml_pb2_grpc
 from mindsdb.microservices_grpc.ml import ml_pb2, common_pb2
 
-from mindsdb.interfaces.storage.fs import (
-    FileStorage,
-    FileStorageFactory,
-    RESOURCE_GROUP,
-)
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 
 from mindsdb.integrations.libs.response import (
@@ -46,17 +41,6 @@ class MLServiceServicer(ml_pb2_grpc.MLServiceServicer):
 
     def _get_handler_controller(self):
         return integration_controller
-
-    # def _get_file_storage(self, integration_id):
-    #     fs_store = FileStorage(
-    #         resource_group=RESOURCE_GROUP.INTEGRATION,
-    #         resource_id=integration_id,
-    #         sync=True,
-    #     )
-    #     return fs_store
-
-    # def _get_storage_factory(self):
-    #     return FileStorageFactory(resource_group=RESOURCE_GROUP.PREDICTOR, sync=True)
 
     def _get_handler(self, handler_context: ml_pb2.HandlerContextML):
         ctx.load(json.loads(handler_context.context))

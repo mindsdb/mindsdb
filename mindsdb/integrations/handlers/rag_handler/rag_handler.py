@@ -8,8 +8,9 @@ from mindsdb.integrations.handlers.rag_handler.rag import QuestionAnswerer
 from mindsdb.integrations.handlers.rag_handler.settings import (
     DEFAULT_EMBEDDINGS_MODEL,
     EVAL_COLUMN_NAMES,
-    USER_DEFINED_WRITER_LLM_PARAMS,
+    OpenAIParameters,
     RAGHandlerParameters,
+    WriterLLMParameters,
 )
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.datasets.dataset import (
@@ -23,16 +24,26 @@ from mindsdb.utilities.log import get_log
 logger = get_log(logger_name=__name__)
 
 
-# todo refactor to add support for other LLMs
-def extract_llm_params(args):
-    """extract llm params from input query args"""
+def build_llm_params(args):
+    """build llm params from input query args"""
 
-    llm_params = {}
-    for param in USER_DEFINED_WRITER_LLM_PARAMS:
-        if param in args:
-            llm_params[param] = args.pop(param)
+    llm_config_class = (
+        WriterLLMParameters if args["llm_type"] == "writer" else OpenAIParameters
+    )
 
-    args["llm_params"] = llm_params
+    if not args.get("llm_params"):
+        # only run this on create, not predict
+
+        llm_params = {}
+        llm_params["llm_name"] = args["llm_type"]
+
+        for param in llm_config_class.__fields__.keys():
+            if param in args:
+                llm_params[param] = args.pop(param)
+    else:
+        llm_params = args.pop("llm_params")
+
+    args["llm_params"] = llm_config_class(**llm_params)
 
     return args
 
@@ -69,13 +80,18 @@ class RAGHandler(BaseMLEngine):
         Dispatch is running embeddings and storing in a VectorDB, unless user already has embeddings persisted
         """
 
-        input_args = extract_llm_params(args["using"])
-        # if user doesn't provide a dataset key, use the input in FROM clause in model creation
-        input_args["evaluate_dataset"] = (
-            input_args["evaluate_dataset"]
-            if "evaluate_dataset" in input_args
-            else df.to_dict(orient="records")
-        )
+        input_args = build_llm_params(args["using"])
+
+        if "run_embeddings" not in input_args:
+            # if user doesn't provide a dataset key, use the input in FROM clause in model creation
+            # Note this should only be run if run_embeddings is false
+
+            input_args["evaluate_dataset"] = (
+                input_args["evaluate_dataset"]
+                if "evaluate_dataset" in input_args
+                else df.to_dict(orient="records")
+            )
+
         args = RAGHandlerParameters(**input_args)
 
         # create folder for vector store to persist embeddings
@@ -116,10 +132,9 @@ class RAGHandler(BaseMLEngine):
         is supported.
         """
 
-        input_args = self.model_storage.json_get("args")
-        args = RAGHandlerParameters(**input_args)
+        input_args = build_llm_params(self.model_storage.json_get("args"))
 
-        # todo add support for input evaluation_df
+        args = RAGHandlerParameters(**input_args)
 
         if args.evaluation_type:
             # if user adds a WHERE clause with 'run_evaluation = true', run evaluation

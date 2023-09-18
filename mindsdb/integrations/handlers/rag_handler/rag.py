@@ -39,7 +39,11 @@ class QuestionAnswerer:
 
         self.prompt_template = args.prompt_template
 
-        self.llm = LLMLoader(args.llm_type, args.llm_params).load_llm()
+        llm_config = {"llm_config": args.llm_params.dict()}
+
+        llm_loader = LLMLoader(**llm_config)
+
+        self.llm = llm_loader.load_llm()
 
     def __call__(self, question: str):
         return self.query(question)
@@ -79,8 +83,13 @@ class QuestionAnswerer:
     @staticmethod
     def extract_generated_text(response: str):
         """Extract generated text from LLM response"""
-        try:
+
+        if isinstance(response, str):
             data = json.loads(response)
+        else:
+            data = response
+
+        try:
             if "choices" in data:
                 return data["choices"][0]["text"]
             else:
@@ -88,6 +97,7 @@ class QuestionAnswerer:
                     f"Error extracting generated text: failed to parse response {response}"
                 )
                 return response
+
         except Exception as e:
             raise Exception(
                 f"{e} Error extracting generated text: failed to parse response {response}"
@@ -99,7 +109,7 @@ class QuestionAnswerer:
 
         result = defaultdict(list)
         extracted_text = self.extract_generated_text(llm_response)
-        result["answer"].append(llm_response)
+        result["answer"].append(extracted_text)
 
         sources = defaultdict(list)
 

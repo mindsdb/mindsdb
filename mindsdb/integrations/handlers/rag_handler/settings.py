@@ -36,6 +36,8 @@ EVAL_COLUMN_NAMES = (
     "context",
 )
 
+SUPPORTED_LLMS = ("writer", "openai")
+
 SUPPORTED_EVALUATION_TYPES = ("retrieval", "e2e")
 
 SUMMARIZATION_PROMPT_TEMPLATE = """
@@ -160,12 +162,12 @@ class PersistedVectorStoreLoader:
 class LLMParameters(BaseModel):
     """Model parameters for the LLM API interface"""
 
-    max_tokens: int = Field(default=50, title="max tokens in response")
+    llm_name: str = Field(default_factory=str, title="LLM API name")
+    max_tokens: int = Field(default=100, title="max tokens in response")
     temperature: float = Field(default=0.0, title="temperature")
     top_p: float = 1
-    stop: List[str] = []
     best_of: int = 5
-    verbose: bool = False
+    stop: List[str] = None
 
     class Config:
         extra = Extra.forbid
@@ -189,23 +191,26 @@ class WriterLLMParameters(LLMParameters):
     base_url: str = None
     model_id: str = "palmyra-x"
     callbacks: List[StreamingStdOutCallbackHandler] = [StreamingStdOutCallbackHandler()]
+    verbose: bool = False
 
 
 class LLMLoader(BaseModel):
-    llm_type: str = "writer"
     llm_config: Union[WriterLLMParameters, OpenAIParameters]
+    config_dict: dict = None
 
     def load_llm(self):
-        method_name = f"load_{self.llm_type}_llm"
+        method_name = f"load_{self.llm_config.llm_name}_llm"
+        self.config_dict = self.llm_config.dict()
+        self.config_dict.pop("llm_name")
         return getattr(self, method_name)()
 
     def load_writer_llm(self):
-
-        return Writer(**self.llm_config.dict())
+        return Writer(**self.config_dict)
 
     def load_openai_llm(self):
         openai.api_key = self.llm_config.open_ai_api_key
-        config = self.llm_config.dict()
+        config = self.config_dict
+        config.pop("open_ai_api_key")
         config["model"] = config.pop("model_id")
 
         return partial(openai.Completion.create, **config)
@@ -231,7 +236,7 @@ class RAGHandlerParameters(BaseModel):
     """Model parameters for create model"""
 
     prompt_template: str
-    llm_model_name: str = "writer"
+    llm_type: str
     llm_params: LLMParameters
     chunk_size: int = 500
     chunk_overlap: int = 50
@@ -259,6 +264,12 @@ class RAGHandlerParameters(BaseModel):
         extra = Extra.forbid
         arbitrary_types_allowed = True
         use_enum_values = True
+
+    @validator("llm_type")
+    def llm_type_must_be_supported(cls, v):
+        if v not in SUPPORTED_LLMS:
+            raise ValueError(f"llm_type must be one of `writer` or `openai`, got {v}")
+        return v
 
     @validator("generation_evaluation_metrics")
     def generation_evaluation_metrics_must_be_supported(cls, v):

@@ -199,7 +199,7 @@ class IntegrationController:
             store = FileStorage(
                 resource_group=RESOURCE_GROUP.INTEGRATION,
                 resource_id=integration_id,
-                sync=True
+                sync=False
             )
             store.add(files_dir, '')
             store.push()

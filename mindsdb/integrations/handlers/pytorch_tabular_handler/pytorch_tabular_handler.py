@@ -21,14 +21,11 @@ class Pytorch_TabularHandler(BaseMLEngine):
     @staticmethod
     def create_validation(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
         task_supported = ['regression','classification','backbone']
-        activation_supported = ['RelU','TanH','LeakyRelU']
         initialization_supported = ['kaiming','xavier','random']
         args = args["using"]
         if "task" not in args:
             if args["task"] not in task_supported:
                 raise Exception(f"Please specify task parameter supported : {task_supported}")
-        if "activation" not in args or args["activation"] not in activation_supported:
-            raise Exception(f"The supported activation functions are {activation_supported}")
         if "initialization" not in args or args["initialization"] not in initialization_supported:
             raise Exception(f"Initialization scheme choices are : {initialization_supported}")
         if "target" not in args:
@@ -36,7 +33,6 @@ class Pytorch_TabularHandler(BaseMLEngine):
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
         train_data = df
-        args = args["using"]
         categorical_columns = None
         dropout = 0.0
         epochs = 3
@@ -66,7 +62,7 @@ class Pytorch_TabularHandler(BaseMLEngine):
             # No additional layer in head, just a mapping layer to output_dim
         ).__dict__
         model_config = CategoryEmbeddingModelConfig(
-            task = args["task"],
+            task = args['task'],
             head_config = head_config
         )
         trainer_config = TrainerConfig(auto_lr_find=True,
@@ -87,7 +83,7 @@ class Pytorch_TabularHandler(BaseMLEngine):
 
         # Save the trained model
         torch.save(tabular_model,"pytorch_tabular.pt")
-
+        self.model_storage.json_set('args', args)
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         file_path = 'pytorch_tabular_handler.py'
@@ -99,3 +95,13 @@ class Pytorch_TabularHandler(BaseMLEngine):
         predictions = tabular_model.predict(df)
         return predictions
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
+        args = self.model_storage.json_get('args')
+        des_dict = {}
+        des_dict['epochs'] = args['epochs']
+        des_dict['initialization'] = args['initialization']
+        des_dict['task'] = args['task']
+        des_dict['categorical_columns'] = args['categorical_cols']
+        des_dict['continuous_columns'] = args['continuous_cols']
+        #check is activation function is required
+        df_describe = pd.DataFrame.from_dict([des_dict])
+        return df_describe

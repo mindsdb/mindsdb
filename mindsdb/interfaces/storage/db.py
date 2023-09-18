@@ -394,7 +394,7 @@ class Skills(Base):
             'id': self.id,
             'name': self.name,
             'project_id': self.project_id,
-            'agent_ids': self.agents,
+            'agent_ids': [a.id for a in self.agents],
             'type': self.type,
             'params': self.params
         }
@@ -415,3 +415,15 @@ class Agents(Base):
 
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
+
+    def as_dict(self) -> Dict:
+        return {
+            'id': self.id,
+            'name': self.name,
+            'project_id': self.project_id,
+            'model_name': self.model_name,
+            'skills': [s.as_dict() for s in self.skills],
+            'params': self.params,
+            'updated_at': self.updated_at,
+            'created_at': self.created_at
+        }

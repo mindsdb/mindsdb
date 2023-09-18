@@ -402,7 +402,7 @@ class IntegrationController:
             root_dir='tmp',
             sync=False
         )
-        handler_storage = HandlerStorage(integration_id, root_dir='tmp')
+        handler_storage = HandlerStorage(integration_id, root_dir='tmp', is_temporal=True)
         handler_ars = self._make_handler_args(
             name='tmp_handler',
             handler_type=handler_type,

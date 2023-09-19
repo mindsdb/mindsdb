@@ -32,9 +32,9 @@ This handler was implemented using the official HackerNews API. It provides a si
 
 ## Example Usage
 ```
-CREATE DATABASE my_hackernews;
-With 
-    ENGINE = 'hackernews',
+CREATE DATABASE my_hackernews
+WITH 
+ENGINE = 'hackernews'
 ```
 
 After setting up the HackerNews Handler, you can use SQL queries to fetch data from HackerNews:

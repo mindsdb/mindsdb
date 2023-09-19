@@ -12,7 +12,7 @@ from pytorch_tabular.tabular_model import TabularModel
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 
-class Pytorch_TabularHandler(BaseMLEngine):
+class Pytorch_Tabular_Handler(BaseMLEngine):
     """
     Implements pytorch tabular to train deep neural networks.
     """

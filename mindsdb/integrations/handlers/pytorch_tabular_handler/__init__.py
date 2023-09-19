@@ -5,7 +5,7 @@ from .__about__ import __version__ as version, __description__ as description
 logger = get_log()
 
 try:
-    from .pytorch_tabular_handler import PyTorchTabularHandler as Handler
+    from .pytorch_tabular_handler import PyTorch_Tabular_Handler as Handler
     import_error = None
     logger.info("PyTorchTabular Handler engine successfully imported")
 except Exception as e:

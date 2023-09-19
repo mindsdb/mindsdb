@@ -257,7 +257,7 @@ class RAGHandlerParameters(BaseModel):
     collection_name: str = "langchain"
     summarize_context: bool = False
     summarization_prompt_template: str = SUMMARIZATION_PROMPT_TEMPLATE
-    vector_store_folder_name: str = "chromadb"
+    vector_store_folder_name: str = "persisted_vector_db"
     vector_store_storage_path: str = None
 
     class Config:

@@ -126,7 +126,7 @@ class HandlerStorage:
     This class deals with all handler-related storage requirements, from storing metadata to synchronizing folders
     across instances.
     """
-    def __init__(self, integration_id: int, root_dir: str = None):
+    def __init__(self, integration_id: int, root_dir: str = None, is_temporal=False):
         args = {}
         if root_dir is not None:
             args['root_dir'] = root_dir
@@ -137,6 +137,7 @@ class HandlerStorage:
         )
         self.fileStorage = storageFactory(integration_id)
         self.integration_id = integration_id
+        self.is_temporal = is_temporal
         # do not sync with remote storage
 
     def __convert_name(self, name):
@@ -155,7 +156,8 @@ class HandlerStorage:
 
     def file_set(self, name, content):
         self.fileStorage.file_set(name, content)
-        self.fileStorage.push_path(name)
+        if not self.is_temporal:
+            self.fileStorage.push_path(name)
 
     def file_list(self):
         ...
@@ -190,6 +192,8 @@ class HandlerStorage:
 
     def folder_sync(self, name):
         # sync abs path
+        if self.is_temporal:
+            return
         name = self.__convert_name(name)
         self.fileStorage.push_path(name)
 

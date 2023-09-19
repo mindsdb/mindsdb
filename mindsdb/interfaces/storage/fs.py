@@ -407,8 +407,6 @@ class FileStorage:
 
     @profiler.profile()
     def push_path(self, path):
-        if self.sync:
-            return
         with FileLock(self.folder_path):
             self.fs_store.put(os.path.join(self.folder_name, path), str(self.resource_group_path))
 

@@ -43,6 +43,26 @@ class AgentsController:
         ).first()
         return agent
 
+    def get_agent_by_id(self, id: int, project_name: str = 'mindsdb') -> db.Agents:
+        '''
+        Gets an agent by id.
+
+        Parameters:
+            id (int): The id of the agent
+            project_name (str): The name of the containing project - must exist
+
+        Returns:
+            agent (db.Agents): The database agent object
+        '''
+
+        project = self.project_controller.get(name=project_name)
+        agent = db.Agents.query.filter(
+            db.Agents.id == id,
+            db.Agents.project_id == project.id,
+            db.Agents.company_id == ctx.company_id
+        ).first()
+        return agent
+
     def get_agents(self, project_name: str = 'mindsdb') -> List[dict]:
         '''
         Gets all agents in a project.

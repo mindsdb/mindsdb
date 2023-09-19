@@ -51,6 +51,7 @@ from mindsdb.integrations.handlers_client.ml_client_factory import MLClientFacto
 from mindsdb.integrations.libs.learn_process import learn_process, predict_process
 from mindsdb.utilities.functions import mark_process
 import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.ml_task_queue import ml_task_queue, ML_TASK_TYPE
 
 import torch.multiprocessing as mp
 mp_ctx = mp.get_context('spawn')
@@ -486,6 +487,13 @@ class BaseMLEngineExec:
             data_integration_ref=data_integration_ref,
             fetch_data_query=fetch_data_query,
             project_name=project_name
+        )
+
+        ml_task_queue.add(
+            task_type=ML_TASK_TYPE.LEARN,
+            model_id=predictor_record.id,
+            company_id=ctx.company_id,
+            # context=
         )
 
         if join_learn_process is True:

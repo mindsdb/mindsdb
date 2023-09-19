@@ -11,6 +11,7 @@ import concurrent.futures
 from typing import Optional, Dict
 
 import openai
+import litellm
 import numpy as np
 import pandas as pd
 
@@ -21,7 +22,7 @@ from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_expo
     truncate_msgs_for_token_limit
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 
-CHAT_MODELS = ('gpt-3.5-turbo', 'gpt-3.5-turbo-16k', 'gpt-4', 'gpt-4-32k')
+CHAT_MODELS = litellm.model_list # litellm supports 100+ LLMs
 
 
 class OpenAIHandler(BaseMLEngine):
@@ -353,7 +354,7 @@ class OpenAIHandler(BaseMLEngine):
                     pkwargs = {**kwargs, **api_args}
 
                     before_openai_query(kwargs)
-                    resp = _tidy(openai.ChatCompletion.create(**pkwargs))
+                    resp = _tidy(litellm.completion(**pkwargs))
                     _log_api_call(pkwargs, resp)
 
                     completions.extend(resp)
@@ -362,7 +363,7 @@ class OpenAIHandler(BaseMLEngine):
                     pkwargs = {**kwargs, **api_args}
 
                     before_openai_query(kwargs)
-                    resp = _tidy(openai.ChatCompletion.create(**pkwargs))
+                    resp = _tidy(litellm.completion(**pkwargs))
                     _log_api_call(pkwargs, resp)
 
                     completions.extend(resp)

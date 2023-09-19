@@ -1,5 +1,6 @@
-import re
 import textwrap
+import re
+from pydantic import BaseModel
 
 import google.generativeai as palm
 import numpy as np
@@ -18,14 +19,37 @@ CHAT_MODELS = (
 )
 
 
+class PalmHandlerArgs(BaseModel):
+    target: str = None
+    model_name: str = "models/chat-bison-001"
+    mode: str = "default"
+    predict_params: dict = None
+    input_text: str = None
+    ft_api_info: dict = None
+    ft_result_stats: dict = None
+    runtime: str = None
+    max_output_tokens: int = 64
+    temperature: float = 0.0
+    api_key: str = None
+    palm_api_key: str = None
+
+    question_column: str = None
+    answer_column: str = None
+    context_column: str = None
+    prompt_template: str = None
+    prompt: str = None
+    user_column: str = None
+    assistant_column: str = None
+
+
 class PalmHandler(BaseMLEngine):
     name = "palm"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.generative = True
-        self.default_model = "models/chat-bison-001"
-        self.default_mode = (
+        self.model_name = "models/chat-bison-001"
+        self.model_name = (
             "default"  # can also be 'conversational' or 'conversational-full'
         )
         self.supported_modes = [
@@ -47,6 +71,8 @@ class PalmHandler(BaseMLEngine):
             )
         else:
             args = args["using"]
+
+        args_model = PalmHandlerArgs(**args)
 
         if (
             len(set(args.keys()) & {"question_column", "prompt_template", "prompt"})
@@ -78,29 +104,7 @@ class PalmHandler(BaseMLEngine):
                 )
 
         # for all args that are not expected, raise an error
-        known_args = set()
-        # flatten of keys_collection
-        for keys in keys_collection:
-            known_args = known_args.union(set(keys))
-
-        # TODO: need a systematic way to maintain a list of known args
-        known_args = known_args.union(
-            {
-                "target",
-                "model_name",
-                "mode",
-                "predict_params",
-                "input_text",
-                "ft_api_info",
-                "ft_result_stats",
-                "runtime",
-                "max_output_tokens",
-                "temperature",
-                "api_key",
-                "palm_api_key",
-            }
-        )
-
+        known_args = set(PalmHandlerArgs.__annotations__.keys())
         unknown_args = set(args.keys()) - known_args
         if unknown_args:
             # return a list of unknown args as a string
@@ -110,8 +114,9 @@ class PalmHandler(BaseMLEngine):
 
     def create(self, target, args=None, **kwargs):
         args = args["using"]
+        args_model = PalmHandlerArgs(**args)
 
-        args["target"] = target
+        args_model.target = target
         api_key = get_api_key("palm", args, self.engine_storage)
 
         # Set palm api key
@@ -119,19 +124,19 @@ class PalmHandler(BaseMLEngine):
 
         available_models = [m.name for m in palm.list_models()]
 
-        if not args.get("model_name"):
-            args["model_name"] = self.default_model
-        elif args["model_name"] not in available_models:
+        if not args_model.model_name:
+            args_model.model_name = self.model_name
+        elif args_model.model_name not in available_models:
             raise Exception(f"Invalid model name. Please use one of {available_models}")
 
-        if not args.get("mode"):
-            args["mode"] = self.default_mode
-        elif args["mode"] not in self.supported_modes:
+        if not args_model.mode:
+            args_model.mode = self.model_name
+        elif args_model.mode not in self.supported_modes:
             raise Exception(
                 f"Invalid operation mode. Please use one of {self.supported_modes}"
             )
 
-        self.model_storage.json_set("args", args)
+        self.model_storage.json_set("args", args_model.dict())
 
     def predict(self, df, args=None):
         """
@@ -140,12 +145,12 @@ class PalmHandler(BaseMLEngine):
         # TODO: support for edits, embeddings and moderation
 
         pred_args = args["predict_params"] if args else {}
-        args = self.model_storage.json_get("args")
+        args_model = PalmHandlerArgs(**self.model_storage.json_get("args"))
         df = df.reset_index(drop=True)
 
         if pred_args.get("mode"):
             if pred_args["mode"] in self.supported_modes:
-                args["mode"] = pred_args["mode"]
+                args_model.mode = pred_args["mode"]
             else:
                 raise Exception(
                     f"Invalid operation mode. Please use one of {self.supported_modes}."
@@ -155,21 +160,21 @@ class PalmHandler(BaseMLEngine):
             base_template = pred_args[
                 "prompt_template"
             ]  # override with predict-time template if available
-        elif args.get("prompt_template", False):
-            base_template = args["prompt_template"]
+        elif args_model.prompt_template:
+            base_template = args_model.prompt_template
         else:
             base_template = None
 
         # Embedding Mode
-        if args.get("mode", self.default_mode) == "embedding":
+        if args_model.mode == "embedding":
             api_args = {
                 "model": pred_args.get("model_name", "models/embedding-gecko-001")
             }
             model_name = "models/embedding-gecko-001"
-            if args.get("question_column"):
-                prompts = list(df[args["question_column"]].apply(lambda x: str(x)))
+            if args_model.question_column:
+                prompts = list(df[args_model.question_column].apply(lambda x: str(x)))
                 empty_prompt_ids = np.where(
-                    df[[args["question_column"]]].isna().all(axis=1).values
+                    df[[args_model.question_column]].isna().all(axis=1).values
                 )[0]
             else:
                 raise Exception("Embedding mode needs a question_column")
@@ -177,33 +182,31 @@ class PalmHandler(BaseMLEngine):
         # Chat or normal completion mode
         else:
             if (
-                args.get("question_column", False)
-                and args["question_column"] not in df.columns
+                args_model.question_column
+                and args_model.question_column not in df.columns
             ):
                 raise Exception(
-                    f"This model expects a question to answer in the '{args['question_column']}' column."
+                    f"This model expects a question to answer in the '{args_model.question_column}' column."
                 )
 
             if (
-                args.get("context_column", False)
-                and args["context_column"] not in df.columns
+                args_model.context_column
+                and args_model.context_column not in df.columns
             ):
                 raise Exception(
-                    f"This model expects context in the '{args['context_column']}' column."
+                    f"This model expects context in the '{args_model.context_column}' column."
                 )
 
             # api argument validation
-            model_name = args.get("model_name", "models/chat-bison-001")
+            model_name = args_model.model_name
             api_args = {
                 "max_output_tokens": pred_args.get(
                     "max_output_tokens",
-                    args.get("max_output_tokens", self.default_max_output_tokens),
+                    args_model.max_output_tokens,
                 ),
                 "temperature": min(
                     1.0,
-                    max(
-                        0.0, pred_args.get("temperature", args.get("temperature", 0.0))
-                    ),
+                    max(0.0, pred_args.get("temperature", args_model.temperature)),
                 ),
                 "top_p": pred_args.get("top_p", None),
                 "candidate_count": pred_args.get("candidate_count", None),
@@ -211,72 +214,73 @@ class PalmHandler(BaseMLEngine):
             }
 
             if (
-                args.get("mode", self.default_mode) != "default"
+                args_model.mode != "default"
                 and model_name not in self.chat_completion_models
             ):
                 raise Exception(
                     f"Conversational modes are only available for the following models: {', '.join(self.chat_completion_models)}"
                 )  # noqa
 
-            if args.get("prompt_template", False):
+            if args_model.prompt_template:
                 prompts, empty_prompt_ids = self._get_completed_prompts(
                     base_template, df
                 )
                 if len(prompts) == 0:
                     raise Exception("No prompts found")
 
-            elif args.get("context_column", False):
+            elif args_model.context_column:
                 empty_prompt_ids = np.where(
-                    df[[args["context_column"], args["question_column"]]]
+                    df[[args_model.context_column, args_model.question_column]]
                     .isna()
                     .all(axis=1)
                     .values
                 )[0]
-                contexts = list(df[args["context_column"]].apply(lambda x: str(x)))
-                questions = list(df[args["question_column"]].apply(lambda x: str(x)))
+                contexts = list(df[args_model.context_column].apply(lambda x: str(x)))
+                questions = list(df[args_model.question_column].apply(lambda x: str(x)))
                 prompts = [
                     f"Context: {c}\nQuestion: {q}\nAnswer: "
                     for c, q in zip(contexts, questions)
                 ]
                 api_args["context"] = "".join(contexts)
 
-            elif "prompt" in args:
+            elif args_model.prompt:
                 empty_prompt_ids = []
-                prompts = list(df[args["user_column"]])
+                prompts = list(df[args_model.user_column])
                 if len(prompts) == 0:
                     raise Exception("No prompts found")
             else:
                 empty_prompt_ids = np.where(
-                    df[[args["question_column"]]].isna().all(axis=1).values
+                    df[[args_model.question_column]].isna().all(axis=1).values
                 )[0]
-                prompts = list(df[args["question_column"]].apply(lambda x: str(x)))
+                prompts = list(df[args_model.question_column].apply(lambda x: str(x)))
 
         # remove prompts without signal from completion queue
         prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
 
-        api_key = get_api_key("palm", args, self.engine_storage)
+        api_key = get_api_key("palm", args_model.dict(), self.engine_storage)
         api_args = {
             k: v for k, v in api_args.items() if v is not None
         }  # filter out non-specified api args
-        completion = self._completion(model_name, prompts, api_key, api_args, args, df)
+        completion = self._completion(
+            model_name, prompts, api_key, api_args, args_model, df
+        )
 
         # add null completion for empty prompts
         for i in sorted(empty_prompt_ids):
             completion.insert(i, None)
 
-        pred_df = pd.DataFrame(completion, columns=[args["target"]])
+        pred_df = pd.DataFrame(completion, columns=[args_model.target])
 
         return pred_df
 
-    def _completion(self, model_name, prompts, api_key, api_args, args, df):
+    def _completion(self, model_name, prompts, api_key, api_args, args_model, df):
         """
         Handles completion for an arbitrary amount of rows.
-
         Additionally, single completion calls are done with exponential backoff to guarantee all prompts are processed,
         because even with previous checks the tokens-per-minute limit may apply.
         """
 
-        def _submit_completion(model_name, prompts, api_key, api_args, args, df):
+        def _submit_completion(model_name, prompts, api_key, api_args, args_model, df):
             kwargs = {
                 "model": model_name,
             }
@@ -287,13 +291,13 @@ class PalmHandler(BaseMLEngine):
             if model_name == "models/embedding-gecko-001":
                 prompts = "".join(prompts)
                 return _submit_embedding_completion(kwargs, prompts, api_args)
-            elif model_name == self.default_model:
+            elif model_name == args_model.model_name:
                 return _submit_chat_completion(
                     kwargs,
                     prompts,
                     api_args,
                     df,
-                    mode=args.get("mode", "conversational"),
+                    mode=args_model.mode,
                 )
             else:
                 prompts = "".join(prompts)
@@ -389,7 +393,7 @@ class PalmHandler(BaseMLEngine):
                     pkwargs["candidate_count"] = 3
                     pkwargs.pop("max_output_tokens")
                     before_palm_query(kwargs)
-                    
+
                     # call the palm sdk with chat-bison-001 model
                     resp = _tidy(palm.chat(**pkwargs))
 
@@ -413,17 +417,17 @@ class PalmHandler(BaseMLEngine):
                 else:
                     # in "normal" conversational mode, we request completions only for the last row
                     last_completion_content = None
-                    if args.get("answer_column") in df.columns:
+                    if args_model.answer_column in df.columns:
                         # insert completion if provided, which saves redundant API calls
-                        completions.extend([df.iloc[pidx][args.get("answer_column")]])
+                        completions.extend([df.iloc[pidx][args_model.answer_column]])
                     else:
                         completions.extend([""])
 
-                if args.get("answer_column") in df.columns:
+                if args_model.answer_column in df.columns:
                     kwargs["messages"].append(
                         {
                             "author": "assistant",
-                            "content": df.iloc[pidx][args.get("answer_column")],
+                            "content": df.iloc[pidx][args_model.answer_column],
                         }
                     )
                 elif last_completion_content:
@@ -436,7 +440,7 @@ class PalmHandler(BaseMLEngine):
 
         try:
             completion = _submit_completion(
-                model_name, prompts, api_key, api_args, args, df
+                model_name, prompts, api_key, api_args, args_model, df
             )
             return completion
         except Exception as e:

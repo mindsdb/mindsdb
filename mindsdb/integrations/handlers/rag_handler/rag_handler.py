@@ -73,7 +73,7 @@ class RAGHandler(BaseMLEngine):
     def create(
         self,
         target: str,
-        df: pd.DataFrame = pd.DataFrame(),
+        df: pd.DataFrame = None,
         args: Optional[Dict] = None,
     ):
         """
@@ -97,7 +97,8 @@ class RAGHandler(BaseMLEngine):
         )
 
         if args.run_embeddings:
-            if "context_columns" not in args:
+            if "context_columns" not in args and df:
+
                 # if no context columns provided, use all columns in df
                 logger.info("No context columns provided, using all columns in df")
                 args.context_columns = df.columns.tolist()

@@ -68,7 +68,7 @@ class Ingestor:
             chunk_size=chunk_size, chunk_overlap=chunk_overlap
         )
 
-        if not self.df.empty:
+        if self.df is not None:
             # if user provides a dataframe, load documents from dataframe
             documents.extend(
                 df_to_documents(

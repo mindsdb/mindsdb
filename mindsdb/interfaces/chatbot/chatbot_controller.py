@@ -188,7 +188,7 @@ class ChatBotController:
             name=name,
             project_id=project.id,
             agent_id=agent.id,
-            model_name=model_name,
+            model_name=agent.model_name,
             database_id=database_id,
             params=params,
         )

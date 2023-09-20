@@ -25,17 +25,32 @@ my_model = project.create_model (
 )
 ```
 
-Here is the syntax to create an OpenAI model:
+Please note that in the case of LLM models, the parameters are stored in `options`. Here is the syntax to create an OpenAI model:
 
 ```bash
-sentiment_classifier = project.create_model(
+sentiment_classifier = project.create_model (
       name='sentiment_classifier',
-      engine='huggingface',
+      engine='openai', # alternatively: engine=server.ml_engines.openai
       predict='sentiment',
+      prompt_template='answer this question: {{questions}}'
       options={
-          'model_name':'cardiffnlp/twitter-roberta-base-sentiment',
-          'input_column': 'comment',
-          'labels': ['negative', 'neutral', 'positive']
+          'model_name':'gpt4'
       }
+)
+```
+
+And in the case of time-series model, the additional options are stored in `timeseries_options`. Here is the syntax to create a time-series model:
+
+```sql
+ts_model = project.create_model (
+     name='time_series_model',
+     predict='target',
+     query=my_table,
+     timeseries_options={
+            'order': 'order_date',
+            'group': 'category',
+            'window': 30,
+            'horizon': 4
+          }
 )
 ```

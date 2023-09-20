@@ -197,7 +197,7 @@
         {
           "group": "Recommenders",
           "pages": [
-            "none"
+            "sql/tutorials/recommenders"
           ]
         },
         {
@@ -885,6 +885,13 @@
             "integrations/ai-engines/statsforecast",
             "integrations/ai-engines/neuralforecast",
             "integrations/ai-engines/timegpt"
+          ]
+        },
+        {
+          "group": "Recommender Models",
+          "pages": [
+            "integrations/ai-engines/lightfm",
+            "integrations/ai-engines/popularity-recommender"
           ]
         }
       ]

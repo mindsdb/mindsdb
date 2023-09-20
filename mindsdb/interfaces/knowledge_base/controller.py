@@ -1,11 +1,57 @@
+import copy
 from typing import List
 
+import mindsdb_sql.planner.utils as utils
+from mindsdb_sql.parser.ast import (
+    ASTNode,
+    BinaryOperation,
+    Constant,
+    Data,
+    Delete,
+    Identifier,
+    Insert,
+    Join,
+    Select,
+    TableColumn,
+    Update,
+)
+
 import mindsdb.interfaces.storage.db as db
+from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
+from mindsdb.api.mysql.mysql_proxy.executor.data_types import ANSWER_TYPE, ExecuteAnswer
+from mindsdb.integrations.libs.vectordatabase_handler import TableField
 
 
 class KnowledgeBaseController:
-    def __init__(self) -> None:
-        ...
+    """
+    Knowledge bae controller handles all
+    db related operations for knowledge bases
+    """
+
+    def __init__(self, session) -> None:
+        self.executor = KnowledgeBaseExecutor(session=session)
+        self.session = session
+
+    def is_knowledge_base(self, identifier: Identifier) -> bool:
+        """
+        Decide if the identifier is a knowledge base
+        """
+        return self.executor.is_knowledge_base(identifier)
+
+    def execute_query(self, query: ASTNode) -> ExecuteAnswer:
+        """
+        Execute a parsed query and return the result
+        """
+        if isinstance(query, Select):
+            return self.executor.select_from_kb(query)
+        elif isinstance(query, Insert):
+            return self.executor.insert_into_kb(query)
+        elif isinstance(query, Delete):
+            return self.executor.delete_from_kb(query)
+        elif isinstance(query, Update):
+            return self.executor.update_kb(query)
+        else:
+            raise NotImplementedError()
 
     def add(
         self,
@@ -120,7 +166,7 @@ class KnowledgeBaseController:
         """
         raise NotImplementedError()
 
-    def list_kb_context_entry(self, session_controller) -> List[dict]:
+    def list_kb_context_entry(self) -> List[dict]:
         """
         List all knowledge base context entries
         """
@@ -128,12 +174,10 @@ class KnowledgeBaseController:
         kbs = db.session.query(
             db.KnowledgeBase,
         ).all()
-        kb_context_entries = [
-            self.get_kb_context_entry_by_id(kb.id, session_controller) for kb in kbs
-        ]
+        kb_context_entries = [self.get_kb_context_entry_by_id(kb.id) for kb in kbs]
         return kb_context_entries
 
-    def get_kb_context_entry_by_id(self, id: str, session_controller) -> dict:
+    def get_kb_context_entry_by_id(self, id: str) -> dict:
         """
         Get the knowledge base context entry
         in the format of
@@ -177,8 +221,8 @@ class KnowledgeBaseController:
 
         # get the output columns
         # describe the model
-        args_df = session_controller.model_controller.describe_model(
-            session=session_controller,
+        args_df = self.session.model_controller.describe_model(
+            session=self.session,
             project_name=model_project.name,
             model_name=model.name,
             attribute="args",
@@ -213,3 +257,238 @@ class KnowledgeBaseController:
             "embeddings_field": embeddings_field,
             "content_field": content_field,
         }
+
+
+class KnowledgeBaseExecutor:
+    """
+    Knowledge base executor handles all
+    sql related operations for knowledge bases
+    """
+
+    MODEL_FIELD = "model"
+    STORAGE_FIELD = "storage"
+    SEARCH_QUERY = "search_query"
+
+    def __init__(self, session) -> None:
+        self.session = session
+
+    def _get_knowledge_base_metadata(self, identifier: Identifier) -> dict:
+        """
+        Get the metadata of a knowledge base
+        """
+        name_parts = list(identifier.parts)
+        name = name_parts[-1]
+        if len(name_parts) > 1:
+            namespace = name_parts[-2]
+        else:
+            namespace = self.session.database
+
+        # query the db
+        project_id = self.session.database_controller.get_project(namespace).id
+
+        kb = self.session.kb_controller.get(
+            name=name,
+            project_id=project_id,
+        )
+
+        kb_metadata = self.session.kb_controller.get_kb_context_entry_by_id(
+            id=kb.id,
+        )
+
+        return kb_metadata
+
+    def is_knowledge_base(self, identifier: Identifier) -> bool:
+        """
+        Check if the identifier is a knowledge base
+        """
+        try:
+            self._get_knowledge_base_metadata(identifier)
+            return True
+        except ValueError:
+            return False
+
+    def select_from_kb(self, query: Select) -> ExecuteAnswer:
+        """
+        Handle the select query
+        We do the following translation logics:
+        1. Select from the underlying storage table
+        2. If a search query clause is provided in where, we
+            substitute the search query clause with a nested select
+            from the underlying model query
+        """
+        knowledge_base_metadata = self._get_knowledge_base_metadata(query.from_table)
+        vector_database_table = knowledge_base_metadata[self.STORAGE_FIELD]
+        model_name = knowledge_base_metadata[self.MODEL_FIELD]
+
+        CONTENT_FIELD = (
+            knowledge_base_metadata.get("content_field") or TableField.CONTENT.value
+        )
+        EMBEDDINGS_FIELD = (
+            knowledge_base_metadata.get("embeddings_field")
+            or TableField.EMBEDDINGS.value
+        )
+        SEARCH_VECTOR_FIELD = (
+            knowledge_base_metadata.get("search_vector_field")
+            or TableField.SEARCH_VECTOR.value
+        )
+
+        is_search_query_present = False
+
+        def find_search_query(node, **kwargs):
+            nonlocal is_search_query_present
+            if isinstance(node, Identifier) and node.parts[-1] == self.SEARCH_QUERY:
+                is_search_query_present = True
+
+        # decide predictor is needed in the query
+        # by detecting if a where clause involving field SEARCH_QUERY is present
+        # if yes, then we need to add additional step to the plan
+        # to apply the predictor to the search query
+        utils.query_traversal(query.where, callback=find_search_query)
+
+        if not is_search_query_present:
+            # dispatch to the underlying storage table
+            query.from_table = Identifier(vector_database_table)
+        else:
+            # rewrite the where clause
+            # search_query = 'some text'
+            # ->
+            # search_vector = (select embeddings from model_name where content = 'some text')
+            def rewrite_search_query_clause(node, **kwargs):
+                if isinstance(node, BinaryOperation):
+                    if node.args[0] == Identifier(self.SEARCH_QUERY):
+                        node.args[0] = Identifier(SEARCH_VECTOR_FIELD)
+                        node.args[1] = Select(
+                            targets=[Identifier(EMBEDDINGS_FIELD)],
+                            from_table=Identifier(model_name),
+                            where=BinaryOperation(
+                                op="=", args=[Identifier(CONTENT_FIELD), node.args[1]]
+                            ),
+                        )
+
+            utils.query_traversal(query.where, callback=rewrite_search_query_clause)
+
+            # dispatch to the underlying storage table
+            query.from_table = Identifier(vector_database_table)
+        sql_query = SQLQuery(sql=query, session=self.session, execute=True)
+        data = sql_query.fetch()
+
+        return ExecuteAnswer(
+            answer_type=ANSWER_TYPE.TABLE,
+            columns=sql_query.columns_list,
+            data=data["result"],
+        )
+
+    def insert_into_kb(self, query: Insert):
+        """
+        Handle the insert query
+        We do the following translation logics:
+        1. Insert into the underlying storage table
+        2. If a select query is present, we join the select query
+            with a model to get the embeddings column
+        3. If values are present, we wrap the values in ast.Data
+            join them with the model to get the embeddings column
+        """
+        metadata = self._get_knowledge_base_metadata(query.table)
+        EMBEDDINGS_FIELD = (
+            metadata.get("embeddings_field") or TableField.EMBEDDINGS.value
+        )
+
+        vector_database_table = metadata[self.STORAGE_FIELD]
+        model_name = metadata[self.MODEL_FIELD]
+
+        query.table = Identifier(vector_database_table)
+
+        if query.from_select is not None:
+            # detect if embeddings field is present in the columns list
+            # if so, we do not need to apply the predictor
+            # if not, we need to join the select with the model table
+            is_embeddings_field_present = False
+
+            def find_embeddings_field(node, **kwargs):
+                nonlocal is_embeddings_field_present
+                if isinstance(node, Identifier) and node.parts[-1] == EMBEDDINGS_FIELD:
+                    is_embeddings_field_present = True
+
+            utils.query_traversal(query.columns, callback=find_embeddings_field)
+
+            if is_embeddings_field_present:
+                return self.plan_insert(query)
+
+            # rewrite the select statement
+            # to join with the model table
+
+            select: Select = query.from_select
+            select.targets.append(Identifier(EMBEDDINGS_FIELD))
+            select.from_table = Select(
+                targets=copy.deepcopy(select.targets),
+                from_table=Join(
+                    left=select.from_table,
+                    right=Identifier(model_name),
+                    join_type="JOIN",
+                ),
+            )
+
+            # append the embeddings field to the columns list
+            if query.columns:
+                query.columns.append(Identifier(EMBEDDINGS_FIELD))
+
+            return self.plan_insert(query)
+        else:
+            if not query.columns:
+                raise Exception(
+                    "Insert into knowledge base requires a select query or a list of columns"
+                )
+
+            keys = [column.name for column in query.columns]
+            is_embeddings_field_present = EMBEDDINGS_FIELD in keys
+
+            query.table = Identifier(vector_database_table)
+            # directly dispatch to the underlying storage table
+            if is_embeddings_field_present:
+                return self.plan_insert(query)
+
+            # if the embeddings field is not present in the columns list
+            # we need to wrap values in ast.Data
+            # join it with a model table
+            # modify the query using from_table
+            # and dispatch to the underlying storage table
+
+            records = []
+            _unwrap_constant_or_self = (
+                lambda node: node.value if isinstance(node, Constant) else node
+            )
+            for row in query.values:
+                records.append(dict(zip(keys, map(_unwrap_constant_or_self, row))))
+
+            data = Data(records, alias=Identifier("data"))
+            predictor_select = Select(
+                targets=[Identifier(col.name) for col in query.columns]
+                + [Identifier(EMBEDDINGS_FIELD)],
+                from_table=Join(
+                    left=data, right=Identifier(model_name), join_type="JOIN"
+                ),
+            )
+
+            query.columns += [TableColumn(name=EMBEDDINGS_FIELD)]
+            query.from_select = predictor_select
+            query.values = None
+
+            _ = SQLQuery(sql=query, session=self.session, execute=True)
+            return ExecuteAnswer(
+                answer_type=ANSWER_TYPE.OK,
+            )
+
+    def delete_from_kb(self, query: Delete):
+        metadata = self._get_knowledge_base_metadata(query.table)
+
+        vector_database_table = metadata[self.STORAGE_FIELD]
+        query.table = Identifier(vector_database_table)
+
+        _ = SQLQuery(sql=query, session=self.session, execute=True)
+        return ExecuteAnswer(
+            answer_type=ANSWER_TYPE.OK,
+        )
+
+    def update_kb(self, query: Update) -> ExecuteAnswer:
+        # TODO: to be implemented
+        raise NotImplementedError()

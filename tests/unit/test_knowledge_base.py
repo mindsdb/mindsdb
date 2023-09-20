@@ -108,8 +108,9 @@ class TestKnowledgeBase(BaseExecutorTest):
         # create a knowledge base
         sql = f"""
             CREATE KNOWLEDGE BASE test_kb
-            MODEL {self.embedding_model_name}
-            STORAGE {self.vector_database_name}.{self.vector_database_table_name}
+            USING
+            MODEL = {self.embedding_model_name},
+            STORAGE = {self.vector_database_name}.{self.vector_database_table_name}
         """
         self.run_sql(sql)
 
@@ -124,8 +125,9 @@ class TestKnowledgeBase(BaseExecutorTest):
                 SELECT content, embeddings, metadata
                 FROM {self.vector_database_name}.{self.vector_database_table_name}
             )
-            MODEL {self.embedding_model_name}
-            STORAGE {self.vector_database_name}.{self.vector_database_table_name}
+            USING
+            MODEL = {self.embedding_model_name},
+            STORAGE = {self.vector_database_name}.{self.vector_database_table_name}
         """
 
         # TODO: this is to be supported
@@ -138,16 +140,18 @@ class TestKnowledgeBase(BaseExecutorTest):
         # create a knowledge base with invalid model and storage name should throw an exception
         sql = f"""
             CREATE KNOWLEDGE BASE test_kb3
-            MODEL invalid_model_name
-            STORAGE {self.vector_database_name}.{self.vector_database_table_name}
+            USING
+            MODEL = invalid_model_name,
+            STORAGE = {self.vector_database_name}.{self.vector_database_table_name}
         """
         with pytest.raises(Exception):
             self.run_sql(sql)
 
         sql = f"""
             CREATE KNOWLEDGE BASE test_kb4
-            MODEL {self.embedding_model_name}
-            STORAGE invalid_storage_name
+            USING
+            MODEL = {self.embedding_model_name},
+            STORAGE = invalid_storage_name
         """
         with pytest.raises(Exception):
             self.run_sql(sql)
@@ -156,8 +160,9 @@ class TestKnowledgeBase(BaseExecutorTest):
         # create a knowledge base
         sql = f"""
             CREATE KNOWLEDGE BASE test_kb
-            MODEL {self.embedding_model_name}
-            STORAGE {self.vector_database_name}.{self.vector_database_table_name}
+            USING
+            MODEL = {self.embedding_model_name},
+            STORAGE = {self.vector_database_name}.{self.vector_database_table_name}
         """
         self.run_sql(sql)
 
@@ -179,8 +184,9 @@ class TestKnowledgeBase(BaseExecutorTest):
         # create the knowledge base
         sql = f"""
             CREATE KNOWLEDGE BASE test_kb
-            MODEL {self.embedding_model_name}
-            STORAGE {self.vector_database_name}.{self.vector_database_table_name}
+            USING
+            MODEL = {self.embedding_model_name},
+            STORAGE = {self.vector_database_name}.{self.vector_database_table_name}
         """
         self.run_sql(sql)
 
@@ -226,8 +232,9 @@ class TestKnowledgeBase(BaseExecutorTest):
         # create the knowledge base
         sql = f"""
             CREATE KNOWLEDGE BASE test_kb
-            MODEL {self.embedding_model_name}
-            STORAGE {self.vector_database_name}.{self.vector_database_table_name}
+            USING
+            MODEL = {self.embedding_model_name},
+            STORAGE = {self.vector_database_name}.{self.vector_database_table_name}
         """
         self.run_sql(sql)
 
@@ -278,8 +285,9 @@ class TestKnowledgeBase(BaseExecutorTest):
         # create the knowledge base
         sql = f"""
             CREATE KNOWLEDGE BASE test_kb
-            MODEL {self.embedding_model_name}
-            STORAGE {self.vector_database_name}.{self.vector_database_table_name}
+            USING
+            MODEL = {self.embedding_model_name},
+            STORAGE = {self.vector_database_name}.{self.vector_database_table_name}
         """
 
         self.run_sql(sql)
@@ -327,8 +335,9 @@ class TestKnowledgeBase(BaseExecutorTest):
         # create the knowledge base
         sql = f"""
             CREATE KNOWLEDGE BASE test_kb
-            MODEL {self.embedding_model_name}
-            STORAGE {self.vector_database_name}.{self.vector_database_table_name}
+            USING
+            MODEL = {self.embedding_model_name},
+            STORAGE = {self.vector_database_name}.{self.vector_database_table_name}
         """
         self.run_sql(sql)
 

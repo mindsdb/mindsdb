@@ -1,8 +1,8 @@
 """add knowledge base
 
-Revision ID: 25922ab621dd
-Revises: e187961e844a
-Create Date: 2023-09-12 17:40:25.582629
+Revision ID: 309db3d07cf4
+Revises: 011e6f2dd9c2
+Create Date: 2023-09-20 13:48:39.422306
 
 """
 import sqlalchemy as sa
@@ -11,8 +11,8 @@ from alembic import op
 import mindsdb.interfaces.storage.db  # noqa
 
 # revision identifiers, used by Alembic.
-revision = "25922ab621dd"
-down_revision = "e187961e844a"
+revision = "309db3d07cf4"
+down_revision = "011e6f2dd9c2"
 branch_labels = None
 depends_on = None
 
@@ -45,7 +45,6 @@ def upgrade():
             "name", "project_id", name="unique_knowledge_base_name_project_id"
         ),
     )
-
     # ### end Alembic commands ###
 
 

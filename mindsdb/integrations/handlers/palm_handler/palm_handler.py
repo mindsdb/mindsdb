@@ -1,6 +1,6 @@
 import textwrap
 import re
-from pydantic import BaseModel
+from pydantic import BaseModel, Extra
 
 import google.generativeai as palm
 import numpy as np
@@ -40,6 +40,10 @@ class PalmHandlerArgs(BaseModel):
     prompt: str = None
     user_column: str = None
     assistant_column: str = None
+
+    class Config:
+        # for all args that are not expected, raise an error
+        extra = Extra.forbid
 
 
 class PalmHandler(BaseMLEngine):
@@ -102,15 +106,6 @@ class PalmHandler(BaseMLEngine):
                 """
                     )
                 )
-
-        # for all args that are not expected, raise an error
-        known_args = set(PalmHandlerArgs.__annotations__.keys())
-        unknown_args = set(args.keys()) - known_args
-        if unknown_args:
-            # return a list of unknown args as a string
-            raise Exception(
-                f"Unknown arguments: {', '.join(unknown_args)}.\n Known arguments are: {', '.join(known_args)}"
-            )
 
     def create(self, target, args=None, **kwargs):
         args = args["using"]

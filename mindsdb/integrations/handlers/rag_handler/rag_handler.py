@@ -79,8 +79,15 @@ class RAGHandler(BaseMLEngine):
         """
         Dispatch is running embeddings and storing in a VectorDB, unless user already has embeddings persisted
         """
+        # get api key from user input on create ML_ENGINE or create MODEL
+        args = args["using"]
 
-        input_args = build_llm_params(args["using"])
+        ml_engine_args = self.engine_storage.get_connection_args()
+
+        # for a model created with USING, only get api for that specific llm type
+        args.update({k: v for k, v in ml_engine_args.items() if args["llm_type"] in k})
+
+        input_args = build_llm_params(args)
 
         if "run_embeddings" not in input_args:
             # if user doesn't provide a dataset key, use the input in FROM clause in model creation

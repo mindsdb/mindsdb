@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from functools import lru_cache, partial
-from typing import Any, List, Union
+from typing import List, Union
 
 import openai
 import pandas as pd
@@ -50,8 +50,6 @@ When summarizing, please keep the following in mind the following question:
 
 GENERATION_METRICS = ("rouge", "meteor", "cosine_similarity", "accuracy")
 RETRIEVAL_METRICS = ("cosine_similarity", "accuracy")
-
-# todo replace writer from langchain with writer sdk
 
 
 def is_valid_store(name):
@@ -178,7 +176,7 @@ class LLMParameters(BaseModel):
 class OpenAIParameters(LLMParameters):
     """Model parameters for the LLM API interface"""
 
-    open_ai_api_key: str
+    openai_api_key: str
     model_id: str = Field(default="text-davinci-003", title="model name")
     n: int = Field(default=1, title="number of responses to return")
 
@@ -208,9 +206,9 @@ class LLMLoader(BaseModel):
         return Writer(**self.config_dict)
 
     def load_openai_llm(self):
-        openai.api_key = self.llm_config.open_ai_api_key
+        openai.api_key = self.llm_config.openai_api_key
         config = self.config_dict
-        config.pop("open_ai_api_key")
+        config.pop("openai_api_key")
         config["model"] = config.pop("model_id")
 
         return partial(openai.Completion.create, **config)

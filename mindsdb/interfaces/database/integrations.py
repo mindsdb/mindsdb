@@ -18,7 +18,7 @@ from sqlalchemy import func
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.storage.fs import FsStore, FileStorage, FileStorageFactory, RESOURCE_GROUP
+from mindsdb.interfaces.storage.fs import FsStore, FileStorage, RESOURCE_GROUP
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -186,6 +186,8 @@ class IntegrationController:
                     arg_name in accept_connection_args
                     and accept_connection_args[arg_name]['type'] == ARG_TYPE.PATH
                 ):
+                    if arg_value is None or arg_value == '':
+                        continue
                     if files_dir is None:
                         files_dir = tempfile.mkdtemp(prefix='mindsdb_files_')
                     shutil.copy(arg_value, files_dir)
@@ -400,7 +402,7 @@ class IntegrationController:
             root_dir='tmp',
             sync=False
         )
-        handler_storage = HandlerStorage(integration_id, root_dir='tmp')
+        handler_storage = HandlerStorage(integration_id, root_dir='tmp', is_temporal=True)
         handler_ars = self._make_handler_args(
             name='tmp_handler',
             handler_type=handler_type,
@@ -496,13 +498,6 @@ class IntegrationController:
             file_storage=file_storage,
             handler_storage=handler_storage
         )
-
-        handler_type = self.handler_modules[integration_engine].type
-        if handler_type == 'ml':
-            handler_ars['storage_factory'] = FileStorageFactory(
-                resource_group=RESOURCE_GROUP.PREDICTOR,
-                sync=True
-            )
 
         HandlerClass = self.handler_modules[integration_engine].Handler
 

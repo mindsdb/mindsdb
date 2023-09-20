@@ -1,6 +1,7 @@
 import json
 from shutil import copyfile
 import datetime as dt
+from collections import OrderedDict
 
 import requests
 
@@ -8,6 +9,9 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response
 )
+
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb_sql.parser import ast
@@ -295,6 +299,18 @@ class GmailHandler(APIHandler):
 
         self.credentials_url = self.connection_args.get('credentials_url', None)
         self.credentials_file = self.connection_args.get('credentials_file', None)
+        if self.connection_args.get('credentials'):
+            self.credentials_file = self.connection_args.pop('credentials')
+        if not self.credentials_file and not self.credentials_url:
+            # try to get from config
+            gm_config = Config().get('handlers', {}).get('gmail', {})
+            secret_file = gm_config.get('credentials_file')
+            secret_url = gm_config.get('credentials_url')
+            if secret_file:
+                self.credentials_file = secret_file
+            elif secret_url:
+                self.credentials_url = secret_url
+
         self.scopes = self.connection_args.get('scopes', DEFAULT_SCOPES)
         self.token_file = None
         self.max_page_size = 500
@@ -344,11 +360,7 @@ class GmailHandler(APIHandler):
                 # save to storage
                 self.handler_storage.folder_sync('config')
             else:
-                # try to get from config
-                config = Config()
-                secret_file = config.get('handlers', {}).get('gmail', {}).get('credentials_file')
-                if secret_file is None or not os.path.isfile(secret_file):
-                    raise ValueError('No valid Gmail Credentials filepath or S3 url found.')
+                raise ValueError('No valid Gmail Credentials filepath or S3 url found.')
 
             # initialise flow
             flow = Flow.from_client_secrets_file(secret_file, self.scopes)
@@ -583,3 +595,22 @@ class GmailHandler(APIHandler):
         df = pd.DataFrame(data)
 
         return df
+
+
+connection_args = OrderedDict(
+    credentials_url={
+        'type': ARG_TYPE.STR,
+        'description': 'URL to Service Account Keys',
+        'label': 'URL to Service Account Keys',
+    },
+    credentials_file={
+        'type': ARG_TYPE.STR,
+        'description': 'Location of Service Account Keys',
+        'label': 'path of Service Account Keys',
+    },
+    credentials={
+        'type': ARG_TYPE.PATH,
+        'description': 'Upload Service Account Keys',
+        'label': 'Upload Service Account Keys',
+    },
+)

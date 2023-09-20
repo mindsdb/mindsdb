@@ -61,7 +61,19 @@ def client(app):
     return app.test_client()
 
 
-def test_get_all_chatbots(client):
+@pytest.fixture()
+def test_db(client):
+    # Fetch all so we don't have to go through the pain of setting context attributes
+    # to fetch a single database.
+    all_databases_response = client.get('/api/databases', follow_redirects=True)
+    all_dbs = all_databases_response.get_json()
+    for database in all_dbs:
+        if database['name'] == 'example_db':
+            return database
+    return None
+
+
+def test_get_all_chatbots(client, test_db):
     response = client.get('/api/projects/mindsdb/chatbots', follow_redirects=True)
     assert '200' in response.status
     assert len(response.get_json()) == 0
@@ -70,7 +82,7 @@ def test_get_all_chatbots(client):
         'chatbot': {
             'name': 'test_get_all_chatbots',
             'model_name': 'test_model',
-            'chat_engine': 'slack',
+            'database_id': test_db['id'],
             'is_running': True,
             'params': {
                 'param1': 'value1'
@@ -88,14 +100,16 @@ def test_get_all_chatbots(client):
     expected_chatbot = {
         'name': 'test_get_all_chatbots',
         'model_name': 'test_model',
-        'chat_engine': 'slack',
+        'database_id': test_db['id'],
+        'database': 'example_db',
+        'last_error': None,
         'is_running': True,
         'params': {
             'param1': 'value1'
         },
         'created_at': actual_chatbot['created_at'],
         'id': actual_chatbot['id'],
-        'project_id': actual_chatbot['project_id']
+        'project': 'mindsdb'
     }
     assert actual_chatbot == expected_chatbot
 
@@ -105,12 +119,12 @@ def test_get_all_chatbots_project_not_found(client):
     assert '404' in response.status
 
 
-def test_get_chatbot(client):
+def test_get_chatbot(client, test_db):
     chatbot_data = {
         'chatbot': {
             'name': 'test_get_chatbot',
             'model_name': 'test_model',
-            'chat_engine': 'slack',
+            'database_id': test_db['id'],
             'is_running': True,
             'params': {
                 'param1': 'value1'
@@ -126,14 +140,16 @@ def test_get_chatbot(client):
     expected_chatbot = {
         'name': 'test_get_chatbot',
         'model_name': 'test_model',
-        'chat_engine': 'slack',
+        'database_id': test_db['id'],
+        'database': 'example_db',
+        'last_error': None,
         'is_running': True,
         'params': {
             'param1': 'value1'
         },
         'created_at': actual_chatbot['created_at'],
         'id': actual_chatbot['id'],
-        'project_id': actual_chatbot['project_id']
+        'project': 'mindsdb'
     }
     assert actual_chatbot == expected_chatbot
 
@@ -148,12 +164,12 @@ def test_get_chatbot_project_not_found(client):
     assert '404' in response.status
 
 
-def test_post_chatbot(client):
+def test_post_chatbot(client, test_db):
     chatbot_data = {
         'chatbot': {
             'name': 'test_post_chatbot',
             'model_name': 'test_model',
-            'chat_engine': 'slack',
+            'database_id': test_db['id'],
             'is_running': True,
             'params': {
                 'param1': 'value1'
@@ -167,8 +183,7 @@ def test_post_chatbot(client):
     expected_chatbot = {
         'name': 'test_post_chatbot',
         'model_name': 'test_model',
-        'chat_engine': 'slack',
-        'is_running': True,
+        'database_id': test_db['id'],
         'params': {
             'param1': 'value1'
         },
@@ -179,11 +194,11 @@ def test_post_chatbot(client):
     assert created_chatbot == expected_chatbot
 
 
-def test_post_chatbot_no_chatbot_fails(client):
+def test_post_chatbot_no_chatbot_fails(client, test_db):
     chatbot_data = {
         'name': 'test_post_chatbot_no_chatbot_fails',
         'model_name': 'test_model',
-        'chat_engine': 'slack',
+        'database_id': test_db['id'],
         'is_running': True,
         'params': {
             'param1': 'value1'
@@ -193,11 +208,11 @@ def test_post_chatbot_no_chatbot_fails(client):
     assert '400' in response.status
 
 
-def test_post_chatbot_no_name_fails(client):
+def test_post_chatbot_no_name_fails(client, test_db):
     chatbot_data = {
         'chatbot': {
             'model_name': 'test_model',
-            'chat_engine': 'slack',
+            'database_id': test_db['id'],
             'is_running': True,
             'params': {
                 'param1': 'value1'
@@ -208,11 +223,11 @@ def test_post_chatbot_no_name_fails(client):
     assert '400' in response.status
 
 
-def test_post_chatbot_no_model_name_fails(client):
+def test_post_chatbot_no_model_name_fails(client, test_db):
     chatbot_data = {
         'chatbot': {
             'name': 'test_post_chatbot_no_model_name_fails',
-            'chat_engine': 'slack',
+            'database_id': test_db['id'],
             'is_running': True,
             'params': {
                 'param1': 'value1'
@@ -238,12 +253,12 @@ def test_post_chatbot_no_database_id_fails(client):
     assert '400' in response.status
 
 
-def test_post_chatbot_model_does_not_exist_fails(client):
+def test_post_chatbot_model_does_not_exist_fails(client, test_db):
     chatbot_data = {
         'chatbot': {
             'name': 'test_post_chatbot_model_does_not_exist_fails',
             'model_name': 'nonexistent_model',
-            'chat_engine': 'slack',
+            'database_id': test_db['id'],
             'is_running': True,
             'params': {
                 'param1': 'value1'
@@ -251,15 +266,15 @@ def test_post_chatbot_model_does_not_exist_fails(client):
         }
     }
     response = client.post('/api/projects/mindsdb/chatbots', json=chatbot_data, follow_redirects=True)
-    assert '404' in response.status
+    assert '400' in response.status
 
 
-def test_post_chatbot_project_does_not_exist_fails(client):
+def test_post_chatbot_project_does_not_exist_fails(client, test_db):
     chatbot_data = {
         'chatbot': {
             'name': 'test_post_chatbot_project_does_not_exist_fails',
             'model_name': 'test_model',
-            'chat_engine': 'slack',
+            'database_id': test_db['id'],
             'is_running': True,
             'params': {
                 'param1': 'value1'
@@ -270,30 +285,12 @@ def test_post_chatbot_project_does_not_exist_fails(client):
     assert '404' in response.status
 
 
-def test_post_chatbot_name_taken_fails(client):
-    chatbot_data = {
-        'chatbot': {
-            'name': 'test_post_chatbot_name_taken_fails',
-            'model_name': 'test_model',
-            'chat_engine': 'slack',
-            'is_running': True,
-            'params': {
-                'param1': 'value1'
-            }
-        }
-    }
-    response = client.post('/api/projects/mindsdb/chatbots', json=chatbot_data, follow_redirects=True)
-    assert '201' in response.status
-    response = client.post('/api/projects/mindsdb/chatbots', json=chatbot_data, follow_redirects=True)
-    assert '409' in response.status
-
-
-def test_put_chatbot_create(client):
+def test_put_chatbot_create(client, test_db):
     chatbot_data = {
         'chatbot': {
             'name': 'test_put_chatbot_create',
             'model_name': 'test_model',
-            'chat_engine': 'slack',
+            'database_id': test_db['id'],
             'is_running': True,
             'params': {
                 'param1': 'value1'
@@ -307,8 +304,7 @@ def test_put_chatbot_create(client):
     expected_chatbot = {
         'name': 'test_put_chatbot_create',
         'model_name': 'test_model',
-        'chat_engine': 'slack',
-        'is_running': True,
+        'database_id': test_db['id'],
         'params': {
             'param1': 'value1'
         },
@@ -319,12 +315,12 @@ def test_put_chatbot_create(client):
     assert created_chatbot == expected_chatbot
 
 
-def test_put_chatbot_update(client):
+def test_put_chatbot_update(client, test_db):
     chatbot_data = {
         'chatbot': {
             'name': 'test_put_chatbot_update',
             'model_name': 'test_model',
-            'chat_engine': 'slack',
+            'database_id': test_db['id'],
             'is_running': True,
             'params': {
                 'param1': 'value1'
@@ -336,8 +332,9 @@ def test_put_chatbot_update(client):
 
     updated_chatbot_data = {
         'chatbot': {
-            'is_running': False,
-            'params': {}
+            'params': {
+                'new_param': 'new_value'
+            }
         }
     }
     response = client.put('/api/projects/mindsdb/chatbots/test_put_chatbot_update', json=updated_chatbot_data, follow_redirects=True)
@@ -347,9 +344,11 @@ def test_put_chatbot_update(client):
     expected_chatbot = {
         'name': 'test_put_chatbot_update',
         'model_name': 'test_model',
-        'chat_engine': 'slack',
-        'is_running': False,
-        'params': {},
+        'database_id': test_db['id'],
+        'params': {
+            'param1': 'value1',
+            'new_param': 'new_value'
+        },
         'created_at': updated_chatbot['created_at'],
         'id': updated_chatbot['id'],
         'project_id': updated_chatbot['project_id']
@@ -357,11 +356,11 @@ def test_put_chatbot_update(client):
     assert updated_chatbot == expected_chatbot
 
 
-def test_put_chatbot_no_chatbot_fails(client):
+def test_put_chatbot_no_chatbot_fails(client, test_db):
     chatbot_data = {
         'name': 'test_put_chatbot_no_chatbot_fails',
         'model_name': 'test_model',
-        'chat_engine': 'slack',
+        'database_id': test_db['id'],
         'is_running': True,
         'params': {
             'param1': 'value1'
@@ -371,12 +370,12 @@ def test_put_chatbot_no_chatbot_fails(client):
     assert '400' in response.status
 
 
-def test_put_chatbot_project_not_found(client):
+def test_put_chatbot_project_not_found(client, test_db):
     chatbot_data = {
         'chatbot': {
             'name': 'test_put_chatbot_project_not_found',
             'model_name': 'test_model',
-            'chat_engine': 'slack',
+            'database_id': test_db['id'],
             'is_running': True,
             'params': {
                 'param1': 'value1'
@@ -387,12 +386,12 @@ def test_put_chatbot_project_not_found(client):
     assert '404' in response.status
 
 
-def test_put_chatbot_model_not_found(client):
+def test_put_chatbot_model_not_found(client, test_db):
     chatbot_data = {
         'chatbot': {
             'name': 'test_put_chatbot_model_not_found',
             'model_name': 'fake_model',
-            'chat_engine': 'slack',
+            'database_id': test_db['id'],
             'is_running': True,
             'params': {
                 'param1': 'value1'
@@ -403,11 +402,11 @@ def test_put_chatbot_model_not_found(client):
     assert '404' in response.status
 
 
-def test_put_chatbot_create_no_name_fails(client):
+def test_put_chatbot_create_no_name_fails(client, test_db):
     chatbot_data = {
         'chatbot': {
             'model_name': 'test_model',
-            'chat_engine': 'slack',
+            'database_id': test_db['id'],
             'is_running': True,
             'params': {
                 'param1': 'value1'
@@ -418,11 +417,11 @@ def test_put_chatbot_create_no_name_fails(client):
     assert '400' in response.status
 
 
-def test_put_chatbot_create_no_model_fails(client):
+def test_put_chatbot_create_no_model_fails(client, test_db):
     chatbot_data = {
         'chatbot': {
             'name': 'test_put_chatbot_create_no_model_fails',
-            'chat_engine': 'slack',
+            'database_id': test_db['id'],
             'is_running': True,
             'params': {
                 'param1': 'value1'
@@ -448,12 +447,12 @@ def test_put_chatbot_create_no_database_id_fails(client):
     assert '400' in response.status
 
 
-def test_delete_chatbot(client):
+def test_delete_chatbot(client, test_db):
     chatbot_data = {
         'chatbot': {
             'name': 'test_delete_chatbot',
             'model_name': 'test_model',
-            'chat_engine': 'slack',
+            'database_id': test_db['id'],
             'is_running': True,
             'params': {
                 'param1': 'value1'

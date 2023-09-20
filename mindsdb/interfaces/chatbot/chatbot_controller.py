@@ -44,9 +44,10 @@ class ChatBotController:
             db.Tasks.company_id == ctx.company_id,
         )
 
-        bot, task = query.first()
-        if bot is None or task is None:
+        query_result = query.first()
+        if query_result is None:
             return None
+        bot, task = query_result
 
         # Include DB and Task information in response.
         session = SessionController()
@@ -215,23 +216,25 @@ class ChatBotController:
         if existing_chatbot is None:
             raise Exception(f'Chat bot not found: {chatbot_name}')
 
+        existing_chatbot_rec = db.ChatBots.query.get(existing_chatbot['id'])
+
         if name is not None and name != chatbot_name:
             # check new name
             bot2 = self.get_chatbot(name, project_name=project_name)
             if bot2 is not None:
                 raise Exception(f'Chat already exists: {name}')
 
-            existing_chatbot.name = name
+            existing_chatbot_rec.name = name
         if model_name is not None:
             # TODO check model_name
-            existing_chatbot.model_name = model_name
+            existing_chatbot_rec.model_name = model_name
         if database_id is not None:
             # TODO check database_id
-            existing_chatbot.database_id = database_id
+            existing_chatbot_rec.database_id = database_id
 
         task = db.Tasks.query.filter(
             db.Tasks.object_type == self.OBJECT_TYPE,
-            db.Tasks.object_id == existing_chatbot.id,
+            db.Tasks.object_id == existing_chatbot_rec.id,
             db.Tasks.company_id == ctx.company_id,
         ).first()
 
@@ -244,12 +247,12 @@ class ChatBotController:
 
         if params is not None:
             # Merge params on update
-            existing_params = {} if not existing_chatbot.params else existing_chatbot.params
+            existing_params = existing_chatbot_rec.params or {}
             params.update(existing_params)
-            existing_chatbot.params = params
+            existing_chatbot_rec.params = params
         db.session.commit()
 
-        return existing_chatbot
+        return existing_chatbot_rec
 
     def delete_chatbot(self, chatbot_name: str, project_name: str = 'mindsdb'):
         '''
@@ -264,15 +267,17 @@ class ChatBotController:
         if bot is None:
             raise Exception(f"Chat bot doesn't exist: {chatbot_name}")
 
+        bot_rec = db.ChatBots.query.get(bot['id'])
+
         task = db.Tasks.query.filter(
             db.Tasks.object_type == self.OBJECT_TYPE,
-            db.Tasks.object_id == bot.id,
+            db.Tasks.object_id == bot_rec.id,
             db.Tasks.company_id == ctx.company_id,
         ).first()
 
         if task is not None:
             db.session.delete(task)
 
-        db.session.delete(bot)
+        db.session.delete(bot_rec)
 
         db.session.commit()

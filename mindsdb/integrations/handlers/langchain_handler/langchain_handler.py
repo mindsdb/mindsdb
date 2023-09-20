@@ -327,6 +327,9 @@ class LangChainHandler(BaseMLEngine):
                 for col in input_variables:
                     kwargs[col] = row[col] if row[col] is not None else ''  # add empty quote if data is missing
                 prompts.append(prompt.format(**kwargs))
+            elif row.get(args['user_column']):
+                # just add prompt
+                prompts.append(row[args['user_column']])
 
         def _completion(agent, prompts):
             # TODO: ensure that agent completion plus prompt match the maximum allowed by the user

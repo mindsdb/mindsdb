@@ -158,6 +158,7 @@
             "data_sources",
             "ml_engines",
             "sql/project",
+            "generative-ai-tables",
             "model-types",
             "tables_views_files"
           ]
@@ -196,7 +197,7 @@
         {
           "group": "Recommenders",
           "pages": [
-            "none"
+            "sql/tutorials/recommenders"
           ]
         },
         {
@@ -715,7 +716,10 @@
               "pages": [
                 "sql/create/jobs",
                 "sql/drop/jobs",
-                "sql/query-jobs"
+                "sql/query-jobs",
+                "sql/create/trigger",
+                "sql/drop/trigger",
+                "sql/query-triggers"
               ]
             },
             {
@@ -768,6 +772,7 @@
             "integrations/app-integrations/github",
             "integrations/app-integrations/gmail",
             "integrations/app-integrations/google-calendar",
+            "integrations/app-integrations/hackernews",
             "integrations/app-integrations/shopify",
             "integrations/app-integrations/slack",
             "integrations/app-integrations/twitter",
@@ -847,7 +852,7 @@
       ]
     },
     {
-      "group": "ML Engines",
+      "group": "AI Engines",
       "pages": [
         "integrations/ml-engines-overview",
         {
@@ -856,7 +861,8 @@
             "integrations/ai-engines/openai",
             "integrations/ai-engines/huggingface",
             "integrations/ai-engines/langchain",
-            "integrations/ai-engines/monkeylearn"
+            "integrations/ai-engines/llamaindex",
+            "integrations/ai-engines/monkeylearn"            
           ]
         },
         {
@@ -876,7 +882,16 @@
         {
           "group": "Time Series Models",
           "pages": [
-            "integrations/ai-engines/statsforecast"
+            "integrations/ai-engines/statsforecast",
+            "integrations/ai-engines/neuralforecast",
+            "integrations/ai-engines/timegpt"
+          ]
+        },
+        {
+          "group": "Recommender Models",
+          "pages": [
+            "integrations/ai-engines/lightfm",
+            "integrations/ai-engines/popularity-recommender"
           ]
         }
       ]

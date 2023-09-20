@@ -345,7 +345,6 @@ class BaseMLEngineExec:
         self.handler_controller = kwargs.get('handler_controller')
         self.company_id = kwargs.get('company_id')
         self.fs_store = kwargs.get('file_storage')
-        self.storage_factory = kwargs.get('storage_factory')
         self.integration_id = kwargs.get('integration_id')
         self.execution_method = kwargs.get('execution_method')
         self.engine = kwargs.get("integration_engine")

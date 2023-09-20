@@ -2,20 +2,38 @@ from typing import Dict, Optional
 
 import pandas as pd
 
-from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.utilities.log import get_log
-
-from .ingest import Ingestor
-from .question_answer import QuestionAnswerer
-from .settings import (
+from mindsdb.integrations.handlers.writer_handler.evaluate import WriterEvaluator
+from mindsdb.integrations.handlers.writer_handler.ingest import Ingestor
+from mindsdb.integrations.handlers.writer_handler.rag import QuestionAnswerer
+from mindsdb.integrations.handlers.writer_handler.settings import (
     DEFAULT_EMBEDDINGS_MODEL,
-    USER_DEFINED_MODEL_PARAMS,
-    ModelParameters,
+    EVAL_COLUMN_NAMES,
+    USER_DEFINED_WRITER_LLM_PARAMS,
+    WriterHandlerParameters,
 )
+from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.integrations.utilities.datasets.dataset import (
+    load_dataset,
+    validate_dataframe,
+)
+from mindsdb.utilities.log import get_log
 
 # these require no additional arguments
 
 logger = get_log(logger_name=__name__)
+
+
+def extract_llm_params(args):
+    """extract llm params from input query args"""
+
+    llm_params = {}
+    for param in USER_DEFINED_WRITER_LLM_PARAMS:
+        if param in args:
+            llm_params[param] = args.pop(param)
+
+    args["llm_params"] = llm_params
+
+    return args
 
 
 class WriterHandler(BaseMLEngine):
@@ -39,11 +57,6 @@ class WriterHandler(BaseMLEngine):
             raise Exception(
                 "Writer engine requires a USING clause! Refer to its documentation for more details."
             )
-        else:
-            args = args["using"]
-
-        if "prompt_template" not in args:
-            raise Exception("Please provide a `prompt_template` for this engine.")
 
     def create(
         self,
@@ -52,35 +65,49 @@ class WriterHandler(BaseMLEngine):
         args: Optional[Dict] = None,
     ):
         """
-        Dispatch is running embeddings and storing in Chroma VectorDB, unless user already has embeddings persisted
+        Dispatch is running embeddings and storing in a VectorDB, unless user already has embeddings persisted
         """
-        args = args["using"]
 
-        if not df.empty and args["run_embeddings"]:
+        input_args = extract_llm_params(args["using"])
+        # if user doesn't provide a dataset key, use the input in FROM clause in model creation
+        input_args["evaluate_dataset"] = (
+            input_args["evaluate_dataset"]
+            if "evaluate_dataset" in input_args
+            else df.to_dict(orient="records")
+        )
+        args = WriterHandlerParameters(**input_args)
+
+        # create folder for vector store to persist embeddings
+        args.vector_store_storage_path = self.engine_storage.folder_get(
+            args.vector_store_folder_name
+        )
+
+        if not df.empty and args.run_embeddings:
             if "context_columns" not in args:
                 # if no context columns provided, use all columns in df
-                args["context_columns"] = df.columns.tolist()
+                logger.info("No context columns provided, using all columns in df")
+                args.context_columns = df.columns.tolist()
 
             if "embeddings_model_name" not in args:
                 logger.info(
                     f"No embeddings model provided in query, using default model: {DEFAULT_EMBEDDINGS_MODEL}"
                 )
 
-            chromadb_folder_name = args["chromadb_folder_name"]
-            # create folder for chromadb to persist embeddings
-            args["chromadb_storage_path"] = self.engine_storage.folder_get(
-                chromadb_folder_name
-            )
-            ingestor = Ingestor(df=df, args=args)
+            ingestor = Ingestor(args=args, df=df)
             ingestor.embeddings_to_vectordb()
-
-            # for mindsdb cloud, store data in shared file system for cloud version of mindsdb to make it be usable by all mindsdb nodes
-            self.engine_storage.folder_sync(chromadb_folder_name)
 
         else:
             logger.info("Skipping embeddings and ingestion into Chroma VectorDB")
 
-        self.model_storage.json_set("args", args)
+        export_args = args.dict(exclude={"llm_params"})
+        # 'callbacks' aren't json serializable, we do this to avoid errors
+        export_args["llm_params"] = args.llm_params.dict(exclude={"callbacks"})
+
+        # for mindsdb cloud, store data in shared file system
+        # for cloud version of mindsdb to make it be usable by all mindsdb nodes
+        self.engine_storage.folder_sync(args.vector_store_folder_name)
+
+        self.model_storage.json_set("args", export_args)
 
     def predict(self, df: pd.DataFrame = None, args: dict = None):
         """
@@ -88,30 +115,77 @@ class WriterHandler(BaseMLEngine):
         is supported.
         """
 
-        # get model parameters if defined by user - else use default values
+        input_args = self.model_storage.json_get("args")
+        args = WriterHandlerParameters(**input_args)
 
-        args = self.model_storage.json_get("args")
-        args["chromadb_storage_path"] = self.engine_storage.folder_get(
-            args["chromadb_folder_name"]
-        )
+        # todo add support for input evaluation_df
 
-        user_defined_model_params = list(
-            filter(lambda x: x in args, USER_DEFINED_MODEL_PARAMS)
+        if args.evaluation_type:
+            # if user adds a WHERE clause with 'run_evaluation = true', run evaluation
+            if "run_evaluation" in df.columns and df["run_evaluation"].tolist()[0]:
+                return self.evaluate(args)
+            else:
+                logger.info(
+                    "Skipping evaluation, running prediction only. "
+                    "to run evaluation, add a WHERE clause with 'run_evaluation = true'"
+                )
+
+        args.vector_store_storage_path = self.engine_storage.folder_get(
+            args.vector_store_folder_name, update=False
         )
-        args["model_params"] = {
-            model_param: args[model_param] for model_param in user_defined_model_params
-        }
-        model_parameters = ModelParameters(**args["model_params"])
 
         # get question answering results
+        question_answerer = QuestionAnswerer(args=args)
 
-        question_answerer = QuestionAnswerer(
-            args=args, model_parameters=model_parameters
+        # get question from sql query
+        # e.g. where question = 'What is the capital of France?'
+        response = question_answerer.query(df["question"].tolist()[0])
+
+        return pd.DataFrame(response)
+
+    def evaluate(self, args: WriterHandlerParameters):
+
+        if isinstance(args.evaluate_dataset, list):
+            # if user provides a list of dicts, convert to dataframe and validate
+            evaluate_df = validate_dataframe(
+                pd.DataFrame(args.evaluate_dataset), EVAL_COLUMN_NAMES
+            )
+        else:
+            evaluate_df = load_dataset(
+                ml_task_type="question_answering", dataset_name=args.evaluate_dataset
+            )
+
+        if args.n_rows_evaluation:
+            # if user specifies n_rows_evaluation in create, only use that many rows
+            evaluate_df = evaluate_df.head(args.n_rows_evaluation)
+
+        ingestor = Ingestor(df=evaluate_df, args=args)
+        ingestor.embeddings_to_vectordb()
+
+        evaluator = WriterEvaluator(args=args, df=evaluate_df, rag=QuestionAnswerer)
+        df = evaluator.evaluate()
+
+        evaluation_metrics = dict(
+            mean_evaluation_metrics=evaluator.mean_evaluation_metrics,
+            evaluation_df=df.to_dict(orient="records"),
         )
 
-        # get question from sql query e.g. where question = 'What is the capital of France?'
-        question_answerer.query(df["question"].tolist()[0])
+        self.model_storage.json_set("evaluation", evaluation_metrics)
 
-        # return results
+        return df
 
-        return question_answerer.results_df
+    def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
+        """
+        Describe the model, or a specific attribute of the model
+        """
+
+        if attribute == "evaluation_output":
+            evaluation = self.model_storage.json_get("evaluation")
+            return pd.DataFrame(evaluation["evaluation_df"])
+        elif attribute == "mean_evaluation_metrics":
+            evaluation = self.model_storage.json_get("evaluation")
+            return pd.DataFrame(evaluation["mean_evaluation_metrics"])
+        else:
+            raise ValueError(
+                f"Attribute {attribute} not supported, try 'evaluation_output' or 'mean_evaluation_metrics'"
+            )

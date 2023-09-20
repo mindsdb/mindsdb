@@ -465,12 +465,6 @@ class SQLQuery():
     @profiler.profile()
     def create_planner(self):
         databases = self.session.database_controller.get_list()
-        # inject knowledge base context
-        additional_context = []
-        kb_context = self.session.kb_controller.list_kb_context_entry(
-            session_controller=self.session
-        )
-        additional_context.extend(kb_context)
 
         predictor_metadata = []
         predictors_records = get_model_records()
@@ -491,10 +485,7 @@ class SQLQuery():
             model_name = predictor_record.name
 
             if model_name not in query_tables:
-                # continue
-                # KB need to access to models that have names not in query
-                # TODO: this may cause performance issues of the planner. Need fixing
-                ...
+                continue
 
             project_record = get_predictor_project(predictor_record)
             if project_record is None:
@@ -535,8 +526,7 @@ class SQLQuery():
             self.query,
             integrations=databases,
             predictor_metadata=predictor_metadata,
-            default_namespace=database,
-            additional_metadata=additional_context
+            default_namespace=database
         )
 
     def fetch(self, view='list'):

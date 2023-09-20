@@ -47,9 +47,9 @@ LIMIT 2;
 
 Each Post has a unique ID. You can use this ID to fetch comments for a particular post.
 
-```
+```sql
 SELECT *
-FROM mysql_datasource.comments
+FROM my_hackernews.comments
 WHERE item_id=35662571
 LIMIT 1;
 ```

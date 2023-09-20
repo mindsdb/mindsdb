@@ -772,6 +772,7 @@
             "integrations/app-integrations/github",
             "integrations/app-integrations/gmail",
             "integrations/app-integrations/google-calendar",
+            "integrations/app-integrations/hackernews",
             "integrations/app-integrations/shopify",
             "integrations/app-integrations/slack",
             "integrations/app-integrations/twitter",
@@ -860,8 +861,8 @@
             "integrations/ai-engines/openai",
             "integrations/ai-engines/huggingface",
             "integrations/ai-engines/langchain",
-            "integrations/ai-engines/monkeylearn",
-            "integrations/ai-engines/llamaindex"
+            "integrations/ai-engines/llamaindex",
+            "integrations/ai-engines/monkeylearn"            
           ]
         },
         {

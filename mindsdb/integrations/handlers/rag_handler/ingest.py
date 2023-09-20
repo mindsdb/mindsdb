@@ -12,6 +12,7 @@ from mindsdb.integrations.handlers.rag_handler.settings import (
     df_to_documents,
     get_chroma_settings,
     load_embeddings_model,
+    url_to_documents,
 )
 from mindsdb.utilities.log import get_log
 
@@ -61,12 +62,19 @@ class Ingestor:
         # Load documents and split in chunks
         logger.info(f"Loading documents from input data")
 
+        documents = []
+
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size, chunk_overlap=chunk_overlap
         )
-        documents = df_to_documents(
-            df=self.df, page_content_columns=self.args.context_columns
+
+        documents.extend(
+            df_to_documents(df=self.df, page_content_columns=self.args.context_columns)
         )
+
+        if self.args.url:
+            # if user provides a url, load documents from url
+            documents.extend(url_to_documents(self.args.url))
 
         # split documents into chunks of text
         texts = text_splitter.split_documents(documents)

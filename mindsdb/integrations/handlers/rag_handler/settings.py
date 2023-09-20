@@ -2,8 +2,10 @@ from dataclasses import dataclass
 from functools import lru_cache, partial
 from typing import List, Union
 
+import html2text
 import openai
 import pandas as pd
+import requests
 from chromadb import Settings
 from langchain import Writer
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
@@ -234,6 +236,7 @@ class RAGHandlerParameters(BaseModel):
     llm_params: LLMParameters
     chunk_size: int = 500
     chunk_overlap: int = 50
+    url: Union[str, List[str]] = None
     generation_evaluation_metrics: List[str] = list(GENERATION_METRICS)
     retrieval_evaluation_metrics: List[str] = list(RETRIEVAL_METRICS)
     evaluation_type: str = "e2e"
@@ -363,6 +366,20 @@ def df_to_documents(
 
         loader = DfLoader(data_frame=df, page_content_column=page_content_column)
         documents.extend(loader.load())
+
+    return documents
+
+
+def url_to_documents(urls: Union[List[str], str]) -> List[Document]:
+    """Converts a given url to a document"""
+    documents = []
+    if isinstance(urls, str):
+        urls = [urls]
+
+    for url in urls:
+        response = requests.get(url, headers=None).text
+        html_to_text = html2text.html2text(response)
+        documents.append(Document(page_content=html_to_text, metadata={"source": url}))
 
     return documents
 

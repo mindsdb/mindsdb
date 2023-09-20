@@ -10,3 +10,4 @@ faiss-cpu>=1.7.4 #todo check support for 'faiss-gpu'
 datasets>=2.14.4
 nltk>=3.8.1
 rouge-score>=0.1.2
+html2text

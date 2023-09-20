@@ -101,12 +101,13 @@ class RAGHandler(BaseMLEngine):
 
         args = RAGHandlerParameters(**input_args)
 
-        # create folder for vector store to persist embeddings
+        # create folder for vector store to persist embeddings or load from existing folder
         args.vector_store_storage_path = self.engine_storage.folder_get(
-            args.vector_store_folder_name
+            args.vector_store_folder_name, update=True if args.run_embeddings else False
         )
 
         if not df.empty and args.run_embeddings:
+
             if "context_columns" not in args:
                 # if no context columns provided, use all columns in df
                 logger.info("No context columns provided, using all columns in df")

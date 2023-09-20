@@ -348,7 +348,7 @@ class FileHandler(DatabaseHandler):
                     for chunk in r:
                         f.write(chunk)
             else:
-                raise Exception(f"Responce status code is {r.status_code}")
+                raise Exception(f"Response status code is {r.status_code}")
         except Exception as e:
             print(f"Error during getting {url}")
             print(e)

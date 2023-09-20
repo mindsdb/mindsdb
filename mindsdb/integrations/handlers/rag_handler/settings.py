@@ -226,10 +226,6 @@ class MissingUseIndex(Exception):
     pass
 
 
-# todo make a separate class for evaluation parameters
-# todo use enum clases instead of iterable to control the values
-
-
 class RAGHandlerParameters(BaseModel):
     """Model parameters for create model"""
 

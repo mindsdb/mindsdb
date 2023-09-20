@@ -68,9 +68,13 @@ class Ingestor:
             chunk_size=chunk_size, chunk_overlap=chunk_overlap
         )
 
-        documents.extend(
-            df_to_documents(df=self.df, page_content_columns=self.args.context_columns)
-        )
+        if not self.df.empty:
+            # if user provides a dataframe, load documents from dataframe
+            documents.extend(
+                df_to_documents(
+                    df=self.df, page_content_columns=self.args.context_columns
+                )
+            )
 
         if self.args.url:
             # if user provides a url, load documents from url

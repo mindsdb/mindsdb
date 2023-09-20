@@ -89,16 +89,6 @@ class RAGHandler(BaseMLEngine):
 
         input_args = build_llm_params(args)
 
-        if "run_embeddings" not in input_args:
-            # if user doesn't provide a dataset key, use the input in FROM clause in model creation
-            # Note this should only be run if run_embeddings is false
-
-            input_args["evaluate_dataset"] = (
-                input_args["evaluate_dataset"]
-                if "evaluate_dataset" in input_args
-                else df.to_dict(orient="records")
-            )
-
         args = RAGHandlerParameters(**input_args)
 
         # create folder for vector store to persist embeddings or load from existing folder
@@ -106,7 +96,7 @@ class RAGHandler(BaseMLEngine):
             args.vector_store_folder_name, update=True if args.run_embeddings else False
         )
 
-        if not df.empty and args.run_embeddings:
+        if args.run_embeddings:
             if "context_columns" not in args:
                 # if no context columns provided, use all columns in df
                 logger.info("No context columns provided, using all columns in df")
@@ -121,6 +111,15 @@ class RAGHandler(BaseMLEngine):
             ingestor.embeddings_to_vectordb()
 
         else:
+            # if user doesn't provide a dataset key, use the input in FROM clause in model creation
+            # Note this should only be run if run_embeddings is false
+
+            input_args["evaluate_dataset"] = (
+                input_args["evaluate_dataset"]
+                if "evaluate_dataset" in input_args
+                else df.to_dict(orient="records")
+            )
+
             logger.info("Skipping embeddings and ingestion into Chroma VectorDB")
 
         export_args = args.dict(exclude={"llm_params"})

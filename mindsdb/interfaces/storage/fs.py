@@ -17,8 +17,10 @@ import psutil
 from checksumdir import dirhash
 try:
     import boto3
+    from botocore.exceptions import ClientError as S3ClientError
 except Exception:
     # Only required for remote storage on s3
+    S3ClientError = FileNotFoundError
     pass
 
 
@@ -438,10 +440,13 @@ class FileStorage:
 
     @profiler.profile()
     def pull(self):
-        self.fs_store.get(
-            str(self.folder_name),
-            str(self.resource_group_path)
-        )
+        try:
+            self.fs_store.get(
+                str(self.folder_name),
+                str(self.resource_group_path)
+            )
+        except (FileNotFoundError, S3ClientError):
+            pass
 
     @profiler.profile()
     def pull_path(self, path):

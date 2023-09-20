@@ -1,7 +1,7 @@
 """predictor-hostname
 
 Revision ID: b0382f5be48d
-Revises: ad04ee0bd385
+Revises: 011e6f2dd9c2
 Create Date: 2023-08-29 17:19:55.372394
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'b0382f5be48d'
-down_revision = 'ad04ee0bd385'
+down_revision = '011e6f2dd9c2'
 branch_labels = None
 depends_on = None
 

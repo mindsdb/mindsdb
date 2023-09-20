@@ -571,6 +571,9 @@ class ExecuteCommands:
         elif type(statement) == Delete:
             if statement.table.parts[-1].lower() == "models_versions":
                 return self.answer_delete_model_version(statement)
+            table_identifier = statement.table
+            if self.session.kb_controller.is_knowledge_base(table_identifier):
+                return self.session.kb_controller.execute_query(statement)
             if (
                     self.session.database != "mindsdb"
                     and statement.table.parts[0] != "mindsdb"
@@ -583,6 +586,10 @@ class ExecuteCommands:
             return ExecuteAnswer(ANSWER_TYPE.OK)
 
         elif type(statement) == Insert:
+            table_identifier = statement.table
+            if self.session.kb_controller.is_knowledge_base(table_identifier):
+                return self.session.kb_controller.execute_query(statement)
+
             SQLQuery(statement, session=self.session, execute=True)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Update:
@@ -601,6 +608,10 @@ class ExecuteCommands:
         elif type(statement) == Select:
             if statement.from_table is None:
                 return self.answer_single_row_select(statement)
+
+            table_identifier = statement.from_table
+            if self.session.kb_controller.is_knowledge_base(table_identifier):
+                return self.session.kb_controller.execute_query(statement)
 
             query = SQLQuery(statement, session=self.session)
             return self.answer_select(query)

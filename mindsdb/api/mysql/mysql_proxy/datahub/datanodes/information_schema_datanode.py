@@ -376,7 +376,7 @@ class InformationSchemaDataNode(DataNode):
 
     def _get_knowledge_bases(self, query: ASTNode = None):
         from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
-        controller = KnowledgeBaseController()
+        controller = KnowledgeBaseController(self.session)
         project_name = None
         if (
                 isinstance(query, Select)

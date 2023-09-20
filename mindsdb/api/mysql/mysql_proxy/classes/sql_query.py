@@ -1012,7 +1012,7 @@ class SQLQuery():
                 data = result
 
             except Exception as e:
-                raise SqlApiUnknownError(f'error in apply predictor step: {e}\n{m}') from e
+                raise SqlApiUnknownError(f'error in apply predictor step: {e}') from e
         elif type(step) == JoinStep:
             try:
                 left_data = steps_data[step.left.step_num]

@@ -682,10 +682,26 @@ class ExecuteCommands:
         # Database ID cannot be null
         database_id = database['id'] if database is not None else -1
 
+        # To be added by https://github.com/mindsdb/mindsdb_sql/pull/307.
+        # TODO: change to statement.agent when possible.
+        agent_node = getattr(statement, 'agent', None)
+        agent = None
+        if agent_node is not None and agent_node.get_string() != 'NULL':
+            agent = agent_node.parts[-1]
+
+        model_node = statement.model
+        model = None
+        if model_node is not None and model_node.get_string() != 'NULL':
+            model = model_node.parts[-1]
+
+        if agent is None and model is None:
+            raise SqlApiException('Need at least one of "agent" or "model" in parameter list')
+
         chatbot_controller.add_chatbot(
             name.parts[-1],
             project_name=project_name,
-            model_name=statement.model.parts[-1],
+            model_name=model,
+            agent_name=agent,
             database_id=database_id,
             is_running=is_running,
             params=statement.params

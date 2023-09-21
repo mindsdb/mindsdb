@@ -20,7 +20,7 @@ This handler supports:
 This integration is useful for a number of reasons
 - Makes it possible to query large document corpus that may exceed most LLM token limit by making use of an intermediate vectorDB, in this case ChromaDB
 - You can load in existing persisted ChromaDB with embeddings
-- Run Question and Answer queries against the powerful differ LLM APIs
+- Run Question and Answer queries against the powerful different LLM APIs
 
 An ideal use case would be long and complex business documents that you want to be able to ask questions about or alternatively academic papers or other long form texts of interest
 

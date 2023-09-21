@@ -291,7 +291,6 @@ class RAGHandlerParameters(BaseModel):
 
 
 class DfLoader(DataFrameLoader):
-
     """
     override the load method of langchain.document_loaders.DataFrameLoaders to ignore rows with 'None' values
     """

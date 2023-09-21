@@ -18,7 +18,7 @@ from mindsdb.utilities.log import get_log
 logger = get_log(logger_name=__name__)
 
 
-def build_llm_params(args):
+def build_llm_params(args: dict) -> Dict:
     """build llm params from input query args"""
 
     llm_config_class = (

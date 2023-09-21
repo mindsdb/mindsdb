@@ -6,6 +6,7 @@ from mindsdb.integrations.handlers.rag_handler.settings import (
     LLMLoader,
     PersistedVectorStoreLoader,
     PersistedVectorStoreLoaderConfig,
+    RAGHandlerParameters,
     load_embeddings_model,
 )
 from mindsdb.utilities.log import get_log
@@ -16,7 +17,7 @@ logger = get_log(logger_name=__name__)
 class QuestionAnswerer:
     """A class for using a RAG model for question answering"""
 
-    def __init__(self, args):
+    def __init__(self, args: RAGHandlerParameters):
 
         self.output_data = defaultdict(list)
 

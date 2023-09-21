@@ -1,13 +1,10 @@
 import ast
 from collections import defaultdict
-from typing import List, Union
+from typing import List
 
 import nltk
 import pandas as pd
-from integrations.handlers.rag_handler.settings import (
-    OpenAIParameters,
-    WriterLLMParameters,
-)
+from integrations.handlers.rag_handler.settings import RAGHandlerParameters
 from nltk import word_tokenize
 from nltk.translate.bleu_score import sentence_bleu
 from nltk.translate.meteor_score import meteor_score
@@ -22,9 +19,7 @@ logger = get_log(logger_name=__name__)
 class RAGEvaluator:
     """Evaluate RAG model performance"""
 
-    def __init__(
-        self, args: Union[WriterLLMParameters, OpenAIParameters], df: pd.DataFrame, rag
-    ):
+    def __init__(self, args: RAGHandlerParameters, df: pd.DataFrame, rag):
 
         self.args = args
         self.df = df
@@ -44,15 +39,17 @@ class RAGEvaluator:
         self.mean_evaluation_metrics = defaultdict(list)
 
         if args.evaluation_type == "e2e":
-            # todo check if this is fine for cloud, better to download once and load from disk
+            # e2e (end-to-end) means evaluation both retrieval and generation steps
+            # note download should only occur once, subsequent calls should load local persisted
+            # we use 'wordnet' for tokenizing and comparing reference and generated answers
             nltk.download("wordnet")
 
     def calculate_retrieval_metrics(
         self,
         df: pd.DataFrame,
-        context_embeddings,
-        retrieved_context_embeddings,
-        prefix="retrieval_",
+        context_embeddings: List[list],
+        retrieved_context_embeddings: List[list],
+        prefix: str = "retrieval_",
     ) -> pd.DataFrame:
         """Calculate retrieval metrics"""
 
@@ -79,9 +76,9 @@ class RAGEvaluator:
     def calculate_generation_metrics(
         self,
         df: pd.DataFrame,
-        generated_answer_embeddings,
-        reference_answer_embeddings,
-        prefix="generator_",
+        generated_answer_embeddings: List[list],
+        reference_answer_embeddings: List[list],
+        prefix: str = "generator_",
     ) -> pd.DataFrame:
         """Calculate generation metrics"""
 
@@ -223,6 +220,7 @@ class RAGEvaluator:
 
     @staticmethod
     def check_match(cosine_similarity: float, threshold: float) -> int:
+        """Check if cosine similarity is above a given threshold"""
         return int(cosine_similarity >= threshold)
 
     def get_matches(
@@ -248,6 +246,7 @@ class RAGEvaluator:
 
     @staticmethod
     def calculate_rouge(generated: str, reference: str) -> dict:
+        """Calculate rouge score for a given generated and reference answer"""
 
         scorer = rouge_scorer.RougeScorer(["rouge1", "rougeL"], use_stemmer=True)
         score = scorer.score(generated, reference)
@@ -283,12 +282,14 @@ class RAGEvaluator:
     def calculate_bleu(
         generated_tokens: List[str], reference_tokens: List[str]
     ) -> float:
+        """Calculate bleu score for a given generated and reference answer"""
         return sentence_bleu([reference_tokens], generated_tokens)
 
     @staticmethod
     def calculate_meteor(
         generated_tokens: List[str], reference_tokens: List[str]
     ) -> float:
+        """Calculate meteor score for a given generated and reference answer"""
         return meteor_score([reference_tokens], generated_tokens)
 
     def evaluate_retrieval(self) -> pd.DataFrame:
@@ -356,6 +357,7 @@ class RAGEvaluator:
         return e2e_df
 
     def evaluate(self) -> pd.DataFrame:
+        """Evaluate the model"""
         if self.args.evaluation_type == "retrieval":
             return self.evaluate_retrieval()
         elif self.args.evaluation_type == "e2e":

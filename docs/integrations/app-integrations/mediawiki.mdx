@@ -31,3 +31,13 @@ Now, you can use this established connection to query your database as follows:
 ```sql
 SELECT * FROM mediawiki_datasource.pages
 ```
+
+Run more advanced queries:
+
+~~~~sql
+SELECT *
+FROM mediawiki_datasource.pages
+WHERE title = 'Barack'
+ORDER BY pageid
+LIMIT 5
+~~~~

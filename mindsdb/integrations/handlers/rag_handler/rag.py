@@ -14,6 +14,8 @@ logger = get_log(logger_name=__name__)
 
 
 class QuestionAnswerer:
+    """A class for using a RAG model for question answering"""
+
     def __init__(self, args):
 
         self.output_data = defaultdict(list)
@@ -45,10 +47,10 @@ class QuestionAnswerer:
 
         self.llm = llm_loader.load_llm()
 
-    def __call__(self, question: str):
+    def __call__(self, question: str) -> defaultdict:
         return self.query(question)
 
-    def _prepare_prompt(self, vector_store_response, question):
+    def _prepare_prompt(self, vector_store_response, question) -> str:
 
         context = [doc.page_content for doc in vector_store_response]
 
@@ -59,7 +61,7 @@ class QuestionAnswerer:
 
         return self.prompt_template.format(question=question, context=combined_context)
 
-    def summarize_context(self, combined_context: str, question: str):
+    def summarize_context(self, combined_context: str, question: str) -> str:
 
         summarization_prompt_template = self.args.summarization_prompt_template
 
@@ -81,7 +83,7 @@ class QuestionAnswerer:
         )
 
     @staticmethod
-    def extract_generated_text(response: str):
+    def extract_generated_text(response: str) -> str:
         """Extract generated text from LLM response"""
 
         if isinstance(response, str):
@@ -103,7 +105,7 @@ class QuestionAnswerer:
                 f"{e} Error extracting generated text: failed to parse response {response}"
             )
 
-    def query(self, question: str):
+    def query(self, question: str) -> defaultdict:
         """Post process LLM response"""
         llm_response, vector_store_response = self._query(question)
 

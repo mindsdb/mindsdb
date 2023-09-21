@@ -5,7 +5,7 @@ sidebarTitle: Remove a File
 
 ## Description
 
-In MindsDB, files are treated as tables. These are stored in the default `files` database. To delete a file, you must save this `files` database into a variable and then, run the `drop_table()` function on it.
+In MindsDB, files are treated as tables. These are stored in the default `files` database. To delete a file, you must save this `files` database into a variable and then, run the `tables.drop()` function on it.
 
 ## Syntax
 
@@ -13,5 +13,5 @@ Here is the syntax:
 
 ```sql
 files = server.get_database('files')
-files.drop_table('file_name')
+files.tables.drop('file_name')
 ```

@@ -59,10 +59,10 @@ tbc
 
 ## Please provide a minimal SQL example that uses this ML engine (pointers to integration tests in the PR also valid)
 ```sql
--- Create Writer engine
+-- Create RAG engine
 create ML_Engine rag_handler from rag_handler;
 
--- Create a Writer model and embed input data
+-- Create a RAG model - OpenAI API and FAISS vectorDB with embeddings
 CREATE MODEL rag_handler_openai_test
 FROM mysql_demo_db (select * from demo_fda_context)
 PREDICT answer
@@ -81,7 +81,7 @@ Context: {context}
 Question: {question}
 Helpful Answer:';
 
--- Ask a question on your data using Writer LLM API
+-- Ask a question on your data using OpenAI LLM API
 SELECT *
 FROM rag_handler_openai_test
 WHERE question='what product is best for treating a cold?';

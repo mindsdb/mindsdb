@@ -2,21 +2,15 @@ from typing import Dict, Optional
 
 import pandas as pd
 
-from mindsdb.integrations.handlers.rag_handler.evaluate import WriterEvaluator
 from mindsdb.integrations.handlers.rag_handler.ingest import Ingestor
 from mindsdb.integrations.handlers.rag_handler.rag import QuestionAnswerer
 from mindsdb.integrations.handlers.rag_handler.settings import (
     DEFAULT_EMBEDDINGS_MODEL,
-    EVAL_COLUMN_NAMES,
     OpenAIParameters,
     RAGHandlerParameters,
     WriterLLMParameters,
 )
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.integrations.utilities.datasets.dataset import (
-    load_dataset,
-    validate_dataframe,
-)
 from mindsdb.utilities.log import get_log
 
 # these require no additional arguments
@@ -112,14 +106,7 @@ class RAGHandler(BaseMLEngine):
             ingestor.embeddings_to_vectordb()
 
         else:
-            # if user doesn't provide a dataset key, use the input in FROM clause in model creation
             # Note this should only be run if run_embeddings is false
-
-            input_args["evaluate_dataset"] = (
-                input_args["evaluate_dataset"]
-                if "evaluate_dataset" in input_args
-                else df.to_dict(orient="records")
-            )
 
             logger.info("Skipping embeddings and ingestion into Chroma VectorDB")
 
@@ -143,16 +130,6 @@ class RAGHandler(BaseMLEngine):
 
         args = RAGHandlerParameters(**input_args)
 
-        if args.evaluation_type:
-            # if user adds a WHERE clause with 'run_evaluation = true', run evaluation
-            if "run_evaluation" in df.columns and df["run_evaluation"].tolist()[0]:
-                return self.evaluate(args)
-            else:
-                logger.info(
-                    "Skipping evaluation, running prediction only. "
-                    "to run evaluation, add a WHERE clause with 'run_evaluation = true'"
-                )
-
         args.vector_store_storage_path = self.engine_storage.folder_get(
             args.vector_store_folder_name, update=False
         )
@@ -165,50 +142,3 @@ class RAGHandler(BaseMLEngine):
         response = question_answerer(df["question"].tolist()[0])
 
         return pd.DataFrame(response)
-
-    def evaluate(self, args: RAGHandlerParameters):
-
-        if isinstance(args.evaluate_dataset, list):
-            # if user provides a list of dicts, convert to dataframe and validate
-            evaluate_df = validate_dataframe(
-                pd.DataFrame(args.evaluate_dataset), EVAL_COLUMN_NAMES
-            )
-        else:
-            evaluate_df = load_dataset(
-                ml_task_type="question_answering", dataset_name=args.evaluate_dataset
-            )
-
-        if args.n_rows_evaluation:
-            # if user specifies n_rows_evaluation in create, only use that many rows
-            evaluate_df = evaluate_df.head(args.n_rows_evaluation)
-
-        ingestor = Ingestor(df=evaluate_df, args=args)
-        ingestor.embeddings_to_vectordb()
-
-        evaluator = WriterEvaluator(args=args, df=evaluate_df, rag=QuestionAnswerer)
-        df = evaluator.evaluate()
-
-        evaluation_metrics = dict(
-            mean_evaluation_metrics=evaluator.mean_evaluation_metrics,
-            evaluation_df=df.to_dict(orient="records"),
-        )
-
-        self.model_storage.json_set("evaluation", evaluation_metrics)
-
-        return df
-
-    def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
-        """
-        Describe the model, or a specific attribute of the model
-        """
-
-        if attribute == "evaluation_output":
-            evaluation = self.model_storage.json_get("evaluation")
-            return pd.DataFrame(evaluation["evaluation_df"])
-        elif attribute == "mean_evaluation_metrics":
-            evaluation = self.model_storage.json_get("evaluation")
-            return pd.DataFrame(evaluation["mean_evaluation_metrics"])
-        else:
-            raise ValueError(
-                f"Attribute {attribute} not supported, try 'evaluation_output' or 'mean_evaluation_metrics'"
-            )

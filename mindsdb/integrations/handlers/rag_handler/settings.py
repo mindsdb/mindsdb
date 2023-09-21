@@ -264,7 +264,7 @@ class RAGHandlerParameters(BaseModel):
 
     @validator("prompt_template")
     def prompt_format_must_be_valid(cls, v):
-        if "{context}" not in v and "{question}":
+        if "{context}" not in v or "{question}" not in v:
             raise InvalidPromptTemplate(
                 "prompt_template must contain '{context}' and '{question}'"
                 f"e.g. {DEFAULT_QA_PROMPT_TEMPLATE}"

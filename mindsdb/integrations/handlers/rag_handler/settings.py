@@ -267,7 +267,7 @@ class RAGHandlerParameters(BaseModel):
         if "{context}" not in v or "{question}" not in v:
             raise InvalidPromptTemplate(
                 "prompt_template must contain {context} and {question}"
-                f"For example, {DEFAULT_QA_PROMPT_TEMPLATE}"
+                f"\n For example, {DEFAULT_QA_PROMPT_TEMPLATE}"
             )
         return v
 

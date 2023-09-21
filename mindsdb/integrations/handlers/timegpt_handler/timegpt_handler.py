@@ -74,8 +74,8 @@ class TimeGPTHandler(BaseMLEngine):
 
         # add prediction intervals
         levels = sorted(model_args['level'], reverse=True)
-        for i, level in enumerate(levels):
-            if i == 0:
+        for itr, level in enumerate(levels):
+            if itr == 0:
                 # NOTE: this should be simplified once we refactor the expected time series output within MindsDB
                 results_df['confidence'] = level/100  # we report the highest level as the overall confidence
                 results_df['lower'] = forecast_df[f'TimeGPT-lo-{level}']

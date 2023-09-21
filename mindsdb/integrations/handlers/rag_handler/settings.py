@@ -118,7 +118,7 @@ class PersistedVectorStoreLoader:
         self,
         vector_store: str,
     ):
-        """Load vector store client from the persisted vector store"""
+        """Load vector store from the persisted vector store"""
 
         if vector_store == "chroma":
 

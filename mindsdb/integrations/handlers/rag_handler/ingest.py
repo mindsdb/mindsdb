@@ -3,6 +3,7 @@ import time
 import pandas as pd
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.vectorstores import VectorStore
 
 from mindsdb.integrations.handlers.rag_handler.settings import (
     PersistedVectorStoreSaver,
@@ -19,7 +20,7 @@ from mindsdb.utilities.log import get_log
 logger = get_log(__name__)
 
 
-def validate_document(doc):
+def validate_document(doc) -> bool:
     """Check an individual document."""
     # Example checks
     if not isinstance(doc, Document):
@@ -31,7 +32,7 @@ def validate_document(doc):
     return True
 
 
-def validate_documents(documents):
+def validate_documents(documents) -> bool:
     """Validate document list format."""
 
     if not isinstance(documents, list):
@@ -45,6 +46,8 @@ def validate_documents(documents):
 
 
 class Ingestor:
+    """A class for converting a dataframe and/or url to a vectorstore embedded with a given embeddings model"""
+
     def __init__(
         self,
         args: RAGHandlerParameters,
@@ -58,7 +61,7 @@ class Ingestor:
             args.vector_store_name
         )
 
-    def split_documents(self, chunk_size=500, chunk_overlap=50):
+    def split_documents(self, chunk_size, chunk_overlap) -> list:
         # Load documents and split in chunks
         logger.info(f"Loading documents from input data")
 
@@ -87,7 +90,7 @@ class Ingestor:
 
         return texts
 
-    def create_db_from_documents(self, documents, embeddings_model):
+    def create_db_from_documents(self, documents, embeddings_model) -> VectorStore:
         """Create DB from documents."""
 
         if self.args.vector_store_name == "chroma":
@@ -108,7 +111,7 @@ class Ingestor:
                 index_name=self.args.collection_name,
             )
 
-    def create_db_from_texts(self, documents, embeddings_model):
+    def create_db_from_texts(self, documents, embeddings_model) -> VectorStore:
         """Create DB from text content."""
 
         texts = [doc.page_content for doc in documents]
@@ -118,7 +121,9 @@ class Ingestor:
             texts=texts, embedding=embeddings_model, metadatas=metadata
         )
 
-    def embeddings_to_vectordb(self):
+    def embeddings_to_vectordb(self) -> None:
+        """Create vectorstore from documents and store locally."""
+
         start_time = time.time()
 
         # Load documents and splits in chunks (if not in evaluation_type mode)

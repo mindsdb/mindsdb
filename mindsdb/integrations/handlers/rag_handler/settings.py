@@ -31,11 +31,13 @@ When summarizing, please keep the following in mind the following question:
 """
 
 
-def is_valid_store(name):
+def is_valid_store(name) -> bool:
     return name in SUPPORTED_VECTOR_STORES
 
 
 class VectorStoreFactory:
+    """Factory class for vector stores"""
+
     @staticmethod
     def get_vectorstore_class(name):
 
@@ -53,6 +55,7 @@ class VectorStoreFactory:
 
 
 def get_chroma_settings(persist_directory: str = "chromadb") -> Settings:
+    """Get chroma settings"""
     return Settings(
         chroma_db_impl="duckdb+parquet",
         persist_directory=persist_directory,
@@ -77,6 +80,8 @@ class PersistedVectorStoreLoaderConfig:
 
 
 class PersistedVectorStoreSaver:
+    """Saves vector store to disk"""
+
     def __init__(self, config: PersistedVectorStoreSaverConfig):
         self.config = config
 
@@ -95,6 +100,8 @@ class PersistedVectorStoreSaver:
 
 
 class PersistedVectorStoreLoader:
+    """Loads vector store from disk"""
+
     def __init__(self, config: PersistedVectorStoreLoaderConfig):
         self.config = config
 
@@ -125,14 +132,17 @@ class PersistedVectorStoreLoader:
         else:
             raise NotImplementedError(f"{vector_store} client is not yet supported")
 
-    def load_vector_store(self):
+    def load_vector_store(self) -> VectorStore:
+        """Load vector store from the persisted vector store"""
         method_name = f"load_{self.config.vector_store_name}"
         return getattr(self, method_name)()
 
     def load_chroma(self) -> Chroma:
+        """Load Chroma vector store from the persisted vector store"""
         return self.load_vector_store_client(vector_store="chroma")
 
     def load_faiss(self) -> FAISS:
+        """Load FAISS vector store from the persisted vector store"""
         return self.load_vector_store_client(vector_store="faiss")
 
 
@@ -175,16 +185,19 @@ class LLMLoader(BaseModel):
     llm_config: Union[WriterLLMParameters, OpenAIParameters]
     config_dict: dict = None
 
-    def load_llm(self):
+    def load_llm(self) -> Union[Writer, partial]:
+        """Load LLM"""
         method_name = f"load_{self.llm_config.llm_name}_llm"
         self.config_dict = self.llm_config.dict()
         self.config_dict.pop("llm_name")
         return getattr(self, method_name)()
 
-    def load_writer_llm(self):
+    def load_writer_llm(self) -> Writer:
+        """Load Writer LLM API interface"""
         return Writer(**self.config_dict)
 
-    def load_openai_llm(self):
+    def load_openai_llm(self) -> partial:
+        """Load OpenAI LLM API interface"""
         openai.api_key = self.llm_config.openai_api_key
         config = self.config_dict
         config.pop("openai_api_key")
@@ -332,6 +345,7 @@ def url_to_documents(urls: Union[List[str], str]) -> List[Document]:
 # e.g. {"device": "gpu" if torch.cuda.is_available() else "cpu"}
 @lru_cache()
 def load_embeddings_model(embeddings_model_name):
+    """Load embeddings model from Hugging Face Hub"""
     try:
         model_kwargs = {"device": "cpu"}
         embedding_model = HuggingFaceEmbeddings(

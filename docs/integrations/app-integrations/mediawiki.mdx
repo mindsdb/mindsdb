@@ -1,0 +1,33 @@
+---
+title: MediaWiki
+sidebarTitle: MediaWiki
+---
+
+This is the implementation of the ClickHouse data handler for MindsDB.
+
+[MediaWiki](https://www.mediawiki.org/wiki/MediaWiki) is a free server-based wiki software, licensed under the GNU General Public License (GPL). It's designed to serve a website that gets millions of hits per day.
+
+## Implementation
+
+This handler was implemented using [MediaWikiAPI](https://github.com/lehinevych/MediaWikiAPI), the Python wrapper for the MediaWiki API.
+
+There are no connection arguments required to initialize the handler.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/mediawiki_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the MediaWiki API in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE mediawiki_datasource
+WITH ENGINE = 'mediawiki'
+```
+
+Now, you can use this established connection to query your database as follows:
+
+```sql
+SELECT * FROM mediawiki_datasource.pages
+```

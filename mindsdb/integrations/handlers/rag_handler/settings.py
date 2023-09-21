@@ -17,10 +17,30 @@ from langchain.vectorstores import FAISS, Chroma, VectorStore
 from pydantic import BaseModel, Extra, Field, validator
 
 DEFAULT_EMBEDDINGS_MODEL = "BAAI/bge-base-en"
+USER_DEFINED_WRITER_LLM_PARAMS = (
+    "model_id",
+    "max_tokens",
+    "temperature",
+    "top_p",
+    "stop",
+    "best_of",
+    "verbose",
+    "writer_org_id",
+    "writer_api_key",
+    "base_url",
+)
 
 SUPPORTED_VECTOR_STORES = ("chroma", "faiss")
 
+EVAL_COLUMN_NAMES = (
+    "question",
+    "answers",
+    "context",
+)
+
 SUPPORTED_LLMS = ("writer", "openai")
+
+SUPPORTED_EVALUATION_TYPES = ("retrieval", "e2e")
 
 SUMMARIZATION_PROMPT_TEMPLATE = """
 Summarize the following texts for me:
@@ -29,6 +49,9 @@ Summarize the following texts for me:
 When summarizing, please keep the following in mind the following question:
 {question}
 """
+
+GENERATION_METRICS = ("rouge", "meteor", "cosine_similarity", "accuracy")
+RETRIEVAL_METRICS = ("cosine_similarity", "accuracy")
 
 
 def is_valid_store(name) -> bool:
@@ -227,6 +250,13 @@ class RAGHandlerParameters(BaseModel):
     chunk_size: int = 500
     chunk_overlap: int = 50
     url: Union[str, List[str]] = None
+    generation_evaluation_metrics: List[str] = list(GENERATION_METRICS)
+    retrieval_evaluation_metrics: List[str] = list(RETRIEVAL_METRICS)
+    evaluation_type: str = "e2e"
+    n_rows_evaluation: int = None  # if None, evaluate on all rows
+    retriever_match_threshold: float = 0.7
+    generator_match_threshold: float = 0.8
+    evaluate_dataset: Union[List[dict], str] = None
     run_embeddings: bool = True
     external_index_name: str = None
     top_k: int = 4
@@ -249,6 +279,32 @@ class RAGHandlerParameters(BaseModel):
     def llm_type_must_be_supported(cls, v):
         if v not in SUPPORTED_LLMS:
             raise ValueError(f"llm_type must be one of `writer` or `openai`, got {v}")
+        return v
+
+    @validator("generation_evaluation_metrics")
+    def generation_evaluation_metrics_must_be_supported(cls, v):
+        for metric in v:
+            if metric not in GENERATION_METRICS:
+                raise ValueError(
+                    f"generation_evaluation_metrics must be one of {', '.join(str(v) for v in GENERATION_METRICS)}, got {metric}"
+                )
+        return v
+
+    @validator("retrieval_evaluation_metrics")
+    def retrieval_evaluation_metrics_must_be_supported(cls, v):
+        for metric in v:
+            if metric not in GENERATION_METRICS:
+                raise ValueError(
+                    f"retrieval_evaluation_metrics must be one of {', '.join(str(v) for v in RETRIEVAL_METRICS)}, got {metric}"
+                )
+        return v
+
+    @validator("evaluation_type")
+    def evaluation_type_must_be_supported(cls, v):
+        if v not in SUPPORTED_EVALUATION_TYPES:
+            raise ValueError(
+                f"evaluation_type must be one of `retrieval` or `e2e`, got {v}"
+            )
         return v
 
     @validator("vector_store_name")

@@ -1,8 +1,8 @@
 from typing import Dict, Optional
 
 import pandas as pd
+from integrations.utilities.rag_evaluate import RAGEvaluator
 
-from mindsdb.integrations.handlers.rag_handler.evaluate import WriterEvaluator
 from mindsdb.integrations.handlers.rag_handler.ingest import Ingestor
 from mindsdb.integrations.handlers.rag_handler.rag import QuestionAnswerer
 from mindsdb.integrations.handlers.rag_handler.settings import (
@@ -185,7 +185,7 @@ class RAGHandler(BaseMLEngine):
         ingestor = Ingestor(df=evaluate_df, args=args)
         ingestor.embeddings_to_vectordb()
 
-        evaluator = WriterEvaluator(args=args, df=evaluate_df, rag=QuestionAnswerer)
+        evaluator = RAGEvaluator(args=args, df=evaluate_df, rag=QuestionAnswerer)
         df = evaluator.evaluate()
 
         evaluation_metrics = dict(

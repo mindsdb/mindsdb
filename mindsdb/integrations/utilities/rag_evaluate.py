@@ -1,28 +1,30 @@
 import ast
-import json
 from collections import defaultdict
-from typing import List
+from typing import List, Union
 
 import nltk
 import pandas as pd
-from integrations.handlers.writer_handler.settings import WriterHandlerParameters
-from nltk import word_tokenize
-from nltk.translate.bleu_score import (  # todo investigate why this always returns 0, not used for now
-    sentence_bleu,
+from integrations.handlers.rag_handler.settings import (
+    OpenAIParameters,
+    WriterLLMParameters,
 )
+from nltk import word_tokenize
+from nltk.translate.bleu_score import sentence_bleu
 from nltk.translate.meteor_score import meteor_score
 from rouge_score import rouge_scorer
 from scipy.spatial import distance
 
 from mindsdb.utilities.log import get_log
 
-# todo use polars for this for speed
-
 logger = get_log(logger_name=__name__)
 
 
-class WriterEvaluator:
-    def __init__(self, args: WriterHandlerParameters, df: pd.DataFrame, rag):
+class RAGEvaluator:
+    """Evaluate RAG model performance"""
+
+    def __init__(
+        self, args: Union[WriterLLMParameters, OpenAIParameters], df: pd.DataFrame, rag
+    ):
 
         self.args = args
         self.df = df
@@ -51,7 +53,7 @@ class WriterEvaluator:
         context_embeddings,
         retrieved_context_embeddings,
         prefix="retrieval_",
-    ):
+    ) -> pd.DataFrame:
         """Calculate retrieval metrics"""
 
         for metric in self.retrieval_metrics:
@@ -80,7 +82,7 @@ class WriterEvaluator:
         generated_answer_embeddings,
         reference_answer_embeddings,
         prefix="generator_",
-    ):
+    ) -> pd.DataFrame:
         """Calculate generation metrics"""
 
         for metric in self.generator_metrics:
@@ -142,11 +144,13 @@ class WriterEvaluator:
 
     @staticmethod
     def extract_returned_text(vector_store_response: List) -> List:
-        # todo: this is a hack, we need to fix this so it works with multiple context ie top_k>1
-        # todo handle empty response
+        """Extract returned text from vector store response NB it will match only the first document (top_k=1)"""
+
+        if not vector_store_response:
+            return [""]
         return [doc.page_content for doc in vector_store_response][0]
 
-    def evaluation_prompt(self, question: str, context: str):
+    def evaluation_prompt(self, question: str, context: str) -> str:
         """Create prompt for evaluating RAG"""
 
         if self.args.summarize_context:
@@ -164,7 +168,7 @@ class WriterEvaluator:
             for question, context in zip(df["question"], df["retrieved_context"])
         ]
 
-    def extract_generated_texts(self, responses: List[str]):
+    def extract_generated_texts(self, responses: List[str]) -> List[str]:
         """Extract generated text from LLM response"""
 
         results = []
@@ -177,9 +181,8 @@ class WriterEvaluator:
 
     @staticmethod
     def extract_reference_answers(df: pd.DataFrame) -> List[str]:
-        """Get reference answers for each question in the dataframe"""
+        """Get reference answers for each question in the dataframe NB it will match only the first answer (top_k=1)"""
 
-        # todo: this is a hack, we need to fix this so it works with multiple answers ie top_k>1
         answers = df["answers"].tolist()
         extracted_answers = []
 
@@ -206,7 +209,7 @@ class WriterEvaluator:
         self,
         gt_embeddings: List[List[float]],
         test_embeddings: List[List[float]],
-    ):
+    ) -> List[float]:
         """Calculate cosine similarity for each ground truth and retrieved/generated pair for a given question"""
 
         return [
@@ -219,11 +222,11 @@ class WriterEvaluator:
         ]
 
     @staticmethod
-    def check_match(cosine_similarity: float, threshold: float = 0.7) -> int:
+    def check_match(cosine_similarity: float, threshold: float) -> int:
         return int(cosine_similarity >= threshold)
 
     def get_matches(
-        self, gt_embeddings, test_embeddings, threshold: float = 0.7
+        self, gt_embeddings, test_embeddings, threshold: float
     ) -> List[int]:
         """Get matches for each ground truth and retrieved/generated pair for a given question"""
 
@@ -252,7 +255,7 @@ class WriterEvaluator:
 
     def extract_rogue_scores(
         self, df: pd.DataFrame, rogue_scores_col: str = "rouge_scores"
-    ):
+    ) -> None:
         """Extract rouge scores from dataframe"""
         rouge_metrics = ["rouge1", "rougeL"]
         supported_metrics = ["precision", "recall", "fmeasure"]
@@ -271,7 +274,7 @@ class WriterEvaluator:
                     col_name=col_name, mean_metric=df[col_name].mean()
                 )
 
-    def store_mean_metric(self, col_name: str, mean_metric: float):
+    def store_mean_metric(self, col_name: str, mean_metric: float) -> None:
         """Calculate mean metric for each metric"""
 
         self.mean_evaluation_metrics[f"mean_{col_name}"].append(mean_metric)
@@ -288,7 +291,7 @@ class WriterEvaluator:
     ) -> float:
         return meteor_score([reference_tokens], generated_tokens)
 
-    def evaluate_retrieval(self):
+    def evaluate_retrieval(self) -> pd.DataFrame:
         """Evaluate the retrieval model"""
 
         df = self.df.copy(deep=True)
@@ -313,7 +316,7 @@ class WriterEvaluator:
 
         return df
 
-    def evaluate_generation(self, df: pd.DataFrame):
+    def evaluate_generation(self, df: pd.DataFrame) -> pd.DataFrame:
         """Evaluate the generation model, given the retrieval results df"""
 
         prompts = self.get_evaluation_prompts(df)
@@ -345,17 +348,17 @@ class WriterEvaluator:
 
         return df
 
-    def evaluate_e2e(self):
+    def evaluate_e2e(self) -> pd.DataFrame:
         """Evaluate the end-to-end evaluation"""
         retrieval_df = self.evaluate_retrieval()
         e2e_df = self.evaluate_generation(retrieval_df)
 
         return e2e_df
 
-    def evaluate(self):
+    def evaluate(self) -> pd.DataFrame:
         if self.args.evaluation_type == "retrieval":
             return self.evaluate_retrieval()
         elif self.args.evaluation_type == "e2e":
             return self.evaluate_e2e()
         else:
-            raise ValueError(f"evaluation_type must be either 'retrieval' or 'e2e'")
+            raise ValueError("evaluation_type must be either 'retrieval' or 'e2e'")

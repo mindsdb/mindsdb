@@ -133,6 +133,19 @@ class RAGHandler(BaseMLEngine):
 
         self.model_storage.json_set("args", export_args)
 
+    def update(self, args) -> None:
+        prompt_template = args["using"].get(
+            "prompt_template", args.get("prompt_template", None)
+        )
+
+        args_cur = self.model_storage.json_get("args")
+        args_cur["using"].update(args["using"])
+
+        # check new set of arguments
+        self.create_validation(None, args_cur)
+
+        self.model_storage.json_set("args", args_cur)
+
     def predict(self, df: pd.DataFrame = None, args: dict = None):
         """
         Dispatch is performed depending on the underlying model type. Currently, only question answering

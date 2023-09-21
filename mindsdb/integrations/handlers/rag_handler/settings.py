@@ -39,10 +39,18 @@ EVAL_COLUMN_NAMES = (
 )
 
 SUPPORTED_LLMS = ("writer", "openai")
-
 SUPPORTED_EVALUATION_TYPES = ("retrieval", "e2e")
 
-SUMMARIZATION_PROMPT_TEMPLATE = """
+# this is the default prompt template for qa
+DEFAULT_QA_PROMPT_TEMPLATE = """
+Use the following pieces of context to answer the question at the end. If you do not know the answer,
+just say that you do not know, do not try to make up an answer.
+Context: {context}
+Question: {question}
+Helpful Answer:"""
+
+# this is the default prompt template for if the user wants to summarize the context before qa prompt
+DEFAULT_SUMMARIZATION_PROMPT_TEMPLATE = """
 Summarize the following texts for me:
 {context}
 
@@ -132,7 +140,7 @@ class PersistedVectorStoreLoader:
         self,
         vector_store: str,
     ):
-        """Load vector store client from the persisted vector store"""
+        """Load vector store from the persisted vector store"""
 
         if vector_store == "chroma":
 
@@ -241,10 +249,18 @@ class MissingUseIndex(Exception):
     pass
 
 
+class UnsupportedLLM(Exception):
+    pass
+
+
+class InvalidPromptTemplate(Exception):
+    pass
+
+
 class RAGHandlerParameters(BaseModel):
     """Model parameters for create model"""
 
-    prompt_template: str
+    prompt_template: str = DEFAULT_QA_PROMPT_TEMPLATE
     llm_type: str
     llm_params: LLMParameters
     chunk_size: int = 500
@@ -266,7 +282,7 @@ class RAGHandlerParameters(BaseModel):
     vector_store: VectorStore = None
     collection_name: str = "langchain"
     summarize_context: bool = False
-    summarization_prompt_template: str = SUMMARIZATION_PROMPT_TEMPLATE
+    summarization_prompt_template: str = DEFAULT_SUMMARIZATION_PROMPT_TEMPLATE
     vector_store_folder_name: str = "persisted_vector_db"
     vector_store_storage_path: str = None
 
@@ -275,10 +291,19 @@ class RAGHandlerParameters(BaseModel):
         arbitrary_types_allowed = True
         use_enum_values = True
 
+    @validator("prompt_template")
+    def prompt_format_must_be_valid(cls, v):
+        if "{context}" not in v and "{question}":
+            raise InvalidPromptTemplate(
+                "prompt_template must contain '{context}' and '{question}'"
+                f"e.g. {DEFAULT_QA_PROMPT_TEMPLATE}"
+            )
+        return v
+
     @validator("llm_type")
     def llm_type_must_be_supported(cls, v):
         if v not in SUPPORTED_LLMS:
-            raise ValueError(f"llm_type must be one of `writer` or `openai`, got {v}")
+            raise UnsupportedLLM(f"'llm_type' must be one of {SUPPORTED_LLMS}, got {v}")
         return v
 
     @validator("generation_evaluation_metrics")
@@ -311,14 +336,6 @@ class RAGHandlerParameters(BaseModel):
     def name_must_be_lower(cls, v):
         return v.lower()
 
-    @validator("prompt_template")
-    def prompt_template_must_be_provided(cls, v):
-        if not v:
-            raise MissingPromptTemplate(
-                "Please provide a `prompt_template` for this engine."
-            )
-        return v
-
     @validator("vector_store_name")
     def vector_store_must_be_supported(cls, v):
         if not is_valid_store(v):
@@ -329,7 +346,6 @@ class RAGHandlerParameters(BaseModel):
 
 
 class DfLoader(DataFrameLoader):
-
     """
     override the load method of langchain.document_loaders.DataFrameLoaders to ignore rows with 'None' values
     """

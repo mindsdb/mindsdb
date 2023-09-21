@@ -18,7 +18,7 @@ from mindsdb.utilities.log import get_log
 logger = get_log(logger_name=__name__)
 
 
-def build_llm_params(args: dict) -> Dict:
+def build_llm_params(args: dict, update=False) -> Dict:
     """build llm params from input query args"""
 
     llm_config_class = (
@@ -36,6 +36,11 @@ def build_llm_params(args: dict) -> Dict:
                 llm_params[param] = args.pop(param)
     else:
         llm_params = args.pop("llm_params")
+
+    if update:
+        # for update method only
+        args["llm_params"] = llm_params
+        return args
 
     args["llm_params"] = llm_config_class(**llm_params)
 
@@ -121,17 +126,21 @@ class RAGHandler(BaseMLEngine):
         self.model_storage.json_set("args", export_args)
 
     def update(self, args) -> None:
-        prompt_template = args["using"].get(
-            "prompt_template", args.get("prompt_template", None)
-        )
 
-        args_cur = self.model_storage.json_get("args")
-        args_cur["using"].update(args["using"])
+        # build llm params from user input args in update query
+        updated_args = build_llm_params(args["using"], update=True)
 
-        # check new set of arguments
-        self.create_validation(None, args_cur)
+        # get current model args
+        current_model_args = self.model_storage.json_get("args")["using"]
 
-        self.model_storage.json_set("args", args_cur)
+        # update current args with new args
+        current_model_args.update(updated_args)
+
+        # validate updated args are valid
+        RAGHandlerParameters(**build_llm_params(current_model_args))
+
+        # if valid, update model args
+        self.model_storage.json_set("args", current_model_args)
 
     def predict(self, df: pd.DataFrame = None, args: dict = None):
         """

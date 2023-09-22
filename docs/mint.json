@@ -773,6 +773,7 @@
             "integrations/app-integrations/gmail",
             "integrations/app-integrations/google-calendar",
             "integrations/app-integrations/hackernews",
+            "integrations/app-integrations/mediawiki",
             "integrations/app-integrations/shopify",
             "integrations/app-integrations/slack",
             "integrations/app-integrations/twitter",

@@ -38,7 +38,7 @@ class OpenAIHandler(BaseMLEngine):
         self.default_max_tokens = 100
         self.chat_completion_models = CHAT_MODELS
         self.supported_ft_models = FINETUNING_LEGACY_MODELS  # base models compatible with finetuning  # TODO #7387: transition to new endpoint before 4/1/24 # noqa
-        self.engine_storage.json_set('ft-suffix', binascii.b2a_hex(os.urandom(15)))  # user suffix for finetunes
+        self.engine_storage.json_set('ft-suffix', binascii.b2a_hex(os.urandom(15)).decode())  # user suffix for finetunes
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):

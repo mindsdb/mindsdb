@@ -7,6 +7,6 @@ Here is how you can fetch all available ML handlers directly from Python code:
 
 ```
 mindsdb = server.get_project('mindsdb')
-data_handlers = mindsdb.query('SHOW HANDLERS WHERE type = \'ml\'')
-print(data_handlers.fetch)
+ml_handlers = mindsdb.query('SHOW HANDLERS WHERE type = \'ml\'')
+print(ml_handlers.fetch())
 ```

@@ -197,7 +197,7 @@
         {
           "group": "Recommenders",
           "pages": [
-            "none"
+            "sql/tutorials/recommenders"
           ]
         },
         {
@@ -772,6 +772,7 @@
             "integrations/app-integrations/github",
             "integrations/app-integrations/gmail",
             "integrations/app-integrations/google-calendar",
+            "integrations/app-integrations/hackernews",
             "integrations/app-integrations/shopify",
             "integrations/app-integrations/slack",
             "integrations/app-integrations/twitter",
@@ -860,7 +861,8 @@
             "integrations/ai-engines/openai",
             "integrations/ai-engines/huggingface",
             "integrations/ai-engines/langchain",
-            "integrations/ai-engines/monkeylearn"
+            "integrations/ai-engines/llamaindex",
+            "integrations/ai-engines/monkeylearn"            
           ]
         },
         {
@@ -883,6 +885,13 @@
             "integrations/ai-engines/statsforecast",
             "integrations/ai-engines/neuralforecast",
             "integrations/ai-engines/timegpt"
+          ]
+        },
+        {
+          "group": "Recommender Models",
+          "pages": [
+            "integrations/ai-engines/lightfm",
+            "integrations/ai-engines/popularity-recommender"
           ]
         }
       ]

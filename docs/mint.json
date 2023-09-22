@@ -777,7 +777,8 @@
             "integrations/app-integrations/slack",
             "integrations/app-integrations/twitter",
             "integrations/app-integrations/web-crawler",
-            "integrations/app-integrations/youtube"
+            "integrations/app-integrations/youtube",
+            "integrations/app-integrations/mediawiki"
           ]
         },
         {

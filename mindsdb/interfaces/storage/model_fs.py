@@ -180,7 +180,10 @@ class HandlerStorage:
     # folder
 
     def folder_get(self, name):
-        # pull folder and return path
+        ''' Copies folder from remote to local file system and returns its path
+
+        :param name: name of the folder
+        '''
         name = self.__convert_name(name)
 
         self.fileStorage.pull_path(name)

@@ -27,39 +27,26 @@ class FootballApiTable(APITable):
         conditions = extract_comparison_conditions(query.where)
         player_params = {}
         for a_where in conditions:
-            if a_where[1] == "league":
-                if a_where[0] != "=":
-                    raise ValueError("Unsupported where operation for state")
+            key = a_where[1]
+
+            if a_where[0] != "=":
+                raise ValueError(f"Unsupported where operation for {key}")
+
+            # Assign values based on the key
+            if key == "league":
                 player_params["league"] = int(a_where[2])
-                continue
-
-            if a_where[1] == "season":
-                if a_where[0] != "=":
-                    raise ValueError("Unsupported where operation for labels")
+            elif key == "season":
                 player_params["season"] = int(a_where[2])
-                continue
-
-            if a_where[1] in "team":
-                if a_where[0] != "=":
-                    raise ValueError(f"Unsupported where operation for {a_where[1]}")
+            elif key == "team":
                 player_params["team"] = int(a_where[2])
-
-            if a_where[1] in "id":
-                if a_where[0] != "=":
-                    raise ValueError(f"Unsupported where operation for {a_where[1]}")
+            elif key == "id":
                 player_params["id"] = int(a_where[2])
-
-            if a_where[1] in "search":
-                if a_where[0] != "=":
-                    raise ValueError(f"Unsupported where operation for {a_where[1]}")
+            elif key == "search":
                 player_params["search"] = a_where[2]
-
-            if a_where[1] in "page":
-                if a_where[0] != "=":
-                    raise ValueError(f"Unsupported where operation for {a_where[1]}")
+            elif key == "page":
                 player_params["page"] = int(a_where[2])
             else:
-                raise ValueError(f"Unsupported where argument {a_where[1]}")
+                raise ValueError(f"Unsupported where argument {key}")
 
         player_data = self.handler.call_football_api("get_players", **player_params)
         columns = []

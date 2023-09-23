@@ -141,6 +141,17 @@ class FootballApiHandler(APIHandler):
         return player_data_list
 
     def _flatten_json(self, json_data, prefix=''):
+        """
+        Recursively flattens a nested JSON object into a flat dictionary.
+
+        Args:
+            json_data (dict): The JSON object to flatten.
+            prefix (str, optional): A prefix to be added to flattened keys.
+
+        Returns:
+            dict: A dictionary where keys represent the flattened keys of the JSON object,
+                and values are the corresponding values.
+        """
         flattened_dict = {}
         for key, value in json_data.items():
             new_key = prefix + key if prefix else key

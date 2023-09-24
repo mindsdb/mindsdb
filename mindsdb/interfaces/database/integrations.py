@@ -18,7 +18,7 @@ from sqlalchemy import func
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.storage.fs import FsStore, FileStorage, FileStorageFactory, RESOURCE_GROUP
+from mindsdb.interfaces.storage.fs import FsStore, FileStorage, RESOURCE_GROUP
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -402,7 +402,7 @@ class IntegrationController:
             root_dir='tmp',
             sync=False
         )
-        handler_storage = HandlerStorage(integration_id, root_dir='tmp')
+        handler_storage = HandlerStorage(integration_id, root_dir='tmp', is_temporal=True)
         handler_ars = self._make_handler_args(
             name='tmp_handler',
             handler_type=handler_type,
@@ -418,9 +418,10 @@ class IntegrationController:
     def copy_integration_storage(self, integration_id_from, integration_id_to):
         storage_from = HandlerStorage(integration_id_from)
         root_path = ''
-        folder_from = storage_from.folder_get(root_path, not_empty=True)
-        if folder_from is None:
-            return
+
+        if storage_from.is_empty():
+            return None
+        folder_from = storage_from.folder_get(root_path)
 
         storage_to = HandlerStorage(integration_id_to)
         folder_to = storage_to.folder_get(root_path)
@@ -497,13 +498,6 @@ class IntegrationController:
             file_storage=file_storage,
             handler_storage=handler_storage
         )
-
-        handler_type = self.handler_modules[integration_engine].type
-        if handler_type == 'ml':
-            handler_ars['storage_factory'] = FileStorageFactory(
-                resource_group=RESOURCE_GROUP.PREDICTOR,
-                sync=True
-            )
 
         HandlerClass = self.handler_modules[integration_engine].Handler
 

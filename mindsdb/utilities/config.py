@@ -86,6 +86,7 @@ class Config():
         paths['tmp'] = os.path.join(paths['root'], 'tmp')
         paths['log'] = os.path.join(paths['root'], 'log')
         paths['cache'] = os.path.join(paths['root'], 'cache')
+        paths['locks'] = os.path.join(paths['root'], 'locks')
 
         for path_name in paths:
             create_directory(paths[path_name])

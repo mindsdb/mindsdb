@@ -1,0 +1,117 @@
+---
+title: LightFM
+sidebarTitle: LightFM
+---
+
+The [LightFM](https://github.com/lyst/lightfm) handler is built as an interface and the LightFM python recommendation library. The current implementation supports collaborative filtering for user-item and item-item recommendations. It allows users to make use of the powerful LightFM recommendation framework library for performing recommendation on interaction data sets.
+
+As the current implementations stand, the input data should be a table containing user-item interaction data:
+
+```
++---------+---------+--------+
+| user_id | item_id | rating |
++---------+---------+--------+
+| 1       | 2       | 4      |
+| 1       | 3       | 7      |
++---------+---------+--------+
+```
+
+<Note>
+Please note that at the moment this integrations does not support the `FINETUNE` feature.
+</Note>
+
+## Example
+
+Before creating a LightFM model, we need to create an ML engine.
+
+```sql
+CREATE ML_ENGINE lightfm
+FROM lightfm;
+```
+
+You can verify it by running `SHOW ML_ENGINES`.
+
+Now let's create a LightFM model specifying the necessary input parameters.
+
+```sql
+CREATE MODEL lightfm_demo
+FROM mysql_demo_db (SELECT * FROM movie_lens_ratings)
+PREDICT movieId
+USING
+  engine = 'lightfm',
+  item_id = 'movieId',
+  user_id = 'userId',
+  threshold = 4,
+  n_recommendations = 10,
+  evaluation = true;
+```
+
+The required parameters include the following:
+
+- The `item_id` parameter that stores items to be recommended; here, these are movies.
+- The `user_id` parameter that stores users to whom items are recommended.
+- The `threshold` parameter is used when score of interaction is provided in the input data. It defines the threshold for the recommendation.
+- The `n_recommendations` parameter stores the number of recommendations to be returned.
+
+Optionally, you can provide the `evaluation` parameter if you want to store the evaluation metrics. It is set to `false` by default.
+
+<Tip>
+Here is how to connect the `mysql_demo_db` used for training the model:
+
+```sql
+CREATE DATABASE mysql_demo_db
+WITH ENGINE = 'mysql',
+PARAMETERS = {
+    "user": "user",
+    "password": "MindsDBUser123!",
+    "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
+    "port": "3306",
+    "database": "public"
+};
+```
+</Tip>
+
+Let's query for the following recommendations:
+
+- Get recommendations for all item_item pairs:
+
+    ```sql
+    SELECT b.*
+    FROM lightfm_demo AS b
+    WHERE recommender_type = 'item_item';
+    ```
+
+- Get item-item recommendations for a specific item_id:
+
+    ```sql
+    SELECT b.*
+    FROM lightfm_demo AS b
+    WHERE movieId = 100
+    USING recommender_type = 'item_item';
+    ```
+
+- Get recommendations for all user-item pairs:
+
+    ```sql
+    SELECT b.*
+    FROM lightfm_demo AS b
+    where recommender_type = 'user_item';
+    ```
+
+- Get user-item recommendations for a specific user_id:
+
+    ```sql
+    SELECT b.*
+    FROM lightfm_demo AS b
+    WHERE userId = 100
+    USING recommender_type = 'user_item';
+    ```
+
+- Get user-item recommendations for multiple user_ids:
+
+    ```sql
+    SELECT b.*
+    FROM mysql_demo_db.movie_lens_ratings AS a
+    JOIN lightfm_demo AS b
+    WHERE a.userId in (215,216);
+    ```

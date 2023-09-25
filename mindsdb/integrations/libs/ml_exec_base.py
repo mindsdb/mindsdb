@@ -19,6 +19,7 @@ In particular, three big components are included:
 import os
 import sys
 import time
+import socket
 import threading
 import datetime as dt
 from typing import Optional, Callable
@@ -355,7 +356,6 @@ class BaseMLEngineExec:
         self.handler_controller = kwargs.get('handler_controller')
         self.company_id = kwargs.get('company_id')
         self.fs_store = kwargs.get('file_storage')
-        self.storage_factory = kwargs.get('storage_factory')
         self.integration_id = kwargs.get('integration_id')
         self.execution_method = kwargs.get('execution_method')
         self.engine = kwargs.get("integration_engine")
@@ -472,6 +472,7 @@ class BaseMLEngineExec:
             training_start_at=dt.datetime.now(),
             status=PREDICTOR_STATUS.GENERATING,
             label=label,
+            hostname=socket.gethostname(),
             version=(
                 db.session.query(
                     coalesce(func.max(db.Predictor.version), 1) + (1 if is_retrain else 0)
@@ -635,6 +636,7 @@ class BaseMLEngineExec:
             training_start_at=dt.datetime.now(),
             status=PREDICTOR_STATUS.GENERATING,
             label=label,
+            hostname=socket.gethostname(),
             version=(
                 db.session.query(
                     coalesce(func.max(db.Predictor.version), 1) + 1

@@ -7,7 +7,7 @@ from concurrent.futures import ProcessPoolExecutor, Future
 from pandas import DataFrame
 
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.ml_task_queue import ML_TASK_TYPE
+from mindsdb.utilities.ml_task_queue.const import ML_TASK_TYPE
 from mindsdb.integrations.libs.learn_process import learn_process, predict_process
 
 

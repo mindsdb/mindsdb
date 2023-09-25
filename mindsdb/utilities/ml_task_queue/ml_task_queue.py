@@ -2,10 +2,11 @@ import io
 import pickle
 import time
 import importlib
+import threading
 from enum import Enum
 from typing import Optional
 from walrus import Database
-from redis.exceptions import ConnectionError 
+from redis.exceptions import ConnectionError
 import redis
 from redis.client import PubSub
 from pandas import DataFrame
@@ -14,22 +15,11 @@ import socket
 from dataclasses import dataclass
 
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.learn_process import learn_process, predict_process
 from mindsdb.integrations.handlers_client.ml_client_factory import MLClientFactory
-
-
-class ML_TASK_TYPE(Enum):
-    LEARN = b'learn'
-    PREDICT = b'predict'
-    FINETUNE = b'finetune'
-
-
-class ML_TASK_STATUS(Enum):
-    WAITING = b'waiting'
-    PROCESSING = b'processing'
-    COMPLETE = b'complete'
-    ERROR = b'error'
-    TIMEOUT = b'timeout'
+from mindsdb.integrations.libs.process_cache import process_cache
+from mindsdb.utilities.ml_task_queue.const import ML_TASK_TYPE, ML_TASK_STATUS
 
 
 TASKS_STREAM_NAME = b'ml-tasks'
@@ -105,6 +95,24 @@ class Task:
         pass
 
 
+def task_in_thread(task_type, model_id, payload, dataframe, redis_db, redis_key):
+    cache = redis_db.cache()
+    redis_db.publish(redis_key.status, ML_TASK_STATUS.PROCESSING.value)
+    cache.set(redis_key.status, ML_TASK_STATUS.PROCESSING.value, 180)
+    task = process_cache.apply_async(
+        task_type=task_type,
+        model_id=model_id,
+        payload=payload,
+        dataframe=dataframe
+    )
+    result = task.result()
+    if isinstance(result, DataFrame):
+        dataframe_bytes = pa.serialize(result).to_buffer().to_pybytes()
+        cache.set(redis_key.dataframe, dataframe_bytes, 10)
+    redis_db.publish(redis_key.status, ML_TASK_STATUS.COMPLETE.value)
+    cache.set(redis_key.status, ML_TASK_STATUS.COMPLETE.value, 180)
+
+
 class MLTaskProducer:
     def __init__(self) -> None:
         self.db = Database(protocol=3)  # decode_responses=True
@@ -162,7 +170,24 @@ class MLTaskProducer:
 
 class MLTaskConsumer:
     def __init__(self) -> None:
-        pass
+        from mindsdb.interfaces.database.integrations import integration_controller
+        config = Config()
+        is_cloud = config.get('cloud', False)
+
+        preload_hendlers = {}
+        lightwood_handler = integration_controller.handler_modules['lightwood']
+        if lightwood_handler.Handler is not None:
+            preload_hendlers[lightwood_handler.Handler] = 4 if is_cloud else 1
+
+        huggingface_handler = integration_controller.handler_modules['huggingface']
+        if huggingface_handler.Handler is not None:
+            preload_hendlers[huggingface_handler.Handler] = 1 if is_cloud else 0
+
+        openai_handler = integration_controller.handler_modules['openai']
+        if openai_handler.Handler is not None:
+            preload_hendlers[openai_handler.Handler] = 1 if is_cloud else 0
+
+        process_cache.init(preload_hendlers)
 
     def run(self):
         # connect
@@ -183,6 +208,7 @@ class MLTaskConsumer:
 
         # x = self.stream.consumers_info(consumer_group)
         while True:
+            # TODO add here delay in case of overload TODO try/catch to whole
             message = consumer_group.read(count=1, block=1000, consumer=TASKS_STREAM_CONSUMER_NAME)
             if message.get(TASKS_STREAM_NAME) is None or len(message.get(TASKS_STREAM_NAME)) == 0:
                 continue
@@ -190,6 +216,7 @@ class MLTaskConsumer:
             message = message[TASKS_STREAM_NAME][0][0]
             message_id = message[0].decode()
             message_content = message[1]
+            # TODO xacn for msg
 
             # region deserialyze payload
             s = io.BytesIO(message_content[b'payload'])
@@ -213,39 +240,28 @@ class MLTaskConsumer:
             # endregion
 
             context = payload['context']  # TODO
-            if task_type == ML_TASK_TYPE.LEARN:
-                learn_process(
-                    class_path=(payload['handler_meta']['module_path'], payload['handler_meta']['class_name']),
-                    engine=payload['handler_meta']['engine'],
-                    integration_id=payload['handler_meta']['integration_id'],
-                    predictor_id=model_id,
-                    problem_definition=payload.get('problem_definition'),   # all to get
-                    set_active=payload['set_active'],
-                    # base_predictor_id=None,
-                    # training_data_df=None,
-                    data_integration_ref=payload['data_integration_ref'],
-                    fetch_data_query=payload['fetch_data_query'],
-                    project_name=payload['project_name']
-                )
-            elif task_type == ML_TASK_TYPE.PREDICT:
-                db.publish(redis_key.status, ML_TASK_STATUS.PROCESSING.value)
-                cache.set(redis_key.status, ML_TASK_STATUS.PROCESSING.value, 180)
-                module_path = payload['handler_meta']['module_path']
-                class_name = payload['handler_meta']['class_name']
-                module = importlib.import_module(module_path)
-                HandlerClass = getattr(module, class_name)
-                prediction: DataFrame = predict_process(
-                    predictor_record=payload.get('predictor_record'),
-                    ml_engine_name=payload['handler_meta']['class_name'],  # payload['handler_meta']['engine'],
-                    handler_class=HandlerClass,
-                    integration_id=payload['handler_meta']['integration_id'],
-                    df=dataframe,
-                    args=payload.get('args')
-                )
-                dataframe_bytes = pa.serialize(prediction).to_buffer().to_pybytes()
-                cache.set(redis_key.dataframe, dataframe_bytes, 10)
-                db.publish(redis_key.status, ML_TASK_STATUS.COMPLETE.value)
-                cache.set(redis_key.status, ML_TASK_STATUS.COMPLETE.value, 180)
+
+            # +++
+            # task = process_cache.apply_async(
+            #     task_type=task_type,
+            #     model_id=model_id,
+            #     payload=payload,
+            #     dataframe=dataframe
+            # )
+            try:
+                thread = threading.Thread(target=task_in_thread, kwargs={
+                    'task_type': task_type,
+                    'model_id': model_id,
+                    'payload': payload,
+                    'dataframe': dataframe,
+                    'redis_db': db,
+                    'redis_key': redis_key
+                })
+            except Exception as e:
+                x = 1
+            thread.start()
+            continue
+            # ---
 
 
 ml_task_queue = MLTaskProducer()

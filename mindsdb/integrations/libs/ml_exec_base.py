@@ -53,7 +53,7 @@ from mindsdb.integrations.handlers_client.ml_client_factory import MLClientFacto
 # from mindsdb.integrations.libs.learn_process import learn_process, predict_process
 from mindsdb.utilities.functions import mark_process
 import mindsdb.utilities.profiler as profiler
-from mindsdb.utilities.ml_task_queue import ml_task_queue, ML_TASK_TYPE
+from mindsdb.utilities.ml_task_queue.ml_task_queue import ml_task_queue, ML_TASK_TYPE
 from mindsdb.integrations.libs.process_cache import process_cache, empty_callback
 
 import torch.multiprocessing as mp

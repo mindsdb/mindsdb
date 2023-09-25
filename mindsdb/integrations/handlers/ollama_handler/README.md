@@ -60,9 +60,10 @@ Supported commands are:
 Not at this time.
 
 ## Any directions for future work in subsequent versions of the handler?
-Two are commented in the code:
+A few are commented in the code:
 1. add support for overriding modelfile params (e.g. temperature)
 2. add support for storing `context` short conversational memory
+3. actually store all model artifacts in the engine storage, instead of the internal Ollama mechanism. This may require upstream changes, though.
 
 ## Please provide a minimal SQL example that uses this ML engine (pointers to integration tests in the PR also valid)
 ```sql

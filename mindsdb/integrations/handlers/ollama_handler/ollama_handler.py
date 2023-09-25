@@ -10,6 +10,8 @@ from mindsdb.integrations.libs.llm_utils import get_completed_prompts
 
 class OllamaHandler(BaseMLEngine):
     name = "ollama"
+    SERVE_URL = 'http://localhost:11434'
+    MODEL_LIST_URL = 'https://registry.ollama.ai/v2/_catalog'
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -19,7 +21,7 @@ class OllamaHandler(BaseMLEngine):
             args = args['using']
 
         # check model version is valid
-        all_models = requests.get('https://registry.ollama.ai/v2/_catalog').json()['repositories']
+        all_models = requests.get(OllamaHandler.MODEL_LIST_URL).json()['repositories']
         base_models = list(filter(lambda x: 'library/' in x, all_models))
         valid_models = [m.split('/')[-1] for m in base_models]
 
@@ -29,22 +31,22 @@ class OllamaHandler(BaseMLEngine):
             raise Exception(f"The model `{args['model_name']}` is not yet supported by Ollama! Please choose one of the following: {valid_models}")  # noqa
 
         # check ollama service health
-        status = requests.get('http://localhost:11434/api/tags').status_code
+        status = requests.get(OllamaHandler.SERVE_URL + '/api/tags').status_code
         if status != 200:
             raise Exception(f"Ollama service is not working (status `{status}`). Please double check it is running and try again.")  # noqa
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """ Pull LLM artifacts with Ollama API. """
-        # argument setting
+        # arg setter
         args = args['using']
         args['target'] = target
         self.model_storage.json_set('args', args)
 
         # download model
-        # TODO: point Ollama to the engine storage folder instead of their default location
+        # TODO v2: point Ollama to the engine storage folder instead of their default location
         model_name = args['model_name']
-        # sync operation, finishes once model has been fully pulled
-        requests.post('http://localhost:11434/api/pull', json={'name': model_name})
+        # blocking operation, finishes once model has been fully pulled and served
+        requests.post(OllamaHandler.SERVE_URL + '/api/pull', json={'name': model_name})
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         """
@@ -72,7 +74,7 @@ class OllamaHandler(BaseMLEngine):
         for i, row in df.iterrows():
             if i not in empty_prompt_ids:
                 raw_output = requests.post(
-                    'http://localhost:11434/api/generate',
+                    OllamaHandler.SERVE_URL + '/api/generate',
                     json={
                         'model': args['model_name'],
                         'prompt': row['__mdb_prompt'],
@@ -103,12 +105,12 @@ class OllamaHandler(BaseMLEngine):
         model_name, target_col = args['model_name'], args['target']
         prompt_template = args.get('prompt_template', 'Answer the following question: {{{{text}}}}')
 
-
         if attribute == "features":
             return pd.DataFrame([[target_col, prompt_template]], columns=['target_column', 'mindsdb_prompt_template'])
+
         # get model info
         else:
-            model_info = requests.post('http://localhost:11434/api/show', json={'name': model_name}).json()
+            model_info = requests.post(OllamaHandler.SERVE_URL + '/api/show', json={'name': model_name}).json()
             return pd.DataFrame([[
                 model_name,
                 model_info['license'],

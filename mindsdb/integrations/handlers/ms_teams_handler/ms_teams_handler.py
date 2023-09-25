@@ -1,5 +1,6 @@
 import pymsteams
 
+from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import MessagesTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -31,6 +32,9 @@ class MSTeamsHandler(APIHandler):
 
         self.connection = None
         self.is_connected = False
+
+        messages_data = MessagesTable(self)
+        self._register_table("messages", messages_data)
 
     def connect(self):
         """

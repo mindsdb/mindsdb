@@ -33,7 +33,7 @@ class MessagesTable(APITable):
         """
         insert_statement_parser = INSERTQueryParser(
             query,
-            supported_columns=['text'],
+            supported_columns=['text', 'title'],
             mandatory_columns=['text'],
             all_mandatory=False
         )
@@ -55,6 +55,7 @@ class MessagesTable(APITable):
         teams = self.handler.connect() 
         for message in message_data:
             try:
+                teams.title(message['title'])
                 teams.text(message['text'])
                 teams.send()
                 logger.info(f"Message sent to Microsoft Teams channel successfully.")

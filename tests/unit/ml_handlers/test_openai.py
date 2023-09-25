@@ -14,7 +14,6 @@ OPEN_AI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 
 class TestOpenAI(BaseExecutorTest):
-    
     def wait_predictor(self, project, name):
         # wait
         done = False

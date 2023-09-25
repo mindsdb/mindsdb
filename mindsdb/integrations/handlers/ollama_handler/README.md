@@ -30,6 +30,7 @@ Inference is generally fast, however stream generation is not supported at this 
 ## What are the recommended system specifications?
 
 * A macOS machine, M1 chip or greater. 
+* A working Ollama installation. For instructions refer to their [webpage](https://ollama.ai). This step should be really simple.
 * For 7B models, at least 8GB RAM is recommended. 
 * For 13B models, at least 16GB RAM is recommended. 
 * For 70B models, at least 64GB RAM is recommended.

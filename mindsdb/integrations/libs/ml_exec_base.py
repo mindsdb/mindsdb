@@ -14,8 +14,9 @@ In particular, three big components are included:
 
     - `predict_process` method: handles async dispatch of the `predict` method in an engine.
 
-"""  # noqa
+"""
 
+import os
 import sys
 import time
 import threading
@@ -249,10 +250,10 @@ class ProcessCache:
                         ]
                     }
 
-    def apply_async(self, handler: object, func: Callable, model_marker: tuple = None, *args, **kwargs) -> Future:
+    def apply_async(self, task_type: ML_TASK_TYPE, model_id: int, payload: dict, dataframe: pd.DataFrame = None) -> Future:
         """ run new task. If possible - do it in existing process, if not - start new one.
 
-            Args:
+            Args: TODO rewrite!
                 handler (object): handler class
                 func (Callable): function to run
                 model_marker (tuple): if any of processes processed task with same marker - new task will be sent to it
@@ -262,13 +263,22 @@ class ProcessCache:
             Returns:
                 Future
         """
+        if task_type in (ML_TASK_TYPE.LEARN, ML_TASK_TYPE.FINETUNE):
+            func = learn_process
+        elif task_type == ML_TASK_TYPE.PREDICT:
+            func = predict_process
+        else:
+            raise Exception(f'Unknown ML task type: {task_type}')
+
+        handler_module_path = payload['handler_meta']['module_path']
+        handler_name = payload['handler_meta']['engine']
+        model_marker = (model_id, payload['context']['company_id'])
         with self._lock:
-            handler_name = handler.__name__
             if handler_name not in self.cache:
-                warm_process = WarmProcess(init_ml_handler, (handler.__module__,))
+                warm_process = WarmProcess(init_ml_handler, (handler_module_path,))
                 self.cache[handler_name] = {
                     'last_usage_at': None,
-                    'handler_module': handler.__module__,
+                    'handler_module': handler_module_path,
                     'processes': [warm_process]
                 }
             else:
@@ -290,10 +300,10 @@ class ProcessCache:
                     except StopIteration:
                         pass
                 if warm_process is None:
-                    warm_process = WarmProcess(init_ml_handler, (handler.__module__,))
+                    warm_process = WarmProcess(init_ml_handler, (handler_module_path,))
                     self.cache[handler_name]['processes'].append(warm_process)
 
-            task = warm_process.apply_async(warm_function, func, ctx.dump(), *args, **kwargs)
+            task = warm_process.apply_async(warm_function, func, payload['context'], payload, dataframe)
             self.cache[handler_name]['last_usage_at'] = time.time()
             warm_process.add_marker(model_marker)
         return task
@@ -359,6 +369,10 @@ class BaseMLEngineExec:
         self.is_connected = True
 
         self.handler_class = MLClientFactory(handler_class=kwargs['handler_class'], engine=self.engine)
+
+        self.base_ml_executor = process_cache
+        if os.environ.get('MINDSDB_BASE_ML_EXECUTOR') == 'redis':
+            self.base_ml_executor = ml_task_queue
 
     def _get_ml_handler(self, predictor_id=None):
         # returns instance or wrapper over it
@@ -472,28 +486,24 @@ class BaseMLEngineExec:
 
         db.serializable_insert(predictor_record)
 
-        class_path = [self.handler_class.__module__, self.handler_class.__name__]
-
-        task = process_cache.apply_async(
-            self.handler_class,
-            learn_process,
-            (ctx.company_id, predictor_record.id),
-            class_path,
-            self.engine,
-            self.integration_id,
-            predictor_record.id,
-            problem_definition,
-            set_active,
-            data_integration_ref=data_integration_ref,
-            fetch_data_query=fetch_data_query,
-            project_name=project_name
-        )
-
-        ml_task_queue.add(
+        task = self.base_ml_executor.apply_async(
             task_type=ML_TASK_TYPE.LEARN,
             model_id=predictor_record.id,
-            company_id=ctx.company_id,
-            # context=
+            payload={
+                'handler_meta': {
+                    'module_path': self.handler_class.__module__,
+                    'class_name': self.handler_class.__name__,
+                    'engine': self.engine,
+                    'integration_id': self.integration_id
+                },
+                'context': ctx.dump(),
+                'model_id': predictor_record.id,
+                'problem_definition': problem_definition,
+                'set_active': set_active,
+                'data_integration_ref': data_integration_ref,
+                'fetch_data_query': fetch_data_query,
+                'project_name': project_name
+            }
         )
 
         if join_learn_process is True:
@@ -501,6 +511,7 @@ class BaseMLEngineExec:
             predictor_record = db.Predictor.query.get(predictor_record.id)
             db.session.refresh(predictor_record)
         else:
+            # to prevent memory leak need to add any callback
             task.add_done_callback(empty_callback)
 
         return predictor_record
@@ -537,16 +548,21 @@ class BaseMLEngineExec:
         }
 
         try:
-            task = process_cache.apply_async(
-                handler=self.handler_class,
-                func=predict_process,
-                model_marker=(ctx.company_id, predictor_record.id),
-                predictor_record=predictor_record,
-                integration_id=self.integration_id,
-                handler_class=self.handler_class,
-                ml_engine_name=self.handler_class.__name__,
-                df=df,
-                args=args
+            task = self.base_ml_executor.apply_async(
+                task_type=ML_TASK_TYPE.PREDICT,
+                model_id=predictor_record.id,
+                payload={
+                    'handler_meta': {
+                        'module_path': self.handler_class.__module__,
+                        'class_name': self.handler_class.__name__,
+                        'engine': self.engine,
+                        'integration_id': self.integration_id
+                    },
+                    'context': ctx.dump(),
+                    'predictor_record': predictor_record,
+                    'args': args
+                },
+                dataframe=df
             )
             predictions = task.result()
         except Exception as e:
@@ -631,33 +647,35 @@ class BaseMLEngineExec:
             ),
             active=False
         )
-        with profiler.Context('finetune-update-record-insert'):
-            db.serializable_insert(predictor_record)
+        db.serializable_insert(predictor_record)
 
-        class_path = [self.handler_class.__module__, self.handler_class.__name__]
+        task = self.base_ml_executor.apply_async(
+            task_type=ML_TASK_TYPE.FINETUNE,
+            model_id=predictor_record.id,
+            payload={
+                'handler_meta': {
+                    'module_path': self.handler_class.__module__,
+                    'class_name': self.handler_class.__name__,
+                    'engine': self.engine,
+                    'integration_id': self.integration_id
+                },
+                'context': ctx.dump(),
+                'model_id': predictor_record.id,
+                'problem_definition': predictor_record.learn_args,
+                'set_active': set_active,
+                'base_model_id': base_predictor_record.id,
+                'data_integration_ref': data_integration_ref,
+                'fetch_data_query': fetch_data_query,
+                'project_name': project_name
+            }
+        )
 
-        with profiler.Context('finetune-update'):
-            task = process_cache.apply_async(
-                self.handler_class,
-                learn_process,
-                (ctx.company_id, predictor_record.id),
-                class_path,
-                self.engine,
-                self.integration_id,
-                predictor_record.id,
-                predictor_record.learn_args,
-                set_active,
-                base_predictor_record.id,
-                data_integration_ref=data_integration_ref,
-                fetch_data_query=fetch_data_query,
-                project_name=project_name
-            )
-
-            if join_learn_process is True:
-                task.result()
-                predictor_record = db.Predictor.query.get(predictor_record.id)
-                db.session.refresh(predictor_record)
-            else:
-                task.add_done_callback(empty_callback)
+        if join_learn_process is True:
+            task.result()
+            predictor_record = db.Predictor.query.get(predictor_record.id)
+            db.session.refresh(predictor_record)
+        else:
+            # to prevent memory leak need to add any callback
+            task.add_done_callback(empty_callback)
 
         return predictor_record

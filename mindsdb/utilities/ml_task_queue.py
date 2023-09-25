@@ -100,6 +100,10 @@ class Task:
         # dataframe = 1
         return self.dataframe
 
+    def add_done_callback(self, fn: callable):
+        # need for compatability with concurrent.futures.Future interface
+        pass
+
 
 class MLTaskProducer:
     def __init__(self) -> None:
@@ -113,7 +117,7 @@ class MLTaskProducer:
         self.cache = self.db.cache()
         self.pubsub = self.db.pubsub()
 
-    def add_async(self, task_type: ML_TASK_TYPE, model_id: int, payload: dict, dataframe: DataFrame = None) -> object:
+    def apply_async(self, task_type: ML_TASK_TYPE, model_id: int, payload: dict, dataframe: DataFrame = None) -> object:
         '''
             Returns:
                 str: task key in queue
@@ -211,7 +215,7 @@ class MLTaskConsumer:
             context = payload['context']  # TODO
             if task_type == ML_TASK_TYPE.LEARN:
                 learn_process(
-                    class_path=(payload['handler_meta']['module'], payload['handler_meta']['class_name']),
+                    class_path=(payload['handler_meta']['module_path'], payload['handler_meta']['class_name']),
                     engine=payload['handler_meta']['engine'],
                     integration_id=payload['handler_meta']['integration_id'],
                     predictor_id=model_id,
@@ -226,9 +230,9 @@ class MLTaskConsumer:
             elif task_type == ML_TASK_TYPE.PREDICT:
                 db.publish(redis_key.status, ML_TASK_STATUS.PROCESSING.value)
                 cache.set(redis_key.status, ML_TASK_STATUS.PROCESSING.value, 180)
-                module_name = payload['handler_meta']['module']
+                module_path = payload['handler_meta']['module_path']
                 class_name = payload['handler_meta']['class_name']
-                module = importlib.import_module(module_name)
+                module = importlib.import_module(module_path)
                 HandlerClass = getattr(module, class_name)
                 prediction: DataFrame = predict_process(
                     predictor_record=payload.get('predictor_record'),

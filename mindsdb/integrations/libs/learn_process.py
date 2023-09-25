@@ -20,8 +20,18 @@ from mindsdb.utilities.config import Config
 
 
 @mark_process(name='learn')
-def predict_process(predictor_record, ml_engine_name, handler_class, integration_id, df, args):
+def predict_process(payload, dataframe):
     db.init()
+    integration_id = payload['handler_meta']['integration_id']
+    predictor_record = payload['predictor_record']
+    args = payload['args']
+    module_path = payload['handler_meta']['module_path']
+    class_name = payload['handler_meta']['class_name']
+    ml_engine_name = payload['handler_meta']['engine']
+
+    module = importlib.import_module(module_path)
+    HandlerClass = getattr(module, class_name)
+    handler_class = HandlerClass
 
     handlerStorage = HandlerStorage(integration_id)
     modelStorage = ModelStorage(predictor_record.id)
@@ -31,13 +41,13 @@ def predict_process(predictor_record, ml_engine_name, handler_class, integration
         model_storage=modelStorage,
     )
 
-    if ml_engine_name == 'LightwoodHandler':
+    if ml_engine_name == 'lightwood':
         args['code'] = predictor_record.code
         args['target'] = predictor_record.to_predict[0]
         args['dtype_dict'] = predictor_record.dtype_dict
         args['learn_args'] = predictor_record.learn_args
 
-    if ml_engine_name in ('LangChainHandler',):
+    if ml_engine_name == 'langchain':
         from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
         from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
 
@@ -48,16 +58,13 @@ def predict_process(predictor_record, ml_engine_name, handler_class, integration
 
         args['executor'] = command_executor
 
-    predictions = ml_handler.predict(df, args)
+    predictions = ml_handler.predict(dataframe, args)
     ml_handler.close()
     return predictions
 
 
 @mark_process(name='learn')
-def learn_process(class_path, engine, integration_id,
-                  predictor_id, problem_definition, set_active,
-                  base_predictor_id=None, training_data_df=None,
-                  data_integration_ref=None, fetch_data_query=None, project_name=None):
+def learn_process(payload, dataframe):
     ctx.profiling = {
         'level': 0,
         'enabled': True,
@@ -68,6 +75,17 @@ def learn_process(class_path, engine, integration_id,
     with profiler.Context('learn_process'):
         from mindsdb.interfaces.database.database import DatabaseController
         db.init()
+
+        data_integration_ref = payload['data_integration_ref']
+        problem_definition = payload['problem_definition']
+        fetch_data_query = payload['fetch_data_query']
+        project_name = payload['project_name']
+        predictor_id = payload['model_id']
+        engine = payload['handler_meta']['engine']
+        integration_id = payload['handler_meta']['integration_id']
+        base_predictor_id = payload.get('base_model_id')
+        set_active = payload['set_active']
+        class_path = (payload['handler_meta']['module_path'], payload['handler_meta']['class_name'])
 
         try:
             target = problem_definition['target']

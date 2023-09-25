@@ -5,32 +5,11 @@ from typing import Dict, Optional
 import pandas as pd
 
 from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.integrations.libs.llm_utils import get_completed_prompts
 
 
 class OllamaHandler(BaseMLEngine):
     name = "ollama"
-    MODEL_LIST = [  # TODO: replace with this API call:
-        'llama2',
-        'llama2-uncensored',
-        'codellama',
-        'codeup',
-        'everythinglm',
-        'falcon',
-        'llama2-chinese',
-        'medllama2',
-        'nous-hermes',
-        'open-orca-platypus2',
-        'orca-mini',
-        'phind-codellama',
-        'stable-beluga',
-        'vicuna',
-        'wizard-math',
-        'wizard-vicuna',
-        'wizard-vicuna-uncensored',
-        'wizardcoder',
-        'wizardllm',
-        'wizardllm-uncensored',
-    ]
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -40,10 +19,14 @@ class OllamaHandler(BaseMLEngine):
             args = args['using']
 
         # check model version is valid
+        all_models = requests.get('https://registry.ollama.ai/v2/_catalog').json()['repositories']
+        base_models = list(filter(lambda x: 'library/' in x, all_models))
+        valid_models = [m.split('/')[-1] for m in base_models]
+
         if 'model_name' not in args:
             raise Exception('`model_name` must be provided in the USING clause.')
-        elif args['model_name'] not in OllamaHandler.MODEL_LIST:
-            raise Exception(f"The model `{args['model_name']}` is not yet supported by Ollama! Please choose one of the following: {OllamaHandler.MODEL_LIST}")  # noqa
+        elif args['model_name'] not in valid_models:
+            raise Exception(f"The model `{args['model_name']}` is not yet supported by Ollama! Please choose one of the following: {valid_models}")  # noqa
 
         # check ollama service health
         status = requests.get('http://localhost:11434/api/tags').status_code
@@ -58,7 +41,7 @@ class OllamaHandler(BaseMLEngine):
         self.model_storage.json_set('args', args)
 
         # download model
-        # TODO: Ollama should let us point to the engine storage folder for this. For now, we use their default
+        # TODO: point Ollama to the engine storage folder instead of their default location
         model_name = args['model_name']
         # sync operation, finishes once model has been fully pulled
         requests.post('http://localhost:11434/api/pull', json={'name': model_name})
@@ -72,29 +55,41 @@ class OllamaHandler(BaseMLEngine):
             Returns:
                 pd.DataFrame: The DataFrame containing row-wise text completions.
         """
+        # setup
+        pred_args = args.get('predict_params', {})
         args = self.model_storage.json_get('args')
         model_name, target_col = args['model_name'], args['target']
+        prompt_template = pred_args.get('prompt_template',
+                                        args.get('prompt_template', 'Answer the following question: {{{{text}}}}'))
 
+        # prepare prompts
+        prompts, empty_prompt_ids = get_completed_prompts(prompt_template, df)
+        df['__mdb_prompt'] = prompts
+
+        # call llm
         completions = []
         for i, row in df.iterrows():
-            raw_output = requests.post(
-                'http://localhost:11434/api/generate',
-                json={
-                    'model': args['model_name'],
-                    'prompt': row['prompt'],  # TODO: make this user-configurable from `input_col` or similar
-                }
-            )
-            out_tokens = raw_output.content.decode().split('\n')  # stream of output tokens
+            if i not in empty_prompt_ids:
+                raw_output = requests.post(
+                    'http://localhost:11434/api/generate',
+                    json={
+                        'model': args['model_name'],
+                        'prompt': row['__mdb_prompt'],
+                    }
+                )
+                out_tokens = raw_output.content.decode().split('\n')  # stream of output tokens
 
-            tokens = []
-            for o in out_tokens:
-                if o != '':
-                    info = json.loads(o)
-                    if 'response' in info:
-                        token = info['response']
-                        tokens.append(token)
+                tokens = []
+                for o in out_tokens:
+                    if o != '':
+                        info = json.loads(o)
+                        if 'response' in info:
+                            token = info['response']
+                            tokens.append(token)
 
-            completions.append(''.join(tokens))
+                completions.append(''.join(tokens))
+            else:
+                completions.append('')
 
         # consolidate output
         data = pd.DataFrame(completions)
@@ -102,9 +97,12 @@ class OllamaHandler(BaseMLEngine):
         return data
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
-        raise NotImplementedError()
-        # if attribute == "features":
-        #     return self._get_schema()
-        #
-        # else:
-        #     return pd.DataFrame(['features'], columns=['tables'])
+        args = self.model_storage.json_get('args')
+        model_name, target_col = args['model_name'], args['target']
+        prompt_template = args.get('prompt_template', 'Answer the following question: {{{{text}}}}')
+
+        if attribute == "features":
+            return pd.DataFrame([[target_col, prompt_template]], columns=['target_column', 'base_prompt_template'])
+
+        else:
+            return pd.DataFrame([model_name], columns=['model_type'])

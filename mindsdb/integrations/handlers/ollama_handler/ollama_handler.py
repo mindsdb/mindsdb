@@ -61,6 +61,7 @@ class OllamaHandler(BaseMLEngine):
         model_name, target_col = args['model_name'], args['target']
         prompt_template = pred_args.get('prompt_template',
                                         args.get('prompt_template', 'Answer the following question: {{{{text}}}}'))
+        # TODO v2: add support for overriding modelfile params (e.g. temperature)
 
         # prepare prompts
         prompts, empty_prompt_ids = get_completed_prompts(prompt_template, df)
@@ -82,6 +83,7 @@ class OllamaHandler(BaseMLEngine):
                 tokens = []
                 for o in out_tokens:
                     if o != '':
+                        # TODO v2: add support for storing `context` short conversational memory
                         info = json.loads(o)
                         if 'response' in info:
                             token = info['response']
@@ -101,8 +103,23 @@ class OllamaHandler(BaseMLEngine):
         model_name, target_col = args['model_name'], args['target']
         prompt_template = args.get('prompt_template', 'Answer the following question: {{{{text}}}}')
 
-        if attribute == "features":
-            return pd.DataFrame([[target_col, prompt_template]], columns=['target_column', 'base_prompt_template'])
 
+        if attribute == "features":
+            return pd.DataFrame([[target_col, prompt_template]], columns=['target_column', 'mindsdb_prompt_template'])
+        # get model info
         else:
-            return pd.DataFrame([model_name], columns=['model_type'])
+            model_info = requests.post('http://localhost:11434/api/show', json={'name': model_name}).json()
+            return pd.DataFrame([[
+                model_name,
+                model_info['license'],
+                model_info['modelfile'],
+                model_info['parameters'],
+                model_info['template'],
+            ]],
+                columns=[
+                    'model_type',
+                    'license',
+                    'modelfile',
+                    'parameters',
+                    'ollama_base_template',
+                ])

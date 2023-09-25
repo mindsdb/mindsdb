@@ -81,6 +81,7 @@ jobs:
       env:
         ACCESS_KEY: ${{ secrets.GH_ACCESS_KEY }}
         mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
+        OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
     - name: Run integration api and flow tests
       run: |
 

@@ -52,7 +52,7 @@ connection_args = OrderedDict(
         'label': 'Keyspace'
     },
     secure_connect_bundle={
-        'type': ARG_TYPE.PATH,
+        'type': ARG_TYPE.STR,
         'description': 'Path or URL to the secure connect bundle',
         'required': False,
         'label': 'Host'

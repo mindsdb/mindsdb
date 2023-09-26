@@ -154,6 +154,7 @@
           "group": "Concepts",
           "pages": [
             "automation",
+            "ai_workflow",
             "mindsdb-handlers",
             "data_sources",
             "ml_engines",
@@ -419,7 +420,7 @@
           ]
         },
         {
-          "group": "Create ML Engines",
+          "group": "Create AI Engines",
           "pages": [
             {
               "group": "SQL",
@@ -773,8 +774,10 @@
             "integrations/app-integrations/gmail",
             "integrations/app-integrations/google-calendar",
             "integrations/app-integrations/hackernews",
+            "integrations/app-integrations/mediawiki",
             "integrations/app-integrations/shopify",
             "integrations/app-integrations/slack",
+            "integrations/app-integrations/stripe",
             "integrations/app-integrations/twitter",
             "integrations/app-integrations/web-crawler",
             "integrations/app-integrations/youtube"

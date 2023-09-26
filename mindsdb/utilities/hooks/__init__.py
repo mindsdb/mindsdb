@@ -12,6 +12,7 @@ try:
     from mindsdb.utilities.hooks.after_api_query import after_api_query
 except ImportError:
     after_api_query = empty_fn
+    after_palm_query = empty_fn
 
 
 try:
@@ -24,8 +25,10 @@ try:
     from mindsdb.utilities.hooks.openai_query import before_openai_query
 except ImportError:
     before_openai_query = empty_fn
+    before_palm_query = empty_fn
 
 try:
     from mindsdb.utilities.hooks.openai_query import after_openai_query
 except ImportError:
     after_openai_query = empty_fn
+    after_palm_query = empty_fn

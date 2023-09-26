@@ -1,5 +1,4 @@
 import os
-import re
 import math
 import json
 import shutil
@@ -22,6 +21,7 @@ from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_expo
     truncate_msgs_for_token_limit, get_available_models
 from mindsdb.integrations.handlers.openai_handler.models import CHAT_MODELS, FINETUNING_LEGACY_MODELS
 from mindsdb.integrations.utilities.handler_utils import get_api_key
+from mindsdb.integrations.libs.llm_utils import get_completed_prompts
 
 
 class OpenAIHandler(BaseMLEngine):
@@ -167,7 +167,7 @@ class OpenAIHandler(BaseMLEngine):
                 prompts = list(df[args['question_column']].apply(lambda x: str(x)))
                 empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
             elif args.get('prompt_template'):
-                prompts, empty_prompt_ids = self._get_completed_prompts(base_template, df)
+                prompts, empty_prompt_ids = get_completed_prompts(base_template, df)
             else:
                 raise Exception('Image mode needs either `prompt_template` or `question_column`.')
 
@@ -198,7 +198,7 @@ class OpenAIHandler(BaseMLEngine):
                 raise Exception(f"Conversational modes are only available for the following models: {', '.join(self.chat_completion_models)}")  # noqa
 
             if args.get('prompt_template', False):
-                prompts, empty_prompt_ids = self._get_completed_prompts(base_template, df)
+                prompts, empty_prompt_ids = get_completed_prompts(base_template, df)
 
             elif args.get('context_column', False):
                 empty_prompt_ids = np.where(df[[args['context_column'],
@@ -624,37 +624,3 @@ class OpenAIHandler(BaseMLEngine):
 
         self.model_storage.json_set('args', args)
         shutil.rmtree(temp_storage_path)
-
-    @staticmethod
-    def _get_completed_prompts(base_template, df):
-        columns = []
-        spans = []
-        matches = list(re.finditer("{{(.*?)}}", base_template))
-
-        assert len(matches) > 0, 'No placeholders found in the prompt, please provide a valid prompt template.'
-
-        first_span = matches[0].start()
-        last_span = matches[-1].end()
-
-        for m in matches:
-            columns.append(m[0].replace('{', '').replace('}', ''))
-            spans.extend((m.start(), m.end()))
-
-        spans = spans[1:-1]  # omit first and last, they are added separately
-        template = [base_template[s:e] for s, e in list(zip(spans, spans[1:]))[::2]]  # take every other to skip placeholders  # noqa
-        template.insert(0, base_template[0:first_span])  # add prompt start
-        template.append(base_template[last_span:])  # add prompt end
-
-        empty_prompt_ids = np.where(df[columns].isna().all(axis=1).values)[0]
-
-        df['__mdb_prompt'] = ''
-        for i in range(len(template)):
-            atom = template[i]
-            if i < len(columns):
-                col = df[columns[i]].replace(to_replace=[None], value='')  # add empty quote if data is missing
-                df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom) + col.astype("string")
-            else:
-                df['__mdb_prompt'] = df['__mdb_prompt'].apply(lambda x: x + atom)
-        prompts = list(df['__mdb_prompt'])
-
-        return prompts, empty_prompt_ids

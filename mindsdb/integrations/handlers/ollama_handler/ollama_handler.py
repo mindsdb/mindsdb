@@ -21,7 +21,10 @@ class OllamaHandler(BaseMLEngine):
             args = args['using']
 
         # check model version is valid
-        all_models = requests.get(OllamaHandler.MODEL_LIST_URL).json()['repositories']
+        try:
+            all_models = requests.get(OllamaHandler.MODEL_LIST_URL).json()['repositories']
+        except Exception as e:
+            raise Exception(f"Could not retrieve model list from Ollama registry: {e}")
         base_models = list(filter(lambda x: 'library/' in x, all_models))
         valid_models = [m.split('/')[-1] for m in base_models]
 

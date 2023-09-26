@@ -38,7 +38,12 @@ class OpenAIHandler(BaseMLEngine):
         self.default_max_tokens = 100
         self.chat_completion_models = CHAT_MODELS
         self.supported_ft_models = FINETUNING_LEGACY_MODELS  # base models compatible with finetuning  # TODO #7387: transition to new endpoint before 4/1/24 # noqa
-        self.engine_storage.json_set('ft-suffix', binascii.b2a_hex(os.urandom(15)).decode())  # user suffix for finetunes
+
+        # user suffix for finetunes, set once
+        try:
+            self.engine_storage.json_get('ft-suffix')['ft-suffix']
+        except KeyError:
+            self.engine_storage.json_set('ft-suffix', {'ft-suffix': binascii.b2a_hex(os.urandom(15)).decode()})
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -101,7 +106,7 @@ class OpenAIHandler(BaseMLEngine):
         args = args['using']
         args['target'] = target
         api_key = get_api_key('openai', args, self.engine_storage)
-        ft_suffix = self.engine_storage.json_get('ft-suffix')
+        ft_suffix = self.engine_storage.json_get('ft-suffix')['ft-suffix']
         available_models = get_available_models(api_key, ft_suffix)
         if not args.get('model_name'):
             args['model_name'] = self.default_model
@@ -528,7 +533,7 @@ class OpenAIHandler(BaseMLEngine):
             raise Exception(f"This model cannot be finetuned. Supported base models are {self.supported_ft_models}")
 
         openai.api_key = get_api_key('openai', args, self.engine_storage)
-        ft_suffix = self.engine_storage.json_get('ft-suffix')
+        ft_suffix = self.engine_storage.json_get('ft-suffix')['ft-suffix']
         finetune_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
         temp_storage_path = tempfile.mkdtemp()

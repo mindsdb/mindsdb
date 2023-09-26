@@ -55,18 +55,38 @@ class RedisKey:
         return f'{self._base_key}-exception'
 
 
+class StatusNotifier(threading.Thread):
+    def __init__(self, redis_key, ml_task_status, db, cache):
+        threading.Thread.__init__(self)
+        self.redis_key = redis_key
+        self.ml_task_status = ml_task_status
+        self.db = db
+        self.cache = cache
+        self._stop_event = threading.Event()
+
+    def stop(self):
+        self._stop_event.set()
+
+    def run(self):
+        while not self._stop_event.is_set():
+            self.db.publish(self.redis_key.status, self.ml_task_status.value)
+            self.cache.set(self.redis_key.status, self.ml_task_status.value, 180)
+            time.sleep(5)
+
+
 class Task:
     def __init__(self, connection: redis.Redis, redis_key: RedisKey):
         self.db = connection
         self.redis_key = redis_key
         self.dataframe = None
         self.exception = None
+        self._timeout = 30
 
     def subscribe(self):
         pubsub = self.db.pubsub()
         cache = self.db.cache()
         pubsub.subscribe(self.redis_key.status)
-        while (msg := pubsub.get_message(timeout=30)):
+        while (msg := pubsub.get_message(timeout=self._timeout)):
             if msg['type'] not in pubsub.PUBLISH_MESSAGE_TYPES:
                 continue
             ml_task_status = ML_TASK_STATUS(msg['data'])
@@ -95,7 +115,7 @@ class Task:
                 else:
                     raise Exception('Unknown error during ML task execution')
             if status == ML_TASK_STATUS.TIMEOUT:
-                raise Exception()  # TODO
+                raise Exception(f"Can't get answer in {self._timeout} seconds")
             if status == ML_TASK_STATUS.COMPLETE:
                 return
             raise KeyError('Unknown task status')
@@ -129,10 +149,7 @@ class MLTaskProducer:
         # only bytes, string, int or float. None is not supported
         try:
             # region payload to bytes
-            f = io.BytesIO()
-            pickle.dump(payload, f, protocol=5)
-            f.seek(0)
-            payload = f.read()
+            payload = pickle.dumps(payload, protocol=5)
             # endregion
 
             redis_key = RedisKey.new()
@@ -159,7 +176,7 @@ class MLTaskProducer:
             return task
 
         except ConnectionError:
-            # TODO try to reconnect and send again?
+            # try to reconnect and send again?
             print('Cant send message to redis: connect failed')
             raise
 
@@ -193,8 +210,7 @@ class MLTaskConsumer:
         # endregion
 
         # region connect to redis
-        self.db = Database(protocol=3)  # decode_responses=True, 
-        # db = redis.Redis(host='localhost', port=6379, db=0, protocol=3, decode_responses=True)
+        self.db = Database(protocol=3)
         try:
             self.db.ping()
         except ConnectionError:
@@ -227,8 +243,6 @@ class MLTaskConsumer:
             time.sleep(1)
 
     def _listen(self):
-        # connect and process
-        # TODO add here delay in case of overload TODO try/catch to whole
         message = None
         while message is None:
             self.wait_cpu_free()
@@ -241,12 +255,10 @@ class MLTaskConsumer:
         message = message[TASKS_STREAM_NAME][0][0]
         message_id = message[0].decode()
         message_content = message[1]
-        # TODO xacn for msg
+        self.consumer_group.streams[TASKS_STREAM_NAME].ack(message_id)
 
         # region deserialyze payload
-        s = io.BytesIO(message_content[b'payload'])
-        s.seek(0)
-        payload = pickle.load(s)
+        payload = pickle.loads(message_content[b'payload'])
         # endregion
 
         task_type = ML_TASK_TYPE(message_content[b'task_type'])
@@ -266,8 +278,6 @@ class MLTaskConsumer:
 
         ctx.load(payload['context'])
 
-        self.db.publish(redis_key.status, ML_TASK_STATUS.PROCESSING.value)
-        self.cache.set(redis_key.status, ML_TASK_STATUS.PROCESSING.value, 180)
         task = process_cache.apply_async(
             task_type=task_type,
             model_id=model_id,
@@ -275,13 +285,17 @@ class MLTaskConsumer:
             dataframe=dataframe
         )
         try:
+            status_notifier = StatusNotifier(redis_key, ML_TASK_STATUS.PROCESSING, self.db, self.cache)
+            status_notifier.start()
             result = task.result()
         except Exception as e:
+            status_notifier.stop()
             exception_bytes = to_bytes(e)
             self.cache.set(redis_key.exception, exception_bytes, 10)
             self.db.publish(redis_key.status, ML_TASK_STATUS.ERROR.value)
             self.cache.set(redis_key.status, ML_TASK_STATUS.ERROR.value, 180)
         else:
+            status_notifier.stop()
             if isinstance(result, DataFrame):
                 dataframe_bytes = to_bytes(result)
                 self.cache.set(redis_key.dataframe, dataframe_bytes, 10)
@@ -292,7 +306,7 @@ class MLTaskConsumer:
         self.event = threading.Event()
         self.event.set()
         while True:
-            self.event.wait()  # timeout?
+            self.event.wait()
             self.event.clear()
             threading.Thread(target=self._listen).start()
 
@@ -300,6 +314,6 @@ class MLTaskConsumer:
 ml_task_queue = MLTaskProducer()
 
 
-def start(_x):
+def start(verbose: bool):
     consumer = MLTaskConsumer()
     consumer.run()

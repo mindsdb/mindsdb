@@ -95,12 +95,12 @@ class TestRAG(BaseExecutorTest):
         self.run_sql("create database proj")
         self.run_sql(
             """
-                                create model proj.test_unsupported_llm
-                                predict answer
-                                using
-                                    engine='rag',
-                                    llm_type='unsupported_llm'
-                            """
+            create model proj.test_unsupported_llm
+            predict answer
+            using
+                engine='rag',
+                llm_type='unsupported_llm'
+        """
         )
         with pytest.raises(Exception):
             self.wait_predictor("proj", "test_unsupported_llm")
@@ -109,14 +109,14 @@ class TestRAG(BaseExecutorTest):
         self.run_sql("create database proj")
         self.run_sql(
             f"""
-                                        create model proj.test_unsupported_vector_store
-                                        predict answer
-                                        using
-                                            engine='rag',
-                                            llm_type='openai',
-                                            openai_api_key='{OPENAI_API_KEY}',
-                                            vector_store_name='unsupported_vector_store'
-                                    """
+            create model proj.test_unsupported_vector_store
+            predict answer
+            using
+                engine='rag',
+                llm_type='openai',
+                openai_api_key='{OPENAI_API_KEY}',
+                vector_store_name='unsupported_vector_store'
+        """
         )
 
         with pytest.raises(Exception):
@@ -126,14 +126,14 @@ class TestRAG(BaseExecutorTest):
         self.run_sql("create database proj")
         self.run_sql(
             f"""
-                        create model proj.test_openai_unknown_arguments
-                        predict answer
-                        using
-                            engine='rag',
-                            llm_type='openai',
-                            openai_api_key='{OPENAI_API_KEY}',
-                            evidently_wrong_argument='wrong value';  --- this is a wrong argument name
-                    """
+            create model proj.test_openai_unknown_arguments
+            predict answer
+            using
+                engine='rag',
+                llm_type='openai',
+                openai_api_key='{OPENAI_API_KEY}',
+                evidently_wrong_argument='wrong value';  --- this is a wrong argument name
+        """
         )
         with pytest.raises(Exception):
             self.wait_predictor("proj", "test_openai_unknown_arguments")

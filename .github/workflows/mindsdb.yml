@@ -81,7 +81,6 @@ jobs:
       env:
         ACCESS_KEY: ${{ secrets.GH_ACCESS_KEY }}
         mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
-        OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
     - name: Run integration api and flow tests
       run: |
 
@@ -134,6 +133,7 @@ jobs:
       shell: bash
       env:
         CHECK_FOR_UPDATES: False
+        OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
 

@@ -12,7 +12,7 @@ except Exception as e:
     import_error = e
 
 title = "RAG Handler"
-name = "rag_handler"
+name = "rag"
 type = HANDLER_TYPE.ML
 permanent = False
 

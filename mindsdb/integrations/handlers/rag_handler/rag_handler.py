@@ -6,9 +6,8 @@ from mindsdb.integrations.handlers.rag_handler.ingest import Ingestor
 from mindsdb.integrations.handlers.rag_handler.rag import QuestionAnswerer
 from mindsdb.integrations.handlers.rag_handler.settings import (
     DEFAULT_EMBEDDINGS_MODEL,
-    OpenAIParameters,
     RAGHandlerParameters,
-    WriterLLMParameters,
+    build_llm_params,
 )
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities.log import get_log
@@ -16,35 +15,6 @@ from mindsdb.utilities.log import get_log
 # these require no additional arguments
 
 logger = get_log(logger_name=__name__)
-
-
-def build_llm_params(args: dict, update=False) -> Dict:
-    """build llm params from input query args"""
-
-    llm_config_class = (
-        WriterLLMParameters if args["llm_type"] == "writer" else OpenAIParameters
-    )
-
-    if not args.get("llm_params"):
-        # only run this on create, not predict
-
-        llm_params = {}
-        llm_params["llm_name"] = args["llm_type"]
-
-        for param in llm_config_class.__fields__.keys():
-            if param in args:
-                llm_params[param] = args.pop(param)
-    else:
-        llm_params = args.pop("llm_params")
-
-    if update:
-        # for update method only
-        args["llm_params"] = llm_params
-        return args
-
-    args["llm_params"] = llm_config_class(**llm_params)
-
-    return args
 
 
 class RAGHandler(BaseMLEngine):

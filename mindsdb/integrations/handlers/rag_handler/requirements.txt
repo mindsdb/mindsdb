@@ -11,3 +11,4 @@ datasets>=2.14.4
 nltk>=3.8.1
 rouge-score>=0.1.2
 html2text
+writerai==0.25.3

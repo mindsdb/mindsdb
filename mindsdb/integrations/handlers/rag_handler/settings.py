@@ -1,11 +1,13 @@
+import json
 from dataclasses import dataclass
 from functools import lru_cache, partial
-from typing import List, Union
+from typing import Dict, List, Union
 
 import html2text
 import openai
 import pandas as pd
 import requests
+import writer
 from chromadb import Settings
 from langchain import Writer
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
@@ -15,12 +17,15 @@ from langchain.embeddings.base import Embeddings
 from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS, Chroma, VectorStore
 from pydantic import BaseModel, Extra, Field, validator
+from writer.models import shared
 
 DEFAULT_EMBEDDINGS_MODEL = "BAAI/bge-base-en"
 
 SUPPORTED_VECTOR_STORES = ("chroma", "faiss")
 
 SUPPORTED_LLMS = ("writer", "openai")
+
+## Default parameters for RAG Handler
 
 # this is the default prompt template for qa
 DEFAULT_QA_PROMPT_TEMPLATE = """
@@ -38,6 +43,12 @@ Summarize the following texts for me:
 When summarizing, please keep the following in mind the following question:
 {question}
 """
+
+DEFAULT_CHUNK_SIZE = 500
+DEFAULT_CHUNK_OVERLAP = 50
+DEFAULT_VECTOR_STORE_NAME = "chroma"
+DEFAULT_VECTOR_STORE_COLLECTION_NAME = "collection"
+DEFAULT_PERSISTED_VECTOR_STORE_FOLDER_NAME = "vector_store_folder"
 
 
 def is_valid_store(name) -> bool:
@@ -70,6 +81,33 @@ def get_chroma_settings(persist_directory: str = "chromadb") -> Settings:
         persist_directory=persist_directory,
         anonymized_telemetry=False,
     )
+
+
+def get_available_writer_model_ids(args: dict) -> list:
+    """Get available writer LLM model ids"""
+
+    writer_client = writer.Writer(
+        security=shared.Security(
+            api_key=args["writer_api_key"],
+        ),
+        organization_id=args["writer_org_id"],
+    )
+
+    res = writer_client.models.list(organization_id=args["writer_org_id"])
+
+    available_models_dict = json.loads(res.raw_response.text)
+
+    return [model["id"] for model in available_models_dict["models"]]
+
+
+def get_available_openai_model_ids(args: dict) -> list:
+    """Get available openai LLM model ids"""
+
+    openai.api_key = args["openai_api_key"]
+
+    res = openai.Engine.list()
+
+    return [models["id"] for models in res.data]
 
 
 @dataclass
@@ -171,12 +209,29 @@ class LLMParameters(BaseModel):
         use_enum_values = True
 
 
+class InvalidOpenAIModel(Exception):
+    pass
+
+
 class OpenAIParameters(LLMParameters):
     """Model parameters for the LLM API interface"""
 
     openai_api_key: str
     model_id: str = Field(default="text-davinci-003", title="model name")
     n: int = Field(default=1, title="number of responses to return")
+
+    @validator("model_id")
+    def openai_model_must_be_supported(cls, v, values):
+        supported_models = get_available_openai_model_ids(values)
+        if v not in supported_models:
+            raise InvalidOpenAIModel(
+                f"'model_id' must be one of {supported_models}, got {v}"
+            )
+        return v
+
+
+class InvalidWriterModel(Exception):
+    pass
 
 
 class WriterLLMParameters(LLMParameters):
@@ -188,6 +243,15 @@ class WriterLLMParameters(LLMParameters):
     model_id: str = "palmyra-x"
     callbacks: List[StreamingStdOutCallbackHandler] = [StreamingStdOutCallbackHandler()]
     verbose: bool = False
+
+    @validator("model_id")
+    def writer_model_must_be_supported(cls, v, values):
+        supported_models = get_available_writer_model_ids(values)
+        if v not in supported_models:
+            raise InvalidWriterModel(
+                f"'model_id' must be one of {supported_models}, got {v}"
+            )
+        return v
 
 
 class LLMLoader(BaseModel):
@@ -238,23 +302,23 @@ class InvalidPromptTemplate(Exception):
 class RAGHandlerParameters(BaseModel):
     """Model parameters for create model"""
 
-    prompt_template: str = DEFAULT_QA_PROMPT_TEMPLATE
     llm_type: str
     llm_params: LLMParameters
-    chunk_size: int = 500
-    chunk_overlap: int = 50
+    prompt_template: str = DEFAULT_QA_PROMPT_TEMPLATE
+    chunk_size: int = DEFAULT_CHUNK_SIZE
+    chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
     url: Union[str, List[str]] = None
     run_embeddings: bool = True
     external_index_name: str = None
     top_k: int = 4
     embeddings_model_name: str = DEFAULT_EMBEDDINGS_MODEL
     context_columns: Union[List[str], str] = None
-    vector_store_name: str = "chroma"
+    vector_store_name: str = DEFAULT_VECTOR_STORE_NAME
     vector_store: VectorStore = None
-    collection_name: str = "langchain"
+    collection_name: str = DEFAULT_VECTOR_STORE_COLLECTION_NAME
     summarize_context: bool = False
     summarization_prompt_template: str = DEFAULT_SUMMARIZATION_PROMPT_TEMPLATE
-    vector_store_folder_name: str = "persisted_vector_db"
+    vector_store_folder_name: str = DEFAULT_PERSISTED_VECTOR_STORE_FOLDER_NAME
     vector_store_storage_path: str = None
 
     class Config:
@@ -373,3 +437,45 @@ def load_embeddings_model(embeddings_model_name):
             f"The {embeddings_model_name}  is not supported, please select a valid option from Hugging Face Hub!"
         )
     return embedding_model
+
+
+def on_create_build_llm_params(
+    args: dict, llm_config_class: Union[WriterLLMParameters, OpenAIParameters]
+) -> Dict:
+    """build llm params from create args"""
+
+    llm_params = {"llm_name": args["llm_type"]}
+
+    for param in llm_config_class.__fields__.keys():
+        if param in args:
+            llm_params[param] = args.pop(param)
+
+    return llm_params
+
+
+def build_llm_params(args: dict, update=False) -> Dict:
+    """build llm params from args"""
+
+    if args["llm_type"] == "writer":
+        llm_config_class = WriterLLMParameters
+    elif args["llm_type"] == "openai":
+        llm_config_class = OpenAIParameters
+    else:
+        raise UnsupportedLLM(
+            f"'llm_type' must be one of {SUPPORTED_LLMS}, got {args['llm_type']}"
+        )
+
+    if not args.get("llm_params"):
+        # for create method only
+        llm_params = on_create_build_llm_params(args, llm_config_class)
+    else:
+        # for predict method only
+        llm_params = args.pop("llm_params")
+    if update:
+        # for update method only
+        args["llm_params"] = llm_params
+        return args
+
+    args["llm_params"] = llm_config_class(**llm_params)
+
+    return args

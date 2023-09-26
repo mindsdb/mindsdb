@@ -14,6 +14,7 @@ from mindsdb_sql.parser.ast import (
 from mindsdb.utilities import log
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 
+
 def query_df(df, query, session=None):
     """ Perform simple query ('select' from one table, without subqueries and joins) on DataFrame.
 
@@ -111,6 +112,3 @@ def query_df(df, query, session=None):
         axis='columns'
     )
     return result_df
-
-
-

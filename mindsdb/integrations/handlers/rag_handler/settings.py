@@ -9,6 +9,13 @@ import pandas as pd
 import requests
 import writer
 from chromadb import Settings
+from integrations.handlers.rag_handler.exceptions import (
+    InvalidOpenAIModel,
+    InvalidPromptTemplate,
+    InvalidWriterModel,
+    UnsupportedLLM,
+    UnsupportedVectorStore,
+)
 from langchain import Writer
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.docstore.document import Document
@@ -207,10 +214,7 @@ class LLMParameters(BaseModel):
         extra = Extra.forbid
         arbitrary_types_allowed = True
         use_enum_values = True
-
-
-class InvalidOpenAIModel(Exception):
-    pass
+        allow_reuse = True
 
 
 class OpenAIParameters(LLMParameters):
@@ -228,10 +232,6 @@ class OpenAIParameters(LLMParameters):
                 f"'model_id' must be one of {supported_models}, got {v}"
             )
         return v
-
-
-class InvalidWriterModel(Exception):
-    pass
 
 
 class WriterLLMParameters(LLMParameters):
@@ -277,26 +277,6 @@ class LLMLoader(BaseModel):
         config["model"] = config.pop("model_id")
 
         return partial(openai.Completion.create, **config)
-
-
-class MissingPromptTemplate(Exception):
-    pass
-
-
-class UnsupportedVectorStore(Exception):
-    pass
-
-
-class MissingUseIndex(Exception):
-    pass
-
-
-class UnsupportedLLM(Exception):
-    pass
-
-
-class InvalidPromptTemplate(Exception):
-    pass
 
 
 class RAGHandlerParameters(BaseModel):

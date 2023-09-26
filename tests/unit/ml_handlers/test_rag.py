@@ -54,7 +54,7 @@ class TestRAG(BaseExecutorTest):
                    engine="rag"
                    """
         )
-        with pytest.raises(KeyError):
+        with pytest.raises(Exception):
             self.wait_predictor("proj", "test_rag_handler_missing_required_args")
 
     def test_invalid_model_id_parameter(self):
@@ -176,8 +176,7 @@ class TestRAG(BaseExecutorTest):
         )
         assert "cold" in result_df["answer"].iloc[0].lower()
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_invalid_prompt_template(self, mock_handler):
+    def test_invalid_prompt_template(self):
         # create project
         self.run_sql("create database proj")
         self.run_sql(

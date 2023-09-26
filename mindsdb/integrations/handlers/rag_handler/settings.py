@@ -214,7 +214,6 @@ class LLMParameters(BaseModel):
         extra = Extra.forbid
         arbitrary_types_allowed = True
         use_enum_values = True
-        allow_reuse = True
 
 
 class OpenAIParameters(LLMParameters):

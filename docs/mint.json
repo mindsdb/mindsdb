@@ -154,6 +154,7 @@
           "group": "Concepts",
           "pages": [
             "automation",
+            "ai_workflow",
             "mindsdb-handlers",
             "data_sources",
             "ml_engines",
@@ -419,7 +420,7 @@
           ]
         },
         {
-          "group": "Create ML Engines",
+          "group": "Create AI Engines",
           "pages": [
             {
               "group": "SQL",

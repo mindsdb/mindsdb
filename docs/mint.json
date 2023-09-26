@@ -822,6 +822,7 @@
             "integrations/data-integrations/matrixone",
             "integrations/data-integrations/microsoft-access",
             "integrations/data-integrations/microsoft-sql-server",
+            "integrations/data-integrations/microsoft-teams",
             "integrations/data-integrations/monetdb",
             "integrations/data-integrations/mongodb",
             "integrations/data-integrations/mysql",

@@ -23,7 +23,7 @@ class TestOpenAI(BaseExecutorTest):
 
     def wait_predictor(self, project, name, timeout=100):
         """
-        Wait for the predictor to be created, 
+        Wait for the predictor to be created,
         raising an exception if predictor creation fails or exceeds timeout
         """
         for attempt in range(timeout):

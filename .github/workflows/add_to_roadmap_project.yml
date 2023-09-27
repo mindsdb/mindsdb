@@ -1,10 +1,8 @@
 name: Add issue to roadmap project
-
 on:
   issues:
     types:
       - opened
-
 jobs:
   add-to-project:
     name: Add issue to roadmap project
@@ -12,8 +10,7 @@ jobs:
     steps:
       - uses: actions/add-to-project@v0.4.0
         with:
-          # You can target a repository in a different organization
-          # to the issue
-          project-url: https://github.com/orgs/mindsdb/projects/54
+          project-url: https://github.com/orgs/mindsdb/projects/53
           github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}
-          labeled: enhancement
+          labeled: bug, enhancement
+          label-operator: OR

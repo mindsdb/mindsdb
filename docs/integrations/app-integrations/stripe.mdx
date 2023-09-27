@@ -1,0 +1,61 @@
+---
+title: Stripe
+sidebarTitle: Stripe
+---
+
+In this section, we present how to connect Stripe to MindsDB.
+
+[Stripe](https://stripe.com/) is a financial technology company that provides a set of software and payment processing solutions for businesses and individuals to accept payments over the internet. Stripe is one of the leading payment gateway and online payment processing platforms.
+
+Data from Stripe can be utilized within MindsDB to train AI models and chatbots based on customers, products, and payment intents, and make relevant predictions and forecasts.
+
+## Connection
+
+This handler was implemented using [stripe-python](https://github.com/stripe/stripe-python), the Python library for the Stripe API.
+
+There is only one parameter required to set up the connection with Stripe:
+- `api_key`: a Stripe API key.
+
+<Tip>
+You can find your API keys in the Stripe Dashboard. [Read more](https://stripe.com/docs/keys).
+</Tip>
+
+To connect to Stripe using MindsDB, the following CREATE DATABASE statement can be used:
+
+```sql
+CREATE DATABASE stripe_datasource
+WITH ENGINE = 'stripe',
+PARAMETERS = {
+  "api_key": "sk_..."
+};
+```
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/stripe_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+Now, you can query the data in your Stripe account (customers, for example) as follows:
+
+```sql
+SELECT * FROM stripe_datasource.customers
+```
+
+You can run more advanced queries to fetch specific customers in a defined order:
+
+```sql
+SELECT  name, email
+FROM stripe_datasource.customers
+WHERE currency = 'inr'
+ORDER BY name
+LIMIT 5
+```
+
+### Supported tables
+
+The following tables are supported by the Stripe handler:
+
+- `customers`
+- `products`
+- `payment_intents`

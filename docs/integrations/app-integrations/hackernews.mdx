@@ -1,0 +1,44 @@
+---
+title: Hacker News
+sidebarTitle: Hacker News
+---
+
+In this section, we present how to connect Hacker News to MindsDB.
+
+[Hacker News](https://news.ycombinator.com/) is an online platform and community for discussions related to technology, startups, computer science, entrepreneurship, and a wide range of other topics of interest to the tech and hacker communities. It was created by Y Combinator, a well-known startup accelerator.
+
+Data from Hacker News, including articles and user comments, can be utilized within MindsDB to train AI models and chatbots with the knowledge and discussions shared at Hacker News.
+
+## Connection
+
+This handler is implemented using the official Hacker News API. It provides a simple and easy-to-use interface to access the Hacker News API.
+
+There are no connection arguments required.
+
+In order to make use of this handler and connect the Hacker News to MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE my_hackernews
+WITH ENGINE = 'hackernews';
+```
+
+It creates a database that comes with the `stories` and `comments` tables.
+
+## Usage
+
+Now you can query the articles, like this:
+
+```sql
+SELECT *
+FROM my_hackernews.stories
+LIMIT 2;
+```
+
+And here is how to fetch comments for a specific article:
+
+```sql
+SELECT *
+FROM my_hackernews.comments
+WHERE item_id=35662571
+LIMIT 1;
+```

@@ -91,104 +91,162 @@ class TestOpenAI(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_qa_no_context(self, mock_handler):
-        """Test for QA without context"""
         df = pd.DataFrame.from_dict({"question": [
             "What is the capital of Sweden?",
             "What is the second planet of the solar system?"
         ]})
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
-        # More Test Logic Here
+        self.run_sql(
+            f"""
+           create model proj.test_openai_qa_no_context
+           predict answer
+           using
+             engine='openai',
+             question_column='question',
+             api_key='{self.get_api_key()}';
+        """
+        )
+        self.wait_predictor("proj", "test_openai_qa_no_context")
+
+        result_df = self.run_sql(
+            """
+            SELECT p.answer
+            FROM proj.test_openai_qa_no_context as p
+            WHERE question='What is the capital of Sweden?'
+        """
+        )
+        assert "stockholm" in result_df["answer"].iloc[0].lower()
+
+        result_df = self.run_sql(
+            """
+            SELECT p.answer
+            FROM pg.df as t
+            JOIN proj.test_openai_qa_no_context as p;
+        """
+        )
+        assert "stockholm" in result_df["answer"].iloc[0].lower()
+        assert "venus" in result_df["answer"].iloc[1].lower()
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_qa_context(self, mock_handler):
-        """Test for QA with context"""
         df = pd.DataFrame.from_dict({"question": [
             "What is the capital of Sweden?",
             "What is the second planet of the solar system?"
         ], "context": ['Add "Boom!" to the end of the answer.', 'Add "Boom!" to the end of the answer.']})
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_prompt_template(self, mock_handler):
-        """Test for prompt template in OpenAI model"""
-        # Set up test environment
-        df = pd.DataFrame.from_dict({
-            "question": [
-                "What is the capital of Sweden?",
-                "What is the second planet of the solar system?"
-            ]
-        })
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
-        # Create model with prompt template
         self.run_sql(
             f"""
-            create model proj.test_openai_prompt_template
-            predict completion
-            using
-              engine='openai',
-              prompt_template='Answer this question and add "Boom!" to the end of the answer: {{{{question}}}}',
-              api_key='{self.get_api_key()}';
-           """
+           create model proj.test_openai_qa_context
+           predict answer
+           using
+             engine='openai',
+             question_column='question',
+             context_column='context',
+             api_key='{self.get_api_key()}';
+        """
+        )
+        self.wait_predictor("proj", "test_openai_qa_context")
+
+        result_df = self.run_sql(
+            """
+            SELECT p.answer
+            FROM proj.test_openai_qa_context as p
+            WHERE
+            question='What is the capital of Sweden?' AND
+            context='Add "Boom!" to the end of the answer.'
+        """
+        )
+        assert "stockholm" in result_df["answer"].iloc[0].lower()
+        assert "boom!" in result_df["answer"].iloc[0].lower()
+
+        result_df = self.run_sql(
+            """
+            SELECT p.answer
+            FROM pg.df as t
+            JOIN proj.test_openai_qa_context as p;
+        """
+        )
+        assert "stockholm" in result_df["answer"].iloc[0].lower()
+        assert "venus" in result_df["answer"].iloc[1].lower()
+
+        for i in range(2):
+            assert "boom!" in result_df["answer"].iloc[i].lower()
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_prompt_template(self, mock_handler):
+        df = pd.DataFrame.from_dict({"question": [
+            "What is the capital of Sweden?",
+            "What is the second planet of the solar system?"
+        ]})
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.run_sql(
+            f"""
+           create model proj.test_openai_prompt_template
+           predict completion
+           using
+             engine='openai',
+             prompt_template='Answer this question and add "Boom!" to the end of the answer: {{{{question}}}}',
+             api_key='{self.get_api_key()}';
+        """
         )
         self.wait_predictor("proj", "test_openai_prompt_template")
-        # Validate the model predictions
-        self._validate_prompt_template_model()
 
-    def _validate_prompt_template_model(self):
-        """Validate the predictions of model created with prompt template"""
-        # Check specific question
         result_df = self.run_sql(
             """
             SELECT p.completion
             FROM proj.test_openai_prompt_template as p
-            WHERE question='What is the capital of Sweden?';
-            """
+            WHERE
+            question='What is the capital of Sweden?';
+        """
         )
         assert "stockholm" in result_df["completion"].iloc[0].lower()
         assert "boom!" in result_df["completion"].iloc[0].lower()
-        # Check joined questions
+
         result_df = self.run_sql(
             """
             SELECT p.completion
             FROM pg.df as t
             JOIN proj.test_openai_prompt_template as p;
-            """
+        """
         )
-        assert all("boom!" in val.lower() for val in result_df["completion"])
         assert "stockholm" in result_df["completion"].iloc[0].lower()
         assert "venus" in result_df["completion"].iloc[1].lower()
 
+        for i in range(2):
+            assert "boom!" in result_df["completion"].iloc[i].lower()
+
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_bulk_normal_completion(self, mock_handler):
-        """Test for bulk normal completions with batch size exceeding the max batch_size"""
-        # Set up test environment
-        handler = OpenAIHandler(model_storage=None, engine_storage=None)  # Storage doesn't matter for this test
-        N = 1 + handler.max_batch_size  # Ensure N is larger than default batch size
+        """Tests normal completions (e.g. text-davinci-003) with bulk joins that are larger than the max batch_size"""
+        handler = OpenAIHandler(
+            model_storage=None,  # the storage does not matter for this test
+            engine_storage=None,
+        )
+        N = 1 + handler.max_batch_size  # get N larger than default batch size
         df = pd.DataFrame.from_dict({"input": ["I feel happy!"] * N})
         self.set_handler(mock_handler, name="pg", tables={"df": df})
-        # Create model with bulk normal completion
         self.run_sql(
             f"""
-            create model proj.test_openai_bulk_normal_completion
-            predict completion
-            using
-              engine='openai',
-              prompt_template='What is the sentiment of the following phrase? Answer either "positive" or "negative": {{{{input}}}}',
-              api_key='{self.get_api_key()}';
-            """
+           create model proj.test_openai_bulk_normal_completion
+           predict completion
+           using
+             engine='openai',
+             prompt_template='What is the sentiment of the following phrase? Answer either "positive" or "negative": {{{{input}}}}',
+             api_key='{self.get_api_key()}';
+        """  # noqa
         )
         self.wait_predictor("proj", "test_openai_bulk_normal_completion")
-        # Validate the model predictions
-        self._validate_bulk_normal_completion_model(N)
 
-    def _validate_bulk_normal_completion_model(self, N):
-        """Validate the predictions of model created with bulk """
         result_df = self.run_sql(
             """
             SELECT p.completion
             FROM pg.df as t
             JOIN proj.test_openai_bulk_normal_completion as p;
-            """
+        """
         )
-        assert all("positive" in val.lower() for val in result_df["completion"])
+
+        for i in range(N):
+            assert "positive" in result_df["completion"].iloc[i].lower()
+

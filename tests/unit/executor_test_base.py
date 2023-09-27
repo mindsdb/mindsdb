@@ -122,7 +122,7 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="pytorch_tabular",data={},engine="pytorch_tabular")
         db.session.add(r)
-        # Lightwood should always be last (else tests break, why?)
+        # Lightwood should always be last (else tests break, why?)̀
         r = db.Integration(name="lightwood", data={}, engine="lightwood")
         db.session.add(r)
 

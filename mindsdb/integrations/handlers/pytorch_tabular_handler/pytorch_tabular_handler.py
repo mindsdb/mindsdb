@@ -1,5 +1,4 @@
-from typing import Optional
-from Optional import Dict
+from typing import Optional, Dict
 import pandas as pd
 import ast
 import torch
@@ -19,7 +18,7 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
     name = 'pytorch_tabular'
 
     @staticmethod
-    def create_validation(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
+    def create_validation(self, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
         task_supported = ['regression','classification','backbone']
         initialization_supported = ['kaiming','xavier','random']
         args = args["using"]

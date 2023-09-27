@@ -249,4 +249,3 @@ class TestOpenAI(BaseExecutorTest):
 
         for i in range(N):
             assert "positive" in result_df["completion"].iloc[i].lower()
-

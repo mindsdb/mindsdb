@@ -87,7 +87,8 @@ class S3Handler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         try:
-            self.connect()
+            connection = self.connect()
+            connection.head_object(Bucket=self.connection_data['bucket'], Key=self.connection_data['key'])
             response.success = True
         except Exception as e:
             log.logger.error(f'Error connecting to AWS with the given credentials, {e}!')

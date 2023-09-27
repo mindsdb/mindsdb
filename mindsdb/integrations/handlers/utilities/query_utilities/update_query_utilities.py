@@ -14,8 +14,11 @@ class UPDATEQueryParser(BaseQueryParser):
     def __init__(self, query):
         super().__init__(query)
     
-    def parse_query():
-        pass
+    def parse_query(self):
+        values_to_update = self.parse_set_clause()
+        where_conditions = self.parse_where_clause()
+
+        return values_to_update, where_conditions
 
     def parse_set_clause(self):
         values = list(self.query.update_columns.items())

@@ -1,4 +1,3 @@
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.integrations.handlers.utilities.query_utilities.base_query_utilities import BaseQueryParser
 
 

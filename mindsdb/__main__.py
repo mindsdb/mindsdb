@@ -18,6 +18,7 @@ from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
 from mindsdb.api.postgres.start import start as start_postgres
 from mindsdb.interfaces.tasks.task_monitor import start as start_tasks
+from mindsdb.utilities.ml_task_queue.consumer import start as start_ml_task_queue
 from mindsdb.interfaces.jobs.scheduler import start as start_scheduler
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
@@ -109,14 +110,14 @@ if __name__ == '__main__':
         config_path = 'absent'
     os.environ['MINDSDB_CONFIG_PATH'] = config_path
 
-    mindsdb_config = Config()
-    create_dirs_recursive(mindsdb_config['paths'])
+    config = Config()
+    create_dirs_recursive(config['paths'])
 
-    if telemetry_file_exists(mindsdb_config['storage_dir']):
+    if telemetry_file_exists(config['storage_dir']):
         os.environ['CHECK_FOR_UPDATES'] = '0'
         print('\n x telemetry disabled! \n')
-    elif os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False'] or mindsdb_config.get('cloud', False):
-        disable_telemetry(mindsdb_config['storage_dir'])
+    elif os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False'] or config.get('cloud', False):
+        disable_telemetry(config['storage_dir'])
         print('\n x telemetry disabled \n')
     else:
         print('\n ✓ telemetry enabled \n')
@@ -131,7 +132,6 @@ if __name__ == '__main__':
     log.initialize_log()
 
     mp.freeze_support()
-    config = Config()
 
     environment = config.get('environment')
     if environment == 'aws_marketplace':
@@ -142,7 +142,7 @@ if __name__ == '__main__':
     elif environment != 'local':
         try:
             aws_meta_data = get_aws_meta_data()
-            Config().update({
+            config.update({
                 'aws_meta_data': aws_meta_data
             })
         except Exception:
@@ -263,7 +263,8 @@ if __name__ == '__main__':
         'mongodb': start_mongo,
         'postgres': start_postgres,
         'jobs': start_scheduler,
-        'tasks': start_tasks
+        'tasks': start_tasks,
+        'ml_task_queue': start_ml_task_queue
     }
 
     if config.get('jobs', {}).get('disable') is not True:
@@ -275,6 +276,12 @@ if __name__ == '__main__':
     # disabled on cloud
     if config.get('tasks', {}).get('disable') is not True:
         apis['tasks'] = {
+            'process': None,
+            'started': False
+        }
+
+    if config.get('ml_task_queue', {}).get('type', 'local') == 'redis':
+        apis['ml_task_queue'] = {
             'process': None,
             'started': False
         }

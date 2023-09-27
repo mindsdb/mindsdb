@@ -16,14 +16,9 @@ In particular, three big components are included:
 
 """
 
-import os
-# import sys
-# import time
 import socket
-# import threading
 import datetime as dt
 from typing import Optional
-# from concurrent.futures import ProcessPoolExecutor, Future
 
 import pandas as pd
 from sqlalchemy import func, null
@@ -50,10 +45,10 @@ from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 from mindsdb.utilities.context import context as ctx
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.integrations.handlers_client.ml_client_factory import MLClientFactory
-# from mindsdb.integrations.libs.learn_process import learn_process, predict_process
 from mindsdb.utilities.functions import mark_process
 import mindsdb.utilities.profiler as profiler
-from mindsdb.utilities.ml_task_queue.ml_task_queue import ml_task_queue, ML_TASK_TYPE
+from mindsdb.utilities.ml_task_queue.producer import ml_task_producer
+from mindsdb.utilities.ml_task_queue.const import ML_TASK_TYPE
 from mindsdb.integrations.libs.process_cache import process_cache, empty_callback
 
 import torch.multiprocessing as mp
@@ -92,8 +87,8 @@ class BaseMLEngineExec:
         self.handler_class = MLClientFactory(handler_class=kwargs['handler_class'], engine=self.engine)
 
         self.base_ml_executor = process_cache
-        if os.environ.get('MINDSDB_BASE_ML_EXECUTOR') == 'redis':
-            self.base_ml_executor = ml_task_queue
+        if self.config['ml_task_queue']['type'] == 'redis':
+            self.base_ml_executor = ml_task_producer
 
     def _get_ml_handler(self, predictor_id=None):
         # returns instance or wrapper over it

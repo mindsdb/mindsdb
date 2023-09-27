@@ -93,7 +93,7 @@ class CustomersTable(APITable):
         )
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        customers_df = self.get_customers_df(limit=result_limit)
+        customers_df = pd.json_normalize(self.get_customers(limit=result_limit))
 
         select_statement_executor = SELECTQueryExecutor(
             customers_df,
@@ -138,16 +138,13 @@ class CustomersTable(APITable):
         pass
 
     def get_columns(self) -> List[Text]:
-        return self.get_customers_df(limit=1).columns.tolist()
+        return pd.json_normalize(self.get_customers(limit=1)).columns.tolist()
 
     def get_customers(self, **kwargs) -> List[Dict]:
         api_session = self.handler.connect()
         shopify.ShopifyResource.activate_session(api_session)
-        return shopify.Customer.find(**kwargs)
-    
-    def get_customers_df(self, **kwargs) -> pd.DataFrame:
-        customers = self.get_customers(**kwargs)
-        return pd.json_normalize([customer.to_dict() for customer in customers])
+        customers = shopify.Customer.find(**kwargs)
+        return [customer.to_dict() for customer in customers]
 
     def create_customers(self, customer_data: List[Dict[Text, Any]]) -> None:
         api_session = self.handler.connect()

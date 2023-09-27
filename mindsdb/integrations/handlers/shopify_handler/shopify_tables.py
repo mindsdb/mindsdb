@@ -135,7 +135,18 @@ class CustomersTable(APITable):
         delete_statement_parser = DELETEQueryParser(query)
         where_conditions = delete_statement_parser.parse_query()
 
-        pass
+        customers_df = pd.json_normalize(self.get_customers())
+
+        select_statement_executor = SELECTQueryExecutor(
+            customers_df,
+            [],
+            where_conditions,
+            {}
+        )
+        customers_df = select_statement_executor.execute_query()
+
+        customer_ids = customers_df['id'].tolist()
+        self.delete_customers(customer_ids)
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_customers(limit=1)).columns.tolist()
@@ -156,6 +167,15 @@ class CustomersTable(APITable):
                 raise Exception('Customer creation failed')
             else:
                 logger.info(f'Customer {created_customer.to_dict()["id"]} created')
+
+    def delete_customers(self, customer_ids: List[int]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for customer_id in customer_ids:
+            customer = shopify.Customer.find(customer_id)
+            customer.destroy()
+            logger.info(f'Customer {customer_id} deleted')
 
 
 class OrdersTable(APITable):

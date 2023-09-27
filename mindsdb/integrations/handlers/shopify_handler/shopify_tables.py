@@ -7,6 +7,7 @@ from mindsdb.integrations.libs.api_handler import APITable
 
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilities import INSERTQueryParser
+from mindsdb.integrations.handlers.utilities.query_utilities.delete_query_utilities import DELETEQueryParser
 
 from mindsdb.utilities.log import get_log
 
@@ -129,6 +130,12 @@ class CustomersTable(APITable):
         )
         customer_data = insert_statement_parser.parse_query()
         self.create_customers(customer_data)
+
+    def delete(self, query: ast.Delete) -> None:
+        delete_statement_parser = DELETEQueryParser(query)
+        where_conditions = delete_statement_parser.parse_query()
+
+        pass
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_customers(limit=1)).columns.tolist()

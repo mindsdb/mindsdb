@@ -17,6 +17,12 @@ class UPDATEQueryParser(BaseQueryParser):
     def parse_query():
         pass
 
-    def parse_set_clause():
-        pass
+    def parse_set_clause(self):
+        values = list(self.query.update_columns.items())
+
+        values_to_update = {}
+        for value in values:
+            values_to_update[value[0]] = value[1].value
+
+        return values_to_update
 

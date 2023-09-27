@@ -1,27 +1,19 @@
+import tiktoken
+
 from typing import Callable
+from mindsdb_sql import parse_sql, Insert
+
 from langchain.utilities import GoogleSerperAPIWrapper
 from langchain.prompts import PromptTemplate
-from mindsdb_sql import parse_sql, Insert
 from langchain.agents import load_tools, Tool
 
 from langchain.chains.llm import LLMChain
-from langchain.chains.mapreduce import MapReduceChain
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.chains.summarize import load_summarize_chain
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains import ReduceDocumentsChain, MapReduceDocumentsChain
 
 
-# Decorators
-def retry_on_token_overflow(fn):
-    """
-        This decorator modifies the input function to automatically retry with a summarized version of the
-        output if the previous call fails due to the token limit being exceeded.
-    """
-    return fn
-
-
-# Tools
+# Individual tools
 # Note: all tools are defined in a closure to pass required args (apart from LLM input) through it, as custom tools don't allow custom field assignment.  # noqa
 def get_exec_call_tool(llm, executor, model_kwargs) -> Callable:
     def mdb_exec_call_tool(query: str) -> str:
@@ -39,49 +31,13 @@ def get_exec_call_tool(llm, executor, model_kwargs) -> Callable:
         except Exception as e:
             data = f"mindsdb tool failed with error:\n{str(e)}"   # let the agent know
 
-        # map-reduce given token budget
-        n_tokens = len(data)
-        if n_tokens > model_kwargs['max_tokens']:  # TODO: bring down to tokens
-            # map
-            map_template = """The following is a set of documents
-            {docs}
-            Based on this list of docs, please identify the main themes
-            Helpful Answer:"""
-            map_prompt = PromptTemplate.from_template(map_template)
-            map_chain = LLMChain(llm=llm, prompt=map_prompt)
-
-            # reduce
-            reduce_template = """The following is set of summaries:
-            {doc_summaries}
-            Take these and distill it into a final, consolidated summary of the main themes.
-            Helpful Answer:"""
-            reduce_prompt = PromptTemplate.from_template(reduce_template)
-            reduce_chain = LLMChain(llm=llm, prompt=reduce_prompt)
-            combine_documents_chain = StuffDocumentsChain(
-                llm_chain=reduce_chain, document_variable_name="doc_summaries"
-            )
-            reduce_documents_chain = ReduceDocumentsChain(
-                combine_documents_chain=combine_documents_chain,
-                collapse_documents_chain=combine_documents_chain,
-                token_max=model_kwargs['max_tokens'],
-            )
-            map_reduce_chain = MapReduceDocumentsChain(
-                llm_chain=map_chain,
-                reduce_documents_chain=reduce_documents_chain,
-                document_variable_name="docs",
-                return_intermediate_steps=False,
-            )
-            text_splitter = CharacterTextSplitter.from_tiktoken_encoder(
-                chunk_size=1000, chunk_overlap=0
-            )
-            docs = text_splitter.create_documents([data])
-            split_docs = text_splitter.split_documents(docs)
-            data = map_reduce_chain.run(split_docs)
+        # summarize output if needed
+        data = summarize_if_overflowed(data, llm, model_kwargs['max_tokens'])
 
         return data
     return mdb_exec_call_tool
 
-def get_exec_metadata_tool(executor) -> Callable:
+def get_exec_metadata_tool(llm, executor, model_kwargs) -> Callable:
     def mdb_exec_metadata_call(query: str) -> str:
         try:
             parts = query.replace('`', '').split('.')
@@ -117,6 +73,10 @@ def get_exec_metadata_tool(executor) -> Callable:
                     data = f'Table {table_name} not found.'
         except Exception as e:
             data = f"mindsdb tool failed with error:\n{str(e)}"  # let the agent know
+
+        # summarize output if needed
+        data = summarize_if_overflowed(data, llm, model_kwargs['max_tokens'])
+
         return data
     return mdb_exec_metadata_call
 
@@ -133,7 +93,6 @@ def get_mdb_write_tool(executor) -> Callable:
     return mdb_write_call
 
 
-
 # Collector
 def setup_tools(llm, model_kwargs, pred_args, executor, default_agent_tools, write_privileges):
     mdb_tool = Tool(
@@ -144,7 +103,7 @@ def setup_tools(llm, model_kwargs, pred_args, executor, default_agent_tools, wri
 
     mdb_meta_tool = Tool(
         name="MDB-Metadata",
-        func=get_exec_metadata_tool(executor),
+        func=get_exec_metadata_tool(llm, executor, model_kwargs),
         description="useful to get column names from a mindsdb table or metadata from a mindsdb data source. the command should be either 1) a data source name, to list all available tables that it exposes, or 2) a string with the format `data_source_name.table_name` (for example, `files.my_table`), to get the table name, table type, column names, data types per column, and amount of rows of the specified table."  # noqa
     )
 
@@ -158,11 +117,12 @@ def setup_tools(llm, model_kwargs, pred_args, executor, default_agent_tools, wri
 
     standard_tools = []
     custom_tools = []
-    # possible to pass standart tool name or custom function
+
     for tool in toolkit:
         if isinstance(tool, str):
             standard_tools.append(tool)
         else:
+            # user defined custom functions
             custom_tools.append(tool)
 
     tools = load_tools(standard_tools)
@@ -189,3 +149,57 @@ def setup_tools(llm, model_kwargs, pred_args, executor, default_agent_tools, wri
         ))
 
     return tools
+
+
+# Helpers
+def summarize_if_overflowed(data, llm, max_tokens, budget_multiplier=0.8) -> str:
+    """
+        This helper retries with a summarized version of the
+        output if the previous call fails due to the token limit being exceeded.
+
+        We trigger summarization when the token count exceeds the limit times a multiplier to be conservative.
+    """
+    # tokenize data for length check
+    # note: this is a rough estimate, as the tokenizer used in each LLM may be different
+    encoding = tiktoken.get_encoding("gpt2")
+    n_tokens = len(encoding.encode(data))
+
+    # map-reduce given token budget
+    if n_tokens > max_tokens * budget_multiplier:
+        # map
+        map_template = """The following is a set of documents
+                {docs}
+                Based on this list of docs, please identify the main themes
+                Helpful Answer:"""
+        map_prompt = PromptTemplate.from_template(map_template)
+        map_chain = LLMChain(llm=llm, prompt=map_prompt)
+
+        # reduce
+        reduce_template = """The following is set of summaries:
+                {doc_summaries}
+                Take these and distill it into a final, consolidated summary of the main themes.
+                Helpful Answer:"""
+        reduce_prompt = PromptTemplate.from_template(reduce_template)
+        reduce_chain = LLMChain(llm=llm, prompt=reduce_prompt)
+        combine_documents_chain = StuffDocumentsChain(
+            llm_chain=reduce_chain, document_variable_name="doc_summaries"
+        )
+        reduce_documents_chain = ReduceDocumentsChain(
+            combine_documents_chain=combine_documents_chain,
+            collapse_documents_chain=combine_documents_chain,
+            token_max=max_tokens * budget_multiplier,  # applies for each group of documents
+        )
+        map_reduce_chain = MapReduceDocumentsChain(
+            llm_chain=map_chain,
+            reduce_documents_chain=reduce_documents_chain,
+            document_variable_name="docs",
+            return_intermediate_steps=False,
+        )
+        # split
+        text_splitter = CharacterTextSplitter.from_tiktoken_encoder(chunk_size=1000, chunk_overlap=0)
+        docs = text_splitter.create_documents([data])
+        split_docs = text_splitter.split_documents(docs)
+
+        # run chain
+        data = map_reduce_chain.run(split_docs)
+    return data

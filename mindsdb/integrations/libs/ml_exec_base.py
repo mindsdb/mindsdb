@@ -51,7 +51,10 @@ from mindsdb.utilities.ml_task_queue.producer import ml_task_producer
 from mindsdb.utilities.ml_task_queue.const import ML_TASK_TYPE
 from mindsdb.integrations.libs.process_cache import process_cache, empty_callback
 
-import torch.multiprocessing as mp
+try:
+    import torch.multiprocessing as mp
+except Exception:
+    import multiprocessing as mp
 mp_ctx = mp.get_context('spawn')
 
 

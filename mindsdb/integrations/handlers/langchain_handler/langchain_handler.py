@@ -19,6 +19,7 @@ from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent impo
 from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
+from mindsdb.utilities import log
 
 
 _DEFAULT_MODEL = 'gpt-3.5-turbo'
@@ -364,6 +365,7 @@ class LangChainHandler(BaseMLEngine):
                         #
                         # Ideally, in the future, we would write a parser that is more robust and flexible than the one Langchain uses.
                         response = response.lstrip(_PARSING_ERROR_PREFIX).rstrip('`')
+                        log.logger.info(f"Agent failure, salvaging response...")
                         completions.append(response)
                 except Exception as e:
                     completions.append(f'agent failed with error:\n{str(e)}...')

@@ -24,7 +24,7 @@ USING
 engine='TPOT';
 ```
 
-![CREATE_PREDICTOR]([Image URL of the screenshot](https://user-images.githubusercontent.com/75653580/221827758-83382215-67e9-45ab-a69e-b624958a5252.png))
+![CREATE_PREDICTOR](https://user-images.githubusercontent.com/75653580/221827758-83382215-67e9-45ab-a69e-b624958a5252.png)
 
 **3. Testing SELECT FROM PREDICTOR**
 

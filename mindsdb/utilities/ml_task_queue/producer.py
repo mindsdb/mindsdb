@@ -53,6 +53,3 @@ class MLTaskProducer:
             # try to reconnect and send again?
             print('Cant send message to redis: connect failed')
             raise
-
-
-ml_task_producer = MLTaskProducer()

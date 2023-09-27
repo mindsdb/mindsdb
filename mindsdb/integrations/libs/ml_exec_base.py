@@ -47,7 +47,7 @@ from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.integrations.handlers_client.ml_client_factory import MLClientFactory
 from mindsdb.utilities.functions import mark_process
 import mindsdb.utilities.profiler as profiler
-from mindsdb.utilities.ml_task_queue.producer import ml_task_producer
+from mindsdb.utilities.ml_task_queue.producer import MLTaskProducer
 from mindsdb.utilities.ml_task_queue.const import ML_TASK_TYPE
 from mindsdb.integrations.libs.process_cache import process_cache, empty_callback
 
@@ -91,7 +91,7 @@ class BaseMLEngineExec:
 
         self.base_ml_executor = process_cache
         if self.config['ml_task_queue']['type'] == 'redis':
-            self.base_ml_executor = ml_task_producer
+            self.base_ml_executor = MLTaskProducer()
 
     def _get_ml_handler(self, predictor_id=None):
         # returns instance or wrapper over it

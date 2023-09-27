@@ -120,7 +120,7 @@ def learn_process(payload, dataframe):
 
         try:
             target = problem_definition['target']
-
+            training_data_df = None
             if data_integration_ref is not None:
                 database_controller = DatabaseController()
                 sql_session = make_sql_session()

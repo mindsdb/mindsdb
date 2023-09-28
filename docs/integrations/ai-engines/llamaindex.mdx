@@ -1,0 +1,127 @@
+---
+title: LlamaIndex
+sidebarTitle: LlamaIndex
+---
+
+LlamaIndex is a data framework for your LLM application that allows you to work with private or domain-specific data and simplifies the interface between your data source and LLM.
+
+Developers can use LlamaIndex to build chatbots, applications, private set-ups, and Q&A over documents and web pages. The implemented features for LlamaIndex include [Support Web Page Reader](https://gpt-index.readthedocs.io/en/latest/examples/data_connectors/WebPageDemo.html) and [Support Database Reader](https://gpt-index.readthedocs.io/en/latest/examples/data_connectors/DatabaseReaderDemo.html).
+
+### How to bring LlamaIndex Models to MindsDB
+
+Before creating a model, you can create an ML engine for LlamaIndex using the `CREATE ML_ENGINE` statement and provide own OpenAI API key:
+
+```sql
+CREATE ML_ENGINE llama_index
+FROM llama_index
+USING api_key='your_openai_api_key';
+```
+
+You can check the available engines with this command:
+
+```sql
+SHOW ML_ENGINES;
+```
+
+Alternatively, you can use the default `llama_index` engine, if available. Please note that it is necessary to provide own OpenAI API key while creating the model.
+
+Next, we use the `CREATE MODEL` statement to create the LlamaIndex model in MindsDB.
+
+```sql
+CREATE MODEL model_name
+FROM datasource
+    (SELECT * FROM table_name)
+PREDICT column_to_be_predicted
+USING 
+  engine = 'llama_index', 
+  index_class = 'vector_store_index',
+  reader = 'reader_type',
+  source_url_link = 'source_url_link',
+  input_column = 'column_name',
+  openai_api_key = 'your_openai_api_key';
+```
+
+Where:
+
+| Name              | Description                                                            |
+|-------------------|------------------------------------------------------------------------|
+| `engine`          | It defines the LlamaIndex engine.                                      |
+| `index_class`     | It is used to define the type of vector store index used.              |
+| `reader`          | It defines the type of reader (either data reader or webpage reader).  |
+| `source_url_link` | It defines the URL link used to get the answers from.                  |
+| `input_column`    | It defines the prompt to the model.                                    |
+| `openai_api_key`  | It is used to provide your OpenAI API key to gain access to the model. |
+
+### Example
+
+Let's explore a usecase where you will be creating a question-answering model that retrieves answers from a webpage. OpenAI will be used as the LLM and Blackrock's investment webpage will be used as the datasource.
+
+Use the `CREATE MODEL` syntax to create a model with Llamaindex.
+
+We use a table that contains questions to train the model. This data can be downloaded [here](https://github.com/chandrevdw31/mindsdb-tutorials/blob/main/Datasets/questions.csv) and uploaded as a file to MindsDB. If you want to know how to upload a file, you can check out the documentation [here](https://docs.mindsdb.com/sql/create/file).
+
+```sql
+CREATE MODEL qa_blackrock
+FROM files
+    (SELECT * FROM about_blackrock)
+PREDICT Answers
+USING 
+  engine = 'llama_index', 
+  index_class = 'GPTVectorStoreIndex',
+  reader = 'DFReader',
+  source_url_link = 'https://www.blackrock.com/za/individual/about-us',
+  input_column = 'Questions',
+  openai_api_key = 'your_api_key';
+```
+
+<Tip>
+Please visit our docs on the [`CREATE MODEL`](/sql/create/model) statement to learn more.
+</Tip>
+
+The status of the model can be verified that it has completed training successfully by using the `DESCRIBE` syntax.
+
+```sql
+DESCRIBE qa_blackrock;
+```
+
+The model can be queried for a single prediction by providing it with a question.
+
+```sql
+SELECT Questions, Answers
+FROM qa_blackrock
+WHERE Questions = 'What is the best long term investment with minimal risks for private investors?';
+```
+
+On execution you get:
+
+```sql
++---------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Questions                                                                       | Answers                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
++---------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| What is the best long term investment with minimal risks for private investors? | The best long term investment for private investors with minimal risks is a diversified portfolio of stocks, bonds, and other asset classes. Investing in a combination of different assets can reduce risk and volatility, while still providing the potential for long-term capital growth. Investing with a reliable financial institution such as Blackrock can provide access to a range of financial products and professional advice to help investors achieve their long-term savings goals. |
++---------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+You can also query for batch predictions.
+
+```sql
+SELECT a.Questions, b.Answers
+FROM qa_blackrock as b
+JOIN files.about_blackrock as a
+LIMIT 4;
+``` 
+
+On execution you get:
+
+```sql
++--------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Questions                                        | Answers                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
++--------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| When was Blackrock founded?                      | Blackrock was founded in 1988.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| What does Blackrock do?                          | Blackrock is a global investment management company that provides investment solutions to retail investors, institutional investors, and corporations. It manages approximately $7.81 trillion in assets and is one of the world's largest asset managers. Blackrock provides a variety of services, including investment consulting, portfolio management, research, and trading. It also provides financial advice and risk management services. Additionally, Blackrock is a leader in sustainability investing and is committed to driving positive change in the world. |
+| Why should investors choose Blackrock?           | Investors should choose Blackrock because it provides comprehensive products and services to help clients meet their financial goals. Blackrock is a trusted leader in the asset management industry, offering a wide range of investment strategies to meet the needs of individual investors, pension plans, endowments, foundations, and other institutions. Blackrock has decades of experience and employs a team of experienced professionals who are committed to providing the highest level of service and knowledge to its clients.                                |
+| How does Blackrock contribute to sustainability? | Blackrock contributes to sustainability by investing in solutions that are focused on social and environmental progress. This includes investing in renewable energy, energy efficiency, clean transportation, and other companies and projects that have a positive impact on the environment. Blackrock also works with policy makers, shareholder activists, and other stakeholders to encourage and support sustainable practices.                                                                                                                                       |
++--------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+The LlamaIndex integration made it possible to use OpenAI to seamlessly query a webpage and obtain answers to questions.

@@ -72,6 +72,15 @@ jobs:
           pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
           pip uninstall pycodestyle -y && pip install pycodestyle==2.9.1  # temp fix while exist conflict in last version with flake8
           pip install gluonts==0.11.4  # temp fix until next lightwood release (>23.1.2.1)
+    - name: Install ML engine related dependencies
+      run: |
+        for engine in openai; do  # statsforecast huggingface lightwood
+          pip install -r ./mindsdb/integrations/handlers/${engine}_handler/requirements.txt
+        done
+      shell: bash
+      env:
+        ACCESS_KEY: ${{ secrets.GH_ACCESS_KEY }}
+        mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
     - name: Run integration api and flow tests
       run: |
 
@@ -84,8 +93,6 @@ jobs:
 
           # need fix in LW. not working yet
           env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
-
-          # env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_lightwood.py
 
           env PYTHONPATH=./ pytest tests/unit/test_predictor_params.py
 
@@ -113,10 +120,20 @@ jobs:
           # Company independent
           echo -e "\n===============test company independent===============\n"
           pytest -vx tests/integration_tests/flows/test_company_independent.py
+
+          # First-tier ML engines
+          echo -e "\n===============test ML engines===============\n"
+          pytest -vx tests/unit/ml_handlers/test_openai.py
+        
+          # pending rework
+          # pytest -vx tests/unit/ml_handlers/test_statsforecast.py
+          # pytest -vx tests/unit/ml_handlers/test_huggingface.py
+          # pytest -vx tests/unit/ml_handlers/test_lightwood.py
         fi
       shell: bash
       env:
         CHECK_FOR_UPDATES: False
+        OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
 

@@ -83,6 +83,12 @@ Use the `CREATE MODEL` statement to create, train, and deploy a model. The `FROM
 
 As it is a time-series model, you should order the data by a date column - here, it is the open time when the open price takes effect. Finally, the `WINDOW` clause defines the window the model looks back at while making forecasts - here, the model looks back at sets of 100 rows (intervals of 100 minutes, as the interval between Binance data rows is one minute). The `HORIZON` clause defines how many rows into the future the model will forecast - here, it forecasts the next 10 rows (the next 10 minutes, as the interval between Binance data rows is one minute).
 
+<Warning>
+Please note that the TimeGPT engine is sensitive to inconsistent intervals between data rows. Please check your data for missing, duplicated or irregular timestamps to mitigate errors that may arise if the intervals between data rows are inconsistent.
+
+In this example, the intervals between Binance data rows are consistently equal to one minute.
+</Warning>
+
 Before proceeding, make sure that the model status reads `complete`.
 
 ```sql

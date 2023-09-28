@@ -21,7 +21,7 @@
 
 <p>
 	<a href="https://github.com/mindsdb/mindsdb/actions"><img src="https://github.com/mindsdb/mindsdb/actions/workflows/release.yml/badge.svg" alt="MindsDB Release"></a>
-	<a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.8.x%7C%203.9.x-brightgreen.svg" alt="Python supported"></a>
+	<a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.8.x%7C%203.9.x%7C%203.10.x%7C%203.11.x-brightgreen.svg" alt="Python supported"></a>
 	<a href="https://pypi.org/project/MindsDB/" target="_blank"><img src="https://badge.fury.io/py/MindsDB.svg" alt="PyPi Version"></a>
 	<br />
 	<img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/Mindsdb">  <a href="https://hub.docker.com/u/mindsdb" target="_blank"><img src="https://img.shields.io/docker/pulls/mindsdb/mindsdb" alt="Docker pulls"></a>
@@ -56,10 +56,9 @@
  [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Build%20AI-Centered%20Applications%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,nlp,machine_learning,neural_networks,databases,gpt3)
 
 MindsDB offers three primary benefits to its users. 
-1. Creating and managing AI models (LLM based Semantic Search and QnA, TimeSeries Forecasting, Anomaly Detection, Classification, Recommenders, etc) through an “enhanced SQL” abstraction. 
+1. Hook AI models to run automatically as new data is observed and plug the output into any of our integrations. 
 2. Automate training and finetuning AI models from data contained in any of the 130+ datasources we support.
-3. Hook AI models to run automatically as new data is observed and plug the output into any of our integrations.
-
+  
 <img width="1089" alt="image" src="https://github.com/mindsdb/mindsdb/assets/5898506/5451fe7e-a854-4c53-b34b-769b6c7c9863">
 
 
@@ -85,13 +84,13 @@ docker pull mindsdb/mindsdb
 ## How it works
 
 1. CONNECT MindsDB to your data platform. We support hundreds of integrations, and this list is constantly growing. If you can’t find the integration you need, please [let us know](https://mindsdb.com/joincommunity).
-2. CREATE MODEL  and pick the AI Engine to learn from your data. The models get provisioned and deployed automatically and become ready for inference instantaneously.
+2. CREATE MODEL:  and pick the AI Engine to learn from your data. The models get provisioned and deployed automatically and become ready for inference instantaneously.
     1. Pick pre-trained models like OpenAI’s GPT, Hugging Face, LangChain, etc, for NLP or generative AI use cases;
     2. or pick from a variety of state-of-the-art engines for classic machine Learning use cases (regression, classification, or time-series tasks);
     3. or [IMPORT](https://docs.mindsdb.com/custom-model/byom) custom model built with any ML framework to automatically deploy as [AI Tables](https://www.youtube.com/watch?v=tnB4Y9T1E2k).
-3. Query models using [SELECT](https://docs.mindsdb.com/sql/api/select) statements, [API](https://docs.mindsdb.com/rest/usage) calls, or [JOIN](https://docs.mindsdb.com/sql/api/join) commands to make predictions for thousands or millions of data points simultaneously.
-4.  Experiment with your models and [Fine-Tune](https://docs.mindsdb.com/sql/api/finetune) them to achieve the best results.
-5. Automate your workflows with [JOBs](https://docs.mindsdb.com/sql/create/jobs). 
+3. SELECT FROM MODEL: Query models using [SELECT](https://docs.mindsdb.com/sql/api/select) statements, [API](https://docs.mindsdb.com/rest/usage) calls, or [JOIN](https://docs.mindsdb.com/sql/api/join) commands to make predictions for thousands or millions of data points simultaneously.
+4. FINE TUNE MODEL: Experiment with your models and [Fine-Tune](https://docs.mindsdb.com/sql/api/finetune) them to achieve the best results.
+5. CREATE JOB: Automate your workflows with [JOBs](https://docs.mindsdb.com/sql/create/jobs). 
 
 Follow the [quickstart guide](https://docs.mindsdb.com/quickstart?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) with sample data to get on-boarded as fast as possible.
 

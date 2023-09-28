@@ -12,5 +12,9 @@ The `drop_model()` function removes a model from MindsDB.
 Use the `drop_model()` method to remove a model:
 
 ```bash
+# option 1
 project.drop_model('my_model')
+
+# option 2
+server.models.drop('my_model')
 ```

@@ -5,6 +5,7 @@ from walrus import Database
 from pandas import DataFrame
 
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.config import Config
 from mindsdb.utilities.ml_task_queue.utils import RedisKey, to_bytes
 from mindsdb.utilities.ml_task_queue.task import Task
 from mindsdb.utilities.ml_task_queue.const import (
@@ -16,7 +17,15 @@ from mindsdb.utilities.ml_task_queue.const import (
 
 class MLTaskProducer:
     def __init__(self) -> None:
-        self.db = Database(protocol=3)
+        config = Config()
+        self.db = Database(
+            host=config.get('host', 'localhost'),
+            port=config.get('port', 6379),
+            db=config.get('db', 0),
+            username=config.get('username'),
+            password=config.get('password'),
+            protocol=3
+        )
         try:
             self.db.ping()
         except ConnectionError:

@@ -48,7 +48,14 @@ class MLTaskConsumer:
         # endregion
 
         # region connect to redis
-        self.db = Database(protocol=3)
+        self.db = Database(
+            host=config.get('host', 'localhost'),
+            port=config.get('port', 6379),
+            db=config.get('db', 0),
+            username=config.get('username'),
+            password=config.get('password'),
+            protocol=3
+        )
         try:
             self.db.ping()
         except ConnectionError:

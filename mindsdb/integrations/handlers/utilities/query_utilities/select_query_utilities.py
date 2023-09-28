@@ -4,8 +4,10 @@ from typing import Text, List, Dict, Tuple
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
+from mindsdb.integrations.handlers.utilities.query_utilities.base_query_utilities import BaseQueryParser
 
-class SELECTQueryParser:
+
+class SELECTQueryParser(BaseQueryParser):
     """
     Parses a SELECT query into its component parts.
 
@@ -49,13 +51,6 @@ class SELECTQueryParser:
                 raise ValueError(f"Unknown query target {type(target)}")
 
         return selected_columns
-
-    def parse_where_clause(self) -> List[List[Text]]:
-        """
-        Parses the WHERE clause of the query.
-        """
-        where_conditions = extract_comparison_conditions(self.query.where)
-        return where_conditions
 
     def parse_order_by_clause(self) -> Dict[Text, List[Text]]:
         """

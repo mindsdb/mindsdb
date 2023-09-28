@@ -16,19 +16,19 @@ class PlanetScaleHandler(MySQLHandler):
 connection_args = OrderedDict(
     user={
         'type': ARG_TYPE.STR,
-        'description': 'The user name used to authenticate with the Planetscale.'
+        'description': 'The user name used to authenticate with the Planetscale server.'
     },
     password={
         'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the Planetscale.'
+        'description': 'The password to authenticate the user with the Planetscale server.'
     },
     database={
         'type': ARG_TYPE.STR,
-        'description': 'The database name to use when connecting with the Planetscale.'
+        'description': 'The database name to use when connecting with the Planetscale server.'
     },
     host={
         'type': ARG_TYPE.STR,
-        'description': 'The host name or IP address of the Planetscale.'
+        'description': 'The host name or IP address of the Planetscale server.'
     },
     port={
         'type': ARG_TYPE.INT,

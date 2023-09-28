@@ -18,7 +18,7 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
     name = 'pytorch_tabular'
 
     @staticmethod
-    def create_validation(self, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
+    def create_validation(self, args: Optional[dict] = None) -> None:
         task_supported = ['regression','classification','backbone']
         initialization_supported = ['kaiming','xavier','random']
         args = args["using"]
@@ -37,12 +37,14 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
         epochs = 3
         continuous_columns = None
         batch_size = 32
+        args = args["using"]
+        target = args["target"]
         if not train_data:
             raise Exception("Please provide data for the model to train on")
         if 'categorical_cols' in args:
             categorical_columns = ast.literal_eval(args["categorical"])
         if 'continuous_cols' in args:
-            continuous_columns = ast.literal_eval(args['continous_cols'])
+            continuous_columns = ast.literal_eval(args['continuous_cols'])
         if 'drop_out' in args:
             dropout = int(args['drop_out'])
         if 'epochs' in args:
@@ -95,12 +97,8 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
         return predictions
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         args = self.model_storage.json_get('args')
-        des_dict = {}
-        des_dict['epochs'] = args['epochs']
-        des_dict['initialization'] = args['initialization']
-        des_dict['task'] = args['task']
-        des_dict['categorical_columns'] = args['categorical_cols']
-        des_dict['continuous_columns'] = args['continuous_cols']
+        des_dict = {'epochs': args['epochs'], 'initialization': args['initialization'], 'task': args['task'],
+                    'categorical_columns': args['categorical_cols'], 'continuous_columns': args['continuous_cols']}
         #check is activation function is required
-        df_describe = pd.DataFrame.from_dict([des_dict])
+        df_describe = pd.DataFrame.from_dict(des_dict)
         return df_describe

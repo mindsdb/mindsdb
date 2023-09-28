@@ -1,3 +1,4 @@
+import pandas as pd
 from typing import Text, List
 from mindsdb_sql.parser import ast
 from abc import ABC, abstractmethod
@@ -10,7 +11,7 @@ class BaseQueryParser(ABC):
 
     Parameters
     ----------
-    query : ast.Insert
+    query : ast
         Given SQL query.
     """
 
@@ -20,7 +21,7 @@ class BaseQueryParser(ABC):
     @abstractmethod
     def parse_query(self):
         """
-        Parses a SQL SELECT statement into its components.
+        Parses a SQL statement into its components.
         """
         pass
 
@@ -30,3 +31,38 @@ class BaseQueryParser(ABC):
         """
         where_conditions = extract_comparison_conditions(self.query.where)
         return where_conditions
+    
+
+class BaseQueryExecutor(ABC):
+    """
+    Executes a SQL query.
+
+    Parameters
+    ----------
+    query : ast
+        Given SQL query.
+    """
+
+    def __init__(self, df: pd.DataFrame, query: ast):
+        self.df = df
+        self.query = query
+
+    @abstractmethod
+    def execute_query(self):
+        """
+        Executes the SQL query.
+        """
+        pass
+
+    def execute_where_clause(self):
+        """
+        Execute the where clause of the query.
+        """
+        if len(self.where_conditions) > 0:
+            for condition in self.where_conditions:
+                column = condition[1]
+                operator = '==' if condition[0] == '=' else condition[0]
+                value = f"'{condition[2]}'" if type(condition[2]) == str else condition[2]
+
+                query = f"{column} {operator} {value}"
+                self.df.query(query, inplace=True)

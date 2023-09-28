@@ -2,6 +2,7 @@ import os
 import math
 import json
 import shutil
+import binascii
 import tempfile
 import datetime
 import textwrap
@@ -17,11 +18,10 @@ from mindsdb.utilities.hooks import before_openai_query, after_openai_query
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff, \
-    truncate_msgs_for_token_limit
+    truncate_msgs_for_token_limit, get_available_models
+from mindsdb.integrations.handlers.openai_handler.models import CHAT_MODELS, FINETUNING_LEGACY_MODELS
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.libs.llm_utils import get_completed_prompts
-
-CHAT_MODELS = ('gpt-3.5-turbo', 'gpt-3.5-turbo-16k', 'gpt-4', 'gpt-4-32k')
 
 
 class OpenAIHandler(BaseMLEngine):
@@ -37,7 +37,13 @@ class OpenAIHandler(BaseMLEngine):
         self.max_batch_size = 20
         self.default_max_tokens = 100
         self.chat_completion_models = CHAT_MODELS
-        self.supported_ft_models = ('davinci', 'curie', 'babbage', 'ada')  # base models compatible with finetuning
+        self.supported_ft_models = FINETUNING_LEGACY_MODELS  # base models compatible with finetuning  # TODO #7387: transition to new endpoint before 4/1/24 # noqa
+
+        # user suffix for finetunes, set once
+        try:
+            self.engine_storage.json_get('ft-suffix')['ft-suffix']
+        except KeyError:
+            self.engine_storage.json_set('ft-suffix', {'ft-suffix': binascii.b2a_hex(os.urandom(15)).decode()})
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -98,10 +104,10 @@ class OpenAIHandler(BaseMLEngine):
 
     def create(self, target, args=None, **kwargs):
         args = args['using']
-
         args['target'] = target
         api_key = get_api_key('openai', args, self.engine_storage)
-        available_models = [m.openai_id for m in openai.Model.list(api_key=api_key).data]
+        ft_suffix = self.engine_storage.json_get('ft-suffix')['ft-suffix']
+        available_models = get_available_models(api_key, ft_suffix)
         if not args.get('model_name'):
             args['model_name'] = self.default_model
         elif args['model_name'] not in available_models:
@@ -527,6 +533,7 @@ class OpenAIHandler(BaseMLEngine):
             raise Exception(f"This model cannot be finetuned. Supported base models are {self.supported_ft_models}")
 
         openai.api_key = get_api_key('openai', args, self.engine_storage)
+        ft_suffix = self.engine_storage.json_get('ft-suffix')['ft-suffix']
         finetune_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
         temp_storage_path = tempfile.mkdtemp()
@@ -571,7 +578,7 @@ class OpenAIHandler(BaseMLEngine):
             'training_file': train_file_id,
             'validation_file': val_file_id,
             'model': _get_model_type(prev_model_name),
-            'suffix': 'mindsdb',
+            'suffix': f'{ft_suffix}',
             'n_epochs': using_args.get('n_epochs', None),
             'batch_size': using_args.get('batch_size', None),
             'learning_rate_multiplier': using_args.get('learning_rate_multiplier', None),

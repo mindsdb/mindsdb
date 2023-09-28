@@ -1,7 +1,6 @@
 from pathlib import Path
 import json
 
-import requests
 import pytest
 
 from pymongo import MongoClient

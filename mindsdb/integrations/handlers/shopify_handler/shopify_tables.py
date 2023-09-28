@@ -137,6 +137,9 @@ class CustomersTable(APITable):
 
         customers_df = pd.json_normalize(self.get_customers())
 
+        # The SELECTQueryExecutor is called here because there does not seem to be away to delete customers based on their attributes
+        # This requires all of the customers to be pulled from the API and then filtered based on the WHERE conditions
+        # TODO: Find a way to delete customers based on their attributes 
         select_statement_executor = SELECTQueryExecutor(
             customers_df,
             [],

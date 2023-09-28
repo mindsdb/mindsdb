@@ -40,7 +40,7 @@ FROM mindsdb.predictors
 WHERE name='mssql_diabetes_predictor';
 ```
 
-![SELECT_FROM]!(https://user-images.githubusercontent.com/241893/199147468-798afd73-7ae6-458a-96b2-de9fbfb70bca.png)
+![SELECT_FROM](https://user-images.githubusercontent.com/241893/199147468-798afd73-7ae6-458a-96b2-de9fbfb70bca.png)
 
 ### Results
 

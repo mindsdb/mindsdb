@@ -29,15 +29,15 @@ class RedisKey:
 
     @property
     def status(self):
-        return f'{self._base_key}-status'
+        return (self._base_key + b'-status').decode()
 
     @property
     def dataframe(self):
-        return f'{self._base_key}-dataframe'
+        return (self._base_key + b'-dataframe').decode()
 
     @property
     def exception(self):
-        return f'{self._base_key}-exception'
+        return (self._base_key + b'-exception').decode()
 
 
 class StatusNotifier(threading.Thread):

@@ -21,7 +21,7 @@ class SELECTQueryParser(BaseQueryParser):
         List of columns in the table.
     """
     def __init__(self, query: ast.Select, table: Text, columns: List[Text]):
-        self.query = query
+        super().__init__(query)
         self.table = table
         self.columns = columns
 

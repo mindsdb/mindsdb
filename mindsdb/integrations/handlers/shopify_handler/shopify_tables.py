@@ -8,6 +8,7 @@ from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilities import INSERTQueryParser
 from mindsdb.integrations.handlers.utilities.query_utilities.delete_query_utilities import DELETEQueryParser
+from mindsdb.integrations.handlers.utilities.query_utilities.update_query_utilities import UPDATEQueryParser
 
 from mindsdb.utilities.log import get_log
 
@@ -131,6 +132,44 @@ class CustomersTable(APITable):
         customer_data = insert_statement_parser.parse_query()
         self.create_customers(customer_data)
 
+    def update(self, query: ast.Update) -> None:
+        """Updates data in the Shopify "PUT /customers" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Update
+           Given SQL UPDATE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        update_statement_parser = UPDATEQueryParser(query)
+        values_to_update, where_conditions = update_statement_parser.parse_query()
+
+        customers_df = pd.json_normalize(self.get_customers())
+
+        # The SELECTQueryExecutor is called here because there does not seem to be away to update customers based on their attributes
+        # This requires all of the customers to be pulled from the API and then filtered based on the WHERE conditions
+        # TODO: Find a way to update customers based on their attributes
+        select_statement_executor = SELECTQueryExecutor(
+            customers_df,
+            [],
+            where_conditions,
+            {}
+        )
+
+        customers_df = select_statement_executor.execute_query()
+
+        customer_ids = customers_df['id'].tolist()
+
+        self.update_customers(customer_ids, values_to_update)
+
     def delete(self, query: ast.Delete) -> None:
         delete_statement_parser = DELETEQueryParser(query)
         where_conditions = delete_statement_parser.parse_query()
@@ -170,6 +209,18 @@ class CustomersTable(APITable):
                 raise Exception('Customer creation failed')
             else:
                 logger.info(f'Customer {created_customer.to_dict()["id"]} created')
+
+    def update_customers(self, customer_ids: List[int], values_to_update: List[Dict[Text, Any]]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for customer_id in customer_ids:
+            customer = shopify.Customer.find(customer_id)
+            for key, value in values_to_update.items():
+                setattr(customer, key, value)
+            customer.save()
+            logger.info(f'Customer {customer_id} updated')
+
 
     def delete_customers(self, customer_ids: List[int]) -> None:
         api_session = self.handler.connect()

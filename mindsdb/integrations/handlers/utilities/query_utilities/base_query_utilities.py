@@ -43,9 +43,9 @@ class BaseQueryExecutor(ABC):
         Given SQL query.
     """
 
-    def __init__(self, df: pd.DataFrame, query: ast):
+    def __init__(self, df: pd.DataFrame, where_conditions: List[List[Text]]):
         self.df = df
-        self.query = query
+        self.where_conditions = where_conditions
 
     @abstractmethod
     def execute_query(self):

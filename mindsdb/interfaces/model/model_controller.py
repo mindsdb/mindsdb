@@ -1,3 +1,4 @@
+import copy
 import os
 import sys
 import json
@@ -420,6 +421,13 @@ class ModelController():
             raise Exception("ML handler doesn't updating")
 
         ml_handler.update(args=problem_definition)
+
+        # update model record
+        if 'using' in problem_definition:
+            learn_args = copy.deepcopy(model_record.learn_args)
+            learn_args['using'].update(problem_definition['using'])
+            model_record.learn_args = learn_args
+            db.session.commit()
 
     def get_model_info(self, predictor_record):
         from mindsdb.interfaces.database.projects import ProjectController

@@ -18,7 +18,7 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
     name = 'pytorch_tabular'
 
     @staticmethod
-    def create_validation(self, args: Optional[dict] = None) -> None:
+    def create_validation(self,args: Optional[dict] = None) -> None:
         task_supported = ['regression','classification','backbone']
         initialization_supported = ['kaiming','xavier','random']
         args = args["using"]
@@ -27,8 +27,8 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
                 raise Exception(f"Please specify task parameter supported : {task_supported}")
         if "initialization" not in args or args["initialization"] not in initialization_supported:
             raise Exception(f"Initialization scheme choices are : {initialization_supported}")
-        if "target" not in args:
-            raise Exception("Please provide the target column")
+        #if not target:
+            #raise Exception("Please provide the target column")
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
         train_data = df
@@ -38,11 +38,8 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
         continuous_columns = None
         batch_size = 32
         args = args["using"]
-        target = args["target"]
-        if not train_data:
-            raise Exception("Please provide data for the model to train on")
         if 'categorical_cols' in args:
-            categorical_columns = ast.literal_eval(args["categorical"])
+            categorical_columns = ast.literal_eval(args["categorical_cols"])
         if 'continuous_cols' in args:
             continuous_columns = ast.literal_eval(args['continuous_cols'])
         if 'drop_out' in args:
@@ -52,7 +49,7 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
         if 'batch_size' in args:
             batch_size = int(args['batch_size'])
         data_config = DataConfig(
-            target = target,
+            target = [target],
             continuous_cols = continuous_columns,
             categorical_cols = categorical_columns,
             continuous_feature_transform=None,
@@ -99,6 +96,5 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
         args = self.model_storage.json_get('args')
         des_dict = {'epochs': args['epochs'], 'initialization': args['initialization'], 'task': args['task'],
                     'categorical_columns': args['categorical_cols'], 'continuous_columns': args['continuous_cols']}
-        #check is activation function is required
         df_describe = pd.DataFrame.from_dict(des_dict)
         return df_describe

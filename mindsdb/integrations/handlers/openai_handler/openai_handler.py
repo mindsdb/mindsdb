@@ -42,7 +42,7 @@ class OpenAIHandler(BaseMLEngine):
         # user suffix for finetunes, set once
         try:
             self.engine_storage.json_get('ft-suffix')['ft-suffix']
-        except KeyError:
+        except (KeyError, TypeError):
             self.engine_storage.json_set('ft-suffix', {'ft-suffix': binascii.b2a_hex(os.urandom(15)).decode()})
 
     @staticmethod

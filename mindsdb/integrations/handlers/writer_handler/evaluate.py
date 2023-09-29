@@ -5,7 +5,6 @@ from typing import List
 
 import nltk
 import pandas as pd
-from integrations.handlers.writer_handler.settings import WriterHandlerParameters
 from nltk import word_tokenize
 from nltk.translate.bleu_score import (  # todo investigate why this always returns 0, not used for now
     sentence_bleu,
@@ -14,6 +13,9 @@ from nltk.translate.meteor_score import meteor_score
 from rouge_score import rouge_scorer
 from scipy.spatial import distance
 
+from mindsdb.integrations.handlers.writer_handler.settings import (
+    WriterHandlerParameters,
+)
 from mindsdb.utilities.log import get_log
 
 # todo use polars for this for speed

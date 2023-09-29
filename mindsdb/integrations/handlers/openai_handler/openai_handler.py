@@ -23,6 +23,8 @@ from mindsdb.integrations.handlers.openai_handler.models import CHAT_MODELS, FIN
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.libs.llm_utils import get_completed_prompts
 
+CHAT_MODELS = ('gpt-3.5-turbo', 'gpt-3.5-turbo-16k', 'gpt-4', 'gpt-4-32k')
+
 
 class OpenAIHandler(BaseMLEngine):
     name = 'openai'
@@ -108,6 +110,7 @@ class OpenAIHandler(BaseMLEngine):
         api_key = get_api_key('openai', args, self.engine_storage)
         ft_suffix = self.engine_storage.json_get('ft-suffix')['ft-suffix']
         available_models = get_available_models(api_key, ft_suffix)
+
         if not args.get('model_name'):
             args['model_name'] = self.default_model
         elif args['model_name'] not in available_models:

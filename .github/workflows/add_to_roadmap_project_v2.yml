@@ -12,5 +12,3 @@ jobs:
         with:
           project-url: https://github.com/orgs/mindsdb/projects/53
           github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}
-          labeled: bug, enhancement
-          label-operator: OR

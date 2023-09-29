@@ -1,93 +1,96 @@
 import os
 import time
 import pytest
-from unittest.mock import patch
-
 import pandas as pd
-
+from unittest.mock import patch
 from mindsdb_sql import parse_sql
-
-from tests.unit.executor_test_base import BaseExecutorTest
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
-
-
-OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
-os.environ["OPENAI_API_KEY"] = OPEN_AI_API_KEY
+from ..executor_test_base import BaseExecutorTest
 
 
 class TestOpenAI(BaseExecutorTest):
-    def wait_predictor(self, project, name):
-        # wait
-        done = False
-        for attempt in range(200):
+    """Test Class for OpenAI Integration Testing"""
+
+    @staticmethod
+    def get_api_key():
+        """Retrieve OpenAI API key from environment variables"""
+        return os.environ.get("OPENAI_API_KEY")
+
+    def setup_method(self, method):
+        """Setup test environment, creating a project"""
+        super().setup_method()
+        self.run_sql("create database proj")
+
+    def wait_predictor(self, project, name, timeout=100):
+        """
+        Wait for the predictor to be created,
+        raising an exception if predictor creation fails or exceeds timeout
+        """
+        for attempt in range(timeout):
             ret = self.run_sql(f"select * from {project}.models where name='{name}'")
             if not ret.empty:
-                if ret["STATUS"][0] == "complete":
-                    done = True
-                    break
-                elif ret["STATUS"][0] == "error":
-                    break
+                status = ret["STATUS"][0]
+                if status == "complete":
+                    return
+                elif status == "error":
+                    raise RuntimeError("Predictor failed", ret["ERROR"][0])
             time.sleep(0.5)
-        if not done:
-            raise RuntimeError("predictor wasn't created")
+        raise RuntimeError("Predictor wasn't created")
 
     def run_sql(self, sql):
+        """Execute SQL and return a DataFrame, raising an AssertionError if an error occurs"""
         ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
-        assert ret.error_code is None
+        assert ret.error_code is None, f"SQL execution failed with error: {ret.error_code}"
         if ret.data is not None:
-            columns = [col.alias if col.alias is not None else col.name for col in ret.columns]
+            columns = [col.alias if col.alias else col.name for col in ret.columns]
             return pd.DataFrame(ret.data, columns=columns)
 
     def test_missing_required_keys(self):
-        # create project
-        self.run_sql("create database proj")
+        """Test for missing required keys"""
         with pytest.raises(Exception):
             self.run_sql(
                 f"""
-                  create model proj.test_openai_missing_required_keys
-                  predict answer
-                  using
-                    engine='openai',
-                    openai_api_key='{OPEN_AI_API_KEY}';
-               """
+                create model proj.test_openai_missing_required_keys
+                predict answer
+                using
+                  engine='openai',
+                  api_key='{self.get_api_key()}';
+                """
             )
 
     def test_invalid_openai_name_parameter(self):
-        # create project
-        self.run_sql("create database proj")
+        """Test for invalid OpenAI model name parameter"""
         self.run_sql(
             f"""
-              create model proj.test_openai_nonexistant_model
-              predict answer
-              using
-                engine='openai',
-                question_column='question',
-                model_name='this-gpt-does-not-exist',
-                openai_api_key='{OPEN_AI_API_KEY}';
-           """
+            create model proj.test_openai_nonexistant_model
+            predict answer
+            using
+              engine='openai',
+              question_column='question',
+              model_name='this-gpt-does-not-exist',
+              api_key='{self.get_api_key()}';
+            """
         )
         with pytest.raises(Exception):
             self.wait_predictor("proj", "test_openai_nonexistant_model")
 
     def test_unknown_arguments(self):
-        self.run_sql("create database proj")
+        """Test for unknown arguments"""
         with pytest.raises(Exception):
             self.run_sql(
                 f"""
                 create model proj.test_openai_unknown_arguments
                 predict answer
                 using
-                    engine='openai',
-                    question_column='question',
-                    openai_api_key='{OPEN_AI_API_KEY}',
-                    evidently_wrong_argument='wrong value';  --- this is a wrong argument name
-            """
+                  engine='openai',
+                  question_column='question',
+                  api_key='{self.get_api_key()}',
+                  evidently_wrong_argument='wrong value';
+                """
             )
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_qa_no_context(self, mock_handler):
-        # create project
-        self.run_sql("create database proj")
         df = pd.DataFrame.from_dict({"question": [
             "What is the capital of Sweden?",
             "What is the second planet of the solar system?"
@@ -101,7 +104,7 @@ class TestOpenAI(BaseExecutorTest):
            using
              engine='openai',
              question_column='question',
-             openai_api_key='{OPEN_AI_API_KEY}';
+             api_key='{self.get_api_key()}';
         """
         )
         self.wait_predictor("proj", "test_openai_qa_no_context")
@@ -127,8 +130,6 @@ class TestOpenAI(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_qa_context(self, mock_handler):
-        # create project
-        self.run_sql("create database proj")
         df = pd.DataFrame.from_dict({"question": [
             "What is the capital of Sweden?",
             "What is the second planet of the solar system?"
@@ -143,7 +144,7 @@ class TestOpenAI(BaseExecutorTest):
              engine='openai',
              question_column='question',
              context_column='context',
-             openai_api_key='{OPEN_AI_API_KEY}';
+             api_key='{self.get_api_key()}';
         """
         )
         self.wait_predictor("proj", "test_openai_qa_context")
@@ -175,8 +176,6 @@ class TestOpenAI(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_prompt_template(self, mock_handler):
-        # create project
-        self.run_sql("create database proj")
         df = pd.DataFrame.from_dict({"question": [
             "What is the capital of Sweden?",
             "What is the second planet of the solar system?"
@@ -189,7 +188,7 @@ class TestOpenAI(BaseExecutorTest):
            using
              engine='openai',
              prompt_template='Answer this question and add "Boom!" to the end of the answer: {{{{question}}}}',
-             openai_api_key='{OPEN_AI_API_KEY}';
+             api_key='{self.get_api_key()}';
         """
         )
         self.wait_predictor("proj", "test_openai_prompt_template")
@@ -226,7 +225,6 @@ class TestOpenAI(BaseExecutorTest):
                 return {'ft-suffix': {'ft-suffix': '$'}}[key]  # finetuning suffix, irrelevant for this test but needed for init  # noqa
 
         # create project
-        self.run_sql("create database proj")
         handler = OpenAIHandler(
             model_storage=None,  # the storage does not matter for this test
             engine_storage=MockHandlerStorage()  # nor does this, but we do need to pass some object due to the init procedure  # noqa
@@ -241,7 +239,7 @@ class TestOpenAI(BaseExecutorTest):
            using
              engine='openai',
              prompt_template='What is the sentiment of the following phrase? Answer either "positive" or "negative": {{{{input}}}}',
-             openai_api_key='{OPEN_AI_API_KEY}';
+             api_key='{self.get_api_key()}';
         """  # noqa
         )
         self.wait_predictor("proj", "test_openai_bulk_normal_completion")

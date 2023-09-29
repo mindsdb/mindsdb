@@ -52,10 +52,12 @@
 
 ----------------------------------------
 
-[MindsDB's](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) **AI Virtual Database** empowers developers to connect any AI/ML model to any datasource. This includes relational and non-relational databases, data warehouses and SaaS applications.
- [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Build%20AI-Centered%20Applications%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,nlp,machine_learning,neural_networks,databases,gpt3)
+[MindsDB's](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) **AI Automation Platform** empowers developers to build real-time AI workflows connecting any AI/ML model directly to any datasource. This includes relational and non-relational databases, data warehouses and SaaS applications. 
+ [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Build%20Real-time%20AI%20with%20@MindsDB%20&url=https://www.mindsdb.com&hashtags=ai,ml,nlp,machine_learning,neural_networks,databases,gpt)
 
-MindsDB offers three primary benefits to its users. 
+We provide a comprehensive solution for deploying AI over dynamic data - from state-of-the-art LLMs and advanced vector operations to the forefront of time-series forecasting and classical ML techniques.
+
+MindsDB offers two primary benefits to its users. 
 1. Hook AI models to run automatically as new data is observed and plug the output into any of our integrations. 
 2. Automate training and finetuning AI models from data contained in any of the 130+ datasources we support.
   
@@ -73,7 +75,7 @@ You can try MindsDB using our [demo environment](https://cloud.mindsdb.com/?utm_
 
 ## Installation
 
-The preferred way is to use MindsDB Cloud [free demo instance](https://cloud.mindsdb.com/home) or use a [dedicated instance](https://cloud.mindsdb.com/home). If you want to move to production, use [the AWS AMI image](https://aws.amazon.com/marketplace/seller-profile?id=03a65520-86ca-4ab8-a394-c11eb54573a9).
+The preferred way is to use MindsDB Cloud [free demo instance](https://cloud.mindsdb.com/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) or use a [dedicated instance](https://cloud.mindsdb.com/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo). If you want to move to production, use [the AWS AMI image](https://aws.amazon.com/marketplace/seller-profile?id=03a65520-86ca-4ab8-a394-c11eb54573a9).
 
 To install locally or on-premise, pull the latest Docker image:
 
@@ -87,10 +89,10 @@ docker pull mindsdb/mindsdb
 2. CREATE MODEL:  and pick the AI Engine to learn from your data. The models get provisioned and deployed automatically and become ready for inference instantaneously.
     1. Pick pre-trained models like OpenAI’s GPT, Hugging Face, LangChain, etc, for NLP or generative AI use cases;
     2. or pick from a variety of state-of-the-art engines for classic machine Learning use cases (regression, classification, or time-series tasks);
-    3. or [IMPORT](https://docs.mindsdb.com/custom-model/byom) custom model built with any ML framework to automatically deploy as [AI Tables](https://www.youtube.com/watch?v=tnB4Y9T1E2k).
-3. SELECT FROM MODEL: Query models using [SELECT](https://docs.mindsdb.com/sql/api/select) statements, [API](https://docs.mindsdb.com/rest/usage) calls, or [JOIN](https://docs.mindsdb.com/sql/api/join) commands to make predictions for thousands or millions of data points simultaneously.
-4. FINE TUNE MODEL: Experiment with your models and [Fine-Tune](https://docs.mindsdb.com/sql/api/finetune) them to achieve the best results.
-5. CREATE JOB: Automate your workflows with [JOBs](https://docs.mindsdb.com/sql/create/jobs). 
+    3. or [IMPORT](https://docs.mindsdb.com/custom-model/byom?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) custom model built with any ML framework to automatically deploy as [AI Tables](https://www.youtube.com/watch?v=tnB4Y9T1E2k).
+3. SELECT FROM MODEL: Query models using [SELECT](https://docs.mindsdb.com/sql/api/select?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) statements, [API](https://docs.mindsdb.com/rest/usage?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) calls, or [JOIN](https://docs.mindsdb.com/sql/api/join?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) commands to make predictions for thousands or millions of data points simultaneously.
+4. FINE TUNE MODEL: Experiment with your models and [Fine-Tune](https://docs.mindsdb.com/sql/api/finetune?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) them to achieve the best results.
+5. CREATE JOB: Automate your workflows with [JOBs](https://docs.mindsdb.com/sql/create/jobs?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo). 
 
 Follow the [quickstart guide](https://docs.mindsdb.com/quickstart?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) with sample data to get on-boarded as fast as possible.
 

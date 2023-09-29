@@ -33,7 +33,7 @@ class BaseQueryParser(ABC):
         return where_conditions
     
 
-class BaseQueryExecutor(ABC):
+class BaseQueryExecutor():
     """
     Executes a SQL query.
 
@@ -57,7 +57,7 @@ class BaseQueryExecutor(ABC):
 
     def execute_where_clause(self):
         """
-        Execute the where clause of the query.
+        Executes the where clause of the query.
         """
         if len(self.where_conditions) > 0:
             for condition in self.where_conditions:

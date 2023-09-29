@@ -47,7 +47,9 @@ class UPDATEQueryExecutor(BaseQueryExecutor):
     where_conditions : List[List[Text]]
         WHERE conditions of the query.
 
-    NOTE: This class expects all of the entities to be passed in as a DataFrane and filters out the relevant records based on the WHERE conditions.
+    NOTE: This class DOES NOT update the relevant records of the entity for you, it will simply return the records that need to be updated based on the WHERE conditions.
+          
+          This class expects all of the entities to be passed in as a DataFrane and filters out the relevant records based on the WHERE conditions.
           Because all of the records need to be extracted to be passed in as a DataFrame, this class is not very computationally efficient.
           Therefore, DO NOT use this class if the API/SDK that you are using supports updating records in bulk.
     """

@@ -97,6 +97,29 @@ class TripAdvisorAPI:
 
         return response
 
+    def location_details(
+        self, url: str, params_dict: dict, locationId: str, language: str = "en"
+    ) -> Response:
+        """
+        A Location Details request returns comprehensive information about a location (hotel, restaurant, or an attraction) such as name, address, rating, and URLs for the listing
+        on Tripadvisor.
+
+        Args:
+            locationId (str): A unique identifier for a location on Tripadvisor. The location ID can be obtained using the Location Search.
+            language (str): The language in which to return results (e.g. "en" for English or "es" for Spanish) from the list of our Supported Languages.
+            currency (str): The currency code to use for request and response (should follow ISO 4217).
+
+        Returns:
+            response (Response): Response object with response data as application/json
+        """
+        url = url + "{locationId}/details?language={language}&key={api_key}&".format(
+            locationId=locationId, api_key=self.api_key, language=language
+        )
+
+        url = self.processQuery(url, params_dict)
+        response = self.getResponse(url)
+        return response
+
     def makeRequest(self, apiCall, **params):
         """
         Making a request based on the query
@@ -104,7 +127,15 @@ class TripAdvisorAPI:
         url = "https://api.content.tripadvisor.com/api/v1/location/"
         params_dict = params
 
+        print("HEYOOO")
+
         if apiCall == TripAdvisorAPICall.SEARCH_LOCATION:
             response = self.location_search(url, params_dict)
 
-        return response.json()["data"]
+            return response.json()["data"]
+        elif apiCall == TripAdvisorAPICall.LOCATION_DETAILS:
+            print("WENT HERE !!")
+            response = self.location_details(
+                url, params_dict, params_dict["locationId"]
+            )
+            return response.json()

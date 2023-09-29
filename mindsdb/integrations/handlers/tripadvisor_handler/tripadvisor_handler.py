@@ -21,9 +21,10 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE,
 )
 
-from tripadvisor_api import TripAdvisorAPI
-from tripadvisor_table import SearchLocationTable
-from tripadvisor_api import TripAdvisorAPICall
+from .tripadvisor_table import SearchLocationTable
+from .tripadvisor_table import LocationDetailsTable
+from .tripadvisor_api import TripAdvisorAPI
+from .tripadvisor_api import TripAdvisorAPICall
 
 
 class TripAdvisorHandler(APIHandler):
@@ -56,6 +57,9 @@ class TripAdvisorHandler(APIHandler):
 
         tripAdvisor = SearchLocationTable(self)
         self._register_table("searchLocationTable", tripAdvisor)
+
+        tripAdvisorLocationDetails = LocationDetailsTable(self)
+        self._register_table("locationDetailsTable", tripAdvisorLocationDetails)
 
     def connect(self, api_version=2):
         """Check the connection with TripAdvisor API"""
@@ -103,7 +107,6 @@ class TripAdvisorHandler(APIHandler):
 
         locations = self.api.makeRequest(TripAdvisorAPICall.SEARCH_LOCATION, **params)
         result = []
-        print(locations)
 
         for loc in locations:
             data = {
@@ -124,6 +127,70 @@ class TripAdvisorHandler(APIHandler):
                 "longitude": loc.get("address_obj").get("longitude"),
             }
             result.append(data)
+
+        result = pd.DataFrame(result)
+        print(result)
+        return result
+
+    def call_tripadvisor_location_details_api(
+        self, method_name: str = None, params: dict = None
+    ) -> pd.DataFrame:
+        if self.is_connected is False:
+            self.connect()
+
+        print("INTERESTING")
+
+        loc = self.api.makeRequest(TripAdvisorAPICall.LOCATION_DETAILS, **params)
+        result = []
+
+        data = {
+            "location_id": loc.get("location_id"),
+            "name": loc.get("name"),
+            "distance": loc.get("distance"),
+            "rating": loc.get("rating"),
+            "bearing": loc.get("bearing"),
+            "street1": loc.get("address_obj").get("street1"),
+            "street2": loc.get("address_obj").get("street2"),
+            "city": loc.get("address_obj").get("city"),
+            "state": loc.get("address_obj").get("state"),
+            "country": loc.get("address_obj").get("country"),
+            "postalcode": loc.get("address_obj").get("postalcode"),
+            "address_string": loc.get("address_obj").get("address_string"),
+            "phone": loc.get("address_obj").get("phone"),
+            "latitude": loc.get("address_obj").get("latitude"),
+            "longitude": loc.get("address_obj").get("longitude"),
+            "web_url": loc.get("web_url"),
+            "timezone": loc.get("timezone"),
+            "email": loc.get("email"),
+            "website": loc.get("website"),
+            "write_review": loc.get("write_review"),
+            "ranking_data": str(loc.get("ranking_data")),
+            "rating": loc.get("rating"),
+            "rating_image_url": loc.get("rating_image_url"),
+            "num_reviews": loc.get("num_reviews"),
+            "review_rating_count": loc.get("review_rating_count"),
+            "subratings": loc.get("subratings"),
+            "photo_count": loc.get("photo_count"),
+            "see_all_photos": loc.get("see_all_photos"),
+            "price_level": loc.get("price_level"),
+            "parent_brand": loc.get("parent_brand"),
+            "brand": loc.get("brand"),
+            "ancestors": str(loc.get("ancestors")),
+            "periods": str(loc.get("hours").get("periods")),
+            "weekday": str(loc.get("hours").get("weekday_text")),
+            "amenities": str(loc.get("amenities")),
+            "features": str(loc.get("features")),
+            "cuisines": str(loc.get("cuisine")),
+            "styles": str(loc.get("styles")),
+            "neighborhood_info": str(loc.get("neighborhood_info")),
+            "awards": str(loc.get("awards")),
+            "trip_types": str(loc.get("trip_types")),
+            "groups": str(loc.get("groups")),
+        }
+
+        result.append(data)
+
+        print(result)
 
         result = pd.DataFrame(result)
         print(result)

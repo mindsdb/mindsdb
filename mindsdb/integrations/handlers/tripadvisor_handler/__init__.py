@@ -9,11 +9,14 @@ try:
 except Exception as e:
     Handler = None
     import_error = e
+    print(import_error)
+
+print("LOL")
 
 title = "TripAdvisor"
 name = "tripadvisor"
 type = HANDLER_TYPE.DATA
-# icon_path = 'icon.svg'
+icon_path = "icon.svg"
 
 __all__ = [
     "Handler",

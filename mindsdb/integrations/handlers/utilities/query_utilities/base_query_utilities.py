@@ -47,12 +47,13 @@ class BaseQueryExecutor(ABC):
         self.df = df
         self.where_conditions = where_conditions
 
-    @abstractmethod
     def execute_query(self):
         """
         Executes the SQL query.
         """
-        pass
+        self.execute_where_clause()
+
+        return self.df
 
     def execute_where_clause(self):
         """

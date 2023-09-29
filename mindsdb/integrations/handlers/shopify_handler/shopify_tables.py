@@ -7,8 +7,8 @@ from mindsdb.integrations.libs.api_handler import APITable
 
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilities import INSERTQueryParser
-from mindsdb.integrations.handlers.utilities.query_utilities.delete_query_utilities import DELETEQueryParser
-from mindsdb.integrations.handlers.utilities.query_utilities.update_query_utilities import UPDATEQueryParser
+from mindsdb.integrations.handlers.utilities.query_utilities.delete_query_utilities import DELETEQueryParser, DELETEQueryExecutor
+from mindsdb.integrations.handlers.utilities.query_utilities.update_query_utilities import UPDATEQueryParser, UPDATEQueryExecutor
 
 from mindsdb.utilities.log import get_log
 
@@ -55,6 +55,39 @@ class ProductsTable(APITable):
         products_df = select_statement_executor.execute_query()
 
         return products_df
+    
+    def delete(self, query: ast.Delete) -> None:
+        """
+        Deletes data from the Shopify "DELETE /products" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Delete
+           Given SQL DELETE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        delete_statement_parser = DELETEQueryParser(query)
+        where_conditions = delete_statement_parser.parse_query()
+
+        products_df = pd.json_normalize(self.get_products())
+
+        delete_query_executor = DELETEQueryExecutor(
+            products_df,
+            where_conditions
+        )
+
+        products_df = delete_query_executor.execute_query()
+
+        product_ids = products_df['id'].tolist()
+        self.delete_products(product_ids)
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_products(limit=1)).columns.tolist()
@@ -64,6 +97,15 @@ class ProductsTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         products = shopify.Product.find(**kwargs)
         return [product.to_dict() for product in products]
+    
+    def delete_products(self, product_ids: List[int]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for product_id in product_ids:
+            product = shopify.Product.find(product_id)
+            product.destroy()
+            logger.info(f'Product {product_id} deleted')
 
 
 class CustomersTable(APITable):
@@ -154,41 +196,16 @@ class CustomersTable(APITable):
 
         customers_df = pd.json_normalize(self.get_customers())
 
-        # The SELECTQueryExecutor is called here because there does not seem to be away to update customers based on their attributes
-        # This requires all of the customers to be pulled from the API and then filtered based on the WHERE conditions
-        # TODO: Find a way to update customers based on their attributes
-        select_statement_executor = SELECTQueryExecutor(
+        update_query_executor = UPDATEQueryExecutor(
             customers_df,
-            [],
-            where_conditions,
-            {}
+            where_conditions
         )
 
-        customers_df = select_statement_executor.execute_query()
+        customers_df = update_query_executor.execute_query()
 
         customer_ids = customers_df['id'].tolist()
 
         self.update_customers(customer_ids, values_to_update)
-
-    def delete(self, query: ast.Delete) -> None:
-        delete_statement_parser = DELETEQueryParser(query)
-        where_conditions = delete_statement_parser.parse_query()
-
-        customers_df = pd.json_normalize(self.get_customers())
-
-        # The SELECTQueryExecutor is called here because there does not seem to be away to delete customers based on their attributes
-        # This requires all of the customers to be pulled from the API and then filtered based on the WHERE conditions
-        # TODO: Find a way to delete customers based on their attributes 
-        select_statement_executor = SELECTQueryExecutor(
-            customers_df,
-            [],
-            where_conditions,
-            {}
-        )
-        customers_df = select_statement_executor.execute_query()
-
-        customer_ids = customers_df['id'].tolist()
-        self.delete_customers(customer_ids)
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_customers(limit=1)).columns.tolist()
@@ -220,16 +237,6 @@ class CustomersTable(APITable):
                 setattr(customer, key, value)
             customer.save()
             logger.info(f'Customer {customer_id} updated')
-
-
-    def delete_customers(self, customer_ids: List[int]) -> None:
-        api_session = self.handler.connect()
-        shopify.ShopifyResource.activate_session(api_session)
-
-        for customer_id in customer_ids:
-            customer = shopify.Customer.find(customer_id)
-            customer.destroy()
-            logger.info(f'Customer {customer_id} deleted')
 
 
 class OrdersTable(APITable):

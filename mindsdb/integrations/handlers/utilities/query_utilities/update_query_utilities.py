@@ -15,12 +15,18 @@ class UPDATEQueryParser(BaseQueryParser):
         super().__init__(query)
     
     def parse_query(self):
+        """
+        Parses a SQL UPDATE statement into its components: the columns and values to update as a dictionary, and the WHERE conditions.
+        """
         values_to_update = self.parse_set_clause()
         where_conditions = self.parse_where_clause()
 
         return values_to_update, where_conditions
 
     def parse_set_clause(self):
+        """
+        Parses the SET clause of the query and returns a dictionary of columns and values to update.
+        """
         values = list(self.query.update_columns.items())
 
         values_to_update = {}
@@ -38,8 +44,10 @@ class UPDATEQueryExecutor(BaseQueryExecutor):
     ----------
     df : pd.DataFrame
         Given table.
-    values_to_update : Dict[Text, Any]
-        Values to update in the table.
     where_conditions : List[List[Text]]
         WHERE conditions of the query.
+
+    NOTE: This class expects all of the entities to be passed in as a DataFrane and filters out the relevant records based on the WHERE conditions.
+          Because all of the records need to be extracted to be passed in as a DataFrame, this class is not very computationally efficient.
+          Therefore, DO NOT use this class if the API/SDK that you are using supports updating records in bulk.
     """

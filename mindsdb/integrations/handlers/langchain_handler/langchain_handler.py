@@ -210,9 +210,9 @@ class LangChainHandler(BaseMLEngine):
         # fill memory
 
         # system prompt
-        prompt = args['prompt']
-        if 'prompt' in pred_args and pred_args['prompt'] is not None:
-            prompt = pred_args['prompt']
+        prompt = args['prompt_template']
+        if 'prompt_template' in pred_args and pred_args['prompt_template'] is not None:
+            prompt = pred_args['prompt_template']
         if 'context' in pred_args:
             prompt += '\n\n' + 'Useful information:\n' + pred_args['context'] + '\n'
         memory.chat_memory.messages.insert(0, SystemMessage(content=prompt))
@@ -228,7 +228,7 @@ class LangChainHandler(BaseMLEngine):
                 memory.chat_memory.add_ai_message(answer)
 
         # use last message as prompt, remove other questions
-        df.iloc[:-1, df.columns.get_loc('question')] = ''
+        df.iloc[:-1, df.columns.get_loc(args['user_column'])] = ''
 
         agent_name = AgentType.CONVERSATIONAL_REACT_DESCRIPTION
         agent = initialize_agent(
@@ -302,12 +302,12 @@ class LangChainHandler(BaseMLEngine):
 
     def run_agent(self, df, agent, args, pred_args):
         # TODO abstract prompt templating into a common utility method, this is also used in vanilla OpenAI
-        if args.get('prompt_template', False):
-            base_template = args['prompt_template']  # override with predict-time template if available
-        elif 'prompt_template' in pred_args:
-            base_template = pred_args['prompt_template']
+        if 'prompt_template' in pred_args:
+            base_template = pred_args['prompt_template']   # override with predict-time template if available
+        elif 'prompt_template' in args:
+            base_template = args['prompt_template']  # use create-time template if not
         else:
-            base_template = '{{question}}'
+            base_template = '{{question}}'  # default template otherwise
 
         input_variables = []
         matches = list(re.finditer("{{(.*?)}}", base_template))
@@ -327,6 +327,9 @@ class LangChainHandler(BaseMLEngine):
                 for col in input_variables:
                     kwargs[col] = row[col] if row[col] is not None else ''  # add empty quote if data is missing
                 prompts.append(prompt.format(**kwargs))
+            elif row.get(args['user_column']):
+                # just add prompt
+                prompts.append(row[args['user_column']])
 
         def _completion(agent, prompts):
             # TODO: ensure that agent completion plus prompt match the maximum allowed by the user

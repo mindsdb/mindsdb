@@ -1,3 +1,4 @@
+import copy
 import os
 import sys
 import json
@@ -41,11 +42,9 @@ def delete_model_storage(model_id, ctx_dump):
 
 class ModelController():
     config: Config
-    fs_store: FsStore
 
     def __init__(self) -> None:
         self.config = Config()
-        self.fs_store = FsStore()
 
     def get_model_data(self, name: str = None, predictor_record=None, ml_handler_name='lightwood') -> dict:
         if predictor_record is None:
@@ -232,66 +231,6 @@ class ModelController():
         for model_record in get_model_records(name=old_name):
             model_record.name = new_name
         db.session.commit()
-
-    def export_predictor(self, name: str) -> json:
-        predictor_record = get_model_record(name=name, except_absent=True)
-
-        fs_name = f'predictor_{ctx.company_id}_{predictor_record.id}'
-        self.fs_store.pull()
-        local_predictor_savefile = os.path.join(self.fs_store.folder_path, fs_name)
-        predictor_binary = open(local_predictor_savefile, 'rb').read()
-
-        # Serialize a predictor record into a dictionary
-        # move into the Predictor db class itself if we use it again somewhere
-        json_storage = get_json_storage(
-            resource_id=predictor_record.id
-        )
-        predictor_record_serialized = {
-            'name': predictor_record.name,
-            'data': predictor_record.data,
-            'to_predict': predictor_record.to_predict,
-            'mindsdb_version': predictor_record.mindsdb_version,
-            'native_version': predictor_record.native_version,
-            'is_custom': predictor_record.is_custom,
-            'learn_args': predictor_record.learn_args,
-            'update_status': predictor_record.update_status,
-            'json_ai': json_storage.get('json_ai'),
-            'code': predictor_record.code,
-            'lightwood_version': predictor_record.lightwood_version,
-            'dtype_dict': predictor_record.dtype_dict,
-            'predictor_binary': predictor_binary
-        }
-
-        return json.dumps(predictor_record_serialized, default=json_serialiser)
-
-    def import_predictor(self, name: str, payload: json) -> None:
-        prs = json.loads(payload)
-
-        predictor_record = db.Predictor(
-            name=name,
-            data=prs['data'],
-            to_predict=prs['to_predict'],
-            company_id=ctx.company_id,
-            mindsdb_version=prs['mindsdb_version'],
-            native_version=prs['native_version'],
-            is_custom=prs['is_custom'],
-            learn_args=prs['learn_args'],
-            update_status=prs['update_status'],
-            json_ai=prs['json_ai'],
-            code=prs['code'],
-            lightwood_version=prs['lightwood_version'],
-            dtype_dict=prs['dtype_dict']
-        )
-
-        db.session.add(predictor_record)
-        db.session.commit()
-
-        predictor_binary = base64.b64decode(prs['predictor_binary'])
-        fs_name = f'predictor_{ctx.company_id}_{predictor_record.id}'
-        with open(os.path.join(self.fs_store.folder_path, fs_name), 'wb') as fp:
-            fp.write(predictor_binary)
-
-        self.fs_store.push()
 
     @staticmethod
     def _get_data_integration_ref(statement, database_controller):
@@ -484,6 +423,13 @@ class ModelController():
             raise Exception("ML handler doesn't updating")
 
         ml_handler.update(args=problem_definition)
+
+        # update model record
+        if 'using' in problem_definition:
+            learn_args = copy.deepcopy(model_record.learn_args)
+            learn_args['using'].update(problem_definition['using'])
+            model_record.learn_args = learn_args
+            db.session.commit()
 
     def get_model_info(self, predictor_record):
         from mindsdb.interfaces.database.projects import ProjectController

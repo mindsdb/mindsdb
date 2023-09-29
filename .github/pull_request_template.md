@@ -2,7 +2,7 @@
 
 Please include a summary of the change and the issue it solves. 
 
-**Fixes** #(issue)
+Fixes #issue_number
 
 ## Type of change
 
@@ -10,17 +10,26 @@ Please include a summary of the change and the issue it solves.
 
 - [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
 - [ ] ⚡ New feature (non-breaking change which adds functionality)
-- [ ] 📢 Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] 📢 Breaking change (fix or feature that would cause existing functionality not to work as expected)
 - [ ] 📄 This change requires a documentation update
 
-### What is the solution?
+## Verification Process
 
-(Describe at a high level how the feature was implemented)
+To ensure the changes are working as expected:
+
+ - [ ]   Test Location: Specify the URL or path for testing.
+ - [ ]   Verification Steps: Outline the steps or queries needed to validate the change. Include any data, configurations, or actions required to reproduce or see the new functionality.
+
+## Additional Media:
+
+- [ ] I have attached a brief loom video or screenshots showcasing the new functionality or change.
 
 ## Checklist:
 
 - [ ] My code follows the style guidelines(PEP 8) of MindsDB.
-- [ ] I have commented my code, particularly in hard-to-understand areas.
-- [ ] I have updated the documentation, or created issues to update them.
-- [ ] I fixed|updated|added unit tests and integration tests for each feature (if applicable).
-- [ ] I have shared a short loom video or screenshots demonstrating any new functionality.
+- [ ] I have appropriately commented on my code, especially in complex areas.
+- [ ] Necessary documentation updates are either made or tracked in issues.
+- [ ] Relevant unit and integration tests are updated or added.
+
+
+

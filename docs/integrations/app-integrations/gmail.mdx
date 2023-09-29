@@ -3,7 +3,11 @@ title: Gmail
 sidebarTitle: Gmail
 ---
 
-In this section, we present how to integrate a Gmail account with MindsDB.
+In this section, we present how to connect Gmail accounts to MindsDB.
+
+[Gmail](https://gmail.com/) is a widely used and popular email service developed by Google.
+
+By connecting your Gmail account to MindsDB, you can utilize various AI models available within MindsDB to summarize emails, detect spam, or even automate email replies.
 
 <Warning>
 Please note that currently you can connect your Gmail account to local MindsDB installation by providing a path to the credentials file stored locally.
@@ -15,7 +19,7 @@ If you want to connect your Gmail account to MindsDB Cloud, you can upload the c
 
 The required arguments to establish a connection are as follows:
 
-* `credentials_file` local path to the credentials.json or `s3_credentials_file` in case your file is uploaded to s3. Follow the instructions below to generate the credentials file.
+* `credentials_file` local path to the credentials.json or `credentials_url` in case your file is uploaded to s3. Follow the instructions below to generate the credentials file.
 * `scopes` define the level of access granted. It is optional and by default it uses 'https://.../gmail.compose' and 'https://.../gmail.readonly' scopes.
 * 
 <Tip>
@@ -39,7 +43,7 @@ Or, you can also connect by giving the credentials file from an s3 [pre signed u
 CREATE DATABASE mindsdb_gmail
 WITH ENGINE = 'gmail',
 parameters = {
-    "s3_credentials_file": "https://s3.amazonaws.com/your_bucket/credentials.json?response-content-disposition=inline&X-Amz-Security-Token=12312...",
+    "credentials_url": "https://s3.amazonaws.com/your_bucket/credentials.json?response-content-disposition=inline&X-Amz-Security-Token=12312...",
     -- "scopes": ['SCOPE_1', 'SCOPE_2', ...] -- Optional scopes. By default 'https://.../gmail.compose' & 'https://.../gmail.readonly' scopes are used
 };
 ```

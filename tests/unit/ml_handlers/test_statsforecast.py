@@ -24,7 +24,7 @@ def test_choose_model():
     sample_df = AirPassengersDF.iloc[:100]
     results_df = get_insample_cv_results(model_args, sample_df)
     best_model = choose_model(model_args, results_df)
-    assert best_model.alias == "AutoTheta"
+    assert best_model.__class__.__name__ == "AutoTheta"
 
 
 class TestStatsForecast(BaseExecutorTest):
@@ -38,7 +38,7 @@ class TestStatsForecast(BaseExecutorTest):
                     done = True
                     break
                 elif ret["STATUS"][0] == "error":
-                    break
+                    raise RuntimeError("predictor failed", ret["ERROR"][0])
             time.sleep(0.5)
         if not done:
             raise RuntimeError("predictor wasn't created")
@@ -55,12 +55,12 @@ class TestStatsForecast(BaseExecutorTest):
         # create project
         self.run_sql("create database proj")
         df = create_mock_df()
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_handler(mock_handler, name="t", tables={"df": df}, engine='mysql')
 
         self.run_sql(
             """
            create model proj.model_1_group
-           from pg (select * from df)
+           from t (select * from df)
            predict target_col
            order by time_col
            group by group_col
@@ -75,7 +75,7 @@ class TestStatsForecast(BaseExecutorTest):
         result_df = self.run_sql(
             """
            SELECT p.*
-           FROM pg.df as t
+           FROM t.df as t
            JOIN proj.model_1_group as p
            where t.group_col='b'
         """
@@ -89,7 +89,7 @@ class TestStatsForecast(BaseExecutorTest):
         self.run_sql(
             """
            create model proj.model_multi_group
-           from pg (select * from df)
+           from t (select * from df)
            predict target_col
            order by time_col
            group by group_col, group_col_2, group_col_3
@@ -103,7 +103,7 @@ class TestStatsForecast(BaseExecutorTest):
         result_df = self.run_sql(
             """
            SELECT p.*
-           FROM pg.df as t
+           FROM t.df as t
            JOIN proj.model_multi_group as p
            where t.group_col_2='a2'
         """

@@ -102,6 +102,7 @@ class TripAdvisorHandler(APIHandler):
     def call_tripadvisor_searchlocation_api(
         self, method_name: str = None, params: dict = None
     ) -> pd.DataFrame:
+        """It processes the JSON data from the call and transforms it into pandas.Dataframe"""
         if self.is_connected is False:
             self.connect()
 
@@ -135,10 +136,9 @@ class TripAdvisorHandler(APIHandler):
     def call_tripadvisor_location_details_api(
         self, method_name: str = None, params: dict = None
     ) -> pd.DataFrame:
+        """It processes the JSON data from the call and transforms it into pandas.Dataframe"""
         if self.is_connected is False:
             self.connect()
-
-        print("INTERESTING")
 
         loc = self.api.makeRequest(TripAdvisorAPICall.LOCATION_DETAILS, **params)
         result = []

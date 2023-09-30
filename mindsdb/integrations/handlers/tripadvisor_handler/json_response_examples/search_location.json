@@ -1,0 +1,111 @@
+{
+    "data": [
+      {
+        "location_id": "186338",
+        "name": "London",
+        "address_obj": {
+          "country": "United Kingdom",
+          "address_string": "London England"
+        }
+      },
+      {
+        "location_id": "154995",
+        "name": "London",
+        "address_obj": {
+          "state": "Ontario",
+          "country": "Canada",
+          "address_string": "London, Ontario Canada"
+        }
+      },
+      {
+        "location_id": "553603",
+        "name": "London Eye",
+        "address_obj": {
+          "street1": "Westminster Bridge Road",
+          "street2": "Riverside Building, County Hall",
+          "city": "London",
+          "country": "United Kingdom",
+          "postalcode": "SE1 7PB",
+          "address_string": "Westminster Bridge Road Riverside Building, County Hall, London SE1 7PB England"
+        }
+      },
+      {
+        "location_id": "187547",
+        "name": "Tower of London",
+        "address_obj": {
+          "city": "London",
+          "country": "United Kingdom",
+          "postalcode": "EC3N 4AB",
+          "address_string": "London EC3N 4AB England"
+        }
+      },
+      {
+        "location_id": "11451660",
+        "name": "Total London Experience + London Eye, Tower of London, St Paul's",
+        "address_obj": {
+          "city": "London",
+          "country": "United Kingdom",
+          "address_string": "London England"
+        }
+      },
+      {
+        "location_id": "193108",
+        "name": "Rosewood London",
+        "address_obj": {
+          "street1": "252 High Holborn",
+          "street2": "",
+          "city": "London",
+          "country": "United Kingdom",
+          "postalcode": "WC1V 7EN",
+          "address_string": "252 High Holborn, London WC1V 7EN England"
+        }
+      },
+      {
+        "location_id": "187536",
+        "name": "London Underground",
+        "address_obj": {
+          "city": "London",
+          "country": "United Kingdom",
+          "postalcode": "SW1H 0TL",
+          "address_string": "London SW1H 0TL England"
+        }
+      },
+      {
+        "location_id": "195284",
+        "name": "Royal Lancaster London",
+        "address_obj": {
+          "street1": "Lancaster Terrace",
+          "street2": "",
+          "city": "London",
+          "country": "United Kingdom",
+          "postalcode": "W2 2TY",
+          "address_string": "Lancaster Terrace, London W2 2TY England"
+        }
+      },
+      {
+        "location_id": "618766",
+        "name": "Mrs London's",
+        "address_obj": {
+          "street1": "464 Broadway",
+          "street2": "464 Broadway, 12866, Saratoga Springs, New York",
+          "city": "Saratoga Springs",
+          "state": "New York",
+          "country": "United States",
+          "postalcode": "12866-2212",
+          "address_string": "464 Broadway 464 Broadway, 12866, Saratoga Springs, New York, Saratoga Springs, NY 12866-2212"
+        }
+      },
+      {
+        "location_id": "187569",
+        "name": "The Langham, London",
+        "address_obj": {
+          "street1": "1C Portland Place",
+          "street2": "Regent Street",
+          "city": "London",
+          "country": "United Kingdom",
+          "postalcode": "W1B 1JA",
+          "address_string": "1C Portland Place Regent Street, London W1B 1JA England"
+        }
+      }
+    ]
+  }

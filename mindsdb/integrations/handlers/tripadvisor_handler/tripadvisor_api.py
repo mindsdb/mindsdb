@@ -127,14 +127,11 @@ class TripAdvisorAPI:
         url = "https://api.content.tripadvisor.com/api/v1/location/"
         params_dict = params
 
-        print("HEYOOO")
-
         if apiCall == TripAdvisorAPICall.SEARCH_LOCATION:
             response = self.location_search(url, params_dict)
 
             return response.json()["data"]
         elif apiCall == TripAdvisorAPICall.LOCATION_DETAILS:
-            print("WENT HERE !!")
             response = self.location_details(
                 url, params_dict, params_dict["locationId"]
             )

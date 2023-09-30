@@ -107,6 +107,12 @@ def get_all_website_links(url):
             
             content_html = 'PDF'
             content_text = pdf_to_markdown(response)
+
+        elif 'application/xml' in content_type or 'text/xml' or 'application/rss+xml' in content_type:
+            # Parse XML content with BeautifulSoup
+            content_html = response.text
+            soup = BeautifulSoup(content_html, 'lxml-xml')  # Note the parser and feature argument
+            content_text = get_readable_text_from_xml(soup)  # You'll need to define this function
         else:
             content_html = response.text
 
@@ -163,6 +169,19 @@ def get_readable_text_from_soup(soup):
 
     return markdown_output
 
+def get_readable_text_from_xml(soup):
+    # Initialize an empty string to store the text content
+    readable_text = ""
+
+    # Assume each XML tag contains text that we want to extract
+    # You may need to specify certain tags if your XML has a specific structure
+    for tag in soup.find_all(True):
+        # Check if the tag has text
+        if tag.string:
+            # Append the tag name and text content to the readable_text string
+            readable_text += f"{tag.name}: {tag.string.strip()}\n"
+
+    return readable_text
 
 # this bad girl does the recursive crawling of the websites
 def get_all_website_links_rec(url, reviewd_urls, limit=None):

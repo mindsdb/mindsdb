@@ -98,15 +98,25 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="merlion", data={}, engine="merlion")
         db.session.add(r)
+        r = db.Integration(name="monkeylearn", data={}, engine="monkeylearn")
+        db.session.add(r)
         r = db.Integration(name="statsforecast", data={}, engine="statsforecast")
         db.session.add(r)
         r = db.Integration(name="dummy_ml", data={}, engine="dummy_ml")
         db.session.add(r)
         r = db.Integration(name="neuralforecast", data={}, engine="neuralforecast")
         db.session.add(r)
-        r = db.Integration(name="statsforecast", data={}, engine="statsforecast")
+        r = db.Integration(
+            name="popularity_recommender", data={}, engine="popularity_recommender"
+        )
+        db.session.add(r)
+        r = db.Integration(name="lightfm", data={}, engine="lightfm")
         db.session.add(r)
         r = db.Integration(name="openai", data={}, engine="openai")
+        db.session.add(r)
+        r = db.Integration(
+            name="langchain_embedding", data={}, engine="langchain_embedding"
+        )
         db.session.add(r)
         # Lightwood should always be last (else tests break, why?)
         r = db.Integration(name="lightwood", data={}, engine="lightwood")
@@ -148,7 +158,6 @@ class BaseExecutorTest(BaseUnitTest):
         from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import (
             SessionController,
         )
-
         from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import (
             ExecuteCommands,
         )
@@ -184,7 +193,7 @@ class BaseExecutorTest(BaseUnitTest):
 
         if mock_lightwood:
             predict_patcher = mock.patch(
-                "mindsdb.integrations.handlers.lightwood_handler.Handler.predict"
+                "mindsdb.integrations.libs.ml_exec_base.BaseMLEngineExec.predict"
             )
             self.mock_predict = predict_patcher.__enter__()
 
@@ -217,10 +226,8 @@ class BaseExecutorTest(BaseUnitTest):
         self.db.session.add(r)
         self.db.session.commit()
 
-        from mindsdb.integrations.libs.response import (
-            HandlerResponse as Response,
-            RESPONSE_TYPE,
-        )
+        from mindsdb.integrations.libs.response import RESPONSE_TYPE
+        from mindsdb.integrations.libs.response import HandlerResponse as Response
 
         def handler_response(df):
             response = Response(RESPONSE_TYPE.TABLE, df)
@@ -356,10 +363,11 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         self.db.session.add(r)
         self.db.session.commit()
 
-        def predict_f(data, pred_format="dict", *args, **kargs):
+        def predict_f(_model_name, data, pred_format="dict", *args, **kargs):
             dict_arr = []
             explain_arr = []
-            data = data.to_dict(orient="records")
+            if isinstance(data, dict):
+                data = [data]
 
             predicted_value = predictor["predicted_value"]
             target = predictor["predict"]

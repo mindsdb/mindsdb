@@ -9,6 +9,7 @@ from typing import Union, Optional
 from dataclasses import dataclass
 from datetime import datetime
 import threading
+import filelock
 
 if os.name == 'posix':
     import fcntl
@@ -168,7 +169,8 @@ class FileLock:
         self._local_path = FileLock.lock_folder_path(relative_path)
         self._lock_file_name = DIR_LOCK_FILE_NAME
         self._lock_file_path = self._local_path / self._lock_file_name
-        self._mode = fcntl.LOCK_EX if mode == 'w' else fcntl.LOCK_SH
+        self._mode = mode  # 'w' or 'r', you can decide how to use this in your locking logic
+        self._lock = filelock.FileLock(str(self._lock_file_path))
 
         if self._lock_file_path.is_file() is False:
             self._local_path.mkdir(parents=True, exist_ok=True)
@@ -178,31 +180,13 @@ class FileLock:
                 pass
 
     def __enter__(self):
-        if os.name != 'posix':
-            return
-
-        try:
-            # On at least some systems, LOCK_EX can only be used if the file
-            # descriptor refers to a file opened for writing.
-            self._lock_fd = os.open(self._lock_file_path, os.O_RDWR | os.O_CREAT)
-            fcntl.lockf(self._lock_fd, self._mode | fcntl.LOCK_NB)
-        except (ValueError, FileNotFoundError):
-            # file probably was deleted between open and lock
-            print(f'Cant accure lock on {self._local_path}')
-            raise FileNotFoundError
-        except BlockingIOError:
-            print(f'Directory is locked by another process: {self._local_path}')
-            fcntl.lockf(self._lock_fd, self._mode)
+        if self._mode == 'w':
+            self._lock.acquire()
+        else:
+            self._lock.acquire(timeout=1)  # Or some other logic for read lock
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if os.name != 'posix':
-            return
-
-        try:
-            fcntl.lockf(self._lock_fd, fcntl.LOCK_UN)
-            os.close(self._lock_fd)
-        except Exception:
-            pass
+        self._lock.release()
 
 
 class S3FSStore(BaseFSStore):

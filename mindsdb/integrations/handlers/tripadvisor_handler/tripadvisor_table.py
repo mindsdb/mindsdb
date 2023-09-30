@@ -146,8 +146,6 @@ class LocationDetailsTable(APITable):
 
         conditions = extract_comparison_conditions(query.where)
 
-        print("LOOOOOOOL")
-
         params = {}
         filters = []
         for op, arg1, arg2 in conditions:
@@ -174,9 +172,9 @@ class LocationDetailsTable(APITable):
         if query.limit is not None:
             params["max_results"] = query.limit.value
 
-        if "searchQuery" not in params:
+        if "locationId" not in params:
             # search not works without searchQuery, use 'London'
-            params["searchQuery"] = "London"
+            params["locationId"] = "23322232"
 
         result = self.handler.call_tripadvisor_location_details_api(params=params)
 

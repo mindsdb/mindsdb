@@ -9,9 +9,6 @@ try:
 except Exception as e:
     Handler = None
     import_error = e
-    print(import_error)
-
-print("LOL")
 
 title = "TripAdvisor"
 name = "tripadvisor"

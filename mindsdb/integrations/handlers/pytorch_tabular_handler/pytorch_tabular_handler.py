@@ -1,9 +1,10 @@
 from typing import Optional, Dict
+
+import dill
 import pandas as pd
 import ast
-import torch
-import os
 
+import torch
 from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig
 from pytorch_tabular.models import CategoryEmbeddingModelConfig
 from pytorch_tabular.models.common.heads import LinearHeadConfig
@@ -80,16 +81,11 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
         tabular_model.fit(train=train_data)
 
         # Save the trained model
-        torch.save(tabular_model,"pytorch_tabular.pt")
         self.model_storage.json_set('args', args)
+        self.model_storage.file_set(torch.save(tabular_model,'pytorch_tabular.pt'))
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
-        file_path = 'pytorch_tabular_handler.py'
-        if os.path.isfile(file_path):
-            tabular_model = torch.load(file_path)
-        else:
-            raise Exception("Trained Model not loaded successfully, Please check if a trained model exists")
-
+        tabular_model = dill.loads(self.model_storage.file_get("model"))
         predictions = tabular_model.predict(df)
         return predictions
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:

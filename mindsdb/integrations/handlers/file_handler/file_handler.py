@@ -22,6 +22,9 @@ from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 
+DEFAULT_CHUNK_SIZE = 200
+DEFAULT_CHUNK_OVERLAP = 50
+
 
 def clean_cell(val):
     if str(val) in ["", " ", "  ", "NaN", "nan", "NA"]:
@@ -49,6 +52,8 @@ class FileHandler(DatabaseHandler):
         self.fs_store = file_storage
         self.custom_parser = connection_data.get("custom_parser", None)
         self.clean_rows = connection_data.get("clean_rows", True)
+        self.chunk_size = connection_data.get("chunk_size", DEFAULT_CHUNK_SIZE)
+        self.chunk_overlap = connection_data.get("chunk_overlap", DEFAULT_CHUNK_OVERLAP)
         self.file_controller = file_controller
 
     def connect(self, **kwargs):
@@ -84,7 +89,11 @@ class FileHandler(DatabaseHandler):
             table_name = query.from_table.parts[-1]
             file_path = self.file_controller.get_file_path(table_name)
             df, _columns = self._handle_source(
-                file_path, self.clean_rows, self.custom_parser
+                file_path,
+                self.clean_rows,
+                self.custom_parser,
+                self.chunk_size,
+                self.chunk_overlap,
             )
             result_df = query_df(df, query)
             return Response(RESPONSE_TYPE.TABLE, data_frame=result_df)
@@ -99,7 +108,16 @@ class FileHandler(DatabaseHandler):
         return self.query(ast)
 
     @staticmethod
-    def _handle_source(file_path, clean_rows=True, custom_parser=None):
+    def _handle_source(
+        file_path,
+        clean_rows=True,
+        custom_parser=None,
+        chunk_size=DEFAULT_CHUNK_SIZE,
+        chunk_overlap=DEFAULT_CHUNK_OVERLAP,
+    ):
+        """
+        This function takes a file path and returns a pandas dataframe
+        """
         # get file data io, format and dialect
         data, fmt, dialect = FileHandler._get_data_io(file_path)
         data.seek(0)  # make sure we are at 0 in file pointer
@@ -123,19 +141,26 @@ class FileHandler(DatabaseHandler):
             json_doc = json.loads(data.read())
             df = pd.json_normalize(json_doc, max_level=0)
 
-        elif fmt == "txt":
-            from langchain.document_loaders import TextLoader
+        elif fmt == "txt" or fmt == "pdf":
+            from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-            loader = TextLoader(file_path, encoding="utf8")
-            docs = loader.load()
-            df = pd.DataFrame([{"text": doc.page_content} for doc in docs])
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=chunk_size, chunk_overlap=chunk_overlap
+            )
 
-        elif fmt == "pdf":
-            from langchain.document_loaders import PDFMinerLoader
+            if fmt == "txt":
+                from langchain.document_loaders import TextLoader
 
-            loader = PDFMinerLoader(file_path)
-            docs = loader.load()
-            df = pd.DataFrame([{"text": doc.page_content} for doc in docs])
+                loader = TextLoader(file_path, encoding="utf8")
+                docs = text_splitter.split_documents(loader.load())
+                df = pd.DataFrame([{"text": doc.page_content} for doc in docs])
+
+            elif fmt == "pdf":
+                from langchain.document_loaders import UnstructuredPDFLoader
+
+                loader = UnstructuredPDFLoader(file_path)
+                docs = text_splitter.split_documents(loader.load())
+                df = pd.DataFrame([{"text": doc.page_content} for doc in docs])
 
         else:
             raise ValueError(

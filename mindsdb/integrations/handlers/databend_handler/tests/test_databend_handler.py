@@ -19,7 +19,7 @@ class DatabendHandlerTest(unittest.TestCase):
         assert self.handler.check_connection()
 
     def test_1_select_query(self):
-        query = 'SELECT * FROM covid_19_us_2022_4668'
+        query = 'SELECT * FROM covid_19_us_2022_4668 LIMT 10'
         result = self.handler.query(query)
         assert result.type is RESPONSE_TYPE.TABLE
 

@@ -178,7 +178,6 @@ class OrdersTable(APITable):
             self.get_columns()
         )
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-        
         orders_df = pd.json_normalize(self.get_orders(limit=result_limit))
 
         select_statement_executor = SELECTQueryExecutor(

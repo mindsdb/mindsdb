@@ -61,24 +61,8 @@ MindsDB offers three primary benefits to its users.
   
 <img width="1089" alt="image" src="https://github.com/mindsdb/mindsdb/assets/5898506/5451fe7e-a854-4c53-b34b-769b6c7c9863">
 
-
-## Table of Contents
-
-[Installation](#Installation)
-
-[How it works](#Howitworks)
-
-[DatabaseIntegrations](#DatabaseIntegrations)
-
-[Documentation](#Documentation)
-
-[Support](#Support)
-
-[Contributing](#Contributing)
-
-[Current contributors](#Currentcontributors)
-
-[License](#License)
+[Installation](#Installation)- [How it works](#Howitworks) - [DatabaseIntegrations](#DatabaseIntegrations) - [Documentation](#Documentation) - [Support](#Support) - [Contributing](#Contributing)
+[Current contributors](#Currentcontributors) - [License](#License)
 
 ----------------------------------------
 

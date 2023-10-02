@@ -10,4 +10,6 @@ Please append your QA tests following the templates below.
 ### Test Results
 
 XXX Test Passed: <link to the test results in your GitHub repository>
+</br>
 XXX Test Failed: <link to the test results in your GitHub repository>, <link to the issue>
+</br>

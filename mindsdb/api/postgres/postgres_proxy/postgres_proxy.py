@@ -471,7 +471,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         server.serve_forever()
 
 
-class TcpServer(socketserver.TCPServer):
+class TcpServer(socketserver.ThreadingTCPServer):
     allow_reuse_address = True
 
 

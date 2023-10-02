@@ -66,15 +66,15 @@ MindsDB offers three primary benefits to its users.
 
 ## Table of Contents
 
-- [Installation](#Installation-)
-- [How it works](#Howitworks-)
-- [Database Integrations](#DatabaseIntegrations-)
-- [Documentation](#Documentation-)
-- [Support](#Support-)
-- [Contributing](#Contributing-)
-- [Current contributors](#Currentcontributors-)
-- [Mailing lists](#mailinglist-)
-- [License](#License-)
+- [Installation](#Installation)
+- [How it works](#How-it-works)
+- [Database Integrations](#Database-Integrations)
+- [Documentation](#Documentation)
+- [Support](#Support)
+- [Contributing](#Contributing)
+- [Current contributors](#Current-contributors)
+- [Mailing lists](#Mailing-lists)
+- [License](#License)
 
 ----------------------------------------
 
@@ -93,7 +93,7 @@ To install locally or on-premise, pull the latest Docker image:
 docker pull mindsdb/mindsdb
 ```
 
-## How it works <a name="Howitworks"></a>
+## How it works <a name="How-it-works"></a>
 
 1. CONNECT MindsDB to your data platform. We support hundreds of integrations, and this list is constantly growing. If you can’t find the integration you need, please [let us know](https://mindsdb.com/joincommunity).
 2. CREATE MODEL:  and pick the AI Engine to learn from your data. The models get provisioned and deployed automatically and become ready for inference instantaneously.
@@ -107,7 +107,7 @@ docker pull mindsdb/mindsdb
 Follow the [quickstart guide](https://docs.mindsdb.com/quickstart?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) with sample data to get on-boarded as fast as possible.
 
 
-## Data Integrations <a name="DatabaseIntegrations"></a> 
+## Data Integrations <a name="Database-Integrations"></a> 
 
 MindsDB works with most SQL, NoSQL databases, data warehouses, and popular applications. You can find the list of all supported integrations [here](https://docs.mindsdb.com/data-integrations/all-data-integrations).
 
@@ -148,7 +148,7 @@ This project is released with a [Contributor Code of Conduct](https://github.com
 Also, check out the [rewards and community programs](https://mindsdb.com/community?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 
 
-### Current contributors <a name="Currentcontributors"></a>
+### Current contributors <a name="Current-contributors"></a>
 
 <a href="https://github.com/mindsdb/mindsdb/graphs/contributors">
   <img src="https://contributors-img.web.app/image?repo=mindsdb/mindsdb" />
@@ -156,7 +156,7 @@ Also, check out the [rewards and community programs](https://mindsdb.com/communi
 
 Made with [contributors-img](https://contributors-img.web.app).
 
-## Subscribe to updates <a name = "mailinglist"></a>
+## Subscribe to updates <a name = "Mailing-lists"></a>
 
 Join our [Slack community](https://mindsdb.com/joincommunity) and subscribe to the monthly [Developer Newsletter](https://mindsdb.com/newsletter/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) to get product updates, information about MindsDB events and contests, and useful content, like tutorials.
 

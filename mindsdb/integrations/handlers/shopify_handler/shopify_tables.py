@@ -199,3 +199,52 @@ class OrdersTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         orders = shopify.Order.find(**kwargs)
         return [order.to_dict() for order in orders]
+
+class InventoryItemsTable(APITable):
+    """The Shopify Inventory Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Pulls data from the Shopify "GET /inventory" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+            Shopify Inventory matching the query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'inventory',
+            self.get_columns()
+        )
+        selected_columns, where_conditions, inventoryitem_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        inventory_df = pd.json_normalize(self.get_inventory(limit=result_limit))
+
+        select_statement_executor = SELECTQueryExecutor(
+            inventory_df,
+            selected_columns,
+            where_conditions,
+            inventoryitem_by_conditions
+        )
+        inventory_df = select_statement_executor.execute_query()
+
+        return inventory_df
+
+    def get_columns(self) -> List[Text]:
+        return pd.json_normalize(self.get_inventory(limit=1)).columns.tolist()
+
+    def get_inventory(self, **kwargs) -> List[Dict]:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+        inventory = shopify.InventoryItem.find(**kwargs)
+        return [item.to_dict() for item in inventory]

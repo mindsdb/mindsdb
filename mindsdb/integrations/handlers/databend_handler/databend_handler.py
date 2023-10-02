@@ -130,7 +130,7 @@ class DatabendHandler(DatabaseHandler):
                 connection.commit()
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            log.logger.error(f'Error running query: {query} on Pinot!')
+            log.logger.error(f'Error running query: {query} on Databend!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)

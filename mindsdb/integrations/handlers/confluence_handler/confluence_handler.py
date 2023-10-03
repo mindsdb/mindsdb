@@ -37,7 +37,7 @@ class ConfluenceHandler(APIHandler):
         confluence_pages_data = ConfluenceSpacesTable(self)
         self._register_table("pages", confluence_pages_data)
 
-    def connect(self) -> StatusResponse:
+    def connect(self):
         """Set up the connection required by the handler.
         Returns
         -------
@@ -46,13 +46,9 @@ class ConfluenceHandler(APIHandler):
         """
         if self.is_connected is True:
             return self.connection
-       
-        s = requests.Session()
-        s.headers['Authorization'] =  f"Bearer {self.connection_data['confluence_api_token']}"
-
-        self.connection = Confluence(url= self.connection_data['url'], session=s)
+        conf = Confluence(url= self.connection_data.get('url'), username = self.connection_data.get('username'), password = self.connection_data.get('password'))
+        self.connection = conf
         self.is_connected = True
-        
         return self.connection
 
     def check_connection(self) -> StatusResponse:

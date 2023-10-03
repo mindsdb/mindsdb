@@ -43,7 +43,7 @@ class ShopifyHandler(APIHandler):
         self._register_table("orders", orders_data)
 
         location_data = LocationTable(self)
-        self._register_table("location", location_data)
+        self._register_table("locations", location_data)
 
     def connect(self):
         """

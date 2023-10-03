@@ -1,5 +1,4 @@
 import ast
-import json
 from collections import defaultdict
 from typing import List
 
@@ -322,7 +321,7 @@ class WriterEvaluator:
 
         raw_generated_answers = [self.rag.llm(prompt) for prompt in prompts]
 
-        generated_answers = self.extract_generated_text(raw_generated_answers)
+        generated_answers = self.extract_generated_texts(raw_generated_answers)
         reference_answers = self.extract_reference_answers(df)
 
         df["generated_answers"] = generated_answers

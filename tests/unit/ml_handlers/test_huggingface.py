@@ -3,10 +3,10 @@ from unittest.mock import patch
 
 import pandas as pd
 from mindsdb_sql import parse_sql
-from unit.executor_test_base import BaseExecutorTest
+from tests.unit.executor_test_base import BaseExecutorTest
 
 # How to run:
-#  env PYTHONPATH=./ pytest tests/unit/test_ml_handlers.py
+#  env PYTHONPATH=./ pytest -vx tests/unit/test_ml_handlers.py
 # Warning: a big huggingface models will be downloaded
 
 

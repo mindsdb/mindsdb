@@ -34,7 +34,7 @@ No, this integration doesn't support DESCRIBE syntax.
 No, fine-tuning is not supported.
 
 ## Are there any other noteworthy aspects to this handler?
-The handler has a number of default parameters set, the user only needs to pass `chromadb_storage_path`, `prompt_template`, `writer_api_key` along with `writer_org_id` or alternatively with `base_url`.
+The handler has a number of default parameters set, the user only needs to pass  `prompt_template`, `writer_api_key` along with `writer_org_id` or alternatively with `base_url`.
 
 The other parameters have default values
 
@@ -50,20 +50,54 @@ FROM writer;
 
 -- Create a Writer model and embed input data
 CREATE MODEL writer_demo
-FROM mysql_demo_db (select * from demo_fda_context)
+FROM mysql_demo_db (select * from demo_fda_context limit 10) --limit to 10 rows for testing purposes
 PREDICT answer ---specify any column name that exists inside context table, 'answer' used for illustrative purposes
 USING
    engine="writer",
-   run_embeddings=true, --if context should be transformed to embeddings and loaded to vectorDB
-   model_name="palmyra-x",  --specify which model to use
    writer_org_id="",
    writer_api_key="",
-   chromadb_folder_name='full_context', --specify folder name for where chromadb will be persisted locally
-   embeddings_model_name="sentence-transformers/all-mpnet-base-v2", --this can be any sentence transformer that is compatible with Hugging Face sentence_transformer library, if none provided defaults to "sentence-transformers/all-mpnet-base-v2"
-   prompt_template='{question}';
+   embeddings_model_name="sentence-transformers/all-mpnet-base-v2",
+   vector_store_folder_name="writer_demo_vector_store",
+   prompt_template="Use the following pieces of context to answer the question at the end. If you do not know the answer,
+just say that you do not know, do not try to make up an answer.
+Context: {context}
+Question: {question}
+Helpful Answer:"; --this can be any sentence transformer that is compatible with Hugging Face sentence_transformer library, if none provided defaults to "sentence-transformers/all-mpnet-base-v2"
 
 -- Ask a question on your data using Writer LLM API
 SELECT *
 FROM writer_demo
 WHERE question='what product is best for treating a cold?';
+```
+
+--Run evaluation of configured model
+```sql
+-- Create Writer model
+CREATE MODEL writer_demo_evaluate
+PREDICT answer
+USING
+   engine="writer",
+     writer_org_id="",
+writer_api_key="",
+   embeddings_model_name="sentence-transformers/all-mpnet-base-v2",
+evaluate_dataset='squad_v2_val_100_sample',
+n_rows_evaluation=10,
+vector_store_folder_name="writer_demo_eval_vector_store",
+prompt_template="Use the following pieces of context to answer the question at the end. If you do not know the answer,
+just say that you do not know, do not try to make up an answer.
+Context: {context}
+Question: {question}
+Helpful Answer:";
+
+-- Evaluate model
+select * from writer_demo_evaluate where run_evaluation = True;
+
+-- Get evaluation metrics and output from evaluation
+
+--NB this will only work if you have run the evaluation query above
+
+DESCRIBE PREDICTOR mindsdb.writer_demo_evaluate.evaluation_output;
+DESCRIBE PREDICTOR mindsdb.writer_demo_evaluate.mean_evaluation_metrics;
+
+
 ```

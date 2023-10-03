@@ -52,7 +52,6 @@ def get_results_from_nixtla_df(nixtla_df, model_args):
     """
     return_df = nixtla_df.reset_index(drop=True if 'unique_id' in nixtla_df.columns else False)
     if len(model_args["group_by"]) > 0:
-        return_df.columns = ["unique_id", "ds", model_args["target"]]
         if len(model_args["group_by"]) > 1:
             for i, group in enumerate(model_args["group_by"]):
                 return_df[group] = return_df["unique_id"].apply(lambda x: x.split("/")[i])

@@ -160,6 +160,7 @@ class PostgresHandler(DatabaseHandler):
             WHERE
                 table_schema NOT IN ('information_schema', 'pg_catalog')
                 and table_type in ('BASE TABLE', 'VIEW')
+                and table_schema = current_schema()
         """
         return self.native_query(query)
 

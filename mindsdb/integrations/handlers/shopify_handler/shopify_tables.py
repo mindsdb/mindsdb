@@ -280,3 +280,52 @@ class InventoryTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         inventories = shopify.InventoryLevel.find(**kwargs)
         return [inventory.to_dict() for inventory in inventories]
+
+
+class LocationTable(APITable):
+    """The Shopify Location Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Pulls data from the Shopify "GET /location" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+            Shopify location matching the location_id
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'locations',
+            self.get_columns()
+        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+        locations_df = pd.json_normalize(self.get_location(limit=result_limit))
+
+        select_statement_executor = SELECTQueryExecutor(
+            locations_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+        locations_df = select_statement_executor.execute_query()
+
+        return locations_df
+
+    def get_columns(self) -> List[Text]:
+        return pd.json_normalize(self.get_location(limit=1)).columns.tolist()
+
+    def get_location(self, **kwargs) -> List[Dict]:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+        locations = shopify.Location.find(**kwargs)
+        return [location.to_dict() for location in locations]

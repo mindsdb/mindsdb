@@ -48,20 +48,16 @@ class CrawlerTable(APITable):
             raise NotImplementedError(
                 f'You must specify what url you want to crawl, for example: SELECT * FROM crawl WHERE url IN ("someurl", ..)')
 
-        limit = None
+        if query.limit is None:
+            raise NotImplementedError(f'You must specify a LIMIT which defines the number of pages to crawl')
+        limit = query.limit.value
 
-        if query.limit is not None:
-            limit = query.limit.value
-            if limit < 0:
-                limit = None
-                raise NotImplementedError(
-                f'You must specify a LIMIT which defines how deep to crawl, a LIMIT 10000 means that will crawl ALL websites and subwebsites in that domain (this can take a while)')
-
-        if limit is None or limit == 0:
-            limit = 1
+        if limit < 0:
+            limit = 0
             
         result = get_all_websites(urls, limit, html=False)
-
+        if len(result) > limit:
+            result = result[:limit]
         # filter targets
         result = project_dataframe(result, query.targets, self.get_columns())
         return result

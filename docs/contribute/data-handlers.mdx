@@ -189,47 +189,65 @@ Here is a step-by-step guide:
 
 ### The `connection_args` Dictionary
 
-The `connection_arg` dictionary contains all required arguments to establish the connection.
+The `connection_args` dictionary contains all of arguments used to establish the connection along with their descriptions, types, labels and whether they are required or not.
 
-Here is an example of the `connection_arg` dictionary from the [MySQL handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mysql_handler).
+Here is an example of the `connection_args` dictionary from the [MySQL handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mysql_handler).
 
 ```py
 connection_args = OrderedDict(
     user = {
         'type': ARG_TYPE.STR,
         'description': 'The user name used to authenticate with the MySQL server.'
+        'required': True,
+        'label': 'User'
     },
     password = {
         'type': ARG_TYPE.STR,
         'description': 'The password to authenticate the user with the MySQL server.'
+        'required': True,
+        'label': 'Password'
     },
     database = {
         'type': ARG_TYPE.STR,
         'description': 'The database name to use when connecting with the MySQL server.'
+        'required': True,
+        'label': 'Database'
     },
     host = {
         'type': ARG_TYPE.STR,
         'description': 'The host name or IP address of the MySQL server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.'
+        'required': True,
+        'label': 'Host'
     },
     port = {
         'type': ARG_TYPE.INT,
         'description': 'The TCP/IP port of the MySQL server. Must be an integer.'
+        'required': True,
+        'label': 'Port'
     },
     ssl = {
         'type': ARG_TYPE.BOOL,
         'description': 'Set it to False to disable ssl.'
+        'required': False,
+        'label': 'SSL'
     },
     ssl_ca = {
         'type': ARG_TYPE.PATH,
         'description': 'Path or URL of the Certificate Authority (CA) certificate file'
+        'required': False,
+        'label': 'SSL Certificate Authority'
     },
     ssl_cert = {
         'type': ARG_TYPE.PATH,
         'description': 'Path name or URL of the server public key certificate file'
+        'required': False,
+        'label': 'SSL Certificates'
     },
     ssl_key = {
         'type': ARG_TYPE.PATH,
         'description': 'The path name or URL of the server private key file'
+        'required': False,
+        'label': 'SSL Keys'
     }
 )
 ```

@@ -1,3 +1,4 @@
+import copy
 import os
 import sys
 import json
@@ -259,7 +260,9 @@ class ModelController():
         project_name = statement.name.parts[0].lower()
         model_name = statement.name.parts[1].lower()
 
-        problem_definition = {}
+        problem_definition = {
+            '__mdb_sql_task': str(statement.task),
+        }
         if statement.targets is not None:
             problem_definition['target'] = statement.targets[0].parts[-1]
 
@@ -420,6 +423,13 @@ class ModelController():
             raise Exception("ML handler doesn't updating")
 
         ml_handler.update(args=problem_definition)
+
+        # update model record
+        if 'using' in problem_definition:
+            learn_args = copy.deepcopy(model_record.learn_args)
+            learn_args['using'].update(problem_definition['using'])
+            model_record.learn_args = learn_args
+            db.session.commit()
 
     def get_model_info(self, predictor_record):
         from mindsdb.interfaces.database.projects import ProjectController

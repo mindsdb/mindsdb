@@ -1,0 +1,14 @@
+name: Add issue to roadmap project
+on:
+  issues:
+    types:
+      - opened
+jobs:
+  add-to-project:
+    name: Add issue to roadmap project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/add-to-project@v0.4.0
+        with:
+          project-url: https://github.com/orgs/mindsdb/projects/53
+          github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}

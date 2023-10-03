@@ -94,7 +94,7 @@ select * from writer_demo_evaluate where run_evaluation = True;
 
 -- Get evaluation metrics and output from evaluation
 
-NB this will only work if you have run the evaluation query above
+--NB this will only work if you have run the evaluation query above
 
 DESCRIBE PREDICTOR mindsdb.writer_demo_evaluate.evaluation_output;
 DESCRIBE PREDICTOR mindsdb.writer_demo_evaluate.mean_evaluation_metrics;

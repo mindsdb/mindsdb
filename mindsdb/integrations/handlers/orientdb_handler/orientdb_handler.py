@@ -33,7 +33,7 @@ class OrientDBHandler(DatabaseHandler):
         if self.is_connected is False:
             client_config = {
                 "host": self.connection_data.get("host"),
-                "port": self.connection.get("port"),
+                "port": self.connection_data.get("port"),
                 "serialization_type": self.connection_data.get("serialization_type"),
             }
 
@@ -42,6 +42,19 @@ class OrientDBHandler(DatabaseHandler):
             except Exception as e:
                 log.logger.error(f"Error in creating OrientDB client: {e}")
 
+            database_config = {
+                "db_name": self.connection_data.get("database"),
+                "user": self.connection_data.get("user"),
+                "password": self.connection_data.get("password"),
+            }
+
+            try:
+                self.connection.db_open(**database_config)
+            except Exception as e:
+                log.logger.error(
+                    f'Error connecting to OrientDB database: {self.connection_data.get("database")}, {e}!'
+                )
+
             self.is_connected = True
         return self.connection
 
@@ -49,6 +62,7 @@ class OrientDBHandler(DatabaseHandler):
         if self.is_connected is False:
             return
 
+        self.connection.db_close()
         self.connection.close()
         self.is_connected = False
         return
@@ -59,11 +73,10 @@ class OrientDBHandler(DatabaseHandler):
 
         try:
             con = self.connect()
-            con.server_info()
-            response.success = True
+            response.success = self.is_connected
         except Exception as e:
             log.logger.error(
-                f'Error connecting to {self.connection_data.get("database")}, {e}!'
+                f'Error connecting to OrientDB database: {self.connection_data.get("database")}, {e}!'
             )
             response.error_message = str(e)
 
@@ -75,23 +88,16 @@ class OrientDBHandler(DatabaseHandler):
         return response
 
     def native_query(self, query: Any) -> Response:
-        need_to_close = self.is_connected is False
-
-        OrientDB().query()
-
-        if need_to_close is True:
-            self.disconnect()
-
-        return response
+        return super().native_query(query)
 
     def query(self, query: ASTNode) -> Response:
-        ...
+        return super().query(query)
 
     def get_columns(self, table_name: str) -> Response:
-        ...
+        return super().get_columns(table_name)
 
     def get_tables(self) -> Response:
-        ...
+        return super().get_tables()
 
 
 connection_args = OrderedDict(

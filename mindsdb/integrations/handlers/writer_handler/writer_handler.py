@@ -154,6 +154,7 @@ class WriterHandler(BaseMLEngine):
             evaluate_df = load_dataset(
                 ml_task_type="question_answering", dataset_name=args.evaluate_dataset
             )
+            args.context_columns = "context"
 
         if args.n_rows_evaluation:
             # if user specifies n_rows_evaluation in create, only use that many rows

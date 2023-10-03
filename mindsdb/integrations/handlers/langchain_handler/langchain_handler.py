@@ -60,7 +60,7 @@ class LangChainHandler(BaseMLEngine):
         self.default_agent_tools = _DEFAULT_AGENT_TOOLS
         self.write_privileges = False  # if True, this agent is able to write into other active mindsdb integrations
 
-    # TODO: refactor to use common function?
+    # TODO (ref #7496): modify handler_utils.get_api_key to check for prefix in all sources, update usage in all handlers, deprecate  # noqa
     def _get_serper_api_key(self, args, strict=True):
         if 'serper_api_key' in args:
             return args['serper_api_key']

@@ -3,13 +3,11 @@ from typing import Optional, Dict
 import pandas as pd
 from nixtlats import TimeGPT
 
-from type_infer.infer import count_data_types_in_column
-from type_infer.dtype import dtype
-
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.utilities.time_series_utils import get_results_from_nixtla_df
 # TODO: add E2E tests.
+
 
 class TimeGPTHandler(BaseMLEngine):
     """
@@ -93,12 +91,6 @@ class TimeGPTHandler(BaseMLEngine):
             # X_df=None,  # exogenous variables
             # add_history=False,  # insample
         )
-
-        # cast back to datetime if applicable
-        sample_data = forecast_df['ds'].sample(min(100, len(forecast_df)))
-        dtypes = count_data_types_in_column(sample_data)
-        if dtype.date in dtypes or dtype.datetime in dtypes:
-            forecast_df['ds'] = pd.to_datetime(forecast_df['ds'])
 
         if model_args['mode'] == 'forecasting':
             results_df = forecast_df[['unique_id', 'ds', 'TimeGPT']]

@@ -1643,7 +1643,7 @@ class SQLQuery():
 
                 # check condition
                 filter_op2 = op_map[filter_op]
-                if getattr(val, filter_op2)(arg):
+                if getattr(val, filter_op2)(pd.Timestamp(arg)):
                     data2.append(row)
             else:
                 # unknown operation, add anyway

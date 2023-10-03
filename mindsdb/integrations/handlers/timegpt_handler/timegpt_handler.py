@@ -3,7 +3,8 @@ from typing import Optional, Dict
 import pandas as pd
 from nixtlats import TimeGPT
 
-import type_infer
+from type_infer.infer import count_data_types_in_column
+from type_infer.dtype import dtype
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
@@ -28,7 +29,7 @@ class TimeGPTHandler(BaseMLEngine):
         using_args = args["using"]
 
         mode = 'forecasting'
-        if args.get("__mdb_sql_task", None):
+        if args.get("__mdb_sql_task", None).lower() in ('forecasting', 'anomalydetection'):
             mode = args["__mdb_sql_task"].lower()
 
         if mode == 'forecasting':
@@ -44,6 +45,7 @@ class TimeGPTHandler(BaseMLEngine):
             "date_features_to_one_hot": using_args.get("date_features_to_one_hot", True),
             "clean_ex_first": using_args.get("clean_ex_first", True),
             "level": using_args.get("level", [90]),
+            "add_history": using_args.get("add_history", False),
             'mode': mode
         }
 
@@ -92,6 +94,12 @@ class TimeGPTHandler(BaseMLEngine):
             # add_history=False,  # insample
         )
 
+        # cast back to datetime if applicable
+        sample_data = forecast_df['ds'].sample(min(100, len(forecast_df)))
+        dtypes = count_data_types_in_column(sample_data)
+        if dtype.date in dtypes or dtype.datetime in dtypes:
+            forecast_df['ds'] = pd.to_datetime(forecast_df['ds'])
+
         if model_args['mode'] == 'forecasting':
             results_df = forecast_df[['unique_id', 'ds', 'TimeGPT']]
             results_df = get_results_from_nixtla_df(results_df, model_args)
@@ -105,11 +113,6 @@ class TimeGPTHandler(BaseMLEngine):
             results_df = results_df.rename({'y': f'observed_{model_args["target"]}'}, axis=1)
         else:
             raise Exception(f'Unsupported prediction mode: {model_args["mode"]}')
-
-        # infer date
-        sample_data = results_df['ds'].sample(min(100, len(results_df)))
-        if type_infer.infer.type_check_date(sample_data):
-            results_df['ds'] = pd.to_datetime(results_df['ds'])
 
         results_df = results_df.rename({'TimeGPT': model_args['target']}, axis=1)
 

@@ -161,6 +161,7 @@
             "sql/project",
             "generative-ai-tables",
             "model-types",
+            "callbacks",
             "tables_views_files"
           ]
         },

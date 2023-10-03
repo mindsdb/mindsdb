@@ -57,6 +57,12 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+- [x] Shopify Customer Reviews Table for a given Store
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
 
 ## TODO
 
@@ -70,14 +76,16 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
 
 ## Example Usage
 
-The first step is to create a database with the new `shopify` engine by passing in the required `shop_url` and `access_token` parameters:
+The first step is to create a database with the new `shopify` engine by passing in the required `shop_url` and `shopify_access_token` parameters. If you are using [Yotpo Product Reviews](https://apps.shopify.com/yotpo-social-reviews) app, you can provide additional keys, `yotpo_app_key` and `yotpo_access_token` (utoken), to access customer reviews:
 
 ~~~~sql
 CREATE DATABASE shopify_datasource
 WITH ENGINE = 'shopify',
 PARAMETERS = {
   "shop_url": "your-shop-name.myshopify.com",
-  "access_token": "shppa_..."
+  "shopify_access_token": "shppa_...",
+  "yotpo_app_key": "...",
+  "yotpo_access_token": "..."
 };
 ~~~~
 
@@ -107,3 +115,4 @@ VALUES
 
 A limited number of columns are supported for INSERT: 'first_name', 'last_name', 'email', 'phone', 'tags' and 'currency'. Of these either 'first_name', 'last_name', 'email' or 'phone' must be provided. 
 
+For `customer_reviews` table, only SELECT is supported.

@@ -128,11 +128,3 @@ LIMIT 5
 `inventory_item_ids` or `location_ids` have to be specified in the `where` clause of the query. 
 
 For `customer_reviews` table, only SELECT is supported.
-
-~~~~sql
-SELECT  *
-FROM shopify_datasource.customer_reviews
-WHERE score=5
-ORDER BY id
-LIMIT 5
-~~~~

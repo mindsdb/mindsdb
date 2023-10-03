@@ -57,7 +57,8 @@ USING
    writer_org_id="",
    writer_api_key="",
    embeddings_model_name="sentence-transformers/all-mpnet-base-v2",
-       prompt_template="Use the following pieces of context to answer the question at the end. If you do not know the answer,
+   vector_store_folder_name="writer_demo_vector_store",
+   prompt_template="Use the following pieces of context to answer the question at the end. If you do not know the answer,
 just say that you do not know, do not try to make up an answer.
 Context: {context}
 Question: {question}
@@ -67,4 +68,36 @@ Helpful Answer:"; --this can be any sentence transformer that is compatible with
 SELECT *
 FROM writer_demo
 WHERE question='what product is best for treating a cold?';
+```
+
+--Run evaluation of configured model
+```sql
+-- Create Writer model
+CREATE MODEL writer_demo_evaluate
+PREDICT answer
+USING
+   engine="writer",
+     writer_org_id="",
+writer_api_key="",
+   embeddings_model_name="sentence-transformers/all-mpnet-base-v2",
+evaluate_dataset='squad_v2_val_100_sample',
+n_rows_evaluation=10,
+vector_store_folder_name="writer_demo_eval_vector_store",
+prompt_template="Use the following pieces of context to answer the question at the end. If you do not know the answer,
+just say that you do not know, do not try to make up an answer.
+Context: {context}
+Question: {question}
+Helpful Answer:";
+
+-- Evaluate model
+select * from writer_demo_evaluate where run_evaluation = True;
+
+-- Get evaluation metrics and output from evaluation
+
+NB this will only work if you have run the evaluation query above
+
+DESCRIBE PREDICTOR mindsdb.writer_demo_evaluate.evaluation_output;
+DESCRIBE PREDICTOR mindsdb.writer_demo_evaluate.mean_evaluation_metrics;
+
+
 ```

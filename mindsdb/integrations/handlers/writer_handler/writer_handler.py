@@ -82,7 +82,7 @@ class WriterHandler(BaseMLEngine):
             args.vector_store_folder_name
         )
 
-        if not df.empty and args.run_embeddings:
+        if df is not None and args.run_embeddings:
             if "context_columns" not in args:
                 # if no context columns provided, use all columns in df
                 logger.info("No context columns provided, using all columns in df")

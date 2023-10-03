@@ -89,18 +89,6 @@ Here is a step-by-step guide:
         self._tables = {}
     ```
 
-* Implementing the [`_register_table()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/api_handler.py#L164) method:
-
-    The `_register_table()` method registers the data resource in memory.
-
-    ```python
-    def _register_table(self, table_name: str, table_class: Any):
-        """
-        Register the data resource. For e.g if you are using Twitter API it registers the `tweets` resource from `/api/v2/tweets`.
-        """
-        self._tables[table_name] = table_class
-    ```
-
 * Implementing the [`connect()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L23) method:
 
     The `connect()` method sets up the connection.

@@ -118,6 +118,10 @@ class TripAdvisorAPI:
         url = url + "{locationId}/details?language={language}&key={api_key}&".format(
             locationId=locationId, api_key=self.api_key, language=language
         )
+        url = self.processQuery(url, params_dict)
+        response = self.getResponse(url)
+
+        return response
 
     def location_reviews(
         self, url: str, locationId: str, language: str = "en"
@@ -154,6 +158,7 @@ class TripAdvisorAPI:
             response = self.location_details(
                 url, params_dict, params_dict["locationId"]
             )
+            print(response)
             return response.json()
 
         elif apiCall == TripAdvisorAPICall.REVIEWS:

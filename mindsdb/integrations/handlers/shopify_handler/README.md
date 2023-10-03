@@ -107,3 +107,11 @@ VALUES
 
 A limited number of columns are supported for INSERT: 'first_name', 'last_name', 'email', 'phone', 'tags' and 'currency'. Of these either 'first_name', 'last_name', 'email' or 'phone' must be provided. 
 
+For querying locations, you can use the `locations` table:
+
+~~~~sql
+SELECT  id, name, address
+FROM shopify_datasource.locations
+ORDER BY id
+LIMIT 5
+~~~~

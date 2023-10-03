@@ -157,6 +157,48 @@ Here is a step-by-step guide:
         """
     ```
 
+### The `connection_args` Dictionary
+
+The `connection_args` dictionary contains all of arguments used to establish the connection along with their descriptions, types, labels and whether they are required or not.
+
+Here is an example of the `connection_arg` dictionary from the [GitHub handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/github_handler):
+
+```py
+connection_args = OrderedDict(
+    repository={
+        "type": ARG_TYPE.STR,
+        "description": " GitHub repository name.",
+        "required": True,
+        "label": "Repository",
+    },
+    api_key={
+        "type": ARG_TYPE.PWD,
+        "description": "Optional GitHub API key to use for authentication.",
+        "required": False,
+        "label": "Api key",
+    },
+    github_url={
+        "type": ARG_TYPE.STR,
+        "description": "Optional GitHub URL to connect to a GitHub Enterprise instance.",
+        "required": False,
+        "label": "Github url",
+    },
+)
+```
+
+### The `connection_args_example` Dictionary
+
+The `connection_args_example` dictionary contains an example of all required arguments to establish the connection.
+
+Here is an example of the `connection_args_example` dictionary from the [GitHub handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/github_handler).
+
+```py
+connection_args_example = OrderedDict(
+    repository="mindsdb/mindsdb", 
+    api_key="ghp_z91InCQZWZAMlddOzFCX7xHJrf9Fai35HT7", 
+    github_url="https://github.com/mindsdb/mindsdb"
+)
+```
 
 ### Exporting All Required Variables
 

@@ -686,12 +686,12 @@ class ExecuteCommands:
         # TODO: change to statement.agent when possible.
         agent_node = getattr(statement, 'agent', None)
         agent = None
-        if agent_node is not None and agent_node.get_string() != 'NULL':
+        if agent_node is not None:
             agent = agent_node.parts[-1]
 
         model_node = statement.model
         model = None
-        if model_node is not None and model_node.get_string() != 'NULL':
+        if model_node is not None:
             model = model_node.parts[-1]
 
         if agent is None and model is None:

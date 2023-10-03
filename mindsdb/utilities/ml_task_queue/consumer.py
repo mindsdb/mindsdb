@@ -157,5 +157,9 @@ class MLTaskConsumer:
 
 
 def start(verbose: bool):
-    consumer = MLTaskConsumer()
-    consumer.run()
+    try:
+        consumer = MLTaskConsumer()
+        consumer.run()
+    except Exception as e:
+        print(f'Got exception: {e}', flush=True)
+        raise

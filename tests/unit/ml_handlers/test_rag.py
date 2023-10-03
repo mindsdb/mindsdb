@@ -139,7 +139,6 @@ class TestRAG(BaseExecutorTest):
             self.wait_predictor("proj", "test_openai_unknown_arguments")
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    @pytest.mark.xfail(reason="test executor not supporting nested queries")
     def test_qa(self, postgres_mock_handler):
         # create project
         self.run_sql("create database proj")

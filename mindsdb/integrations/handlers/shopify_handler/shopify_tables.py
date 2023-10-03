@@ -199,3 +199,54 @@ class OrdersTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         orders = shopify.Order.find(**kwargs)
         return [order.to_dict() for order in orders]
+
+class PaymentsTable(APITable):
+    """The Shopify Payments Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Pulls data from the Shopify "GET /payments" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+            Shopify Payments matching the query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'payments',
+            self.get_columns()
+        )
+        selected_columns, where_conditions, payment_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        payments_df = pd.json_normalize(self.get_payments(limit=result_limit))
+
+        select_statement_executor = SELECTQueryExecutor(
+            payments_df,
+            selected_columns,
+            where_conditions,
+            payment_by_conditions
+        )
+        payments_df = select_statement_executor.execute_query()
+
+        return payments_df
+
+    def get_columns(self) -> List[Text]:
+        return pd.json_normalize(self.get_payments(limit=1)).columns.tolist()
+
+    def get_payments(self, **kwargs) -> List[Dict]:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+        payments = shopify.Payment.find(**kwargs)
+        return [payment.to_dict() for payment in payments]
+

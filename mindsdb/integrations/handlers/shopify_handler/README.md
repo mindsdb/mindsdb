@@ -107,3 +107,14 @@ VALUES
 
 A limited number of columns are supported for INSERT: 'first_name', 'last_name', 'email', 'phone', 'tags' and 'currency'. Of these either 'first_name', 'last_name', 'email' or 'phone' must be provided. 
 
+Inventory details for the products can be queried as follows:
+
+~~~~sql
+SELECT  *
+FROM shopify_datasource.inventory
+WHERE inventory_item_ids="id1,id2" AND location_ids="id1,id2"
+ORDER BY available
+LIMIT 5
+~~~~
+
+`inventory_item_ids` or `location_ids` have to be specified in the `where` clause of the query. 

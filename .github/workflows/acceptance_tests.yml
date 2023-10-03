@@ -58,7 +58,7 @@ jobs:
       shell: bash
       env:
         CHECK_FOR_UPDATES: False
-        OPEN_AI_API_KEY: ${{secrets.OPEN_AI_API_KEY}}
+        OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
 
   microservice_mode_test:
     needs: tutorials_test

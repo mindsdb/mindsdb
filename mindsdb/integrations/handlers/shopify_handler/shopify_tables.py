@@ -199,3 +199,53 @@ class OrdersTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         orders = shopify.Order.find(**kwargs)
         return [order.to_dict() for order in orders]
+    
+
+class LocationTable(APITable):
+    """The Shopify Location Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Pulls data from the Shopify "GET /locations" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+            Shopify Locations matching the query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'locations',
+            self.get_columns()
+        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        locations_df = pd.json_normalize(self.get_locations(limit=result_limit))
+
+        select_statement_executor = SELECTQueryExecutor(
+            locations_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+        locations_df = select_statement_executor.execute_query()
+
+        return locations_df
+
+    def get_columns(self) -> List[Text]:
+        return pd.json_normalize(self.get_locations(limit=1)).columns.tolist()
+
+    def get_locations(self, **kwargs) -> List[Dict]:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+        locations = shopify.Location.find(**kwargs)
+        return [location.to_dict() for location in locations]

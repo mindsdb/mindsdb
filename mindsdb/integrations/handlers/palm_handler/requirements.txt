@@ -1,0 +1,2 @@
+pandas
+google-generativeai >= 0.1.0

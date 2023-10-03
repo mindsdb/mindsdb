@@ -370,7 +370,7 @@ def test_put_chatbot_no_chatbot_fails(client, test_db):
     assert '400' in response.status
 
 
-def test_put_chatbot_project_not_found(clientt, test_db):
+def test_put_chatbot_project_not_found(client, test_db):
     chatbot_data = {
         'chatbot': {
             'name': 'test_put_chatbot_project_not_found',

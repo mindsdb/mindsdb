@@ -1,6 +1,6 @@
 import json
 from shutil import copyfile
-import datetime as dt
+from collections import OrderedDict
 
 import requests
 
@@ -8,6 +8,9 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response
 )
+
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb_sql.parser import ast
@@ -29,25 +32,13 @@ from email.message import EmailMessage
 
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 
+from .utils import AuthException, google_auth_flow, save_creds_to_file
+
 DEFAULT_SCOPES = ['https://www.googleapis.com/auth/gmail.compose',
                   'https://www.googleapis.com/auth/gmail.readonly',
                   'https://www.googleapis.com/auth/gmail.modify']
 
 
-def credentials_to_dict(credentials):
-  return {'token': credentials.token,
-          'refresh_token': credentials.refresh_token,
-          'token_uri': credentials.token_uri,
-          'client_id': credentials.client_id,
-          'client_secret': credentials.client_secret,
-          'scopes': credentials.scopes,
-          'expiry': dt.datetime.strftime(credentials.expiry, '%Y-%m-%dT%H:%M:%S')}
-
-class AuthException(Exception):
-    def __init__(self, message, auth_url=None):
-        super().__init__(message)
-
-        self.auth_url = auth_url
 
 
 class EmailsTable(APITable):
@@ -295,6 +286,18 @@ class GmailHandler(APIHandler):
 
         self.credentials_url = self.connection_args.get('credentials_url', None)
         self.credentials_file = self.connection_args.get('credentials_file', None)
+        if self.connection_args.get('credentials'):
+            self.credentials_file = self.connection_args.pop('credentials')
+        if not self.credentials_file and not self.credentials_url:
+            # try to get from config
+            gm_config = Config().get('handlers', {}).get('gmail', {})
+            secret_file = gm_config.get('credentials_file')
+            secret_url = gm_config.get('credentials_url')
+            if secret_file:
+                self.credentials_file = secret_file
+            elif secret_url:
+                self.credentials_url = secret_url
+
         self.scopes = self.connection_args.get('scopes', DEFAULT_SCOPES)
         self.token_file = None
         self.max_page_size = 500
@@ -344,34 +347,12 @@ class GmailHandler(APIHandler):
                 # save to storage
                 self.handler_storage.folder_sync('config')
             else:
-                # try to get from config
-                config = Config()
-                secret_file = config.get('handlers', {}).get('gmail', {}).get('credentials_file')
-                if secret_file is None or not os.path.isfile(secret_file):
-                    raise ValueError('No valid Gmail Credentials filepath or S3 url found.')
+                raise ValueError('No valid Gmail Credentials filepath or S3 url found.')
 
-            # initialise flow
-            flow = Flow.from_client_secrets_file(secret_file, self.scopes)
+            creds = google_auth_flow(secret_file, self.scopes, self.connection_args.get('code'))
 
-            # get host url from flask
-            from flask import request
-            flow.redirect_uri = request.headers['ORIGIN'] + '/verify-auth'
-
-            if self.connection_args.get('code'):
-                flow.fetch_token(code=self.connection_args['code'])
-                creds = flow.credentials
-
-                # Save the credentials for the next run
-                with open(creds_file, 'w') as token:
-                    data = credentials_to_dict(creds)
-                    token.write(json.dumps(data))
-
-                # save to storage
-                self.handler_storage.folder_sync('config')
-
-            else:
-                auth_url = flow.authorization_url()[0]
-                raise AuthException(f'Authorisation required. Please follow the url: {auth_url}', auth_url=auth_url)
+            save_creds_to_file(creds, creds_file)
+            self.handler_storage.folder_sync('config')
 
         return build('gmail', 'v1', credentials=creds)
 
@@ -583,3 +564,22 @@ class GmailHandler(APIHandler):
         df = pd.DataFrame(data)
 
         return df
+
+
+connection_args = OrderedDict(
+    credentials_url={
+        'type': ARG_TYPE.STR,
+        'description': 'URL to Service Account Keys',
+        'label': 'URL to Service Account Keys',
+    },
+    credentials_file={
+        'type': ARG_TYPE.STR,
+        'description': 'Location of Service Account Keys',
+        'label': 'path of Service Account Keys',
+    },
+    credentials={
+        'type': ARG_TYPE.PATH,
+        'description': 'Service Account Keys',
+        'label': 'Upload Service Account Keys',
+    },
+)

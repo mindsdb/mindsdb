@@ -167,7 +167,15 @@ class ChatBotResource(Resource):
             )
         chatbot_controller = ChatBotController()
 
-        existing_chatbot = chatbot_controller.get_chatbot(chatbot_name, project_name=project_name)
+        try:
+            existing_chatbot = chatbot_controller.get_chatbot(chatbot_name, project_name=project_name)
+        except ValueError:
+            # Project needs to exist.
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Project not found',
+                f'Project with name {project_name} does not exist'
+            )
 
         chatbot = request.json['chatbot']
         name = chatbot.get('name', None)

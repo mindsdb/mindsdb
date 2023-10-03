@@ -127,7 +127,7 @@ your machine.
 
 ### Pip and Python Versions
 
-We suggest using **Python 3.8.x or 3.9.x versions** for now.
+Currently, MindsDB supports Python versions 3.8.x, 3.9.x, 3.10.x, and 3.11.x.
 
 To successfully install MindsDB, use **Python 64-bit version**. Also, make sure
 that **Python >= 3.8** and **pip >= 20.3**. You can check the pip and python
@@ -156,11 +156,6 @@ dependencies. Make sure to allocate min. 3 GB of disk space to avoid the
 
 Before anything, activate your virtual environment where your MindsDB is
 installed. It is to avoid the `No module named mindsdb` error.
-
-The
-`numpy.distutils.system_info.NotFoundError: No lapack/blas resources found. Note: Accelerate is no longer supported.`
-error might be caused by some dependencies not working with Python 3.9 version.
-For now, please use Python 3.7.x or Python 3.8.x, as mentioned before.
 
 Some users can get `OSError: dlopen Library not loaded 'libomp.dylib'`. Please make sure you have installed `libomp` and run the export commands.
 

@@ -154,12 +154,14 @@
           "group": "Concepts",
           "pages": [
             "automation",
+            "ai_workflow",
             "mindsdb-handlers",
             "data_sources",
             "ml_engines",
             "sql/project",
             "generative-ai-tables",
             "model-types",
+            "callbacks",
             "tables_views_files"
           ]
         },
@@ -197,7 +199,7 @@
         {
           "group": "Recommenders",
           "pages": [
-            "none"
+            "sql/tutorials/recommenders"
           ]
         },
         {
@@ -419,7 +421,7 @@
           ]
         },
         {
-          "group": "Create ML Engines",
+          "group": "Create AI Engines",
           "pages": [
             {
               "group": "SQL",
@@ -768,12 +770,19 @@
           "group": "Applications",
           "pages": [
             "integrations/app-integrations/binance",
+            "integrations/app-integrations/confluence",
             "integrations/app-integrations/email",
             "integrations/app-integrations/github",
             "integrations/app-integrations/gmail",
             "integrations/app-integrations/google-calendar",
+            "integrations/app-integrations/hackernews",
+            "integrations/app-integrations/mediawiki",
+            "integrations/app-integrations/microsoft-teams",
+            "integrations/app-integrations/plaid",
+            "integrations/app-integrations/reddit",
             "integrations/app-integrations/shopify",
             "integrations/app-integrations/slack",
+            "integrations/app-integrations/stripe",
             "integrations/app-integrations/twitter",
             "integrations/app-integrations/web-crawler",
             "integrations/app-integrations/youtube"
@@ -860,7 +869,8 @@
             "integrations/ai-engines/openai",
             "integrations/ai-engines/huggingface",
             "integrations/ai-engines/langchain",
-            "integrations/ai-engines/monkeylearn"
+            "integrations/ai-engines/llamaindex",
+            "integrations/ai-engines/monkeylearn"            
           ]
         },
         {
@@ -883,6 +893,13 @@
             "integrations/ai-engines/statsforecast",
             "integrations/ai-engines/neuralforecast",
             "integrations/ai-engines/timegpt"
+          ]
+        },
+        {
+          "group": "Recommender Models",
+          "pages": [
+            "integrations/ai-engines/lightfm",
+            "integrations/ai-engines/popularity-recommender"
           ]
         }
       ]

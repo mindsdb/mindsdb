@@ -199,7 +199,7 @@ class OrdersTable(APITable):
         orders = shopify.Order.find(**kwargs)
         return [order.to_dict() for order in orders]
 
-class InventoryTable(APITable):
+class InventoryLevelTable(APITable):
     """The Shopify Inventory Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
@@ -222,7 +222,7 @@ class InventoryTable(APITable):
         """
         select_statement_parser = SELECTQueryParser(
             query,
-            'inventory',
+            'inventory_level',
             self.get_columns()
         )
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()

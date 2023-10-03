@@ -1,4 +1,3 @@
-import datetime as dt
 import pandas as pd
 import dill
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -101,7 +100,7 @@ class StatsForecastHandler(BaseMLEngine):
         model_args["order_by"] = time_settings["order_by"]
         if 'group_by' not in time_settings:
             # add group column
-            group_col = '__groupy_by'
+            group_col = '__group_by'
             time_settings["group_by"] = [group_col]
 
         model_args["group_by"] = time_settings["group_by"]

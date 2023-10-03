@@ -2,7 +2,7 @@
 
 Please include a summary of the change and the issue it solves. 
 
-**Fixes** #(issue)
+Fixes #issue_number
 
 ## Type of change
 

@@ -19,6 +19,8 @@ API_LIST = ["http"]
 
 HTTP_API_ROOT = 'http://127.0.0.1:47334/api'
 
+USE_GUI = True
+
 
 @pytest.mark.usefixtures('mindsdb_app', 'postgres_db', 'mysql_db', 'maria_db')
 class TestHTTP:

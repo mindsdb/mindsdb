@@ -418,9 +418,10 @@ class IntegrationController:
     def copy_integration_storage(self, integration_id_from, integration_id_to):
         storage_from = HandlerStorage(integration_id_from)
         root_path = ''
-        folder_from = storage_from.folder_get(root_path, not_empty=True)
-        if folder_from is None:
-            return
+
+        if storage_from.is_empty():
+            return None
+        folder_from = storage_from.folder_get(root_path)
 
         storage_to = HandlerStorage(integration_id_to)
         folder_to = storage_to.folder_get(root_path)

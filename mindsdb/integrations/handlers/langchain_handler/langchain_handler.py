@@ -15,7 +15,7 @@ from langchain.utilities import GoogleSerperAPIWrapper
 from langchain.agents.agent_toolkits import SQLDatabaseToolkit
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
 
-from mindsdb.integrations.handlers.openai_handler.openai_handler import CHAT_MODELS as OPEN_AI_CHAT_MODELS
+from mindsdb.integrations.handlers.openai_handler.models import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key

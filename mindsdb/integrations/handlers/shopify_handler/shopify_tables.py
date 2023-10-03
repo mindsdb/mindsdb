@@ -298,7 +298,7 @@ class CustomerReviews(APITable):
         Returns
         -------
         pd.DataFrame
-            Shopify Orders matching the query
+            Shopify customer reviews matching the query
 
         Raises
         ------

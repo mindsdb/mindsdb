@@ -11,6 +11,8 @@ from sqlalchemy.sql.schema import ForeignKey
 from sqlalchemy import JSON
 from sqlalchemy.exc import OperationalError
 
+from mindsdb.utilities.json_encoder import CustomJSONEncoder
+
 
 class Base:
     __allow_unmapped__ = True
@@ -27,7 +29,8 @@ def init(connection_str: str = None):
         connection_str = os.environ['MINDSDB_DB_CON']
     base_args = {
         'pool_size': 30,
-        'max_overflow': 200
+        'max_overflow': 200,
+        'json_serializer': CustomJSONEncoder().encode
     }
     engine = create_engine(connection_str, echo=False, **base_args)
     session = scoped_session(sessionmaker(bind=engine, autoflush=True))
@@ -430,3 +433,16 @@ class Agents(Base):
             'updated_at': self.updated_at,
             'created_at': self.created_at
         }
+
+
+class QueryContext(Base):
+    __tablename__ = 'query_context'
+    id = Column(Integer, primary_key=True)
+    company_id = Column(Integer, nullable=True)
+
+    query = Column(String, nullable=False)
+    context_name = Column(String, nullable=False)
+    values = Column(JSON)
+
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.now)

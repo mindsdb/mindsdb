@@ -10,6 +10,7 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
+from mindsdb.interfaces.query_context.context_controller import contextController
 
 
 def split_sql(sql):
@@ -169,6 +170,9 @@ class JobsController:
         self._delete_record(record)
         db.session.commit()
 
+        # delete context
+        contextController.drop_query_context('job', record.id)
+
     def _delete_record(self, record):
         record.deleted_at = dt.datetime.now()
 
@@ -314,6 +318,7 @@ class JobsExecutor:
         if record.user_class is not None:
             ctx.user_class = record.user_class
 
+        contextController.set_context('job', record.id)
         if history_id is None:
             history_record = db.JobsHistory(
                 job_id=record.id,

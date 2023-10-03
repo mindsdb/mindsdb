@@ -50,17 +50,13 @@ FROM writer;
 
 -- Create a Writer model and embed input data
 CREATE MODEL writer_demo
-FROM mysql_demo_db (select * from demo_fda_context)
+FROM mysql_demo_db (select * from demo_fda_context limit 10) --limit to 10 rows for testing purposes
 PREDICT answer ---specify any column name that exists inside context table, 'answer' used for illustrative purposes
 USING
    engine="writer",
-   run_embeddings=true, --if context should be transformed to embeddings and loaded to vectorDB
-   model_name="palmyra-x",  --specify which model to use
    writer_org_id="",
    writer_api_key="",
-   chromadb_folder_name='full_context', --specify folder name for where chromadb will be persisted locally
-   embeddings_model_name="sentence-transformers/all-mpnet-base-v2", --this can be any sentence transformer that is compatible with Hugging Face sentence_transformer library, if none provided defaults to "sentence-transformers/all-mpnet-base-v2"
-   prompt_template='{question}';
+   embeddings_model_name="sentence-transformers/all-mpnet-base-v2"; --this can be any sentence transformer that is compatible with Hugging Face sentence_transformer library, if none provided defaults to "sentence-transformers/all-mpnet-base-v2"
 
 -- Ask a question on your data using Writer LLM API
 SELECT *

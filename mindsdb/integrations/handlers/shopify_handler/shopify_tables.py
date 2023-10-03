@@ -201,6 +201,7 @@ class OrdersTable(APITable):
         orders = shopify.Order.find(**kwargs)
         return [order.to_dict() for order in orders]
 
+
 class CustomerReviews(APITable):
     """The Shopify Customer Reviews Table implementation"""
 

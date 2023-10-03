@@ -13,3 +13,7 @@ XXX Test Passed: <link to the test results in your GitHub repository>
 </br>
 XXX Test Failed: <link to the test results in your GitHub repository>, <link to the issue>
 </br>
+
+
+
+- Microsoft Teams Test Passed: https://github.com/neelshah2409/Microsoft-Team-Integration-with-Mindsdb

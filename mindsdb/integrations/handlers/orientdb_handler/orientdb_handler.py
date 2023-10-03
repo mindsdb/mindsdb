@@ -38,24 +38,10 @@ class OrientDBHandler(DatabaseHandler):
             }
 
             try:
-                client = OrientDB(**client_config)
+                self.connection = OrientDB(**client_config)
             except Exception as e:
                 log.logger.error(f"Error in creating OrientDB client: {e}")
 
-            connection_config = {
-                "db_name": self.connection_data.get("database"),
-                "user": self.connection_data.get("user"),
-                "password": self.connection_data.get("password"),
-            }
-
-            try:
-                connection = client.db_open(**connection_config)
-            except Exception as e:
-                log.logger.error(
-                    f'Error connecting to {self.connection_data.get("database")}, {e}!'
-                )
-
-            self.connection = connection
             self.is_connected = True
         return self.connection
 
@@ -89,7 +75,14 @@ class OrientDBHandler(DatabaseHandler):
         return response
 
     def native_query(self, query: Any) -> Response:
-        ...
+        need_to_close = self.is_connected is False
+
+        OrientDB().query()
+
+        if need_to_close is True:
+            self.disconnect()
+
+        return response
 
     def query(self, query: ASTNode) -> Response:
         ...

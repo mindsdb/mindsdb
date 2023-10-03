@@ -131,7 +131,7 @@ class WriterHandler(BaseMLEngine):
                 )
 
         args.vector_store_storage_path = self.engine_storage.folder_get(
-            args.vector_store_folder_name, update=False
+            args.vector_store_folder_name
         )
 
         # get question answering results

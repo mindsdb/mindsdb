@@ -50,6 +50,7 @@ pyvenv.cfg
 Scripts
 Include
 xgboost
+mindsdb-venv
 
 # Docs
 node_modules

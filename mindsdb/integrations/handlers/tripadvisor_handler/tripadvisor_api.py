@@ -4,9 +4,12 @@ from enum import Enum
 
 
 class TripAdvisorAPICall(Enum):
+    """TripAdvisor API references"""
+
     SEARCH_LOCATION = 1
     LOCATION_DETAILS = 2
     PHOTOS = 3
+    REVIEWS = 4
 
 
 class TripAdvisorAPI:
@@ -19,7 +22,7 @@ class TripAdvisorAPI:
     def __init__(self, api_key):
         self.api_key = api_key
 
-    def connectTripAdvisor(self):
+    def checkTripAdvisorConnection(self):
         """
         Check the connection with TripAdvisor
         """
@@ -116,7 +119,23 @@ class TripAdvisorAPI:
             locationId=locationId, api_key=self.api_key, language=language
         )
 
-        url = self.processQuery(url, params_dict)
+    def location_reviews(
+        self, url: str, locationId: str, language: str = "en"
+    ) -> Response:
+        """
+        The Location Reviews request returns up to 5 of the most recent reviews for a specific location. Please note that the limits are different for the beta subscribers.
+
+        Args:
+            locationId (str): A unique identifier for a location on Tripadvisor. The location ID can be obtained using the Location Search.
+            language (str): The language in which to return results (e.g. "en" for English or "es" for Spanish) from the list of our Supported Languages.
+
+        Returns:
+            response: Response object with response data as application/json
+        """
+        url = url + "{locationId}/reviews?language={language}&key={api_key}&".format(
+            locationId=locationId, api_key=self.api_key, language=language
+        )
+
         response = self.getResponse(url)
         return response
 
@@ -129,10 +148,14 @@ class TripAdvisorAPI:
 
         if apiCall == TripAdvisorAPICall.SEARCH_LOCATION:
             response = self.location_search(url, params_dict)
-
             return response.json()["data"]
+
         elif apiCall == TripAdvisorAPICall.LOCATION_DETAILS:
             response = self.location_details(
                 url, params_dict, params_dict["locationId"]
             )
             return response.json()
+
+        elif apiCall == TripAdvisorAPICall.REVIEWS:
+            response = self.location_reviews(url, params_dict["locationId"])
+            return response.json()["data"]

@@ -1,7 +1,10 @@
-from tripadvisor_handler import TripAdvisorHandler
+from mindsdb.integrations.handlers.tripadvisor_handler.tripadvisor_handler import (
+    TripAdvisorHandler,
+)
 
 """
-This .py script serves for manual testing
+This .py script serves for manual testing, to see the responses in raw
+JSON format.
 """
 
 if __name__ == "__main__":
@@ -15,7 +18,8 @@ if __name__ == "__main__":
         params={"searchQuery": "london"}
     )
 
-    result_locationDetails = handler.call_tripadvisor_searchlocation_api(
+    # Testing LocationDetails
+    result_locationDetails = handler.call_tripadvisor_location_details_api(
         params={"locationId": "23322232"}
     )
 

@@ -23,6 +23,7 @@ from mindsdb.integrations.libs.response import (
 
 from .tripadvisor_table import SearchLocationTable
 from .tripadvisor_table import LocationDetailsTable
+from .tripadvisor_table import ReviewsTable
 from .tripadvisor_api import TripAdvisorAPI
 from .tripadvisor_api import TripAdvisorAPICall
 
@@ -61,6 +62,9 @@ class TripAdvisorHandler(APIHandler):
         tripAdvisorLocationDetails = LocationDetailsTable(self)
         self._register_table("locationDetailsTable", tripAdvisorLocationDetails)
 
+        tripAdvisorReviews = ReviewsTable(self)
+        self._register_table("reviewsTable", tripAdvisorReviews)
+
     def connect(self, api_version=2):
         """Check the connection with TripAdvisor API"""
 
@@ -94,10 +98,6 @@ class TripAdvisorHandler(APIHandler):
             self.is_connected = False
 
         return response
-
-    def _register_table(self, table_name: str, table_class: Any):
-        """It registers the data resource in memory."""
-        self._tables[table_name] = table_class
 
     def call_tripadvisor_searchlocation_api(
         self, method_name: str = None, params: dict = None
@@ -176,8 +176,12 @@ class TripAdvisorHandler(APIHandler):
             "parent_brand": loc.get("parent_brand"),
             "brand": loc.get("brand"),
             "ancestors": str(loc.get("ancestors")),
-            "periods": str(loc.get("hours").get("periods")),
-            "weekday": str(loc.get("hours").get("weekday_text")),
+            "periods": str(loc.get("hours").get("periods"))
+            if loc.get("hours") != None
+            else None,
+            "weekday": str(loc.get("hours").get("weekday_text"))
+            if loc.get("weekday") != None
+            else None,
             "amenities": str(loc.get("amenities")),
             "features": str(loc.get("features")),
             "cuisines": str(loc.get("cuisine")),
@@ -191,6 +195,41 @@ class TripAdvisorHandler(APIHandler):
         result.append(data)
 
         print(result)
+
+        result = pd.DataFrame(result)
+        print(result)
+        return result
+
+    def call_tripadvisor_reviews_api(
+        self, method_name: str = None, params: dict = None
+    ) -> pd.DataFrame:
+        """It processes the JSON data from the call and transforms it into pandas.Dataframe"""
+        if self.is_connected is False:
+            self.connect()
+
+        locations = self.api.makeRequest(TripAdvisorAPICall.REVIEWS, **params)
+        result = []
+
+        for loc in locations:
+            data = {
+                "id": loc.get("id"),
+                "lang": loc.get("lang"),
+                "location_id": loc.get("location_id"),
+                "published_date": loc.get("published_date"),
+                "rating": loc.get("rating"),
+                "helpful_votes": loc.get("helpful_votes"),
+                "rating_image_url": loc.get("rating_image_url"),
+                "url": loc.get("url"),
+                "trip_type": loc.get("trip_type"),
+                "travel_date": loc.get("travel_date"),
+                "text_review": loc.get("text"),
+                "title": loc.get("title"),
+                "owner_response": loc.get("owner_response"),
+                "is_machine_translated": loc.get("is_machine_translated"),
+                "user": str(loc.get("user")),
+                "subratings": str(loc.get("subratings")),
+            }
+            result.append(data)
 
         result = pd.DataFrame(result)
         print(result)

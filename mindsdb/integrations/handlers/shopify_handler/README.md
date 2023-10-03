@@ -118,3 +118,14 @@ LIMIT 5
 ~~~~
 
 `inventory_item_ids` or `location_ids` have to be specified in the `where` clause of the query. 
+
+`location_ids` can be queried as follows:
+
+~~~~sql
+SELECT id as location_id, name, address1, city, zip 
+FROM shopify_datasource.locations 
+WHERE country = "US" 
+ORDER BY name desc 
+LIMIT 5;
+~~~~
+

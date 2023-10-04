@@ -13,3 +13,5 @@ XXX Test Passed: <link to the test results in your GitHub repository>
 </br>
 XXX Test Failed: <link to the test results in your GitHub repository>, <link to the issue>
 </br>
+
+Integrate Data Sources (SQL) Test Passed: https://github.com/Better-Boy/mindsdb-QA/blob/main/Testing.md

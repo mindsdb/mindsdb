@@ -60,7 +60,7 @@ class ShopifyHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        api_session = shopify.Session(self.connection_data['shop_url'], '2021-10', self.connection_data['shopify_access_token'])
+        api_session = shopify.Session(self.connection_data['shop_url'], '2021-10', self.connection_data['access_token'])
 
         self.yotpo_app_key = self.connection_data['yotpo_app_key'] if 'yotpo_app_key' in self.connection_data else None
         self.yotpo_access_token = self.connection_data['yotpo_access_token'] if 'yotpo_access_token' in self.connection_data else None

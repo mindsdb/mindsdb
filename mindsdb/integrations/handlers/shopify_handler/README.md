@@ -76,14 +76,16 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
 
 ## Example Usage
 
-The first step is to create a database with the new `shopify` engine by passing in the required `shop_url` and `shopify_access_token` parameters. If you are using [Yotpo Product Reviews](https://apps.shopify.com/yotpo-social-reviews) app, you can provide additional keys, `yotpo_app_key` and `yotpo_access_token` (utoken), to access customer reviews:
+The first step is to create a database with the new `shopify` engine by passing in the required `shop_url` and `access_token` parameters.
+
+Optionally, if you are using [Yotpo Product Reviews](https://apps.shopify.com/yotpo-social-reviews) app, you can provide additional keys, `yotpo_app_key` and `yotpo_access_token` (utoken), to access customer reviews. To generate the access token refer to [this](https://support.yotpo.com/docs/finding-your-yotpo-app-key-and-secret-key) and [this](https://apidocs.yotpo.com/reference/yotpo-authentication). In short, you have to generate app key and a secret key and use those keys to generate the access token.
 
 ~~~~sql
 CREATE DATABASE shopify_datasource
 WITH ENGINE = 'shopify',
 PARAMETERS = {
   "shop_url": "your-shop-name.myshopify.com",
-  "shopify_access_token": "shppa_...",
+  "access_token": "shppa_...",
   "yotpo_app_key": "...",
   "yotpo_access_token": "..."
 };

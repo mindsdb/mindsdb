@@ -328,6 +328,8 @@ class CustomerReviews(APITable):
         return pd.json_normalize(self.get_customer_reviews(limit=1)).columns.tolist()
 
     def get_customer_reviews(self, **kwargs) -> List[Dict]:
+        if self.handler.yotpo_app_key is None and self.handler.yotpo_access_token is None:
+            raise Exception("You need to provide 'yotpo_app_key' and 'yotpo_access_token' to retrieve customer reviews.")
         url = f"https://api.yotpo.com/v1/apps/{self.handler.yotpo_app_key}/reviews?count=0&utoken={self.handler.yotpo_access_token}"
         headers = {
             "accept": "application/json",

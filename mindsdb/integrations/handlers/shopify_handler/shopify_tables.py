@@ -200,8 +200,7 @@ class OrdersTable(APITable):
         orders = shopify.Order.find(**kwargs)
         return [order.to_dict() for order in orders]
 
-
-class InventoryTable(APITable):
+class InventoryLevelTable(APITable):
     """The Shopify Inventory Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
@@ -215,6 +214,7 @@ class InventoryTable(APITable):
         Returns
         -------
         pd.DataFrame
+
             Shopify Inventory matching the inventory_item_id or/and location_id
 
         Raises
@@ -224,7 +224,7 @@ class InventoryTable(APITable):
         """
         select_statement_parser = SELECTQueryParser(
             query,
-            'inventory',
+            'inventory_level',
             self.get_columns()
         )
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
@@ -283,6 +283,56 @@ class InventoryTable(APITable):
         inventories = shopify.InventoryLevel.find(**kwargs)
         return [inventory.to_dict() for inventory in inventories]
 
+class LocationTable(APITable):
+    """The Shopify Location Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Pulls data from the Shopify "GET /locations" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+
+            Shopify Locations matching the query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'locations',
+            self.get_columns()
+        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        locations_df = pd.json_normalize(self.get_locations(limit=result_limit))
+
+        select_statement_executor = SELECTQueryExecutor(
+            locations_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+
+        locations_df = select_statement_executor.execute_query()
+
+        return locations_df
+
+    def get_columns(self) -> List[Text]:
+        return pd.json_normalize(self.get_locations(limit=1)).columns.tolist()
+
+    def get_locations(self, **kwargs) -> List[Dict]:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+        locations = shopify.Location.find(**kwargs)
+        return [location.to_dict() for location in locations]
 
 class CustomerReviews(APITable):
     """The Shopify Customer Reviews Table implementation"""
@@ -298,6 +348,7 @@ class CustomerReviews(APITable):
         Returns
         -------
         pd.DataFrame
+
             Shopify customer reviews matching the query
 
         Raises
@@ -320,6 +371,7 @@ class CustomerReviews(APITable):
             where_conditions,
             order_by_conditions
         )
+
         customer_reviews_df = select_statement_executor.execute_query()
 
         return customer_reviews_df
@@ -335,3 +387,4 @@ class CustomerReviews(APITable):
         }
         json_response = requests.get(url, headers=headers).json()
         return [review for review in json_response['reviews']] if 'reviews' in json_response else []
+

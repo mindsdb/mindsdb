@@ -1,3 +1,8 @@
+from mindsdb_sql.parser import ast
+from typing import Text, List, Optional
+
+from .exceptions import UnsupportedColumnException
+
 from mindsdb.integrations.handlers.utilities.query_utilities.base_query_utilities import BaseQueryParser
 from mindsdb.integrations.handlers.utilities.query_utilities.base_query_utilities import BaseQueryExecutor
 
@@ -10,9 +15,12 @@ class UPDATEQueryParser(BaseQueryParser):
     ----------
     query : ast.Update
         Given SQL UPDATE query.
+    supported_columns : List[Text], Optional
+        List of columns supported by the table for updating.
     """
-    def __init__(self, query):
+    def __init__(self, query: ast.Update, supported_columns: Optional[List[Text]] = None):
         super().__init__(query)
+        self.supported_columns = supported_columns
     
     def parse_query(self):
         """
@@ -31,6 +39,10 @@ class UPDATEQueryParser(BaseQueryParser):
 
         values_to_update = {}
         for value in values:
+            if self.supported_columns:
+                if value[0] not in self.supported_columns:
+                    raise UnsupportedColumnException(f"Unsupported column: {value[0]}")
+            
             values_to_update[value[0]] = value[1].value
 
         return values_to_update

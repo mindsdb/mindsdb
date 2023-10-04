@@ -6,15 +6,37 @@ import threading
 from mindsdb.utilities.context import context as ctx
 
 
-def to_bytes(obj):
+def to_bytes(obj: object) -> bytes:
+    """ dump object into bytes
+
+        Args:
+            obj (object): object to convert
+
+        Returns:
+            bytes
+    """
     return pickle.dumps(obj, protocol=5)
 
 
-def from_bytes(b):
+def from_bytes(b: bytes) -> object:
+    """ load object from bytes
+
+        Args:
+            b (bytes):
+
+        Returns:
+            object
+    """
     return pickle.loads(b)
 
 
 class RedisKey:
+    """ The class responsible for unique task keys in redis
+
+        Attributes:
+            _base_key (bytes): prefix for keys
+    """
+
     @staticmethod
     def new():
         timestamp = str(time.time()).replace('.', '')
@@ -41,6 +63,9 @@ class RedisKey:
 
 
 class StatusNotifier(threading.Thread):
+    """ Worker that updates task status in redis with fixed frequency
+    """
+
     def __init__(self, redis_key, ml_task_status, db, cache):
         threading.Thread.__init__(self)
         self.redis_key = redis_key

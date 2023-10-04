@@ -1,6 +1,7 @@
 import pandas as pd
 
-from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor, CreateJob, RetrainPredictor, FinetunePredictor
+from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor, CreateJob, RetrainPredictor, FinetunePredictor,\
+    CreateMLEngine
 from mindsdb_sql.parser.ast import Identifier, OrderBy, Insert, TableColumn, Constant
 
 import mindsdb.api.mongo.functions as helpers
@@ -210,6 +211,17 @@ class Responce(Responder):
             )
             run_sql_command(request_env, ast_query)
 
+    def _insert_ml_engine(self, query, request_env, mindsdb_env):
+        for doc in query['documents']:
+
+            ast_query = CreateMLEngine(
+                name=Identifier(doc['name']),
+                handler=doc['handler'],
+                params=doc.get('params')
+            )
+
+            run_sql_command(request_env, ast_query)
+
     def _result(self, query, request_env, mindsdb_env):
         table = query['insert']
 
@@ -221,6 +233,9 @@ class Responce(Responder):
 
         elif table == 'jobs':
             self._insert_job(query, request_env, mindsdb_env)
+
+        elif table == 'ml_engines':
+            self._insert_ml_engine(query, request_env, mindsdb_env)
 
         else:
             # regular insert

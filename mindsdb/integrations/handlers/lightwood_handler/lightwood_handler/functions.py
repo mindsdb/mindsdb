@@ -23,6 +23,7 @@ from mindsdb.interfaces.model.functions import (
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.fs import FileStorage, RESOURCE_GROUP
 from mindsdb.interfaces.storage.json import get_json_storage
+import mindsdb.utilities.profiler as profiler
 
 from .utils import rep_recur, brack_to_mod, unpack_jsonai_old_args
 
@@ -42,6 +43,7 @@ def delete_learn_mark():
 
 
 @mark_process(name='learn')
+@profiler.profile()
 def run_generate(df: DataFrame, predictor_id: int, model_storage, args: dict = None):
 
     model_storage.training_state_set(current_state_num=1, total_states=5, state_name='Generating problem definition')
@@ -83,6 +85,7 @@ def run_generate(df: DataFrame, predictor_id: int, model_storage, args: dict = N
 
 
 @mark_process(name='learn')
+@profiler.profile()
 def run_fit(predictor_id: int, df: pd.DataFrame, model_storage) -> None:
     try:
         predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
@@ -104,7 +107,7 @@ def run_fit(predictor_id: int, df: pd.DataFrame, model_storage) -> None:
             sync=True
         )
         predictor.save(fs.folder_path / fs.folder_name)
-        fs.push()
+        fs.push(compression_level=0)
 
         predictor_record.data = predictor.model_analysis.to_dict()
 
@@ -148,12 +151,15 @@ def run_learn_remote(df: DataFrame, predictor_id: int) -> None:
 
 @mark_process(name='learn')
 def run_learn(df: DataFrame, args: dict, model_storage) -> None:
-    # FIXME
+    if df is None or df.shape[0] == 0:
+        raise Exception('No input data. Ensure the data source is healthy and try again.')
+
     predictor_id = model_storage.predictor_id
 
     predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
     predictor_record.training_start_at = datetime.now()
     db.session.commit()
+
 
     run_generate(df, predictor_id, model_storage, args)
     run_fit(predictor_id, df, model_storage)
@@ -166,14 +172,16 @@ def run_learn(df: DataFrame, args: dict, model_storage) -> None:
 @mark_process(name='finetune')
 def run_finetune(df: DataFrame, args: dict, model_storage):
     try:
+        if df is None or df.shape[0] == 0:
+            raise Exception('No input data. Ensure the data source is healthy and try again.')
+
         base_predictor_id = args['base_model_id']
-        base_predictor_record = db.Predictor.query.filter_by(
-            id=base_predictor_id,
-            status=PREDICTOR_STATUS.COMPLETE
-        ).first()
+        base_predictor_record = db.Predictor.query.get(base_predictor_id)
+        if base_predictor_record.status != PREDICTOR_STATUS.COMPLETE:
+            raise Exception("Base model must be in status 'complete'")
 
         predictor_id = model_storage.predictor_id
-        predictor_record = db.Predictor.query.filter_by(id=predictor_id).first()
+        predictor_record = db.Predictor.query.get(predictor_id)
 
         # TODO move this to ModelStorage (don't work with database directly)
         predictor_record.data = {'training_log': 'training'}
@@ -188,7 +196,7 @@ def run_finetune(df: DataFrame, args: dict, model_storage):
         )
         predictor = lightwood.predictor_from_state(base_fs.folder_path / base_fs.folder_name,
                                                    base_predictor_record.code)
-        predictor.adjust(df, adjust_args=args)
+        predictor.adjust(df, adjust_args=args.get('using', {}))
 
         fs = FileStorage(
             resource_group=RESOURCE_GROUP.PREDICTOR,
@@ -196,27 +204,13 @@ def run_finetune(df: DataFrame, args: dict, model_storage):
             sync=True
         )
         predictor.save(fs.folder_path / fs.folder_name)
-        fs.push()
+        fs.push(compression_level=0)
 
         predictor_record.data = predictor.model_analysis.to_dict()  # todo: update accuracy in LW as post-finetune hook
         predictor_record.code = base_predictor_record.code
         predictor_record.update_status = 'up_to_date'
         predictor_record.status = PREDICTOR_STATUS.COMPLETE
         predictor_record.training_stop_at = datetime.now()
-        db.session.commit()
-
-        predictor_records = get_model_records(
-            active=None,
-            name=predictor_record.name,
-        )
-        predictor_records = [
-            x for x in predictor_records
-            if x.training_stop_at is not None
-        ]
-        predictor_records.sort(key=lambda x: x.training_stop_at)
-        for record in predictor_records:
-            record.active = False
-        predictor_records[-1].active = True
         db.session.commit()
 
     except Exception as e:
@@ -226,8 +220,10 @@ def run_finetune(df: DataFrame, args: dict, model_storage):
         print(traceback.format_exc())
         error_message = format_exception_error(e)
         predictor_record.data = {"error": error_message}
+        predictor_record.status = PREDICTOR_STATUS.ERROR
         db.session.commit()
-
-    if predictor_record.training_stop_at is None:
-        predictor_record.training_stop_at = datetime.now()
-        db.session.commit()
+        raise
+    finally:
+        if predictor_record.training_stop_at is None:
+            predictor_record.training_stop_at = datetime.now()
+            db.session.commit()

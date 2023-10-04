@@ -1,5 +1,4 @@
 import os
-import psutil
 import tempfile
 from pathlib import Path
 
@@ -15,6 +14,30 @@ from mindsdb.utilities.telemetry import (
     inject_telemetry_to_static
 )
 from mindsdb.api.http.gui import update_static
+from mindsdb.utilities.fs import clean_unlinked_process_marks
+from mindsdb.api.http.utils import http_error
+
+
+def get_active_tasks():
+    response = {
+        'learn': False,
+        'predict': False,
+        'analyse': False
+    }
+
+    if os.name != 'posix':
+        return response
+
+    for process_type in response:
+        processes_dir = Path(tempfile.gettempdir()).joinpath(f'mindsdb/processes/{process_type}/')
+        if not processes_dir.is_dir():
+            continue
+        clean_unlinked_process_marks()
+        process_marks = [x.name for x in processes_dir.iterdir()]
+        if len(process_marks) > 0:
+            response[process_type] = True
+
+    return response
 
 
 @ns_conf.route('/ping')
@@ -25,6 +48,20 @@ class Ping(Resource):
         return {'status': 'ok'}
 
 
+@ns_conf.route('/readiness')
+class ReadinessProbe(Resource):
+    @ns_conf.doc('get_ready')
+    def get(self):
+        '''Checks server is ready for work'''
+
+        tasks = get_active_tasks()
+        for key in tasks:
+            if tasks[key] is True:
+                return http_error(503, 'not ready', 'not ready')
+
+        return '', 200
+
+
 @ns_conf.route('/ping_native')
 class PingNative(Resource):
     @ns_conf.doc('get_ping_native')
@@ -32,30 +69,7 @@ class PingNative(Resource):
         ''' Checks server use native for learn or analyse.
             Will return right result only on Linux.
         '''
-        response = {
-            'learn': False,
-            'predict': False,
-            'analyse': False
-        }
-
-        if os.name != 'posix':
-            return response
-
-        for process_type in response:
-            processes_dir = Path(tempfile.gettempdir()).joinpath(f'mindsdb/processes/{process_type}/')
-            if not processes_dir.is_dir():
-                continue
-            process_marks = [x.name for x in processes_dir.iterdir()]
-            for p_mark in process_marks:
-                pid = int(p_mark.split('-')[0])
-                try:
-                    psutil.Process(pid)
-                except Exception:
-                    processes_dir.joinpath(p_mark).unlink()
-                else:
-                    response[process_type] = True
-
-        return response
+        return get_active_tasks()
 
 
 @ns_conf.route('/telemetry')

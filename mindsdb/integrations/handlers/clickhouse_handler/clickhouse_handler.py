@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
 import pandas as pd
-import clickhouse_driver
 from sqlalchemy import create_engine
 from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -30,7 +29,17 @@ class ClickHouseHandler(DatabaseHandler):
         self.connection_data = connection_data
         self.renderer = SqlalchemyRender(ClickHouseDialect)
         self.is_connected = False
-        self.protocol = connection_data.get('protocol', 'native')
+        self.protocol = connection_data.get('protocol', 'clickhouse')
+
+        # region added for back-compatibility with connections creatad before 11.05.2023
+        protocols_map = {
+            'native': 'clickhouse+native',
+            'http': 'clickhouse+http',
+            'https': 'clickhouse+https',
+        }
+        if self.protocol in protocols_map:
+            self.protocol = protocols_map[self.protocol]
+        # endregion
 
     def __del__(self):
         if self.is_connected is True:
@@ -43,14 +52,14 @@ class ClickHouseHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        protocol = "clickhouse+native" if self.protocol == 'native' else "clickhouse+http"
+        protocol = self.protocol
         host = self.connection_data['host']
         port = self.connection_data['port']
         user = self.connection_data['user']
         password = self.connection_data['password']
         database = self.connection_data['database']
         url = f'{protocol}://{user}:{password}@{host}:{port}/{database}'
-        if self.protocol == 'https':
+        if self.protocol == 'clickhouse+https':
             url = url + "?protocol=https"
 
         engine = create_engine(url)
@@ -154,32 +163,45 @@ class ClickHouseHandler(DatabaseHandler):
 connection_args = OrderedDict(
     protocol={
         'type': ARG_TYPE.STR,
-        'protocol': 'The protocol to query clickhouse. Supported: native, http, https. Default: native'
+        'description': 'The protocol to query clickhouse. Supported: clickhouse, clickhouse+native, clickhouse+http, clickhouse+https. Default: clickhouse',
+        'required': True,
+        'label': 'Protocol'
     },
     user={
         'type': ARG_TYPE.STR,
-        'description': 'The user name used to authenticate with the ClickHouse server.'
-    },
-    password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the ClickHouse server.'
+        'description': 'The user name used to authenticate with the ClickHouse server.',
+        'required': True,
+        'label': 'User'
     },
     database={
         'type': ARG_TYPE.STR,
-        'description': 'The database name to use when connecting with the ClickHouse server.'
+        'description': 'The database name to use when connecting with the ClickHouse server.',
+        'required': True,
+        'label': 'Database name'
     },
     host={
         'type': ARG_TYPE.STR,
-        'description': 'The host name or IP address of the ClickHouse server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.'
+        'description': 'The host name or IP address of the ClickHouse server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.',
+        'required': True,
+        'label': 'Host'
     },
     port={
         'type': ARG_TYPE.INT,
-        'description': 'The TCP/IP port of the ClickHouse server. Must be an integer.'
-    }
+        'description': 'The TCP/IP port of the ClickHouse server. Must be an integer.',
+        'required': True,
+        'label': 'Port'
+    },
+    password={
+        'type': ARG_TYPE.PWD,
+        'description': 'The password to authenticate the user with the ClickHouse server.',
+        'required': True,
+        'label': 'Password'
+    },
+    
 )
 
 connection_args_example = OrderedDict(
-    protocol='native',
+    protocol='clickhouse',
     host='127.0.0.1',
     port=9000,
     user='root',

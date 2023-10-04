@@ -71,10 +71,8 @@ exclude =
   tests/prediction_latency_test/*
   tests/unit/executor_test_base.py
   tests/unit/test_cache.py
-  tests/unit/test_executor.py
   tests/unit/test_mongodb_handler.py
   tests/unit/test_mongodb_server.py
-  tests/integration_tests/flows/conftest.py
   tests/unit/ml_handlers/test_huggingface.py
   tests/unit/ml_handlers/test_mlflow.py
   tests/unit/ml_handlers/test_huggingface.py

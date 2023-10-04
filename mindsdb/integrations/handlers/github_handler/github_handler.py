@@ -1,10 +1,15 @@
 import github
+from collections import OrderedDict
 
-from mindsdb.integrations.handlers.github_handler.github_tables import GithubIssuesTable
+from mindsdb.integrations.handlers.github_handler.github_tables import (
+    GithubIssuesTable,
+    GithubPullRequestsTable,
+)
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 from mindsdb.utilities.log import get_log
 from mindsdb_sql import parse_sql
@@ -35,7 +40,9 @@ class GithubHandler(APIHandler):
         self.is_connected = False
 
         github_issues_data = GithubIssuesTable(self)
+        github_pull_requests_data = GithubPullRequestsTable(self)
         self._register_table("issues", github_issues_data)
+        self._register_table("pull_requests", github_pull_requests_data)
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.
@@ -103,3 +110,31 @@ class GithubHandler(APIHandler):
         """
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
+
+
+connection_args = OrderedDict(
+    repository={
+        "type": ARG_TYPE.STR,
+        "description": " GitHub repository name.",
+        "required": True,
+        "label": "Repository",
+    },
+    api_key={
+        "type": ARG_TYPE.PWD,
+        "description": "Optional GitHub API key to use for authentication.",
+        "required": False,
+        "label": "Api key",
+    },
+    github_url={
+        "type": ARG_TYPE.STR,
+        "description": "Optional GitHub URL to connect to a GitHub Enterprise instance.",
+        "required": False,
+        "label": "Github url",
+    },
+)
+
+connection_args_example = OrderedDict(
+    repository="mindsdb/mindsdb", 
+    api_key="ghp_z91InCQZWZAMlddOzFCX7xHJrf9Fai35HT7", 
+    github_url="https://github.com/mindsdb/mindsdb"
+)

@@ -1,244 +1,79 @@
 ---
-title: What is MindsDB?
-sidebarTitle: What is MindsDB?
+title: Introduction to MindsDB
+sidebarTitle: Introduction
 ---
 
-Data that lives in your database is a valuable asset. MindsDB enables you to use
-your data and make forecasts. It speeds up the ML development process by
-bringing machine learning into the database.
+MindsDB is an AI Automation platform for building AI/ML powered features and applications. It works by connecting any source of data with any AI/ML model or framework and automating how real-time data flows between them.
 
-With MindsDB, you can build, train, optimize, and deploy your ML models without
-the need for other platforms. And to get the forecasts, simply query your data
-and ML models. Read along to see some examples.
+MindsDB allows you to easily:
 
-![Machine Learning in Database using SQL](/assets/what_is_mindsdb.png)
+ - Connect to any store of data or end-user application.
+ - Pass data to an AI model from any store of data or end-user application.
+ - Plug the output of an AI model into any store of data or end-user application.
+ - Fully automate these workflows to build AI-powered features and applications.
 
-## What are AI Tables?
+![What is MindsDB](/assets/what_is_mindsdb2.png)
 
-MindsDB brings machine learning into databases by employing the concept of AI
-Tables.
+## Build with MindsDB
 
-AI Tables are machine learning models stored as virtual tables inside a
-database. They facilitate making predictions based on your data. You can perform
-the time series, regression, and classification predictions within your database
-and get the output almost instantly by querying an AI Table with simple SQL
-statements.
+As you can connect any data source with any AI/ML model, you can build and automate any AI/ML use case.
 
-## Deep Dive into the AI Tables
+Here are some AI/LLM use cases:
+      - [Semantic Search and Q&A/RAG](/nlp/question-answering-inside-mysql-with-openai)
+      - [Chatbots](/sql/tutorials/twitterbot-mariadb-enterprise-server-skysql)
+      - [Classification](/nlp/nlp-extended-examples#text-classification)
+      - [Sentiment Analysis](/nlp/sentiment-analysis-inside-mysql-with-openai)
+      - [Summarisation](/nlp/text-summarization-inside-mysql-with-openai)
+      - [Translation](/nlp/nlp-extended-examples#translation)
 
-### Current Challenges
+You can use MindsDB for the following machine learning use cases:
+      - [Forecasting](/sql/tutorials/eeg-forecasting)
+      - [Classification](/sql/tutorials/customer-churn)
+      - [Regression](/sql/tutorials/home-rentals)
+      - Anomaly Detection
+      - Recommenders
 
-Let’s consider the following `income_table` table that stores the `income` and
-`debt` values.
+You can use one of MindsDB’s AutoMLs or you can bring your own, pre-trained model.
 
-```sql
-SELECT income, debt
-FROM income_table;
-```
+## Sample AI Workflow
 
-On execution, we get:
+We can automate any workflow end-to-end using MindsDB’s Jobs command. Take an AI workflow featuring integrations with [Binance](/integrations/app-integrations/binance) (our data source), [TimeGPT](/integrations/ai-engines/timegpt) (our forecasting model), and [Slack](/integrations/app-integrations/slack) (where we’ll publish the outputs from the forecasting model). In this scenario, you can seamlessly retrieve real-time trading data from Binance, utilize it as input for a TimeGPT model to generate forecasts, and receive these forecasts as Slack notifications.
 
-```sql
-+------+-----+
-|income|debt |
-+------+-----+
-|60000 |20000|
-|80000 |25100|
-|100000|30040|
-|120000|36010|
-+------+-----+
-```
+Check out the **Use Cases** section for more examples and tutorials.
 
-A simple visualization of the data present in the `income_table` table is as
-follows:
+<Note>
+To find out about data sources available in MindsDB, follow [this link](/integrations/data-sources-overview).
 
-![Income vs Debt](/assets/sql/income_vs_debt.png)
+To find out about AI frameworks available in MindsDB, follow [this link](/integrations/ml-engines-overview).
+</Note>
 
-Querying the income table to get the `debt` value for a particular `income`
-value results in the following:
+## Benefits of MindsDB
 
-```sql
-SELECT income, debt
-FROM income_table
-WHERE income = 80000;
-```
+1. **Unified AI Deployment and Management**<br></br>
+    MindsDB integrates directly with the database, warehouse, or stream. This eliminates the need to build and maintain custom, complex data pipelines or separate systems for AI/ML deployment.
 
-On execution, we get:
+2. **Automated AI Workflows**<br></br>
+    MindsDB automates the entire AI workflow to execute on time-based or event-based triggers. No need to build custom automation logic to get predictions, move data, or (re)train models.
 
-```sql
-+------+-----+
-|income|debt |
-+------+-----+
-|80000 |25100|
-+------+-----+
-```
+3. **Turn every developer into an AI Engineer**<br></br>
+    MindsDB enables developers to leverage their existing SQL skills, accelerating the adoption of AI across teams and departments, turning every developer into an AI Engineer.
 
-And here is what we get:
+4. **Enhanced Scalability and Performance**<br></br>
+    Whether in your private cloud or using MindsDB’s managed service, MindsDB enables you to handle large-scale AI/ML workloads efficiently. MindsDB can scale to meet the demands of your use case, ensuring optimal performance and responsiveness.
 
-![Income vs Debt chart](/assets/sql/income_vs_debt_known_value.png)
+## Contributing to MindsDB
 
-But what happens when querying the table for an `income` value that is not
-present there?
+Here is what you can do to help democratize AI:
 
-```sql
-SELECT income, debt
-FROM income_table
-WHERE income = 90000;
-```
+* Go ahead and try out MindsDB by following our tutorials. If you find something is not right, you can [report an issue here](https://github.com/mindsdb/mindsdb/issues/new/choose).
 
-On execution, we get:
+* Are you familiar with Python? You can then help us out in resolving open issues. Have a look at [issues labeled with the `help wanted` tag](https://github.com/mindsdb/mindsdb/labels/help%20wanted).
 
-```sql
-Empty set (0.00 sec)
-```
-
-When the `WHERE` clause condition is not fulfilled for any of the rows, no
-value is returned.
-
-![Income vs Debt query](/assets/sql/income_vs_debt_unknown_value.png)
-
-When a table doesn’t have an exact match, the query returns an empty set or null
-value. This is where the AI Tables come into play!
-
-### Solution Offered by MindsDB
-
-Let’s create a `debt_model` model that allows us to approximate the `debt` value
-for any `income` value. We train the `debt_model` model using the data from the
-`income_table` table.
-
-```sql
-CREATE MODEL mindsdb.debt_model
-FROM income_table
-PREDICT debt;
-```
-
-On execution, we get:
-
-```sql
-Query OK, 0 rows affected (x.xxx sec)
-```
-
-MindsDB provides the [`CREATE MODEL`](/sql/create/predictor/)
-statement. On execution of this statement, the predictive model works in the
-background, automatically creating a vector representation of the data that can
-be visualized as follows:
-
-![Income vs Debt model](/assets/sql/income_vs_debt_predictor.png)
-
-Let’s now look for the `debt` value of some random `income` value. To get the
-approximated `debt` value, we query the `mindsdb.debt_model` model instead
-of the `income_table` table.
-
-```sql
-SELECT income, debt
-FROM mindsdb.debt_model
-WHERE income = 90000;
-```
-
-On execution, we get:
-
-```sql
-+------+-----+
-|income|debt |
-+------+-----+
-|90000 |27820|
-+------+-----+
-```
-
-And here is how it looks:
-
-![Income vs Debt model](/assets/sql/income_vs_debt_prediction.png)
-
-## Why Choose MindsDB?
-
-### Shift to Data Analysis Paradigm
-
-There is an ongoing transformational shift within the modern business world from
-the “what happened and why” based on historical data analysis to the “what will
-happen and how can we make it happen” based on machine learning predictive
-modeling.
-
-![Analytics](/assets/sql/analytics_shift.png)
-
-The success of your predictions depends both on the data you have available and
-the models trained with the data. Data Scientists and Data Engineers require
-efficient and easy-to-use tools to prepare the data for feature engineering,
-then training the models, and finally, deploying, monitoring, and managing these
-implementations for optimal prediction confidence.
-
-### The Machine Learning Lifecycle
-
-The ML lifecycle is a process that consists of the data preparation phase,
-modeling phase, and deployment phase. The diagram below presents all the steps
-included in each of the stages.
-
-![ML Workflow](/assets/sql/machine_learning_lifecycle.png)
-
-Current solutions for implementing machine learning encounter various
-challenges, such as time-consuming preparation, cleaning, and labeling of
-substantial amounts of data, and difficulties in finding qualified ML/AI data
-scientists.
-
-The processes that must be followed by the ML/AI data scientists to implement
-machine learning include the following:
-
-- feature engineering,
-- building, training, and optimizing models,
-- assembling, verifying, and deploying models to production,
-- continuously monitoring and improving the models,
-- continuously training the models, as they require multiple training iterations
-  with existing data,
-- extracting, transforming, and loading (ETL) data from one system to another,
-  which is complicated and may lead to multiple copies of information.
-
-A recent study has shown it takes 64% of companies a month up to over a year to
-deploy a machine learning model into production. Leveraging existing databases
-and automating all the aforementioned processes is called AutoML. AutoML has
-been gaining traction within enterprises for enabling non-experts to use machine
-learning models for practical applications.
-
-## Why MindsDB?
-
-Well, as with most names, we needed one. We like science fiction and
-[The Culture](<https://en.wikipedia.org/wiki/The_Culture_(series)>) series,
-where the AI super-smart entities are called _Minds_. So that's for the first
-part of our name.
-
-As for the second part - the _DB_, it is quite self-explanatory. Although we
-will support all kinds of data in the future, but currently, our objective is to
-add intelligence to existing data stores and databases. Hence, the term _DB_
-comes along.
-
-So there we have it, MindsDB.
-
-And why the bear? We wanted to honor the open-source tradition of animals
-related to projects. We went for a bear because MindsDB was born at UC Berkeley,
-where the first codes were written. Then, we went a step further and decided for
-a polar bear.
-
-## How to Help Democratize Machine Learning?
-
-Here is what you can do:
-
-* Go ahead and try out MindsDB by following our tutorials, and in case of
-      problems, you can always
-      [report an issue here](https://github.com/mindsdb/mindsdb/issues/new/choose).
-
-* Are you familiar with Python? You can then help us out in resolving open
-      issues. At first, have a look at
-      [issues labeled with the good first issue tag](https://github.com/mindsdb/mindsdb/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22),
-      as these should be easy to start.
-
-* You can also help us with documentation and tutorials. Here is how you can
-      contribute by writing
-      [documentation](/contribute/docs/) and
-      [tutorials](/contribute/tutorials). Don't
-      forget to follow the [style guide](/docs-rules/).
+* You can also help us with documentation and tutorials. Here is how you can contribute by writing [documentation](/contribute/docs/) and [tutorials](/contribute/tutorials). Don't forget to follow the [style guide](/docs-rules/).
 
 * Share with your friends and spread the word about MindsDB.
 
-* Join our team! We are a fast-growing company, so we always have
-      [a few open positions](https://mindsdb.com/careers/).
+* Join our team! We are a fast-growing company, so we always have [a few open positions](https://mindsdb.com/careers/).
 
 <Tip>
 **From Our Community**

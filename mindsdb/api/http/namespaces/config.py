@@ -12,9 +12,9 @@ from flask import current_app as ca
 from dateutil.tz import tzlocal
 
 from mindsdb.utilities import log
+from mindsdb.utilities.functions import encrypt, decrypt
 from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.utilities.log_controller import get_logs
-from mindsdb.interfaces.stream.stream import StreamController
 from mindsdb.utilities.config import Config
 from mindsdb.api.http.utils import http_error
 
@@ -127,6 +127,10 @@ class Integration(Resource):
                 params[key] = file_path
 
         is_test = params.get('test', False)
+
+        config = Config()
+        secret_key = config.get('secret_key', 'dummy-key')
+
         if is_test:
             del params['test']
 
@@ -136,10 +140,22 @@ class Integration(Resource):
                 handler_type=handler_type,
                 connection_data=params
             )
+
             status = handler.check_connection()
             if temp_dir is not None:
                 shutil.rmtree(temp_dir)
-            return status, 200
+
+            resp = status.to_json()
+            if status.success and 'code' in params:
+                if hasattr(handler, 'handler_storage'):
+                    # attach storage if exists
+                    export = handler.handler_storage.export_files()
+                    if export:
+                        # encrypt with flask secret key
+                        encrypted = encrypt(export, secret_key)
+                        resp['storage'] = encrypted.decode()
+
+            return resp, 200
 
         integration = ca.integration_controller.get(name, sensitive_info=False)
         if integration is not None:
@@ -149,13 +165,16 @@ class Integration(Resource):
             engine = params['type']
             if engine is not None:
                 del params['type']
-            publish = params.pop('publish', False)
+            params.pop('publish', False)
             ca.integration_controller.add(name, engine, params)
 
-            if is_test is False and publish is True:
-                stream_controller = StreamController()
-                if engine in stream_controller.known_dbs and publish is True:
-                    stream_controller.setup(name)
+            # copy storage
+            if params.get('storage'):
+                handler = ca.integration_controller.get_handler(name)
+
+                export = decrypt(params['storage'].encode(), secret_key)
+                handler.handler_storage.import_files(export)
+
         except Exception as e:
             log.logger.error(str(e))
             if temp_dir is not None:
@@ -164,7 +183,7 @@ class Integration(Resource):
 
         if temp_dir is not None:
             shutil.rmtree(temp_dir)
-        return '', 200
+        return {}, 200
 
     @ns_conf.doc('delete_integration')
     def delete(self, name):
@@ -195,9 +214,6 @@ class Integration(Resource):
                 del params['enabled']
             ca.integration_controller.modify(name, params)
 
-            stream_controller = StreamController()
-            if params.get('type') in stream_controller.known_dbs and params.get('publish', False) is True:
-                stream_controller.setup(name)
         except Exception as e:
             log.logger.error(str(e))
             abort(500, f'Error during integration modifycation: {str(e)}')

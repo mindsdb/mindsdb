@@ -44,13 +44,20 @@ class MySQLHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
+        port = self.connection_data.get('port')
+        if port is None:
+            port = 3306
+
         config = {
             'host': self.connection_data.get('host'),
-            'port': self.connection_data.get('port'),
+            'port': port,
             'user': self.connection_data.get('user'),
             'password': self.connection_data.get('password'),
             'database': self.connection_data.get('database')
         }
+        
+        if 'conn_attrs' in self.connection_data:
+            config['conn_attrs'] = self.connection_data['conn_attrs']
 
         ssl = self.connection_data.get('ssl')
         if ssl is True:
@@ -148,12 +155,22 @@ class MySQLHandler(DatabaseHandler):
 
     def get_tables(self) -> Response:
         """
-        Get a list with all of the tabels in MySQL
+        Get a list with all of the tabels in MySQL selected database
         """
-        q = "SHOW TABLES;"
-        result = self.native_query(q)
-        df = result.data_frame
-        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+        sql = """
+            SELECT
+                TABLE_SCHEMA AS table_schema,
+                TABLE_NAME AS table_name,
+                TABLE_TYPE AS table_type
+            FROM
+                information_schema.TABLES
+            WHERE
+                TABLE_TYPE IN ('BASE TABLE', 'VIEW') 
+                AND TABLE_SCHEMA = DATABASE()
+            ORDER BY 2
+            ;
+        """
+        result = self.native_query(sql)
         return result
 
     def get_columns(self, table_name) -> Response:
@@ -168,39 +185,57 @@ class MySQLHandler(DatabaseHandler):
 connection_args = OrderedDict(
     user={
         'type': ARG_TYPE.STR,
-        'description': 'The user name used to authenticate with the MySQL server.'
+        'description': 'The user name used to authenticate with the MySQL server.',
+        'required': True,
+        'label': 'User'
     },
     password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the MySQL server.'
+        'type': ARG_TYPE.PWD,
+        'description': 'The password to authenticate the user with the MySQL server.',
+        'required': True,
+        'label': 'Password'
     },
     database={
         'type': ARG_TYPE.STR,
-        'description': 'The database name to use when connecting with the MySQL server.'
+        'description': 'The database name to use when connecting with the MySQL server.',
+        'required': True,
+        'label': 'Database'
     },
     host={
         'type': ARG_TYPE.STR,
-        'description': 'The host name or IP address of the MySQL server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.'
+        'description': 'The host name or IP address of the MySQL server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.',
+        'required': True,
+        'label': 'Host'
     },
     port={
         'type': ARG_TYPE.INT,
-        'description': 'The TCP/IP port of the MySQL server. Must be an integer.'
+        'description': 'The TCP/IP port of the MySQL server. Must be an integer.',
+        'required': True,
+        'label': 'Port'
     },
     ssl={
         'type': ARG_TYPE.BOOL,
-        'description': 'Set it to False to disable ssl.'
+        'description': 'Set it to False to disable ssl.',
+        'required': False,
+        'label': 'ssl'
     },
     ssl_ca={
         'type': ARG_TYPE.PATH,
-        'description': 'Path or URL of the Certificate Authority (CA) certificate file'
+        'description': 'Path or URL of the Certificate Authority (CA) certificate file',
+        'required': False,
+        'label': 'ssl_ca'
     },
     ssl_cert={
         'type': ARG_TYPE.PATH,
-        'description': 'Path name or URL of the server public key certificate file'
+        'description': 'Path name or URL of the server public key certificate file',
+        'required': False,
+        'label': 'ssl_cert'
     },
     ssl_key={
         'type': ARG_TYPE.PATH,
-        'description': 'The path name or URL of the server private key file'
+        'description': 'The path name or URL of the server private key file',
+        'required': False,
+        'label': 'ssl_key',
     }
 )
 

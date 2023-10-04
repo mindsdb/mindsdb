@@ -35,9 +35,9 @@ You can use the MindsDB SQL Editor or open your preferred MySQL client and conne
 
 ---
 
-## 2. Connecting a Database [`#!sql CREATE DATABASE`](/sql/create/databases/)
+## 2. Connecting a Database [`#!sql CREATE DATABASE`](https://docs.mindsdb.com/sql/create/database)
 
-For this quickstart, we have already prepared some example data for you.  To add it to your account, use the [`#!sql CREATE DATABASE`](/sql/create/databases/) syntax by copying and pasting this command into your SQL client:
+For this quickstart, we have already prepared some example data for you.  To add it to your account, use the [`#!sql CREATE DATABASE`](https://docs.mindsdb.com/sql/create/database) syntax by copying and pasting this command into your SQL client:
 
 
 ```sql
@@ -91,9 +91,9 @@ On execution, you should get:
 
 ---
 
-## 4. Creating a Predictor [`#!sql CREATE MODEL`](/sql/create/predictor/)
+## 4. Creating a Predictor [`#!sql CREATE MODEL`](https://docs.mindsdb.com/sql/create/model)
 
-Now you are ready to create your first predictor. Use the [`#!sql CREATE MODEL`](/sql/create/predictor/) syntax by copying and pasting this command into your SQL client:
+Now you are ready to create your first predictor. Use the [`#!sql CREATE MODEL`](https://docs.mindsdb.com/sql/create/model) syntax by copying and pasting this command into your SQL client:
 
 ```sql 
 CREATE MODEL mindsdb.home_rentals_predictor

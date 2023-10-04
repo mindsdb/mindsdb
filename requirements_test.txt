@@ -1,7 +1,13 @@
 docker >= 5.0.3
+itsdangerous==2.0.1
+jinja2<3.1.0
 netifaces >= 0.11.0
 mysql-connector-python==8.0.29
 pytest
 pytest-subtests
 flake8==5.0.4
 pycodestyle==2.9.1
+pymssql >= 2.1.4
+boto3
+
+openai >= 0.27.0 # for ml handler tests [should match version defined in handler's requirements.txt]

@@ -1,0 +1,12 @@
+---
+title: List Data Sources
+sidebarTitle: List Data Sources
+---
+
+You can list all data sources using the code below.
+
+```
+const query = 'SHOW FULL DATABASES WHERE type = \‘data\’';
+result = await MindsDB.SQL.runQuery(query);
+console.log(result);
+```

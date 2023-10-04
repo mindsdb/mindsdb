@@ -13,16 +13,33 @@ on:
       - 'README.md'
 
 jobs:
+  code_checking:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3.5.3
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v4.7.0
+      with:
+        python-version: 3.9
+    - name: Install flake8
+      run: |
+        pip install flake8==5.0.4 pycodestyle==2.9.1
+      shell: bash
+    - name: Static code checking
+      run: |
+        python3 -m flake8
+      shell: bash
   matrix_prep:
+    needs: code_checking
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.5.3
       - id: set-matrix
-        uses: JoshuaTheMiller/conditional-build-matrix@0.0.1
+        uses: JoshuaTheMiller/conditional-build-matrix@v1.0.1
         with:
-          filter: '[?runOn==`${{ github.ref }}` || runOn==`always`]'
+          filter: '[?runOnBranch==`${{ github.ref }}` || runOnBranch==`always`]'
   test:
     needs: matrix_prep
     strategy:
@@ -31,16 +48,16 @@ jobs:
     runs-on: ${{ matrix.runs_on }}
     if: github.ref_type == 'branch'
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3.5.3
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4.7.0
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        #python -m pip install --upgrade pip==21.0.1
-        pip install 'pymssql >= 2.1.4'
-        pip install boto3
+        pip install --upgrade pip
+        # temp
+        pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
         pip install --no-cache-dir .
         pip install -r requirements_test.txt
         pip uninstall pycodestyle -y && pip install pycodestyle==2.9.1  # temp fix while exist conflict in last version with flake8
@@ -48,24 +65,23 @@ jobs:
       env:
         ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
         mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
-    - name: Install dependencies Windows
-      run: |
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          pip install torch==1.7.0+cpu torchvision==0.8.1+cpu -f https://download.pytorch.org/whl/torch_stable.html;
-        fi
-      shell: bash
-      env:
-        CHECK_FOR_UPDATES: False
     - name: Install staging mdb libraries if it's not mindsdb/stable
       if: ${{ github.ref != 'refs/heads/stable' }}
       run: |
-          pip install git+https://github.com/mindsdb/mindsdb_sql.git@staging --upgrade --no-cache-dir
           pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
           pip uninstall pycodestyle -y && pip install pycodestyle==2.9.1  # temp fix while exist conflict in last version with flake8
-          pip install gluonts==0.11.4  # temp fix until next lightwood release (>23.1.2.1)
+          pip install git+https://github.com/mindsdb/mindsdb_sql.git@staging --upgrade --no-cache-dir  # install post lightwood so it does not get overwritten
+    - name: Install ML engine related dependencies
+      run: |
+        for engine in openai; do  # statsforecast huggingface lightwood
+          pip install -r ./mindsdb/integrations/handlers/${engine}_handler/requirements.txt
+        done
+      shell: bash
+      env:
+        ACCESS_KEY: ${{ secrets.GH_ACCESS_KEY }}
+        mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
     - name: Run integration api and flow tests
       run: |
-        python3 -m flake8
 
         if [ "$RUNNER_OS" == "Linux" ]; then
           # Unit tests
@@ -74,21 +90,16 @@ jobs:
 
           env PYTHONPATH=./ pytest tests/unit/test_executor.py
 
-          # need fix in LW. not working yet 
+          # need fix in LW. not working yet
           env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
-          
-          # env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_lightwood.py
 
           env PYTHONPATH=./ pytest tests/unit/test_predictor_params.py
-        
+
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
 
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
 
           env PYTHONPATH=./ pytest tests/unit/test_cache.py
-
-          # it is too early for such tests
-          # env PYTHONPATH=./ pytest tests/unit/test_interfaces_consistency.py
 
           # MySQL API
           echo -e "\n===============test MySQL API===============\n"
@@ -104,37 +115,24 @@ jobs:
           # HTTP
           echo -e "\n===============test HTTP===============\n"
           pytest -vx tests/integration_tests/flows/test_http.py
-          #
+
           # Company independent
           echo -e "\n===============test company independent===============\n"
           pytest -vx tests/integration_tests/flows/test_company_independent.py
 
-          # mkdir -p ~/.ssh/
-          # echo "$DB_MACHINE_KEY" > ~/.ssh/db_machine
-          # sudo chmod 600 ~/.ssh/db_machine
-          # echo "$DB_MACHINE_MS_KEY" > ~/.ssh/db_machine_ms
-          # sudo chmod 600 ~/.ssh/db_machine_ms
-          # echo "$DATABASE_CREDENTIALS" > ~/.mindsdb_credentials.json
-          # sudo chmod 644 ~/.mindsdb_credentials.json
-
-          # export USE_EXTERNAL_DB_SERVER="1"
-
-
-          # # Kafka Stream
-          # echo -e "\n===============\ntest Kafka Stream\n===============\n"
-          # python tests/integration_tests/flows/test_kafka.py
-
-          # # Redis Stream
-          # echo -e "\n===============\ntest Redis Stream\n===============\n"
-          # python tests/integration_tests/flows/test_redis.py
+          # First-tier ML engines
+          echo -e "\n===============test ML engines===============\n"
+          pytest -vx tests/unit/ml_handlers/test_openai.py
         
+          # pending rework
+          # pytest -vx tests/unit/ml_handlers/test_statsforecast.py
+          # pytest -vx tests/unit/ml_handlers/test_huggingface.py
+          # pytest -vx tests/unit/ml_handlers/test_lightwood.py
         fi
       shell: bash
       env:
         CHECK_FOR_UPDATES: False
-          # DB_MACHINE_KEY: ${{secrets.DB_MACHINE_KEY}}
-          # DB_MACHINE_MS_KEY: ${{secrets.DB_MACHINE_MS_KEY}}
-          # DATABASE_CREDENTIALS: ${{secrets.DATABASE_CREDENTIALS}}
+        OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
 
@@ -143,9 +141,9 @@ jobs:
     needs: test
     if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3.5.3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4.7.0
       with:
         python-version: '3.7'
     - name: Install dependencies
@@ -170,9 +168,9 @@ jobs:
     needs: test
     if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3.5.3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4.7.0
       with:
         python-version: '3.7'
     - name: Create version files
@@ -190,4 +188,3 @@ jobs:
         AWS_REGION: 'us-west-2'
         SOURCE_DIR: 'distributions/ver/dist'
         DEST_DIR: 'mindsdb-installer/ver'
-

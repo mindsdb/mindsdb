@@ -1,0 +1,59 @@
+---
+title: Microsoft Teams
+sidebarTitle: Microsoft Teams
+---
+
+In this section, we present how to connect Microsoft Teams to MindsDB.
+
+[Microsoft Teams](https://www.microsoft.com/en/microsoft-teams/group-chat-software/) is the ultimate messaging app for your organization—a workspace for real-time collaboration and communication, meetings, file and app sharing, and even the occasional emoji! All in one place, all in the open, all accessible to everyone.
+
+The Microsoft Temas handler allows you to send messages to a channel in Microsoft Teams via a webhook.
+
+## Connection
+
+This handler was implemented using the [pymsteams](https://pypi.org/project/pymsteams/), which is the Python Wrapper Library to send requests to Microsoft Teams Webhooks.
+
+The Microsoft Temas handler is initialized with a single parameter:
+
+* `webhook_url` is a webhook url for the Microsoft Teams channel to send messages to.
+
+<Note>
+Read about creating an Incoming Webhook in Microsoft Teams [here](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook?tabs=dotnet).
+</Note>
+
+To connect to Microsoft Teams using MindsDB, the following CREATE DATABASE statement can be used:
+
+```sql
+CREATE DATABASE teams_datasource
+WITH ENGINE = 'teams',
+PARAMETERS = {
+  "webhook_url": "https://..."
+};
+```
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/ms_teams_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+Now, you can send messages to the configured Microsoft Teams channel:
+
+```sql
+INSERT INTO teams_datasource.messages(title, text)
+VALUES 
+('Hello from MindsDB!', 'This is a test message from MindsDB.');
+```
+
+You can also send multiple messages at once:
+
+```sql
+INSERT INTO teams_datasource.messages(title, text)
+VALUES 
+('Hello from MindsDB!', 'This is a test message from MindsDB.'),
+('Hello again!', 'This is another test message from MindsDB.');
+```
+
+<Tip>
+you can use this handler to send outputs from models created in MinsDB as notifications to Microsoft Teams.
+</Tip>

@@ -1,4 +1,3 @@
-import time
 from unittest.mock import patch
 import datetime as dt
 import tempfile
@@ -10,6 +9,7 @@ import numpy as np
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 
 # How to run:
@@ -47,7 +47,7 @@ class Test(BaseExecutorMockPredictor):
         }
         self.set_predictor(predictor)
 
-        ret = self.command_executor.execute_command(parse_sql(f'''
+        ret = self.command_executor.execute_command(parse_sql('''
              select p, a from mindsdb.task_model where a = 2
            ''', dialect='mindsdb'))
         ret_df = self.ret_to_df(ret)
@@ -75,13 +75,13 @@ class Test(BaseExecutorMockPredictor):
         }
         self.set_predictor(predictor)
 
-        ret = self.command_executor.execute_command(parse_sql(f'''
+        ret = self.command_executor.execute_command(parse_sql('''
             SELECT a, last(b)
             FROM (
-               SELECT res.a, res.b 
+               SELECT res.a, res.b
                FROM pg.tasks as source
                JOIN mindsdb.task_model as res
-            ) 
+            )
             group by 1
             order by a
            ''', dialect='mindsdb'))
@@ -150,7 +150,7 @@ class Test(BaseExecutorMockPredictor):
         self.mock_predict.side_effect = lambda *a, **b: predict_result
 
         # = latest  ______________________
-        ret = self.command_executor.execute_command(parse_sql(f'''
+        ret = self.command_executor.execute_command(parse_sql('''
                 select t.t as t0, p.* from pg.tasks t
                 join mindsdb.task_model p
                 where t.t = latest
@@ -171,7 +171,7 @@ class Test(BaseExecutorMockPredictor):
         assert data[1]['g'] == 'y'
 
         # > latest ______________________
-        ret = self.command_executor.execute_command(parse_sql(f'''
+        ret = self.command_executor.execute_command(parse_sql('''
                 select t.t as t0, p.* from pg.tasks t
                 join mindsdb.task_model p
                 where t.t > latest
@@ -194,7 +194,7 @@ class Test(BaseExecutorMockPredictor):
         assert ret_df1.t0.iloc[0] is None
 
         # > date ______________________
-        ret = self.command_executor.execute_command(parse_sql(f'''
+        ret = self.command_executor.execute_command(parse_sql('''
                 select t.t as t0, p.* from pg.tasks t
                 join mindsdb.task_model p
                 where t.t > '2020-01-02'
@@ -210,7 +210,7 @@ class Test(BaseExecutorMockPredictor):
 
         # 2nd group
         ret_df1 = ret_df[ret_df['g'] == 'y']
-        assert ret_df1.shape[0] == 5 #  all records from predictor
+        assert ret_df1.shape[0] == 5  # all records from predictor
         assert ret_df1.t.min() == dt.datetime(2021, 1, 2)
 
         # between ______________________
@@ -228,10 +228,10 @@ class Test(BaseExecutorMockPredictor):
         predict_result = pd.DataFrame(predict_result)
         self.mock_predict.side_effect = lambda *a, **b: predict_result
 
-        ret = self.command_executor.execute_command(parse_sql(f'''
+        ret = self.command_executor.execute_command(parse_sql('''
                 select p.* from pg.tasks t
                 join mindsdb.task_model p
-                where t.t between '2020-01-02' and '2020-01-03' 
+                where t.t between '2020-01-02' and '2020-01-03'
             ''', dialect='mindsdb'))
         assert ret.error_code is None
 
@@ -241,10 +241,10 @@ class Test(BaseExecutorMockPredictor):
         assert ret_df.t.max() == dt.datetime(2020, 1, 3)
 
         # ------- limit -------
-        ret = self.command_executor.execute_command(parse_sql(f'''
+        ret = self.command_executor.execute_command(parse_sql('''
                 select p.* from pg.tasks t
                 join mindsdb.task_model p
-                where t.t between '2020-01-02' and '2020-01-03' 
+                where t.t between '2020-01-02' and '2020-01-03'
                 limit 1
             ''', dialect='mindsdb'))
         assert ret.error_code is None
@@ -300,7 +300,7 @@ class Test(BaseExecutorMockPredictor):
         self.mock_predict.side_effect = lambda *a, **b: predict_result
 
         # = latest  ______________________
-        ret = self.command_executor.execute_command(parse_sql(f'''
+        ret = self.command_executor.execute_command(parse_sql('''
                 select p.* from pg.tasks t
                 join mindsdb.task_model p
                 where t.t = latest
@@ -313,7 +313,7 @@ class Test(BaseExecutorMockPredictor):
         assert ret_df.t[0] == dt.datetime(2020, 1, 3)
 
         # > latest ______________________
-        ret = self.command_executor.execute_command(parse_sql(f'''
+        ret = self.command_executor.execute_command(parse_sql('''
                 select t.t as t0, p.* from pg.tasks t
                 join mindsdb.task_model p
                 where t.t > latest
@@ -327,7 +327,7 @@ class Test(BaseExecutorMockPredictor):
         assert ret_df.t0[0] is None
 
         # > date ______________________
-        ret = self.command_executor.execute_command(parse_sql(f'''
+        ret = self.command_executor.execute_command(parse_sql('''
                 select p.* from pg.tasks t
                 join mindsdb.task_model p
                 where t.t > '2020-01-02'
@@ -353,10 +353,10 @@ class Test(BaseExecutorMockPredictor):
         predict_result = pd.DataFrame(predict_result)
         self.mock_predict.side_effect = lambda *a, **b: predict_result
 
-        ret = self.command_executor.execute_command(parse_sql(f'''
+        ret = self.command_executor.execute_command(parse_sql('''
                 select p.* from pg.tasks t
                 join mindsdb.task_model p
-                where t.t between '2020-01-02' and '2020-01-03' 
+                where t.t between '2020-01-02' and '2020-01-03'
             ''', dialect='mindsdb'))
         assert ret.error_code is None
 
@@ -412,7 +412,7 @@ class Test(BaseExecutorMockPredictor):
         self.mock_predict.side_effect = lambda *a, **b: predict_result
 
         # > latest ______________________
-        ret = self.command_executor.execute_command(parse_sql(f'''
+        ret = self.command_executor.execute_command(parse_sql('''
                  select t.t as t0, p.* from pg.tasks t
                  join mindsdb.task_model p
                  where t.t > latest
@@ -478,7 +478,7 @@ class Test(BaseExecutorMockPredictor):
         self.mock_predict.side_effect = lambda *a, **b: predict_result
 
         # > latest ______________________
-        ret = self.command_executor.execute_command(parse_sql(f'''
+        ret = self.command_executor.execute_command(parse_sql('''
                 select p.* from files.tasks t
                 join mindsdb.task_model p
                 where t.t > latest
@@ -494,15 +494,14 @@ class Test(BaseExecutorMockPredictor):
         self.set_handler(mock_handler, name='pg', tables={})
 
         # remove existing
-        ret = self.command_executor.execute_command(parse_sql(f'''
+        ret = self.command_executor.execute_command(parse_sql('''
                 drop database pg
                ''', dialect='mindsdb'))
         assert ret.error_code is None
 
         # try one more time
-        from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiException
         try:
-            ret = self.command_executor.execute_command(parse_sql(f'''
+            ret = self.command_executor.execute_command(parse_sql('''
                     drop database pg
                    ''', dialect='mindsdb'))
         except Exception as e:
@@ -512,7 +511,7 @@ class Test(BaseExecutorMockPredictor):
 
         # try files
         try:
-            self.command_executor.execute_command(parse_sql(f'''
+            self.command_executor.execute_command(parse_sql('''
                     drop database files
                    ''', dialect='mindsdb'))
         except Exception as e:
@@ -522,7 +521,7 @@ class Test(BaseExecutorMockPredictor):
 
     def test_wrong_using(self):
         with pytest.raises(Exception) as exc_info:
-            ret = self.command_executor.execute_command(parse_sql(
+            self.command_executor.execute_command(parse_sql(
                 '''
                     CREATE PREDICTOR task_model
                     FROM mindsdb
@@ -530,7 +529,8 @@ class Test(BaseExecutorMockPredictor):
                     PREDICT a
                     using a=1 b=2  -- no ',' here
                 ''',
-                dialect='mindsdb'))
+                dialect='mindsdb')
+            )
 
         assert 'Syntax error' in str(exc_info.value)
 
@@ -568,7 +568,7 @@ class TestComplexQueries(BaseExecutorMockPredictor):
              SELECT model.a as a2, model.p as target2
               FROM pg.tasks as t
              JOIN mindsdb.task_model as model
-             WHERE t.a=1           
+             WHERE t.a=1
         '''
         # union all
         ret = self.command_executor.execute_command(
@@ -595,22 +595,22 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         # --- use predictor ---
         self.set_predictor(self.task_predictor)
         sql = '''
-            update 
-                pg.table2                   
+            update
+                pg.table2
             set
                 a1 = df.a,
                 c1 = df.c
-            from                            
+            from
                 (
                     SELECT model.a as a, model.b as b, model.p as c
                       FROM pg.tasks as t
                      JOIN mindsdb.task_model as model
-                     WHERE t.a=1 
+                     WHERE t.a=1
                 )
                 as df
-            where  
-                table2.a1 = df.a 
-                and table2.b1 = df.b     
+            where
+                table2.a1 = df.a
+                and table2.b1 = df.b
         '''
 
         ret = self.command_executor.execute_command(
@@ -624,17 +624,62 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         assert mock_handler().query.call_args_list[1][0][0].to_string() == "update table2 set a1=1, c1='ccc' where (a1 = 1) AND (b1 = 'ccc')"
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_update_in_integration(self, mock_handler):
+        self.set_handler(mock_handler, name='pg', tables={})
+
+        sql = '''
+            update
+                pg.table2
+            set
+                a1 = 1,
+                c1 = 'ccc'
+            where
+                b1 = 'b'
+        '''
+
+        ret = self.command_executor.execute_command(
+            parse_sql(sql, dialect='mindsdb'))
+        assert ret.error_code is None
+
+        # 1 select and 2 updates
+        assert mock_handler().query.call_count == 1
+
+        # second is update
+        assert mock_handler().query.call_args_list[0][0][0].to_string() == "update table2 set a1=1, c1='ccc' where b1 = 'b'"
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_delete_in_integration(self, mock_handler):
+        self.set_handler(mock_handler, name='pg', tables={})
+
+        sql = '''
+             delete from
+                 pg.table2
+             where
+                 b1 = 'b'
+         '''
+
+        ret = self.command_executor.execute_command(
+            parse_sql(sql, dialect='mindsdb'))
+        assert ret.error_code is None
+
+        # 1 select and 2 updates
+        assert mock_handler().query.call_count == 1
+
+        # second is update
+        assert mock_handler().query.call_args_list[0][0][0].to_string() == "DELETE FROM table2 WHERE b1 = 'b'"
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_create_table(self, mock_handler):
         self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
 
         self.set_predictor(self.task_predictor)
         sql = '''
-              create table pg.table1                          
+              create table pg.table1
               (
                       SELECT model.a as a, model.b as b, model.p as c
                         FROM pg.tasks as t
                        JOIN mindsdb.task_model as model
-                       WHERE t.a=1 
+                       WHERE t.a=1
              )
           '''
 
@@ -668,12 +713,12 @@ class TestComplexQueries(BaseExecutorMockPredictor):
 
         self.set_predictor(self.task_predictor)
         sql = '''
-               insert into pg.table1                          
+               insert into pg.table1
                (
                        SELECT model.a as a, model.b as b, model.p as c
                          FROM pg.tasks as t
                         JOIN mindsdb.task_model as model
-                        WHERE t.a=1 
+                        WHERE t.a=1
               )
            '''
 
@@ -736,12 +781,12 @@ class TestTableau(BaseExecutorMockPredictor):
             'predicted_value': 3.14
         }
         self.set_predictor(predictor)
-        ret = self.command_executor.execute_command(parse_sql(f'''
-              SELECT 
+        ret = self.command_executor.execute_command(parse_sql('''
+              SELECT
               `Custom SQL Query`.`a` AS `height`,
               last(`Custom SQL Query`.`b`) AS `length1`
             FROM (
-               SELECT res.a, res.b 
+               SELECT res.a, res.b
                FROM pg.tasks as source
                JOIN mindsdb.task_model as res
             ) `Custom SQL Query`
@@ -771,23 +816,27 @@ class TestTableau(BaseExecutorMockPredictor):
             'predicted_value': predicted_value
         }
         self.set_predictor(predictor)
-        ret = self.command_executor.execute_command(parse_sql(f'''
-           SELECT 
-              SUM(1) AS `cnt__0B4A4E8BD11C48FFB4730D4D2C32191A_ok`,
-              sum(`Custom SQL Query`.`a`) AS `sum_height_ok`,
-              max(`Custom SQL Query`.`p`) AS `sum_length1_ok`
-            FROM (
-              SELECT res.a, res.p 
-               FROM pg.tasks as source
-               JOIN mindsdb.task_model as res
-            ) `Custom SQL Query`
-            HAVING (COUNT(1) > 0)
-                ''', dialect='mindsdb'))
+        ret = self.command_executor.execute_command(
+            parse_sql(
+                '''
+                    SELECT
+                        SUM(1) AS `cnt__0B4A4E8BD11C48FFB4730D4D2C32191A_ok`,
+                        sum(`Custom SQL Query`.`a`) AS `sum_height_ok`,
+                        max(`Custom SQL Query`.`p`) AS `sum_length1_ok`
+                    FROM (
+                        SELECT res.a, res.p
+                        FROM pg.tasks as source
+                        JOIN mindsdb.task_model as res
+                    ) `Custom SQL Query`
+                    HAVING (COUNT(1) > 0)
+                ''',
+                dialect='mindsdb'
+            )
+        )
 
         # second column is having last value of 'b'
         # 3: count rows, 4: sum of 'a', 5 max of prediction
         assert ret.data[0] == [3, 4, 5]
-
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_predictor_tableau_header_alias(self, mock_handler):
@@ -807,17 +856,22 @@ class TestTableau(BaseExecutorMockPredictor):
             'predicted_value': predicted_value
         }
         self.set_predictor(predictor)
-        ret = self.command_executor.execute_command(parse_sql(f'''
-           SELECT              
-              max(a1) AS a1,
-              min(a2) AS a2
-            FROM (
-              SELECT source.a as a1, source.a as a2 
-               FROM pg.tasks as source
-               JOIN mindsdb.task_model as res
-            ) t1
-            HAVING (COUNT(1) > 0)
-                ''', dialect='mindsdb'))
+        ret = self.command_executor.execute_command(
+            parse_sql(
+                '''
+                    SELECT
+                    max(a1) AS a1,
+                    min(a2) AS a2
+                    FROM (
+                    SELECT source.a as a1, source.a as a2
+                    FROM pg.tasks as source
+                    JOIN mindsdb.task_model as res
+                    ) t1
+                    HAVING (COUNT(1) > 0)
+                ''',
+                dialect='mindsdb'
+            )
+        )
 
         # second column is having last value of 'b'
         # 3: count rows, 4: sum of 'a', 5 max of prediction
@@ -828,7 +882,7 @@ class TestTableau(BaseExecutorMockPredictor):
 
         self.set_handler(mock_handler, name='pg', tables={'tasks': self.task_table})
 
-        ret = self.command_executor.execute_command(parse_sql(f'''
+        ret = self.command_executor.execute_command(parse_sql('''
            SELECT max(y2) FROM (
               select a as y2  from pg.tasks
            )
@@ -838,6 +892,7 @@ class TestTableau(BaseExecutorMockPredictor):
         # 3: count rows, 4: sum of 'a', 5 max of prediction
         assert ret.data[0] == [2]
 
+
 class TestWithNativeQuery(BaseExecutorMockPredictor):
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_integration_native_query(self, mock_handler):
@@ -846,9 +901,12 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
         df = pd.DataFrame(data, columns=['a', 'b'])
         self.set_handler(mock_handler, name='pg', tables={'tasks': df})
 
-        ret = self.command_executor.execute_command(parse_sql(
-              'select max(a) from pg (select * from tasks) group by b',
-            dialect='mindsdb'))
+        ret = self.command_executor.execute_command(
+            parse_sql(
+                'select max(a) from pg (select * from tasks) group by b',
+                dialect='mindsdb'
+            )
+        )
 
         # native query was called
         assert mock_handler().native_query.call_args[0][0] == 'select * from tasks'
@@ -950,9 +1008,9 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
 
         # check predictor call
         # input = one row whit a==2
-        df_in = self.mock_predict.call_args[0][0]
-        assert df_in.shape[0] == 1
-        assert df_in.a[0] == 2
+        data_in = self.mock_predict.call_args[0][1]
+        assert len(data_in) == 1
+        assert data_in[0]['a'] == 2
 
         # check prediction
         assert ret.data[0][0] == predicted_value
@@ -1017,7 +1075,7 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
         assert mock_handler().native_query.call_args[0][0] == 'select * from tasks'
 
         # input to predictor all 9 rows
-        when_data = self.mock_predict.call_args[0][0]
+        when_data = self.mock_predict.call_args[0][1]
         assert len(when_data) == 9
 
         # all group values in input
@@ -1048,10 +1106,26 @@ class TestSteps(BaseExecutorMockPredictor):
         ])
 
         self.set_handler(mock_handler, name='pg', tables={'tasks': df, 'task2': df})
-        ret = self.command_executor.execute_command(parse_sql(f'''
-                        select t.* from pg.tasks 
-                        join pg.tasks2 on tasks.a=tasks2.a
-                        where t.a > 1 
-                        limit 1
-                    ''', dialect='mindsdb'))
+        ret = self.command_executor.execute_command(parse_sql('''
+            select t.* from pg.tasks
+            join pg.tasks2 on tasks.a=tasks2.a
+            where t.a > 1
+            limit 1
+        ''', dialect='mindsdb'))
         assert ret.error_code is None
+
+
+class TestExecutionTools:
+
+    def test_query_df(self):
+        d = [
+            {'TRAINING_OPTIONS':
+                {'b': {
+                    'x': 'A',
+                    'y': 'B'}}},
+            {'TRAINING_OPTIONS':
+                {'b': {
+                    'x': 'A'}}}
+        ]
+        df = pd.DataFrame(d)
+        query_df(df, 'select * from models')

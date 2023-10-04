@@ -10,7 +10,6 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
 
 
 def split_sql(sql):
@@ -55,12 +54,12 @@ def calc_next_date(schedule_str, base_date: dt.datetime):
     else:
         raise Exception(f"Unknown period: {period}")
 
-    config = Config()
-
-    is_cloud = config.get('cloud', False)
-    if is_cloud and ctx.user_class == 0:
-        if delta < dt.timedelta(days=1):
-            raise Exception("Minimal allowed period can't be less than one day")
+    # period limitation disabled for now
+    # config = Config()
+    # is_cloud = config.get('cloud', False)
+    # if is_cloud and ctx.user_class == 0:
+    #     if delta < dt.timedelta(days=1):
+    #         raise Exception("Minimal allowed period can't be less than one day")
 
     next_date = base_date + delta
 
@@ -348,7 +347,8 @@ class JobsExecutor:
                         # start date of the job
                         value = record.created_at
                     else:
-                        value = history_prev.start_at
+                        # fix for twitter: created_at filter must be minimum of 10 seconds prior to the current time
+                        value = history_prev.start_at - dt.timedelta(seconds=60)
                     value = value.strftime("%Y-%m-%d %H:%M:%S")
                     sql = sql.replace('{{PREVIOUS_START_DATETIME}}', value)
 
@@ -382,6 +382,8 @@ class JobsExecutor:
         try:
             self.update_task_schedule(record)
         except Exception as e:
+            db.session.rollback()
+
             log.logger.error(f'Error to update schedule: {e}')
             error += f'Error to update schedule: {e}'
 

@@ -115,11 +115,14 @@ Please note that it is required to provide an OpenAI API key when using MindsDB 
 
 </Warning>
 
+<Note>
+If you want to use the OpenAI API key provided by MindsDB, please confirm your email. Alternatively, you have the option to utilize your own OpenAI API key by specifying it in the `api_key` parameter.
+</Note>
+
 Once the `CREATE MODEL` statement has started execution, we can check the status of the creation process with the following query:
 
 ```sql
-SELECT * FROM models
-WHERE name = 'sentiment_classifier_model';
+DESCRIBE sentiment_classifier_model;
 ```
 
 It may take a while to register as complete depending on the internet connection. Once the creation is complete, the behavior is the same as with any other AI table – you can query it either by specifying synthetic data in the actual query:

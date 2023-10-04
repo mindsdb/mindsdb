@@ -1,0 +1,135 @@
+---
+title: IBM Informix
+sidebarTitle: IBM Informix
+---
+
+This is the implementation of the IBM Informix data handler for MindsDB.
+
+[IBM Informix](https://www.ibm.com/products/informix) is a product family within IBM's Information Management division that is centered on several relational database management system (RDBMS) offerings. The Informix server supports object–relational models and (through extensions) data types that are not a part of the SQL standard. The most widely used of these are the JSON, BSON, time series, and spatial extensions, which provide both data type support and language extensions that permit high-performance domain-specific queries and efficient storage for data sets based on semi-structured, time series, and spatial data.
+
+## Implementation
+
+This handler is implemented using `IfxPy/IfxPyDbi`, a Python library that allows you to use Python code to run SQL commands on the Informix database.
+
+The required arguments to establish a connection are as follows:
+
+* `user` is the username associated with database.
+* `password` is the password to authenticate your access.
+* `host` is the hostname or IP address of the server.
+* `port` is the port through which TCP/IP connection is to be made.
+* `database` is the database name to be connected.
+* `schema_name` is the schema name to get tables.
+* `server` is the name of server you want connect.
+* `logging_enabled` defines whether logging is enabled or not. Defaults to `True` if not provided.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/informix_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the Informix database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE informix_datasource
+WITH
+    engine='informix',
+    parameters={
+      "server": "server",
+      "host": "127.0.0.1",
+      "port": 9091,
+      "user": "informix",
+      "password": "in4mix",
+      "database": "stores_demo",
+      "schema_name": "love",
+      "loging_enabled": False
+    };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM informix_datasource.items;
+```
+
+<Note>
+This integration uses `IfxPy`. As it is in development stage, it can be install using `pip install IfxPy`. However, it doesn't work with higher versions of Python, therefore, you have to build it from source.
+
+<AccordionGroup>
+
+<Accordion title="On Linux">
+
+1. This code downloads and extracts the `onedb-ODBC` driver used to make connection:
+```bash
+cd $HOME
+mkdir Informix
+cd Informix
+mkdir -p home/informix/cli
+wget https://hcl-onedb.github.io/odbc/OneDB-Linux64-ODBC-Driver.tar
+sudo tar xvf  OneDB-Linux64-ODBC-Driver.tar -C ./home/informix/cli
+rm OneDB-Linux64-ODBC-Driver.tar
+```
+
+2. Add enviroment variables in the `.bashrc` file:
+```bash
+export INFORMIXDIR=$HOME/Informix/home/informix/cli/onedb-odbc-driver
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}${INFORMIXDIR}/lib:${INFORMIXDIR}/lib/esql:${INFORMIXDIR}/lib/cli
+```
+
+3. This code clones the `IfxPy` repo, builds a wheel, and installs it:
+```bash
+pip install wheel
+mkdir Temp
+cd Temp
+git clone https://github.com/OpenInformix/IfxPy.git
+cd IfxPy/IfxPy
+python setup.py bdist_wheel
+pip install --find-links=./dist IfxPy
+cd ..
+cd ..
+cd ..
+rm -rf Temp
+```
+
+</Accordion>
+
+<Accordion title="On Windows">
+
+1. This code downloads and extracts the `onedb-ODBC` driver used to make connection:
+```bash
+cd $HOME
+mkdir Informix
+cd Informix
+mkdir  /home/informix/cli
+wget https://hcl-onedb.github.io/odbc/OneDB-Win64-ODBC-Driver.zip
+tar xvf  OneDB-Win64-ODBC-Driver.zip -C ./home/informix/cli
+del OneDB-Win64-ODBC-Driver.zip
+```
+
+2. Add an enviroment variable:
+```bash
+set INFORMIXDIR=$HOME/Informix/home/informix/cli/onedb-odbc-driver
+```
+
+3. Add `%INFORMIXDIR%\bin` to the PATH environment variable.
+
+4. This code clones the `IfxPy` repo, builds a wheel, and installs it:
+```bash
+pip install wheel
+mkdir Temp
+cd Temp
+git clone https://github.com/OpenInformix/IfxPy.git
+cd IfxPy/IfxPy
+python setup.py bdist_wheel
+pip install --find-links=./dist IfxPy
+cd ..
+cd ..
+cd ..
+rmdir Temp
+```
+
+</Accordion>
+
+</AccordionGroup>
+</Note>

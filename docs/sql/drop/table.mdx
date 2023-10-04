@@ -1,8 +1,36 @@
 ---
-title: DROP TABLE Statement
-sidebarTitle: TABLE
+title: Remove a Table
+sidebarTitle: Remove a Table
 ---
 
+## Description
+
+The `DROP TABLE` statement deletes a table or a file.
+
+<Warning>
+Please note that this feature is not yet implemented for tables from connected data sources.
+</Warning>
+
+## Syntax
+
+Here is the syntax:
+
+```sql
+DROP TABLE table_name;
+```
+
+And for files:
+
+```sql
+DROP TABLE files.file_name;
+```
+
+On execution, we get:
+
+```sql
+Query successfully completed
+```
+
 <Note>
-This page is a work in progress.
+Please note that the uploaded files are tables as well. So to remove an uploaded file, use this `DROP TABLE` statement.
 </Note>

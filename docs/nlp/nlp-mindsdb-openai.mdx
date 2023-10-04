@@ -16,9 +16,17 @@ MindsDB lets you create models that utilize features provided by OpenAI GPT-3. C
   to expand to other NLP options in the future, so stay tuned!
 </Tip>
 
+<Tip>
+**Fine-tune an OpenAI model with MindsDB**
+
+All OpenAI models belong to the group of Large Language Models (LLMs). By definition, these are pre-trained on large amounts of data. However, it is possible to fine-tune these models with a task-specific dataset for a defined use case.
+
+OpenAI supports fine-tuning of some of its models, including `davinci`, `curie`, `babbage`, and `ada` ([more details here](https://platform.openai.com/docs/guides/fine-tuning)). And with MindsDB, you can easily [fine-tune an OpenAI model](/sql/api/finetune) making it more applicable to your specific use case.
+</Tip>
+
 ## How to Bring the OpenAI Model to MindsDB
 
-We use the [`CREATE MODEL`](/sql/create/predictor) statement to bring the OpenAI models to MindsDB.
+We use the [`CREATE MODEL`](/sql/create/model) statement to bring the OpenAI models to MindsDB.
 
 Generally, it looks like this:
 
@@ -49,6 +57,11 @@ FROM openai
 USING
   api_key = 'YOUR_OPENAI_API_KEY';
 ```
+
+<Note>
+If you want to use the OpenAI API key provided by MindsDB, please confirm your email. Alternatively, you have the option to utilize your own OpenAI API key by specifying it in the `api_key` parameter.
+</Note>
+
 <Tip>
 
 **MindsDB Pro**
@@ -100,9 +113,7 @@ Where:
 Before querying for predictions, we should verify the status of the `sentiment_classifier` model.
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name = 'sentiment_classifier';
+DESCRIBE sentiment_classifier;
 ```
 
 On execution, we get:

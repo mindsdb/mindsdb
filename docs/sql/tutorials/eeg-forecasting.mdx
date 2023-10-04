@@ -113,7 +113,7 @@ linear regression).
 ## Training a Predictor
 
 Let's create and train the machine learning model. For that, we use the
-[`CREATE MODEL`](/sql/create/predictor) statement and specify the
+[`CREATE MODEL`](/sql/create/model) statement and specify the
 input columns used to train `FROM` (features) and what we want to
 `PREDICT` (labels).
 
@@ -127,10 +127,10 @@ frequency of approximately 8 milliseconds.
 
 ```sql
 CREATE MODEL mindsdb.eeg_eye_forecast
-FROM files
-  (SELECT * FROM eeg_eye)
-PREDICT eyeDetection
-ORDER BY Timestamps
+FROM example_db
+  (SELECT * FROM demo_data.eeg_eye)
+PREDICT eyedetection
+ORDER BY timestamps
 WINDOW 50
 HORIZON 10;
 ```
@@ -145,9 +145,7 @@ A predictor may take a couple of minutes for the training to complete. You can
 monitor the status of the predictor by using this SQL command:
 
 ```sql
-SELECT status
-FROM mindsdb.models
-WHERE name='eeg_eye_forecast';
+DESCRIBE eeg_eye_forecast;
 ```
 
 If we run it right after creating a predictor, we get this output:
@@ -195,9 +193,8 @@ Let's run a query to get predictions for the next `HORIZON` timesteps into
 the future, which in this case is roughly 80 milliseconds.
 
 ```sql
-SELECT m.Timestamps as timestamps,
-       m.eyeDetection as eye_status
-FROM files.eeg_eye as t
+SELECT m.timestamps, m.eyedetection
+FROM example_db.demo_data.eeg_eye as t
 JOIN mindsdb.eeg_eye_forecast as m
 WHERE t.timestamps > LATEST
 LIMIT 10;
@@ -206,7 +203,20 @@ LIMIT 10;
 On execution, we get:
 
 ```sql
-
++----------------------------+--------------+
+| timestamps                 | eyedetection |
++----------------------------+--------------+
+| 2001-09-03 08:01:57.000000 | 1            |
+| 2001-09-03 08:01:57.008000 | 1            |
+| 2001-09-03 08:01:57.016000 | 1            |
+| 2001-09-03 08:01:57.024000 | 1            |
+| 2001-09-03 08:01:57.032000 | 1            |
+| 2001-09-03 08:01:57.040000 | 1            |
+| 2001-09-03 08:01:57.048000 | 1            |
+| 2001-09-03 08:01:57.056000 | 1            |
+| 2001-09-03 08:01:57.064000 | 1            |
+| 2001-09-03 08:01:57.072000 | 1            |
++----------------------------+--------------+
 ```
 
 That's it. We can now `JOIN` any set of `WINDOW` rows worth of

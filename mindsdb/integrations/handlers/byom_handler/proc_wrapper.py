@@ -109,8 +109,13 @@ def main():
     if method == 'train':
         df = pd_decode(params['df'])
         to_predict = params['to_predict']
+        args = params['args']
         model = model_class()
-        model.train(df, to_predict)
+
+        call_args = [df, to_predict]
+        if args:
+            call_args.append(args)
+        model.train(*call_args)
 
         # return model
         data = model.__dict__
@@ -121,12 +126,35 @@ def main():
     elif method == 'predict':
         model_state = params['model_state']
         df = pd_decode(params['df'])
+        args = params['args']
 
         model = model_class()
         model.__dict__ = decode(model_state)
 
-        res = model.predict(df)
+        call_args = [df]
+        if args:
+            call_args.append(args)
+        res = model.predict(*call_args)
         return_output(pd_encode(res))
+
+    elif method == 'finetune':
+        model_state = params['model_state']
+        df = pd_decode(params['df'])
+        args = params['args']
+
+        model = model_class()
+        model.__dict__ = decode(model_state)
+
+        call_args = [df]
+        if args:
+            call_args.append(args)
+
+        model.finetune(*call_args)
+
+        # return model
+        data = model.__dict__
+        model_state = encode(data)
+        return_output(model_state)
 
     raise NotImplementedError(method)
 

@@ -1,0 +1,40 @@
+## Testing: Hugging Face - Crypto Buy Signals Tutorial
+
+Testing CREATE MODEL
+
+```sql
+CREATE MODEL mindsdb.hf_crypto
+PREDICT PRED
+USING
+engine = 'huggingface',
+task = 'text-classification',
+model_name = 'ElKulako/cryptobert',
+input_column = 'text';
+```
+
+STATUS OF THE MODEL
+
+```sql
+SELECT *
+FROM mindsdb.models
+WHERE name = 'hf_crypto';
+
+```
+
+Testing SELECT (making predictions)
+
+```sql
+SELECT *
+FROM mindsdb.hf_crypto
+WHERE text = 'BTC is killing it right now';
+```
+
+Output:
+
+```
++------+------------------------------------------------------------------------------------------+---------------------------+
+|PRED   |PRED_explain                                                                              |text                       |
++-------+------------------------------------------------------------------------------------------+---------------------------+
+|Bullish|{"Bearish":0.0002816587220877409,"Bullish":0.559426486492157,"Neutral":0.4402918517589569}|BTC is killing it right now|
++-------+------------------------------------------------------------------------------------------+---------------------------+
+```

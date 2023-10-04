@@ -1,3 +1,4 @@
+from typing import List, Optional
 import random
 import time
 import math
@@ -6,6 +7,7 @@ import openai
 import tiktoken
 
 import mindsdb.utilities.profiler as profiler
+from mindsdb.integrations.handlers.openai_handler.models import ALL_MODELS as ALL_VALID_MODELS
 
 
 def retry_with_exponential_backoff(
@@ -94,7 +96,7 @@ def truncate_msgs_for_token_limit(messages, model_name, max_tokens, truncate='fi
     n_tokens = count_tokens(messages, encoder, model_name)
     while n_tokens > max_tokens:
         if len(messages) == 2:
-            return messages[-1]  # edge case: if limit is surpassed by just one input, we remove initial instruction
+            return messages[:-1]  # edge case: if limit is surpassed by just one input, we remove initial instruction
         elif len(messages) == 1:
             return messages
 
@@ -121,3 +123,23 @@ def count_tokens(messages, encoder, model_name='gpt-3.5-turbo-0301'):
         return num_tokens
     else:
         raise NotImplementedError(f"""_count_tokens() is not presently implemented for model {model_name}.""")
+
+
+def get_available_models(api_key: str, finetune_suffix: Optional[str] = None) -> List[str]:
+    """
+        Helper method that returns available models for
+            - a given API key and
+            - a finetune suffix (which is unique per each MindsDB user)
+    """
+    def _get_user_fts(model: str) -> bool:
+        if ':ft-' in model and f':{finetune_suffix}' in model:  # follows legacy naming (should change with #7387)
+            return True
+        else:
+            return False
+
+    models = ALL_VALID_MODELS
+    user_models = [m.openai_id for m in openai.Model.list(api_key=api_key).data]
+    if finetune_suffix is not None:
+        user_models = list(filter(_get_user_fts, user_models))
+        models.extend(user_models)
+    return models

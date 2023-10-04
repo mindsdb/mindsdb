@@ -1,0 +1,50 @@
+---
+title: OrioleDB
+sidebarTitle: OrioleDB
+---
+
+This is the implementation of the OrioleDB data handler for MindsDB.
+
+[OrioleDB](https://www.orioledata.com/) is a new storage engine for PostgreSQL, bringing a modern approach to database capacity, capabilities, and performance to the world's most-loved database platform. It consists of an extension, building on the innovative table access method framework and other standard Postgres extension interfaces. By extending and enhancing the current table access methods, OrioleDB opens the door to a future of more powerful storage models that are optimized for cloud and modern hardware architectures.
+
+## Implementation
+
+This handler is implemented by extending the PostgreSQL data handler.
+
+The required arguments to establish a connection are as follows:
+
+* `user` is the database user.
+* `password` is the database password.
+* `host` is the host name, IP address, or URL.
+* `port` is the port used to make TCP/IP connection.
+* `server` is the OrioleDB server.
+* `database` is the database name.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/orioledb_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the OrioleDB server in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE orioledb_datasource
+WITH ENGINE = 'orioledb',
+PARAMETERS = {
+  "user": "orioledb_user",
+  "password": "password",
+  "host": "127.0.0.1",
+  "port": 55505,
+  "server": "server_name",
+  "database": "oriole_db"
+};
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM orioledb_data.demo_table
+LIMIT 10;
+```

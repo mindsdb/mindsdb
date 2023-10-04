@@ -1,0 +1,68 @@
+---
+title: Create, Train, and Deploy a Model
+sidebarTitle: Create, Train, and Deploy a Model
+---
+
+## Description
+
+The `models.get()` and `models.create()` methods enable you to get an existing model or create and deploy a new model.
+
+## Syntax
+
+Use the `models.get()` method to get an existing model:
+
+```bash
+my_model = project.models.get('my_model')
+```
+
+Or, the `create()` method to create and train a new model:
+
+```bash
+my_model = project.models.create (
+    name = 'my_model',
+    predict = 'target',
+    query = my_table
+)
+```
+
+Please note that in the case of LLM models, the parameters can be stored in `options`. Here is the syntax to create an OpenAI model:
+
+```bash
+sentiment_classifier = project.models.create (
+      name='sentiment_classifier',
+      engine='openai', # alternatively: engine=server.ml_engines.openai
+      predict='sentiment',
+      options={
+          'prompt_template':'answer this question: {{questions}}',
+          'model_name':'gpt4'
+      }
+)
+```
+
+Alternatively, you can skip `options` and define parameters as arguments.
+
+```bash
+sentiment_classifier = project.models.create (
+      name='sentiment_classifier',
+      engine='openai', # alternatively: engine=server.ml_engines.openai
+      predict='sentiment',
+      prompt_template='answer this question: {{questions}}',
+      model_name='gpt4'
+)
+```
+
+And in the case of time-series model, the additional options are stored in `timeseries_options`. Here is the syntax to create a time-series model:
+
+```sql
+ts_model = project.models.create (
+     name='time_series_model',
+     predict='target',
+     query=my_table,
+     timeseries_options={
+            'order': 'order_date',
+            'group': 'category',
+            'window': 30,
+            'horizon': 4
+          }
+)
+```

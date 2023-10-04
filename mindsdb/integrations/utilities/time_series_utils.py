@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from sklearn.metrics import r2_score
 from hierarchicalforecast.core import HierarchicalReconciliation
@@ -30,6 +31,10 @@ def transform_to_nixtla_df(df, settings_dict, exog_vars=[]):
     else:
         group_col = settings_dict["group_by"][0]
 
+    if group_col not in df.columns:
+        # add to dataframe
+        nixtla_df[group_col] = '1'
+
     # Rename columns to statsforecast names
     nixtla_df = nixtla_df.rename(
         {settings_dict["target"]: "y", settings_dict["order_by"]: "ds", group_col: "unique_id"}, axis=1
@@ -45,21 +50,23 @@ def get_results_from_nixtla_df(nixtla_df, model_args):
 
     This will return the dataframe to the original format supplied by the MindsDB query.
     """
-    return_df = nixtla_df.reset_index()
-    return_df.columns = ["unique_id", "ds", model_args["target"]]
-    if len(model_args["group_by"]) > 1:
-        for i, group in enumerate(model_args["group_by"]):
-            return_df[group] = return_df["unique_id"].apply(lambda x: x.split("/")[i])
-    else:
-        group_by_col = model_args["group_by"][0]
-        return_df[group_by_col] = return_df["unique_id"]
+    return_df = nixtla_df.reset_index(drop=True if 'unique_id' in nixtla_df.columns else False)
+    if len(model_args["group_by"]) > 0:
+        if len(model_args["group_by"]) > 1:
+            for i, group in enumerate(model_args["group_by"]):
+                return_df[group] = return_df["unique_id"].apply(lambda x: x.split("/")[i])
+        else:
+            group_by_col = model_args["group_by"][0]
+            return_df[group_by_col] = return_df["unique_id"]
+
     return return_df.drop(["unique_id"], axis=1).rename({"ds": model_args["order_by"]}, axis=1)
 
 
 def infer_frequency(df, time_column, default=DEFAULT_FREQUENCY):
     try:  # infer frequency from time column
         date_series = pd.to_datetime(df[time_column]).unique()
-        date_series.sort()
+        if isinstance(date_series, np.ndarray):
+            date_series.sort()
         inferred_freq = pd.infer_freq(date_series)
     except TypeError:
         inferred_freq = default

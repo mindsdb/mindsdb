@@ -1,0 +1,24 @@
+---
+title: List Projects
+sidebarTitle: List Projects
+---
+
+## Description
+
+The `SHOW DATABASES` command lists all available data sources and projects. The `WHERE` clause filters all projects.
+
+## Syntax
+
+Here is the syntax:
+
+```sql
+SHOW DATABASES
+WHERE type = 'project';
+```
+
+Alternatively, you can use the `FULL` keyword to get more information:
+
+```sql
+SHOW FULL DATABASES
+WHERE type = 'project';
+```

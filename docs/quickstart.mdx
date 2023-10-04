@@ -1,9 +1,20 @@
 ---
 title: Quickstart
-sidebarTitle: Try It Out!
+sidebarTitle: Quickstart
 ---
 
 Follow the steps below to start making data forecasts with MindsDB using standard SQL.
+
+<iframe
+    className="w-full h-96"
+    width="628"
+    height="286"
+    src="https://www.youtube.com/embed/CDgTwWM-qP8"
+    title="Get Started with MindsDB"
+    frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    allowfullscreen
+></iframe>
 
 Check out our [Getting Started guide](/getting-started/) to set up and work with
 MindsDB using your own data and models.
@@ -125,10 +136,10 @@ On execution, we get:
 To learn more about MindsDB tables structure, check out
 [this guide](/sql/table-structure/).
 
-## 5. Create a Model Using [`CREATE MODEL`](/sql/create/predictor/)
+## 5. Create a Model Using [`CREATE MODEL`](/sql/create/model/)
 
 Now you are ready to create your first model. Use the
-[`CREATE MODEL`](/sql/create/predictor/) statement, as below.
+[`CREATE MODEL`](/sql/create/model/) statement, as below.
 
 ```sql
 CREATE MODEL mindsdb.home_rentals_model
@@ -149,9 +160,7 @@ It may take a couple of minutes until the model is trained. You can monitor
 the status of your model by executing the following command:
 
 ```sql
-SELECT status
-FROM mindsdb.models
-WHERE name = 'home_rentals_model';
+DESCRIBE home_rentals_model;
 ```
 
 On execution, we get:
@@ -239,6 +248,40 @@ SELECT m.rental_price, m.rental_price_explain
 FROM mindsdb.home_rentals_model AS m
 JOIN example_data.demo_data.home_rentals AS d;
 ```
+
+## 8. Automate the Workflow Using [`CREATE JOB`](/sql/create/jobs/)
+
+Now, we can take this even further. MindsDB includes powerful automation features called Jobs which allow us to automate queries in MindsDB. This is very handy for production AI/ML systems which all require automation logic to help them to work.
+
+We use the `CREATE JOB` statement to create a Job.
+
+Now, let's use a Job to set the model we've created to be retrained every two days, just like we might in production. You can [retrain](/sql/api/retrain/) the model to improve predictions every time when either new data or new MindsDB version is available. And, if you want to retrain your model considering only new data, then go for [finetuning](/sql/api/finetune/) it.
+
+In the same job, we will create a table and insert these new predictions back into a database so the predictions are ready to be used by our hypothetical application.
+
+```sql
+CREATE JOB retrain_model_and_save_predictions (
+
+   RETRAIN mindsdb.home_rentals_model
+   FROM example_data
+         (SELECT * FROM demo_data.home_rentals)
+   USING
+         join_learn_process = true;
+
+   CREATE TABLE my_integration.rentals_{{START_DATETIME}} (
+         SELECT m.rental_price, m.rental_price_explain
+         FROM mindsdb.home_rentals_model AS m
+         JOIN example_data.demo_data.home_rentals AS d
+   )
+
+)
+END '2023-10-30 00:00:00'
+EVERY 2 days;
+```
+
+Please note that `my_integration` is your database connection name in MindsDB. Before executing this job, make sure to connect your database to MindsDB with a user who has write access to be able to create a table.
+
+And there you have it! You created an end-to-end automated production ML system in a few short minutes.
 
 <Check>
 **Congratulations!** If you got this far, you have successfully trained a predictive model using SQL

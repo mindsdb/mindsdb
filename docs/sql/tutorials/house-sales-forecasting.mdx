@@ -108,14 +108,16 @@ Where:
 | `type`     | Type of property (`house` or `unit`).                               | `character varying` | Feature |
 | `bedrooms` | Number of bedrooms.                                                 | `integer`           | Feature |
 
-!!!Info "Labels and Features" A **label** is a column whose values will be
+<Note>
+Info "Labels and Features" A **label** is a column whose values will be
 predicted (the y variable in simple linear regression).<br/> A **feature** is a
 column used to train the model (the x variable in simple linear regression).
+</Note>
 
 ## Training a Predictor
 
 Let's create and train the machine learning model. For that, we use the
-[`CREATE MODEL`](/sql/create/predictor) statement and specify the
+[`CREATE MODEL`](/sql/create/model) statement and specify the
 input columns used to train `FROM` (features) and what we want to
 `PREDICT` (labels).
 
@@ -146,9 +148,7 @@ A predictor may take a couple of minutes for the training to complete. You can
 monitor the status of the predictor by using this SQL command:
 
 ```sql
-SELECT status
-FROM mindsdb.models
-WHERE name='house_sales_predictor';
+DESCRIBE house_sales_predictor;
 ```
 
 If we run it right after creating a predictor, we get this output:

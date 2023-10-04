@@ -1,9 +1,9 @@
 ---
-title: The PROJECT Entity
-sidebarTitle: MindsDB Projects
+title: Projects
+sidebarTitle: Projects
 ---
 
-MindsDB introduces the `PROJECT` entity that lets you create projects to store your ML experiments. In SQL words each project is a new database.
+Within MindsDB, you can create projects to store your AI models, views, or jobs.
 
 ## Working with `PROJECTS`
 
@@ -26,17 +26,21 @@ project_beta
 Here is how you create a project:
 
 ```sql
-CREATE DATABASE project_alpha;
+CREATE PROJECT project_alpha;
 ```
+
+<Tip>
+Use lower-case letters for a project name.
+</Tip>
 
 ### Viewing `PROJECTS`
 
-There are two ways you can list all your databases and projects:
+There are two ways you can list all your projects:
 
 1. Use the `SHOW DATABASES` command:
 
     ```sql
-    SHOW DATABASES;
+    SHOW DATABASES WHERE type = 'project';
     ```
 
     On execution, we get:
@@ -45,18 +49,18 @@ There are two ways you can list all your databases and projects:
     +----------------------+
     | Database             |
     +----------------------+
-    | information_schema   |
     | mindsdb              |
     | project_alpha        |
     | project_beta         |
-    | files                |
     +----------------------+
     ```
+
+    Please note that `mindsdb` is the default project.
 
 2. Use the `SHOW FULL DATABASES` command to get more details:
 
     ```sql
-    SHOW FULL DATABASES;
+    SHOW FULL DATABASES WHERE type = 'project';
     ```
 
     On execution, we get:
@@ -65,20 +69,22 @@ There are two ways you can list all your databases and projects:
     +----------------------+----------+-----------+
     | Database             | TYPE     | ENGINE    |
     +----------------------+----------+-----------+
-    | information_schema   | system   | [NULL]    |
     | mindsdb              | project  | [NULL]    |
     | project_alpha        | project  | [NULL]    |
     | project_beta         | project  | [NULL]    |
-    | files                | data     | files     |
     +----------------------+----------+-----------+
     ```
+
+    <Tip>
+    To view all connected data sources, specify `type = 'data'` in the `WHERE` clause.
+    </Tip>
 
 ### Dropping `PROJECTS`
 
 Here is how you can remove a project:
 
 ```sql
-DROP DATABASE project_alpha;
+DROP PROJECT project_alpha;
 ```
 
 On execution, we get:
@@ -90,7 +96,7 @@ Query OK, 0 rows affected (x.xxx sec)
 <Note>
    **Cannot Drop a Project**
 
-   Please note that if your project stores at least one table, it cannot be removed. In this case, you should first drop all the tables, such as models and views, belonging to this project, and then, you can remove the project.
+   Please note that if your project stores at least one object, it cannot be removed. In this case, you should first drop all the jobs and tables, such as models and views, belonging to this project, and then, you can remove the project.
    Please see the [Example](#example) section for details.
 </Note>
 
@@ -293,7 +299,7 @@ On execution, we get:
 <Note>
    **Default Tables**
 
-    Please note that each project contains two tables by default. These are the `models` table and the `models_versions` table.
+    Please note that each project contains four tables by default. These are the models, models_versions , jobs and jobs_history table.
 </Note>
 
 There are also shortcut commands to query for the tables:
@@ -381,10 +387,10 @@ There are also shortcut commands to query for the tables:
 Let's create a project.
 
 ```sql
-CREATE DATABASE my_project;
+CREATE PROJECT my_project;
 ```
 
-To verify that the project was created successfully, let's run the command below.
+To verify that the project was created successfully, let's run the command below to select all databases, including connected data sources and projects.
 
 ```sql
 SHOW FULL DATABASES;
@@ -404,9 +410,7 @@ On execution, we get:
 ```
 
 <Note>
-    **Default Databases**
-
-    Please note that `information_schema`, `mindsdb`, and `files` are the default databases. For more information, please visit our docs on [MindsDB default structure](/sql/table-structure/).
+    Please note that `information_schema` is the system database, `mindsdb` is the default project, and `files` is the database to store all uploaded files. For more information, please visit our docs on [MindsDB default structure](/sql/table-structure/).
 </Note>
 
 Now we create a model within the project.
@@ -449,7 +453,7 @@ On execution, we get:
 Let's try to delete our project.
 
 ```sql
-DROP DATABASE my_project;
+DROP PROJECT my_project;
 ```
 
 On execution, we get:
@@ -468,5 +472,19 @@ DROP VIEW my_project.my_view;
 Now we can proceed to drop a project.
 
 ```sql
-DROP DATABASE my_project;
+DROP PROJECT my_project;
 ```
+
+<Info>
+**Next Steps**
+
+Below are the links to help you explore further.
+
+<CardGroup cols={3}>
+
+    <Card title="CREATE PROJECT" icon="link" href="/sql/create/project">Find out how to create and use projects.</Card>
+    <Card title="MindsDB Information Schema" icon="link" href="/sql/table-structure">Check it out to learn more.</Card>
+
+</CardGroup>
+
+</Info>

@@ -36,9 +36,13 @@ Let's go through the steps presented above:
 
 Here is how to connect MongoDB Compass to MindsDB using either MindsDB Cloud or local installation.
 
+<Info>
+Please add the [MindsDB Cloud Public IPs](/faqs/whitelist-ips) to the access list of your Mongo database.
+</Info>
+
 <Tabs>
 
-  <Tab title= "Connecting to Local MindsDB Installation">
+  <Tab title= "Local MindsDB">
   
     First, create a new connection in MongoDB Compass by clicking the `New Connection` button in the left navigation panel.
 
@@ -50,7 +54,7 @@ Here is how to connect MongoDB Compass to MindsDB using either MindsDB Cloud or 
 
   </Tab>
 
-  <Tab title="Connecting to MindsDB Cloud">
+  <Tab title="MindsDB Cloud">
 
     First, create a new connection in MongoDB Compass by clicking the `New Connection` button in the left navigation panel.
 
@@ -66,6 +70,21 @@ Here is how to connect MongoDB Compass to MindsDB using either MindsDB Cloud or 
       <img src="/assets/connect_mongo_compass_2.png" />
     </p>
 
+  </Tab>
+
+  <Tab title="MindsDB Pro">
+
+    First, create a new connection in MongoDB Compass by clicking the `New Connection` button in the left navigation panel.
+
+    It is similar to connecting MindsDB Cloud. Here, the host value is the IP of your dedicated instace and the port value is 3306.
+
+    Here is what you need to connect:
+    
+    ```
+    Host: <dedicated instance ip>:3306
+    Username: <your MindsDB Cloud username>
+    Password: <your MindsDB Cloud password>
+    ```
   </Tab>
 </Tabs>
 

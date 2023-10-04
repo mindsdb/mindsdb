@@ -1,0 +1,49 @@
+---
+title: OpenGauss
+sidebarTitle: OpenGauss
+---
+
+This is the implementation of the OpenGauss data handler for MindsDB.
+  
+[OpenGauss](https://opengauss.org/en/) is an open-source relational database management system released with the Mulan PSL v2 and the kernel built on Huawei's years of experience in the database field. It continuously provides competitive features tailored to enterprise-grade scenarios.
+
+## Implementation
+
+This handler is implemented by extending the PostgreSQL data handler.
+
+The required arguments to establish a connection are as follows:
+
+* `user` is the database user.
+* `password` is the database password.
+* `host` is the host name, IP address, or URL.
+* `port` is the port used to make TCP/IP connection.
+* `database` is the database name.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/opengauss_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the OpenGauss database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE opengauss_datasource
+WITH
+  ENGINE = 'opengauss',
+  PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": 5432,
+    "database": "opengauss",
+    "user": "mindsdb",
+    "password": "password"
+  };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM opengauss_datasource.demo_table
+LIMIT 10;
+```

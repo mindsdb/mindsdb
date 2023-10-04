@@ -114,7 +114,7 @@ class TestMongoDBServer(BaseUnitTest):
 
         expected_sql = '''
           SELECT * FROM 
-             (SELECT * FROM mongo.fish WHERE Species = 'Pike')
+             (SELECT * FROM mongo.fish WHERE Species = 'Pike') as fish
              JOIN mindsdb.fish_model1
         '''
         assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
@@ -146,7 +146,7 @@ class TestMongoDBServer(BaseUnitTest):
                SELECT * FROM example_mongo.house_sales2
                 WHERE saledate > latest
                and type = 'house' and bedrooms=2
-             )
+             ) as house_sales2
              JOIN mindsdb.house_sales_model_h1w4
         '''
         assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
@@ -223,6 +223,36 @@ class TestMongoDBServer(BaseUnitTest):
         ast = mock_executor.call_args[0][0]
 
         expected_sql = "DELETE FROM myproj.models_versions WHERE name = 'house_sales_model5' and version=112"
+        assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
+
+    # ml engines
+
+    def t_create_ml_engine(self, client_con, mock_executor):
+
+        client_con.myproj.ml_engines.insert_one({'name': "openai2", "handler": "openai", "params": {"api_key": "qqq"}})
+
+        ast = mock_executor.call_args[0][0]
+
+        expected_sql = "CREATE ML_ENGINE openai2 FROM openai USING api_key= 'qqq'"
+        assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
+
+    def t_list_ml_engines(self, client_con, mock_executor):
+
+        res = client_con.myproj.ml_engines.find({})
+        res = list(res)
+
+        ast = mock_executor.call_args[0][0]
+
+        expected_sql = "SHOW ML_ENGINES"
+        assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
+
+    def t_drop_ml_engine(self, client_con, mock_executor):
+
+        client_con.myproj.ml_engines.delete_one({'name': 'openai2'})
+
+        ast = mock_executor.call_args[0][0]
+
+        expected_sql = "DROP ML_ENGINE openai2"
         assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
 
     def t_delete_model_version_by_id(self, client_con, mock_executor):

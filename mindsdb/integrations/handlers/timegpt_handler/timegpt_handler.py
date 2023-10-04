@@ -44,7 +44,8 @@ class TimeGPTHandler(BaseMLEngine):
             "date_features_to_one_hot": using_args.get("date_features_to_one_hot", True),
             "clean_ex_first": using_args.get("clean_ex_first", True),
             "level": using_args.get("level", [90]),
-            'mode': mode
+            "add_history": using_args.get("add_history", False),
+            'mode': mode,
         }
 
         if time_settings:

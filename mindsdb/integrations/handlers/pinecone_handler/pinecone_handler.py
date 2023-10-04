@@ -105,7 +105,7 @@ class PineconeHandler(VectorStoreHandler):
         return Response(resp_type=RESPONSE_TYPE.OK)
 
     def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
-        """Delete an index from the pinecone ."""
+        """Delete an index passed in through `table_name` from the pinecone ."""
         try:
             pinecone.delete_index(table_name)
         except Exception as e:

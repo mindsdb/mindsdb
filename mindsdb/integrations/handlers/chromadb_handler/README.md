@@ -14,7 +14,7 @@ The required arguments to establish a connection are:
 
 * `chroma_server_host`: the host name or IP address of the ChromaDB instance
 * `chroma_server_http_port`: the port to use when connecting
-* `persist_directory`: the directory to use for persisting data, this should only be used when `chroma_api_impl` is set to `local`
+* `persist_directory`: the directory to use for persisting data
 
 
 ## Usage

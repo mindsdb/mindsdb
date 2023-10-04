@@ -278,36 +278,26 @@ class PineconeHandler(VectorStoreHandler):
             results_df = pd.DataFrame(columns=list(df_columns.values()))
         return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=results_df)
 
-
-
-
-
-
-
-
-
-
-
+    def get_columns(self, table_name: str) -> HandlerResponse:
+        return super().get_columns(table_name)
 
     def update(
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None
     ) -> HandlerResponse:
-        """
-        Update data in the ChromaDB database.
-        TODO: not implemented yet
-        """
+        """ Update data in the pinecone index named `table_name`."""
+
         return super().update(table_name, data, columns)
 
-    def get_columns(self, table_name: str) -> HandlerResponse:
-        # check if collection exists
-        try:
-            _ = self._client.get_collection(table_name)
-        except ValueError:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Table {table_name} does not exist!",
-            )
-        return super().get_columns(table_name)
+
+
+
+
+
+
+
+
+
+
 
 
 connection_args = OrderedDict(

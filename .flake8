@@ -16,10 +16,6 @@ exclude =
   build/*
   mindsdb/microservices_grpc/*
   # TODO: clean up this code
-  mindsdb/integrations/handlers/access_handler/access_handler.py
-  mindsdb/integrations/handlers/airtable_handler/airtable_handler.py
-  mindsdb/integrations/handlers/bigquery_handler/tests/test_bigquery_handler.py
-  mindsdb/integrations/handlers/couchbase_handler/couchbase_handler.py
   mindsdb/integrations/handlers/couchbase_handler/tests/test_couchbase_handler.py
   mindsdb/integrations/handlers/crate_handler/crate_handler.py
   mindsdb/integrations/handlers/crate_handler/tests/test_crate_handler.py
@@ -83,6 +79,5 @@ exclude =
   tests/unit/test_merlion_handler.py
   mindsdb/integrations/handlers/byom_handler/byom_handler.py
   mindsdb/integrations/handlers/byom_handler/proc_wrapper.py
-  mindsdb/integrations/handlers/*
 
 max-complexity = 18

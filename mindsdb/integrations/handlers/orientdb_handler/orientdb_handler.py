@@ -18,7 +18,7 @@ from mindsdb.utilities import log
 class OrientDBHandler(DatabaseHandler):
     name = "orientdb"
 
-    def __init__(self, name: str = None, **kwargs):
+    def __init__(self, name: str = None, **kwargs: dict):
         super().__init__(name)
         self.connection_data = kwargs.get("connection_data")
 
@@ -72,7 +72,7 @@ class OrientDBHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         try:
-            con = self.connect()
+            self.connect()
             response.success = self.is_connected
         except Exception as e:
             log.logger.error(
@@ -87,8 +87,31 @@ class OrientDBHandler(DatabaseHandler):
 
         return response
 
-    def native_query(self, query: Any) -> Response:
-        return super().native_query(query)
+    def native_query(self, query: str) -> Response:
+        need_to_close = self.is_connected is False
+        connection = self.connect()
+
+        try:
+            semicolon_count = query.count(";")
+            if semicolon_count > 1:
+                query = "BEGIN;\n" + query + "\nCOMMIT RETRY 100;"
+                results = connection.batch(query)
+            else:
+                results = connection.command("query")
+
+            data = [r.oRecordData for r in results]
+            response = Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(data))
+
+        except Exception as e:
+            log.logger.error(
+                f'Error running query: {query} on {self.connection_data["database"]}.'
+            )
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+
+        if need_to_close is True:
+            self.disconnect()
+
+        return response
 
     def query(self, query: ASTNode) -> Response:
         return super().query(query)
@@ -97,7 +120,35 @@ class OrientDBHandler(DatabaseHandler):
         return super().get_columns(table_name)
 
     def get_tables(self) -> Response:
-        return super().get_tables()
+        default_tables = [
+            "OIdentity",
+            "ORole",
+            "V",
+            "E",
+            "OFunction",
+            "OSchedule",
+            "OUser",
+            "OTriggered",
+        ]
+
+        query = "SELECT expand(classes) FROM metadata:schema"
+        connection = self.connect()
+        tables = connection.command(query)
+
+        db_name = f"Tables_in_{self.collection_data['database']}"
+        data = {db_name: []}
+
+        for t in tables:
+            record_data = t.oRecordData
+            record_name = record_data["name"]
+            if record_name not in default_tables:
+                data[db_name].append(record_name)
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(data),
+        )
+        return response
 
 
 connection_args = OrderedDict(

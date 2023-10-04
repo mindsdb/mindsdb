@@ -18,6 +18,8 @@ OVERRIDE_CONFIG = {
     'jobs': {'disable': True}
 }
 
+ML_TASK_QUEUE_CONSUMER = True
+
 API_LIST = ["http"]
 
 

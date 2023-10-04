@@ -283,7 +283,7 @@ if __name__ == '__main__':
             'started': False
         }
 
-    if config.get('ml_task_queue', {}).get('type', 'local') == 'redis':
+    if args.ml_task_queue_consumer is True:
         apis['ml_task_queue'] = {
             'process': None,
             'started': False

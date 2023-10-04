@@ -146,12 +146,12 @@ def mindsdb_app(request, config):
         with open(config_path, "wt") as f:
             f.write(json.dumps(config))
 
-        use_gui = getattr(request.module, "USE_GUI", False)
-
         os.environ['CHECK_FOR_UPDATES'] = '0'
         cmd = ['python3', '-m', 'mindsdb', f'--api={api_str}', f'--config={config_path}', '--verbose']
-        if use_gui is False:
+        if getattr(request.module, "USE_GUI", False) is False:
             cmd.append('--no_studio')
+        if getattr(request.module, "ML_TASK_QUEUE_CONSUMER", False) is True:
+            cmd.append('--ml_task_queue_consumer')
         timeout = 90
 
     print('Starting mindsdb process!')

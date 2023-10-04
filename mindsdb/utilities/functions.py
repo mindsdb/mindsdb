@@ -21,6 +21,7 @@ def args_parse():
     parser.add_argument('--no_studio', action='store_true')
     parser.add_argument('-v', '--version', action='store_true')
     parser.add_argument('--ray', action='store_true', default=None)
+    parser.add_argument('--ml_task_queue_consumer', action='store_true', default=None)
     return parser.parse_args()
 
 

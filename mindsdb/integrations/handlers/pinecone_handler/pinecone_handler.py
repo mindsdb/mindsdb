@@ -142,7 +142,7 @@ class PineconeHandler(VectorStoreHandler):
             response_code.success = True
         except Exception as e:
             log.logger.error(f"Error connecting to pinecone , {e}!")
-            response_code.error_message = str(e.reason)
+            response_code.error_message = str(e)
         return response_code
 
     def get_tables(self) -> HandlerResponse:
@@ -189,7 +189,7 @@ class PineconeHandler(VectorStoreHandler):
         except Exception as e:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error deleting index {table_name}: {e.reason}"
+                error_message=f"Error deleting index {table_name}: {e}"
             )
         return Response(resp_type=RESPONSE_TYPE.OK)
 

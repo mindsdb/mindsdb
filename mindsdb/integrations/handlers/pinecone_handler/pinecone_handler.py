@@ -104,6 +104,19 @@ class PineconeHandler(VectorStoreHandler):
             )
         return Response(resp_type=RESPONSE_TYPE.OK)
 
+    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
+        """Delete an index from the pinecone ."""
+        try:
+            pinecone.delete_index(table_name)
+        except Exception as e:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Error deleting index {table_name}: {e.reason}"
+            )
+        return Response(resp_type=RESPONSE_TYPE.OK)
+
+
+
 
 
 
@@ -293,23 +306,6 @@ class PineconeHandler(VectorStoreHandler):
             raise Exception("Delete query must have at least one condition!")
         collection = self._client.get_collection(table_name)
         collection.delete(ids=id_filters, where=filters)
-        return Response(resp_type=RESPONSE_TYPE.OK)
-
-    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
-        """
-        Delete a collection from the ChromaDB database.
-        """
-        try:
-            self._client.delete_collection(table_name)
-        except ValueError:
-            if if_exists:
-                return Response(resp_type=RESPONSE_TYPE.OK)
-            else:
-                return Response(
-                    resp_type=RESPONSE_TYPE.ERROR,
-                    error_message=f"Table {table_name} does not exist!",
-                )
-
         return Response(resp_type=RESPONSE_TYPE.OK)
 
     def get_columns(self, table_name: str) -> HandlerResponse:

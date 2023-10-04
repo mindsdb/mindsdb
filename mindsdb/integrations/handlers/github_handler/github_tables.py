@@ -557,3 +557,161 @@ class GithubPullRequestsTable(APITable):
             "merged",
             "closed",
         ]
+class GithubCommitsTable(APITable):
+    """The GitHub Commits Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Pulls data from the GitHub "List repository commits" API
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+            GitHub commits matching the query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+
+        conditions = extract_comparison_conditions(query.where)
+
+        if query.limit:
+            total_results = query.limit.value
+        else:
+            total_results = 20
+
+        commits_kwargs = {}
+        order_by_conditions = {}
+
+        if query.order_by and len(query.order_by) > 0:
+            order_by_conditions["columns"] = []
+            order_by_conditions["ascending"] = []
+
+            for an_order in query.order_by:
+                if an_order.field.parts[0] != "commits":
+                    next
+                if an_order.field.parts[1] in self.get_columns():
+                    order_by_conditions["columns"].append(an_order.field.parts[1])
+
+                    if an_order.direction == "ASC":
+                        order_by_conditions["ascending"].append(True)
+                    else:
+                        order_by_conditions["ascending"].append(False)
+                else:
+                    raise ValueError(
+                        f"Order by unknown column {an_order.field.parts[1]}"
+                    )
+
+        for a_where in conditions:
+            if a_where[1] == "path":
+                if a_where[0] != "=":
+                    raise ValueError("Unsupported where operation for labels")
+
+                commits_kwargs["path"] = a_where[2]
+
+                continue
+            if a_where[1] in ["author"]:
+                if a_where[0] != "=":
+                    raise ValueError(f"Unsupported where operation for {a_where[1]}")
+
+                commits_kwargs[a_where[1]] = a_where[2]
+            else:
+                raise ValueError(f"Unsupported where argument {a_where[1]}")
+
+        self.handler.connect()
+
+        github_commits_df = pd.DataFrame(columns=self.get_columns())
+
+        start = 0
+
+        while True:
+            try:
+                for a_commit in self.handler.connection.get_repo(
+                    self.handler.repository
+                ).get_commits(**commits_kwargs)[start: start + 10]:
+
+                    logger.debug(f"Processing commit {a_commit.sha}")
+
+                    github_commits_df = pd.concat(
+                        [
+                            github_commits_df,
+                            pd.DataFrame(
+                                [
+                                    {
+                                        "sha": a_commit.sha,
+                                        "message": a_commit.message,
+                                        "author": a_commit.author.login,
+                                        "files": ",".join(
+                                            [f.filename for f in a_commit.files]
+                                        ),
+                                        "committer": a_commit.committer.login,
+                                        "last_modified": a_commit.last_modified,
+                                        "additions": a_commit.stats.additions,
+                                        "deletions": a_commit.stats.deletions,
+                                        "total_changes": a_commit.stats.total,
+                                    }
+                                ]
+                            ),
+                        ]
+                    )
+
+                    if github_commits_df.shape[0] >= total_results:
+                        break
+            except IndexError:
+                break
+
+            if github_commits_df.shape[0] >= total_results:
+                break
+            else:
+                start += 10
+
+        selected_columns = []
+        for target in query.targets:
+            if isinstance(target, ast.Star):
+                selected_columns = self.get_columns()
+                break
+            elif isinstance(target, ast.Identifier):
+                selected_columns.append(target.parts[-1])
+            else:
+                raise ValueError(f"Unknown query target {type(target)}")
+
+        if len(github_commits_df) == 0:
+            github_commits_df = pd.DataFrame([], columns=selected_columns)
+        else:
+            github_commits_df.columns = self.get_columns()
+            for col in set(github_commits_df.columns).difference(set(selected_columns)):
+                github_commits_df = github_commits_df.drop(col, axis=1)
+
+            if len(order_by_conditions.get("columns", [])) > 0:
+                github_commits_df = github_commits_df.sort_values(
+                    by=order_by_conditions["columns"],
+                    ascending=order_by_conditions["ascending"],
+                )
+
+        return github_commits_df
+
+    def get_columns(self) -> List[str]:
+        """Gets all columns to be returned in pandas DataFrame responses
+
+        Returns
+        -------
+        List[str]
+            List of columns
+        """
+        return [
+            "sha",
+            "message",
+            "author",
+            "files",
+            "committer",
+            "last_modified",
+            "additions",
+            "deletions",
+            "total_changes",
+        ]

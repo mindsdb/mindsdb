@@ -193,76 +193,46 @@ class PineconeHandler(VectorStoreHandler):
             )
         return Response(resp_type=RESPONSE_TYPE.OK)
 
-    def _get_pinecone_operator(self, operator: FilterOperator) -> str:
-        """Convert FilterOperator to an operator that pinecone's query language can undersand"""
-        mapping = {
-            FilterOperator.EQUAL: "$eq",
-            FilterOperator.NOT_EQUAL: "$ne",
-            FilterOperator.GREATER_THAN: "$gt",
-            FilterOperator.GREATER_THAN_OR_EQUAL: "$gte",
-            FilterOperator.LESS_THAN: "$lt",
-            FilterOperator.LESS_THAN_OR_EQUAL: "$lte",
-            FilterOperator.IN: "$in",
-            FilterOperator.NOT_IN: "$nin",
-        }
-        if operator not in mapping:
-            raise Exception(f"Operator {operator} is not supported by Pinecone!")
-        return mapping[operator]
-
-    def _translate_metadata_condition(self, conditions: List[FilterCondition]) -> Optional[dict]:
-        """
-        Translate a list of FilterCondition objects a dict that can be used by pinecone.
-        E.g.,
-        [
-            FilterCondition(
-                column="metadata.created_at",
-                op=FilterOperator.LESS_THAN,
-                value="2020-01-01",
-            ),
-            FilterCondition(
-                column="metadata.created_at",
-                op=FilterOperator.GREATER_THAN,
-                value="2019-01-01",
-            )
-        ]
-        -->
-        {
-            "$and": [
-                {"created_at": {"$lt": "2020-01-01"}},
-                {"created_at": {"$gt": "2019-01-01"}}
-            ]
-        }
-        """
-        # we ignore all non-metadata conditions
-        if conditions is None:
-            return None
-        metadata_conditions = [
-            condition
+    def delete(self, table_name: str, conditions: List[FilterCondition] = None) -> HandlerResponse:
+        """Delete records in pinecone index `table_name` based on ids or based on metadata conditions."""
+        filters = self._translate_metadata_condition(conditions)
+        ids = [
+            condition.value
             for condition in conditions
-            if condition.column.startswith(TableField.METADATA.value)
-        ]
-        if len(metadata_conditions) == 0:
-            return None
-
-        # we translate each metadata condition into a dict
-        pinecone_conditions = []
-        for condition in metadata_conditions:
-            metadata_key = condition.column.split(".")[-1]
-            pinecone_conditions.append(
-                {
-                    metadata_key: {
-                        self._get_pinecone_operator(condition.op): condition.value
-                    }
-                }
+            if condition.column == TableField.ID.value
+        ] or None
+        if filters is None and ids is None:
+            raise Exception("Delete query must have either id condition or metadata condition!")
+        index = self._get_index_handle(table_name)
+        if index is None:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Error getting index '{table_name}', are you sure the name is correct?"
             )
+        try:
+            if filters is None:
+                index.delete(ids=ids)
+            else:
+                index.delete(filter=filters)
+        except Exception as e:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Error deleting records in '{table_name}': {e}"
+            )
+        return Response(resp_type=RESPONSE_TYPE.OK)
 
-        # we combine all metadata conditions into a single dict
-        metadata_condition = (
-            {"$and": pinecone_conditions}
-            if len(pinecone_conditions) > 1
-            else pinecone_conditions[0]
-        )
-        return metadata_condition
+
+
+
+
+
+
+
+
+
+
+
+
 
     def select(
         self,

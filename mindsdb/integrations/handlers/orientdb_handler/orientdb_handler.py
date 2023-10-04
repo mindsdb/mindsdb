@@ -16,9 +16,25 @@ from mindsdb.utilities import log
 
 
 class OrientDBHandler(DatabaseHandler):
+    """
+    A database handler for OrientDB.
+    """
+
+    # Define the name of the handler
     name = "orientdb"
 
     def __init__(self, name: str = None, **kwargs: dict):
+        """
+        Initialize the OrientDBHandler.
+
+        Args:
+            name (str): The name of the handler.
+            kwargs (dict): Additional keyword arguments.
+
+        Keyword Args:
+            connection_data (dict): Connection data for OrientDB.
+
+        """
         super().__init__(name)
         self.connection_data = kwargs.get("connection_data")
 
@@ -26,11 +42,21 @@ class OrientDBHandler(DatabaseHandler):
         self.is_connected = False
 
     def __del__(self):
+        """
+        Destructor method. Disconnects from the OrientDB database if connected.
+        """
         if self.is_connected is True:
             self.disconnect()
 
     def connect(self) -> StatusResponse:
+        """
+        Connect to the OrientDB database.
+
+        Returns:
+            StatusResponse: A response object indicating the success of the connection.
+        """
         if self.is_connected is False:
+            # Configuration for connecting to the OrientDB server
             client_config = {
                 "host": self.connection_data.get("host"),
                 "port": self.connection_data.get("port"),
@@ -38,10 +64,12 @@ class OrientDBHandler(DatabaseHandler):
             }
 
             try:
+                # Create an OrientDB client
                 self.connection = OrientDB(**client_config)
             except Exception as e:
                 log.logger.error(f"Error in creating OrientDB client: {e}")
 
+            # Configuration for connecting to the OrientDB database
             database_config = {
                 "column_name": self.connection_data.get("database"),
                 "user": self.connection_data.get("user"),
@@ -49,6 +77,7 @@ class OrientDBHandler(DatabaseHandler):
             }
 
             try:
+                # Open the database connection
                 self.connection.db_open(**database_config)
             except Exception as e:
                 log.logger.error(
@@ -59,15 +88,25 @@ class OrientDBHandler(DatabaseHandler):
         return self.connection
 
     def disconnect(self):
+        """
+        Disconnect from the OrientDB database.
+        """
         if self.is_connected is False:
             return
 
+        # Close the database connection
         self.connection.db_close()
         self.connection.close()
         self.is_connected = False
         return
 
     def check_connection(self) -> StatusResponse:
+        """
+        Check the status of the OrientDB database connection.
+
+        Returns:
+            StatusResponse: A response object indicating the success of the connection check.
+        """
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
 
@@ -88,10 +127,20 @@ class OrientDBHandler(DatabaseHandler):
         return response
 
     def native_query(self, query: str) -> Response:
+        """
+        Run a native query on the OrientDB database.
+
+        Args:
+            query (str): The query to be executed.
+
+        Returns:
+            Response: A response object containing the query results.
+        """
         need_to_close = self.is_connected is False
         connection = self.connect()
 
         try:
+            # Handle batch queries with multiple statements
             semicolon_count = query.count(";")
             if semicolon_count > 1:
                 query = "BEGIN;\n" + query + "\nCOMMIT RETRY 100;"
@@ -114,9 +163,27 @@ class OrientDBHandler(DatabaseHandler):
         return response
 
     def query(self, query: ASTNode) -> Response:
+        """
+        Execute a query on the OrientDB database.
+
+        Args:
+            query (ASTNode): The query to be executed.
+
+        Returns:
+            Response: A response object containing the query results.
+        """
         return self.native_query(query.to_string())
 
     def get_columns(self, table_name: str) -> Response:
+        """
+        Get the columns of a table in the OrientDB database.
+
+        Args:
+            table_name (str): The name of the table.
+
+        Returns:
+            Response: A response object containing the table's column names.
+        """
         query = f"""
         SELECT expand(properties) 
         FROM (SELECT properties 
@@ -138,6 +205,12 @@ class OrientDBHandler(DatabaseHandler):
         return response
 
     def get_tables(self) -> Response:
+        """
+        Get a list of tables in the OrientDB database.
+
+        Returns:
+            Response: A response object containing the list of table names.
+        """
         default_tables = [
             "OIdentity",
             "ORole",

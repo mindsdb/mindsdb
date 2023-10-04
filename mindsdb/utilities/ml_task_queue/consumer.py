@@ -72,9 +72,10 @@ class MLTaskConsumer:
         self._ready_event.set()
 
     def _collect_cpu_stat(self):
-        self.cpu_stat = self.cpu_stat[1:]
-        self.cpu_stat.append(psutil.cpu_percent())
-        time.sleep(1)
+        while True:
+            self.cpu_stat = self.cpu_stat[1:]
+            self.cpu_stat.append(psutil.cpu_percent())
+            time.sleep(1)
 
     def get_avg_cpu_usage(self):
         """ get average CPU usage for last period (10s by default)

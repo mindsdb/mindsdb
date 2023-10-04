@@ -111,10 +111,19 @@ Inventory details for the products can be queried as follows:
 
 ~~~~sql
 SELECT  *
-FROM shopify_datasource.inventory
+FROM shopify_datasource.inventory_level
 WHERE inventory_item_ids="id1,id2" AND location_ids="id1,id2"
 ORDER BY available
 LIMIT 5
 ~~~~
 
 `inventory_item_ids` or `location_ids` have to be specified in the `where` clause of the query. 
+
+For querying locations, you can use the `locations` table:
+
+~~~~sql
+SELECT  id, name, address
+FROM shopify_datasource.locations
+ORDER BY id
+LIMIT 5
+~~~~

@@ -43,7 +43,7 @@ class OrientDBHandler(DatabaseHandler):
                 log.logger.error(f"Error in creating OrientDB client: {e}")
 
             database_config = {
-                "db_name": self.connection_data.get("database"),
+                "column_name": self.connection_data.get("database"),
                 "user": self.connection_data.get("user"),
                 "password": self.connection_data.get("password"),
             }
@@ -117,7 +117,25 @@ class OrientDBHandler(DatabaseHandler):
         return super().query(query)
 
     def get_columns(self, table_name: str) -> Response:
-        return super().get_columns(table_name)
+        query = f"""
+        SELECT expand(properties) 
+        FROM (SELECT properties 
+        FROM (SELECT expand(classes) 
+            FROM metadata:schema) 
+        WHERE name = '{table_name}')
+        """
+
+        connection = self.connect()
+        columns = connection.command(query)
+
+        column_name = f"Columns_in_{table_name}"
+        data = {column_name: [c["name"] for c in columns]}
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(data),
+        )
+        return response
 
     def get_tables(self) -> Response:
         default_tables = [
@@ -135,14 +153,14 @@ class OrientDBHandler(DatabaseHandler):
         connection = self.connect()
         tables = connection.command(query)
 
-        db_name = f"Tables_in_{self.collection_data['database']}"
-        data = {db_name: []}
+        column_name = f"Tables_in_{self.collection_data['database']}"
+        data = {column_name: []}
 
         for t in tables:
             record_data = t.oRecordData
             record_name = record_data["name"]
             if record_name not in default_tables:
-                data[db_name].append(record_name)
+                data[column_name].append(record_name)
 
         response = Response(
             RESPONSE_TYPE.TABLE,

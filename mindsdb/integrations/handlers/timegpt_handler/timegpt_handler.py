@@ -8,6 +8,7 @@ import type_infer
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.utilities.time_series_utils import get_results_from_nixtla_df
+from mindsdb.integrations.utilities.infer_types import infer_and_convert_column
 # TODO: add E2E tests.
 
 class TimeGPTHandler(BaseMLEngine):
@@ -108,9 +109,8 @@ class TimeGPTHandler(BaseMLEngine):
             raise Exception(f'Unsupported prediction mode: {model_args["mode"]}')
 
         # infer date
-        sample_data = results_df['ds'].sample(min(100, len(results_df)))
-        if type_infer.infer.type_check_date(sample_data):
-            results_df['ds'] = pd.to_datetime(results_df['ds'])
+        ds_col = model_args["order_by"]
+        results_df = infer_and_convert_column(results_df, ds_col, type='datetime')
 
         results_df = results_df.rename({'TimeGPT': model_args['target']}, axis=1)
 

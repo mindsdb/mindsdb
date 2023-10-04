@@ -680,3 +680,4 @@ class GithubCommitsTable(APITable):
             List of columns
         """
         return ["sha", "author", "message", "date", "url"]
+

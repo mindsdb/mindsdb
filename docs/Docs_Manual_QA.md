@@ -14,4 +14,4 @@ XXX Test Passed: <link to the test results in your GitHub repository>
 XXX Test Failed: <link to the test results in your GitHub repository>, <link to the issue>
 </br>
 
-AI_WORKFLOW_SECTION (DEV_ENV) Test Passed: https://github.com/truesoni/hacktoberfest2023/blob/main/mindsdb/issues_7516/Testing.md
+Create Project using Python Test Passed: https://github.com/truesoni/hacktoberfest2023/blob/main/mindsdb/issues_7516/Testing.md

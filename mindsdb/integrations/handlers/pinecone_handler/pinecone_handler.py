@@ -288,37 +288,21 @@ class PineconeHandler(VectorStoreHandler):
         return self.insert(table_name, data, columns)
 
 
-
-
-
-
-
-
-
-
-
-
-
 connection_args = OrderedDict(
-    chroma_server_host={
+    api_key={
         "type": ARG_TYPE.STR,
-        "description": "chromadb server host",
-        "required": False,
+        "description": "The API key that can be found in your pinecone account",
+        "required": True,
     },
-    chroma_server_http_port={
-        "type": ARG_TYPE.INT,
-        "description": "chromadb server port",
-        "required": False,
-    },
-    persist_directory={
+    environment={
         "type": ARG_TYPE.STR,
-        "description": "persistence directory for chroma",
-        "required": False,
+        "description": "The environment name corresponding to the `api_key`",
+        "required": True,
     },
 )
 
+
 connection_args_example = OrderedDict(
-    chroma_server_host="localhost",
-    chroma_server_http_port=8000,
-    persist_directoryn="chroma",
+    api_key="00000000-0000-0000-0000-000000000000",
+    environment="gcp-starter",
 )

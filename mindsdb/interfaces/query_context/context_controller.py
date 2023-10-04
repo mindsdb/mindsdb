@@ -119,6 +119,18 @@ class ContextController:
     def gen_context_name(self, object_type, object_name):
         return f'{object_type}-{object_name}'
 
+    def gen_context_vars(self, object_type, object_name):
+        context_name = self.gen_context_name(object_type, object_name)
+        vars = []
+        for rec in db.session.query(db.QueryContext).filter_by(
+            context_name=context_name,
+            company_id=ctx.company_id
+        ):
+            if rec.values is not None:
+                vars.append(rec.values)
+
+        return vars
+
     # DB
     def __get_context_record(self, context_name, query_str):
 

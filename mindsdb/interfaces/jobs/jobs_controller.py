@@ -203,6 +203,7 @@ class JobsController:
                 'next_run_at': record.next_run_at,
                 'schedule_str': record.schedule_str,
                 'query': record.query_str,
+                'variables': contextController.gen_context_vars('job', record.id)
             })
         return data
 

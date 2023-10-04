@@ -276,7 +276,7 @@ class PineconeHandler(VectorStoreHandler):
             results_df.rename(columns=df_columns, inplace=True)
         else:
             results_df = pd.DataFrame(columns=list(df_columns.values()))
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=results_df)
+        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=results_df[columns])
 
     def get_columns(self, table_name: str) -> HandlerResponse:
         return super().get_columns(table_name)

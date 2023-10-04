@@ -158,12 +158,11 @@ class PineconeHandler(VectorStoreHandler):
         """Insert data into pinecone index passed in through `table_name` parameter."""
         index = pinecone.Index(table_name)
         upsert_size = 99
-        try:
-            pinecone.describe_index_stats()
-        except Exception as e:
+        index = self._get_index_handle(table_name)
+        if index is None:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error getting {table_name}: {e.reason}"
+                error_message=f"Error getting index '{table_name}', are you sure the name is correct?"
             )
         data.dropna(axis=1, inplace=True)
         data.rename(columns={

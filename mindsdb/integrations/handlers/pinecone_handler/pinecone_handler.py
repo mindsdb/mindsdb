@@ -221,19 +221,6 @@ class PineconeHandler(VectorStoreHandler):
             )
         return Response(resp_type=RESPONSE_TYPE.OK)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
     def select(
         self,
         table_name: str,
@@ -242,11 +229,16 @@ class PineconeHandler(VectorStoreHandler):
         offset: int = None,
         limit: int = None,
     ) -> HandlerResponse:
-        collection = self._client.get_collection(table_name)
-        filters = self._translate_metadata_condition(conditions)
-        # check if embedding vector filter is present
+        """Run query on pinecone index named `table_name` and get results."""
+        index = self._get_index_handle(table_name)
+        if index is None:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Error getting index '{table_name}', are you sure the name is correct?"
+            )
+        metadata_filters = self._translate_metadata_condition(conditions)
         vector_filter = (
-            []
+            None
             if conditions is None
             else [
                 condition
@@ -254,67 +246,48 @@ class PineconeHandler(VectorStoreHandler):
                 if condition.column == TableField.SEARCH_VECTOR.value
             ]
         )
-        if len(vector_filter) > 0:
-            vector_filter = vector_filter[0]
-        else:
-            vector_filter = None
-        id_filters = None
-        if conditions is not None:
-            id_filters = [
-                condition.value
-                for condition in conditions
-                if condition.column == TableField.ID.value
-            ] or None
-
-        if vector_filter is not None:
-            # similarity search
-            query_payload = {
-                "where": filters,
-                "query_embeddings": vector_filter.value
-                if vector_filter is not None
-                else None,
-                "include": ["metadatas", "documents", "distances"],
-            }
-            if limit is not None:
-                query_payload["n_results"] = limit
-
-            result = collection.query(**query_payload)
-            ids = result["ids"][0]
-            documents = result["documents"][0]
-            metadatas = result["metadatas"][0]
-            distances = result["distances"][0]
-        else:
-            # general get query
-            result = collection.get(
-                ids=id_filters,
-                where=filters,
-                limit=limit,
-                offset=offset,
-            )
-            ids = result["ids"]
-            documents = result["documents"]
-            metadatas = result["metadatas"]
-            distances = None
-
-        # project based on columns
-        payload = {
-            TableField.ID.value: ids,
-            TableField.CONTENT.value: documents,
-            TableField.METADATA.value: metadatas,
+        vector_filter = None if not vector_filter else vector_filter
+        query = {
+            "include_values": True,
+            "include_metadata": True
         }
+        if vector_filter is not None: query["vector"] = vector_filter
+        if limit is not None:
+            query["top_k"] = limit
+        else:
+            query["top_k"] = 10000
+        if metadata_filters is not None: query["filter"] = metadata_filters
+        result = None
+        try:
+            result = index.query(query)
+        except Exception as e:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Error executing query on '{table_name}': {e}"
+            )
+        df_columns = {
+            "id": TableField.ID.value,
+            "metadata": TableField.METADATA.value,
+            "values": TableField.EMBEDDINGS.value,
+            "sparse_values": TableField.CONTENT.value
+        }
+        results_df = pd.DataFrame.from_records(result["matches"])
+        if len(results_df.columns) != 0:
+            results_df.rename(columns=df_columns, inplace=True)
+        else:
+            results_df = pd.DataFrame(columns=list(df_columns.values()))
+        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=results_df)
 
-        if columns is not None:
-            payload = {
-                column: payload[column]
-                for column in columns
-                if column != TableField.EMBEDDINGS.value
-            }
 
-        # always include distance
-        if distances is not None:
-            payload[TableField.DISTANCE.value] = distances
-        result_df = pd.DataFrame(payload)
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=result_df)
+
+
+
+
+
+
+
+
+
 
     def update(
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None
@@ -324,23 +297,6 @@ class PineconeHandler(VectorStoreHandler):
         TODO: not implemented yet
         """
         return super().update(table_name, data, columns)
-
-    def delete(
-        self, table_name: str, conditions: List[FilterCondition] = None
-    ) -> HandlerResponse:
-        filters = self._translate_metadata_condition(conditions)
-        # get id filters
-        id_filters = [
-            condition.value
-            for condition in conditions
-            if condition.column == TableField.ID.value
-        ] or None
-
-        if filters is None and id_filters is None:
-            raise Exception("Delete query must have at least one condition!")
-        collection = self._client.get_collection(table_name)
-        collection.delete(ids=id_filters, where=filters)
-        return Response(resp_type=RESPONSE_TYPE.OK)
 
     def get_columns(self, table_name: str) -> HandlerResponse:
         # check if collection exists

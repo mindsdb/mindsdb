@@ -114,7 +114,7 @@ class OrientDBHandler(DatabaseHandler):
         return response
 
     def query(self, query: ASTNode) -> Response:
-        return super().query(query)
+        return self.native_query(query.to_string())
 
     def get_columns(self, table_name: str) -> Response:
         query = f"""

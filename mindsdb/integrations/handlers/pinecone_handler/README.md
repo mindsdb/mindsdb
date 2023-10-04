@@ -17,9 +17,9 @@ The required arguments to establish a connection are:
 
 ## Tasks
 
-- [ ] Add logo
 - [ ] `CREATE TABLE` support
     - Creating a table in Pinecone requires 2 additional parameters: dimension (int) and metric (string enum)
+- [ ] Support for [namespaces](https://docs.pinecone.io/docs/namespaces)
 
 ## Usage
 

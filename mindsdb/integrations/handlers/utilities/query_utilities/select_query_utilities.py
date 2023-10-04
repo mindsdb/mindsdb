@@ -1,8 +1,6 @@
 import pandas as pd
-from typing import Text, List, Dict, Tuple
-
 from mindsdb_sql.parser import ast
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
+from typing import Text, List, Dict, Tuple
 
 from mindsdb.integrations.handlers.utilities.query_utilities.base_query_utilities import BaseQueryParser
 from mindsdb.integrations.handlers.utilities.query_utilities.base_query_utilities import BaseQueryExecutor

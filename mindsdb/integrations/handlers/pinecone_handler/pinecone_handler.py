@@ -115,39 +115,25 @@ class PineconeHandler(VectorStoreHandler):
             )
         return Response(resp_type=RESPONSE_TYPE.OK)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-    def _get_chromadb_operator(self, operator: FilterOperator) -> str:
+    def _get_pinecone_operator(self, operator: FilterOperator) -> str:
+        """Convert FilterOperator to an operator that pinecone's query language can undersand"""
         mapping = {
             FilterOperator.EQUAL: "$eq",
             FilterOperator.NOT_EQUAL: "$ne",
-            FilterOperator.LESS_THAN: "$lt",
-            FilterOperator.LESS_THAN_OR_EQUAL: "$lte",
             FilterOperator.GREATER_THAN: "$gt",
             FilterOperator.GREATER_THAN_OR_EQUAL: "$gte",
+            FilterOperator.LESS_THAN: "$lt",
+            FilterOperator.LESS_THAN_OR_EQUAL: "$lte",
+            FilterOperator.IN: "$in",
+            FilterOperator.NOT_IN: "$nin",
         }
-
         if operator not in mapping:
-            raise Exception(f"Operator {operator} is not supported by ChromaDB!")
-
+            raise Exception(f"Operator {operator} is not supported by Pinecone!")
         return mapping[operator]
 
-    def _translate_metadata_condition(
-        self, conditions: List[FilterCondition]
-    ) -> Optional[dict]:
+    def _translate_metadata_condition(self, conditions: List[FilterCondition]) -> Optional[dict]:
         """
-        Translate a list of FilterCondition objects a dict that can be used by ChromaDB.
+        Translate a list of FilterCondition objects a dict that can be used by pinecone.
         E.g.,
         [
             FilterCondition(
@@ -181,22 +167,22 @@ class PineconeHandler(VectorStoreHandler):
             return None
 
         # we translate each metadata condition into a dict
-        chroma_db_conditions = []
+        pinecone_conditions = []
         for condition in metadata_conditions:
             metadata_key = condition.column.split(".")[-1]
-            chroma_db_conditions.append(
+            pinecone_conditions.append(
                 {
                     metadata_key: {
-                        self._get_chromadb_operator(condition.op): condition.value
+                        self._get_pinecone_operator(condition.op): condition.value
                     }
                 }
             )
 
         # we combine all metadata conditions into a single dict
         metadata_condition = (
-            {"$and": chroma_db_conditions}
-            if len(chroma_db_conditions) > 1
-            else chroma_db_conditions[0]
+            {"$and": pinecone_conditions}
+            if len(pinecone_conditions) > 1
+            else pinecone_conditions[0]
         )
         return metadata_condition
 

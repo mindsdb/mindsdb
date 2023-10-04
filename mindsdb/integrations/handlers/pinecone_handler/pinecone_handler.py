@@ -37,6 +37,86 @@ class PineconeHandler(VectorStoreHandler):
         if self.is_connected is True:
             self.disconnect()
 
+    def _get_index_handle(self, index_name):
+        """Returns handler to index specified by `index_name`"""
+        index = pinecone.Index(index_name)
+        try:
+            pinecone.describe_index_stats()
+        except:
+            index = None
+        return index
+
+    def _get_pinecone_operator(self, operator: FilterOperator) -> str:
+        """Convert FilterOperator to an operator that pinecone's query language can undersand"""
+        mapping = {
+            FilterOperator.EQUAL: "$eq",
+            FilterOperator.NOT_EQUAL: "$ne",
+            FilterOperator.GREATER_THAN: "$gt",
+            FilterOperator.GREATER_THAN_OR_EQUAL: "$gte",
+            FilterOperator.LESS_THAN: "$lt",
+            FilterOperator.LESS_THAN_OR_EQUAL: "$lte",
+            FilterOperator.IN: "$in",
+            FilterOperator.NOT_IN: "$nin",
+        }
+        if operator not in mapping:
+            raise Exception(f"Operator {operator} is not supported by Pinecone!")
+        return mapping[operator]
+
+    def _translate_metadata_condition(self, conditions: List[FilterCondition]) -> Optional[dict]:
+        """
+        Translate a list of FilterCondition objects a dict that can be used by pinecone.
+        E.g.,
+        [
+            FilterCondition(
+                column="metadata.created_at",
+                op=FilterOperator.LESS_THAN,
+                value="2020-01-01",
+            ),
+            FilterCondition(
+                column="metadata.created_at",
+                op=FilterOperator.GREATER_THAN,
+                value="2019-01-01",
+            )
+        ]
+        -->
+        {
+            "$and": [
+                {"created_at": {"$lt": "2020-01-01"}},
+                {"created_at": {"$gt": "2019-01-01"}}
+            ]
+        }
+        """
+        # we ignore all non-metadata conditions
+        if conditions is None:
+            return None
+        metadata_conditions = [
+            condition
+            for condition in conditions
+            if condition.column.startswith(TableField.METADATA.value)
+        ]
+        if len(metadata_conditions) == 0:
+            return None
+
+        # we translate each metadata condition into a dict
+        pinecone_conditions = []
+        for condition in metadata_conditions:
+            metadata_key = condition.column.split(".")[-1]
+            pinecone_conditions.append(
+                {
+                    metadata_key: {
+                        self._get_pinecone_operator(condition.op): condition.value
+                    }
+                }
+            )
+
+        # we combine all metadata conditions into a single dict
+        metadata_condition = (
+            {"$and": pinecone_conditions}
+            if len(pinecone_conditions) > 1
+            else pinecone_conditions[0]
+        )
+        return metadata_condition
+
     def connect(self):
         """Connect to a pinecone database."""
         try:

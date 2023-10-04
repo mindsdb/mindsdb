@@ -146,8 +146,9 @@ class SlackChannelsTable(APITable):
         columns = [target.parts[-1].lower() for target in query.targets if isinstance(target, ast.Identifier)]
         result = result[columns]
 
-        # Append the history, timestamp, datetime to the response
-        response_history = []
+        # Append the user, text, timestamp, datetime to the response
+        response_user = []
+        response_text = []
         response_ts = []
         response_datetime = []
         response_datetime_timestamp = []
@@ -162,6 +163,7 @@ class SlackChannelsTable(APITable):
                 datetime_ts = datetime_ts.strftime('%Y-%m-%d %H:%M:%S')
                 response_datetime.append(datetime_ts)
                 response_ts.append(timestamp)
+                response_user.append(message['user'])
 
                 # if '>' operator store message in response_datetime_timestamp
                 if 'start_time' in params and datetime_ts > params['start_time']:
@@ -171,7 +173,7 @@ class SlackChannelsTable(APITable):
                     response_datetime_timestamp.append(message['text'])
                 # else store it in response_history
                 else:
-                    response_history.append(message['text'])
+                    response_text.append(message['text'])
 
         # else parse message and return as a response object
         else:
@@ -183,7 +185,8 @@ class SlackChannelsTable(APITable):
                 datetime_ts = datetime_ts.strftime('%Y-%m-%d %H:%M:%S')
                 response_datetime.append(datetime_ts)
                 response_ts.append(timestamp)
-                response_history.append(message['text'])
+                response_user.append(message['user'])
+                response_text.append(message['text'])
 
         result['channel'] = channel_name
         # convert response_datetime_timestamp to Dataframe object in order to return
@@ -191,8 +194,9 @@ class SlackChannelsTable(APITable):
             filtered_df = pd.DataFrame(response_datetime_timestamp, columns=result.columns)
             result['messages'] = filtered_df
         else:
-            result['messages'] = response_history
+            result['messages'] = response_text
         
+        result['user'] = response_user
         result['message_created_at'] = response_datetime
         result['ts'] = response_ts
 

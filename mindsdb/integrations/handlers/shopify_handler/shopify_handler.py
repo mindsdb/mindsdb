@@ -1,6 +1,6 @@
 import shopify
 
-from mindsdb.integrations.handlers.shopify_handler.shopify_tables import ProductsTable, CustomersTable, OrdersTable, InventoryTable, LocationTable
+from mindsdb.integrations.handlers.shopify_handler.shopify_tables import ProductsTable, CustomersTable, OrdersTable, InventoryLevelTable, LocationTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -42,8 +42,8 @@ class ShopifyHandler(APIHandler):
         orders_data = OrdersTable(self)
         self._register_table("orders", orders_data)
 
-        inventory_data = InventoryTable(self)
-        self._register_table("inventory", inventory_data)
+        inventory_level_data = InventoryLevelTable(self)
+        self._register_table("inventory_level", inventory_level_data)
     
         location_data = LocationTable(self)
         self._register_table("locations", location_data)

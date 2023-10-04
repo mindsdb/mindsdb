@@ -285,8 +285,7 @@ class PineconeHandler(VectorStoreHandler):
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None
     ) -> HandlerResponse:
         """ Update data in the pinecone index named `table_name`."""
-
-        return super().update(table_name, data, columns)
+        return self.insert(table_name, data, columns)
 
 
 

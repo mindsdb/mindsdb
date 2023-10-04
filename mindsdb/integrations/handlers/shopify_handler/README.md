@@ -34,6 +34,13 @@ The Shopify handler is initialized with the following parameters:
 - `shop_url`: a required URL to your Shopify store.
 - `access_token`: a required access token to use for authentication.
 
+These are the optional parameters:
+
+- `yotpo_app_key`: token needed to access customer reviews via the Yotpo Product Reviews app.
+- `yotpo_access_token`: token needed to access customer reviews via the Yotpo Product Reviews app.
+
+If you want to query customer reviews, use the [Yotpo Product Reviews](https://apps.shopify.com/yotpo-social-reviews) app available in Shopify. To generate `yotpo_app_key` and `yotpo_access_token` keys, refer to [this](https://support.yotpo.com/docs/finding-your-yotpo-app-key-and-secret-key) and [this](https://apidocs.yotpo.com/reference/yotpo-authentication).
+
 Watch this video on creating a Shopify access token [here](https://www.youtube.com/watch?v=4f_aiC5oTNc&t=302s).
 
 ## Implemented Features
@@ -76,9 +83,7 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
 
 ## Example Usage
 
-The first step is to create a database with the new `shopify` engine by passing in the required `shop_url` and `access_token` parameters.
-
-Optionally, if you are using [Yotpo Product Reviews](https://apps.shopify.com/yotpo-social-reviews) app, you can provide additional keys, `yotpo_app_key` and `yotpo_access_token` (utoken), to access customer reviews. To generate the access token refer to [this](https://support.yotpo.com/docs/finding-your-yotpo-app-key-and-secret-key) and [this](https://apidocs.yotpo.com/reference/yotpo-authentication). In short, you have to generate app key and a secret key and use those keys to generate the access token.
+The first step is to create a database with the new `shopify` engine by passing in the required `shop_url` and `access_token` parameters. Optionally, you can provide additional keys, `yotpo_app_key` and `yotpo_access_token`, to access customer reviews.
 
 ~~~~sql
 CREATE DATABASE shopify_datasource

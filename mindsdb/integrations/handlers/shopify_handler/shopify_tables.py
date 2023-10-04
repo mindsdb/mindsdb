@@ -1,4 +1,5 @@
 import shopify
+import requests
 import pandas as pd
 from typing import Text, List, Dict, Any
 
@@ -281,7 +282,7 @@ class InventoryLevelTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         inventories = shopify.InventoryLevel.find(**kwargs)
         return [inventory.to_dict() for inventory in inventories]
-      
+
 class LocationTable(APITable):
     """The Shopify Location Table implementation"""
 
@@ -319,6 +320,7 @@ class LocationTable(APITable):
             where_conditions,
             order_by_conditions
         )
+
         locations_df = select_statement_executor.execute_query()
 
         return locations_df
@@ -331,3 +333,60 @@ class LocationTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         locations = shopify.Location.find(**kwargs)
         return [location.to_dict() for location in locations]
+
+class CustomerReviews(APITable):
+    """The Shopify Customer Reviews Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Pulls data from the Yotpo "GET https://api.yotpo.com/v1/apps/{app_key}/reviews?utoken={utoken}" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+
+            Shopify customer reviews matching the query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'customer_reviews',
+            self.get_columns()
+        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        customer_reviews_df = pd.json_normalize(self.get_customer_reviews(limit=result_limit))
+
+        select_statement_executor = SELECTQueryExecutor(
+            customer_reviews_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+
+        customer_reviews_df = select_statement_executor.execute_query()
+
+        return customer_reviews_df
+
+    def get_columns(self) -> List[Text]:
+        return pd.json_normalize(self.get_customer_reviews(limit=1)).columns.tolist()
+
+    def get_customer_reviews(self, **kwargs) -> List[Dict]:
+        if self.handler.yotpo_app_key is None or self.handler.yotpo_access_token is None:
+            raise Exception("You need to provide 'yotpo_app_key' and 'yotpo_access_token' to retrieve customer reviews.")
+        url = f"https://api.yotpo.com/v1/apps/{self.handler.yotpo_app_key}/reviews?count=0&utoken={self.handler.yotpo_access_token}"
+        headers = {
+            "accept": "application/json",
+            "Content-Type": "application/json"
+        }
+        json_response = requests.get(url, headers=headers).json()
+        return [review for review in json_response['reviews']] if 'reviews' in json_response else []
+

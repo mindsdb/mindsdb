@@ -9,13 +9,6 @@ import pandas as pd
 import requests
 import writer
 from chromadb import Settings
-from integrations.handlers.rag_handler.exceptions import (
-    InvalidOpenAIModel,
-    InvalidPromptTemplate,
-    InvalidWriterModel,
-    UnsupportedLLM,
-    UnsupportedVectorStore,
-)
 from langchain import Writer
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.docstore.document import Document
@@ -25,6 +18,14 @@ from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS, Chroma, VectorStore
 from pydantic import BaseModel, Extra, Field, validator
 from writer.models import shared
+
+from mindsdb.integrations.handlers.rag_handler.exceptions import (
+    InvalidOpenAIModel,
+    InvalidPromptTemplate,
+    InvalidWriterModel,
+    UnsupportedLLM,
+    UnsupportedVectorStore,
+)
 
 DEFAULT_EMBEDDINGS_MODEL = "BAAI/bge-base-en"
 

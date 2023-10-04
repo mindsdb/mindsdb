@@ -12,10 +12,9 @@ This handler uses `chromadb` python library connect to a chromadb instance, it u
 
 The required arguments to establish a connection are:
 
-* `chroma_api_impl`: the api implementation, likely should be `rest` or `local`
 * `chroma_server_host`: the host name or IP address of the ChromaDB instance
 * `chroma_server_http_port`: the port to use when connecting
-* `persist_directory`: the directory to use for persisting data, this should only be used when `chroma_api_impl` is set to `local`
+* `persist_directory`: the directory to use for persisting data
 
 
 ## Usage
@@ -26,9 +25,8 @@ In order to make use of this handler and connect to a ChromaDB server in MindsDB
 CREATE DATABASE chroma_dev
 WITH ENGINE = "chromadb",
 PARAMETERS = {
-   "chroma_api_impl": "rest",
    "chroma_server_host": "localhost",
-   "chroma_server_http_port": 8000,
+   "chroma_server_http_port": 8000
     }
 ```
 

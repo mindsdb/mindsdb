@@ -19,7 +19,7 @@ logger = get_log(logger_name=__name__)
 
 class RAGHandler(BaseMLEngine):
     """
-    RAGHandler is a MindsDB integration with Writer API LLMs that allows users to run question answering
+    RAGHandler is a MindsDB integration with supported LLM APIs allows users to run question answering
     on their data by providing a question.
 
     The User is able to provide data that provides context for the questions, see create() method for more details.
@@ -36,7 +36,7 @@ class RAGHandler(BaseMLEngine):
     def create_validation(target, args=None, **kwargs):
         if "using" not in args:
             raise Exception(
-                "Writer engine requires a USING clause! Refer to its documentation for more details."
+                "RAG engine requires a USING clause! Refer to its documentation for more details."
             )
 
     def create(

@@ -16,4 +16,4 @@ XXX Test Failed: <link to the test results in your GitHub repository>, <link to 
 
 Create a Project, Test passed: https://github.com/hridaya423/HacktoberfestMindsDBTesting/blob/master/Testing.md
 Remove a Project, Test passed: https://github.com/hridaya423/HacktoberfestMindsDBTesting/blob/master/Testing.md
-List Projects, Test Failed: https://github.com/hridaya423/HacktoberfestMindsDBTesting/blob/master/Testing.md, https://github.com/mindsdb/mindsdb/issues/7519
+List Projects, Test Passed: https://github.com/hridaya423/HacktoberfestMindsDBTesting/blob/master/Testing.md

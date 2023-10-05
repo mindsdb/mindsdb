@@ -15,7 +15,7 @@ class MLClientFactory:
         self.__module__ = self.handler_class.__module__
 
     def __call__(self, engine_storage, model_storage, **kwargs):
-        self.handler_class(engine_storage=engine_storage, model_storage=model_storage, **kwargs)
+        return self.handler_class(engine_storage=engine_storage, model_storage=model_storage, **kwargs)
 
     def discover_service(self, engine):
         discover_url = os.environ.get("REGISTRY_URL")

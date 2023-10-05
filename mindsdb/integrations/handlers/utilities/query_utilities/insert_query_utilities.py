@@ -1,6 +1,5 @@
-from typing import Text, List, Dict, Any, Optional
-
 from mindsdb_sql.parser import ast
+from typing import Text, List, Dict, Any, Optional
 
 from .exceptions import UnsupportedColumnException, MandatoryColumnException, ColumnCountMismatchException
 
@@ -14,9 +13,9 @@ class INSERTQueryParser:
     query : ast.Insert
         Given SQL INSERT query.
     supported_columns : List[Text], Optional
-        List of columns supported by the table.
+        List of columns supported by the table for inserting.
     mandatory_columns : List[Text], Optional
-        List of columns that must be present in the query.
+        List of columns that must be present in the query for inserting.
     all_mandatory : Optional[Any], Optional (default=True)
         Whether all mandatory columns must be present in the query. If False, only one of the mandatory columns must be present.
     """

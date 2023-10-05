@@ -1,4 +1,4 @@
-langchain==0.0.267
+langchain==0.0.308
 SQLAlchemy
 duckdb==0.7.1
 chromadb==0.3.25

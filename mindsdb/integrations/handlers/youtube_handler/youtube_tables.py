@@ -5,12 +5,10 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 from mindsdb.utilities.log import get_log
 
 from mindsdb_sql.parser import ast
+from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 
-
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
-import os
 import pandas as pd
+import re
 
 
 logger = get_log("integrations.youtube_handler")
@@ -148,3 +146,68 @@ class YoutubeGetCommentsTable(APITable):
 
 
         return all_youtube_comments_df
+
+class YoutubeVideoTable(APITable):
+
+    """Youtube Video info  by video id Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'video',
+            self.get_columns()
+        )
+
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        video_id = None
+        for op, arg1, arg2 in where_conditions:
+            if arg1 == 'video_id':
+                if op == '=':
+                    video_id = arg2
+                    break
+                else:
+                    raise NotImplementedError("Only '=' operator is supported for video_id column.")
+
+        if not video_id:
+            raise NotImplementedError("video_id has to be present in where clause.")
+
+        video_df = self.get_video_details(video_id)
+
+        select_statement_executor = SELECTQueryExecutor(
+            video_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+        video_df = select_statement_executor.execute_query()
+
+        return video_df
+
+    def get_video_details(self, video_id):
+        details = self.handler.connect().videos().list(part="statistics,snippet,contentDetails",id=video_id).execute()
+        items = details.get("items")[0]
+        snippet         = items["snippet"]
+        statistics      = items["statistics"]
+        content_details = items["contentDetails"]
+        
+        data = {"channel_title": snippet["channelTitle"],
+        "title": snippet["title"],
+        "description": snippet["description"],
+        "publish_time": snippet["publishedAt"],
+        "comment_count": statistics["commentCount"],
+        "like_count": statistics["likeCount"],
+        "view_count": statistics["viewCount"],
+        "video_id": video_id
+        }
+        duration = content_details["duration"]
+        parsed_duration = re.search(f"PT(\d+H)?(\d+M)?(\d+S)", duration).groups()
+        duration_str = ""
+        for d in parsed_duration:
+            if d:
+                duration_str += f"{d[:-1]}:"
+        data["duration_str"] = duration_str.strip(":")
+        return pd.json_normalize(data)
+
+    def get_columns(self) -> List[str]:
+        return ["channel_title", "title", "description", "publish_time", "comment_count", "like_count","view_count", "view_count", "video_id", "duration_str"]

@@ -8,7 +8,7 @@ Pinecone is a vector database which is fully-managed, developer-friendly, and ea
 
 ## Implementation
 
-This handler uses `pinecone-clinet` python library connect to a pinecone environment.
+This handler uses `pinecone-client` python library connect to a pinecone environment.
 
 The required arguments to establish a connection are:
 
@@ -18,7 +18,7 @@ The required arguments to establish a connection are:
 ## Limitations
 
 - [ ] `CREATE TABLE` support
-    - Creating a table in Pinecone requires 2 additional parameters: dimension (int) and metric (string enum)
+    - Creating a table in Pinecone requires 2 additional parameters: dimension and metric
 - [ ] Support for [namespaces](https://docs.pinecone.io/docs/namespaces)
 - [ ] Display score/distance
 - [ ] Support for creating/reading sparse values
@@ -36,7 +36,7 @@ PARAMETERS = {
 };
 ```
 
-You can query pinecone indicies (`temp` in the following examples) based on `id` or `search_vector`, but not both:
+You can query pinecone indexes (`temp` in the following examples) based on `id` or `search_vector`, but not both:
 
 ```sql
 SELECT * from pinecone_dev.temp
@@ -68,11 +68,11 @@ DELETE FROM pinecone_dev.temp
 WHERE temp.metadata.tbd = true
 ```
 
-You can insert data into a new collection like so
+You can insert data into a new collection like so:
 
 ```sql
 CREATE TABLE pinecone_dev.temp (
 SELECT * FROM mysql_demo_db.temp LIMIT 10);
 ```
 
-To update records, you can use insert statement. When there is a conflicting id in pinecone index, the record is updated with new values.
+To update records, you can use insert statement. When there is a conflicting ID in pinecone index, the record is updated with new values.

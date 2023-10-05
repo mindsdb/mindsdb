@@ -54,6 +54,9 @@ class TestPackageImports(unittest.TestCase):
                 ):
                     logging.warning(f"Invalid import in {module_path}: {e}")
                     return False
+            except Exception as e:
+                logging.warning(f"Issue with {module_path}: {e}")
+                return False
         return True
 
     def is_in_requirements(self, package, filepath):

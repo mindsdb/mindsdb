@@ -322,9 +322,7 @@ class ModelController():
             if set_active in ('0', 0, None):
                 set_active = False
 
-        params = self.prepare_create_statement(statement,
-                                               ml_handler.database_controller,
-                                               ml_handler.handler_controller)
+        params = self.prepare_create_statement(statement, ml_handler.database_controller)
 
         base_predictor_record = get_model_record(
             name=params['model_name'],

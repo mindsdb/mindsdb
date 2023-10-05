@@ -1,7 +1,8 @@
 from typing import Dict, List
 
-from mindsdb.interfaces.storage import db
+from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.storage import db
 
 from mindsdb.utilities.context import context as ctx
 
@@ -14,10 +15,13 @@ class ChatBotController:
 
     OBJECT_TYPE = 'chatbot'
 
-    def __init__(self, project_controller: ProjectController = None):
+    def __init__(self, project_controller: ProjectController = None, agents_controller: AgentsController = None):
         if project_controller is None:
             project_controller = ProjectController()
+        if agents_controller is None:
+            agents_controller = AgentsController()
         self.project_controller = project_controller
+        self.agents_controller = agents_controller
 
     def get_chatbot(self, chatbot_name: str, project_name: str = 'mindsdb') -> db.ChatBots:
         '''
@@ -49,16 +53,20 @@ class ChatBotController:
             return None
         bot, task = query_result
 
-        # Include DB and Task information in response.
+        # Include DB, Agent, and Task information in response.
         session = SessionController()
         database_names = {
             i['id']: i['name']
             for i in session.database_controller.get_list()
         }
+
+        agent = self.agents_controller.get_agent_by_id(bot.agent_id)
+        agent_obj = agent.as_dict() if agent is not None else None
         bot_obj = {
             'id': bot.id,
             'name': bot.name,
             'project': project_name,
+            'agent': agent_obj,
             'database_id': bot.database_id,  # TODO remove in future
             'database': database_names.get(bot.database_id, '?'),
             'model_name': bot.model_name,
@@ -100,11 +108,14 @@ class ChatBotController:
 
         bots = []
         for bot, task in query.all():
+            agent = self.agents_controller.get_agent_by_id(bot.agent_id)
+            agent_obj = agent.as_dict() if agent is not None else None
             bots.append(
                 {
                     'id': bot.id,
                     'name': bot.name,
                     'project': project_name,
+                    'agent': agent_obj,
                     'database_id': bot.database_id,  # TODO remove in future
                     'database': database_names.get(bot.database_id, '?'),
                     'model_name': bot.model_name,
@@ -121,7 +132,8 @@ class ChatBotController:
             self,
             name: str,
             project_name: str,
-            model_name: str,
+            model_name: str = None,
+            agent_name: str = None,
             database_id: int = None,
             is_running: bool = True,
             params: Dict[str, str] = {}) -> db.ChatBots:
@@ -132,6 +144,7 @@ class ChatBotController:
             name (str): The name of the new chatbot
             project_name (str): The containing project
             model_name (str): The name of the existing ML model the chatbot will use
+            agent_name (str): The name of the existing agent the chatbot will use
             database_id (int): The ID of the existing database the chatbot will use
             is_running (bool): Whether or not to start the chatbot right after creation
             params: (Dict[str, str]): Parameters to use when running the chatbot
@@ -155,17 +168,26 @@ class ChatBotController:
         if bot is not None:
             raise Exception(f'Chat bot already exists: {name}')
 
-        # TODO check input: model_name, database_id
-
         # check database
         session_controller = SessionController()
         db_record = session_controller.integration_controller.get_by_id(database_id)
         if db_record is None:
-            raise Exception(f"Database doesn't exits {database_id}")
+            raise Exception(f"Database doesn't exist: {database_id}")
+
+        if model_name is None and agent_name is None:
+            raise ValueError('Need to provide either "model_name" or "agent_name" when creating a chatbot')
+        if agent_name is not None:
+            agent = self.agents_controller.get_agent(agent_name, project_name)
+            if agent is None:
+                raise ValueError(f"Agent with name doesn't exist: {agent_name}")
+        else:
+            # Create a new agent with the given model name.
+            agent = self.agents_controller.add_agent(name, project_name, model_name, [])
 
         bot = db.ChatBots(
             name=name,
             project_id=project.id,
+            agent_id=agent.id,
             model_name=model_name,
             database_id=database_id,
             params=params,
@@ -193,6 +215,7 @@ class ChatBotController:
             project_name: str = 'mindsdb',
             name: str = None,
             model_name: str = None,
+            agent_name: str = None,
             database_id: int = None,
             is_running: bool = None,
             params: Dict[str, str] = None):
@@ -204,6 +227,7 @@ class ChatBotController:
             project_name (str): The containing project
             name (str): The updated name of the chatbot
             model_name (str): The name of the existing ML model the chatbot will use
+            agent_name (str): The name of the existing agent the chatbot will use
             database_id (int): The ID of the existing database the chatbot will use
             is_running (bool): Whether or not the chatbot will run after update/creation
             params: (Dict[str, str]): Parameters to use when running the chatbot
@@ -225,6 +249,13 @@ class ChatBotController:
                 raise Exception(f'Chat already exists: {name}')
 
             existing_chatbot_rec.name = name
+
+        if agent_name is not None:
+            agent = self.agents_controller.get_agent(agent_name, project_name)
+            if agent is None:
+                raise ValueError(f"Agent with name doesn't exist: {agent_name}")
+            existing_chatbot_rec.agent_id = agent.id
+
         if model_name is not None:
             # TODO check model_name
             existing_chatbot_rec.model_name = model_name

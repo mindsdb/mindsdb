@@ -1,11 +1,12 @@
 import pandas as pd
+from mindsdb_sql.parser import ast
 from typing import Text, List, Dict, Tuple
 
-from mindsdb_sql.parser import ast
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
+from mindsdb.integrations.handlers.utilities.query_utilities.base_query_utilities import BaseQueryParser
+from mindsdb.integrations.handlers.utilities.query_utilities.base_query_utilities import BaseQueryExecutor
 
 
-class SELECTQueryParser:
+class SELECTQueryParser(BaseQueryParser):
     """
     Parses a SELECT query into its component parts.
 
@@ -19,7 +20,7 @@ class SELECTQueryParser:
         List of columns in the table.
     """
     def __init__(self, query: ast.Select, table: Text, columns: List[Text]):
-        self.query = query
+        super().__init__(query)
         self.table = table
         self.columns = columns
 
@@ -49,13 +50,6 @@ class SELECTQueryParser:
                 raise ValueError(f"Unknown query target {type(target)}")
 
         return selected_columns
-
-    def parse_where_clause(self) -> List[List[Text]]:
-        """
-        Parses the WHERE clause of the query.
-        """
-        where_conditions = extract_comparison_conditions(self.query.where)
-        return where_conditions
 
     def parse_order_by_clause(self) -> Dict[Text, List[Text]]:
         """
@@ -94,7 +88,7 @@ class SELECTQueryParser:
         return result_limit
 
 
-class SELECTQueryExecutor:
+class SELECTQueryExecutor(BaseQueryExecutor):
     """
     Executes a SELECT query.
 
@@ -112,9 +106,8 @@ class SELECTQueryExecutor:
         Number of results to return.
     """
     def __init__(self, df: pd.DataFrame, selected_columns: List[Text], where_conditions: List[List[Text]], order_by_conditions: Dict[Text, List[Text]], result_limit: int = None):
-        self.df = df
+        super().__init__(df, where_conditions)
         self.selected_columns = selected_columns
-        self.where_conditions = where_conditions
         self.order_by_conditions = order_by_conditions
         self.result_limit = result_limit
 
@@ -140,19 +133,6 @@ class SELECTQueryExecutor:
             self.df = pd.DataFrame([], columns=self.selected_columns)
         else:
             self.df = self.df[self.selected_columns]
-
-    def execute_where_clause(self):
-        """
-        Execute the where clause of the query.
-        """
-        if len(self.where_conditions) > 0:
-            for condition in self.where_conditions:
-                column = condition[1]
-                operator = '==' if condition[0] == '=' else condition[0]
-                value = f"'{condition[2]}'" if type(condition[2]) == str else condition[2]
-
-                query = f"{column} {operator} {value}"
-                self.df.query(query, inplace=True)
 
     def execute_order_by_clause(self):
         """

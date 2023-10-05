@@ -161,6 +161,7 @@
             "sql/project",
             "generative-ai-tables",
             "model-types",
+            "callbacks",
             "tables_views_files"
           ]
         },
@@ -776,8 +777,11 @@
             "integrations/app-integrations/google-calendar",
             "integrations/app-integrations/hackernews",
             "integrations/app-integrations/mediawiki",
+            "integrations/app-integrations/microsoft-teams",
+            "integrations/app-integrations/newsapi",
             "integrations/app-integrations/plaid",
             "integrations/app-integrations/reddit",
+            "integrations/app-integrations/sendinblue",
             "integrations/app-integrations/shopify",
             "integrations/app-integrations/slack",
             "integrations/app-integrations/stripe",

@@ -163,7 +163,8 @@ class BaseMLEngineExec:
         # TODO move to model_controller
         """ Trains a model given some data-gathering SQL statement. """
 
-        target = problem_definition['target']
+        # may or may not be provided (e.g. 0-shot models do not need it), so engine will handle it
+        target = problem_definition.get('target', [''])  # db.Predictor expects Column(Array(String))
 
         project = self.database_controller.get_project(name=project_name)
 

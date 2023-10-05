@@ -1,1 +1,1 @@
-clickhouse-sqlalchemy
+databend-sqlalchemy

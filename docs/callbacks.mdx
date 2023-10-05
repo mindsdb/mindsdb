@@ -1,0 +1,297 @@
+---
+title: Callbacks
+sidebarTitle: Callbacks
+---
+
+Callbacks enable the retrieval of a model's status when it transitions to either 'complete' or 'error'. This is accomplished by sending a POST request to the specified URL, with the payload structured as follows:
+
+```json
+{
+    "name": "my_model",
+    "version": 1,
+    "active": true,
+    "predictor_id": 123,
+    "predictor_created_at": "Fri, 09 Sep 2023 11:50:27 GMT",
+    "old_status": "training",
+    "new_status": "complete",
+    "changed_at": "Fri, 09 Sep 2023 11:59:00 GMT"
+}
+```
+
+Let's break down each key:
+ - `name`: name of the model
+ - `version`: version of the trained model
+ - `active`: indicates whether the newly trained model is active
+ - `predictor_id`: unique identifier for the trained model
+ - `predictor_created_at`: time at which the model was created
+ - `old_status`: status the model had prior to receiving the `new_status`
+ - `new_status`: current status of the model
+ - `changed_at`:  time when the model's status transitioned from `old_status` to `new_status`
+
+<Note>
+Please note that this feature works only in MinsdDB Cloud and only for [MindsDB Starter](/setup/cloud-starter) users.
+</Note>
+
+## Callbacks API
+
+Callback API provides information on how to add, get, edit, and delete callbacks.
+
+### Add a Callback
+
+This is the Request format:
+
+```json
+POST /cloud/callback/model_status
+Content-Type: application/json
+{
+  // url will be called on model status change
+  "url": "https://my.endpoint.com/"
+}
+```
+
+And this is the Response format:
+
+```json
+Status: 200 OK  
+Content-Type: application/json
+{
+  // id of created 'callback'
+  "id": 123456
+}
+```
+
+### Get a Callback
+
+This is the Request format:
+
+```json
+GET /cloud/callback/model_status
+```
+
+And this is the Response format:
+
+```json
+Status: 200 OK  
+Content-Type: application/json
+[{
+  "id": 123456,
+  "created_at": "Fri, 09 Sep 2023 11:50:27 GMT",
+  "url": "https://my.endpoint.com/"
+}]
+```
+
+### Edit a Callback
+
+This is the Request format:
+
+```json
+PUT /cloud/callback/model_status/<id>
+Content-Type: application/json
+{
+  // new callback url
+  "url": "https://my.endpoint.com/"
+}
+```
+
+And this is the Response format:
+
+```json
+Status: 200 OK
+```
+
+### Delete a Callback
+
+This is the Request format:
+
+```json
+DELETE /cloud/callback/model_status/<id>
+```
+
+And this is the Response format:
+
+```json
+Status: 200 OK
+```
+
+## Handling Callbacks using Python SDK
+
+Below is an example of using callbacks with the `home_rentals` model. Be sure that your endpoint `HOSTNAME` is accessible from the internet.
+
+<Note>
+Please note that `localhost` is not accessible from the internet - you can make `localhost` accessible via multiple ways, like [ngrok tunnel](https://ngrok.com/).
+</Note>
+
+```python
+import requests
+import mindsdb_sdk
+from flask import Flask, request
+
+MODEL_NAME = 'home_rentals'
+HOSTNAME = 'my.endpoint.com'
+PORT = 5000
+
+app = Flask(__name__)
+
+con = mindsdb_sdk.connect(
+    'https://cloud.mindsdb.com',
+    login='name@email.com',
+    password='password'
+)
+
+# add callback
+con.api.session.post(
+    'https://cloud.mindsdb.com/cloud/callback/model_status',
+    json={
+        'url': f'https://{HOSTNAME}:{PORT}/'
+    }
+)
+
+@app.route('/', methods=['POST'])
+def callback():
+    data = request.json
+    if data['version'] == 1:
+        # let retrain the model
+        model = con.models.get(MODEL_NAME)
+        model.retrain()
+    elif data['version'] == 2:
+        # let make a prediciton
+        model = con.models.get(MODEL_NAME)
+        prediction = model.predict({"sqft": 1000})
+        print(prediction)
+    return '', 200
+
+# connect to database
+db = con.databases.create(
+    'example_db',
+    engine='postgres',
+    connection_args={
+        "user": "demo_user",
+        "password": "demo_password",
+        "host": "3.220.66.106",
+        "port": "5432",
+        "database": "demo"
+    }
+)
+
+# train base model
+model = con.models.create(
+    MODEL_NAME,
+    predict='rental_price',
+    query=db.tables.get('demo_data.home_rentals')
+)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=PORT)
+```
+
+## Handling Callbacks using JavaScript SDK
+
+Below is an example of using callbacks with the `home_rentals` model. Be sure that the callback `HOSTNAME` is accesssible from MindsDB Cloud.
+
+```js
+import express from 'express';
+import axios from 'axios';
+import * as MindsDB from 'mindsdb-js-sdk';
+const mdb = MindsDB.default.default;
+
+const app = express();
+const PORT = 54321;
+const MODEL_NAME = 'home_rentals';
+const HOSTNAME = 'my.endpoint.com';
+
+// Create an Axios instance with interceptors for timeout and error handling
+const customAxios = axios.create();
+customAxios.interceptors.request.use(config => {
+  config.timeout = 120000; // Set a request timeout of 120 seconds
+  return config;
+});
+customAxios.interceptors.response.use(
+  response => response,
+  error => {
+    console.error('Axios Error:', error.message);
+    return Promise.reject(error);
+  }
+);
+
+// Connect to MindsDB Cloud
+try {
+  await mdb.connect({
+    host: 'https://cloud.mindsdb.com',
+    user: 'name@email.com',
+    password: 'password',
+    httpClient: customAxios,
+  });
+} catch (error) {
+  console.error('MindsDB Cloud Connection Error:', error);
+  process.exit(1);
+}
+
+// Connect to the database
+await mdb.Databases.createDatabase('example_db', 'postgres', {
+  user: 'demo_user',
+  password: 'demo_password',
+  host: '3.220.66.106',
+  port: '5432',
+  database: 'demo',
+});
+
+// Express Middleware to parse JSON requests
+app.use(express.json());
+
+// Define an Express route to handle model status updates
+app.post('/model-status', async (req, res) => {
+  const data = req.body;
+
+  if (data.new_status !== 'complete') {
+    console.error(`Error! Got model status: ${data.new_status}`);
+    return res.status(400).send({ error: 'Invalid model status' });
+  }
+
+  const trained_model_version = data.version;
+  console.log(`Model training completed, model version=${trained_model_version}`);
+
+  if (trained_model_version === 1) {
+    // Base model finished training, let's retrain it
+    let model = await mdb.Models.getModel(MODEL_NAME, 'mindsdb');
+    model.retrain();
+  } else if (trained_model_version === 2) {
+    // Model retraining finished, let's make a prediction
+    let model = await mdb.Models.getModel(MODEL_NAME, 'mindsdb');
+    let prediction = await model.query({
+      where: [
+        'sqft = 823',
+        'location = "good"',
+        'neighborhood = "downtown"',
+        'days_on_market = 10',
+      ],
+    });
+    console.log(`Prediction: ${JSON.stringify(prediction)}`);
+  }
+
+  res.sendStatus(200);
+});
+
+// Start the Express server
+app.listen(PORT, () => {
+  console.log(`Express server started on port ${PORT}`);
+});
+
+// Add a callback to notify MindsDB Cloud about the endpoint
+try {
+  await customAxios.post('https://cloud.mindsdb.com/cloud/callback/model_status', {
+    url: `https://${HOSTNAME}:${PORT}/model-status`,
+  });
+} catch (error) {
+  console.error('Callback Error:', error);
+}
+
+// Train a model
+try {
+  await mdb.Models.trainModel(MODEL_NAME, 'rental_price', 'mindsdb', {
+    integration: 'example_db',
+    select: 'SELECT * FROM demo_data.home_rentals',
+  });
+} catch (error) {
+  console.error('Model Training Error:', error);
+}
+```

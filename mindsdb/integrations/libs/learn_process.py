@@ -118,7 +118,7 @@ def learn_process(payload, dataframe):
         class_path = (payload['handler_meta']['module_path'], payload['handler_meta']['class_name'])
 
         try:
-            target = problem_definition['target']
+            target = problem_definition.get('target', None)
             training_data_df = None
             if data_integration_ref is not None:
                 database_controller = DatabaseController()

@@ -13,3 +13,6 @@ XXX Test Passed: <link to the test results in your GitHub repository>
 </br>
 XXX Test Failed: <link to the test results in your GitHub repository>, <link to the issue>
 </br>
+
+Create Project (Python) Test Passed: https://github.com/truesoni/hacktoberfest2023/blob/main/mindsdb/issues_7516/Testing.md
+Integrate Data Sources (SQL) Test Passed: https://github.com/Better-Boy/mindsdb-QA/blob/main/Testing.md

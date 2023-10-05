@@ -4,6 +4,7 @@ from collections import OrderedDict
 from mindsdb.integrations.handlers.github_handler.github_tables import (
     GithubIssuesTable,
     GithubPullRequestsTable,
+    GithubCommitsTable,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
@@ -41,8 +42,10 @@ class GithubHandler(APIHandler):
 
         github_issues_data = GithubIssuesTable(self)
         github_pull_requests_data = GithubPullRequestsTable(self)
+        github_commits_data = GithubCommitsTable(self)
         self._register_table("issues", github_issues_data)
         self._register_table("pull_requests", github_pull_requests_data)
+        self._register_table("commits", github_commits_data)
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.

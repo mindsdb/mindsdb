@@ -17,7 +17,7 @@ from mindsdb.utilities.ml_task_queue.const import (
 
 class MLTaskProducer:
     def __init__(self) -> None:
-        config = Config()
+        config = Config().get('ml_task_queue', {})
         self.db = Database(
             host=config.get('host', 'localhost'),
             port=config.get('port', 6379),

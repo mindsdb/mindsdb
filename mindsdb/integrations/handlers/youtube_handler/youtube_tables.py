@@ -149,7 +149,7 @@ class YoutubeGetCommentsTable(APITable):
 
 class YoutubeChannelTable(APITable):
 
-    """Youtube List Comments  by video id Table implementation"""
+    """Youtube Channel Info  by channel id Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         select_statement_parser = SELECTQueryParser(
@@ -167,7 +167,7 @@ class YoutubeChannelTable(APITable):
                     channel_id = arg2
                     break
                 else:
-                    raise NotImplementedError("Only '=' operator is supported for inventory_item_ids column.")
+                    raise NotImplementedError("Only '=' operator is supported for channel_id column.")
 
         if not channel_id:
             raise NotImplementedError("channel_id has to be present in where clause.")

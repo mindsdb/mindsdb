@@ -1,9 +1,13 @@
+"""
+Pinecone Handler
+Parts of this script are copied from chromadb_handler whose author is Daniel Usvyat at the time of writing
+"""
+
 from collections import OrderedDict
 from typing import List, Optional
 
 import pinecone
 import pandas as pd
-import numpy as np
 
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
@@ -267,7 +271,8 @@ class PineconeHandler(VectorStoreHandler):
             query["top_k"] = limit
         else:
             query["top_k"] = 10000
-        if metadata_filters is not None: query["filter"] = metadata_filters
+        if metadata_filters is not None:
+            query["filter"] = metadata_filters
         # check for id filter
         id_filters = None
         if conditions is not None:

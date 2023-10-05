@@ -24,7 +24,7 @@ class UPDATEQueryParser():
         self.table = table
         self.columns = columns
 
-    def parse_query(self) -> Tuple[List[Tuple[Text, Any]], List[List[Text]]]:
+    def parse_query(self) -> Tuple[Dict[Text, Any], List[List[Text]]]:
         """
         Parses a SQL UPDATE statement into its components: UPDATE, SET, WHERE.
         """

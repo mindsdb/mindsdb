@@ -1,3 +1,4 @@
+import pytest
 # def native_query(self, query: Any) -> HandlerResponse:
 #     """Receive raw query and act upon it somehow.
 #     Args:

@@ -1556,7 +1556,7 @@ class SQLQuery():
                     if isinstance(arg, Constant) and isinstance(arg.value, str):
                         arg.value = fnc(arg.value)
 
-        if self.model_types.get(order_col) in ('date', 'datetime'):
+        if self.model_types.get(order_col) in ('date', 'datetime') or isinstance(predictor_data[0][order_col], pd.Timestamp):  # noqa
             # convert strings to date
             # it is making side effect on original data by changing it but let it be
 

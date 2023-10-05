@@ -151,6 +151,9 @@ class SlackChannelsTable(APITable):
 
         # convert SlackResponse object to pandas DataFrame
         result = pd.DataFrame(result['messages'])
+
+        # Remove null rows from the result
+        result = result[result['text'].notnull()]
             
         # add absent columns
         for col in set(columns) & set(result.columns) ^ set(columns):
@@ -169,7 +172,7 @@ class SlackChannelsTable(APITable):
         elif 'end_time' in params:
             result = result[result['ts_datetime'] < datetime.strptime(params['end_time'], '%Y-%m-%d %H:%M:%S')]
 
-        # filter by columns
+        # filter by columns to be returned
         result = result[columns]
 
         # Sort the data based on order_by_conditions
@@ -188,8 +191,7 @@ class SlackChannelsTable(APITable):
             if target.alias:
                 result.rename(columns={target.parts[-1]: str(target.alias)}, inplace=True)
 
-        # Remove null rows from the result
-        result = result[result['text'].notnull()]
+        # ensure the data in the table is of string type
         return result.astype(str)
 
     def insert(self, query):

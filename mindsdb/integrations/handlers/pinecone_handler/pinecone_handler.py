@@ -3,6 +3,7 @@ from typing import List, Optional
 
 import pinecone
 import pandas as pd
+import numpy as np
 
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
@@ -41,8 +42,8 @@ class PineconeHandler(VectorStoreHandler):
         """Returns handler to index specified by `index_name`"""
         index = pinecone.Index(index_name)
         try:
-            pinecone.describe_index_stats()
-        except:
+            index.describe_index_stats()
+        except Exception as e:
             index = None
         return index
 
@@ -116,6 +117,10 @@ class PineconeHandler(VectorStoreHandler):
             else pinecone_conditions[0]
         )
         return metadata_condition
+
+    def _matches_to_dicts(self, matches: List):
+        """Converts the custom pinecone response type to a list of python dict"""
+        return [match.to_dict() for match in matches]
 
     def connect(self):
         """Connect to a pinecone database."""
@@ -236,46 +241,73 @@ class PineconeHandler(VectorStoreHandler):
                 resp_type=RESPONSE_TYPE.ERROR,
                 error_message=f"Error getting index '{table_name}', are you sure the name is correct?"
             )
-        metadata_filters = self._translate_metadata_condition(conditions)
-        vector_filter = (
-            None
-            if conditions is None
-            else [
-                condition
-                for condition in conditions
-                if condition.column == TableField.SEARCH_VECTOR.value
-            ]
-        )
-        vector_filter = None if not vector_filter else vector_filter
         query = {
             "include_values": True,
             "include_metadata": True
         }
-        if vector_filter is not None: query["vector"] = vector_filter
+        # check for metadata filter
+        metadata_filters = self._translate_metadata_condition(conditions)
+        # check for vector filter
+        vector_filter = (
+            None
+            if conditions is None
+            else [
+                condition.value
+                for condition in conditions
+                if condition.column == TableField.SEARCH_VECTOR.value
+            ]
+        )
+        if vector_filter:
+            if len(vector_filter) > 1:
+                return Response(
+                    resp_type=RESPONSE_TYPE.ERROR,
+                    error_message=f"You cannot have multiple search_vectors in query"
+                )
+            query["vector"] = vector_filter[0]
+        # check for limit
         if limit is not None:
             query["top_k"] = limit
         else:
             query["top_k"] = 10000
         if metadata_filters is not None: query["filter"] = metadata_filters
+        # check for id filter
+        id_filters = None
+        if conditions is not None:
+            id_filters = [
+                condition.value
+                for condition in conditions
+                if condition.column == TableField.ID.value
+            ] or None
+        if id_filters:
+            if len(id_filters) > 1:
+                return Response(
+                    resp_type=RESPONSE_TYPE.ERROR,
+                    error_message=f"You cannot have multiple IDs in query"
+                )
+            query["id"] = id_filters[0]
+        # exec query
         result = None
         try:
-            result = index.query(query)
+            result = index.query(**query)
         except Exception as e:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error executing query on '{table_name}': {e}"
+                error_message=f"Error executing query: {query} on '{table_name}' using conditions: {conditions}: {e}"
             )
+        # convert to dataframe
         df_columns = {
             "id": TableField.ID.value,
             "metadata": TableField.METADATA.value,
             "values": TableField.EMBEDDINGS.value,
             "sparse_values": TableField.CONTENT.value
         }
-        results_df = pd.DataFrame.from_records(result["matches"])
+        results_df = pd.DataFrame.from_records(self._matches_to_dicts(result["matches"]))
         if len(results_df.columns) != 0:
             results_df.rename(columns=df_columns, inplace=True)
         else:
             results_df = pd.DataFrame(columns=list(df_columns.values()))
+        if TableField.CONTENT.value not in results_df.columns:
+            results_df[TableField.CONTENT.value] = np.nan
         return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=results_df[columns])
 
     def get_columns(self, table_name: str) -> HandlerResponse:

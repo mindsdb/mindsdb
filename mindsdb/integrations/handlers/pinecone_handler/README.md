@@ -20,6 +20,7 @@ The required arguments to establish a connection are:
 - [ ] `CREATE TABLE` support
     - Creating a table in Pinecone requires 2 additional parameters: dimension (int) and metric (string enum)
 - [ ] Support for [namespaces](https://docs.pinecone.io/docs/namespaces)
+- [ ] Display score/distance
 
 ## Usage
 
@@ -33,6 +34,33 @@ PARAMETERS = {
    "environment": "..."
 };
 ```
+
+You can query pinecone indicies (`temp` in the following examples) based on `id` or `search_vector`, but not both:
+
+```sql
+SELECT * from pinecone_dev.temp
+WHERE id = "abc"
+LIMIT 1
+```
+
+```sql
+SELECT * from pinecone_dev.temp
+WHERE search_vector = "[1,2,3,4,5,6,7,8]"
+```
+
+Optionally, you can filter based on metadata too:
+
+```sql
+SELECT * from pinecone_dev.temp
+WHERE id = "abc" AND temp.metadata.hello < 100
+```
+
+
+## Limitations
+
+Creation of tables is not supported using SQL in MindsDB. Pincone has additional requirements like dimention and metric that needs to be selected. You can do that using pinecone web application.
+
+In addition to that, there is no support to enrich queries using pinecone namespaces as of now.
 
 -----------------------------------------
 

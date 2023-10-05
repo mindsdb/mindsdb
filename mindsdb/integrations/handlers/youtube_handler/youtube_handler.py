@@ -37,6 +37,8 @@ class YoutubeHandler(APIHandler):
         youtube_video_comments_data =YoutubeGetCommentsTable(self)
         self._register_table("get_comments", youtube_video_comments_data)
 
+        youtube_channel_data = YoutubeGetChannelTable(self)
+        self._register_table("get_channel", youtube_channel_data)
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.
@@ -101,3 +103,25 @@ connection_args = OrderedDict(
 connection_args_example = OrderedDict(
     youtube_api_token ='<your-youtube-api-token>'
 )
+
+class YoutubeGetChannelTable(object):
+    def __init__(self, handler):
+        self.handler = handler
+
+    def get_data(self, table_name):
+        youtube = self.handler.connection
+        channel_id = self.handler.kwargs.get("channel_id", None)
+
+        if channel_id is None:
+            raise ValueError("Channel ID is required")
+
+        request = youtube.channels().list(part="snippet", id=channel_id)
+        response = request.execute()
+
+        if response.get("pageInfo", {}).get("totalResults", 0) == 0:
+            return []
+
+        items = response.get("items", [])
+        channel_data = items[0].get("snippet", {})
+
+        return [channel_data]

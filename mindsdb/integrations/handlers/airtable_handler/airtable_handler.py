@@ -74,7 +74,7 @@ class AirtableHandler(DatabaseHandler):
 
                     new_records = response['records']
                     records = records + new_records
-            except Exception:
+            except Exception as e:  # noqa: F841
                 new_records = False
 
         rows = [record['fields'] for record in records]

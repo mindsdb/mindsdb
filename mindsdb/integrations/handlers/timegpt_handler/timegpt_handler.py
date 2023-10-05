@@ -27,7 +27,7 @@ class TimeGPTHandler(BaseMLEngine):
         using_args = args["using"]
 
         mode = 'forecasting'
-        if args.get("__mdb_sql_task", None):
+        if args.get("__mdb_sql_task", None).lower() in ('forecasting', 'anomalydetection'):
             mode = args["__mdb_sql_task"].lower()
 
         if mode == 'forecasting':
@@ -43,6 +43,7 @@ class TimeGPTHandler(BaseMLEngine):
             "date_features_to_one_hot": using_args.get("date_features_to_one_hot", True),
             "clean_ex_first": using_args.get("clean_ex_first", True),
             "level": using_args.get("level", [90]),
+            "add_history": using_args.get("add_history", False),
             'mode': mode
         }
 
@@ -84,7 +85,7 @@ class TimeGPTHandler(BaseMLEngine):
             clean_ex_first=args.get('clean_ex_first', model_args['clean_ex_first']),
 
             # anomaly detection
-            add_history=args.get('add_history', model_args.get('add_history', False)),  # insample bounds and anomaly detection
+            add_history=args.get('add_history', model_args['add_history'])  # insample bounds and anomaly detection
 
             # TODO: enable this post-refactor
             # X_df=None,  # exogenous variables

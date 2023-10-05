@@ -5,11 +5,8 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 from mindsdb.utilities.log import get_log
 
 from mindsdb_sql.parser import ast
+from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 
-
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
-import os
 import pandas as pd
 
 
@@ -148,3 +145,59 @@ class YoutubeGetCommentsTable(APITable):
 
 
         return all_youtube_comments_df
+
+
+class YoutubeChannelTable(APITable):
+
+    """Youtube List Comments  by video id Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'channel',
+            self.get_columns()
+        )
+
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        channel_id = None
+        for op, arg1, arg2 in where_conditions:
+            if arg1 == 'channel_id':
+                if op == '=':
+                    channel_id = arg2
+                    break
+                else:
+                    raise NotImplementedError("Only '=' operator is supported for inventory_item_ids column.")
+
+        if not channel_id:
+            raise NotImplementedError("channel_id has to be present in where clause.")
+
+        channel_df = self.get_channel_details(channel_id)
+
+        select_statement_executor = SELECTQueryExecutor(
+            channel_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+        channel_df = select_statement_executor.execute_query()
+
+        return channel_df
+
+    def get_channel_details(self, channel_id):
+        details = self.handler.connect().channels().list(part="statistics,snippet,contentDetails",id=channel_id).execute()
+        snippet = details["items"][0]["snippet"]
+        statistics = details["items"][0]["statistics"]
+        data = { "country":snippet["country"],
+        "description": snippet["description"],
+        "creation_date": snippet["publishedAt"],
+        "title": snippet["title"],
+        "subscriber_count": statistics["subscriberCount"],
+        "video_count": statistics["videoCount"],
+        "view_count": statistics["viewCount"],
+        "channel_id":channel_id
+        }
+        return pd.json_normalize(data)
+
+    def get_columns(self) -> List[str]:
+        return ["country", "description", "creation_date", "title", "subscriber_count", "video_count","view_count", "channel_id"]

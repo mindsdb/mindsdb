@@ -64,20 +64,21 @@ class MLEngineException(Exception):
 
 class BaseMLEngineExec:
 
-    def __init__(self, name, **kwargs):
-        """
-        ML handler interface converter
+    def __init__(self, name, integration_id, integration_engine, handler_class):
+        """ ML handler interface converter
+
+            Args:
+                name
+                integration_id
+                integration_engine
+                handler_class
         """  # noqa
         # TODO move this class to model controller
 
         self.name = name
         self.config = Config()
-        self.handler_controller = kwargs.get('handler_controller')
-        self.company_id = kwargs.get('company_id')
-        self.fs_store = kwargs.get('file_storage')
-        self.integration_id = kwargs.get('integration_id')
-        self.execution_method = kwargs.get('execution_method')
-        self.engine = kwargs.get("integration_engine")
+        self.integration_id = integration_id
+        self.engine = integration_engine
 
         self.model_controller = ModelController()
         self.database_controller = DatabaseController()
@@ -87,7 +88,7 @@ class BaseMLEngineExec:
 
         self.is_connected = True
 
-        self.handler_class = MLClientFactory(handler_class=kwargs['handler_class'], engine=self.engine)
+        self.handler_class = MLClientFactory(handler_class=handler_class, engine=self.engine)
 
         self.base_ml_executor = process_cache
         if self.config['ml_task_queue']['type'] == 'redis':
@@ -297,7 +298,7 @@ class BaseMLEngineExec:
             predictions['__mindsdb_row_id'] = df['__mindsdb_row_id']
 
         after_predict_hook(
-            company_id=self.company_id,
+            company_id=ctx.company_id,
             predictor_id=predictor_record.id,
             rows_in_count=df.shape[0],
             columns_in_count=df.shape[1],

@@ -78,6 +78,7 @@ class BaseMLEngineExec:
         self.config = Config()
         self.integration_id = integration_id
         self.engine = integration_engine
+        self.handler_class = handler_class
 
         self.model_controller = ModelController()
         self.database_controller = DatabaseController()

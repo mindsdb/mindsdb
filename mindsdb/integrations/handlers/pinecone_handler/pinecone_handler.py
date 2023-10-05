@@ -309,12 +309,6 @@ class PineconeHandler(VectorStoreHandler):
     def get_columns(self, table_name: str) -> HandlerResponse:
         return super().get_columns(table_name)
 
-    def update(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
-        """ Update data in the pinecone index named `table_name`."""
-        return self.insert(table_name, data, columns)
-
 
 connection_args = OrderedDict(
     api_key={

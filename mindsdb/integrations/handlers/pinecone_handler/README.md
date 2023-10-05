@@ -74,3 +74,5 @@ You can insert data into a new collection like so
 CREATE TABLE pinecone_dev.temp (
 SELECT * FROM mysql_demo_db.temp LIMIT 10);
 ```
+
+To update records, you can use insert statement. When there is a conflicting id in pinecone index, the record is updated with new values.

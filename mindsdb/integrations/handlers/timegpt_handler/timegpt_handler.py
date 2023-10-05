@@ -84,7 +84,7 @@ class TimeGPTHandler(BaseMLEngine):
             clean_ex_first=args.get('clean_ex_first', model_args['clean_ex_first']),
 
             # anomaly detection
-            add_history=args.get('add_history', model_args['add_history']),  # insample bounds and anomaly detection
+            add_history=args.get('add_history', model_args.get('add_history', False)),  # insample bounds and anomaly detection
 
             # TODO: enable this post-refactor
             # X_df=None,  # exogenous variables

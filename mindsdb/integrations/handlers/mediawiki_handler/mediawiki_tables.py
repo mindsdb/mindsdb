@@ -7,11 +7,10 @@ from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb_sql.parser import ast
 
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
-
+from mindsdb.integrations.handlers.utilities.query_utilities import UPDATEQueryParser, UPDATEQueryExecutor
 from mindsdb.utilities.log import get_log
 
 logger = get_log("integrations.mediawiki_handler")
-
 
 class PagesTable(APITable):
     """The MediaWiki Pages Table implementation"""
@@ -41,19 +40,8 @@ class PagesTable(APITable):
             self.get_columns()
         )
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-
-        title, page_id = None, None
-        for condition in where_conditions:
-            if condition[1] == 'title':
-                if condition[0] != '=':
-                    raise ValueError(f"Unsupported operator '{condition[0]}' for column '{condition[1]}' in WHERE clause.")
-                title = condition[2]
-            elif condition[1] == 'pageid':
-                if condition[0] != '=':
-                    raise ValueError(f"Unsupported operator '{condition[0]}' for column '{condition[1]}' in WHERE clause.")
-                page_id = condition[2]
-            else:
-                raise ValueError(f"Unsupported column '{condition[1]}' in WHERE clause.")
+        
+        title, page_id = self.validate_where_conditions(where_conditions)
 
         pages_df = pd.json_normalize(self.get_pages(title=title, page_id=page_id, limit=result_limit))
 
@@ -66,7 +54,30 @@ class PagesTable(APITable):
         pages_df = select_statement_executor.execute_query()
 
         return pages_df
+     
+    def update(self, query: ast.Update) -> None:
+        
+        update_statements_parser = UPDATEQueryParser(
+            query,
+            'pages',
+            self.get_columns()
+        )
+        set_clauses, where_conditions = update_statements_parser.parse_query()
 
+        title, page_id = self.validate_where_conditions(where_conditions)
+            
+        pages_df = pd.json_normalize(self.get_pages(title=title, page_id=page_id))
+
+        update_statement_executor = UPDATEQueryExecutor(
+            pages_df,
+            set_clauses,
+            where_conditions
+        )
+        pages_df = update_statement_executor.execute_query()
+
+        return pages_df
+
+        
     def get_columns(self) -> List[str]:
         return ['pageid', 'title', 'original_title', 'content', 'summary', 'url', 'categories']
 
@@ -96,3 +107,19 @@ class PagesTable(APITable):
                 logger.debug(f"Error accessing '{attribute}' attribute. Skipping...")
 
         return result
+         
+    def validate_where_conditions(self, conditions):
+        title, page_id = None, None
+        for condition in conditions:
+            if condition[1] == 'title':
+                if condition[0] != '=':
+                    raise ValueError(f"Unsupported operator '{condition[0]}' for column '{condition[1]}' in WHERE clause.")
+                title = condition[2]
+            elif condition[1] == 'pageid':
+                if condition[0] != '=':
+                    raise ValueError(f"Unsupported operator '{condition[0]}' for column '{condition[1]}' in WHERE clause.")
+                page_id = condition[2]
+            else:
+                raise ValueError(f"Unsupported column '{condition[1]}' in WHERE clause.")
+               
+        return title, page_id 

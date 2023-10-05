@@ -781,6 +781,7 @@
             "integrations/app-integrations/newsapi",
             "integrations/app-integrations/plaid",
             "integrations/app-integrations/reddit",
+            "integrations/app-integrations/sendinblue",
             "integrations/app-integrations/shopify",
             "integrations/app-integrations/slack",
             "integrations/app-integrations/stripe",

@@ -14,6 +14,9 @@ XXX Test Passed: <link to the test results in your GitHub repository>
 XXX Test Failed: <link to the test results in your GitHub repository>, <link to the issue>
 </br>
 
-Create a Project, Test passed: https://github.com/hridaya423/HacktoberfestMindsDBTesting/blob/master/Testing.md
-Remove a Project, Test passed: https://github.com/hridaya423/HacktoberfestMindsDBTesting/blob/master/Testing.md
-List Projects, Test Passed: https://github.com/hridaya423/HacktoberfestMindsDBTesting/blob/master/Testing.md
+
+Create Project (Python) Test Passed: https://github.com/truesoni/hacktoberfest2023/blob/main/mindsdb/issues_7516/Testing.md
+Integrate Data Sources (SQL) Test Passed: https://github.com/Better-Boy/mindsdb-QA/blob/main/Testing.md
+Create a Project Using SQL, Test passed: https://github.com/hridaya423/HacktoberfestMindsDBTesting/blob/master/Testing.md
+Remove a Project Using SQL, Test passed: https://github.com/hridaya423/HacktoberfestMindsDBTesting/blob/master/Testing.md
+List Projects Using SQL, Test Passed: https://github.com/hridaya423/HacktoberfestMindsDBTesting/blob/master/Testing.md

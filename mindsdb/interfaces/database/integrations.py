@@ -392,7 +392,7 @@ class IntegrationController:
         """
         handler_meta = self.handlers_import_status[handler_type]
         if not handler_meta["import"]["success"]:
-            logger.info(f"to use {handler_type} please install 'pip install mindsdb[{handler_type}]'")
+            logger.info(f"to use {handler_type} please install 'pip install {handler_type}'")
 
         logger.debug("%s.create_tmp_handler: connection args - %s", self.__class__.__name__, connection_data)
         integration_id = int(time() * 10000)
@@ -465,7 +465,7 @@ class IntegrationController:
                 msg += dedent(f'''
 
                 If error is related to missing dependencies, then try to run command in shell and restart mindsdb:
-                    pip install mindsdb[{integration_engine}]
+                    pip install {integration_engine}
                 ''')
             logger.debug(msg)
             raise Exception(msg)

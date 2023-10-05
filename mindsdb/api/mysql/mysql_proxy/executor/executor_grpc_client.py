@@ -14,7 +14,7 @@ try:
     from mindsdb.microservices_grpc.executor import executor_pb2_grpc
     from mindsdb.microservices_grpc.executor import executor_pb2
 except ImportError:
-    logger.error("to user microservice mode please install 'pip install mindsdb[grpc]'")
+    logger.error("to user microservice mode please install 'pip install grpc'")
 
 
 class ExecutorClientGRPC:

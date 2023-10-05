@@ -1009,7 +1009,7 @@ class ExecuteCommands:
                 msg += dedent(f'''
 
                 If error is related to missing dependencies, then try to run command in shell and restart mindsdb:
-                    pip install mindsdb[{handler_module_meta['name']}]
+                    pip install {handler_module_meta['name']}
                 ''')
             log.logger.info(msg)
             raise SqlApiException(msg)

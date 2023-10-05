@@ -14,7 +14,7 @@ class DBClientFactory:
                 from mindsdb.integrations.handlers_client.db_grpc_client import DBClientGRPC
                 self.client_class = DBClientGRPC
             except (ImportError, ModuleNotFoundError):
-                logger.info("to work with microservice mode please install 'pip install mindsdb[grpc]'")
+                logger.info("to work with microservice mode please install 'pip install grpc'")
                 self.host = None
                 self.port = None
 

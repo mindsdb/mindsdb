@@ -110,7 +110,7 @@ def initialize_log(config=None, logger_name='main', wrap_print=False):
                 traces_sample_rate=0  # Set to `1` to experiment with performance metrics
             )
         except (ImportError, ModuleNotFoundError) as e:
-            raise Exception(f"to use telemetry please install 'pip install mindsdb[telemetry]': {e}")
+            raise Exception(f"to use telemetry please install 'pip install telemetry': {e}")
 
     ''' Create new logger
     :param config: object, app config

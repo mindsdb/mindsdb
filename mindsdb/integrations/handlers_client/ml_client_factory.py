@@ -29,7 +29,7 @@ class MLClientFactory:
                 from mindsdb.integrations.handlers_client.ml_grpc_client import MLClientGRPC
                 self.client_class = MLClientGRPC
             except (ImportError, ModuleNotFoundError):
-                logger.error("to use microservice mode please install 'pip install mindsdb[grpc]'")
+                logger.error("to use microservice mode please install 'pip install grpc'")
                 host = None
                 port = None
 

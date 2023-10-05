@@ -144,12 +144,12 @@ class FileHandler(DatabaseHandler):
             return True
         return False
 
-    # @staticmethod
-    # def is_it_xlsx(file_path: str) -> bool:
-    #     file_type = magic.from_file(file_path, mime=True)
-    #     if file_type in ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel']:
-    #         return True
-    #     return False
+    @staticmethod
+    def is_it_xlsx(file_path: str) -> bool:
+        file_type = magic.from_file(file_path, mime=True)
+        if file_type in ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel']:
+            return True
+        return False
 
     @staticmethod
     def is_it_json(data_str: StringIO) -> bool:

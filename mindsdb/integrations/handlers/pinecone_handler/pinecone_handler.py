@@ -292,7 +292,7 @@ class PineconeHandler(VectorStoreHandler):
         except Exception as e:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error executing query: {query} on '{table_name}' using conditions: {conditions}: {e}"
+                error_message=f"Error running SELECT query on '{table_name}': {e}"
             )
         # convert to dataframe
         df_columns = {

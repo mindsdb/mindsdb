@@ -55,6 +55,17 @@ SELECT * from pinecone_dev.temp
 WHERE id = "abc" AND temp.metadata.hello < 100
 ```
 
+You can delete records using `id` or `metadata` like so:
+
+```sql
+SELECT * from pinecone_dev.temp
+WHERE id = "abc"
+```
+
+```sql
+DELETE from pinecone_dev.temp
+WHERE temp.metadata.tbd = true
+```
 
 ## Limitations
 

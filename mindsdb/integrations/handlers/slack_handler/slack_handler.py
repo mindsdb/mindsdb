@@ -113,7 +113,6 @@ class SlackChannelsTable(APITable):
         # Retrieve the conversation history
         try:
             result = self.client.conversations_history(channel=params['channel'])
-            log.logger.warning(result)
         except SlackApiError as e:
             log.logger.error("Error creating conversation: {}".format(e))
             raise e

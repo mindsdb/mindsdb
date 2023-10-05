@@ -1,5 +1,7 @@
+import json
 from collections import OrderedDict
 
+from google.oauth2 import service_account
 from google.cloud import spanner_dbapi
 from google.cloud.spanner_dbapi import Connection
 
@@ -51,9 +53,12 @@ class CloudSpannerHandler(DatabaseHandler):
             'database_id': self.connection_data.get('database_id'),
             'instance_id': self.connection_data.get('instance_id'),
             'project': self.connection_data.get('project'),
-            'credentials': self.connection_data.get('crendentials'),
+            'credentials': self.connection_data.get('credentials'),
         }
 
+        args['credentials'] = service_account.Credentials.from_service_account_info(
+            json.loads(args['credentials'])
+        )
         self.connection = spanner_dbapi.connect(**args)
         self.is_connected = True
 

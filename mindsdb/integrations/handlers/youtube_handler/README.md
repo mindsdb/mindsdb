@@ -20,6 +20,12 @@ Please follow this (link)[https://blog.hubspot.com/website/how-to-get-youtube-ap
   - [x] Support WHERE
   - [x] Support ORDER BY
   - [x] Support column selection
+- [x] Youtube video_channel table 
+  - [x] Support LIMIT
+  - [x] Support WHERE
+  - [x] Support ORDER BY
+  - [x] Support column selection
+
 
 
 ## Example Usage
@@ -51,3 +57,8 @@ WHERE youtube_video_id = "raWFGQ20OfA"
 ORDER BY display_name ASC
 LIMIT 5;
 ~~~~
+
+Sample Command for the channel handler
+# Get the channel with the ID "1234567890"
+SELECT * FROM mindsdb_youtube.get_channel
+WHERE id = "1234567890";

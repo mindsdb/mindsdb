@@ -1,4 +1,4 @@
-from mindsdb.integrations.handlers.youtube_handler.youtube_tables import YoutubeGetCommentsTable, YouTubeVideoTable
+from mindsdb.integrations.handlers.youtube_handler.youtube_tables import YoutubeGetCommentsTable, YoutubeGetVideoTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -37,7 +37,7 @@ class YoutubeHandler(APIHandler):
         youtube_video_comments_data =YoutubeGetCommentsTable(self)
         self._register_table("get_comments", youtube_video_comments_data)
 
-        self._register_table("get_video_resource", YouTubeVideoTable(self))
+        self._register_table("get_video_resource", YoutubeGetVideoTable(self))
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.
@@ -89,32 +89,34 @@ class YoutubeHandler(APIHandler):
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
 
-    def get_video_resource(self, video_id):
-        """Extracts the Video Resource data for a given video ID.
+def get_video_resource(self, video_id):
+    """Extracts the Video Resource data for a given video ID.
 
-        Args:
-            video_id: The ID of the video.
+    Args:
+        video_id: The ID of the video.
 
-        Returns:
-            None
-        """
+    Returns:
+        None
+    """
+    youtube = self.connect()
 
-        youtube = self.connection
+    request = youtube.videos().list(part='snippet', id=video_id)
+    response = request.execute()
 
-        request = youtube.videos().list(part='snippet', id=video_id)
-        response = request.execute()
+    video_resource = response['items'][0]
 
-        video_resource = response['items'][0]
-
-        # Insert the video resource data into the table
-        table = self.get_table("get_video_resource")
-        table.insert_row(
-            id=video_resource['id'],
-            title=video_resource['snippet']['title'],
-            description=video_resource['snippet']['description'],
-            thumbnail_url=video_resource['snippet']['thumbnails']['high']['url'],
-            publish_date=video_resource['snippet']['publishedAt']
-        )
+    # Insert the video resource data into the table
+    table = self.get_table("get_video_resource")
+    table.insert_row(
+        video_id=video_resource['id'],
+        title=video_resource['snippet']['title'],
+        description=video_resource['snippet']['description'],
+        publish_date=video_resource['snippet']['publishedAt'],
+        view_count=video_resource['statistics']['viewCount'],
+        like_count=video_resource['statistics']['likeCount'],
+        dislike_count=video_resource['statistics']['dislikeCount'],
+        comment_count=video_resource['statistics']['commentCount'],
+    )
 
 connection_args = OrderedDict(
     youtube_access_token={

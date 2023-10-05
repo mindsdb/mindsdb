@@ -1,32 +1,36 @@
 # Youtube Handler
 
-Youtube handler for MindsDB provides interfaces to connect with Youtube via APIs and pull the video comments of the particular video.
+The Youtube Handler for MindsDB provides interfaces to connect with YouTube via APIs and pull video comments and video information from YouTube.
 
-## Youtube
-Youtube is app that needs no introduction. It provides a great distrbution for all business and creators and It opens-up a great opportunity to do NLP on youtube comments
+## YouTube
+YouTube is a platform that needs no introduction. It provides great distribution for businesses and creators, and it opens up opportunities for natural language processing (NLP) on YouTube comments.
 
 ## Youtube Handler Initialization
 
-The Youtube handler is initialized with the following parameters:
+The Youtube handler is initialized with the following parameter:
 
-- `youtube_api_token`: Youtube API key to use for authentication 
-
-Please follow this (link)[https://blog.hubspot.com/website/how-to-get-youtube-api-key] to generate the token for accessing strava API
+- `youtube_api_token`: YouTube API key for authentication. You can obtain this token by following [these instructions](https://blog.hubspot.com/website/how-to-get-youtube-api-key).
 
 ## Implemented Features
 
-- [x] Youtube video_comments table 
+- [x] Youtube video_comments table
+  - [x] Support LIMIT
+  - [x] Support WHERE
+  - [x] Support ORDER BY
+  - [x] Support column selection
+- [x] Youtube video_resource table
   - [x] Support LIMIT
   - [x] Support WHERE
   - [x] Support ORDER BY
   - [x] Support column selection
 
-
 ## Example Usage
 
-The first step is to create a database with the new `Youtube` engine.
+### Create a Database
 
-~~~~sql
+The first step is to create a database with the new `Youtube` engine. Replace `<your-youtube-api-key-token>` with your actual YouTube API key.
+
+```sql
 CREATE DATABASE mindsdb_youtube
 WITH ENGINE = 'youtube',
 PARAMETERS = {
@@ -51,3 +55,10 @@ WHERE youtube_video_id = "raWFGQ20OfA"
 ORDER BY display_name ASC
 LIMIT 5;
 ~~~~
+
+query the get_video_resource table
+~~~~sql
+SELECT * FROM mindsdb_youtube.get_video_resource
+WHERE video_id = "<video-id>";
+~~~~
+

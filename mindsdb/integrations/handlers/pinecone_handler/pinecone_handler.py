@@ -168,14 +168,12 @@ class PineconeHandler(VectorStoreHandler):
                 resp_type=RESPONSE_TYPE.ERROR,
                 error_message=f"Error getting index '{table_name}', are you sure the name is correct?"
             )
-        data.dropna(axis=1, inplace=True)
         data.rename(columns={
             TableField.ID.value: "id",
             TableField.EMBEDDINGS.value: "values",
-            TableField.METADATA.value: "metadata",
-            TableField.CONTENT.value: "sparse_values"},
+            TableField.METADATA.value: "metadata"},
             inplace=True)
-        data = data[["id", "values", "metadata", "sparse_values"]]
+        data = data[["id", "values", "metadata"]]
         try:
             for chunk in (data[pos:pos + upsert_size] for pos in range(0, len(data), upsert_size)):
                 chunk = chunk.to_dict(orient="records")
@@ -299,15 +297,13 @@ class PineconeHandler(VectorStoreHandler):
             "id": TableField.ID.value,
             "metadata": TableField.METADATA.value,
             "values": TableField.EMBEDDINGS.value,
-            "sparse_values": TableField.CONTENT.value
         }
         results_df = pd.DataFrame.from_records(self._matches_to_dicts(result["matches"]))
         if len(results_df.columns) != 0:
             results_df.rename(columns=df_columns, inplace=True)
         else:
             results_df = pd.DataFrame(columns=list(df_columns.values()))
-        if TableField.CONTENT.value not in results_df.columns:
-            results_df[TableField.CONTENT.value] = np.nan
+        results_df[TableField.CONTENT.value] = ""
         return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=results_df[columns])
 
     def get_columns(self, table_name: str) -> HandlerResponse:

@@ -10,7 +10,6 @@ from mindsdb_sql.parser.ast import Identifier, Select, Star, NativeQuery
 import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 from mindsdb.integrations.utilities.sql_utils import make_sql_session
-from mindsdb.integrations.handlers_client.ml_client_factory import MLClientFactory
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 from mindsdb.interfaces.model.functions import get_model_records
@@ -112,7 +111,7 @@ def learn_process(payload, dataframe):
         fetch_data_query = payload['fetch_data_query']
         project_name = payload['project_name']
         predictor_id = payload['model_id']
-        engine = payload['handler_meta']['engine']
+        # engine = payload['handler_meta']['engine']
         integration_id = payload['handler_meta']['integration_id']
         base_predictor_id = payload.get('base_model_id')
         set_active = payload['set_active']
@@ -156,7 +155,6 @@ def learn_process(payload, dataframe):
             module_name, class_name = class_path
             module = importlib.import_module(module_name)
             HandlerClass = getattr(module, class_name)
-            HandlerClass = MLClientFactory(handler_class=HandlerClass, engine=engine)
 
             handlerStorage = HandlerStorage(integration_id)
             modelStorage = ModelStorage(predictor_id)

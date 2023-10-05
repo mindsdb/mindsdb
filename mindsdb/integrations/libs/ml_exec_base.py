@@ -44,7 +44,6 @@ from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 from mindsdb.utilities.context import context as ctx
 from mindsdb.interfaces.model.functions import get_model_records
-from mindsdb.integrations.handlers_client.ml_client_factory import MLClientFactory
 from mindsdb.utilities.functions import mark_process
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.ml_task_queue.producer import MLTaskProducer
@@ -87,8 +86,6 @@ class BaseMLEngineExec:
         self.dialect = 'mindsdb'
 
         self.is_connected = True
-
-        self.handler_class = MLClientFactory(handler_class=handler_class, engine=self.engine)
 
         self.base_ml_executor = process_cache
         if self.config['ml_task_queue']['type'] == 'redis':
@@ -169,12 +166,8 @@ class BaseMLEngineExec:
 
         project = self.database_controller.get_project(name=project_name)
 
-        # handler-side validation
-        # self.handler_class is a instance of MLClientFactory
-        # so need to check self.handler_class.handler_class attribute
-        # which is a class of a real MLHandler
-        if hasattr(self.handler_class.handler_class, 'create_validation'):
-            self.handler_class.handler_class.create_validation(target, args=problem_definition)
+        if hasattr(self.handler_class, 'create_validation'):
+            self.handler_class.create_validation(target, args=problem_definition)
 
         predictor_record = db.Predictor(
             company_id=ctx.company_id,

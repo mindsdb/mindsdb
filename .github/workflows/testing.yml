@@ -1,4 +1,4 @@
- name: MindsDB Testing
+name: MindsDB Testing
 
 on:
   push:

@@ -171,4 +171,5 @@ exclude =
   mindsdb/integrations/handlers/surrealdb_handler/*
   mindsdb/integrations/handlers/neuralforecast_handler/*
   mindsdb/integrations/handlers/postgres_handler/*
+  mindsdb/integrations/handlers/rag_handler/*
 max-complexity = 18

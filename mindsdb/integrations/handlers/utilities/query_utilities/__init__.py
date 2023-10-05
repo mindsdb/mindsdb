@@ -1,1 +1,2 @@
 from .select_query_utilities import SELECTQueryParser, SELECTQueryExecutor
+from .update_query_utilities import UPDATEQueryParser, UPDATEQueryExecutor

@@ -110,7 +110,8 @@ class TimeGPTHandler(BaseMLEngine):
 
         # infer date
         ds_col = model_args["order_by"]
-        results_df = infer_and_convert_column(results_df, ds_col, type='datetime')
+        if not pd.api.types.is_datetime64_any_dtype(results_df[ds_col]):
+            results_df[ds_col] = pd.to_datetime(results_df[ds_col])
 
         results_df = results_df.rename({'TimeGPT': model_args['target']}, axis=1)
 

@@ -55,37 +55,38 @@ class OrientDBHandler(DatabaseHandler):
         Returns:
             StatusResponse: A response object indicating the success of the connection.
         """
+
+        status_response = StatusResponse()
         if self.is_connected is False:
             # Configuration for connecting to the OrientDB server
-            client_config = {
-                "host": self.connection_data.get("host"),
-                "port": self.connection_data.get("port"),
-                "serialization_type": self.connection_data.get("serialization_type"),
-            }
-
             try:
                 # Create an OrientDB client
-                self.connection = OrientDB(**client_config)
+                self.connection = OrientDB(
+                    host=self.connection_data.get("host"),
+                    port=self.connection_data.get("port"),
+                )
             except Exception as e:
                 log.logger.error(f"Error in creating OrientDB client: {e}")
+                status_response.success = False
+                status_response.error_message = str(e)
 
             # Configuration for connecting to the OrientDB database
-            database_config = {
-                "column_name": self.connection_data.get("database"),
-                "user": self.connection_data.get("user"),
-                "password": self.connection_data.get("password"),
-            }
-
             try:
                 # Open the database connection
-                self.connection.db_open(**database_config)
+                self.connection.db_open(
+                    db_name=self.connection_data.get("database"),
+                    user=self.connection_data.get("user"),
+                    password=self.connection_data.get("password"),
+                )
             except Exception as e:
                 log.logger.error(
-                    f'Error connecting to OrientDB database: {self.connection_data.get("database")}, {e}!'
+                    f'Error connecting to database: {self.connection_data.get("database")}, {e}!'
                 )
+                status_response.success = False
+                status_response.error_message = str(e)
 
             self.is_connected = True
-        return self.connection
+        return status_response
 
     def disconnect(self):
         """
@@ -98,7 +99,6 @@ class OrientDBHandler(DatabaseHandler):
         self.connection.db_close()
         self.connection.close()
         self.is_connected = False
-        return
 
     def check_connection(self) -> StatusResponse:
         """
@@ -107,24 +107,24 @@ class OrientDBHandler(DatabaseHandler):
         Returns:
             StatusResponse: A response object indicating the success of the connection check.
         """
-        response = StatusResponse(False)
+        status_response = StatusResponse()
         need_to_close = self.is_connected is False
 
         try:
             self.connect()
-            response.success = self.is_connected
+            status_response.success = self.is_connected
         except Exception as e:
             log.logger.error(
                 f'Error connecting to OrientDB database: {self.connection_data.get("database")}, {e}!'
             )
-            response.error_message = str(e)
+            status_response.error_message = str(e)
 
-        if response.success is True and need_to_close:
+        if status_response.success is True and need_to_close:
             self.disconnect()
-        if response.success is False and self.is_connected is True:
+        if status_response.success is False and self.is_connected is True:
             self.is_connected = False
 
-        return response
+        return status_response
 
     def native_query(self, query: str) -> Response:
         """
@@ -137,16 +137,16 @@ class OrientDBHandler(DatabaseHandler):
             Response: A response object containing the query results.
         """
         need_to_close = self.is_connected is False
-        connection = self.connect()
+        self.connect()
 
         try:
             # Handle batch queries with multiple statements
             semicolon_count = query.count(";")
             if semicolon_count > 1:
                 query = "BEGIN;\n" + query + "\nCOMMIT RETRY 100;"
-                results = connection.batch(query)
+                results = self.connection.batch(query)
             else:
-                results = connection.command("query")
+                results = self.connection.command(query)
 
             data = [r.oRecordData for r in results]
             response = Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(data))
@@ -192,11 +192,13 @@ class OrientDBHandler(DatabaseHandler):
         WHERE name = '{table_name}')
         """
 
-        connection = self.connect()
-        columns = connection.command(query)
+        self.connect()
+        columns = self.connection.command(query)
 
-        column_name = f"Columns_in_{table_name}"
-        data = {column_name: [c["name"] for c in columns]}
+        data = {
+            "column_name": [c["name"] for c in columns],
+            "data_type": [c["type"] for c in columns],
+        }
 
         response = Response(
             RESPONSE_TYPE.TABLE,
@@ -212,28 +214,30 @@ class OrientDBHandler(DatabaseHandler):
             Response: A response object containing the list of table names.
         """
         default_tables = [
-            "OIdentity",
-            "ORole",
-            "V",
+            "_studio",
             "E",
             "OFunction",
+            "OIdentity",
+            "ORestricted",
+            "ORole",
             "OSchedule",
-            "OUser",
+            "OSequence",
             "OTriggered",
+            "OUser",
+            "V",
         ]
 
         query = "SELECT expand(classes) FROM metadata:schema"
-        connection = self.connect()
-        tables = connection.command(query)
+        self.connect()
 
-        column_name = f"Tables_in_{self.collection_data['database']}"
-        data = {column_name: []}
+        tables = self.connection.command(query)
+        data = {"table_name": []}
 
         for t in tables:
             record_data = t.oRecordData
             record_name = record_data["name"]
             if record_name not in default_tables:
-                data[column_name].append(record_name)
+                data["table_name"].append(record_name)
 
         response = Response(
             RESPONSE_TYPE.TABLE,

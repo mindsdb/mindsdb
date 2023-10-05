@@ -158,7 +158,6 @@ class TripAdvisorAPI:
             response = self.location_details(
                 url, params_dict, params_dict["locationId"]
             )
-            print(response)
             return response.json()
 
         elif apiCall == TripAdvisorAPICall.REVIEWS:

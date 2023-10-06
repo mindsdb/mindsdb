@@ -287,11 +287,11 @@ class WeaviateDBHandler(VectorStoreHandler):
 
         data = data.to_dict(orient="records")
         for record in data:
-            id = self._client.data_object.create(data_object={"content": record.get(TableField.CONTENT.value),
-                                                              "metadata": str(record.get(TableField.METADATA.value))},
-                                                 class_name=table_name,
-                                                 vector=record[TableField.EMBEDDINGS.value],
-                                                 uuid=record[TableField.ID.value])
+            _ = self._client.data_object.create(data_object={"content": record.get(TableField.CONTENT.value),
+                                                             "metadata": str(record.get(TableField.METADATA.value))},
+                                                class_name=table_name,
+                                                vector=record[TableField.EMBEDDINGS.value],
+                                                uuid=record[TableField.ID.value])
 
         return Response(resp_type=RESPONSE_TYPE.OK)
 

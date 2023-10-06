@@ -20,11 +20,11 @@ from couchbase.exceptions import KeyspaceNotFoundException, CouchbaseException
 
 class CouchbaseHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Couchbase statements. 
+    This handler handles connection and execution of the Couchbase statements.
     """
 
     name = 'couchbase'
-    #TODO: Check the timeout value with the sdk default time
+    # TODO: Check the timeout value with the sdk default time
     DEFAULT_TIMEOUT_SECONDS = 60
 
     def __init__(self, name, **kwargs):
@@ -41,7 +41,7 @@ class CouchbaseHandler(DatabaseHandler):
     def connect(self):
         """
         Set up connections required by the handler.
-        
+
         Returns:
             The connected cluster.
         """
@@ -75,8 +75,8 @@ class CouchbaseHandler(DatabaseHandler):
             self.cluster = cluster
         except UnAmbiguousTimeoutException:
             self.is_connected = False
-            raise 
-        
+            raise
+
         return self.cluster
 
     def disconnect(self):
@@ -111,17 +111,17 @@ class CouchbaseHandler(DatabaseHandler):
 
     def native_query(self, query: str) -> Response:
         """Execute a raw query against Couchbase.
-        
+
         Args:
             query (str): Raw Couchbase query.
-            
+
         Returns:
             HandlerResponse containing query results.
         """
         self.connect()
         bucket = self.cluster.bucket(self.bucket_name)
         cb = bucket.scope(self.scope)
-        
+
         data = {}
         try:
             for collection in cb.query(query):
@@ -132,11 +132,11 @@ class CouchbaseHandler(DatabaseHandler):
                     else:
                         for k, v in collection.items():
                             data.setdefault(k, []).append(v)
-            
+
             response = Response(RESPONSE_TYPE.TABLE, pd.DataFrame(data) if data else RESPONSE_TYPE.OK)
         except CouchbaseException as e:
             response = Response(RESPONSE_TYPE.ERROR, error_message=str(e.error_context.first_error_message))
-        
+
         return response
 
     def query(self, query: ASTNode) -> Response:

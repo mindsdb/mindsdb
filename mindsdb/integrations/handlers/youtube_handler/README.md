@@ -58,3 +58,11 @@ SELECT * FROM mindsdb_youtube.channel where channel_id="UC-..."
 ~~~~
 
 Here, `channel_id` column is mandatory in the where clause.
+
+Get information about any youtube video using video_id:
+
+~~~~sql
+select * from mindsdb_youtube.video where video_id="id"
+~~~~
+
+`video_id` is a mandatory column in the where clause.

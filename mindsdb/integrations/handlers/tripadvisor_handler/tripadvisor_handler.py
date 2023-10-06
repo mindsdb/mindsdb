@@ -39,7 +39,6 @@ class TripAdvisorHandler(APIHandler):
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
 
-        print("INPUT: ", kwargs)
         args = kwargs.get("connection_data", {})
         self._tables = {}
 
@@ -70,8 +69,6 @@ class TripAdvisorHandler(APIHandler):
 
         if self.is_connected is True:
             return self.api
-
-        print("CONNECTION ARGS: ", self.connection_args)
 
         self.api = TripAdvisorAPI(api_key=self.connection_args["api_key"])
 
@@ -130,7 +127,6 @@ class TripAdvisorHandler(APIHandler):
             result.append(data)
 
         result = pd.DataFrame(result)
-        print(result)
         return result
 
     def call_tripadvisor_location_details_api(
@@ -194,10 +190,7 @@ class TripAdvisorHandler(APIHandler):
 
         result.append(data)
 
-        print(result)
-
         result = pd.DataFrame(result)
-        print(result)
         return result
 
     def call_tripadvisor_reviews_api(
@@ -232,5 +225,4 @@ class TripAdvisorHandler(APIHandler):
             result.append(data)
 
         result = pd.DataFrame(result)
-        print(result)
         return result

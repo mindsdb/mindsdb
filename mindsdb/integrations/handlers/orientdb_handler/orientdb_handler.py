@@ -29,7 +29,6 @@ class OrientDBHandler(DatabaseHandler):
 
         Keyword Args:
             connection_data (dict): Connection data for OrientDB.
-
         """
         super().__init__(name)
         self.connection_data = kwargs.get("connection_data")

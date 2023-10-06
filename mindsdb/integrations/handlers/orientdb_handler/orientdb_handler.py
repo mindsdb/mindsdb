@@ -2,12 +2,10 @@ from collections import OrderedDict
 
 import pandas as pd
 from mindsdb.integrations.libs.base import DatabaseHandler
-from mindsdb.integrations.libs.const import \
-    HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse as Response
-from mindsdb.integrations.libs.response import \
-    HandlerStatusResponse as StatusResponse
+from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.utilities import log
 from mindsdb_sql.parser.ast.base import ASTNode
 from pyorient import OrientDB
@@ -234,6 +232,22 @@ class OrientDBHandler(DatabaseHandler):
             record_name = record_data["name"]
             if record_name not in default_tables:
                 data["table_name"].append(record_name)
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(data),
+        )
+        return response
+
+    def get_databases(self) -> Response:
+        """
+        Get a list of databases in the OrientDB client.
+
+        Returns:
+            Response: A response object containing the list of database names.
+        """
+        dbs = self.connection.db_list()
+        data = {"db_name": dbs}
 
         response = Response(
             RESPONSE_TYPE.TABLE,

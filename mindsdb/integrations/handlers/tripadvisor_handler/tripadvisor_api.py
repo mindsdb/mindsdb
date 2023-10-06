@@ -48,7 +48,7 @@ class TripAdvisorAPI:
         response = requests.get(url, headers=headers)
         return response
 
-    def processQuery(self, url: str, params_dict: dict) -> str:
+    def getURLQuery(self, url: str, params_dict: dict) -> str:
         """
         Processing the query and adding parameters to the URL
         """
@@ -95,7 +95,7 @@ class TripAdvisorAPI:
             api_key=self.api_key, language=language
         )
 
-        url = self.processQuery(url, params_dict)
+        url = self.getURLQuery(url, params_dict)
         response = self.getResponse(url)
 
         return response
@@ -118,7 +118,7 @@ class TripAdvisorAPI:
         url = url + "{locationId}/details?language={language}&key={api_key}&".format(
             locationId=locationId, api_key=self.api_key, language=language
         )
-        url = self.processQuery(url, params_dict)
+        url = self.getURLQuery(url, params_dict)
         response = self.getResponse(url)
 
         return response
@@ -143,9 +143,9 @@ class TripAdvisorAPI:
         response = self.getResponse(url)
         return response
 
-    def makeRequest(self, apiCall, **params):
+    def getTripAdvisorData(self, apiCall, **params):
         """
-        Making a request based on the query
+        Making a request based on the query and receive data from TripAdvisor.
         """
         url = "https://api.content.tripadvisor.com/api/v1/location/"
         params_dict = params

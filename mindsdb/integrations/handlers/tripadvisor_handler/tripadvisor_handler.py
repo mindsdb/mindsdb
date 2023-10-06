@@ -103,7 +103,9 @@ class TripAdvisorHandler(APIHandler):
         if self.is_connected is False:
             self.connect()
 
-        locations = self.api.makeRequest(TripAdvisorAPICall.SEARCH_LOCATION, **params)
+        locations = self.api.getTripAdvisorData(
+            TripAdvisorAPICall.SEARCH_LOCATION, **params
+        )
         result = []
 
         for loc in locations:
@@ -136,7 +138,7 @@ class TripAdvisorHandler(APIHandler):
         if self.is_connected is False:
             self.connect()
 
-        loc = self.api.makeRequest(TripAdvisorAPICall.LOCATION_DETAILS, **params)
+        loc = self.api.getTripAdvisorData(TripAdvisorAPICall.LOCATION_DETAILS, **params)
         result = []
 
         data = {
@@ -200,7 +202,7 @@ class TripAdvisorHandler(APIHandler):
         if self.is_connected is False:
             self.connect()
 
-        locations = self.api.makeRequest(TripAdvisorAPICall.REVIEWS, **params)
+        locations = self.api.getTripAdvisorData(TripAdvisorAPICall.REVIEWS, **params)
         result = []
 
         for loc in locations:

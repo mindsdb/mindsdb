@@ -19,51 +19,28 @@ class SearchLocationTable(APITable):
 
         conditions = extract_comparison_conditions(query.where)
 
+        allowed_keys = set(
+            [
+                "searchQuery",
+                "category",
+                "phone",
+                "address",
+                "latLong",
+                "radius",
+                "radiusUnit",
+                "language",
+            ]
+        )
+
         params = {}
         filters = []
         for op, arg1, arg2 in conditions:
             if op == "or":
                 raise NotImplementedError(f"OR is not supported")
-            if arg1 == "searchQuery":
-                if op == "=":
-                    params[arg1] = arg2
-                else:
-                    NotImplementedError(f"Unknown op: {op}")
-            elif arg1 == "category":
-                if op == "=":
-                    params[arg1] = arg2
-                else:
-                    NotImplementedError(f"Unknown op: {op}")
-            elif arg1 == "phone":
-                if op == "=":
-                    params[arg1] = arg2
-                else:
-                    NotImplementedError(f"Unknown op: {op}")
-            elif arg1 == "address":
-                if op == "=":
-                    params[arg1] = arg2
-                else:
-                    NotImplementedError(f"Unknown op: {op}")
-            elif arg1 == "latLong":
-                if op == "=":
-                    params[arg1] = arg2
-                else:
-                    NotImplementedError(f"Unknown op: {op}")
-            elif arg1 == "radius":
-                if op == "=":
-                    params[arg1] = arg2
-                else:
-                    NotImplementedError(f"Unknown op: {op}")
-            elif arg1 == "radiusUnit":
-                if op == "=":
-                    params[arg1] = arg2
-                else:
-                    NotImplementedError(f"Unknown op: {op}")
-            elif arg1 == "language":
-                if op == "=":
-                    params[arg1] = arg2
-                else:
-                    NotImplementedError(f"Unknown op: {op}")
+            elif op == "=" and arg1 in allowed_keys:
+                params[arg1] = arg2
+            elif op != "=":
+                raise NotImplementedError(f"Unknown op: {op}")
             else:
                 filters.append([op, arg1, arg2])
 
@@ -146,26 +123,17 @@ class LocationDetailsTable(APITable):
 
         conditions = extract_comparison_conditions(query.where)
 
+        allowed_keys = set(["locationId", "currency", "language"])
+
         params = {}
         filters = []
         for op, arg1, arg2 in conditions:
             if op == "or":
                 raise NotImplementedError(f"OR is not supported")
-            if arg1 == "locationId":
-                if op == "=":
-                    params[arg1] = arg2
-                else:
-                    NotImplementedError(f"Unknown op: {op}")
-            elif arg1 == "currency":
-                if op == "=":
-                    params[arg1] = arg2
-                else:
-                    NotImplementedError(f"Unknown op: {op}")
-            elif arg1 == "language":
-                if op == "=":
-                    params[arg1] = arg2
-                else:
-                    NotImplementedError(f"Unknown op: {op}")
+            elif op == "=" and arg1 in allowed_keys:
+                params[arg1] = arg2
+            elif op != "=":
+                raise NotImplementedError(f"Unknown op: {op}")
             else:
                 filters.append([op, arg1, arg2])
 
@@ -272,21 +240,17 @@ class ReviewsTable(APITable):
 
         conditions = extract_comparison_conditions(query.where)
 
+        allowed_keys = set(["locationId", "language"])
+
         params = {}
         filters = []
         for op, arg1, arg2 in conditions:
             if op == "or":
                 raise NotImplementedError(f"OR is not supported")
-            if arg1 == "locationId":
-                if op == "=":
-                    params[arg1] = arg2
-                else:
-                    NotImplementedError(f"Unknown op: {op}")
-            elif arg1 == "language":
-                if op == "=":
-                    params[arg1] = arg2
-                else:
-                    NotImplementedError(f"Unknown op: {op}")
+            elif op == "=" and arg1 in allowed_keys:
+                params[arg1] = arg2
+            elif op != "=":
+                raise NotImplementedError(f"Unknown op: {op}")
             else:
                 filters.append([op, arg1, arg2])
 

@@ -26,7 +26,6 @@ class DocumentDBHandler(MongoDBHandler):
         self.connection = None
         self.is_connected = False
 
-
     def connect(self):
         kwargs = {}
         if isinstance(self.user, str) and len(self.user) > 0:
@@ -44,6 +43,7 @@ class DocumentDBHandler(MongoDBHandler):
         self.is_connected = True
         self.connection = connection
         return self.connection
+
 
 connection_args = OrderedDict(
     user={
@@ -83,6 +83,7 @@ connection_args = OrderedDict(
         'label': 'Kwargs'
     },
 )
+
 
 connection_args_example = OrderedDict(
     host='127.0.0.1',

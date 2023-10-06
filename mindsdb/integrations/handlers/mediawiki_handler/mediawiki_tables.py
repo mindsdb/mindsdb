@@ -59,7 +59,6 @@ class PagesTable(APITable):
         
         update_statements_parser = UPDATEQueryParser(
             query,
-            'pages',
             self.get_columns()
         )
         set_clauses, where_conditions = update_statements_parser.parse_query()
@@ -76,6 +75,16 @@ class PagesTable(APITable):
         pages_df = update_statement_executor.execute_query()
 
         return pages_df
+    
+        """         
+        Fetch Login
+        Login
+        CSRF
+        API:Edit {
+            title:
+            content:
+            etc:
+        } """
 
         
     def get_columns(self) -> List[str]:

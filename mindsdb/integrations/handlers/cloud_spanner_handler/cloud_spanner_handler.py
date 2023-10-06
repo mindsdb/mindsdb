@@ -4,10 +4,13 @@ from collections import OrderedDict
 from google.oauth2 import service_account
 from google.cloud import spanner_dbapi
 from google.cloud.spanner_dbapi import Connection
+from google.cloud.sqlalchemy_spanner import SpannerDialect
 
 import pandas as pd
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql.parser.ast import CreateTable, Function
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.const import (
@@ -29,8 +32,13 @@ class CloudSpannerHandler(DatabaseHandler):
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'googlesql'
         self.connection_data = kwargs.get('connection_data')
+        self.dialect = self.connection_data.get('dialect', 'googlesql')
+
+        if self.dialect == 'postgres':
+            self.renderer = SqlalchemyRender('postgres')
+        else:
+            self.renderer = SqlalchemyRender(SpannerDialect)
 
         self.connection = None
         self.is_connected = False
@@ -211,6 +219,11 @@ connection_args = OrderedDict(
     project={
         'type': ARG_TYPE.STR,
         'description': 'The Cloud Spanner project indentifier.',
+    },
+    dialect={
+        'type': ARG_TYPE.STR,
+        'description': 'Dialect of the database',
+        "required": False,
     },
     credentials={
         'type': ARG_TYPE.STR,

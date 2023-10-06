@@ -69,3 +69,53 @@ class INSERTQueryParser:
         Parses the values in the query.
         """
         return self.query.values
+
+class INSERTQueryExecutor(BaseQueryExecutor):
+    """
+    Executes an INSERT query.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Given table.
+    where_conditions : List[List[Text]]
+        WHERE conditions of the query.
+
+    """
+    def __init__(self, df: pd.DataFrame, set_clauses: List[Tuple[Text, Any]], where_conditions: List[List[Text]]):
+        self.df = df
+        self.set_clauses = set_clauses
+        self.where_conditions = where_conditions
+
+    def execute_query(self) -> pd.DataFrame:
+        """
+        Execute the query.
+        """
+        self.execute_where_clause()
+
+        self.execute_set_clauses()
+
+        return self.df
+
+    def execute_set_clauses(self)  -> None:
+        """
+        Execute the set clause of the query.
+        """
+        for column, value in self.set_clauses.items():
+            if not isinstance(column, str):
+                raise ValueError("The column name should be a string")
+
+            self.df[column] = value
+
+    def execute_where_clause(self) -> None:
+        """
+        Execute the where clause of the query.
+        """
+        if len(self.where_conditions) > 0:
+            for condition in self.where_conditions:
+                column = condition[1]
+                operator = '==' if condition[0] == '=' else condition[0]
+                value = f"'{condition[2]}'" if type(condition[2]) == str else condition[2]
+
+                query = f"{column} {operator} {value}"
+                self.df.query(query, inplace=True)

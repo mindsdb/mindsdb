@@ -69,7 +69,7 @@ class WeaviateDBHandler(VectorStoreHandler):
     def connect(self):
         """Connect to a weaviate database."""
         log.logger.error("connected!")
-        if self.is_connected is True:
+        if self.is_connected:
             return self._client
 
         try:
@@ -83,7 +83,7 @@ class WeaviateDBHandler(VectorStoreHandler):
     def disconnect(self):
         """Close the database connection."""
 
-        if self.is_connected is False:
+        if not self.is_connected:
             return
 
         self._client = None
@@ -92,7 +92,7 @@ class WeaviateDBHandler(VectorStoreHandler):
     def check_connection(self):
         """Check the connection to the Weaviate database."""
         response_code = StatusResponse(False)
-        need_to_close = self.is_connected is False
+        need_to_close = not self.is_connected
 
         try:
             if self._client.is_live():
@@ -101,14 +101,15 @@ class WeaviateDBHandler(VectorStoreHandler):
             log.logger.error(f"Error connecting to weaviate , {e}!")
             response_code.error_message = str(e)
         finally:
-            if response_code.success is True and need_to_close:
+            if response_code.success and need_to_close:
                 self.disconnect()
-            if response_code.success is False and self.is_connected is True:
+            if not response_code.success and self.is_connected:
                 self.is_connected = False
 
         return response_code
 
-    def _get_weaviate_operator(self, operator: FilterOperator) -> str:
+    @staticmethod
+    def _get_weaviate_operator(operator: FilterOperator) -> str:
         mapping = {
             FilterOperator.EQUAL: "Equal",
             FilterOperator.NOT_EQUAL: "NotEqual",
@@ -125,7 +126,8 @@ class WeaviateDBHandler(VectorStoreHandler):
 
         return mapping[operator]
 
-    def _get_weaviate_value_type(self, value) -> str:
+    @staticmethod
+    def _get_weaviate_value_type(value) -> str:
         value_type = None,
         if isinstance(value, list):
             value_list_types = {
@@ -151,7 +153,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         return value_type
 
     def _translate_condition(
-            self, conditions: List[FilterCondition]
+            self, table_name: str, conditions: List[FilterCondition] = None, meta_conditions: List[FilterCondition] = None,
     ) -> Optional[dict]:
         """
         Translate a list of FilterCondition objects a dict that can be used by Weaviate.
@@ -177,21 +179,34 @@ class WeaviateDBHandler(VectorStoreHandler):
         }
         """
         # we ignore all non-metadata conditions
-        if conditions is None:
+        if conditions is None and meta_conditions is None:
             return None
 
         # we translate each condition into a dict
         weaviate_conditions = []
-        for condition in conditions:
-            column_key = condition.column.split(".")[-1]
-            value_type = self._get_weaviate_value_type(condition.value)
-            weaviate_conditions.append(
-                {
-                    'path': [column_key],
-                    'operator': self._get_weaviate_operator(condition.op),
-                    value_type: condition.value
-                }
-            )
+        if conditions is not None:
+
+            for condition in conditions:
+                column_key = condition.column
+                value_type = self._get_weaviate_value_type(condition.value)
+                weaviate_conditions.append(
+                    {
+                        'path': [column_key],
+                        'operator': self._get_weaviate_operator(condition.op),
+                        value_type: condition.value
+                    }
+                )
+        if meta_conditions is not None:
+            for condition in meta_conditions:
+                meta_key = condition.column.split(".")[-1]
+                value_type = self._get_weaviate_value_type(condition.value)
+                weaviate_conditions.append(
+                    {
+                        'path': ["associatedMetadata", table_name.capitalize() + "_metadata", meta_key],
+                        'operator': self._get_weaviate_operator(condition.op),
+                        value_type: condition.value
+                    }
+                )
 
         # we combine all conditions into a single dict
         all_conditions = (
@@ -211,8 +226,14 @@ class WeaviateDBHandler(VectorStoreHandler):
             limit: int = None,
     ) -> HandlerResponse:
 
-        filters = self._translate_condition(conditions)
-        fixed_columns = ["id", "embeddings", "distance"]
+        fixed_columns = ["id", "embeddings", "distance", "metadata"]
+        filters = None
+        if conditions is not None:
+            filters = self._translate_condition(table_name, [condition for condition in conditions
+                                                 if not condition.column.startswith(TableField.METADATA.value)],
+                                                [condition for condition in conditions
+                                                 if condition.column.startswith(TableField.METADATA.value)])
+
         # check if embedding vector filter is present
         vector_filter = (
             []
@@ -221,9 +242,10 @@ class WeaviateDBHandler(VectorStoreHandler):
                 condition
                 for condition in conditions
                 if condition.column == TableField.SEARCH_VECTOR.value or
-                condition.column == TableField.EMBEDDINGS.value
+                   condition.column == TableField.EMBEDDINGS.value
             ]
         )
+
         if len(vector_filter) > 0:
             vector_filter = vector_filter[0]
         else:
@@ -232,14 +254,23 @@ class WeaviateDBHandler(VectorStoreHandler):
         for col in fixed_columns:
             if col in columns:
                 columns.remove(col)
-
+        metadata_fields = " ".join(
+            [prop['name'] for prop in self._client.schema.get(table_name.capitalize() + "_metadata")['properties']])
         if columns is not None and len(columns) > 0:
-            query = self._client.query.get(table_name, columns).with_additional(["id vector distance"])
+            query = self._client.query.get(table_name, columns + [
+                "associatedMetadata {... on " + table_name.capitalize() + "_metadata { " + metadata_fields + " }}"]).with_additional(
+                ["id vector distance"])
         else:
-            query = self._client.query.get(table_name).with_additional(["id vector distance"])
+            query = self._client.query.get(table_name, [
+                "associatedMetadata {... on " + table_name.capitalize() + "_metadata { " + metadata_fields + " }}"]).with_additional(
+                ["id vector distance"])
         if vector_filter is not None:
             # similarity search
-            query = query.with_hybrid(query=vector_filter.column, vector=vector_filter.value)
+            # assuming the similarity search is on content
+            near_vector = {
+                "vector": vector_filter.value
+            }
+            query = query.with_near_vector(near_vector)
         if filters is not None:
             query = query.with_where(filters)
         if limit is not None:
@@ -249,22 +280,23 @@ class WeaviateDBHandler(VectorStoreHandler):
         ids = [query_obj['_additional']["id"] for query_obj in result]
         contents = [query_obj.get("content") for query_obj in result]
         distances = [query_obj.get('_additional').get("distance") for query_obj in result]
-        vector = [query_obj.get('_additional').get("vector") for query_obj in result]
-        metadatas = [query_obj.get("metadata") for query_obj in result]
+        vectors = [query_obj.get('_additional').get("vector") for query_obj in result]
+        metadatas = [query_obj.get("associatedMetadata") for query_obj in result]
 
         # project based on columns
         payload = {
             TableField.ID.value: ids,
             TableField.CONTENT.value: contents,
             TableField.METADATA.value: metadatas,
-            TableField.EMBEDDINGS.value: vector,
+            TableField.EMBEDDINGS.value: vectors,
+            TableField.SEARCH_VECTOR.value: vectors,
             TableField.DISTANCE.value: distances
         }
 
         if columns is not None:
             payload = {
                 column: payload[column]
-                for column in columns+fixed_columns
+                for column in columns + fixed_columns
                 if column != TableField.EMBEDDINGS.value
             }
 
@@ -287,12 +319,16 @@ class WeaviateDBHandler(VectorStoreHandler):
 
         data = data.to_dict(orient="records")
         for record in data:
-            _ = self._client.data_object.create(data_object={"content": record.get(TableField.CONTENT.value),
-                                                             "metadata": str(record.get(TableField.METADATA.value))},
+            metadata_data = record.get(TableField.METADATA.value)
+            meta_id = self.add_metadata(metadata_data, table_name)
+            obj_id = self._client.data_object.create(data_object={"content": record.get(TableField.CONTENT.value)},
                                                 class_name=table_name,
-                                                vector=record[TableField.EMBEDDINGS.value],
-                                                uuid=record[TableField.ID.value])
-
+                                                vector=record[TableField.EMBEDDINGS.value])
+            self._client.data_object.reference.add(
+                from_uuid=obj_id,
+                from_property_name='associatedMetadata',
+                to_uuid=meta_id
+            )
         return Response(resp_type=RESPONSE_TYPE.OK)
 
     def update(
@@ -316,25 +352,55 @@ class WeaviateDBHandler(VectorStoreHandler):
     def delete(
             self, table_name: str, conditions: List[FilterCondition] = None
     ) -> HandlerResponse:
-        filters = self._translate_condition(conditions)
+        filters = self._translate_condition(table_name, conditions)
 
         if filters is None:
             raise Exception("Delete query must have at least one condition!")
-        self._client.batch.delete_objects(
-            class_name=table_name,
-            where=filters)
+        result = self._client.query.get(table_name,
+                                        "associatedMetadata { ... on " + table_name.capitalize() + "_metadata { id } }").with_additional(
+            ["id"]).with_where(filters).do()
+        result = result['data']["Get"][table_name]
+        for query_obj in result:
+            obj_id = query_obj['_additional']["id"]
+            meta_id = query_obj[table_name.capitalize() + '_metadata']["id"]
+            self._client.data_object.reference.delete(
+                from_class_name=table_name,
+                from_uuid=obj_id,
+                from_property_name="associatedMetadata",
+                to_class_name=table_name.capitalize() + "_metadata",
+                to_uuid=meta_id,
+            )
+            self._client.data_object.delete(
+                uuid=meta_id,
+                class_name='Metadata',
+            )
+            self._client.data_object.delete(
+                uuid=obj_id,
+                class_name=table_name,
+            )
         return Response(resp_type=RESPONSE_TYPE.OK)
 
     def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
         """
         Create a class with the given name in the weaviate database.
         """
-        log.logger.error("adding table!")
+        if not self._client.schema.exists(table_name.capitalize() + '_metadata'):
+            self._client.schema.create_class({"class": table_name.capitalize() + '_metadata'})
         if not self._client.schema.exists(table_name):
             self._client.schema.create_class({"class": table_name,
                                               'properties': [{"dataType": ['text'],
                                                               "name": prop['name']} for prop in self.SCHEMA
-                                                             if prop["name"] != "id" and prop['name'] != 'embeddings']})
+                                                             if prop["name"] != "id" and prop[
+                                                                 'name'] != 'embeddings' and prop[
+                                                                 'name'] != 'metadata'],
+                                              "vectorIndexType": "hnsw"
+                                              })
+            add_prop = {
+                'name': 'associatedMetadata',
+                'dataType': [table_name.capitalize() + '_metadata'],
+            }
+            self._client.schema.property.create(table_name, add_prop)
+
         return Response(resp_type=RESPONSE_TYPE.OK)
 
     def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
@@ -381,6 +447,33 @@ class WeaviateDBHandler(VectorStoreHandler):
             data_frame=data,
             resp_type=RESPONSE_TYPE.OK
         )
+
+    def add_metadata(self, data: dict, table_name: str):
+        self._client.schema.get(table_name.capitalize() + '_metadata')
+        added_prop_list = [prop['name'] for prop in
+                           self._client.schema.get(table_name.capitalize() + '_metadata')['properties']]
+        for prop in data.keys():
+            if prop not in added_prop_list:
+                if isinstance(data[prop], int):
+                    add_prop = {
+                        'name': prop,
+                        'dataType': ['int'],
+                    }
+                elif isinstance(data[prop][0], datetime):
+                    add_prop = {
+                        'name': prop,
+                        'dataType': ['date'],
+                    }
+                else:
+                    add_prop = {
+                        'name': prop,
+                        'dataType': ['string'],
+                    }
+                self._client.schema.property.create(table_name.capitalize() + '_metadata', add_prop)
+
+        metadata_id = self._client.data_object.create(data_object=data,
+                                                      class_name=table_name.capitalize() + '_metadata')
+        return metadata_id
 
 
 connection_args = OrderedDict(

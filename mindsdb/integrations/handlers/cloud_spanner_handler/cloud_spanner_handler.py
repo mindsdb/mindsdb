@@ -157,10 +157,22 @@ class CloudSpannerHandler(DatabaseHandler):
         Returns:
             Response: The query result.
         """
-        if isinstance(query, ASTNode):
-            query_str = query.to_string()
-        else:
-            query_str = str(query)
+
+        # check primary key for table:
+        if isinstance(query, CreateTable) and query.columns is not None:
+            id_col = None
+            has_primary = False
+            for col in query.columns:
+                if col.name.lower() == 'id':
+                    id_col = col
+                if col.is_primary_key:
+                    has_primary = True
+            # if no other primary keys use id
+            if not has_primary and id_col:
+                id_col.is_primary_key = True
+                id_col.default = Function('GENERATE_UUID', args=[])
+
+        query_str = self.renderer.get_string(query, with_failback=True)
 
         return self.native_query(query_str)
 

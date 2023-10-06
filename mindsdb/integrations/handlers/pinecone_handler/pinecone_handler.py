@@ -25,6 +25,7 @@ class PineconeHandler(VectorStoreHandler):
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
+        self.MAX_FETCH_LIMIT = 10000
         self._connection_data = kwargs.get("connection_data")
         self._client_config = {
             "api_key": self._connection_data.get("api_key"),
@@ -265,7 +266,7 @@ class PineconeHandler(VectorStoreHandler):
         if limit is not None:
             query["top_k"] = limit
         else:
-            query["top_k"] = 10000
+            query["top_k"] = self.MAX_FETCH_LIMIT
         if metadata_filters is not None:
             query["filter"] = metadata_filters
         # check for id filter
@@ -277,7 +278,7 @@ class PineconeHandler(VectorStoreHandler):
                 if condition.column == TableField.ID.value
             ] or None
         if id_filters:
-            if len(id_filters) > 1:
+            if bool(len(id_filters)):
                 return Response(
                     resp_type=RESPONSE_TYPE.ERROR,
                     error_message="You cannot have multiple IDs in query"
@@ -299,7 +300,7 @@ class PineconeHandler(VectorStoreHandler):
             "values": TableField.EMBEDDINGS.value,
         }
         results_df = pd.DataFrame.from_records(self._matches_to_dicts(result["matches"]))
-        if len(results_df.columns) != 0:
+        if bool(len(results_df.columns)):
             results_df.rename(columns=df_columns, inplace=True)
         else:
             results_df = pd.DataFrame(columns=list(df_columns.values()))

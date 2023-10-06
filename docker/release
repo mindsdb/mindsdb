@@ -102,7 +102,7 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==23.1.2 &
     pip install --prefer-binary --no-cache-dir 'pymsteams' || true && \
     pip install --prefer-binary --no-cache-dir bs4 pymupdf || true && \
     pip install --prefer-binary --no-cache-dir 'sib_api_v3_sdk' || true && \
-    pip install --prefer-binary --no-cache-dir 'pytrends' || true && \
+    pip install --prefer-binary --no-cache-dir 'newsapi-python' || true && \
 
 
 ARG VERSION=

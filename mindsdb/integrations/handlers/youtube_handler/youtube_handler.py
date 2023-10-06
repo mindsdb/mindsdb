@@ -1,4 +1,4 @@
-from mindsdb.integrations.handlers.youtube_handler.youtube_tables import YoutubeGetCommentsTable
+from mindsdb.integrations.handlers.youtube_handler.youtube_tables import YoutubeGetCommentsTable, YoutubeVideoTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -36,6 +36,9 @@ class YoutubeHandler(APIHandler):
 
         youtube_video_comments_data =YoutubeGetCommentsTable(self)
         self._register_table("get_comments", youtube_video_comments_data)
+
+        youtube_video_data = YoutubeVideoTable(self)
+        self._register_table("video", youtube_video_data)
 
 
     def connect(self) -> StatusResponse:

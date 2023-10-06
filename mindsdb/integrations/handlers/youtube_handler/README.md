@@ -50,4 +50,19 @@ SELECT * FROM mindsdb_youtube.get_comments
 WHERE youtube_video_id = "raWFGQ20OfA"
 ORDER BY display_name ASC
 LIMIT 5;
+
+Given a channel_id, get information about the channel
+
+~~~~sql
+SELECT * FROM mindsdb_youtube.channel where channel_id="UC-..."
 ~~~~
+
+Here, `channel_id` column is mandatory in the where clause.
+
+Get information about any youtube video using video_id:
+
+~~~~sql
+select * from mindsdb_youtube.video where video_id="id"
+~~~~
+
+`video_id` is a mandatory column in the where clause.

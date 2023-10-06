@@ -61,7 +61,7 @@ class OrientDBHandler(DatabaseHandler):
                     port=self.connection_data.get("port"),
                 )
             except Exception as e:
-                log.logger.error(f"Error in creating OrientDB client: {e}")
+                log.logger.error(f"Error in creating OrientDB client: {e}!")
                 status_response.success = False
                 status_response.error_message = str(e)
 
@@ -239,22 +239,6 @@ class OrientDBHandler(DatabaseHandler):
         )
         return response
 
-    def get_databases(self) -> Response:
-        """
-        Get a list of databases in the OrientDB client.
-
-        Returns:
-            Response: A response object containing the list of database names.
-        """
-        dbs = self.connection.db_list()
-        data = {"db_name": dbs}
-
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(data),
-        )
-        return response
-
 
 connection_args = OrderedDict(
     user={
@@ -264,7 +248,7 @@ connection_args = OrderedDict(
         "label": "User",
     },
     password={
-        "type": ARG_TYPE.STR,
+        "type": ARG_TYPE.PWD,
         "description": "The password used to authenticate the user when connecting to the OrientDB server.",
         "required": True,
         "label": "Password",
@@ -300,6 +284,6 @@ connection_args_example = OrderedDict(
     host="127.0.0.1",
     port=2424,
     user="root",
-    password="password",
-    database="database",
+    password="root",
+    database="demo",
 )

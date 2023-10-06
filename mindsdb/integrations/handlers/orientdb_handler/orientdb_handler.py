@@ -56,7 +56,6 @@ class OrientDBHandler(DatabaseHandler):
 
         status_response = StatusResponse()
         if self.is_connected is False:
-            # Configuration for connecting to the OrientDB server
             try:
                 # Create an OrientDB client
                 self.connection = OrientDB(
@@ -68,7 +67,6 @@ class OrientDBHandler(DatabaseHandler):
                 status_response.success = False
                 status_response.error_message = str(e)
 
-            # Configuration for connecting to the OrientDB database
             try:
                 # Open the database connection
                 self.connection.db_open(
@@ -151,7 +149,7 @@ class OrientDBHandler(DatabaseHandler):
 
         except Exception as e:
             log.logger.error(
-                f'Error running query: {query} on {self.connection_data["database"]}.'
+                f'Error running query: {query} on {self.connection_data.get("database")}.'
             )
             response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 

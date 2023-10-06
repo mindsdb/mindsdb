@@ -42,7 +42,7 @@ class PineconeHandler(VectorStoreHandler):
         index = pinecone.Index(index_name)
         try:
             index.describe_index_stats()
-        except Exception as e:
+        except Exception:
             index = None
         return index
 
@@ -258,7 +258,7 @@ class PineconeHandler(VectorStoreHandler):
             if len(vector_filter) > 1:
                 return Response(
                     resp_type=RESPONSE_TYPE.ERROR,
-                    error_message=f"You cannot have multiple search_vectors in query"
+                    error_message="You cannot have multiple search_vectors in query"
                 )
             query["vector"] = vector_filter[0]
         # check for limit
@@ -280,7 +280,7 @@ class PineconeHandler(VectorStoreHandler):
             if len(id_filters) > 1:
                 return Response(
                     resp_type=RESPONSE_TYPE.ERROR,
-                    error_message=f"You cannot have multiple IDs in query"
+                    error_message="You cannot have multiple IDs in query"
                 )
             query["id"] = id_filters[0]
         # exec query

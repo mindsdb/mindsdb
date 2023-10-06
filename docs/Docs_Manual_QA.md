@@ -21,4 +21,4 @@ Create a Project Using SQL, Test passed: https://github.com/hridaya423/Hacktober
 Remove a Project Using SQL, Test passed: https://github.com/hridaya423/HacktoberfestMindsDBTesting/blob/master/Testing.md
 List Projects Using SQL, Test Passed: https://github.com/hridaya423/HacktoberfestMindsDBTesting/blob/master/Testing.md
 
-AI Workflow section - Tests Passes - https://github.com/Better-Boy/mindsdb-QA/blob/main/ML-handlers/Testing.md
+Create AI Engines section using SQL - Tests Passes - https://github.com/Better-Boy/mindsdb-QA/blob/main/ML-handlers/Testing.md

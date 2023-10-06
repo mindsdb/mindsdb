@@ -68,7 +68,6 @@ class WeaviateDBHandler(VectorStoreHandler):
 
     def connect(self):
         """Connect to a weaviate database."""
-        log.logger.error("connected!")
         if self.is_connected:
             return self._client
 

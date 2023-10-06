@@ -6,6 +6,7 @@ from mindsdb.integrations.handlers.github_handler.github_tables import (
     GithubPullRequestsTable,
     GithubCommitsTable,
     GithubReleasesTable,
+    GithubBranchesTable
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
@@ -45,10 +46,12 @@ class GithubHandler(APIHandler):
         github_pull_requests_data = GithubPullRequestsTable(self)
         github_commits_data = GithubCommitsTable(self)
         github_releases_data = GithubReleasesTable(self)
+        github_branches_data = GithubBranchesTable(self)
         self._register_table("issues", github_issues_data)
         self._register_table("pull_requests", github_pull_requests_data)
         self._register_table("commits", github_commits_data)
         self._register_table("releases", github_releases_data)
+        self._register_table("branches", github_branches_data)
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.

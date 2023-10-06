@@ -1,4 +1,3 @@
-import requests
 import pandas as pd
 from typing import List
 from mindsdb.integrations.libs.api_handler import APITable
@@ -818,5 +817,109 @@ class GithubReleasesTable(APITable):
             "title",
             "url",
             "zipball_url"
+        ]
+
+
+class GithubBranchesTable(APITable):
+    """The GitHub Branches Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Pulls data from the GitHub "List repository branches" API
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+
+            GitHub branches matching the query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'branches',
+            self.get_columns()
+        )
+
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        total_results = result_limit if result_limit else 20
+
+        self.handler.connect()
+
+        github_branches_df = pd.DataFrame(columns=self.get_columns())
+
+        start = 0
+
+        while True:
+            try:
+
+                for branch in self.handler.connection.get_repo(self.handler.repository).get_branches()[start: start + 10]:
+                    logger.debug(f"Processing branch {branch.name}")
+                    raw_data = branch.raw_data
+                    github_branches_df = pd.concat(
+                        [
+                            github_branches_df,
+                            pd.DataFrame(
+                                [
+                                    {
+                                        "name": self.check_none(raw_data["name"]),
+                                        "url": "https://github.com/" + self.handler.repository + "/tree/" + raw_data["name"],
+                                        "commit_sha": self.check_none(raw_data["commit"]["sha"]),
+                                        "commit_url": self.check_none(raw_data["commit"]["url"]),
+                                        "protected": self.check_none(raw_data["protected"])
+                                    }
+                                ]
+                            ),
+                        ]
+                    )
+
+                    if github_branches_df.shape[0] >= total_results:
+                        break
+            except IndexError:
+                break
+
+            if github_branches_df.shape[0] >= total_results:
+                break
+            else:
+                start += 10
+
+        select_statement_executor = SELECTQueryExecutor(
+            github_branches_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+
+        github_branches_df = select_statement_executor.execute_query()
+
+        return github_branches_df
+
+    def check_none(self, val):
+        return "" if val is None else val
+
+    def get_columns(self) -> List[str]:
+        """Gets all columns to be returned in pandas DataFrame responses
+
+        Returns
+        -------
+        List[str]
+            List of columns
+        """
+
+        return [
+            "name",
+            "url",
+            "commit_sha",
+            "commit_url",
+            "protected"
         ]
 

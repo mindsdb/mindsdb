@@ -183,11 +183,11 @@ class WeaviateDBHandler(VectorStoreHandler):
         # we translate each condition into a dict
         weaviate_conditions = []
         for condition in conditions:
-            metadata_key = condition.column.split(".")[-1]
+            column_key = condition.column.split(".")[-1]
             value_type = self._get_weaviate_value_type(condition.value)
             weaviate_conditions.append(
                 {
-                    'path': [metadata_key],
+                    'path': [column_key],
                     'operator': self._get_weaviate_operator(condition.op),
                     value_type: condition.value
                 }
@@ -212,7 +212,7 @@ class WeaviateDBHandler(VectorStoreHandler):
     ) -> HandlerResponse:
 
         filters = self._translate_condition(conditions)
-        fixed_columns = ["id", "embeddings", "distance", "score"]
+        fixed_columns = ["id", "embeddings", "distance"]
         # check if embedding vector filter is present
         vector_filter = (
             []
@@ -220,7 +220,8 @@ class WeaviateDBHandler(VectorStoreHandler):
             else [
                 condition
                 for condition in conditions
-                if condition.column == TableField.SEARCH_VECTOR.value
+                if condition.column == TableField.SEARCH_VECTOR.value or
+                condition.column == TableField.EMBEDDINGS.value
             ]
         )
         if len(vector_filter) > 0:
@@ -233,9 +234,9 @@ class WeaviateDBHandler(VectorStoreHandler):
                 columns.remove(col)
 
         if columns is not None and len(columns) > 0:
-            query = self._client.query.get(table_name, columns).with_additional(["id vector distance score"])
+            query = self._client.query.get(table_name, columns).with_additional(["id vector distance"])
         else:
-            query = self._client.query.get(table_name).with_additional(["id vector distance score"])
+            query = self._client.query.get(table_name).with_additional(["id vector distance"])
         if vector_filter is not None:
             # similarity search
             query = query.with_hybrid(query=vector_filter.column, vector=vector_filter.value)
@@ -248,7 +249,6 @@ class WeaviateDBHandler(VectorStoreHandler):
         ids = [query_obj['_additional']["id"] for query_obj in result]
         contents = [query_obj.get("content") for query_obj in result]
         distances = [query_obj.get('_additional').get("distance") for query_obj in result]
-        scores = [query_obj.get('_additional').get("score") for query_obj in result]
         vector = [query_obj.get('_additional').get("vector") for query_obj in result]
         metadatas = [query_obj.get("metadata") for query_obj in result]
 
@@ -258,13 +258,13 @@ class WeaviateDBHandler(VectorStoreHandler):
             TableField.CONTENT.value: contents,
             TableField.METADATA.value: metadatas,
             TableField.EMBEDDINGS.value: vector,
-            TableField.SEARCH_VECTOR.value: scores
+            TableField.DISTANCE.value: distances
         }
 
         if columns is not None:
             payload = {
                 column: payload[column]
-                for column in columns
+                for column in columns+fixed_columns
                 if column != TableField.EMBEDDINGS.value
             }
 
@@ -339,7 +339,7 @@ class WeaviateDBHandler(VectorStoreHandler):
 
     def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
         """
-        Delete a collection from the weaviate database.
+        Delete a class from the weaviate database.
         """
         try:
             self._client.schema.delete_class(table_name)
@@ -356,29 +356,27 @@ class WeaviateDBHandler(VectorStoreHandler):
 
     def get_tables(self) -> HandlerResponse:
         """
-        Get the list of collections in the Weaviate database.
+        Get the list of classes in the Weaviate database.
         """
-        log.logger.error("getting table!")
-        collections = self._client.schema.get()["classes"]
-        log.logger.error(f"{collections}")
+        classes = self._client.schema.get()["classes"]
 
-        collections_name = pd.DataFrame(
+        classes_name = pd.DataFrame(
             columns=["table_name"],
-            data=[collection["class"] for collection in collections],
+            data=[classes["class"] for classes in classes],
         )
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=collections_name)
+        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=classes_name)
 
     def get_columns(self, table_name: str) -> HandlerResponse:
-        # check if collection exists
+        # check if class exists
         try:
-            collection = self._client.schema.get(table_name)
+            weaviate_class = self._client.schema.get(table_name)
         except ValueError:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
                 error_message=f"Table {table_name} does not exist!",
             )
         data = pd.DataFrame(data=[{"COLUMN_NAME": column["name"],
-                                   "DATA_TYPE": column["dataType"][0]} for column in collection["properties"]])
+                                   "DATA_TYPE": column["dataType"][0]} for column in weaviate_class["properties"]])
         return Response(
             data_frame=data,
             resp_type=RESPONSE_TYPE.OK

@@ -57,3 +57,5 @@ Get information about any youtube video using video_id:
 ~~~~sql
 select * from mindsdb_youtube.video where video_id="id"
 ~~~~
+
+`video_id` is a mandatory column in the where clause.

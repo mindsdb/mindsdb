@@ -1,8 +1,3 @@
-"""
-Pinecone Handler
-Parts of this script are copied from chromadb_handler whose author is Daniel Usvyat at the time of writing
-"""
-
 from collections import OrderedDict
 from typing import List, Optional
 

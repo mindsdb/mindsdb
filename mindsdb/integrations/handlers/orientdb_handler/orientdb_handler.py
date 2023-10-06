@@ -1,18 +1,16 @@
 from collections import OrderedDict
-from typing import Any
 
 import pandas as pd
-from pyorient import OrientDB
-
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-
 from mindsdb.integrations.libs.base import DatabaseHandler
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from mindsdb.integrations.libs.const import \
+    HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse as Response
-from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
+from mindsdb.integrations.libs.response import \
+    HandlerStatusResponse as StatusResponse
 from mindsdb.utilities import log
+from mindsdb_sql.parser.ast.base import ASTNode
+from pyorient import OrientDB
 
 
 class OrientDBHandler(DatabaseHandler):

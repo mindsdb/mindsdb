@@ -105,10 +105,10 @@ class SearchLocationTable(APITable):
         return result
 
     def get_columns(self):
-        """Get the list of column names for the comment table.
+        """Get the list of column names for the search_location table.
 
         Returns:
-            list: A list of column names for the comment table.
+            list: A list of column names for the search_location table.
         """
         return [
             "location_id",
@@ -259,7 +259,7 @@ class LocationDetailsTable(APITable):
 
 class ReviewsTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
-        """Select data from the search_location table and return it as a pandas DataFrame.
+        """Select data from the reviews table and return it as a pandas DataFrame.
 
         Args:
             query (ast.Select): The SQL query to be executed.
@@ -328,10 +328,10 @@ class ReviewsTable(APITable):
         return result
 
     def get_columns(self):
-        """Get the list of column names for the comment table.
+        """Get the list of column names for the reviews table.
 
         Returns:
-            list: A list of column names for the comment table.
+            list: A list of column names for the reviews table.
         """
         return [
             "id",

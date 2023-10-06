@@ -92,7 +92,7 @@ class BaseMLEngineExec:
         if self.config['ml_task_queue']['type'] == 'redis':
             self.base_ml_executor = MLTaskProducer()
 
-    def _get_ml_handler(self, predictor_id=None):
+    def get_ml_handler(self, predictor_id=None):
         # returns instance or wrapper over it
 
         integration_id = self.integration_id

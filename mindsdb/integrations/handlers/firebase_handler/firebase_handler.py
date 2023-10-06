@@ -83,42 +83,6 @@ class FirebaseHandler(APIHandler):
         self.is_connected = response.success
 
         return response
-        if not filters:
-            return data
-
-        data2 = []
-        for row in data:
-            add = False
-            for op, key, value in filters:
-                value2 = row.get(key)
-                if isinstance(value, int):
-                    # firebase returns ids as string
-                    value = str(value)
-
-                if op in ('!=', '<>'):
-                    if value == value2:
-                        break
-                elif op in ('==', '='):
-                    if value != value2:
-                        break
-                elif op == 'in':
-                    if not isinstance(value, list):
-                        value = [value]
-                    if value2 not in value:
-                        break
-                elif op == 'not in':
-                    if not isinstance(value, list):
-                        value = [value]
-                    if value2 in value:
-                        break
-                else:
-                    raise NotImplementedError(f'Unknown filter: {op}')
-                # only if there wasn't breaks
-                add = True
-            if add:
-                data2.append(row)
-        return data2
-
 
     def send_push_notification(self,title, message, registrationTokens):
         if len(registrationTokens) > 1:

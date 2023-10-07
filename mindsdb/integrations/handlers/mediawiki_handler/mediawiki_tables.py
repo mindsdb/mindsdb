@@ -56,7 +56,26 @@ class PagesTable(APITable):
         return pages_df
      
     def update(self, query: ast.Update) -> None:
-        
+        """
+        Updates MediaWiki pages data based on the provided SQL UPDATE query.
+
+        This method parses the given query, validates the WHERE conditions, fetches the relevant pages, 
+        and applies the updates. 
+
+        Parameters
+        ----------
+        query : ast.Update
+            Given SQL UPDATE query
+
+        Returns
+        -------
+        pd.DataFrame
+    
+        Raises
+        ------
+        ValueError
+            If the query contains unsupported conditions or attempts to update unsupported columns.
+        """
         update_statements_parser = UPDATEQueryParser(
             query,
             self.get_columns()
@@ -113,8 +132,6 @@ class PagesTable(APITable):
                 logger.debug(f"Error accessing '{attribute}' attribute. Skipping...")
 
         return result
-    
-    
          
     def validate_where_conditions(self, conditions):
         title, page_id = None, None

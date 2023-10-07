@@ -33,7 +33,7 @@ class OrientDBHandlerTest(unittest.TestCase):
     def test_3_create_table(self):
         res = self.handler.native_query(
             """
-            CREATE CLASS integers; 
+            CREATE CLASS integers;
             CREATE PROPERTY integers.i INTEGER;
             """
         )

@@ -176,10 +176,10 @@ class OrientDBHandler(DatabaseHandler):
             Response: A response object containing the table's column names.
         """
         query = f"""
-        SELECT expand(properties) 
-        FROM (SELECT properties 
-        FROM (SELECT expand(classes) 
-            FROM metadata:schema) 
+        SELECT expand(properties)
+        FROM (SELECT properties
+        FROM (SELECT expand(classes)
+            FROM metadata:schema)
         WHERE name = '{table_name}')
         """
 

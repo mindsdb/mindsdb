@@ -56,13 +56,6 @@ Read about creating a GitHub API key [here](https://docs.github.com/en/github/au
     - [x] Support ORDER BY
     - [x] Support column selection
 
-## TODO
-
-- [ ] GitHub Commits Table for a given Repository
-- [ ] GitHub Releases Table for a given Repository
-- [ ] GitHub Contributors Table for a given Repository
-- [ ] GitHub Branches Table for a given Repository
-
 ## Example Usage
 
 The first step is to create a database with the new `github` engine. The `api_key` parameter is optional,

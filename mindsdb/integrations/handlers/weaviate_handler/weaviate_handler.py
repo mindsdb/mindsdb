@@ -373,9 +373,11 @@ class WeaviateDBHandler(VectorStoreHandler):
             metadata_data = record.get(TableField.METADATA.value)
             meta_id = self.add_metadata(metadata_data, table_name)
             data_object = {"content": record.get(TableField.CONTENT.value)}
-            data_obj_id = weaviate.util.generate_uuid5(data_object)
-            if TableField.ID.value in record.keys():
-                data_obj_id = record[TableField.ID.value]
+            data_obj_id = (
+                record[TableField.ID.value]
+                if TableField.ID.value in record.keys()
+                else weaviate.util.generate_uuid5(data_object)
+            )
             obj_id = self._client.data_object.create(
                 data_object=data_object,
                 class_name=table_name,

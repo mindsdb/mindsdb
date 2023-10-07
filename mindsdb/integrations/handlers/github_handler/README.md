@@ -76,6 +76,10 @@ Use the established connection to query your database:
 SELECT * FROM mindsdb_github.issues
 ~~~~
 
+~~~~sql
+SELECT * FROM mindsdb_github.branches
+~~~~
+
 Run more advanced queries:
 
 ~~~~sql

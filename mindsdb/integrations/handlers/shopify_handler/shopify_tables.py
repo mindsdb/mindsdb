@@ -478,3 +478,53 @@ class CustomerReviews(APITable):
         json_response = requests.get(url, headers=headers).json()
         return [review for review in json_response['reviews']] if 'reviews' in json_response else []
 
+class CarrierServiceTable(APITable):
+    """The Shopify carrier service Table implementation. Example carrier services like usps, dhl etc."""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Pulls data from the Shopify "GET /carrier_services" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+
+            Shopify Carrier service info
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'carrier_service',
+            self.get_columns()
+        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        carrier_service_df = pd.json_normalize(self.get_carrier_service())
+
+        select_statement_executor = SELECTQueryExecutor(
+            carrier_service_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+        
+        carrier_service_df = select_statement_executor.execute_query()
+
+        return carrier_service_df
+
+    def get_columns(self) -> List[Text]:
+        return ["id", "name", "active", "service_discovery", "carrier_service_type", "admin_graphql_api_id"]
+
+    def get_carrier_service(self) -> List[Dict]:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+        services = shopify.CarrierService.find()
+        return [service.to_dict() for service in services]

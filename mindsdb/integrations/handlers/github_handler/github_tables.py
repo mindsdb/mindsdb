@@ -818,8 +818,7 @@ class GithubReleasesTable(APITable):
             "url",
             "zipball_url"
         ]
-
-
+     
 class GithubBranchesTable(APITable):
     """The GitHub Branches Table implementation"""
 
@@ -882,8 +881,7 @@ class GithubBranchesTable(APITable):
                         ]
                     )
 
-                    if github_branches_df.shape[0] >= total_results:
-                        break
+                    if github_branches_df.shape[0] >= total_results: break
             except IndexError:
                 break
 
@@ -923,3 +921,141 @@ class GithubBranchesTable(APITable):
             "protected"
         ]
 
+class GithubContributorsTable(APITable):
+    """The GitHub Contributors Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Pulls data from the GitHub "List repository contributors" API
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+
+            GitHub contributors matching the query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'contributors',
+            self.get_columns()
+        )
+
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        total_results = result_limit if result_limit else 20
+
+        self.handler.connect()
+
+        github_contributors_df = pd.DataFrame(columns=self.get_columns())
+
+        start = 0
+
+        while True:
+            try:
+
+                for contributor in self.handler.connection.get_repo(self.handler.repository).get_contributors()[start: start + 10]:
+                    
+                    raw_data = contributor.raw_data
+                    github_contributors_df = pd.concat(
+                        [
+                            github_contributors_df,
+                            pd.DataFrame(
+                                [
+                                    {
+                                        "avatar_url": self.check_none(raw_data["avatar_url"]),
+                                        "html_url": self.check_none(raw_data["html_url"]),
+                                        "followers_url": self.check_none(raw_data["followers_url"]),
+                                        "subscriptions_url": self.check_none(raw_data["subscriptions_url"]),
+                                        "organizations_url": self.check_none(raw_data["organizations_url"]),
+                                        "repos_url": self.check_none(raw_data["repos_url"]),
+                                        "events_url": self.check_none(raw_data["events_url"]),
+                                        "received_events_url": self.check_none(raw_data["received_events_url"]),
+                                        "site_admin": self.check_none(raw_data["site_admin"]),
+                                        "name": self.check_none(raw_data["name"]),
+                                        "company": self.check_none(raw_data["company"]),
+                                        "blog": self.check_none(raw_data["blog"]),
+                                        "location": self.check_none(raw_data["location"]),
+                                        "email": self.check_none(raw_data["email"]),
+                                        "hireable": self.check_none(raw_data["hireable"]),
+                                        "bio": self.check_none(raw_data["bio"]),
+                                        "twitter_username": self.check_none(raw_data["twitter_username"]),
+                                        "public_repos": self.check_none(raw_data["public_repos"]),
+                                        "public_gists": self.check_none(raw_data["public_repos"]),
+                                        "followers": self.check_none(raw_data["followers"]),
+                                        "following": self.check_none(raw_data["following"]),
+                                        "created_at": self.check_none(raw_data["created_at"]),
+                                        "updated_at": self.check_none(raw_data["updated_at"])
+                                    }
+                                ]
+                            ),
+                        ]
+                    )
+
+                    if github_contributors_df.shape[0] >= total_results:
+                        break
+            except IndexError:
+                break
+
+            if github_contributors_df.shape[0] >= total_results:
+                break
+            else:
+                start += 10
+
+        select_statement_executor = SELECTQueryExecutor(
+            github_contributors_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+
+        github_contributors_df = select_statement_executor.execute_query()
+
+        return github_contributors_df
+
+    def check_none(self, val):
+        return "" if val is None else val
+
+    def get_columns(self) -> List[str]:
+        """Gets all columns to be returned in pandas DataFrame responses
+
+        Returns
+        -------
+        List[str]
+            List of columns
+        """
+
+        return [
+            "avatar_url",
+            "html_url",
+            "followers_url",
+            "subscriptions_url",
+            "organizations_url",
+            "repos_url",
+            "events_url",
+            "received_events_url",
+            "site_admin",
+            "name",
+            "company",
+            "blog",
+            "location",
+            "email",
+            "hireable",
+            "bio",
+            "twitter_username",
+            "public_repos",
+            "public_gists",
+            "followers",
+            "following",
+            "created_at",
+            "updated_at"
+        ]

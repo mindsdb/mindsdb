@@ -80,6 +80,10 @@ SELECT * FROM mindsdb_github.issues
 SELECT * FROM mindsdb_github.branches
 ~~~~
 
+~~~~sql
+SELECT * FROM mindsdb_github.contributors
+~~~~
+
 Run more advanced queries:
 
 ~~~~sql
@@ -97,3 +101,5 @@ SELECT number, state, title, creator, head, commits
   ORDER BY long_running DESC, commits DESC
   LIMIT 10
 ~~~~
+
+

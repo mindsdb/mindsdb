@@ -44,7 +44,7 @@ class OpenBBtable(APITable):
         params = self._get_params_from_conditions(conditions)
 
         openbb_data = self.handler.call_openbb_api(
-            method_name='stocks_load',
+            method_name='openbb_fetcher',
             params=params,
         )
 

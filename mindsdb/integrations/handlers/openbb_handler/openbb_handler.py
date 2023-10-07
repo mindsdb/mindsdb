@@ -36,8 +36,7 @@ class OpenBBHandler(APIHandler):
 
         self.is_connected = False
 
-        stocks_load = OpenBBtable(self)
-        self._register_table('stocks_load', stocks_load)
+        self._register_table('openbb_fetcher', OpenBBtable(self))
 
     def connect(self) -> bool:
         """Connects with OpenBB account through personal access token (PAT).
@@ -73,7 +72,21 @@ class OpenBBHandler(APIHandler):
         self.is_connected = response.success
         return response
 
-    def _get_stocks_load(self, params: Dict = None) -> pd.DataFrame:
+    def _process_cols_names(self, cols: list) -> list:
+        new_cols = []
+        for element in cols:
+            # If the element is a tuple, we want to merge the elements together
+            if type(element) == tuple:
+                # Ensure that there's more than one element in the tuple
+                if len(element) > 1:
+                    new_cols.append('_'.join(map(str, element)))
+                else:
+                    new_cols.append(element[0])
+            else:
+                new_cols.append(element)
+        return new_cols   
+
+    def _openbb_fetcher(self, params: Dict = None) -> pd.DataFrame:
         """Gets aggregate trade data for a symbol based on given parameters
 
         Returns results as a pandas DataFrame.
@@ -84,8 +97,35 @@ class OpenBBHandler(APIHandler):
         self.connect()
 
         try:
-            data = obb.stocks.load(**params).to_df()
+            if params is None:
+                log.logger.error(f'At least cmd needs to be added!')
+                return pd.DataFrame()
+
+            # get the OpenBB command to get the data from
+            cmd = params.pop("cmd")
+
+            args = ""
+            # if there are parameters create arguments as a string
+            if params:
+                for arg, val in params.items():
+                    args += f"{arg}={val},"
+
+                # remove the additional ',' added
+                if args:
+                    args = args[:-1]
+
+            # recreate the OpenBB command with the arguments
+            openbb_cmd = f"{cmd}({args})"
+
+            OBBject = eval(openbb_cmd)
+
+            data = OBBject.to_df()            
             data.reset_index(inplace=True)
+
+            # MindsDB doesn't handle well '-' in column names
+            data.columns = self._process_cols_names(data.columns)
+
+            print(data.columns)
 
         except Exception as e:
             log.logger.error(f'Error accessing data from OpenBB: {e}!')
@@ -106,6 +146,6 @@ class OpenBBHandler(APIHandler):
             method_name (str): Method name to call (e.g. klines)
             params (Dict): Params to pass to the API call
         """
-        if method_name == 'stocks_load':
-            return self._get_stocks_load(params)
+        if method_name == 'openbb_fetcher':
+            return self._openbb_fetcher(params)
         raise NotImplementedError('Method name {} not supported by OpenBB Platform Handler'.format(method_name))

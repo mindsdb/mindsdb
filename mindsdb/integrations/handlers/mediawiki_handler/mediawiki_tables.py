@@ -73,19 +73,16 @@ class PagesTable(APITable):
             where_conditions
         )
         pages_df = update_statement_executor.execute_query()
+        
+        #Since we didn't reindex pages_df we can loop through the changes and POST them to the API:Edit endpoint 
+        for index, row in pages_df.iterrows():
+            self.handler.call_application_api('edit', {
+                'title': row['title'],
+                'content': row['content'],
+                'summary': row['summary']
+            })
 
         return pages_df
-    
-        """         
-        Fetch Login
-        Login
-        CSRF
-        API:Edit {
-            title:
-            content:
-            etc:
-        } """
-
         
     def get_columns(self) -> List[str]:
         return ['pageid', 'title', 'original_title', 'content', 'summary', 'url', 'categories']
@@ -116,6 +113,8 @@ class PagesTable(APITable):
                 logger.debug(f"Error accessing '{attribute}' attribute. Skipping...")
 
         return result
+    
+    
          
     def validate_where_conditions(self, conditions):
         title, page_id = None, None

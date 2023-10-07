@@ -21,29 +21,14 @@ class OpenBBtable(APITable):
         Args:
             conditions (List): List of individual SQL WHERE conditions.
         """
-        params = {
-            'provider': 'fmp'
-        }
+        params: dict = {}
+        # generic interpreter for conditions
+        # since these are all equality conditions due to OpenBB Platform's API
+        # then we can just use the first arg as the key and the second as the value
         for op, arg1, arg2 in conditions:
-            if arg1 == 'symbol':
-                if op != '=':
-                    raise NotImplementedError
-                params['symbol'] = arg2
-
-            if arg1 == 'start_date':
-                if op != '=':
-                    raise NotImplementedError
-                params['start_date'] = arg2
-
-            if arg1 == 'end_date':
-                if op != '=':
-                    raise NotImplementedError
-                params['end_date'] = arg2
-
-            if arg1 == 'provider':
-                if op != '=':
-                    raise NotImplementedError
-                params['provider'] = arg2
+            if op != '=':
+                raise NotImplementedError
+            params[arg1] = arg2
 
         return params
 

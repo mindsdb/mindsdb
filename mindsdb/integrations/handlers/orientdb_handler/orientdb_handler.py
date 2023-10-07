@@ -1,5 +1,4 @@
 from collections import OrderedDict
-
 import pandas as pd
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
@@ -32,7 +31,6 @@ class OrientDBHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.connection_data = kwargs.get("connection_data")
-
         self.connection = None
         self.is_connected = False
 
@@ -260,7 +258,7 @@ connection_args = OrderedDict(
     },
     host={
         "type": ARG_TYPE.STR,
-        "description": "The host name or IP address of the Orient server. NOTE: use '127.0.0.1' instead of 'localhost' to connect to local server.",
+        "description": "The host name or IP address of the Orient server. NOTE: use '127.0.0.1' instead of 'localhost' to connect to the local server.",
         "required": True,
         "label": "Host",
     },

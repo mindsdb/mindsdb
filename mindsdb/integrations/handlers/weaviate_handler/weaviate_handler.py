@@ -376,7 +376,7 @@ class WeaviateDBHandler(VectorStoreHandler):
             data_obj_id = (
                 record[TableField.ID.value]
                 if TableField.ID.value in record.keys()
-                else weaviate.util.generate_uuid5(data_object)
+                else generate_uuid5(data_object)
             )
             obj_id = self._client.data_object.create(
                 data_object=data_object,

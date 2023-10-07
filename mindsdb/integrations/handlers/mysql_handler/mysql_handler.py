@@ -2,7 +2,9 @@ from collections import OrderedDict
 
 import pandas as pd
 import mysql.connector
+from urllib.parse import urlparse
 from sqlalchemy import create_engine
+from werkzeug.exceptions import HTTPException, BadRequest
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -40,22 +42,99 @@ class MySQLHandler(DatabaseHandler):
         if self.is_connected is True:
             self.disconnect()
 
+    def _unpack_config(self):
+        """
+        Unpacks the config from the connection_data.
+
+        The connection_data must include either the old style of dictionary
+        attriutes (host, optional port, user, password, database) OR have
+        a url connection string with username and password optionally supplied
+        in the dictionary itself.
+
+        Arguments:
+        - conection_data is the dictionary parsed from the JSON payload
+
+        Exceptions thrown:
+        - BadRequest if data validation rules fail.
+
+        Returns a dictionary with the relevant config info:
+        - host
+        - port
+        - user
+        - password
+        - database
+        """
+        url = self.connection_data.get('url')
+        if url:
+            urlfields = urlparse(url)
+            if urlfields.scheme != 'mysql':
+                raise BadRequest(
+                      description = "If using a URL to connect to MySQL, the URL needs to start with 'mysql://'"
+                      status      = 400
+                )
+            if urlfields.username and self.connection_data.get('user'):
+                raise BadRequest(
+                      description = "Cannot specify a user in both the URL and elsewhere"
+                      status      = 400
+                )
+            if urlfields.username and self.connection_data.get('password'):
+                raise BadRequest(
+                      description = "Cannot specify a password in both the URL and elsewhere"
+                      status      = 400
+                )
+            if not urlfields.host:
+                raise BadRequest(
+                      description = "Connection URL does not include hostname"
+                      status      = 400
+                )
+            if not urlfields.path:
+                raise BadRequest(
+                      description = "Connection URL does not include database"
+                      status      = 400
+                )
+            config = {
+                'host'    : urlfields.host,
+                'port'    : urlfields.port or  3306,
+                'user'    : urlfields.username or self.connection_data.get('user'),
+                'password': urlfields.password or self.connection_data.get('password'),
+                'database': urlfields.path,
+            }
+
+        else:
+            config = {
+                'host': self.connection_data.get('host'),
+                'port': self.connection_data.get('port') or 3306,
+                'user': self.connection_data.get('user'),
+                'password': self.connection_data.get('password'),
+                'database': self.connection_data.get('database')
+            }
+
+            if not config.get('host'):
+                raise BadRequest(
+                        description = "Must supply a host",
+                        status = 400
+                )
+            if not config.get('database'):
+                raise BadRequest(
+                        description = "Must supply a database name",
+                        status = 400
+                )
+
+        if not config.get('user'):
+            raise BadRequest(description = 'Must supply a user', status = 400)
+        if not config.get('password'):
+            raise BadRequest(
+                    description = 'Must supply a password for connections',
+                    status = 400
+            )
+        return config
+
     def connect(self):
         if self.is_connected is True:
             return self.connection
 
-        port = self.connection_data.get('port')
-        if port is None:
-            port = 3306
+        config = self._unpack_config();
 
-        config = {
-            'host': self.connection_data.get('host'),
-            'port': port,
-            'user': self.connection_data.get('user'),
-            'password': self.connection_data.get('password'),
-            'database': self.connection_data.get('database')
-        }
-        
         if 'conn_attrs' in self.connection_data:
             config['conn_attrs'] = self.connection_data['conn_attrs']
 

@@ -56,6 +56,8 @@ is converted into:
 ```python
 obb.stocks.load(symbol = 'MSFT', start_date = '2023-09-01', provider = 'polygon')
 ```
+<img width="1115" alt="Screenshot 2023-10-07 at 7 06 28 PM" src="https://github.com/DidierRLopes/mindsdb/assets/25267873/a8ee9c5b-01c9-443f-bc50-d4514f55d3b7">
+
 
 ### **Example 2**: obb.economy.cpi
 
@@ -73,6 +75,9 @@ is converted into:
 obb.economy.cpi(countries = ['portugal','italy'])
 ```
 
+<img width="881" alt="Screenshot 2023-10-07 at 7 05 57 PM" src="https://github.com/DidierRLopes/mindsdb/assets/25267873/3465dcc5-02f5-44cf-8aab-e8868fcfcbe7">
+
+
 ### **Example 3**: obb.fixedincome.ycrv
 
 Reference:
@@ -88,6 +93,8 @@ is converted into: [https://docs.openbb.co/sdk/reference/fixedincome/ycrv](https
 ```python
 obb.fixedincome.ycrv()
 ```
+
+<img width="469" alt="Screenshot 2023-10-07 at 7 05 25 PM" src="https://github.com/DidierRLopes/mindsdb/assets/25267873/90538eda-15db-4a6f-816a-07ca0f35af52">
 
 
 ## Enhance data access through OpenBB extensions

@@ -1,3 +1,3 @@
-# OpenBB Platform Handler
+# OpenBB Handler
 
 tbd

@@ -3,10 +3,13 @@ title: Callbacks
 sidebarTitle: Callbacks
 ---
 
-Callbacks allow you to get model status after it changes to 'complete' or 'error'. It sends POST requets to provided URL with payload as below.
+Callbacks enable the retrieval of a model's status when it transitions to either 'complete' or 'error'. This is accomplished by sending a POST request to the specified URL, with the payload structured as follows:
 
 ```json
 {
+    "name": "my_model",
+    "version": 1,
+    "active": true,
     "predictor_id": 123,
     "predictor_created_at": "Fri, 09 Sep 2023 11:50:27 GMT",
     "old_status": "training",
@@ -14,6 +17,16 @@ Callbacks allow you to get model status after it changes to 'complete' or 'error
     "changed_at": "Fri, 09 Sep 2023 11:59:00 GMT"
 }
 ```
+
+Let's break down each key:
+ - `name`: name of the model
+ - `version`: version of the trained model
+ - `active`: indicates whether the newly trained model is active
+ - `predictor_id`: unique identifier for the trained model
+ - `predictor_created_at`: time at which the model was created
+ - `old_status`: status the model had prior to receiving the `new_status`
+ - `new_status`: current status of the model
+ - `changed_at`:  time when the model's status transitioned from `old_status` to `new_status`
 
 <Note>
 Please note that this feature works only in MinsdDB Cloud and only for [MindsDB Starter](/setup/cloud-starter) users.

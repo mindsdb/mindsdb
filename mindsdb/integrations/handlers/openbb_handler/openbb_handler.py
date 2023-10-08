@@ -137,7 +137,7 @@ class OpenBBHandler(APIHandler):
 
         except Exception as e:
             log.logger.error(f"Error accessing data from OpenBB: {e}!")
-            data = pd.DataFrame()
+            raise Exception(f"Error accessing data from OpenBB: {e}!")
 
         return data
 

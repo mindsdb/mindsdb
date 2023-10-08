@@ -33,17 +33,14 @@ class WeaviateDBHandler(VectorStoreHandler):
         self._client_config = {
             "weaviate_url": self._connection_data.get("weaviate_url"),
             "weaviate_api_key": self._connection_data.get("weaviate_api_key"),
-            "persist_directory": self._connection_data.get("persist_directory"),
         }
 
-        # either host + port or persist_directory is required
-        # but not both
         if (
             self._client_config["weaviate_url"] is None
             or self._client_config["weaviate_api_key"] is None
         ):
             raise Exception(
-                "Either url + auth client secret is required for weaviate connection!"
+                "Both url + api key client secret are required for weaviate connection!"
             )
 
         self._client = None

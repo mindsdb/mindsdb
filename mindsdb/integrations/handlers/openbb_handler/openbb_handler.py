@@ -78,9 +78,13 @@ class OpenBBHandler(APIHandler):
         for element in cols:
             # If the element is a tuple, we want to merge the elements together
             if type(element) == tuple:
-                # Ensure that there's more than one element in the tuple
+                # If there's more than one element we want to merge them together
                 if len(element) > 1:
-                    new_cols.append("_".join(map(str, element)))
+                    new_element = "_".join(map(str, element))
+                    # Prevents the case where there's a multi column index and the index is a date
+                    # in that instance we will have ('date', '') and this avoids having a column named 'date_'
+                    new_element = new_element[:-1] if new_element[-1] == "_" else new_element
+                    new_cols.append(new_element)
                 else:
                     new_cols.append(element[0])
             else:
@@ -102,31 +106,34 @@ class OpenBBHandler(APIHandler):
                 log.logger.error("At least cmd needs to be added!")
                 return pd.DataFrame()
 
-            # get the OpenBB command to get the data from
+            # Get the OpenBB command to get the data from
             cmd = params.pop("cmd")
 
             args = ""
-            # if there are parameters create arguments as a string
+            # If there are parameters create arguments as a string
             if params:
                 for arg, val in params.items():
                     args += f"{arg}={val},"
 
-                # remove the additional ',' added
+                # Remove the additional ',' added at the end
                 if args:
                     args = args[:-1]
 
-            # recreate the OpenBB command with the arguments
+            # Recreate the OpenBB command with the arguments
             openbb_cmd = f"{cmd}({args})"
 
+            # Execute the OpenBB command and return the OBBject
             OBBject = eval(openbb_cmd)
 
+            # Transform the OBBject into a pandas DataFrame
             data = OBBject.to_df()
-            data.reset_index(inplace=True)
 
-            # MindsDB doesn't handle well '-' in column names
+            # Check if index is a datetime, if it is we want that as a column
+            if isinstance(data.index, pd.DatetimeIndex):
+                data.reset_index(inplace=True)
+
+            # Process column names
             data.columns = self._process_cols_names(data.columns)
-
-            print(data.columns)
 
         except Exception as e:
             log.logger.error(f"Error accessing data from OpenBB: {e}!")

@@ -26,17 +26,13 @@ class Auto_ts_Handler(BaseMLEngine):
         if 'using' in args:
             args = args['using']
 
-        if 'score_type' in args and args['score_type'] in score_type:
-            score_type = args['score_type']
-        else:
+        if 'score_type' in args and args['score_type'] not in score_type:
             raise Exception(f"score_type must be one of {score_type}")
 
-        if 'time_interval' in args and args['time_interval'] in frequency:
-            frequency = args['time_interval']
-        else:
+        if 'time_interval' in args and args['time_interval'] not in frequency:
             raise Exception(f"frequency must be one of {frequency}")
 
-        if 'non_seasonal_pdq' in args and not isinstance(args['non_seasonal_pdq'],tuple):
+        if 'non_seasonal_pdq' in args and not (isinstance(args['non_seasonal_pdq'],tuple) or args['non_seasonal_pdq']=='None'):
             raise Exception("non_seasonal_pdq must be a tuple")
 
         if 'model_type' in args and args['model_type'] not in model:
@@ -62,6 +58,7 @@ class Auto_ts_Handler(BaseMLEngine):
         model_type = 'stats'
         cv = 5
         sep = ','
+        seasonal_period=None
 
         if 'time_interval' in args:
             time_interval = args['time_interval']
@@ -69,6 +66,8 @@ class Auto_ts_Handler(BaseMLEngine):
             score_type = args['score_type']
         if 'non_seasonal_pdq' in args:
             non_seasonal_pdq = args['non_seasonal_pdq']
+        if 'seasonal_period' in args:
+            seasonal_period = args['seasonal_period']
         if 'seasonality' in args:
             seasonality = args['seasonality']
         if 'model_type' in args:
@@ -82,6 +81,7 @@ class Auto_ts_Handler(BaseMLEngine):
                     time_interval=time_interval,
                     non_seasonal_pdq=non_seasonal_pdq,
                     seasonality=seasonality,
+                    seasonal_period=seasonal_period,
                     model_type=[model_type],
                     verbose = 0
                 )
@@ -104,5 +104,5 @@ class Auto_ts_Handler(BaseMLEngine):
             return pred
 
         def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
-
+            raise NotImplementedError
 

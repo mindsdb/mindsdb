@@ -69,6 +69,8 @@ class TrinoHandler(DatabaseHandler):
             optional_config['schema'] = self.connection_data['schema']
         if 'http_scheme' in self.connection_data:
             optional_config['http_scheme'] = self.connection_data['http_scheme']
+        if 'verify' in self.connection_data:
+            optional_config['verify'] = self.connection_data['verify']
         # create a config object
         config =  {
             **required_config,
@@ -110,8 +112,9 @@ class TrinoHandler(DatabaseHandler):
                 auth_method_params.append(self.connection_data[req_param])
             # optional config passed in authenticator class
             for opt_param in auth_method[self.connection_data['auth']]['optional']:
-                auth_method_params.append(self.connection_data[opt_param])
-            config['auth'] = auth_method[self.connection_data.get['auth']]['call'](*auth_method_params)
+                if opt_param in self.connection_data:
+                    auth_method_params.append(self.connection_data[opt_param])
+            config['auth'] = auth_method[self.connection_data['auth']]['call'](*auth_method_params)
         return config
 
     def connect(self):
@@ -125,12 +128,14 @@ class TrinoHandler(DatabaseHandler):
 
         if 'with' in self.connection_data:
            self.with_clause=self.connection_data['with']
-        # TODO: raise an error if password with kerberos?
+
+        if self.connection_data.get('auth', '')=='kerberos' and bool(self.connection_data.get('password', '')):
+            raise Exception("Kerberos authorization doesn't support password.")
 
         self.connection = connect(**config)
         self.is_connected = True
 
-        return conn
+        return self.connection
 
     def check_connection(self) -> StatusResponse:
         """

@@ -38,7 +38,7 @@ These additional parameters need to have the exact same naming as in [OpenBB doc
 
 ## Examples
 
-> **Example 1**: obb.stocks.load
+### **Example 1**: obb.stocks.load
 
 Reference: [https://docs.openbb.co/sdk/reference/stocks/load](https://docs.openbb.co/sdk/reference/stocks/load)
 
@@ -57,7 +57,7 @@ is converted into:
 obb.stocks.load(symbol = 'MSFT', start_date = '2023-09-01', provider = 'polygon')
 ```
 
-> **Example 2**: obb.economy.cpi
+### **Example 2**: obb.economy.cpi
 
 Reference: [https://docs.openbb.co/sdk/reference/economy/cpi](https://docs.openbb.co/sdk/reference/economy/cpi)
 
@@ -73,7 +73,7 @@ is converted into:
 obb.economy.cpi(countries = ['portugal','italy'])
 ```
 
-> **Example 3**: obb.fixedincome.ycrv
+### **Example 3**: obb.fixedincome.ycrv
 
 Reference:
 

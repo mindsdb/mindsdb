@@ -12,6 +12,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
+
 class OpenBBHandler(APIHandler):
     """A class for handling connections and interactions with the OpenBB Platform.
 
@@ -30,13 +31,13 @@ class OpenBBHandler(APIHandler):
         super().__init__(name)
         self.PAT = None
 
-        args = kwargs.get('connection_data', {})
-        if 'PAT' in args:
-            self.PAT = args['PAT']
+        args = kwargs.get("connection_data", {})
+        if "PAT" in args:
+            self.PAT = args["PAT"]
 
         self.is_connected = False
 
-        self._register_table('openbb_fetcher', OpenBBtable(self))
+        self._register_table("openbb_fetcher", OpenBBtable(self))
 
     def connect(self) -> bool:
         """Connects with OpenBB account through personal access token (PAT).
@@ -45,12 +46,12 @@ class OpenBBHandler(APIHandler):
         """
         self.is_connected = False
         obb.account.login(pat=self.PAT)
-        
+
         # Check if PAT utilized is valid
         if obb.user.profile.active:
             self.is_connected = True
             return True
-        
+
         return False
 
     def check_connection(self) -> StatusResponse:
@@ -66,7 +67,7 @@ class OpenBBHandler(APIHandler):
                 response.success = True
 
         except Exception as e:
-            log.logger.error(f'Error connecting to OpenBB Platform: {e}!')
+            log.logger.error(f"Error connecting to OpenBB Platform: {e}!")
             response.error_message = e
 
         self.is_connected = response.success
@@ -79,12 +80,12 @@ class OpenBBHandler(APIHandler):
             if type(element) == tuple:
                 # Ensure that there's more than one element in the tuple
                 if len(element) > 1:
-                    new_cols.append('_'.join(map(str, element)))
+                    new_cols.append("_".join(map(str, element)))
                 else:
                     new_cols.append(element[0])
             else:
                 new_cols.append(element)
-        return new_cols   
+        return new_cols
 
     def _openbb_fetcher(self, params: Dict = None) -> pd.DataFrame:
         """Gets aggregate trade data for a symbol based on given parameters
@@ -98,7 +99,7 @@ class OpenBBHandler(APIHandler):
 
         try:
             if params is None:
-                log.logger.error(f'At least cmd needs to be added!')
+                log.logger.error("At least cmd needs to be added!")
                 return pd.DataFrame()
 
             # get the OpenBB command to get the data from
@@ -119,7 +120,7 @@ class OpenBBHandler(APIHandler):
 
             OBBject = eval(openbb_cmd)
 
-            data = OBBject.to_df()            
+            data = OBBject.to_df()
             data.reset_index(inplace=True)
 
             # MindsDB doesn't handle well '-' in column names
@@ -128,16 +129,18 @@ class OpenBBHandler(APIHandler):
             print(data.columns)
 
         except Exception as e:
-            log.logger.error(f'Error accessing data from OpenBB: {e}!')
+            log.logger.error(f"Error accessing data from OpenBB: {e}!")
             data = pd.DataFrame()
-        
+
         return data
-       
+
     def native_query(self, query: str = None) -> Response:
-        ast = parse_sql(query, dialect='mindsdb')
+        ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
 
-    def call_openbb_api(self, method_name: str = None, params: Dict = None) -> pd.DataFrame:
+    def call_openbb_api(
+        self, method_name: str = None, params: Dict = None
+    ) -> pd.DataFrame:
         """Calls the OpenBB Platform method with the given params.
 
         Returns results as a pandas DataFrame.
@@ -146,6 +149,10 @@ class OpenBBHandler(APIHandler):
             method_name (str): Method name to call (e.g. klines)
             params (Dict): Params to pass to the API call
         """
-        if method_name == 'openbb_fetcher':
+        if method_name == "openbb_fetcher":
             return self._openbb_fetcher(params)
-        raise NotImplementedError('Method name {} not supported by OpenBB Platform Handler'.format(method_name))
+        raise NotImplementedError(
+            "Method name {} not supported by OpenBB Platform Handler".format(
+                method_name
+            )
+        )

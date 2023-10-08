@@ -1,21 +1,16 @@
 from mindsdb.integrations.libs.api_handler import APITable
-from mindsdb.integrations.libs.response import HandlerResponse as Response
-from mindsdb.integrations.utilities.date_utils import interval_str_to_duration_ms, utc_date_str_to_timestamp_ms
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb_sql.parser import ast
 
-from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List
 
 import pandas as pd
-import time
 
 
 class OpenBBtable(APITable):
-
     def _get_params_from_conditions(self, conditions: List) -> Dict:
         """Gets aggregate trade data API params from SQL WHERE conditions.
-        
+
         Returns params to use for Binance API call to klines.
 
         Args:
@@ -26,7 +21,7 @@ class OpenBBtable(APITable):
         # since these are all equality conditions due to OpenBB Platform's API
         # then we can just use the first arg as the key and the second as the value
         for op, arg1, arg2 in conditions:
-            if op != '=':
+            if op != "=":
                 raise NotImplementedError
             params[arg1] = arg2
 
@@ -34,7 +29,7 @@ class OpenBBtable(APITable):
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Selects data from the OpenBB Platform and returns it as a pandas DataFrame.
-        
+
         Returns dataframe representing the OpenBB data.
 
         Args:
@@ -44,7 +39,7 @@ class OpenBBtable(APITable):
         params = self._get_params_from_conditions(conditions)
 
         openbb_data = self.handler.call_openbb_api(
-            method_name='openbb_fetcher',
+            method_name="openbb_fetcher",
             params=params,
         )
 

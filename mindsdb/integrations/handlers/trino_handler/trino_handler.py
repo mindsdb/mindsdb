@@ -3,7 +3,7 @@ from typing import Dict
 import pandas as pd
 from pyhive import (trino, sqlalchemy_trino)
 from mindsdb_sql import parse_sql, ASTNode
-from trino.auth import KerberosAuthentication, BasicAuthentication
+from trino.auth import KerberosAuthentication, BasicAuthentication, JWTAuthentication, OAuth2Authentication, CertificateAuthentication
 from trino.dbapi import connect
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -50,6 +50,70 @@ class TrinoHandler(DatabaseHandler):
         self.is_connected = False
         self.with_clause = ""
 
+    def _generate_connection_arguments(self):
+        """
+        Generates arguments that need to create a connection
+        """
+        # required config passed in trino connect method
+        required_config = {
+            'host': self.connection_data.get('host', ''),
+            'port': self.connection_data.get('port', ''),
+            'user': self.connection_data.get('user', ''),
+        }
+        # TODO: password in required here? (def not for kerberos)
+        # optional config passed in trino connect method
+        optional_config = {'http_scheme': 'http'}
+        if 'catalog' in self.connection_data:
+            optional_config['catalog'] = self.connection_data['catalog']
+        if 'schema' in self.connection_data:
+            optional_config['schema'] = self.connection_data['schema']
+        if 'http_scheme' in self.connection_data:
+            optional_config['http_scheme'] = self.connection_data['http_scheme']
+        # create a config object
+        config =  {
+            **required_config,
+            **optional_config
+        }
+        # generate auth config
+        if 'auth' in self.connection_data:
+            auth_method_params = []
+            # NOTE: the order of parameters in required and optional corresponds to the init methods in authenticator class
+            auth_method = { 
+                'basic': {
+                    'call': BasicAuthentication,
+                    'required': ['user', 'password'],
+                    'optional': []
+                },
+                'jwt': {
+                    'call': JWTAuthentication,
+                    'required': ['jwt_token'],
+                    'optional': []
+                },
+                'cert': {
+                    'call': CertificateAuthentication,
+                    'required': ['cert_path', 'key_cert'],
+                    'optional': []
+                },
+                'oauth2': { # TODO: will this work?
+                    'call': OAuth2Authentication,
+                    'required': [],
+                    'optional': []
+                },
+                'kerberos': {
+                    'call': KerberosAuthentication,
+                    'required': [],
+                    'optional': ['config', 'service_name', 'mutual_authentication', 'force_preemptive', 'hostname_override', 'sanitize_mutual_error_response', 'principal', 'delegate', 'ca_bundle']
+                }
+            }
+            # required config passed in authenticator class
+            for req_param in auth_method[self.connection_data['auth']]['required']:
+                auth_method_params.append(self.connection_data[req_param])
+            # optional config passed in authenticator class
+            for opt_param in auth_method[self.connection_data['auth']]['optional']:
+                auth_method_params.append(self.connection_data[opt_param])
+            config['auth'] = auth_method[self.connection_data.get['auth']]['call'](*auth_method_params)
+        return config
+
     def connect(self):
         """"
         Handles the connection to a Trino instance.
@@ -57,45 +121,15 @@ class TrinoHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        # option configuration
-        http_scheme='http'
-        auth=None
-        auth_config=None
-        password=None
+        config = self._generate_connection_arguments()
 
-        if 'auth' in self.connection_data:
-            auth=self.connection_data['auth']
-        if 'password' in self.connection_data:
-            password=self.connection_data['password']
-        if 'http_scheme' in self.connection_data:
-           http_scheme=self.connection_data['http_scheme']
         if 'with' in self.connection_data:
            self.with_clause=self.connection_data['with']
+        # TODO: raise an error if password with kerberos?
 
-        if password and auth=='kerberos':
-            raise Exception("Kerberos authorization doesn't support password.")
-        elif password:
-            auth_config=BasicAuthentication(self.connection_data['user'], password)
-
-        if auth:
-            conn = connect(
-                host=self.connection_data['host'],
-                port=self.connection_data['port'],
-                user=self.connection_data['user'],
-                catalog=self.connection_data['catalog'],
-                schema=self.connection_data['schema'],
-                http_scheme=http_scheme,
-                auth=auth_config)
-        else:
-            conn = connect(
-                host=self.connection_data['host'],
-                port=self.connection_data['port'],
-                user=self.connection_data['user'],
-                catalog=self.connection_data['catalog'],
-                schema=self.connection_data['schema'])
-
+        self.connection = connect(**config)
         self.is_connected = True
-        self.connection = conn
+
         return conn
 
     def check_connection(self) -> StatusResponse:

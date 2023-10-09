@@ -6,18 +6,18 @@
 
 **1. Testing CREATE DATABASE**
 
-```
 ![image](https://github.com/Anuragwagh/mindsdb/assets/56196363/90e28362-0bdc-441e-bdfc-40458bc716fb)
 
 ![image](https://github.com/Anuragwagh/mindsdb/assets/56196363/e8a87c9c-2b89-473c-b44a-b4fc1c3b0255)
 
 Default Home_Rental dataset of MindsDB
-```
+
 
 **2. Testing CREATE PREDICTOR**
 
+![Output for successfully creation of model](https://github.com/Anuragwagh/mindsdb/assets/56196363/283d917e-5cc1-4eb7-94ab-66eb716f4fc5
+
 ```
-![Output for successfully creation of model](https://github.com/Anuragwagh/mindsdb/assets/56196363/283d917e-5cc1-4eb7-94ab-66eb716f4fc5)
 
 CREATE MODEL [MODEL_Name]
 

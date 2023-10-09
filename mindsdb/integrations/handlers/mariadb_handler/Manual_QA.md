@@ -14,9 +14,7 @@ Default Home_Rental dataset of MindsDB
 
 
 ```
-
 CREATE MODEL [MODEL_Name]
-
 ```
 
 **3. Testing SELECT FROM PREDICTOR**
@@ -24,18 +22,14 @@ CREATE MODEL [MODEL_Name]
 ```
 FROM [MariaDB_Connection_Name] (SELECT * FROM [Dataset_Name])
 PREDICT (Column_Name)
-
+```
 After Predict Query MindsDB throwing error
 
-
-```
 
 **4. Testing DROP DATABASE**
 
 ```
-
-'DROP DATABASE [Database_Name]'
-
+DROP DATABASE [Database_Name]
 ```
 
 ### Results

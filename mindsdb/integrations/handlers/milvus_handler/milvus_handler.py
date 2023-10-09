@@ -27,13 +27,12 @@ class MilvusHandler(VectorStoreHandler):
         search_param_names = {
             "search_metric_type": "metric_type",
             "search_ignore_growing": "ignore_growing",
-            "search_params": "params"
+            "search_params": "param"
         }
         self._search_params = {}
         for search_param_alias, actual_search_param_name in search_param_names.items():
             if search_param_alias in self._connection_data:
                 self._search_params[actual_search_param_name] = self._connection_data[search_param_alias]
-                del self._connection_data[search_param_alias]
         self.is_connected = False
         self.connect()
 
@@ -165,23 +164,29 @@ class MilvusHandler(VectorStoreHandler):
                 resp_type=RESPONSE_TYPE.ERROR,
                 error_message=f"Error loading collection {table_name}: {e}",
             )
+
         # Find vector filter in conditions
         vector_filter = (
             []
             if conditions is None
             else [
-                condition
+                condition.value
                 for condition in conditions
                 if condition.column == TableField.SEARCH_VECTOR.value
             ]
         )
+
         # Generate search parameters
-        search_arguments = {
-            "data": [vector_filter],  # search vector
-            "anns_field": TableField.EMBEDDINGS.value,  # name of the field to search on
-            "param": self._search_params,
-        }
-        # According to api sum of offset and limit should be less than 16384.
+        search_arguments = {}
+        # TODO: check if distance in columns work
+        if columns:
+            search_arguments["output_fields"] = columns
+        else:
+            search_arguments["output_fields"] = [
+                schema_obj.name for schema_obj in self.SCHEMA]
+        search_arguments["expr"] = self._translate_metadata_conditions(
+            conditions)
+        # NOTE: According to api sum of offset and limit should be less than 16384.
         api_limit = 16384
         if limit is not None and offset is not None and limit + offset >= api_limit:
             return Response(
@@ -192,37 +197,48 @@ class MilvusHandler(VectorStoreHandler):
             search_arguments["limit"] = limit
         if offset is not None:
             search_arguments["param"]["offset"] = offset
-        # TODO: check if distance in columns work
-        if columns:
-            search_arguments["output_fields"] = columns
-        else:
-            search_arguments["output_fields"] = [
-                schema_obj.name for schema_obj in self.SCHEMA]
-        search_arguments["expr"] = self._translate_metadata_conditions(
-            conditions)
+
         # Execute query
-        results = collection.search(**search_arguments)
-        # TODO: format results
-        columns_required = [
-            TableField.ID,
-            TableField.DISTANCE
-        ]
-        if TableField.CONTENT in columns:
-            columns_required.append(TableField.CONTENT)
-        if TableField.EMBEDDINGS in columns:
-            columns_required.append(TableField.EMBEDDINGS)
-        if TableField.METADATA in columns:
-            columns_required.append(TableField.METADATA)
-        data = {k: [] for k in columns_required}
-        # TODO: convert metadata somehow
-        for hits in results:
-            for hit in hits:
-                for col in columns_required:
-                    if col != TableField.DISTANCE:
-                        data[col].append(hit.entity.get(col))
-                    else:
-                        data[TableField] = hit.distance
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(data))
+        results = None
+        if vector_filter:
+            search_arguments["data"] = vector_filter
+            search_arguments["anns_field"] = TableField.EMBEDDINGS.value
+            search_arguments["param"] = self._search_params
+            results = collection.search(**search_arguments)
+            columns_required = [
+                TableField.ID.value,
+                TableField.DISTANCE.value
+            ]
+            if TableField.CONTENT.value in columns:
+                columns_required.append(TableField.CONTENT.value)
+            if TableField.EMBEDDINGS.value in columns:
+                columns_required.append(TableField.EMBEDDINGS.value)
+            # TODO: convert metadata somehow
+            # if TableField.METADATA.value in columns:
+            #    columns_required.append(TableField.METADATA.value)
+            data = {k: [] for k in columns_required}
+            for hits in results:
+                for hit in hits:
+                    for col in columns_required:
+                        if col != TableField.DISTANCE.value:
+                            data[col].append(hit.entity.get(col))
+                        else:
+                            data[TableField.DISTANCE.value].append(hit.distance)
+            return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(data))
+        else:
+            if not search_arguments["expr"]:
+                search_arguments["expr"] = ""
+                # If no expression, query requires a limit
+                if "limit" not in search_arguments:
+                    search_arguments["limit"] = 100
+            search_arguments["output_fields"] = [
+                TableField.ID.value,
+                TableField.CONTENT.value,
+                TableField.EMBEDDINGS.value,
+                TableField.METADATA.value,
+            ] if not columns else columns
+            results = collection.query(**search_arguments)
+            return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame.from_records(results))
 
     def insert(
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None
@@ -299,25 +315,55 @@ class MilvusHandler(VectorStoreHandler):
 
 
 connection_args = OrderedDict(
-    chroma_server_host={
+    alias={
         "type": ARG_TYPE.STR,
         "description": "chromadb server host",
-        "required": False,
+        "required": True,
     },
-    chroma_server_http_port={
+    host={
+        "type": ARG_TYPE.STR,
+        "description": "chromadb server port",
+        "required": True,
+    },
+    port={
         "type": ARG_TYPE.INT,
         "description": "chromadb server port",
+        "required": True,
+    },
+    user={
+        "type": ARG_TYPE.STR,
+        "description": "chromadb server port",
+        "required": True,
+    },
+    password={
+        "type": ARG_TYPE.STR,
+        "description": "chromadb server port",
+        "required": True,
+    },
+    search_metric_type={
+        "type": ARG_TYPE.STR,
+        "description": "Metric type used for searches",
         "required": False,
     },
-    persist_directory={
-        "type": ARG_TYPE.STR,
-        "description": "persistence directory for chroma",
+    search_ignore_growing={
+        "type": ARG_TYPE.BOOL,
+        "description": "Metric type used for searches",
+        "required": False,
+    },
+    search_params={
+        "type": ARG_TYPE.DICT,
+        "description": "Metric type used for searches",
         "required": False,
     },
 )
 
 connection_args_example = OrderedDict(
-    chroma_server_host="localhost",
-    chroma_server_http_port=8000,
-    persist_directoryn="chroma",
+    alias="default",
+    host="127.0.0.1",
+    port=19530,
+    user="username",
+    password="password",
+    search_metric_type="L2",
+    search_ignore_growing=True,
+    search_params={"nprobe": 10},
 )

@@ -57,6 +57,32 @@ class ProductsTable(APITable):
 
         return products_df
     
+    def insert(self, query: ast.Insert) -> None:
+        """Inserts data into the Shopify "POST /products" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Insert
+           Given SQL INSERT query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        insert_statement_parser = INSERTQueryParser(
+            query,
+            supported_columns=['title', 'body_html', 'vendor', 'product_type', 'tags', 'status'],
+            mandatory_columns=['title' ],
+            all_mandatory=False
+        )
+        product_data = insert_statement_parser.parse_query()
+        self.create_products(product_data)
+    
     def delete(self, query: ast.Delete) -> None:
         """
         Deletes data from the Shopify "DELETE /products" API endpoint.
@@ -107,6 +133,18 @@ class ProductsTable(APITable):
             product = shopify.Product.find(product_id)
             product.destroy()
             logger.info(f'Product {product_id} deleted')
+
+
+    def create_products(self, product_data: List[Dict[Text, Any]]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for product in product_data:
+            created_product = shopify.Product.create(product)
+            if 'id' not in created_product.to_dict():
+                raise Exception('Product creation failed')
+            else:
+                logger.info(f'Product {created_product.to_dict()["id"]} created')
 
 
 class CustomersTable(APITable):

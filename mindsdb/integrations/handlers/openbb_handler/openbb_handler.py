@@ -103,10 +103,16 @@ class OpenBBHandler(APIHandler):
         try:
             if params is None:
                 log.logger.error("At least cmd needs to be added!")
-                return pd.DataFrame()
+                raise Exception("At least cmd needs to be added!")
 
             # Get the OpenBB command to get the data from
             cmd = params.pop("cmd")
+
+            # Ensure that the cmd provided is a valid OpenBB command
+            available_cmds = [f"obb{cmd}" for cmd in list(obb.coverage.commands.keys())]
+            if cmd not in available_cmds:
+                log.logger.error(f"The command provided is not supported by OpenBB! Choose one of the following: {', '.join(available_cmds)}")
+                raise Exception(f"The command provided is not supported by OpenBB! Choose one of the following: {', '.join(available_cmds)}")
 
             args = ""
             # If there are parameters create arguments as a string
@@ -122,10 +128,10 @@ class OpenBBHandler(APIHandler):
             openbb_cmd = f"{cmd}({args})"
 
             # Execute the OpenBB command and return the OBBject
-            OBBject = eval(openbb_cmd)
+            openbb_object = eval(openbb_cmd)
 
             # Transform the OBBject into a pandas DataFrame
-            data = OBBject.to_df()
+            data = openbb_object.to_df()
 
             # Check if index is a datetime, if it is we want that as a column
             if isinstance(data.index, pd.DatetimeIndex):

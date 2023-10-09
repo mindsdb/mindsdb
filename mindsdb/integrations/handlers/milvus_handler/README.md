@@ -1,4 +1,5 @@
 - make sure that pymilvus version is same as your instance
+- create does not support create_index
 
 # Milvus Handler
 

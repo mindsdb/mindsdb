@@ -93,6 +93,61 @@ class MilvusHandler(VectorStoreHandler):
                 )
         return Response(resp_type=RESPONSE_TYPE.OK)
 
+    def _get_milvus_operator(self, operator: FilterOperator) -> str:
+        mapping = {
+            FilterOperator.EQUAL: "==",
+            FilterOperator.NOT_EQUAL: "!=",
+            FilterOperator.LESS_THAN: "<",
+            FilterOperator.LESS_THAN_OR_EQUAL: "<=",
+            FilterOperator.GREATER_THAN: ">",
+            FilterOperator.GREATER_THAN_OR_EQUAL: ">=",
+            FilterOperator.IN: "in",
+            FilterOperator.NOT_IN: "not in",
+            FilterOperator.LIKE: "like",
+            FilterOperator.NOT_LIKE: "not like",
+        }
+        if operator not in mapping:
+            raise Exception(f"Operator {operator} is not supported by Milvus!")
+        return mapping[operator]
+
+    def _translate_metadata_conditions(
+        self, conditions: List[FilterCondition]
+    ) -> Optional[str]:
+        """
+        Translate a list of FilterCondition objects a string that can be used by Milvus.
+        E.g.,
+        [
+            FilterCondition(
+                column="metadata.price",
+                op=FilterOperator.LESS_THAN,
+                value=1000,
+            ),
+            FilterCondition(
+                column="metadata.price",
+                op=FilterOperator.GREATER_THAN,
+                value=300,
+            )
+        ]
+        Is converted to: "(price < 1000) and (price > 300)"
+        """
+        # Ignore all non-metadata conditions
+        if conditions is None:
+            return None
+        metadata_conditions = [
+            condition
+            for condition in conditions
+            if condition.column.startswith(TableField.METADATA.value)
+        ]
+        if len(metadata_conditions) == 0:
+            return None
+        # Translate each metadata condition into a dict
+        milvus_conditions = []
+        for condition in metadata_conditions:
+            milvus_conditions.append(
+                f"({condition.column.split('.')[-1]} {self._get_chromadb_operator(condition.op)} {condition.value})")
+        # Combine all metadata conditions into a single string and return
+        return " and ".join(milvus_conditions) if milvus_conditions else None
+
     def select(
         self,
         table_name: str,
@@ -101,7 +156,6 @@ class MilvusHandler(VectorStoreHandler):
         offset: int = None,
         limit: int = None,
     ) -> HandlerResponse:
-
         # Load collection table
         collection = Collection(table_name)
         try:
@@ -121,185 +175,54 @@ class MilvusHandler(VectorStoreHandler):
                 if condition.column == TableField.SEARCH_VECTOR.value
             ]
         )
-        # NOTE: According to api offset and limit should be less than 16384.
+        # Generate search parameters
+        search_arguments = {
+            "data": [vector_filter],  # search vector
+            "anns_field": TableField.EMBEDDINGS.value,  # name of the field to search on
+            "param": self._search_params,
+        }
+        # According to api sum of offset and limit should be less than 16384.
         api_limit = 16384
         if limit is not None and offset is not None and limit + offset >= api_limit:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
                 error_message=f"Sum of limit and offset should be less than {api_limit}",
             )
-
-        search_arguments = {
-            "data": [vector_filter],  # search vector
-            # name of the field (vector) to search on
-            "anns_field": TableField.EMBEDDINGS.value,
-            "param": self._search_params,
-            "expr": None,  # boolean filters
-            # cols (in metadata for mindsdb, table for milvus) to return
-            "output_fields": ['title'],
-        }
         if limit is not None:
             search_arguments["limit"] = limit
         if offset is not None:
             search_arguments["param"]["offset"] = offset
-
+        # TODO: check if distance in columns work
+        if columns:
+            search_arguments["output_fields"] = columns
+        else:
+            search_arguments["output_fields"] = [
+                schema_obj.name for schema_obj in self.SCHEMA]
+        search_arguments["expr"] = self._translate_metadata_conditions(
+            conditions)
+        # Execute query
         results = collection.search(**search_arguments)
-
-        """
-        # get the IDs of all returned hits
-        results[0].ids
-        # get the distances to the query vector from all returned hits
-        results[0].distances
-        # get the value of an output field specified in the search request.
-        hit = results[0][0]
-        hit.entity.get('title')
-        """
-
-        collection = self._client.get_collection(table_name)
-        filters = self._translate_metadata_condition(conditions)
-        # check if embedding vector filter is present
-        vector_filter = (
-            []
-            if conditions is None
-            else [
-                condition
-                for condition in conditions
-                if condition.column == TableField.SEARCH_VECTOR.value
-            ]
-        )
-        if len(vector_filter) > 0:
-            vector_filter = vector_filter[0]
-        else:
-            vector_filter = None
-        id_filters = None
-        if conditions is not None:
-            id_filters = [
-                condition.value
-                for condition in conditions
-                if condition.column == TableField.ID.value
-            ] or None
-
-        if vector_filter is not None:
-            # similarity search
-            query_payload = {
-                "where": filters,
-                "query_embeddings": vector_filter.value
-                if vector_filter is not None
-                else None,
-                "include": ["metadatas", "documents", "distances"],
-            }
-            if limit is not None:
-                query_payload["n_results"] = limit
-
-            result = collection.query(**query_payload)
-            ids = result["ids"][0]
-            documents = result["documents"][0]
-            metadatas = result["metadatas"][0]
-            distances = result["distances"][0]
-        else:
-            # general get query
-            result = collection.get(
-                ids=id_filters,
-                where=filters,
-                limit=limit,
-                offset=offset,
-            )
-            ids = result["ids"]
-            documents = result["documents"]
-            metadatas = result["metadatas"]
-            distances = None
-
-        # project based on columns
-        payload = {
-            TableField.ID.value: ids,
-            TableField.CONTENT.value: documents,
-            TableField.METADATA.value: metadatas,
-        }
-
-        if columns is not None:
-            payload = {
-                column: payload[column]
-                for column in columns
-                if column != TableField.EMBEDDINGS.value
-            }
-
-        # always include distance
-        if distances is not None:
-            payload[TableField.DISTANCE.value] = distances
-        result_df = pd.DataFrame(payload)
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=result_df)
-
-    def _get_chromadb_operator(self, operator: FilterOperator) -> str:
-        mapping = {
-            FilterOperator.EQUAL: "$eq",
-            FilterOperator.NOT_EQUAL: "$ne",
-            FilterOperator.LESS_THAN: "$lt",
-            FilterOperator.LESS_THAN_OR_EQUAL: "$lte",
-            FilterOperator.GREATER_THAN: "$gt",
-            FilterOperator.GREATER_THAN_OR_EQUAL: "$gte",
-        }
-
-        if operator not in mapping:
-            raise Exception(f"Operator {operator} is not supported by Milvus!")
-
-        return mapping[operator]
-
-    def _translate_metadata_condition(
-        self, conditions: List[FilterCondition]
-    ) -> Optional[dict]:
-        """
-        Translate a list of FilterCondition objects a dict that can be used by Milvus.
-        E.g.,
-        [
-            FilterCondition(
-                column="metadata.created_at",
-                op=FilterOperator.LESS_THAN,
-                value="2020-01-01",
-            ),
-            FilterCondition(
-                column="metadata.created_at",
-                op=FilterOperator.GREATER_THAN,
-                value="2019-01-01",
-            )
+        # TODO: format results
+        columns_required = [
+            TableField.ID,
+            TableField.DISTANCE
         ]
-        -->
-        {
-            "$and": [
-                {"created_at": {"$lt": "2020-01-01"}},
-                {"created_at": {"$gt": "2019-01-01"}}
-            ]
-        }
-        """
-        # we ignore all non-metadata conditions
-        if conditions is None:
-            return None
-        metadata_conditions = [
-            condition
-            for condition in conditions
-            if condition.column.startswith(TableField.METADATA.value)
-        ]
-        if len(metadata_conditions) == 0:
-            return None
-
-        # we translate each metadata condition into a dict
-        chroma_db_conditions = []
-        for condition in metadata_conditions:
-            metadata_key = condition.column.split(".")[-1]
-            chroma_db_conditions.append(
-                {
-                    metadata_key: {
-                        self._get_chromadb_operator(condition.op): condition.value
-                    }
-                }
-            )
-
-        # we combine all metadata conditions into a single dict
-        metadata_condition = (
-            {"$and": chroma_db_conditions}
-            if len(chroma_db_conditions) > 1
-            else chroma_db_conditions[0]
-        )
-        return metadata_condition
+        if TableField.CONTENT in columns:
+            columns_required.append(TableField.CONTENT)
+        if TableField.EMBEDDINGS in columns:
+            columns_required.append(TableField.EMBEDDINGS)
+        if TableField.METADATA in columns:
+            columns_required.append(TableField.METADATA)
+        data = {k: [] for k in columns_required}
+        # TODO: convert metadata somehow
+        for hits in results:
+            for hit in hits:
+                for col in columns_required:
+                    if col != TableField.DISTANCE:
+                        data[col].append(hit.entity.get(col))
+                    else:
+                        data[TableField] = hit.distance
+        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(data))
 
     def insert(
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None

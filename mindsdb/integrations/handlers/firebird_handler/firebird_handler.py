@@ -15,7 +15,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE,
+    RESPONSE_TYPE
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
@@ -25,7 +25,7 @@ class FirebirdHandler(DatabaseHandler):
     This handler handles connection and execution of the Firebird statements.
     """
 
-    name = "firebird"
+    name = 'firebird'
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
@@ -37,7 +37,7 @@ class FirebirdHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = "firebird"
+        self.dialect = 'firebird'
         self.connection_data = connection_data
         self.kwargs = kwargs
 
@@ -59,10 +59,10 @@ class FirebirdHandler(DatabaseHandler):
             return self.connection
 
         self.connection = fdb.connect(
-            host=self.connection_data["host"],
-            database=self.connection_data["database"],
-            user=self.connection_data["user"],
-            password=self.connection_data["password"],
+            host=self.connection_data['host'],
+            database=self.connection_data['database'],
+            user=self.connection_data['user'],
+            password=self.connection_data['password'],
         )
         self.is_connected = True
 
@@ -94,9 +94,7 @@ class FirebirdHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(
-                f'Error connecting to Firebird {self.connection_data["database"]}, {e}!'
-            )
+            log.logger.error(f'Error connecting to Firebird {self.connection_data["database"]}, {e}!')
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -127,17 +125,19 @@ class FirebirdHandler(DatabaseHandler):
                 response = Response(
                     RESPONSE_TYPE.TABLE,
                     data_frame=pd.DataFrame(
-                        result, columns=[x[0] for x in cursor.description]
-                    ),
+                        result,
+                        columns=[x[0] for x in cursor.description]
+                    )
                 )
             else:
                 connection.commit()
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            log.logger.error(
-                f'Error running query: {query} on {self.connection_data["database"]}!'
+            log.logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
             )
-            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         cursor.close()
         if need_to_close is True:
@@ -164,16 +164,17 @@ class FirebirdHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        query = (
-            "SELECT RDB$RELATION_NAME"
-            "FROM RDB$RELATIONS"
-            "WHERE (RDB$SYSTEM_FLAG <> 1 OR RDB$SYSTEM_FLAG IS NULL) AND RDB$VIEW_BLR IS NULL"
-            "ORDER BY RDB$RELATION_NAME;"
-        )
+
+        query = """
+            SELECT RDB$RELATION_NAME 
+            FROM RDB$RELATIONS
+            WHERE (RDB$SYSTEM_FLAG <> 1 OR RDB$SYSTEM_FLAG IS NULL) AND RDB$VIEW_BLR IS NULL
+            ORDER BY RDB$RELATION_NAME;
+        """
         result = self.native_query(query)
         df = result.data_frame
         df[df.columns[0]] = df[df.columns[0]].apply(lambda row: row.strip())
-        result.data_frame = df.rename(columns={df.columns[0]: "table_name"})
+        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
         return result
 
     def get_columns(self, table_name: str) -> StatusResponse:
@@ -235,34 +236,35 @@ class FirebirdHandler(DatabaseHandler):
         """
         result = self.native_query(query)
         df = result.data_frame
-        result.data_frame = df.rename(
-            columns={"FIELD_NAME": "column_name", "FIELD_TYPE": "data_type"}
-        )
+        result.data_frame = df.rename(columns={'FIELD_NAME': 'column_name', 'FIELD_TYPE': 'data_type'})
         return result
 
 
 connection_args = OrderedDict(
     host={
-        "type": ARG_TYPE.STR,
-        "description": "The host name or IP address of the Firebird server.",
+        'type': ARG_TYPE.STR,
+        'description': 'The host name or IP address of the Firebird server.'
     },
     database={
-        "type": ARG_TYPE.STR,
-        "description": (
-            "The database name to use when connecting with the Firebird server."
-            "NOTE: use double backslashes (\\) for the database path on a Windows machine."
-        ),
+        'type': ARG_TYPE.STR,
+        'description': """
+            The database name to use when connecting with the Firebird server. NOTE: use double backslashes (\\) for the 
+            database path on a Windows machine.
+        """
     },
     user={
-        "type": ARG_TYPE.STR,
-        "description": "The user name used to authenticate with the Firebird server.",
+        'type': ARG_TYPE.STR,
+        'description': 'The user name used to authenticate with the Firebird server.'
     },
     password={
-        "type": ARG_TYPE.STR,
-        "description": "The password to authenticate the user with the Firebird server.",
-    },
+        'type': ARG_TYPE.STR,
+        'description': 'The password to authenticate the user with the Firebird server.'
+    }
 )
 
 connection_args_example = OrderedDict(
-    host="localhost", database="/temp/test.db", user="sysdba", password="password"
+    host='localhost',
+    database='/temp/test.db',
+    user='sysdba',
+    password='password'
 )

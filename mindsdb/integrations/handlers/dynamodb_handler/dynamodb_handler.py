@@ -15,7 +15,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE,
+    RESPONSE_TYPE
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
@@ -25,7 +25,7 @@ class DyanmoDBHandler(DatabaseHandler):
     This handler handles connection and execution of the DynamoDB statements.
     """
 
-    name = "dynamodb"
+    name = 'dynamodb'
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
@@ -37,7 +37,7 @@ class DyanmoDBHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = "dynamodb"
+        self.dialect = 'dynamodb'
 
         self.connection_data = connection_data
         self.kwargs = kwargs
@@ -56,10 +56,10 @@ class DyanmoDBHandler(DatabaseHandler):
             return self.connection
 
         self.connection = boto3.client(
-            "dynamodb",
-            aws_access_key_id=self.connection_data["aws_access_key_id"],
-            aws_secret_access_key=self.connection_data["aws_secret_access_key"],
-            region_name=self.connection_data["region_name"],
+            'dynamodb',
+            aws_access_key_id=self.connection_data['aws_access_key_id'],
+            aws_secret_access_key=self.connection_data['aws_secret_access_key'],
+            region_name=self.connection_data['region_name']
         )
 
         self.is_connected = True
@@ -92,7 +92,7 @@ class DyanmoDBHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f"Error connecting to DynamoDB, {e}!")
+            log.logger.error(f'Error connecting to DynamoDB, {e}!')
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -117,18 +117,22 @@ class DyanmoDBHandler(DatabaseHandler):
 
         try:
             result = connection.execute_statement(Statement=query)
-            if result["Items"]:
+            if result['Items']:
                 records = []
-                for record in result["Items"]:
+                for record in result['Items']:
                     records.append(self.parse_record(record))
                 response = Response(
-                    RESPONSE_TYPE.TABLE, data_frame=pd.json_normalize(records)
+                    RESPONSE_TYPE.TABLE,
+                    data_frame=pd.json_normalize(records)
                 )
             else:
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            log.logger.error(f"Error running query: {query} on DynamoDB!")
-            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+            log.logger.error(f'Error running query: {query} on DynamoDB!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
 
         connection.close()
         if need_to_close is True:
@@ -138,7 +142,7 @@ class DyanmoDBHandler(DatabaseHandler):
 
     def parse_record(self, record):
         deserializer = TypeDeserializer()
-        return {k: deserializer.deserialize(v) for k, v in record.items()}
+        return {k: deserializer.deserialize(v) for k,v in record.items()}
 
     def query(self, query: ASTNode) -> StatusResponse:
         """
@@ -161,9 +165,15 @@ class DyanmoDBHandler(DatabaseHandler):
 
         result = self.connection.list_tables()
 
-        df = pd.DataFrame(data=result["TableNames"], columns=["table_name"])
+        df = pd.DataFrame(
+            data=result['TableNames'],
+            columns=['table_name']
+        )
 
-        response = Response(RESPONSE_TYPE.TABLE, df)
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            df
+        )
 
         return response
 
@@ -176,36 +186,46 @@ class DyanmoDBHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        result = self.connection.describe_table(TableName=table_name)
-
-        df = pd.DataFrame(result["Table"]["AttributeDefinitions"])
-
-        df = df.rename(
-            columns={"AttributeName": "column_name", "AttributeType": "data_type"}
+        result = self.connection.describe_table(
+            TableName=table_name
         )
 
-        response = Response(RESPONSE_TYPE.TABLE, df)
+        df = pd.DataFrame(
+            result['Table']['AttributeDefinitions']
+        )
+
+        df = df.rename(
+            columns={
+                'AttributeName': 'column_name',
+                'AttributeType': 'data_type'
+            }
+        )
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            df
+        )
 
         return response
 
 
 connection_args = OrderedDict(
     aws_access_key_id={
-        "type": ARG_TYPE.STR,
-        "description": "The access key for the AWS account.",
+        'type': ARG_TYPE.STR,
+        'description': 'The access key for the AWS account.'
     },
     aws_secret_access_key={
-        "type": ARG_TYPE.STR,
-        "description": "The secret key for the AWS account.",
+        'type': ARG_TYPE.STR,
+        'description': 'The secret key for the AWS account.'
     },
     region_name={
-        "type": ARG_TYPE.STR,
-        "description": "The AWS region where the DynamoDB tables are created.",
-    },
+        'type': ARG_TYPE.STR,
+        'description': 'The AWS region where the DynamoDB tables are created.'
+    }
 )
 
 connection_args_example = OrderedDict(
-    aws_access_key_id="PCAQ2LJDOSWLNSQKOCPW",
-    aws_secret_access_key="U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i",
-    region_name="us-east-1",
+    aws_access_key_id='PCAQ2LJDOSWLNSQKOCPW',
+    aws_secret_access_key='U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i',
+    region_name='us-east-1'
 )

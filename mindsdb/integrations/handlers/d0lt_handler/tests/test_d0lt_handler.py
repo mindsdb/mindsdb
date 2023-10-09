@@ -13,16 +13,16 @@ class D0ltHandlerTest(unittest.TestCase):
             "user": "root",
             "password": "",
             "database": "getting_started",
-            "ssl": False,
+            "ssl": False
         }
-        cls.handler = D0ltHandler("test_mysql_handler", connection_data=cls.kwargs)
+        cls.handler = D0ltHandler('test_mysql_handler', connection_data=cls.kwargs)
 
     def test_0_connect(self):
-        self.handler.connect()
+         self.handler.connect()
 
     def test_1_drop_table(self):
         res = self.handler.query("DROP TABLE IF EXISTS PREM;")
-        assert res.type is not RESPONSE_TYPE.ERROR
+        assert res.type is  not RESPONSE_TYPE.ERROR
 
     def test_2_create_table(self):
         res = self.handler.query("CREATE TABLE IF NOT EXISTS PREM (Premi varchar(50));")
@@ -35,19 +35,19 @@ class D0ltHandlerTest(unittest.TestCase):
     def test_4_get_tables(self):
         tables = self.handler.get_tables()
         assert tables.type is not RESPONSE_TYPE.ERROR
-
+ 
     def test_5_select_query(self):
         query = "SELECT * FROM PREM;"
         result = self.handler.native_query(query)
-        assert result.type is not RESPONSE_TYPE.ERROR
-
+        assert result.type is not  RESPONSE_TYPE.ERROR
+    
     def test_6_get_columns(self):
-        result = self.handler.get_columns("PREM")
-        assert result.type is not RESPONSE_TYPE.ERROR
+        result = self.handler.get_columns('PREM')
+        assert result.type is not  RESPONSE_TYPE.ERROR
 
     def test_7_check_connection(self):
         self.handler.check_connection()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

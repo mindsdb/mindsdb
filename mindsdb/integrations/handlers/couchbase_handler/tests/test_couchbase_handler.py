@@ -8,11 +8,11 @@ class CouchbaseHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         connection_data = {
-            'host': '192.168.33.10',
-            'user': 'admin',
-            'password': '00154abs',
-            'bucket': 'bag-bucket',
-            'scope': 'test-scope'  # This is optinal, but if ommited will default to _default.
+            'host':'192.168.33.10',
+            'user':'admin',
+            'password':'00154abs',
+            'bucket':'bag-bucket',
+            'scope':'test-scope' # This is optinal, but if ommited will default to _default.
         }
         cls.kwargs = dict(connection_data=connection_data)
         cls.handler = CouchbaseHandler("test_couchbase_handler", **cls.kwargs)

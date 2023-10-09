@@ -1,7 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.firebird_handler.firebird_handler import (
-    FirebirdHandler,
-)
+from mindsdb.integrations.handlers.firebird_handler.firebird_handler import FirebirdHandler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
@@ -13,10 +11,10 @@ class FirebirdHandlerTest(unittest.TestCase):
                 "host": "localhost",
                 "database": r"C:\Users\minura\Documents\mindsdb\test.fdb",
                 "user": "sysdba",
-                "password": "password",
+                "password": "password"
             }
         }
-        cls.handler = FirebirdHandler("test_firebird_handler", cls.kwargs)
+        cls.handler = FirebirdHandler('test_firebird_handler', cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -31,9 +29,9 @@ class FirebirdHandlerTest(unittest.TestCase):
         assert tables.type is not RESPONSE_TYPE.ERROR
 
     def test_4_get_columns(self):
-        columns = self.handler.get_columns("test_tbl")
+        columns = self.handler.get_columns('test_tbl')
         assert columns.type is not RESPONSE_TYPE.ERROR
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

@@ -2,7 +2,7 @@
 
 Being part of the core MindsDB team is accessible to anyone who is motivated and wants to be part of that journey!
 
-Please see below how to contribute to the project, also refer to the contributing documentation.
+Please see below how to contribute to the project. Also refer to the contributing documentation.
 
 ## How can you help us?
 

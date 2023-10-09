@@ -102,6 +102,10 @@ Use the established connection to query your database:
 SELECT * FROM shopify_datasource.products
 ~~~~
 
+~~~~sql
+SELECT * FROM shopify_datasource.carrier_service;
+~~~~
+
 Run more advanced SELECT queries:
 
 ~~~~sql

@@ -22,3 +22,5 @@ Remove a Project Using SQL, Test passed: https://github.com/hridaya423/Hacktober
 List Projects Using SQL, Test Passed: https://github.com/hridaya423/HacktoberfestMindsDBTesting/blob/master/Testing.md
 
 Create AI Engines section using SQL - Tests Passes - https://github.com/Better-Boy/mindsdb-QA/blob/main/ML-handlers/Testing.md
+
+Test the Email handler for Outlook - Tests Passes - https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Email-Handler/Testing.md

@@ -9,6 +9,7 @@ from mindsdb.integrations.utilities.time_series_utils import get_results_from_ni
 
 # TODO: add E2E tests.
 
+
 class TimeGPTHandler(BaseMLEngine):
     """
     Integration with the Nixtla TimeGPT models for

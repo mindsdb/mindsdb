@@ -77,13 +77,12 @@ class OpenBBHandler(APIHandler):
         new_cols = []
         for element in cols:
             # If the element is a tuple, we want to merge the elements together
-            if type(element) == tuple:
+            if isinstance(element, tuple):
                 # If there's more than one element we want to merge them together
                 if len(element) > 1:
-                    new_element = "_".join(map(str, element))
                     # Prevents the case where there's a multi column index and the index is a date
                     # in that instance we will have ('date', '') and this avoids having a column named 'date_'
-                    new_element = new_element[:-1] if new_element[-1] == "_" else new_element
+                    new_element = "_".join(map(str, element)).rstrip("_")
                     new_cols.append(new_element)
                 else:
                     new_cols.append(element[0])

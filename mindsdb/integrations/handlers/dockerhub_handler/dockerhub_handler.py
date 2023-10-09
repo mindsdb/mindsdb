@@ -1,9 +1,9 @@
-from DockerHubClient import DockerHubClient
 from collections import OrderedDict
 
 from mindsdb.integrations.handlers.dockerhub_handler.dockerhub_tables import (
     DockerHubRepoImagesSummaryTable
 )
+from mindsdb.integrations.handlers.dockerhub_handler.DockerHubClient import DockerHubClient
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -34,7 +34,6 @@ class DockerHubHandler(APIHandler):
         self.connection_data = connection_data
         self.kwargs = kwargs
         self.docker_client = DockerHubClient()
-        self.connection = None
         self.is_connected = False
 
         repo_images_stats_data = DockerHubRepoImagesSummaryTable(self)
@@ -48,15 +47,14 @@ class DockerHubHandler(APIHandler):
         StatusResponse
             connection object
         """
-        # TODO
         resp = StatusResponse(False)
         status = self.docker_client.login(self.connection_data.get("username"), self.connection_data.get("password"))
-        if not status:
+        if status["code"] != 200:
             resp.success = False
-            # response.error_message 
+            resp.error_message = status["error"]
+            return resp
         self.is_connected = True
-
-        return self.docker_client
+        return resp
 
     def check_connection(self) -> StatusResponse:
         """Check connection to the handler.
@@ -69,22 +67,20 @@ class DockerHubHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            self.connect()
-            if self.connection_data.get("api_key", None):
-                current_user = self.connection.get_user().name
+            status = self.docker_client.login(self.connection_data.get("username"), self.connection_data.get("password"))
+            if status["code"] == 200:
+                current_user = self.connection_data.get("username")
                 logger.info(f"Authenticated as user {current_user}")
+                response.success = True
             else:
-                logger.info("Proceeding without an API key")
-
-            current_limit = self.connection.get_rate_limit()
-            logger.info(f"Current rate limit: {current_limit}")
-            response.success = True
+                response.success = False
+                logger.info("Error connecting to dockerhub. " + status["error"])
+                response.error_message = status["error"]
         except Exception as e:
             logger.error(f"Error connecting to DockerHub API: {e}!")
             response.error_message = e
 
         self.is_connected = response.success
-
         return response
 
     def native_query(self, query: str) -> StatusResponse:

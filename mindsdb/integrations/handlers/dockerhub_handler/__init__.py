@@ -3,8 +3,8 @@ from mindsdb.integrations.libs.const import HANDLER_TYPE
 from .__about__ import __version__ as version, __description__ as description
 
 try:
-    from .github_handler import (
-        GithubHandler as Handler,
+    from .dockerhub_handler import (
+        DockerHubHandler as Handler,
         connection_args_example,
         connection_args,
     )
@@ -14,8 +14,8 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = "GitHub"
-name = "github"
+title = "DockerHub"
+name = "dockerhub"
 type = HANDLER_TYPE.DATA
 icon_path = "icon.svg"
 

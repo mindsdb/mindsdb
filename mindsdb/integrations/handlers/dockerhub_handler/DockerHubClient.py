@@ -17,15 +17,16 @@ class DockerHubClient:
         else:
             resp = request_method(url, headers=headers)
         content = {}
-        if resp.status_code == 200: content = json.loads(resp.content.decode())
-        return {'content': content, 'code': resp.status_code}
+        if resp.status_code == 200: content = {'content': json.loads(resp.content.decode()), 'code': 200}
+        else: content = {'content': {}, 'code': resp.status_code, 'error': resp.text}
+        return content
 
     def login(self, username=None, password=None):
         data = {'username': username, 'password': password}
         self.auth_token = None
         resp = self.make_request(self.docker_hub_base_endpoint + 'users/login/', 'POST', data)
         if resp['code'] == 200: self.auth_token = resp['content']['token']
-        return resp['code'] == 200
+        return resp
 
     def get_images_summary(self, namespace, repo):
         url = f'{self.docker_hub_base_endpoint}namespaces/{namespace}/repositories/{repo}/images-summary'

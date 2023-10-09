@@ -66,11 +66,7 @@ PARAMETERS = {
 };
 ```
 
-It creates a database that comes with the `emails` table.
-
-## Usage
-
-Now you can query for emails like this:
+It creates a database that comes with the `emails` table. Now you can query for emails like this:
 
 ```sql
 SELECT *
@@ -110,11 +106,7 @@ PARAMETERS = {
 };
 ```
 
-It creates a database that comes with the `emails` table.
-
-## Usage
-
-Now you can query for emails like this:
+It creates a database that comes with the `emails` table. Now you can query for emails like this:
 
 ```sql
 SELECT *

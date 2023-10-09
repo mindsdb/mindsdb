@@ -89,7 +89,9 @@ jobs:
 
           python -c 'from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df; print(query_df)'
           
-          env PYTHONPATH=./ pytest tests/unit/test_executor.py
+          pytest -vx tests/integration_tests/flows/test_mysql_api.py
+          
+          pytest -vx tests/unit/test_executor.py
 
           # need fix in LW. not working yet
           env PYTHONPATH=./ pytest tests/unit/test_project_structure.py

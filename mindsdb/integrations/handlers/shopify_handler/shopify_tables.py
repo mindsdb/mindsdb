@@ -528,3 +528,64 @@ class CarrierServiceTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         services = shopify.CarrierService.find()
         return [service.to_dict() for service in services]
+
+
+class ShippingZoneTable(APITable):
+    """The Shopify shipping zone Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Pulls data from the Shopify "GET /shipping_zone" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+
+            Shopify Shipping Zone info
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'shipping_zone',
+            self.get_columns()
+        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        shipping_zone_df = pd.json_normalize(self.get_shipping_zone(), record_path="countries", meta=["id", "name"], record_prefix="countries_")
+
+
+        select_statement_executor = SELECTQueryExecutor(
+            shipping_zone_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions,
+            result_limit
+        )
+        
+        shipping_zone_df = select_statement_executor.execute_query()
+
+        return shipping_zone_df
+
+    def get_columns(self) -> List[Text]:
+        return ['countries_id', 'countries_name', 'countries_tax', 'countries_code', 'countries_tax_name', 'countries_shipping_zone_id', 'countries_provinces', 'id', 'name']
+
+    def clean_response(self, res):
+        temp = {}
+        temp["id"] = res["id"]
+        temp["name"] = res["name"]
+        temp["countries"] = res["countries"]
+        return temp
+
+    def get_shipping_zone(self) -> List[Dict]:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+        zones = shopify.ShippingZone.find()
+        return [self.clean_response(zone.to_dict()) for zone in zones]

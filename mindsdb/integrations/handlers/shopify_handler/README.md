@@ -106,6 +106,10 @@ SELECT * FROM shopify_datasource.products
 SELECT * FROM shopify_datasource.carrier_service;
 ~~~~
 
+~~~~sql
+SELECT * FROM shopify_datasource.shipping_zone;
+~~~~
+
 Run more advanced SELECT queries:
 
 ~~~~sql

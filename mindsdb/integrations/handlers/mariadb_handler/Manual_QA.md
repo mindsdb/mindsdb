@@ -50,5 +50,5 @@ DROP DATABASE [Database_Name]
 
 Drop a remark based on your observation.
 - [ ] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
-- [x] There's a Bug 🪲 [fcntl is not defined] Getting Error After PREDICT Query
+- [x] There's a Bug 🪲 `fcntl is not defined` Getting Error After PREDICT Query
 ---

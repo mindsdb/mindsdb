@@ -8,50 +8,41 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
-
-
 import pandas as pd
 from crate import client as db
-from crate.client.sqlalchemy.dialect  import  CrateDialect
-
+from crate.client.sqlalchemy.dialect import CrateDialect
 
 
 class CrateHandler(DatabaseHandler):
-
-
-    name= 'crate'
+    name = "crate"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
-        """ Initialize the handler
+        """Initialize the handler
         Args:
             name (str): name of particular handler instance
             connection_data (dict): parameters for connecting to the database
             **kwargs: arbitrary keyword arguments.
         """
         super().__init__(name)
-        
+
         self.kwargs = kwargs
         self.parser = parse_sql
-        self.dialect = 'crate'
-        self.user = connection_data['user']
-        self.password = connection_data['password']
-        self.schemaName = connection_data.get('schema_name','doc')
-        self.host = connection_data['host']
-        self.port = connection_data['port']
-
-        
-        
+        self.dialect = "crate"
+        self.user = connection_data["user"]
+        self.password = connection_data["password"]
+        self.schemaName = connection_data.get("schema_name", "doc")
+        self.host = connection_data["host"]
+        self.port = connection_data["port"]
 
         self.connection = None
         self.is_connected = False
-          
-    
+
     def connect(self):
-        """ Set up any connections required by the handler
+        """Set up any connections required by the handler
         Should return output of check_connection() method after attempting
         connection. Should switch self.is_connected.
         Returns:
@@ -60,20 +51,20 @@ class CrateHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        url="http://{0}:{1}@{2}:{3}".format(self.user,self.password,self.host,self.port)
+        url = "http://{0}:{1}@{2}:{3}".format(
+            self.user, self.password, self.host, self.port
+        )
         try:
             self.connection = db.connect(url)
-  
-            self.is_connected= True
+
+            self.is_connected = True
         except Exception as e:
             log.logger.error(f"Error while connecting to CrateDB, {e}")
 
-
         return self.connection
 
-
     def disconnect(self):
-        """ Close any existing connections
+        """Close any existing connections
         Should switch self.is_connected.
         """
 
@@ -81,15 +72,14 @@ class CrateHandler(DatabaseHandler):
             return
         try:
             self.connection.close()
-            self.is_connected=False
+            self.is_connected = False
         except Exception as e:
             log.logger.error(f"Error while disconnecting to CrateDB, {e}")
 
-        return 
-
+        return
 
     def check_connection(self) -> StatusResponse:
-        """ Check connection to the handler
+        """Check connection to the handler
         Returns:
             HandlerStatusResponse
         """
@@ -101,7 +91,7 @@ class CrateHandler(DatabaseHandler):
             self.connect()
             responseCode.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to  CrateDB, {e}!')
+            log.logger.error(f"Error connecting to  CrateDB, {e}!")
             responseCode.error_message = str(e)
         finally:
             if responseCode.success is True and need_to_close:
@@ -110,7 +100,6 @@ class CrateHandler(DatabaseHandler):
                 self.is_connected = False
 
         return responseCode
-
 
     def native_query(self, query: str) -> StatusResponse:
         """Receive raw query and act upon it somehow.
@@ -122,28 +111,24 @@ class CrateHandler(DatabaseHandler):
         """
 
         need_to_close = self.is_connected is False
-        
+
         conn = self.connect()
-        cur = conn.cursor() 
+        cur = conn.cursor()
         try:
-            cur.execute(query)      
-            if cur.rowcount :
-                result = cur.fetchall() 
+            cur.execute(query)
+            if cur.rowcount:
+                result = cur.fetchall()
                 response = Response(
                     RESPONSE_TYPE.TABLE,
                     data_frame=pd.DataFrame(
-                        result,
-                        columns=[x[0] for x in cur.description]
-                    )
+                        result, columns=[x[0] for x in cur.description]
+                    ),
                 )
             else:
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            log.logger.error(f'Error running query: {query} on CrateDB!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            log.logger.error(f"Error running query: {query} on CrateDB!")
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
         cur.close()
 
         if need_to_close is True:
@@ -151,7 +136,6 @@ class CrateHandler(DatabaseHandler):
 
         return response
 
-    
     def query(self, query: ASTNode) -> StatusResponse:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.
         Args:
@@ -160,29 +144,24 @@ class CrateHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        
-
-
         renderer = SqlalchemyRender(CrateDialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
-
     def get_tables(self) -> StatusResponse:
-        """ Return list of entities
+        """Return list of entities
         Return list of entities that will be accesible as tables.
         Returns:
             HandlerResponse: shoud have same columns as information_schema.tables
                 (https://dev.mysql.com/doc/refman/8.0/en/information-schema-tables-table.html)
                 Column 'TABLE_NAME' is mandatory, other is optional.
         """
-        
         q = f"SHOW TABLES FROM {self.schemaName};"
         result = self.native_query(q)
         return result
-    
+
     def get_columns(self, table_name: str) -> StatusResponse:
-        """ Returns a list of entity columns
+        """Returns a list of entity columns
         Args:
             table_name (str): name of one of tables returned by self.get_tables()
         Returns:
@@ -192,48 +171,37 @@ class CrateHandler(DatabaseHandler):
                 recomended to define also 'DATA_TYPE': it should be one of
                 python data types (by default it str).
         """
-
-        
         q = f"SHOW COLUMNS FROM {table_name};"
         result = self.native_query(q)
         return result
 
 
-        
-
-
-
-
-
 connection_args = OrderedDict(
     host={
-        'type': ARG_TYPE.STR,
-        'description': 'The host name or IP address of the CrateDB server/database.'
+        "type": ARG_TYPE.STR,
+        "description": "The host name or IP address of the CrateDB server/database.",
     },
     user={
-        'type': ARG_TYPE.STR,
-        'description': 'The user name used to authenticate with the CrateDB server.'
+        "type": ARG_TYPE.STR,
+        "description": "The user name used to authenticate with the CrateDB server.",
     },
     password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the CrateDB server.'
+        "type": ARG_TYPE.STR,
+        "description": "The password to authenticate the user with the CrateDB server.",
     },
     port={
-        'type': ARG_TYPE.INT,
-        'description': 'Specify port to connect CrateDB server'
-    }, 
-    schemaName={
-        'type': ARG_TYPE.STR,
-        'description': 'Specify the schema name. Note: It is optional DEFAULT is "doc"'
+        "type": ARG_TYPE.INT,
+        "description": "Specify port to connect CrateDB server",
     },
-
+    schemaName={
+        "type": ARG_TYPE.STR,
+        "description": 'Specify the schema name. Note: It is optional DEFAULT is "doc"',
+    },
 )
 
 connection_args_example = OrderedDict(
-    host='127.0.0.1',
-    port='4200',
-    password='',
-    user='crate',
-    
-
+    host="127.0.0.1",
+    port="4200",
+    password="",
+    user="crate",
 )

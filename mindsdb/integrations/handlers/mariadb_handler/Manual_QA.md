@@ -17,10 +17,11 @@ Default Home_Rental dataset of MindsDB
 
 **2. Testing CREATE PREDICTOR**
 
-
 ```
 CREATE MODEL [MODEL_Name]
 ```
+![Output for successfully creation of model](https://github.com/Anuragwagh/mindsdb/assets/56196363/5af86744-7dff-4771-bda4-fd43e5cd7866)
+
 
 **3. Testing SELECT FROM PREDICTOR**
 
@@ -28,7 +29,13 @@ CREATE MODEL [MODEL_Name]
 FROM [MariaDB_Connection_Name] (SELECT * FROM [Dataset_Name])
 PREDICT (Column_Name)
 ```
+![Output for successfully creation of model](https://github.com/Anuragwagh/mindsdb/assets/56196363/b315dd9e-e8ed-48e3-aef0-4c07a4e6d357)
+
 After Predict Query MindsDB throwing error
+
+![Web capture_9-10-2023_05735_127 0 0 1](https://github.com/Anuragwagh/mindsdb/assets/56196363/d5ea4473-2383-4bf8-a324-69729e1d52b0)
+
+![Screenshot 2023-10-09 005244](https://github.com/Anuragwagh/mindsdb/assets/56196363/741bf150-d500-4d28-b11e-79b2f30d168c)
 
 
 **4. Testing DROP DATABASE**
@@ -36,10 +43,12 @@ After Predict Query MindsDB throwing error
 ```
 DROP DATABASE [Database_Name]
 ```
+![Web capture_9-10-2023_05510_127 0 0 1](https://github.com/Anuragwagh/mindsdb/assets/56196363/361fa357-4c35-4d2b-b9e7-23cd39b99d99)
+
 
 ### Results
 
 Drop a remark based on your observation.
 - [ ] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
-- [*] There's a Bug 🪲 [fcntl is not defined] Getting Error After PREDICT Query
+- [x] There's a Bug 🪲 [fcntl is not defined] Getting Error After PREDICT Query
 ---

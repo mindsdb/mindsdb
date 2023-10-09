@@ -2,20 +2,17 @@ from collections import OrderedDict
 from typing import List, Optional
 
 import pandas as pd
-from pymilvus import connections
-
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from mindsdb.integrations.libs.const import \
+    HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse
 from mindsdb.integrations.libs.response import HandlerResponse as Response
-from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
+from mindsdb.integrations.libs.response import \
+    HandlerStatusResponse as StatusResponse
 from mindsdb.integrations.libs.vectordatabase_handler import (
-    FilterCondition,
-    FilterOperator,
-    TableField,
-    VectorStoreHandler,
-)
+    FilterCondition, FilterOperator, TableField, VectorStoreHandler)
 from mindsdb.utilities import log
+from pymilvus import connections, utility
 
 
 class MilvusHandler(VectorStoreHandler):
@@ -25,51 +22,9 @@ class MilvusHandler(VectorStoreHandler):
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
-
         self._connection_data = kwargs.get("connection_data")
-
-        self._client_config = {
-            "chroma_server_host": self._connection_data.get("chroma_server_host"),
-            "chroma_server_http_port": self._connection_data.get(
-                "chroma_server_http_port"
-            ),
-            "persist_directory": self._connection_data.get("persist_directory"),
-        }
-
-        # either host + port or persist_directory is required
-        # but not both
-        if (
-            self._client_config["chroma_server_host"] is None
-            or self._client_config["chroma_server_http_port"] is None
-        ) and self._client_config["persist_directory"] is None:
-            raise Exception(
-                "Either host + port or persist_directory is required for Milvus connection!"
-            )
-        elif (
-            self._client_config["chroma_server_host"] is not None
-            and self._client_config["chroma_server_http_port"] is not None
-        ) and self._client_config["persist_directory"] is not None:
-            raise Exception(
-                "Either host + port or persist_directory is required for Milvus connection, but not both!"
-            )
-
-        self._client = None
         self.is_connected = False
         self.connect()
-
-    def _get_client(self):
-        client_config = self._client_config
-        if client_config is None:
-            raise Exception("Client config is not set!")
-
-        # decide the client type to be used, either persistent or httpclient
-        if client_config["persist_directory"] is not None:
-            return chromadb.PersistentClient(path=client_config["persist_directory"])
-        else:
-            return chromadb.HttpClient(
-                host=client_config["chroma_server_host"],
-                port=client_config["chroma_server_http_port"],
-            )
 
     def __del__(self):
         if self.is_connected is True:
@@ -78,43 +33,60 @@ class MilvusHandler(VectorStoreHandler):
     def connect(self):
         """Connect to a Milvus database."""
         if self.is_connected is True:
-            return self._client
-
+            return
         try:
-            self._client = self._get_client()
+            connections.connect(**self._connection_data)
             self.is_connected = True
-            return self._client
         except Exception as e:
-            log.logger.error(f"Error connecting to Milvus client, {e}!")
+            log.logger.error(f"Error connecting to Milvus client: {e}!")
             self.is_connected = False
 
     def disconnect(self):
         """Close the database connection."""
-
         if self.is_connected is False:
             return
-
-        self._client = None
+        connections.disconnect(self._connection_data["alias"])
         self.is_connected = False
 
     def check_connection(self):
         """Check the connection to the Milvus database."""
         response_code = StatusResponse(False)
-        need_to_close = self.is_connected is False
-
         try:
-            self._client.heartbeat()
-            response_code.success = True
+            response_code.success = connections.has_connection(
+                self._connection_data["alias"])
         except Exception as e:
-            log.logger.error(f"Error connecting to Milvus , {e}!")
+            log.logger.error(f"Error checking Milvus connection: {e}!")
             response_code.error_message = str(e)
-        finally:
-            if response_code.success is True and need_to_close:
-                self.disconnect()
-            if response_code.success is False and self.is_connected is True:
-                self.is_connected = False
-
         return response_code
+
+    def get_tables(self) -> HandlerResponse:
+        """Get the list of collections in the Milvus database."""
+        collections = utility.list_collections()
+        collections_name = pd.DataFrame(
+            columns=["table_name"],
+            data=[collection for collection in collections],
+        )
+        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=collections_name)
+
+    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
+        """Delete a collection from the Milvus database."""
+        try:
+            utility.drop_collection(table_name)
+        except Exception as e:
+            if if_exists:
+                return Response(resp_type=RESPONSE_TYPE.OK)
+            else:
+                return Response(
+                    resp_type=RESPONSE_TYPE.ERROR,
+                    error_message=f"Error dropping table '{table_name}': {e}",
+                )
+        return Response(resp_type=RESPONSE_TYPE.OK)
+
+
+
+
+
+
 
     def _get_chromadb_operator(self, operator: FilterOperator) -> str:
         mapping = {
@@ -321,39 +293,9 @@ class MilvusHandler(VectorStoreHandler):
         return Response(resp_type=RESPONSE_TYPE.OK)
 
     def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
-        """
-        Create a collection with the given name in the Milvus database.
-        """
+        """Create a collection with the given name in the Milvus database."""
         self._client.create_collection(table_name, get_or_create=if_not_exists)
         return Response(resp_type=RESPONSE_TYPE.OK)
-
-    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
-        """
-        Delete a collection from the Milvus database.
-        """
-        try:
-            self._client.delete_collection(table_name)
-        except ValueError:
-            if if_exists:
-                return Response(resp_type=RESPONSE_TYPE.OK)
-            else:
-                return Response(
-                    resp_type=RESPONSE_TYPE.ERROR,
-                    error_message=f"Table {table_name} does not exist!",
-                )
-
-        return Response(resp_type=RESPONSE_TYPE.OK)
-
-    def get_tables(self) -> HandlerResponse:
-        """
-        Get the list of collections in the Milvus database.
-        """
-        collections = self._client.list_collections()
-        collections_name = pd.DataFrame(
-            columns=["table_name"],
-            data=[collection.name for collection in collections],
-        )
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=collections_name)
 
     def get_columns(self, table_name: str) -> HandlerResponse:
         # check if collection exists
@@ -364,6 +306,13 @@ class MilvusHandler(VectorStoreHandler):
                 resp_type=RESPONSE_TYPE.ERROR,
                 error_message=f"Table {table_name} does not exist!",
             )
+        """
+        data = pd.DataFrame(self.SCHEMA)
+        data.columns = ["COLUMN_NAME", "DATA_TYPE"]
+        return HandlerResponse(
+            data_frame=data,
+        )
+        """
         return super().get_columns(table_name)
 
 

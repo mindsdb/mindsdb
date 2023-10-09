@@ -60,7 +60,6 @@ class TrinoHandler(DatabaseHandler):
             'port': self.connection_data.get('port', ''),
             'user': self.connection_data.get('user', ''),
         }
-        # TODO: password in required here? (def not for kerberos)
         # optional config passed in trino connect method
         optional_config = {'http_scheme': 'http'}
         if 'catalog' in self.connection_data:

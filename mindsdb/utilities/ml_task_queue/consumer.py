@@ -1,6 +1,8 @@
 import time
 import pickle
+import signal
 import threading
+from functools import wraps
 
 import psutil
 from walrus import Database
@@ -19,10 +21,28 @@ from mindsdb.utilities.ml_task_queue.const import (
 )
 
 
+def save_thread_link(func):
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        current_thread = threading.current_thread()
+        self._listen_message_threads.append(current_thread)
+        result = func(self, *args, **kwargs)
+        self._listen_message_threads.remove(current_thread)
+        return result
+    return wrapper
+
+
 class MLTaskConsumer:
     def __init__(self) -> None:
+        self._ready_event = threading.Event()
+        self._ready_event.set()
+
+        self._stop_event = threading.Event()
+        self._stop_event.clear()
+
         # region preload ml handlers
         from mindsdb.interfaces.database.integrations import integration_controller
+
         config = Config()
         is_cloud = config.get('cloud', False)
 
@@ -44,8 +64,11 @@ class MLTaskConsumer:
 
         # region collect cpu usage statistic
         self.cpu_stat = [0] * 10
-        threading.Thread(target=self._collect_cpu_stat).start()
+        self._collect_cpu_stat_thread = threading.Thread(target=self._collect_cpu_stat)
+        self._collect_cpu_stat_thread.start()
         # endregion
+
+        self._listen_message_threads = []
 
         # region connect to redis
         config = config.get('ml_task_queue', {})
@@ -69,11 +92,8 @@ class MLTaskConsumer:
         self.consumer_group.consumer(TASKS_STREAM_CONSUMER_NAME)
         # endregion
 
-        self._ready_event = threading.Event()
-        self._ready_event.set()
-
     def _collect_cpu_stat(self):
-        while True:
+        while self._stop_event.is_set() is False:
             self.cpu_stat = self.cpu_stat[1:]
             self.cpu_stat.append(psutil.cpu_percent())
             time.sleep(1)
@@ -92,10 +112,13 @@ class MLTaskConsumer:
         while self.get_avg_cpu_usage() > 60 or max(self.cpu_stat[-3:]) > 60:
             time.sleep(1)
 
+    @save_thread_link
     def _listen(self):
         message = None
         while message is None:
             self.wait_cpu_free()
+            if self._stop_event.is_set():
+                return
             message = self.consumer_group.read(count=1, block=1000, consumer=TASKS_STREAM_CONSUMER_NAME)
             if message.get(TASKS_STREAM_NAME) is None or len(message.get(TASKS_STREAM_NAME)) == 0:
                 message = None
@@ -152,16 +175,29 @@ class MLTaskConsumer:
 
     def run(self):
         self._ready_event.set()
-        while True:
-            self._ready_event.wait()
+        while self._stop_event.is_set() is False:
+            self._ready_event.wait(timeout=1)
+            if self._ready_event.is_set() is False:
+                continue
             self._ready_event.clear()
             threading.Thread(target=self._listen).start()
+
+    def stop(self):
+        self._stop_event.set()
+        for thread in (*self._listen_message_threads, self._collect_cpu_stat_thread):
+            try:
+                if thread.is_alive():
+                    thread.join()
+            except Exception:
+                pass
 
 
 def start(verbose: bool):
     try:
         consumer = MLTaskConsumer()
+        signal.signal(signal.SIGTERM, lambda _x, _y: consumer.stop())
         consumer.run()
     except Exception as e:
+        consumer.stop()
         print(f'Got exception: {e}', flush=True)
         raise

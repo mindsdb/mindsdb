@@ -49,21 +49,22 @@ def close_api_gracefully(apis):
     _stop_event.set()
     try:
         for api in apis.values():
-            process = api['process']
-            childs = get_child_pids(process.pid)
-            for p in childs:
-                try:
-                    os.kill(p, signal.SIGTERM)
-                except Exception:
-                    p.kill()
-            sys.stdout.flush()
-            process.terminate()
-            process.join()
-            sys.stdout.flush()
+            try:
+                process = api['process']
+                childs = get_child_pids(process.pid)
+                for p in childs:
+                    try:
+                        os.kill(p, signal.SIGTERM)
+                    except Exception:
+                        p.kill()
+                sys.stdout.flush()
+                process.terminate()
+                process.join()
+                sys.stdout.flush()
+            except psutil.NoSuchProcess:
+                pass
     except KeyboardInterrupt:
         sys.exit(0)
-    except psutil.NoSuchProcess:
-        pass
 
 
 def do_clean_process_marks():
@@ -295,10 +296,10 @@ if __name__ == '__main__':
             continue
         print(f'{api_name} API: starting...')
         try:
+            process_args = (args.verbose,)
             if api_name == 'http':
-                p = ctx.Process(target=start_functions[api_name], args=(args.verbose, args.no_studio, with_nlp))
-            else:
-                p = ctx.Process(target=start_functions[api_name], args=(args.verbose,))
+                process_args = (args.verbose, args.no_studio, with_nlp)
+            p = ctx.Process(target=start_functions[api_name], args=process_args, name=api_name)
             p.start()
             api_data['process'] = p
         except Exception as e:

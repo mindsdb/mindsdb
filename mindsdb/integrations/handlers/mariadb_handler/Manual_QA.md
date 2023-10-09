@@ -9,6 +9,11 @@
 
 Default Home_Rental dataset of MindsDB
 
+![image](https://github.com/Anuragwagh/mindsdb/assets/56196363/59e3e499-0df7-4b1d-8f49-19c98a26e753)
+
+![output of MariaDB successfully connected to MindsDB](https://github.com/Anuragwagh/mindsdb/assets/56196363/b50b86fb-579f-4aa9-9b4d-59393ade0d26)
+
+
 
 **2. Testing CREATE PREDICTOR**
 

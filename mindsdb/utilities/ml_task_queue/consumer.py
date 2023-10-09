@@ -1,7 +1,10 @@
+import os
 import time
 import pickle
 import signal
+import tempfile
 import threading
+from pathlib import Path
 from functools import wraps
 
 import psutil
@@ -12,6 +15,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.integrations.libs.process_cache import process_cache
 from mindsdb.utilities.ml_task_queue.utils import RedisKey, StatusNotifier, to_bytes, from_bytes
+from mindsdb.utilities.fs import clean_unlinked_process_marks
 from mindsdb.utilities.ml_task_queue.const import (
     ML_TASK_TYPE,
     ML_TASK_STATUS,
@@ -109,8 +113,15 @@ class MLTaskConsumer:
     def wait_cpu_free(self):
         """ wait untill CPU usage will be low
         """
-        while self.get_avg_cpu_usage() > 60 or max(self.cpu_stat[-3:]) > 60:
-            time.sleep(1)
+        processes_dir = Path(tempfile.gettempdir()).joinpath('mindsdb/processes/learn/')
+        while True:
+            while self.get_avg_cpu_usage() > 60 or max(self.cpu_stat[-3:]) > 60:
+                time.sleep(1)
+            while (len(list(processes_dir.iterdir())) * 2) >= os.cpu_count():
+                time.sleep(1)
+                clean_unlinked_process_marks()
+            if (self.get_avg_cpu_usage() > 60 or max(self.cpu_stat[-3:]) > 60) is False:
+                return
 
     @save_thread_link
     def _listen(self):

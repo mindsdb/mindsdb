@@ -6,11 +6,9 @@ from .__about__ import __version__ as version, __description__ as description
 try:
     from .google_docs_handler import GoogleDocs_Handler as Handler
     import_error = None
-    logger.error("No Error Importing to Google Doc")
 except Exception as e:
     Handler = None
     import_error = e
-    logger.error("Error Importing to Google Doc")
 
 title = 'Google_Docs'
 name = 'google_docs'

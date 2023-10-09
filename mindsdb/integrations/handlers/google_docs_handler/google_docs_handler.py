@@ -46,7 +46,7 @@ class GoogleDocs_Handler(APIHandler):
         self.parser = parse_sql
         
         google_doc_data = GoogleDocGetDetailsTable(self)
-        self._register_table("get_doc_details", google_doc_data)
+        self._register_table("doc_content", google_doc_data)
 
 
     def connect(self) -> StatusResponse:

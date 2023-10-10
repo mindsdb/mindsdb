@@ -1,4 +1,3 @@
-dask
 auto-ts
 dask[distributed]
 seaborn

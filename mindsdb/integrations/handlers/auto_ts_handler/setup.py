@@ -1,21 +1,31 @@
-from mindsdb.integrations.libs.const import HANDLER_TYPE
-
-from mindsdb.integrations.handlers.autokeras_handler.__about__ import (
-    __version__ as version,
-    __description__ as description,
+from setuptools import setup, find_packages
+from mindsdb.integrations.handlers.auto_ts_handler.__about__ import (
+    __title__,
+    __version__,
+    __github__,
+    __pypi__,
+    __license__,
+    __author__,
+    __description__,
 )
 
-try:
-    from .auto_ts_handler import Auto_ts_Handler as Handler
+with open("requirements.txt") as req_file:
+    requirements = [req.strip() for req in req_file.read().splitlines()]
 
-    import_error = None
-except Exception as e:
-    Handler = None
-    import_error = e
-
-title = "Auto_ts"
-name = "auto_ts"
-type = HANDLER_TYPE.ML
-permanent = True
-
-__all__ = ["Handler", "version", "name", "type", "title", "description", "import_error"]
+setup(
+    name=__title__,
+    version=__version__,
+    url=__github__,
+    download_url=__pypi__,
+    license=__license__,
+    author=__author__,
+    description=__description__,
+    packages=find_packages(),
+    install_requires=requirements,
+    include_package_data=True,
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "Operating System :: OS Independent",
+    ],
+    python_requires=">=3.8",
+)

@@ -8,10 +8,9 @@ Databend is a modern cloud data warehouse that empowers your object storage for 
 https://databend.rs/
 
 ## Implementation
-This handler was implemented as a subclass of the `ClickHouseHandler`.
+This handler was implemented using `databend-sqlalchemy` library, the Databend dialect for SQLAlchemy.
 
 The required arguments to establish a connection are,
-* `protocol`: the protocol to query Databend. Supported: native, http, https. Default: native'.
 * `host`: the host name or IP address of the Databend warehouse. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.
 * `port`: the TCP/IP port of the Databend warehouse.
 * `user`: the username used to authenticate with the Databend warehouse.
@@ -25,7 +24,6 @@ CREATE DATABASE databend_datasource
 WITH
 engine='databend',
 parameters={
-    "protocol": "https",
     "user": "root",
     "port": 443,
     "password": "password",

@@ -101,7 +101,7 @@ def learn_process(class_path, engine, integration_id,
         db.init()
 
         try:
-            target = problem_definition['target']
+            target = problem_definition.get('target', None)
 
             if data_integration_ref is not None:
                 database_controller = DatabaseController()

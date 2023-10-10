@@ -199,10 +199,18 @@ class HandlerStorage:
     # jsons
 
     def json_set(self, name, content):
-        ...
+        json_storage = get_json_storage(
+            resource_id=self.integration_id,
+            resource_group=RESOURCE_GROUP.INTEGRATION
+        )
+        return json_storage.set(name, content)
 
     def json_get(self, name):
-        ...
+        json_storage = get_json_storage(
+            resource_id=self.integration_id,
+            resource_group=RESOURCE_GROUP.INTEGRATION
+        )
+        return json_storage.get(name)
 
     def json_list(self):
         ...

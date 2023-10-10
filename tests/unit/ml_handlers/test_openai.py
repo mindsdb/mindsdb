@@ -220,9 +220,14 @@ class TestOpenAI(BaseExecutorTest):
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_bulk_normal_completion(self, mock_handler):
         """Tests normal completions (e.g. text-davinci-003) with bulk joins that are larger than the max batch_size"""
+        class MockHandlerStorage:
+            def json_get(self, key):
+                return {'ft-suffix': {'ft-suffix': '$'}}[key]  # finetuning suffix, irrelevant for this test but needed for init  # noqa
+
+        # create project
         handler = OpenAIHandler(
             model_storage=None,  # the storage does not matter for this test
-            engine_storage=None,
+            engine_storage=MockHandlerStorage()  # nor does this, but we do need to pass some object due to the init procedure  # noqa
         )
         N = 1 + handler.max_batch_size  # get N larger than default batch size
         df = pd.DataFrame.from_dict({"input": ["I feel happy!"] * N})

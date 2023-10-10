@@ -1,0 +1,61 @@
+---
+title: Sendinblue
+sidebarTitle: Sendinblue
+---
+
+In this section, we present how to connect Sendinblue to MindsDB.
+
+[Brevo (formerly Sendinblue)](https://www.brevo.com/) is an all-in-one platform to automate your marketing campaigns over Email, SMS, WhatsApp or chat.
+
+Data from Sendinblue can be used to understand the impact of email marketing.
+
+## Connection
+
+This handler is implemented using the [sib-api-v3-sdk](https://github.com/sendinblue/APIv3-python-library) library, a Python library that wraps Sendinblue APIs.
+
+The required arguments to establish a connection are as follows:
+
+* `api_key`: a required Sendinblue API key to use for authentication
+
+<Tip>
+Check out [this guide](https://developers.brevo.com/docs) on how to create the Sendinblue API key.
+
+It is recommended to use the API key to avoid the `API rate limit exceeded` error.
+</Tip>
+
+Here is how to connect the SendinBlue to MindsDB:
+
+```sql
+CREATE DATABASE sib_datasource
+WITH ENGINE = 'sendinblue',
+PARAMETERS = {
+  "api_key": "xkeysib-..."
+};
+```
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/sendinblue_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+Use the established connection to query your database:
+
+```sql
+SELECT * FROM sib_datasource.email_campaigns
+```
+
+Run more advanced queries:
+
+```sql
+SELECT  id, name
+FROM sib_datasource.email_campaigns
+WHERE status = 'sent'
+ORDER BY name
+LIMIT 5
+```
+
+
+<Info>
+For more information about available actions and development plans, visit [this page](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/sendinblue_handler/README.md).
+</Info>

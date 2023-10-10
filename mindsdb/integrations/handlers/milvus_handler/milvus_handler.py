@@ -324,6 +324,11 @@ class MilvusHandler(VectorStoreHandler):
                 error_message=f"Unable to fetch collection `{table_name}`: {e}"
             )
         try:
+            data = data[columns]
+            if TableField.METADATA.value in data.columns:
+                rows = data[TableField.METADATA.value].to_list()
+                data = pd.concat(
+                    [data, pd.DataFrame.from_records(rows)], axis=1)
             collection.insert(data[columns])
         except Exception as e:
             return Response(
@@ -335,46 +340,62 @@ class MilvusHandler(VectorStoreHandler):
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
     ) -> HandlerResponse:
-        filters = self._translate_metadata_condition(conditions)
-        # get id filters
+        metadata_filter = self._translate_metadata_conditions(conditions)
         id_filters = [
             condition.value
             for condition in conditions
             if condition.column == TableField.ID.value
         ] or None
-
-        if filters is None and id_filters is None:
-            raise Exception("Delete query must have at least one condition!")
-        collection = self._client.get_collection(table_name)
-        collection.delete(ids=id_filters, where=filters)
-        return Response(resp_type=RESPONSE_TYPE.OK)
-
-    def update(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
-        """
-        Update data in the Milvus database.
-        TODO: not implemented yet
-        """
-        return super().update(table_name, data, columns)
-
-    def get_columns(self, table_name: str) -> HandlerResponse:
-        # check if collection exists
-        try:
-            _ = self._client.get_collection(table_name)
-        except ValueError:
+        if id_filters:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Table {table_name} does not exist!",
+                error_message="Milvus does not support deletion by IDs",
             )
-        """
-        data = pd.DataFrame(self.SCHEMA)
-        data.columns = ["COLUMN_NAME", "DATA_TYPE"]
-        return HandlerResponse(
-            data_frame=data,
-        )
-        """
-        return super().get_columns(table_name)
+        if not metadata_filter:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message="Metadata filters are required",
+            )
+        try:
+            collection = Collection(table_name)
+        except Exception as e:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Error retrieving collection `table_name`: {e}",
+            )
+        try:
+            collection.delete(metadata_filter)
+        except Exception as e:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Error deleting from collection `table_name`: {e}",
+            )
+        return Response(resp_type=RESPONSE_TYPE.OK)
+
+    def get_columns(self, table_name: str) -> HandlerResponse:
+        """Get columns in a Milvus collection"""
+        collection = None
+        try:
+            collection = Collection(table_name)
+        except Exception as e:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Error finding table: {e}",
+            )
+        try:
+            field_names = {field["name"] for field in collection.schema.fields}
+            schema = [
+                mindsdb_schema_field for mindsdb_schema_field in self.SCHEMA if mindsdb_schema_field["name"] in field_names]
+            data = pd.DataFrame(schema)
+            data.columns = ["COLUMN_NAME", "DATA_TYPE"]
+            return HandlerResponse(
+                data_frame=data,
+            )
+        except Exception as e:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Error finding table: {e}",
+            )
 
 
 connection_args = OrderedDict(

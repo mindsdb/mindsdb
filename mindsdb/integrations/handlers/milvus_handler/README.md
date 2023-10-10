@@ -42,6 +42,8 @@ For more information about how these perameters map to Milvus API, look at Milvu
 
 Before continuing, make sure that `pymilvus` version is same as your Milvus instance version.
 
+### CREATE DATABASE
+
 In order to make use of this handler and connect to a Milvus server in MindsDB, the following syntax can be used:
 
 ```sql
@@ -56,7 +58,7 @@ WITH
     "password": "password",
     "search_metric_type": "L2",
     "search_ignore_growing": True,
-    "search_params": {"nprobe": 10}
+    "search_params": {"nprobe": 10},
     "create_embedding_dim": 8,
     "create_dynamic_field": True,
     "create_content_max_len": 200,
@@ -65,15 +67,19 @@ WITH
     "create_alias": "default",
     "create_index_params": {},
     "create_index_metric_type": "L2",
-    "create_index_type": "AUTOINDEX",
+    "create_index_type": "AUTOINDEX"
 };
 ```
+
+### DROP DATABASE
 
 To drop a collection use this command
 
 ```sql
 DROP DATABASE milvus_datasource;
 ```
+
+### SELECT
 
 To query database using a search vector, you can use `search_vector` in `WHERE` clause
 
@@ -91,6 +97,9 @@ If you omit the `search_vector`, 100 entires in collection are returned
 SELECT * from milvus_datasource.test
 ```
 
+### UPDATE
+
+Updating records is not supported by Milvus API. You can try using combination of `DELETE` and `INSERT`
 
 
 

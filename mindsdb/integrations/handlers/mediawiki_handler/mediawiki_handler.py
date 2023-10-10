@@ -1,44 +1,47 @@
+import pandas as pd
+import requests
 from mediawikiapi import MediaWikiAPI
-
 from mindsdb.integrations.handlers.mediawiki_handler.mediawiki_tables import PagesTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
-
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
-
 from typing import Optional
-import pandas as pd
-import requests
+
+class LoginFailedException(Exception):
+    pass
+
 
 class MediaWikiHandler(APIHandler):
     """
     The MediaWiki handler implementation.
     """
 
-    name = 'mediawiki'
-    #How do we want to get these?
-    username = ''
-    pwd = ''
+    name = "mediawiki"
 
-    #Get Login Token Params
+    # Get Login Token Params
     LOGIN_PARAMS = {
-        'action': 'query',
-        'meta': 'tokens',
-        'type': 'login',
-        'format': 'json'
+        "action": "query",
+        "meta": "tokens",
+        "type": "login",
+        "format": "json",
     }
 
-    #Get CSRF Token Params
+    # Get CSRF Token Params
     CSRF_PARAMS = {
-        'action': 'query',
-        'meta': 'tokens',
-        'format': 'json'
-    }
+        "action": "query",
+        "meta": "tokens",
+        "format": "json"}
 
-    def __init__(self, name: str, username: Optional[str] = None, password: Optional[str] = None, **kwargs):
+    def __init__(
+        self,
+        name: str,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        **kwargs,
+    ):
         """
         Initialize the handler.
         Args:
@@ -46,11 +49,11 @@ class MediaWikiHandler(APIHandler):
             **kwargs: arbitrary keyword arguments.
         """
         super().__init__(name)
-        self.kwargs= kwargs
-        self.API_URL = 'https://www.mediawiki.org/w/api.php'
-        self.username = username if username else None #How do we get these?
-        self.password = password if password else None#How do we get these?
-        self.isLogged= False
+        self.kwargs = kwargs
+        self.api_url = "https://www.mediawiki.org/w/api.php"
+        self.username = username
+        self.password = password
+        self.islogged = False
         self.connection = None
         self.is_connected = False
 
@@ -62,8 +65,8 @@ class MediaWikiHandler(APIHandler):
         Set up the connection required by the handler.
         Returns
         -------
-        StatusResponse
-            connection object
+        MediaWikiAPI or None
+        Connection object to MediaWikiAPI or None.
         """
         if self.is_connected is True:
             return self.connection
@@ -87,7 +90,7 @@ class MediaWikiHandler(APIHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error('Error connecting to MediaWiki!')
+            log.logger.error("Error connecting to MediaWiki!")
             response.error_message = str(e)
 
         self.is_connected = response.success
@@ -107,36 +110,40 @@ class MediaWikiHandler(APIHandler):
         """
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
-    
-    def call_application_api(self, operation:str, params:dict) -> pd.DataFrame:
+
+    #Could add operation specific logic (UPDATE, INSERT, DELETE)
+    def call_mediawiki_api(self, operation: str, params: dict) -> pd.DataFrame:
         """
-        Perform specified auth-required operation 
+        Perform specified auth-required operation ()
 
         Connects and login to API, fetch CSRF token, then performs specified operation
 
         Args:
-            operation (str, optional)
-            params
+            operation (str): 'update', 'select', ...
+            params (dict): paramaters for operation
         """
         try:
-            if not self.is_connected:    
+            if not self.is_connected:
                 self.connect()
-            if not self.isLogged:
+            if not self.islogged:
                 self.login(self.username, self.password)
-        
+
             csrf = self.get_csrf()
             if csrf is not None:
-                params['csrf'] = csrf
-                params.update({'action': operation})
-                response = requests.post(self.API_URL, params=params, timeout=5)
-                df = pd.DataFrame(response.json())
-                return df
+                params["csrf"] = csrf
+                params.update({"action": operation})
+                response = requests.post(self.api_url, params=params, timeout=5)
+                return response.status_code
+        except requests.exceptions.RequestException as e:
+            log.logger.error(f"Error during call_mediawiki_api: {e}")
+            return None
         except Exception as e:
-            log.logger.error(f"Error during call_application_api: {e}")
-            return None 
+            log.logger.error(f"Unexpected error during call_mediawiki_api: {e} ")
+            return None
+        
 
-    #Useful for Insert and Delete Issues
-    def login(self, user:str, pwd:str) -> None:
+    # Needed for Insert, Update, Delete Issues
+    def login(self, user: str, pwd: str) -> None:
         """
         Authenticate a user with the MediaWiki API.
 
@@ -148,29 +155,27 @@ class MediaWikiHandler(APIHandler):
             None
         """
         params = self.LOGIN_PARAMS.copy()
-        params.update({'lgname': user, 'lgpassword': pwd})
-        response = requests.get(self.API_URL, params)
+        params.update({"lgname": user, "lgpassword": pwd})
+        response = requests.get(self.api_url, params)
         if response:
-            login_token = response.json()['query']['tokens']['logintoken']
-            params.update({'lgtoken': login_token, 'action': 'login'})
-            login_response = requests.post(self.API_URL, data=params, timeout=5)
+            login_token = response.json()["query"]["tokens"]["logintoken"]
+            params.update({"lgtoken": login_token, "action": "login"})
+            login_response = requests.post(self.api_url, data=params, timeout=5)
             if login_response.status_code == 200:
-                self.isLogged = True
+                self.islogged = True
             else:
-                self.isLogged = False
-                raise Exception("Login failed with status code: " + str(login_response.status_code))
-            
-        
-    #Useful for Insert and Delete Issues
+                self.islogged = False
+                raise LoginFailedException("Login failed with status code: " + str(login_response.status_code))
+
+    # Needed for Insert, Update, Delete Issues
     def get_csrf(self) -> Optional[str]:
         """
         Fetch a CSRF token from api
 
         Returns:
-            str: CSRF Token
+            str or None: CSRF Token or None
         """
-        response = requests.get(self.API_URL, self.CSRF_PARAMS)
-        if response:      
-            return response.json()['query']['tokens']['csrftoken']
+        response = requests.get(self.api_url, self.CSRF_PARAMS)
+        if response:
+            return response.json()["query"]["tokens"]["csrftoken"]
         return None
-

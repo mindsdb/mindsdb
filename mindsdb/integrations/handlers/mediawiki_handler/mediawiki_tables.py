@@ -74,22 +74,50 @@ class PagesTable(APITable):
         return title, page_id
 
     def insert(self, query: ast.Insert) -> None:
+        """
+        Updates MediaWiki pages data based on the provided SQL INSERT query.
+
+        This method parses the given query, validates the WHERE conditions, fetches the relevant pages,
+        and applies the updates.
+
+        Parameters
+        ----------
+        query : ast.Insert
+            Given SQL INSERT query
+
+        Returns
+        -------
+        pd.DataFrame
+
+        Raises
+        ------
+        ValueError
+            If the query contains unsupported conditions or attempts to update unsupported columns.
+        """
         insert_statements_parser = INSERTQueryParser(
             query,
             self.get_columns()
         )
-        set_clauses, where_conditions = insert_statements_parser.parse_query()
+        # set_clauses, where_conditions = insert_statements_parser.parse_query()
 
         title, page_id = self.validate_where_conditions(where_conditions)
 
         pages_df = pd.json_normalize(self.get_pages(title=title, page_id=page_id))
 
-        insert_statement_executor = INSERTQueryExecutor(
-            pages_df,
-            set_clauses,
-            where_conditions
-        )
-        pages_df = insert_statement_executor.execute_query()
+        # insert_statement_executor = INSERTQueryExecutor(
+        #     pages_df,
+        #     set_clauses,
+        #     where_conditions
+        # )
+        # pages_df = insert_statement_executor.execute_query()
+
+        #Since we didn't reindex pages_df we can loop through the changes and POST them to the API:Edit endpoint
+        for index, row in pages_df.iterrows():
+            self.handler.call_application_api('edit', {
+                'title': row['title'],
+                'content': row['content'],
+                'summary': row['summary']
+            })
 
         return pages_df
 

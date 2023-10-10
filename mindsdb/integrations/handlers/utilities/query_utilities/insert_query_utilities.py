@@ -4,7 +4,7 @@ from typing import Text, List, Dict, Any, Optional
 from .exceptions import UnsupportedColumnException, MandatoryColumnException, ColumnCountMismatchException
 
 
-class INSERTQueryParser:
+class INSERTQueryParser(BaseQueryExecutor):
     """
     Parses a INSERT query into its component parts.
 
@@ -81,11 +81,21 @@ class INSERTQueryExecutor(BaseQueryExecutor):
     where_conditions : List[List[Text]]
         WHERE conditions of the query.
 
+    NOTE: This class DOES NOT Insert the relevant records of the entity for you, it will simply return the records that need to be inserted based on the WHERE conditions.
+
+          This class expects all of the entities to be passed in as a DataFrane and filters out the relevant records based on the WHERE conditions.
+          Because all of the records need to be extracted to be passed in as a DataFrame, this class is not very computationally efficient.
+          Therefore, DO NOT use this class if the API/SDK that you are using supports deleting records in bulk.
+
     """
-    def __init__(self, df: pd.DataFrame, set_clauses: List[Tuple[Text, Any]], where_conditions: List[List[Text]]):
-        self.df = df
-        self.set_clauses = set_clauses
-        self.where_conditions = where_conditions
+    def __init__(self, df: pd.DataFrame,
+                 values_clause: List[Tuple[Text, Any]],
+                 into_clauses: List[Tuple[Text, Any]],
+                 where_conditions: List[List[Text]]):
+        self.__init__(df, where_conditions)
+        self.values_clauses = values_clauses
+        self.into_clauses = into_clauses
+
 
     def execute_query(self) -> pd.DataFrame:
         """
@@ -93,11 +103,12 @@ class INSERTQueryExecutor(BaseQueryExecutor):
         """
         self.execute_where_clause()
 
-        self.execute_set_clauses()
+        self.execute_values_clause()
+        self.execute_into_clause()
 
         return self.df
 
-    def execute_set_clauses(self)  -> None:
+    def execute_values_clause(self)  -> None:
         """
         Execute the set clause of the query.
         """
@@ -107,15 +118,11 @@ class INSERTQueryExecutor(BaseQueryExecutor):
 
             self.df[column] = value
 
-    def execute_where_clause(self) -> None:
+    def execute_into_clause(self)  -> None:
         """
-        Execute the where clause of the query.
+        Execute the set clause of the query.
         """
-        if len(self.where_conditions) > 0:
-            for condition in self.where_conditions:
-                column = condition[1]
-                operator = '==' if condition[0] == '=' else condition[0]
-                value = f"'{condition[2]}'" if type(condition[2]) == str else condition[2]
-
-                query = f"{column} {operator} {value}"
-                self.df.query(query, inplace=True)
+        for column, value in self.set_clauses.items():
+            if not isinstance(column, str):
+                raise ValueError("The column name should be a string")
+            self.df[column] = value

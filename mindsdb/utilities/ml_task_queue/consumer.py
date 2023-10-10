@@ -139,11 +139,13 @@ class MLTaskConsumer:
             - current CPU usage is less than 60%
             - current tasks count is less than (N CPU cores) / 2
         """
+        config = Config()
+        is_cloud = config.get('cloud', False)
         processes_dir = Path(tempfile.gettempdir()).joinpath('mindsdb/processes/learn/')
         while True:
             while self.get_avg_cpu_usage() > 60 or max(self.cpu_stat[-3:]) > 60:
                 time.sleep(1)
-            if processes_dir.is_dir():
+            if is_cloud and processes_dir.is_dir():
                 clean_unlinked_process_marks()
                 while (len(list(processes_dir.iterdir())) * 2) >= os.cpu_count():
                     time.sleep(1)

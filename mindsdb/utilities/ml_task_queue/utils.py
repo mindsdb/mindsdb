@@ -4,6 +4,7 @@ import socket
 import threading
 
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.ml_task_queue.const import ML_TASK_STATUS
 
 
 def to_bytes(obj: object) -> bytes:
@@ -38,27 +39,27 @@ class RedisKey:
     """
 
     @staticmethod
-    def new():
+    def new() -> 'RedisKey':
         timestamp = str(time.time()).replace('.', '')
         return RedisKey(f"{timestamp}-{ctx.company_id}-{socket.gethostname()}".encode())
 
-    def __init__(self, base_key: str):
+    def __init__(self, base_key: bytes) -> None:
         self._base_key = base_key
 
     @property
-    def base(self):
+    def base(self) -> bytes:
         return self._base_key
 
     @property
-    def status(self):
+    def status(self) -> str:
         return (self._base_key + b'-status').decode()
 
     @property
-    def dataframe(self):
+    def dataframe(self) -> str:
         return (self._base_key + b'-dataframe').decode()
 
     @property
-    def exception(self):
+    def exception(self) -> str:
         return (self._base_key + b'-exception').decode()
 
 
@@ -66,7 +67,7 @@ class StatusNotifier(threading.Thread):
     """ Worker that updates task status in redis with fixed frequency
     """
 
-    def __init__(self, redis_key, ml_task_status, db, cache):
+    def __init__(self, redis_key: RedisKey, ml_task_status: ML_TASK_STATUS, db, cache) -> None:
         threading.Thread.__init__(self)
         self.redis_key = redis_key
         self.ml_task_status = ml_task_status
@@ -74,13 +75,22 @@ class StatusNotifier(threading.Thread):
         self.cache = cache
         self._stop_event = threading.Event()
 
-    def set_status(self, ml_task_status):
+    def set_status(self, ml_task_status: ML_TASK_STATUS):
+        """ change status
+
+            Args:
+                ml_task_status (ML_TASK_STATUS): new status
+        """
         self.ml_task_status = ml_task_status
 
-    def stop(self):
+    def stop(self) -> None:
+        """ stop status updating
+        """
         self._stop_event.set()
 
     def run(self):
+        """ start update status with fixed frequency
+        """
         while not self._stop_event.is_set():
             self.db.publish(self.redis_key.status, self.ml_task_status.value)
             self.cache.set(self.redis_key.status, self.ml_task_status.value, 180)

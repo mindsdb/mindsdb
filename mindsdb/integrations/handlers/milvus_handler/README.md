@@ -25,11 +25,18 @@ These are used for `SELECT` queries:
 * `search_ignore_growing`: whether to ignore growing segments during similarity searches
 * `search_params`: specific to the `search_metric_type`
 
+These are used for `CREATE` queries:
+* `create_embedding_dim`: embedding dimension for creating table (default=8)
+* `create_dynamic_field`: whether or not the created tables have dynamic fields or not (default=True)
+* `create_content_max_len`: max length of the content column (default=200)
+* `create_content_default_value`: default value of content column (default='')
+* `create_schema_description`: description of the created schemas (default='')
+* `create_alias`: alias of the created schemas (default='default')
+* `create_index_params`: parameters of the index created on embeddings column (default={})
+* `create_index_metric_type`: metric used to create the index (default='L2')
+* `create_index_type`: the type of index (default='AUTOINDEX')
 
-## Limitations
-
-- `CREATE` command in limited in user
-    - It does not support `create_index`
+For more information about how these perameters map to Milvus API, look at Milvus' documentation
 
 ## Usage
 
@@ -50,6 +57,15 @@ WITH
     "search_metric_type": "L2",
     "search_ignore_growing": True,
     "search_params": {"nprobe": 10}
+    "create_embedding_dim": 8,
+    "create_dynamic_field": True,
+    "create_content_max_len": 200,
+    "create_content_default_value": "",
+    "create_schema_description": "MindsDB generated table",
+    "create_alias": "default",
+    "create_index_params": {},
+    "create_index_metric_type": "L2",
+    "create_index_type": "AUTOINDEX",
 };
 ```
 

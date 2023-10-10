@@ -34,6 +34,21 @@ class MilvusHandler(VectorStoreHandler):
         for search_param_alias, actual_search_param_name in search_param_names.items():
             if search_param_alias in self._connection_data:
                 self._search_params[actual_search_param_name] = self._connection_data[search_param_alias]
+        # Extract parameters used for creating tables
+        self._create_table_params = {
+            "create_embedding_dim": 8,
+            "create_dynamic_field": True,
+            "create_content_max_len": 200,
+            "create_content_default_value": "",
+            "create_schema_description": "MindsDB generated table",
+            "create_alias": "default",
+            "create_index_params": {},
+            "create_index_metric_type": "L2",
+            "create_index_type": "AUTOINDEX",
+        }
+        for create_table_param in self._create_table_params:
+            if create_table_param in self._connection_data:
+                self._create_table_params[create_table_param] = self._connection_data[create_table_param]
         self.is_connected = False
         self.connect()
 
@@ -254,18 +269,18 @@ class MilvusHandler(VectorStoreHandler):
         embeddings = FieldSchema(
             name=TableField.EMBEDDINGS.value,
             dtype=DataType.FLOAT_VECTOR,
-            dim=8
+            dim=self._create_table_params["create_embedding_dim"]
         )
         content = FieldSchema(
             name=TableField.CONTENT.value,
             dtype=DataType.VARCHAR,
-            max_length=2000,
-            default_value="",
+            max_length=self._create_table_params["create_content_max_len"],
+            default_value=self._create_table_params["create_content_default_value"]
         )
         schema = CollectionSchema(
             fields=[id, content, embeddings],
-            description="MindsDB generated table",
-            enable_dynamic_field=True
+            description=self._create_table_params["create_schema_description"],
+            enable_dynamic_field=self._create_table_params["create_dynamic_field"]
         )
         collection_name = table_name
         collection = None
@@ -273,7 +288,7 @@ class MilvusHandler(VectorStoreHandler):
             collection = Collection(
                 name=collection_name,
                 schema=schema,
-                using="default",
+                using=self._create_table_params["create_alias"],
             )
         except Exception as e:
             return Response(
@@ -284,9 +299,9 @@ class MilvusHandler(VectorStoreHandler):
             collection.create_index(
                 field_name=TableField.EMBEDDINGS.value,
                 index_params={
-                    "index_type": "AUTOINDEX",
-                    "metric_type": "L2",
-                    "params": {}
+                    "index_type": self._create_table_params["create_index_type"],
+                    "metric_type": self._create_table_params["create_index_metric_type"],
+                    "params": self._create_table_params["create_index_params"]
                 }
             )
         except Exception as e:
@@ -403,6 +418,51 @@ connection_args = OrderedDict(
         "description": "specific to the `search_metric_type`",
         "required": False,
     },
+    create_embedding_dim={
+        "type": ARG_TYPE.INT,
+        "description": "embedding dimension for creating table (default=8)",
+        "required": False,
+    },
+    create_dynamic_field={
+        "type": ARG_TYPE.BOOL,
+        "description": "whether or not the created tables have dynamic fields or not (default=True)",
+        "required": False,
+    },
+    create_content_max_len={
+        "type": ARG_TYPE.INT,
+        "description": "max length of the content column (default=200)",
+        "required": False,
+    },
+    create_content_default_value={
+        "type": ARG_TYPE.STR,
+        "description": "default value of content column (default='')",
+        "required": False,
+    },
+    create_schema_description={
+        "type": ARG_TYPE.STR,
+        "description": "description of the created schemas (default='')",
+        "required": False,
+    },
+    create_alias={
+        "type": ARG_TYPE.STR,
+        "description": "alias of the created schemas (default='default')",
+        "required": False,
+    },
+    create_index_params={
+        "type": ARG_TYPE.DICT,
+        "description": "parameters of the index created on embeddings column (default={})",
+        "required": False,
+    },
+    create_index_metric_type={
+        "type": ARG_TYPE.STR,
+        "description": "metric used to create the index (default='L2')",
+        "required": False,
+    },
+    create_index_type={
+        "type": ARG_TYPE.STR,
+        "description": "the type of index (default='AUTOINDEX')",
+        "required": False,
+    },
 )
 
 connection_args_example = OrderedDict(
@@ -414,4 +474,13 @@ connection_args_example = OrderedDict(
     search_metric_type="L2",
     search_ignore_growing=True,
     search_params={"nprobe": 10},
+    create_embedding_dim=8,
+    create_dynamic_field=True,
+    create_content_max_len=200,
+    create_content_default_value="",
+    create_schema_description="MindsDB generated table",
+    create_alias="default",
+    create_index_params={},
+    create_index_metric_type="L2",
+    create_index_type="AUTOINDEX",
 )

@@ -11,7 +11,7 @@ You can build a Twitter chatbot that converts text prompts into images. Follow [
 
 ## Creating a Model
 
-Let's create an OpenAI model:
+Let's create an OpenAI model. Follow [this instruction](/integrations/ai-engines/openai#setup) to set up the OpenAI integration in MindsDB.
 
 ```sql
 CREATE MODEL mindsdb.dalle
@@ -23,10 +23,6 @@ USING
 ```
 
 This model connects to the OpenAI’s DALL-E engine for generating images. The `{{text}}` variable present in the `prompt_template` parameter is replaced with the user's input.
-
-<Note>
-If you want to use the OpenAI API key provided by MindsDB, please confirm your email. Alternatively, you have the option to utilize your own OpenAI API key by specifying it in the `api_key` parameter.
-</Note>
 
 ## Generating Images
 

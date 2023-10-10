@@ -15,19 +15,6 @@ except ImportError:
     WEAVIATE_INSTALLED = False
 
 
-@pytest.mark.parametrize(
-    "url, api_key",
-    [
-        (
-            "https://sample-0tz79bia.weaviate.network",
-            "YOwV62Sdb1fGTNAHejwKHFallJY6SQM6gCOc",
-        )
-    ],
-)
-def input_credentials(url, api_key):
-    return url, api_key
-
-
 @pytest.mark.skipif(not WEAVIATE_INSTALLED, reason="weaviate is not installed")
 class TestWeaviateHandler(BaseExecutorTest):
     def run_sql(self, sql):
@@ -43,21 +30,20 @@ class TestWeaviateHandler(BaseExecutorTest):
     def setup_method(self):
         super().setup_method()
         # create a weaviate database connection
-        url, api_key = input_credentials
         self.run_sql(
             f"""
             CREATE DATABASE weaviate_test
             WITH ENGINE = "weaviate",
             PARAMETERS = {{
-                "weaviate_url" : "{url}",
-                "weaviate_api_key": "{api_key}"
+                "weaviate_url" : "{"https://sample-2bhdweti.weaviate.network"}",
+                "weaviate_api_key": "{"bKu5mk6ArzOgkaMzuic71jzxXDv4hPjfOmIL"}"
             }}
         """
         )
 
     @pytest.mark.xfail(reason="create table for vectordatabase is not well supported")
-    @patch("mindsdb.integrations.handlers.weaviate_handler.Handler")
-    def test_create_table(self, weaviate_handler_mock):
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_create_table(self, postgres_handler_mock):
         # create an empty table
         sql = """
             CREATE TABLE weaviate_test.test_table;
@@ -65,7 +51,6 @@ class TestWeaviateHandler(BaseExecutorTest):
         self.run_sql(sql)
 
         # create a table with the schema definition is not allowed
-
         sql = """
             CREATE TABLE weaviate_test.test_table (
                 id int,
@@ -76,18 +61,18 @@ class TestWeaviateHandler(BaseExecutorTest):
         with pytest.raises(Exception):
             self.run_sql(sql)
 
-    @patch("mindsdb.integrations.handlers.weaviate_handler.Handler")
-    def test_create_with_select(self, weaviate_handler_mock):
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_create_with_select(self, postgres_handler_mock):
         df = pd.DataFrame(
             {
-                "id": ["id1", "id2"],
+                "id": ["df1f2718-2e44-5596-a877-aa05b4e91730", "c62e19d2-8876-5e90-8209-ced8bb7b9f11"],
                 "content": ["this is a test", "this is a test"],
                 "metadata": [{"test": "test"}, {"test": "test"}],
                 "embeddings": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]],
             }
         )
 
-        self.set_handler(weaviate_handler_mock, "weaviate", tables={"test_table": df})
+        self.set_handler(postgres_handler_mock, "weaviate", tables={"test_table": df})
 
         sql = """
         CREATE TABLE weaviate_test.test_table2 (
@@ -98,17 +83,17 @@ class TestWeaviateHandler(BaseExecutorTest):
         self.run_sql(sql)
 
     @pytest.mark.xfail(reason="drop table for vectordatabase is not working")
-    @patch("mindsdb.integrations.handlers.weaviate_handler.Handler")
-    def test_drop_table(self, weaviate_handler_mock):
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_drop_table(self, postgres_handler_mock):
         df = pd.DataFrame(
             {
-                "id": ["id1", "id2"],
+                "id": ["df1f2718-2e44-5596-a877-aa05b4e91730", "c62e19d2-8876-5e90-8209-ced8bb7b9f11"],
                 "content": ["this is a test", "this is a test"],
                 "metadata": [{"test": "test"}, {"test": "test"}],
                 "embeddings": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]],
             }
         )
-        self.set_handler(weaviate_handler_mock, "weaviate", tables={"test_table": df})
+        self.set_handler(postgres_handler_mock, "weaviate", tables={"test_table": df})
 
         # create a table
         sql = """
@@ -131,11 +116,11 @@ class TestWeaviateHandler(BaseExecutorTest):
         with pytest.raises(Exception):
             self.run_sql(sql)
 
-    @patch("mindsdb.integrations.handlers.weaviate_handler.Handler")
-    def test_insert_into(self, weaviate_handler_mock):
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_insert_into(self, postgres_handler_mock):
         df = pd.DataFrame(
             {
-                "id": ["id1", "id2", "id3"],
+                "id": ["df1f2718-2e44-5596-a877-aa05b4e91730", "c62e19d2-8876-5e90-8209-ced8bb7b9f11", "396c5757-f8ae-5162-84af-029d3e961d9f"],
                 "content": ["this is a test", "this is a test", "this is a test"],
                 "metadata": [{"test": "test1"}, {"test": "test2"}, {"test": "test3"}],
                 "embeddings": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0], [1.0, 2.0, 3.0]],
@@ -143,7 +128,7 @@ class TestWeaviateHandler(BaseExecutorTest):
         )
         df2 = pd.DataFrame(
             {
-                "id": ["id1", "id2", "id3"],
+                "id": ["df1f2718-2e44-5596-a877-aa05b4e91730", "c62e19d2-8876-5e90-8209-ced8bb7b9f11", "396c5757-f8ae-5162-84af-029d3e961d9f"],
                 "content": ["this is a test", "this is a test", "this is a test"],
                 "metadata": [{"test": "test1"}, {"test": "test2"}, {"test": "test3"}],
                 "embeddings": [
@@ -154,7 +139,7 @@ class TestWeaviateHandler(BaseExecutorTest):
             }
         )
         self.set_handler(
-            weaviate_handler_mock, "weaviate", tables={"df": df, "df2": df2}
+            postgres_handler_mock, "weaviate", tables={"df": df, "df2": df2}
         )
         num_record = df.shape[0]
 
@@ -172,14 +157,14 @@ class TestWeaviateHandler(BaseExecutorTest):
                 id,content,metadata,embeddings
             )
             VALUES (
-                'some_unique_id', 'this is a test', '{"test": "test"}', '[1.0, 2.0, 3.0]'
+                'dbe30df2-7a6d-5bdf-a1d1-1601de695f9a', 'this is a test', '{"test": "test"}', '[1.0, 2.0, 3.0]'
             )
         """
         self.run_sql(sql)
         # check if the data is inserted
         sql = """
             SELECT * FROM weaviate_test.test_table
-            WHERE id = 'some_unique_id'
+            WHERE id = 'dbe30df2-7a6d-5bdf-a1d1-1601de695f9a'
         """
         ret = self.run_sql(sql)
         assert ret.shape[0] == 1
@@ -190,7 +175,7 @@ class TestWeaviateHandler(BaseExecutorTest):
                 content,metadata,embeddings
             )
             VALUES (
-                'this is a test', '{"test": "test"}', '[1.0, 2.0, 3.0]'
+                'aa792bb7-aa07-5cde-99fd-c5e520e70bae', '{"test": "test"}', '[1.0, 2.0, 3.0]'
             )
         """
         self.run_sql(sql)
@@ -268,23 +253,23 @@ class TestWeaviateHandler(BaseExecutorTest):
                 id,content,metadata,embeddings
             )
             VALUES (
-                'id1', 'this is a test', '{"test": "test"}', '[1.0, 2.0, 3.0]'
+                'df1f2718-2e44-5596-a877-aa05b4e91730', 'this is a test', '{"test": "test"}', '[1.0, 2.0, 3.0]'
             )
         """
         with pytest.raises(Exception):
             self.run_sql(sql)
 
-    @patch("mindsdb.integrations.handlers.weaviate_handler.Handler")
-    def test_select_from(self, weaviate_handler_mock):
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_select_from(self, postgres_handler_mock):
         df = pd.DataFrame(
             {
-                "id": ["id1", "id2"],
+                "id": ["df1f2718-2e44-5596-a877-aa05b4e91730", "c62e19d2-8876-5e90-8209-ced8bb7b9f11"],
                 "content": ["this is a test", "this is a test"],
                 "metadata": [{"test": "test"}, {"test": "test"}],
                 "embeddings": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]],
             }
         )
-        self.set_handler(weaviate_handler_mock, "weaviate", tables={"test_table": df})
+        self.set_handler(postgres_handler_mock, "weaviate", tables={"test_table": df})
         # create a table
         sql = """
             CREATE TABLE weaviate_test.test_table (
@@ -302,7 +287,7 @@ class TestWeaviateHandler(BaseExecutorTest):
         # query a table with id
         sql = """
             SELECT * FROM weaviate_test.test_table
-            WHERE id = 'id1'
+            WHERE id = 'df1f2718-2e44-5596-a877-aa05b4e91730'
         """
         ret = self.run_sql(sql)
         assert ret.shape[0] == 1
@@ -426,17 +411,17 @@ class TestWeaviateHandler(BaseExecutorTest):
         with pytest.raises(Exception):
             self.run_sql(sql)
 
-    @patch("mindsdb.integrations.handlers.weaviate_handler.Handler")
-    def test_delete(self, weaviate_handler_mock):
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_delete(self, postgres_handler_mock):
         df = pd.DataFrame(
             {
-                "id": ["id1", "id2"],
+                "id": ["df1f2718-2e44-5596-a877-aa05b4e91730", "c62e19d2-8876-5e90-8209-ced8bb7b9f11"],
                 "content": ["this is a test", "this is a test"],
                 "metadata": [{"test": "test1"}, {"test": "test2"}],
                 "embeddings": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]],
             }
         )
-        self.set_handler(weaviate_handler_mock, "weaviate", tables={"test_table": df})
+        self.set_handler(postgres_handler_mock, "weaviate", tables={"test_table": df})
 
         # create a table
         sql = """
@@ -463,13 +448,13 @@ class TestWeaviateHandler(BaseExecutorTest):
         # delete by id
         sql = """
             DELETE FROM weaviate_test.test_table
-            WHERE id = 'id2'
+            WHERE id = 'c62e19d2-8876-5e90-8209-ced8bb7b9f11'
         """
         self.run_sql(sql)
         # check if the data is deleted
         sql = """
             SELECT * FROM weaviate_test.test_table
-            WHERE id = 'id2'
+            WHERE id = 'c62e19d2-8876-5e90-8209-ced8bb7b9f11'
         """
         ret = self.run_sql(sql)
         assert ret.shape[0] == 0

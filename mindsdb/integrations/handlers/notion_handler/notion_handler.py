@@ -45,12 +45,14 @@ class NotionHandler(APIHandler):
         self.connection_args = {}
 
         handler_config = Config().get("notion_handler", {})
+        # allow either of notion_api_token or api_token from parameters
         token_name = ["notion_api_token", "api_token"]
         for k in token_name:
             if len(self.connection_args.keys()) > 0:
                 self.connection_args[k] = self.connection_args.get(
                     list(self.connection_args.keys())[0]
                 )
+            # read from parameters/environment variables/config
             if k in args:
                 self.connection_args[k] = args[k]
             elif f"NOTION_{k.upper()}" in os.environ:
@@ -80,8 +82,7 @@ class NotionHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            api = self.connect()
-
+            self.connect()
             response.success = True
 
         except Exception as e:
@@ -89,27 +90,47 @@ class NotionHandler(APIHandler):
                 f"Error connecting to Notion api: {e}. Check notion_api_token"
             )
             log.logger.error(response.error_message)
+            response.success = False
 
-        if response.success is True and not self.connection_args["api_token"]:
-            try:
-                api = self.connect()
-
-            except Exception as e:
-                keys = "notion_api_token"
-                response.error_message = (
-                    f"Error connecting to Notion api: {e}. Check" + ", ".join(keys)
-                )
-                log.logger.error(response.error_message)
-
-                response.success = False
-
-        if response.success is False and self.is_connected is True:
+        if response.success is False:
             self.is_connected = False
 
         return response
 
     def _apply_filters(self, data, filters):
-        return data
+        if not filters:
+            return data
+
+        data2 = []
+        for row in data:
+            add = False
+            for op, key, value in filters:
+                value2 = row.get(key)
+                if isinstance(value, int):
+                    value = str(value)
+
+                if op in ("!=", "<>"):
+                    if value == value2:
+                        break
+                elif op in ("==", "="):
+                    if value != value2:
+                        break
+                elif op == "in":
+                    if not isinstance(value, list):
+                        value = [value]
+                    if value2 not in value:
+                        break
+                elif op == "not in":
+                    if not isinstance(value, list):
+                        value = [value]
+                    if value2 in value:
+                        break
+                else:
+                    raise NotImplementedError(f"Unknown filter: {op}")
+                add = True
+            if add:
+                data2.append(row)
+        return data2
 
     def call_notion_api(
         self, method_name: str = None, params: dict = None, filters: list = None
@@ -125,6 +146,8 @@ class NotionHandler(APIHandler):
         }
 
         api = self.connect()
+        # use the service as the resource to query(database, page, block, comment)
+        # and query as the type of method(retrieve, list, query)
         service, query = method_name.split(".")
         if service in ["databases", "pages", "blocks", "comments"]:
             method = getattr(api, service)
@@ -169,6 +192,7 @@ class NotionHandler(APIHandler):
                 for table, records in resp.includes.items():
                     includes[table].extend([r.data for r in records])
             if resp.get("results"):
+                # database and comment api has list of results
                 if isinstance(resp["results"], list):
                     chunk = [r for r in resp["results"]]
             else:

@@ -1,4 +1,3 @@
-import re
 import pandas as pd
 
 from mindsdb_sql.parser import ast
@@ -13,30 +12,28 @@ logger = get_log("integrations.notion_handler")
 
 
 class NotionDatabaseTable(APITable):
-
     def select(self, query: ast.Select) -> Response:
         conditions = extract_comparison_conditions(query.where)
 
         params = {}
         filters = []
         for op, arg1, arg2 in conditions:
+            if op == "or":
+                raise NotImplementedError(f"OR is not supported")
 
-            if op == 'or':
-                raise NotImplementedError(f'OR is not supported')
-
-            if arg1 == 'database_id':
-                if op == '=':
+            if arg1 == "database_id":
+                if op == "=":
                     params[arg1] = arg2
                 else:
-                    NotImplementedError(f'Unknown op: {op}')
+                    NotImplementedError(f"Unknown op: {op}")
 
             else:
                 filters.append([op, arg1, arg2])
 
+        # fetch a particular database with the given id
+        # additionally filter the results
         result = self.handler.call_notion_api(
-            method_name='databases.query',
-            params=params,
-            filters=filters
+            method_name="databases.query", params=params, filters=filters
         )
 
         # filter targets
@@ -69,38 +66,37 @@ class NotionDatabaseTable(APITable):
 
     def get_columns(self):
         return [
-            'id',
-            'created_time',
-            'last_edited_time',
-            'created_by',
-            'last_edited_by',
-            'cover',
-            'icon',
-            'parent',
-            'archived',
-            'properties',
-            'url',
-            'public_url',
+            "id",
+            "created_time",
+            "last_edited_time",
+            "created_by",
+            "last_edited_by",
+            "cover",
+            "icon",
+            "parent",
+            "archived",
+            "properties",
+            "url",
+            "public_url",
         ]
 
     def insert(self, query: ast.Insert):
+        # TODO
         pass
 
 
 class NotionPagesTable(APITable):
-
     def select(self, query: ast.Select) -> Response:
         conditions = extract_comparison_conditions(query.where)
 
         params = {}
         filters = []
         for op, arg1, arg2 in conditions:
+            if op == "or":
+                raise NotImplementedError(f"OR is not supported")
 
-            if op == 'or':
-                raise NotImplementedError(f'OR is not supported')
-
-            if arg1 == 'page_id':
-                if op == '=':
+            if arg1 == "page_id":
+                if op == "=":
                     params[arg1] = arg2
                 else:
                     raise NotImplementedError
@@ -108,14 +104,13 @@ class NotionPagesTable(APITable):
             else:
                 filters.append([op, arg1, arg2])
 
-        if 'query' not in params:
+        if "query" not in params:
             # search not works without query, use 'mindsdb'
-            params['query'] = 'mindsdb'
+            params["query"] = "mindsdb"
 
+        # fetch a particular page with the given id
         result = self.handler.call_notion_api(
-            method_name='pages.retrieve',
-            params=params,
-            filters=filters
+            method_name="pages.retrieve", params=params, filters=filters
         )
 
         # filter targets
@@ -148,87 +143,107 @@ class NotionPagesTable(APITable):
 
     def get_columns(self):
         return [
-            'id',
-            'object',
-            'created_time',
-            'last_edited_time',
-            'created_by',
-            'last_edited_by',
-            'cover',
-            'icon',
-            'parent',
-            'archived',
-            'properties',
-            'url',
-            'public_url',
+            "id",
+            "object",
+            "created_time",
+            "last_edited_time",
+            "created_by",
+            "last_edited_by",
+            "cover",
+            "icon",
+            "parent",
+            "archived",
+            "properties",
+            "url",
+            "public_url",
         ]
 
     def insert(self, query: ast.Insert):
         columns = [col.name for col in query.columns]
 
-        insert_params = ('notion_api_token',)
+        insert_params = ("notion_api_token",)
         for p in insert_params:
             if p not in self.handler.connection_args:
-                raise Exception(f'To insert data into Notion, you need to provide the following parameters when connecting it to MindsDB: {insert_params}')  # noqa
+                raise Exception(
+                    f"To insert data into Notion, you need to provide the following parameters when connecting it to MindsDB: {insert_params}"
+                )  # noqa
 
         for row in query.values:
             params = dict(zip(columns, row))
 
-            words = re.split('( )', text)
+            # title and database_id as required params for creating the page
+            # optionally provide the text to populate the page
+            title = params["title"]
+            text = params.get("title", "")
 
             messages = []
 
-            text2 = ''
-            for word in words:
-                if len(text2) + len(word) > max_text_len - 3 - 7:
-                    messages.append(text2.strip())
-
-                    text2 = ''
-                text2 += word
-
             # the last message
-            if text2.strip() != '':
-                messages.append(text2.strip())
+            if text.strip() != "":
+                messages.append(text.strip())
 
             len_messages = len(messages)
             for i, text in enumerate(messages):
                 if i < len_messages - 1:
-                    text += '...'
+                    text += "..."
                 else:
-                    text += ' '
+                    text += " "
 
-                text += f'({i + 1}/{len_messages})'
+                params["parent"] = {"database_id": params["database_id"]}
+                params["properties"] = {
+                    "Name": {
+                        "title": [
+                            {
+                                "text": {
+                                    "content": title,
+                                },
+                            },
+                        ],
+                    },
+                }
+                params["children"] = [
+                    {
+                        "object": "block",
+                        "type": "paragraph",
+                        "paragraph": {
+                            "rich_text": [
+                                {
+                                    "type": "text",
+                                    "text": {
+                                        "content": text,
+                                    },
+                                }
+                            ]
+                        },
+                    }
+                ]
 
-                params['text'] = text
-                ret = self.handler.call_notion_api('pages.create', params)
+                ret = self.handler.call_notion_api("pages.create", params)
                 inserted_id = ret.id[0]
 
 
 class NotionBlocksTable(APITable):
-
     def select(self, query: ast.Select) -> Response:
         conditions = extract_comparison_conditions(query.where)
 
         params = {}
         filters = []
         for op, arg1, arg2 in conditions:
+            if op == "or":
+                raise NotImplementedError(f"OR is not supported")
 
-            if op == 'or':
-                raise NotImplementedError(f'OR is not supported')
-
-            if arg1 == 'block_id':
-                if op == '=':
+            if arg1 == "block_id":
+                if op == "=":
                     params[arg1] = arg2
                 else:
-                    NotImplementedError(f'Unknown op: {op}')
+                    NotImplementedError(f"Unknown op: {op}")
 
             else:
                 filters.append([op, arg1, arg2])
 
+        # fetch a particular block with the given id
         result = self.handler.call_notion_api(
-            method_name='blocks.retrieve',
-            params=params,
-            filters=filters
+            method_name="blocks.retrieve", params=params, filters=filters
         )
 
         # filter targets
@@ -260,79 +275,78 @@ class NotionBlocksTable(APITable):
         return result
 
     def get_columns(self):
+        # most of the columns will remain NULL as a block can be of a single type
         return [
-            'object',
-            'id',
-            'parent',
-            'has_children',
-            'created_time',
-            'last_edited_time',
-            'created_by',
-            'last_edited_by',
-            'archived',
-            'type',
-            'bookmark',
-            'breadcrumb',
-            'bulleted_list_item',
-            'callout',
-            'child_database',
-            'child_page',
-            'column',
-            'column_list',
-            'divider',
-            'embed',
-            'equation',
-            'file',
-            'heading_1',
-            'heading_2',
-            'heading_3',
-            'image',
-            'link_preview',
-            'link_to_page',
-            'numbered_list_item',
-            'paragraph',
-            'pdf',
-            'quote',
-            'synced_block',
-            'table',
-            'table_of_contents',
-            'table_row',
-            'template',
-            'to_do',
-            'toggle',
-            'unsupported',
-            'video',
+            "object",
+            "id",
+            "parent",
+            "has_children",
+            "created_time",
+            "last_edited_time",
+            "created_by",
+            "last_edited_by",
+            "archived",
+            "type",
+            "bookmark",
+            "breadcrumb",
+            "bulleted_list_item",
+            "callout",
+            "child_database",
+            "child_page",
+            "column",
+            "column_list",
+            "divider",
+            "embed",
+            "equation",
+            "file",
+            "heading_1",
+            "heading_2",
+            "heading_3",
+            "image",
+            "link_preview",
+            "link_to_page",
+            "numbered_list_item",
+            "paragraph",
+            "pdf",
+            "quote",
+            "synced_block",
+            "table",
+            "table_of_contents",
+            "table_row",
+            "template",
+            "to_do",
+            "toggle",
+            "unsupported",
+            "video",
         ]
 
     def insert(self, query: ast.Insert):
+        # TODO
         pass
 
 
 class NotionCommentsTable(APITable):
-
     def select(self, query: ast.Select) -> Response:
         conditions = extract_comparison_conditions(query.where)
 
         params = {}
         filters = []
         for op, arg1, arg2 in conditions:
+            if op == "or":
+                raise NotImplementedError(f"OR is not supported")
 
-            if op == 'or':
-                raise NotImplementedError(f'OR is not supported')
-
-            if arg1 == 'block_id':
-                if op == '=':
+            if arg1 == "block_id":
+                if op == "=":
                     params[arg1] = arg2
                 else:
-                    NotImplementedError(f'Unknown op: {op}')
+                    NotImplementedError(f"Unknown op: {op}")
 
             else:
                 filters.append([op, arg1, arg2])
 
+        # list all the unresolved comments for a given block id
         result = self.handler.call_notion_api(
-            method_name='comments.list',
-            params=params,
-            filters=filters
+            method_name="comments.list", params=params, filters=filters
         )
 
         # filter targets
@@ -365,15 +379,16 @@ class NotionCommentsTable(APITable):
 
     def get_columns(self):
         return [
-            'id',
-            'object',
-            'parent',
-            'discussion_id',
-            'created_time',
-            'last_edited_time',
-            'created_by',
-            'rich_text',
+            "id",
+            "object",
+            "parent",
+            "discussion_id",
+            "created_time",
+            "last_edited_time",
+            "created_by",
+            "rich_text",
         ]
 
     def insert(self, query: ast.Insert):
+        # TODO
         pass

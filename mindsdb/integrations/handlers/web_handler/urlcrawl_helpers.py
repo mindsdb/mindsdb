@@ -151,7 +151,7 @@ def get_readable_text_from_soup(soup):
         elif tag.name == 'p':
             markdown_output += tag.get_text().strip() + "\n\n"
         elif tag.name == 'a':
-            markdown_output += f"[{tag.get_text().strip()}]({tag['href']})\n\n"
+            markdown_output += f"[{tag.get_text().strip()}]({tag.get('href')})\n\n"
         elif tag.name == 'ul':
             for li in tag.find_all('li'):
                 markdown_output += f"* {li.get_text().strip()}\n"

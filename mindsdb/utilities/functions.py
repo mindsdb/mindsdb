@@ -1,6 +1,9 @@
 import argparse
 import datetime
 from functools import wraps
+import hashlib
+import base64
+from cryptography.fernet import Fernet
 
 import requests
 from mindsdb_sql import get_lexer_parser
@@ -154,3 +157,21 @@ def resolve_model_identifier(name: Identifier) -> tuple:
             return None, None, None
 
     return database_name, model_name, model_version
+
+
+def encrypt(string: bytes, key: str) -> bytes:
+    hashed_string = hashlib.sha256(key.encode()).digest()
+
+    fernet_key = base64.urlsafe_b64encode(hashed_string)
+
+    cipher = Fernet(fernet_key)
+    return cipher.encrypt(string)
+
+
+def decrypt(encripted: bytes, key: str) -> bytes:
+    hashed_string = hashlib.sha256(key.encode()).digest()
+
+    fernet_key = base64.urlsafe_b64encode(hashed_string)
+
+    cipher = Fernet(fernet_key)
+    return cipher.decrypt(encripted)

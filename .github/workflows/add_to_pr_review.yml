@@ -1,0 +1,16 @@
+name: Add Pull Requests to PR review project
+
+on:
+  pull_request:
+    types:
+      - opened
+
+jobs:
+  add-to-project:
+    name: Add issue to project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: https://github.com/orgs/mindsdb/projects/65
+          github-token: ${{ secrets.ADD_TO_PR }}

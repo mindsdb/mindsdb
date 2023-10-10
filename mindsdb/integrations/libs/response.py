@@ -47,16 +47,21 @@ class HandlerResponse:
             )
 
 class HandlerStatusResponse:
-    def __init__(self, success: bool = True, error_message: str = None) -> None:
+    def __init__(self, success: bool = True, error_message: str = None, redirect_url: str = None) -> None:
         self.success = success
         self.error_message = error_message
+        self.redirect_url = redirect_url
 
     def to_json(self):
-        return {"success": self.success,
-                "error": self.error_message}
+        data = {"success": self.success, "error": self.error_message}
+        if self.redirect_url is not None:
+            data['redirect_url'] = self.redirect_url
+        return data
 
     def __repr__(self):
-        return f"{self.__class__.__name__}: success={self.success}, error={self.error_message}"
+        return f"{self.__class__.__name__}: success={self.success},\
+              error={self.error_message},\
+              redirect_url={self.redirect_url}"
 
 
 class ExecutorResponse:

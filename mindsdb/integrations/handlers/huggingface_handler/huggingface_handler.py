@@ -79,7 +79,7 @@ class HuggingFaceHandler(BaseMLEngine):
             keys = ["min_output_length", "max_output_length"]
             for key in keys:
                 if key not in args:
-                    raise Exception(f"{key} is required for translation")
+                    raise Exception(f"{key} is required for summarization")
                 input_keys.remove(key)
 
         # optional keys
@@ -263,7 +263,7 @@ class HuggingFaceHandler(BaseMLEngine):
         try:
             # load from model storage (finetuned models will use this)
             hf_model_storage_path = self.model_storage.folder_get(
-                args["model_name"], update=False
+                args["model_name"]
             )
             pipeline = transformers.pipeline(
                 task=args["task_proper"],
@@ -273,7 +273,7 @@ class HuggingFaceHandler(BaseMLEngine):
         except OSError:
             # load from engine storage (i.e. 'common' models)
             hf_model_storage_path = self.engine_storage.folder_get(
-                args["model_name"], update=False
+                args["model_name"]
             )
             pipeline = transformers.pipeline(
                 task=args["task_proper"],

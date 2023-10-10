@@ -1,17 +1,24 @@
 import os
+from collections import OrderedDict
+
 import pandas as pd
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from .google_calendar_tables import GoogleCalendarEventsTable
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
 )
 from mindsdb.utilities import log
+
+from mindsdb.integrations.handlers.gmail_handler.utils import AuthException, google_auth_flow, save_creds_to_file
+
+from .google_calendar_tables import GoogleCalendarEventsTable
+
 
 class GoogleCalendarHandler(APIHandler):
     """
@@ -33,13 +40,16 @@ class GoogleCalendarHandler(APIHandler):
         self.token = None
         self.service = None
         self.connection_data = kwargs.get('connection_data', {})
-        self.credentials_file = self.connection_data.get('credentials', None)
-        self.scopes = ['https://www.googleapis.com/auth/calendar', 
-              'https://www.googleapis.com/auth/calendar.events',
-              'https://www.googleapis.com/auth/calendar.readonly'
-            ]
-        self.credentials = None
+        self.credentials_file = self.connection_data['credentials']
+        self.scopes = [
+            'https://www.googleapis.com/auth/calendar',
+            'https://www.googleapis.com/auth/calendar.events',
+            'https://www.googleapis.com/auth/calendar.readonly'
+        ]
         self.is_connected = False
+
+        self.handler_storage = kwargs['handler_storage']
+
         events = GoogleCalendarEventsTable(self)
         self.events = events
         self._register_table('events', events)
@@ -54,20 +64,35 @@ class GoogleCalendarHandler(APIHandler):
         """
         if self.is_connected is True:
             return self.service
-        if self.credentials_file:
-            if os.path.exists('token.json'):
-                self.credentials = Credentials.from_authorized_user_file('token.json', self.scopes)
-            if not self.credentials or not self.credentials.valid:
-                if self.credentials and self.credentials.expired and self.credentials.refresh_token:
-                    self.credentials.refresh(Request())
-                else:
-                    flow = InstalledAppFlow.from_client_secrets_file(
-                        self.credentials_file, self.scopes)
-                    self.credentials = flow.run_local_server(port=0)
-            # Save the credentials for the next run
-            with open('token.json', 'w') as token:
-                token.write(self.credentials.to_json())
-            self.service = build('calendar', 'v3', credentials=self.credentials)
+
+        secret_file = self.credentials_file
+
+        curr_dir = self.handler_storage.folder_get('config')
+
+        creds_file = None
+        try:
+            creds_file = os.path.join(curr_dir, 'secret.json')
+        except Exception:
+            pass
+
+        creds = None
+        if os.path.isfile(creds_file):
+            creds = Credentials.from_authorized_user_file(creds_file, self.scopes)
+
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+
+                save_creds_to_file(creds, creds_file)
+                self.handler_storage.folder_sync('config')
+
+            else:
+                creds = google_auth_flow(secret_file, self.scopes, self.connection_data.get('code'))
+
+                save_creds_to_file(creds, creds_file)
+                self.handler_storage.folder_sync('config')
+
+        self.service = build('calendar', 'v3', credentials=creds)
         return self.service
 
     def check_connection(self) -> StatusResponse:
@@ -80,8 +105,14 @@ class GoogleCalendarHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            service = self.connect()
+            self.connect()
             response.success = True
+
+        except AuthException as error:
+            response.error_message = str(error)
+            response.redirect_url = error.auth_url
+            return response
+
         except Exception as e:
             log.logger.error(f'Error connecting to Google Calendar API: {e}!')
             response.error_message = e
@@ -260,3 +291,12 @@ class GoogleCalendarHandler(APIHandler):
             return self.delete_event(params)
         else:
             raise NotImplementedError(f'Unknown method {method_name}')
+
+
+connection_args = OrderedDict(
+    credentials={
+        'type': ARG_TYPE.PATH,
+        'description': 'Service Account Keys',
+        'label': 'Upload Service Account Keys',
+    },
+)

@@ -23,4 +23,7 @@ my_table = mysql_demo_db.create_table('my_table', 'SELECT * FROM some_table WHER
 
 # option 2
 my_table = mysql_demo_db.create_table('my_table', base_table)
+
+# option 3
+my_table = mysql_demo_db.create_table('my_table', base_table.filter(key='value'))
 ```

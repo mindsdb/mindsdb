@@ -18,6 +18,7 @@ In particular, three big components are included:
 
 import sys
 import time
+import socket
 import threading
 import datetime as dt
 from typing import Optional, Callable
@@ -344,7 +345,6 @@ class BaseMLEngineExec:
         self.handler_controller = kwargs.get('handler_controller')
         self.company_id = kwargs.get('company_id')
         self.fs_store = kwargs.get('file_storage')
-        self.storage_factory = kwargs.get('storage_factory')
         self.integration_id = kwargs.get('integration_id')
         self.execution_method = kwargs.get('execution_method')
         self.engine = kwargs.get("integration_engine")
@@ -430,7 +430,8 @@ class BaseMLEngineExec:
         # TODO move to model_controller
         """ Trains a model given some data-gathering SQL statement. """
 
-        target = problem_definition['target']
+        # may or may not be provided (e.g. 0-shot models do not need it), so engine will handle it
+        target = problem_definition.get('target', [''])  # db.Predictor expects Column(Array(String))
 
         project = self.database_controller.get_project(name=project_name)
 
@@ -457,6 +458,7 @@ class BaseMLEngineExec:
             training_start_at=dt.datetime.now(),
             status=PREDICTOR_STATUS.GENERATING,
             label=label,
+            hostname=socket.gethostname(),
             version=(
                 db.session.query(
                     coalesce(func.max(db.Predictor.version), 1) + (1 if is_retrain else 0)
@@ -611,6 +613,7 @@ class BaseMLEngineExec:
             training_start_at=dt.datetime.now(),
             status=PREDICTOR_STATUS.GENERATING,
             label=label,
+            hostname=socket.gethostname(),
             version=(
                 db.session.query(
                     coalesce(func.max(db.Predictor.version), 1) + 1
@@ -650,8 +653,6 @@ class BaseMLEngineExec:
                 predictor_record = db.Predictor.query.get(predictor_record.id)
                 db.session.refresh(predictor_record)
             else:
-                # return the base predictor record if process is not joined
-                predictor_record = db.Predictor.query.get(base_predictor_record.id)
                 task.add_done_callback(empty_callback)
 
         return predictor_record

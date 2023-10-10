@@ -1,7 +1,8 @@
 from typing import Dict, List
 
-from mindsdb.interfaces.storage import db
+from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.storage import db
 
 from mindsdb.utilities.context import context as ctx
 
@@ -14,10 +15,13 @@ class ChatBotController:
 
     OBJECT_TYPE = 'chatbot'
 
-    def __init__(self, project_controller: ProjectController = None):
+    def __init__(self, project_controller: ProjectController = None, agents_controller: AgentsController = None):
         if project_controller is None:
             project_controller = ProjectController()
+        if agents_controller is None:
+            agents_controller = AgentsController()
         self.project_controller = project_controller
+        self.agents_controller = agents_controller
 
     def get_chatbot(self, chatbot_name: str, project_name: str = 'mindsdb') -> db.ChatBots:
         '''
@@ -34,7 +38,7 @@ class ChatBotController:
         project = self.project_controller.get(name=project_name)
 
         query = db.session.query(
-            db.ChatBots
+            db.ChatBots, db.Tasks
         ).join(
             db.Tasks, db.ChatBots.id == db.Tasks.object_id
         ).filter(
@@ -44,7 +48,34 @@ class ChatBotController:
             db.Tasks.company_id == ctx.company_id,
         )
 
-        return query.first()
+        query_result = query.first()
+        if query_result is None:
+            return None
+        bot, task = query_result
+
+        # Include DB, Agent, and Task information in response.
+        session = SessionController()
+        database_names = {
+            i['id']: i['name']
+            for i in session.database_controller.get_list()
+        }
+
+        agent = self.agents_controller.get_agent_by_id(bot.agent_id)
+        agent_obj = agent.as_dict() if agent is not None else None
+        bot_obj = {
+            'id': bot.id,
+            'name': bot.name,
+            'project': project_name,
+            'agent': agent_obj,
+            'database_id': bot.database_id,  # TODO remove in future
+            'database': database_names.get(bot.database_id, '?'),
+            'model_name': bot.model_name,
+            'params': bot.params,
+            'created_at': bot.created_at,
+            'is_running': task.active,
+            'last_error': task.last_error,
+        }
+        return bot_obj
 
     def get_chatbots(self, project_name: str = 'mindsdb') -> List[dict]:
         '''
@@ -77,11 +108,14 @@ class ChatBotController:
 
         bots = []
         for bot, task in query.all():
+            agent = self.agents_controller.get_agent_by_id(bot.agent_id)
+            agent_obj = agent.as_dict() if agent is not None else None
             bots.append(
                 {
                     'id': bot.id,
                     'name': bot.name,
                     'project': project_name,
+                    'agent': agent_obj,
                     'database_id': bot.database_id,  # TODO remove in future
                     'database': database_names.get(bot.database_id, '?'),
                     'model_name': bot.model_name,
@@ -98,7 +132,8 @@ class ChatBotController:
             self,
             name: str,
             project_name: str,
-            model_name: str,
+            model_name: str = None,
+            agent_name: str = None,
             database_id: int = None,
             is_running: bool = True,
             params: Dict[str, str] = {}) -> db.ChatBots:
@@ -109,6 +144,7 @@ class ChatBotController:
             name (str): The name of the new chatbot
             project_name (str): The containing project
             model_name (str): The name of the existing ML model the chatbot will use
+            agent_name (str): The name of the existing agent the chatbot will use
             database_id (int): The ID of the existing database the chatbot will use
             is_running (bool): Whether or not to start the chatbot right after creation
             params: (Dict[str, str]): Parameters to use when running the chatbot
@@ -132,17 +168,26 @@ class ChatBotController:
         if bot is not None:
             raise Exception(f'Chat bot already exists: {name}')
 
-        # TODO check input: model_name, database_id
-
         # check database
         session_controller = SessionController()
         db_record = session_controller.integration_controller.get_by_id(database_id)
         if db_record is None:
-            raise Exception(f"Database doesn't exits {database_id}")
+            raise Exception(f"Database doesn't exist: {database_id}")
+
+        if model_name is None and agent_name is None:
+            raise ValueError('Need to provide either "model_name" or "agent_name" when creating a chatbot')
+        if agent_name is not None:
+            agent = self.agents_controller.get_agent(agent_name, project_name)
+            if agent is None:
+                raise ValueError(f"Agent with name doesn't exist: {agent_name}")
+        else:
+            # Create a new agent with the given model name.
+            agent = self.agents_controller.add_agent(name, project_name, model_name, [])
 
         bot = db.ChatBots(
             name=name,
             project_id=project.id,
+            agent_id=agent.id,
             model_name=model_name,
             database_id=database_id,
             params=params,
@@ -170,6 +215,7 @@ class ChatBotController:
             project_name: str = 'mindsdb',
             name: str = None,
             model_name: str = None,
+            agent_name: str = None,
             database_id: int = None,
             is_running: bool = None,
             params: Dict[str, str] = None):
@@ -181,6 +227,7 @@ class ChatBotController:
             project_name (str): The containing project
             name (str): The updated name of the chatbot
             model_name (str): The name of the existing ML model the chatbot will use
+            agent_name (str): The name of the existing agent the chatbot will use
             database_id (int): The ID of the existing database the chatbot will use
             is_running (bool): Whether or not the chatbot will run after update/creation
             params: (Dict[str, str]): Parameters to use when running the chatbot
@@ -193,23 +240,32 @@ class ChatBotController:
         if existing_chatbot is None:
             raise Exception(f'Chat bot not found: {chatbot_name}')
 
+        existing_chatbot_rec = db.ChatBots.query.get(existing_chatbot['id'])
+
         if name is not None and name != chatbot_name:
             # check new name
             bot2 = self.get_chatbot(name, project_name=project_name)
             if bot2 is not None:
                 raise Exception(f'Chat already exists: {name}')
 
-            existing_chatbot.name = name
+            existing_chatbot_rec.name = name
+
+        if agent_name is not None:
+            agent = self.agents_controller.get_agent(agent_name, project_name)
+            if agent is None:
+                raise ValueError(f"Agent with name doesn't exist: {agent_name}")
+            existing_chatbot_rec.agent_id = agent.id
+
         if model_name is not None:
             # TODO check model_name
-            existing_chatbot.model_name = model_name
+            existing_chatbot_rec.model_name = model_name
         if database_id is not None:
             # TODO check database_id
-            existing_chatbot.database_id = database_id
+            existing_chatbot_rec.database_id = database_id
 
         task = db.Tasks.query.filter(
             db.Tasks.object_type == self.OBJECT_TYPE,
-            db.Tasks.object_id == existing_chatbot.id,
+            db.Tasks.object_id == existing_chatbot_rec.id,
             db.Tasks.company_id == ctx.company_id,
         ).first()
 
@@ -221,10 +277,13 @@ class ChatBotController:
             task.reload = True
 
         if params is not None:
-            existing_chatbot.params = params
+            # Merge params on update
+            existing_params = existing_chatbot_rec.params or {}
+            params.update(existing_params)
+            existing_chatbot_rec.params = params
         db.session.commit()
 
-        return existing_chatbot
+        return existing_chatbot_rec
 
     def delete_chatbot(self, chatbot_name: str, project_name: str = 'mindsdb'):
         '''
@@ -239,15 +298,17 @@ class ChatBotController:
         if bot is None:
             raise Exception(f"Chat bot doesn't exist: {chatbot_name}")
 
+        bot_rec = db.ChatBots.query.get(bot['id'])
+
         task = db.Tasks.query.filter(
             db.Tasks.object_type == self.OBJECT_TYPE,
-            db.Tasks.object_id == bot.id,
+            db.Tasks.object_id == bot_rec.id,
             db.Tasks.company_id == ctx.company_id,
         ).first()
 
         if task is not None:
             db.session.delete(task)
 
-        db.session.delete(bot)
+        db.session.delete(bot_rec)
 
         db.session.commit()

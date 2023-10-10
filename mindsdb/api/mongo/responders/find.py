@@ -1,6 +1,6 @@
 from bson.int64 import Int64
 
-from mindsdb_sql.parser.ast import Join, Select, Identifier, Describe, Show
+from mindsdb_sql.parser.ast import Join, Select, Identifier, Describe, Show, Constant
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import Responder
 from mindsdb.api.mongo.utilities.mongodb_ast import MongoToAst
@@ -34,6 +34,10 @@ def find_to_ast(query, database):
             filter=filter,
         )
         table_select.parentheses = True
+        table_select.alias = Identifier(query['filter']['collection'])
+        table_select.alias.parts = [table_select.alias.parts[-1]]
+        if 'limit' in query:
+            table_select.limit = Constant(query['limit'])
 
         modifiers = query['filter'].get('modifiers')
         if modifiers is not None and hasattr(ast_query, 'modifiers'):

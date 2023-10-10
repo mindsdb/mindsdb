@@ -1,13 +1,15 @@
+import os
 import random
 import string
 from typing import Optional
-import os
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 import autokeras as ak
 from sklearn import preprocessing
-from mindsdb.integrations.libs.base import BaseMLEngine
 from tensorflow.keras.models import load_model
+
+from mindsdb.integrations.libs.base import BaseMLEngine
 
 
 # Makes this run on systems where this arg isn't specified, like Windows Subsystem for Linux

@@ -1,59 +1,182 @@
-# Huggingface ML Handler
+# HuggingFace API Handler
 
-## Briefly describe what ML framework does this handler integrate to MindsDB, and how? 
-This handler integrates the Hugging Face Inference API to MindsDB using Hugging-Py-Face, a powerful Python package that provides seamless integration with the Hugging Face Inference API. The source code for the package is available here: https://github.com/MinuraPunchihewa/hugging-py-face
+The HuggingFace API handler for MindsDB provides an interface to interact with the HuggingFace Inference API.
 
-## Why is this integration useful? What does the ideal predictive use case for this integration look like? When would you definitely not use this integration? 
-This integration is useful for a number of reasons,
-- Faster model deployment: Pre-trained models can be quickly deployed for use in applications without having to spend time training the models.
-- Greater model variety: Hugging Face offers a large and growing collection of pre-trained models for a wide range of tasks that are made available through this integration.
-- Reduced computational costs: Computational costs of training models from scratch can be avoided.
+## About the HuggingFace Inference API
+Easily integrate NLP, audio and computer vision models deployed for inference via simple API calls. Harness the power of machine learning while staying out of MLOps!
+<br>
+https://huggingface.co/inference-api
 
-An ideal predictive use case for this integration would be one where you have a large and complex dataset that you want to use to make predictions or classifications, and where you don't have the time or resources to train a model from scratch.
+## HuggingFace API Handler Implementation
 
-This integration is not suitable for uses cases that require a highly customized machine learning model trained on a specific dataset.
+This handler was implemented using [Hugging-Py-Face](https://github.com/MinuraPunchihewa/hugging-py-face), a powerful Python package that provides seamless integration with the Hugging Face Inference API.
 
-## Are models created with this integration fast and scalable, in general?
-In general, yes. However, the free Inference API may be rate limited for heavy use cases. More information about the API can be found here: https://huggingface.co/docs/api-inference/faq. Furthermore, the performance of the Computer Vision and Audio Processing tasks on large datasets will be somewhat slow as a API call needs to be made for each image/audio file to be processed. Future work will include optimizing performance through parallelism and batch jobs, however, this will be supported only for paid plans of the Hugging Face Inference API.
+## Creating an ML Engine
 
-## What are the recommended system specifications for models created with this framework?
-Since the models are hosted on by Hugging Face, there is no need for any additional system specifications. The only requirement is to have an internet connection.
-
-## To what degree can users control the underlying framework by passing parameters via the USING syntax?
-Users are allowed complete control over the underlying framework by passing parameters via the USING syntax. The parameters are passed to the Hugging Face Inference API, which is used to create the models. The parameters supported for each task are documented here: https://huggingface.co/docs/api-inference/detailed_parameters
-
-## Does this integration offer model explainability or insights via the DESCRIBE syntax?
-No, this integration does not offer model explainability or insights via the DESCRIBE syntax.
-
-## Does this integration support fine-tuning pre-existing models (i.e. is the update() method implemented)? Are there any caveats?
-No, fine-tuning is not supported. This integration is only for inference using the hosted models of the Hugging Face Inference API.
-
-## Are there any other noteworthy aspects to this handler?
-A few other noteworthy aspects of this handler are,
-- Flexibility: This integration provides a lot of flexibility in terms of the types of models you can build and the types of data you can work with. A variety of pre-trained models can be used for Natural Language Processing, Computer Vision and Audio Processing.
-- Ease of use: Similar to the Hugging Face Inference API itself, this integration is desgined to be easy to use.
-
-## Any directions for future work in subsequent versions of the handler?
-Future work includes adding support for other tasks supported by the Hugging Face Inference API and optimizing performance through parallelism and batch jobs.
-
-## Please provide a minimal SQL example that uses this ML engine (pointers to integration tests in the PR also valid)
+The first step to make use of this handler is to create an ML Engine. This can be done using the following syntax,
 ```sql
--- Create Huggingface engine
 CREATE ML_ENGINE hf_api_engine
 FROM huggingface_api
 USING
-  api_key = 'hf_...';
-  
--- Create a model for text classification
-CREATE MODEL mindsdb.hf_sentiment_classifier
+  api_key = '<YOUR_API_KEY>';
+```
+
+## Creating Models
+
+Now, you can use this ML Engine to create Models for the different tasks supported by the handler. 
+
+When executing the `CREATE MODEL` statement, the following parameters are supported in the `USING` clause of the query:
+- `engine`: The name of the ML Engine to use. This is a required parameter.
+- `api_key`: The HuggingFace API key to use for authentication. This is a required parameter.
+- `task`: The task to perform. This is an optional parameter. If not specified, the `model_name` parameter must be specified instead and the handler will automatically infer the task.
+- `model_name`: The name of the model to use. This is an optional parameter. If not specified, the `task` parameter must be specified instead and the handler will automatically use the recommended model for the task.
+- `input_column`: The name of the column to use as input to the model. This is a required parameter.
+- `endpoint`: The endpoint to use for the API call. This is an optional parameter. If not specified, the hosted inference API from HuggingFace will be used.
+- `options`: A JSON object containing additional options to pass to the API call. This is an optional parameter. More information about the available options for each task can be found [here](https://huggingface.co/docs/api-inference/detailed_parameters).
+- `parameters`: A JSON object containing additional parameters to pass to the API call. This is an optional parameter. More information about the available parameters for each task can be found [here](https://huggingface.co/docs/api-inference/detailed_parameters).
+
+In addition to the above, there are a few task-specific parameters that the handler supports. These will be introduced in the following sections.`
+
+Given below are examples of creating Models for each of the supported tasks.
+
+### Text Classification
+```sql
+CREATE MODEL mindsdb.hf_text_classifier
 PREDICT sentiment
 USING
   task = 'text-classification',
-  column = 'text',
-  engine = 'hf_api_engine';
-
--- Predict sentiment using model
-SELECT text, sentiment
-FROM mindsdb.hf_sentiment_classifier
-WHERE text = 'I like you. I love you.';
+  engine = 'hf_api_engine',
+  api_key = '<YOUR_API_KEY>',
+  input_column = 'text'
 ```
+
+### Fill Mask
+```sql
+CREATE MODEL mindsdb.hf_fill_mask
+PREDICT sequence
+USING
+  task = 'fill-mask',
+  engine = 'hf_api_engine',
+  api_key = '<YOUR_API_KEY>',
+  input_column = 'text'
+```
+
+### Summarization
+```sql
+CREATE MODEL mindsdb.hf_summarizer
+PREDICT summary
+USING
+  task = 'summarization',
+  engine = 'hf_api_engine',
+  api_key = '<YOUR_API_KEY>',
+  input_column = 'text'
+```
+
+### Text Generation
+```sql
+CREATE MODEL mindsdb.hf_text_generator
+PREDICT generated_text
+USING
+  task = 'text-generation',
+  engine = 'hf_api_engine',
+  api_key = '<YOUR_API_KEY>',
+  input_column = 'text'
+```
+
+### Question Answering
+```sql
+CREATE MODEL mindsdb.hf_question_answerer
+PREDICT answer
+USING
+  task = 'question-answering',
+  engine = 'hf_api_engine',
+  api_key = '<YOUR_API_KEY>',
+  input_column = 'question',
+  context_column = 'context'
+```
+
+The `context_column` parameter is specific to the Question Answering task and is used to specify the column containing the context for the question.
+
+### Sentences Similarity
+```sql
+CREATE MODEL mindsdb.hf_sentence_similarity
+PREDICT similarity
+USING
+  task = 'sentence-similarity',
+  engine = 'hf_api_engine',
+  api_key = '<YOUR_API_KEY>',
+  input_column = 'sentence1',
+  input_column2 = 'sentence2'
+```
+
+The `input_column2` parameter is specific to the Sentence Similarity task and is used to specify the column containing the second sentence to compare.
+
+### Zero Shot Classification
+```sql
+CREATE MODEL mindsdb.hf_zero_shot_classifier
+PREDICT label
+USING
+  task = 'zero-shot-classification',
+  engine = 'hf_api_engine',
+  api_key = '<YOUR_API_KEY>',
+  input_column = 'text',
+  candidate_labels = ['label1', 'label2', 'label3']
+```
+
+The `candidate_labels` parameter is specific to the Zero Shot Classification task and is used to specify the candidate labels to use for classification.
+
+### Image Classification
+```sql
+CREATE MODEL mindsdb.hf_image_classifier
+PREDICT label
+USING
+  task = 'image-classification',
+  engine = 'hf_api_engine',
+  api_key = '<YOUR_API_KEY>',
+  input_column = 'image_url'
+```
+
+### Object Detection
+```sql
+CREATE MODEL mindsdb.hf_object_detector
+PREDICT objects
+USING
+  task = 'object-detection',
+  engine = 'hf_api_engine',
+  api_key = '<YOUR_API_KEY>',
+  input_column = 'image_url'
+```
+
+### Automatic Speech Recognition
+```sql
+CREATE MODEL mindsdb.hf_speech_recognizer
+PREDICT transcription
+USING
+  task = 'automatic-speech-recognition',
+  engine = 'hf_api_engine',
+  api_key = '<YOUR_API_KEY>',
+  input_column = 'audio_url'
+```
+
+### Audio Classification
+```sql
+CREATE MODEL mindsdb.hf_audio_classifier
+PREDICT label
+USING
+  task = 'audio-classification',
+  engine = 'hf_api_engine',
+  api_key = '<YOUR_API_KEY>',
+  input_column = 'audio_url'
+```
+
+## Making Predictions
+
+### Single Prediction
+A single prediction can be made by running SELECT statements and passing inputs as part of the WHERE clause. The following example shows how to make a single prediction using the Text Classification model created in the previous section.
+```sql
+SELECT text, sentiment
+FROM mindsdb.hf_text_classifier
+WHERE text = 'I love MindsDB';
+```
+
+### Batch Prediction

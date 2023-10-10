@@ -82,7 +82,7 @@ Let's create a model table to predict the house price moving average values:
 CREATE MODEL mindsdb.house_sales_predictor
 FROM mysql_demo_db
   (SELECT * FROM house_sales)
-PREDICT MA
+PREDICT house_price_moving_average
 ORDER BY saledate
 GROUP BY bedrooms, type
 WINDOW 8

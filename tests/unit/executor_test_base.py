@@ -33,7 +33,6 @@ class BaseUnitTest:
 
     @staticmethod
     def setup_class(cls):
-
         # remove imports of mindsdb in previous tests
         unload_module("mindsdb")
 
@@ -67,7 +66,6 @@ class BaseUnitTest:
 
     @staticmethod
     def teardown_class(cls):
-
         # remove tmp db file
         cls.db.session.close()
         os.unlink(cls.db_file)
@@ -116,6 +114,13 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="openai", data={}, engine="openai")
         db.session.add(r)
+        r = db.Integration(
+            name="langchain_embedding", data={}, engine="langchain_embedding"
+        )
+        db.session.add(r)
+        r = db.Integration(name="rag", data={}, engine="rag")
+        db.session.add(r)
+
         # Lightwood should always be last (else tests break, why?)
         r = db.Integration(name="lightwood", data={}, engine="lightwood")
         db.session.add(r)
@@ -191,7 +196,7 @@ class BaseExecutorTest(BaseUnitTest):
 
         if mock_lightwood:
             predict_patcher = mock.patch(
-                'mindsdb.integrations.libs.ml_exec_base.BaseMLEngineExec.predict'
+                "mindsdb.integrations.libs.ml_exec_base.BaseMLEngineExec.predict"
             )
             self.mock_predict = predict_patcher.__enter__()
 

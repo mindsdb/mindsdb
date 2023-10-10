@@ -1,11 +1,11 @@
 import os
 import json
 import datetime
-from typing import Dict
+from typing import Dict, List
 
 import numpy as np
-from sqlalchemy import create_engine, types, UniqueConstraint
-from sqlalchemy.orm import scoped_session, sessionmaker, declarative_base
+from sqlalchemy import create_engine, types, Table, UniqueConstraint
+from sqlalchemy.orm import relationship, scoped_session, sessionmaker, declarative_base, Mapped
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index, text
 from sqlalchemy.sql.schema import ForeignKey
 from sqlalchemy import JSON
@@ -167,6 +167,7 @@ class Predictor(Base):
     training_phase_current = Column(Integer)
     training_phase_total = Column(Integer)
     training_phase_name = Column(String)
+    hostname = Column(String)
 
     @staticmethod
     def get_name_and_version(full_name):
@@ -302,7 +303,9 @@ class ChatBots(Base):
 
     name = Column(String, nullable=False)
     project_id = Column(Integer, nullable=False)
+    agent_id = Column(ForeignKey('agents.id', name='fk_agent_id'))
 
+    # To be removed when existing chatbots are backfilled with newly created Agents.
     model_name = Column(String, nullable=False)
     database_id = Column(Integer)
     params = Column(JSON)
@@ -315,6 +318,7 @@ class ChatBots(Base):
             'id': self.id,
             'name': self.name,
             'project_id': self.project_id,
+            'agent_id': self.agent_id,
             'model_name': self.model_name,
             'params': self.params,
             'created_at': self.created_at,
@@ -370,3 +374,60 @@ class Tasks(Base):
 
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     created_at = Column(DateTime, default=datetime.datetime.now)
+
+
+agent_skills_table = Table(
+    'agent_skills',
+    Base.metadata,
+    Column('agent_id', ForeignKey('agents.id'), primary_key=True),
+    Column('skill_id', ForeignKey('skills.id'), primary_key=True),
+)
+
+
+class Skills(Base):
+    __tablename__ = 'skills'
+    id = Column(Integer, primary_key=True)
+    agents: Mapped[List['Agents']] = relationship(secondary=agent_skills_table, back_populates='skills')
+    name = Column(String, nullable=False)
+    project_id = Column(Integer, nullable=False)
+    type = Column(String, nullable=False)
+    params = Column(JSON)
+
+    def as_dict(self) -> Dict:
+        return {
+            'id': self.id,
+            'name': self.name,
+            'project_id': self.project_id,
+            'agent_ids': [a.id for a in self.agents],
+            'type': self.type,
+            'params': self.params
+        }
+
+
+class Agents(Base):
+    __tablename__ = 'agents'
+    id = Column(Integer, primary_key=True)
+    skills: Mapped[List['Skills']] = relationship(secondary=agent_skills_table, back_populates='agents')
+    company_id = Column(Integer, nullable=True)
+    user_class = Column(Integer, nullable=True)
+
+    name = Column(String, nullable=False)
+    project_id = Column(Integer, nullable=False)
+
+    model_name = Column(String, nullable=False)
+    params = Column(JSON)
+
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+
+    def as_dict(self) -> Dict:
+        return {
+            'id': self.id,
+            'name': self.name,
+            'project_id': self.project_id,
+            'model_name': self.model_name,
+            'skills': [s.as_dict() for s in self.skills],
+            'params': self.params,
+            'updated_at': self.updated_at,
+            'created_at': self.created_at
+        }

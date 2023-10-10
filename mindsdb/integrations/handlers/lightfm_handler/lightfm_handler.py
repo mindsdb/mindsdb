@@ -38,7 +38,9 @@ class LightFMHandler(BaseMLEngine):
         }
         model_parameters = ModelParameters(**args["model_params"])
 
-        #
+        # store model parameters
+        args["model_params"] = model_parameters.dict()
+
         rec_preprocessor = RecommenderPreprocessor(
             interaction_data=df,
             user_id_column_name=args["user_id"],
@@ -58,11 +60,15 @@ class LightFMHandler(BaseMLEngine):
         random_state = 42
 
         # run evaluation if specified
-        if args.get("evaluate", False):
+        if args.get("evaluation"):
 
-            self.evaluate(
+            evaluation_metrics = self.evaluate(
                 preprocessed_data.interaction_matrix, random_state, model_parameters
             )
+            # convert to float to str so it can be stored in json
+            args["evaluation_metrics"] = {
+                k: str(v) for k, v in evaluation_metrics.items()
+            }
 
         # train model
         model = LightFM(
@@ -141,6 +147,33 @@ class LightFMHandler(BaseMLEngine):
                 "recommender_type must be either 'user_item', 'item_item' or 'user_user'"
             )
 
+    def describe(self, attribute=None):
+        model_args = self.model_storage.json_get("args")
+
+        if attribute == "model":
+            return pd.DataFrame({k: [model_args[k]] for k in ["model_params"]})
+
+        elif attribute == "features":
+            return pd.DataFrame(
+                {
+                    "n_users_items": [model_args["n_users_items"]],
+                }
+            )
+
+        elif attribute == "info":
+
+            model_metrics = model_args["evaluation_metrics"]
+
+            info_dict = {k: [model_metrics[k]] for k in ["auc", "precision", "recall"]}
+            info_dict["user_id"] = [model_args["user_id"]]
+            info_dict["item_id"] = [model_args["item_id"]]
+
+            return pd.DataFrame(info_dict)
+
+        else:
+            tables = ["info", "features", "model"]
+            return pd.DataFrame(tables, columns=["tables"])
+
     def evaluate(self, interaction_matrix, random_state, model_parameters):
 
         train, test = random_train_test_split(
@@ -162,4 +195,4 @@ class LightFMHandler(BaseMLEngine):
             recall=recall_at_k(model, test, train).mean(),
         )
 
-        self.model_storage.json_set("evaluation_metrics", evaluation_metrics)
+        return evaluation_metrics

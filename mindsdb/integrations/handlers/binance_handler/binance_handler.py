@@ -114,8 +114,8 @@ class BinanceHandler(APIHandler):
         close_time_i = 6
         for i in range(len(raw_klines)):
             # To train we need timestamps to be in seconds since Unix epoch and Binance returns it in ms.
-            raw_klines[i][open_time_i] /= 1000
-            raw_klines[i][close_time_i] /= 1000
+            raw_klines[i][open_time_i] = int(raw_klines[i][open_time_i] / 1000)
+            raw_klines[i][close_time_i] = int(raw_klines[i][close_time_i] / 1000)
 
         df = pd.DataFrame(raw_klines)
         df.insert(0, 'symbol', [symbol] * len(raw_klines), True)

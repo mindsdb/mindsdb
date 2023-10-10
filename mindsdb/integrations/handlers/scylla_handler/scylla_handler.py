@@ -1,7 +1,10 @@
 import os
+import tempfile
 from collections import OrderedDict
 
 import pandas as pd
+import requests
+
 from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.util import Date
@@ -34,6 +37,35 @@ class ScyllaHandler(DatabaseHandler):
         self.session = None
         self.is_connected = False
 
+    def download_secure_bundle(self, url, max_size=10*1024*1024):
+        """
+        Downloads the secure bundle from a given URL and stores it in a temporary file.
+        
+        :param url: URL of the secure bundle to be downloaded.
+        :param max_size: Maximum allowable size of the bundle in bytes. Defaults to 10MB.
+        :return: Path to the downloaded secure bundle saved as a temporary file.
+        :raises ValueError: If the secure bundle size exceeds the allowed `max_size`.
+        
+        TODO:
+        - Find a way to periodically clean up or delete the temporary files 
+        after they have been used to prevent filling up storage over time.
+        """
+        response = requests.get(url, stream=True, timeout=10)
+        response.raise_for_status()
+
+        content_length = int(response.headers.get('content-length', 0))
+        if content_length > max_size:
+            raise ValueError("Secure bundle is larger than the allowed size!")
+
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            size_downloaded = 0
+            for chunk in response.iter_content(chunk_size=8192):
+                size_downloaded += len(chunk)
+                if size_downloaded > max_size:
+                    raise ValueError("Secure bundle is larger than the allowed size!")
+                temp_file.write(chunk)
+        return temp_file.name
+
     def connect(self):
         """
         Handles the connection to a Scylla keystore.
@@ -51,9 +83,10 @@ class ScyllaHandler(DatabaseHandler):
         connection_props['protocol_version'] = self.connection_args.get('protocol_version', 4)
         secure_connect_bundle = self.connection_args.get('secure_connect_bundle')
 
-        if secure_connect_bundle is not None:
-            if os.path.isfile(secure_connect_bundle) is False:
-                raise Exception("Secure_connect_bundle' must be path to the file")
+        if secure_connect_bundle:
+            # Check if the secure bundle is a URL
+            if secure_connect_bundle.startswith(('http://', 'https://')):
+                secure_connect_bundle = self.download_secure_bundle(secure_connect_bundle)
             connection_props['cloud'] = {
                 'secure_connect_bundle': secure_connect_bundle
             }
@@ -172,30 +205,44 @@ class ScyllaHandler(DatabaseHandler):
 connection_args = OrderedDict(
     user={
         'type': ARG_TYPE.STR,
-        'description': 'User name'
+        'description': 'User name',
+        'required': True,
+        'label': 'User'
     },
     password={
-        'type': ARG_TYPE.STR,
-        'description': 'Password'
+        'type': ARG_TYPE.PWD,
+        'description': 'Password',
+        'required': True,
+        'label': 'Password'
     },
     protocol_version={
         'type': ARG_TYPE.INT,
-        'description': 'The protocol version.'
+        'description': 'is not required, and default to 4.',
+        'required': False,
+        'label': 'Protocol version'
     },
     host={
         'type': ARG_TYPE.STR,
-        'description': 'Server host'
+        'description': ' is the host name or IP address of the ScyllaDB.',
+        'required': True,
+        'label': 'Host'
     },
     port={
         'type': ARG_TYPE.INT,
-        'description': 'Server port'
+        'description': 'Server port',
+        'required': True,
+        'label': 'Port'
     },
     keyspace={
         'type': ARG_TYPE.STR,
-        'description': 'Name of keyspace'
+        'description': 'is the keyspace to connect to. It is a top level container for tables.',
+        'required': True,
+        'label': 'Keyspace'
     },
     secure_connect_bundle={
-        'type': ARG_TYPE.PATH,
-        'description': 'Path or URL to the secure connect bundle'
+        'type': ARG_TYPE.STR,
+        'description': 'Path or URL to the secure connect bundle',
+        'required': True,
+        'label': 'Host'
     }
 )

@@ -67,6 +67,7 @@ class ViewController:
 
     def _get_view_record_data(self, record):
         return {
+            'id': record.id,
             'name': record.name,
             'query': record.query
         }

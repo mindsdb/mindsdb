@@ -109,14 +109,25 @@ class ContextController:
 
     def get_context(self):
         try:
-            return ctx.context_name
+            return ctx.context_stack[-1]
         except Exception:
             return ''
 
-    def set_context(self, object_type, object_name):
-        ctx.context_name = self.gen_context_name(object_type, object_name)
+    def set_context(self, object_type=None, object_name=None):
+        if ctx.context_stack is None:
+            ctx.context_stack = []
+        ctx.context_stack.append(self.gen_context_name(object_type, object_name))
+
+    def release_context(self, object_type=None, object_name=None):
+        if ctx.context_stack is None:
+            return
+        context_name = self.gen_context_name(object_type, object_name)
+        if ctx.context_stack[-1] == context_name:
+            ctx.context_stack.pop()
 
     def gen_context_name(self, object_type, object_name):
+        if object_name is None:
+            return ''
         return f'{object_type}-{object_name}'
 
     def gen_context_vars(self, object_type, object_name):

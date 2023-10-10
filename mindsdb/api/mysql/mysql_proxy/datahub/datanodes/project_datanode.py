@@ -12,6 +12,7 @@ from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.interfaces.query_context.context_controller import contextController
 
 
 class ProjectDataNode(DataNode):
@@ -91,16 +92,22 @@ class ProjectDataNode(DataNode):
         view_query_ast = self.project.query_view(query)
 
         renderer = SqlalchemyRender('mysql')
-        query_str = renderer.get_string(view_query_ast, with_failback=True)
+        view_meta = renderer.get_string(view_query_ast, with_failback=True)
 
-        sqlquery = SQLQuery(
-            query_str,
-            session=session
-        )
+        contextController.set_context('view', view_meta['id'])
 
-        result = sqlquery.fetch(view='dataframe')
+        try:
+            sqlquery = SQLQuery(
+                view_meta['query_ast'],
+                session=session
+            )
+            result = sqlquery.fetch(view='dataframe')
+
+        finally:
+            contextController.release_context('view', view_meta['id'])
+
         if result['success'] is False:
-            raise Exception(f'Cant execute view query: {query_str}')
+            raise Exception(f"Cant execute view query: {view_meta['query_ast']}")
         df = result['result']
 
         df = query_df(df, query)

@@ -97,7 +97,7 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # create a table
         sql = """
-            CREATE TABLE weaviate_test.test_table (
+            CREATE TABLE weaviate_test.test_table3 (
                 SELECT * FROM weaviate.df
             )
         """
@@ -105,13 +105,13 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # drop a table
         sql = """
-            DROP TABLE weaviate_test.test_table;
+            DROP TABLE weaviate_test.test_table3;
         """
         self.run_sql(sql)
 
         # drop a non existent table will raise an error
         sql = """
-            DROP TABLE weaviate_test.test_table2;
+            DROP TABLE weaviate_test.test_table4;
         """
         with pytest.raises(Exception):
             self.run_sql(sql)
@@ -145,7 +145,7 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # create a table
         sql = """
-            CREATE TABLE weaviate_test.test_table (
+            CREATE TABLE weaviate_test.test_table5 (
                 SELECT * FROM weaviate.df
             )
         """
@@ -153,7 +153,7 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # insert into a table with values
         sql = """
-            INSERT INTO weaviate_test.test_table (
+            INSERT INTO weaviate_test.test_table5 (
                 id,content,metadata,embeddings
             )
             VALUES (
@@ -163,7 +163,7 @@ class TestWeaviateHandler(BaseExecutorTest):
         self.run_sql(sql)
         # check if the data is inserted
         sql = """
-            SELECT * FROM weaviate_test.test_table
+            SELECT * FROM weaviate_test.test_table5
             WHERE id = '0159d6c7-973f-5e7a-a9a0-d195d0ea6fe2'
         """
         ret = self.run_sql(sql)
@@ -171,7 +171,7 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # insert without specifying id should also work
         sql = """
-            INSERT INTO weaviate_test.test_table (
+            INSERT INTO weaviate_test.test_table5 (
                 content,metadata,embeddings
             )
             VALUES (
@@ -181,14 +181,14 @@ class TestWeaviateHandler(BaseExecutorTest):
         self.run_sql(sql)
         # check if the data is inserted
         sql = """
-            SELECT * FROM weaviate_test.test_table
+            SELECT * FROM weaviate_test.test_table5
         """
         ret = self.run_sql(sql)
         assert ret.shape[0] == num_record + 2
 
         # insert into a table with a select statement
         sql = """
-            INSERT INTO weaviate_test.test_table (
+            INSERT INTO weaviate_test.test_table5 (
                 content,metadata,embeddings
             )
             SELECT
@@ -199,7 +199,7 @@ class TestWeaviateHandler(BaseExecutorTest):
         self.run_sql(sql)
         # check if the data is inserted
         sql = """
-            SELECT * FROM weaviate_test.test_table
+            SELECT * FROM weaviate_test.test_table5
         """
         ret = self.run_sql(sql)
         assert ret.shape[0] == num_record * 2 + 2
@@ -207,7 +207,7 @@ class TestWeaviateHandler(BaseExecutorTest):
         # insert into a table with a select statement, but wrong columns
         with pytest.raises(Exception):
             sql = """
-                INSERT INTO weaviate_test.test_table
+                INSERT INTO weaviate_test.test_table5
                 SELECT
                     content,metadata,embeddings as wrong_column
                 FROM
@@ -217,7 +217,7 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # insert into a table with a select statement, missing metadata column
         sql = """
-            INSERT INTO weaviate_test.test_table
+            INSERT INTO weaviate_test.test_table5
             SELECT
                 content,embeddings
             FROM
@@ -228,7 +228,7 @@ class TestWeaviateHandler(BaseExecutorTest):
         # insert into a table with a select statement, missing embedding column, shall raise an error
         with pytest.raises(Exception):
             sql = """
-                INSERT INTO weaviate_test.test_table
+                INSERT INTO weaviate_test.test_table5
                 SELECT
                     content,metadata
                 FROM
@@ -238,7 +238,7 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # insert into a table with a select statement, with different embedding dimensions, shall raise an error
         sql = """
-            INSERT INTO weaviate_test.test_table
+            INSERT INTO weaviate_test.test_table5
             SELECT
                 content,metadata,embeddings
             FROM
@@ -249,7 +249,7 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # insert into a table with existing id, shall raise an error
         sql = """
-            INSERT INTO weaviate_test.test_table (
+            INSERT INTO weaviate_test.test_table5 (
                 id,content,metadata,embeddings
             )
             VALUES (

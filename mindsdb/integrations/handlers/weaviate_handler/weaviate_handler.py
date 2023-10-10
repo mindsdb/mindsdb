@@ -362,7 +362,6 @@ class WeaviateDBHandler(VectorStoreHandler):
         # parsing the records one by one as we need to update metadata (which has variable columns)
         for record in data:
             metadata_data = record.get(TableField.METADATA.value)
-            meta_id = self.add_metadata(metadata_data, table_name)
             data_object = {"content": record.get(TableField.CONTENT.value)}
             data_obj_id = (
                 record[TableField.ID.value]
@@ -375,11 +374,13 @@ class WeaviateDBHandler(VectorStoreHandler):
                 vector=record[TableField.EMBEDDINGS.value],
                 uuid=data_obj_id,
             )
-            self._client.data_object.reference.add(
-                from_uuid=obj_id,
-                from_property_name="associatedMetadata",
-                to_uuid=meta_id,
-            )
+            if metadata_data is not None:
+                meta_id = self.add_metadata(metadata_data, table_name)
+                self._client.data_object.reference.add(
+                    from_uuid=obj_id,
+                    from_property_name="associatedMetadata",
+                    to_uuid=meta_id,
+                )
         return Response(resp_type=RESPONSE_TYPE.OK)
 
     def update(
@@ -570,7 +571,6 @@ class WeaviateDBHandler(VectorStoreHandler):
                 self._client.schema.property.create(
                     table_name.capitalize() + "_metadata", add_prop
                 )
-
         metadata_id = self._client.data_object.create(
             data_object=data, class_name=table_name.capitalize() + "_metadata"
         )

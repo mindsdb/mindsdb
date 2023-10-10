@@ -5599,6 +5599,22 @@
       "created_at": "2023-10-08T15:13:28Z",
       "repoId": 143328315,
       "pullRequestNo": 7632
+    },
+    {
+      "name": "DidierRLopes",
+      "id": 25267873,
+      "comment_id": 1753255602,
+      "created_at": "2023-10-09T15:46:18Z",
+      "repoId": 143328315,
+      "pullRequestNo": 7621
+    },
+    {
+      "name": "jspisak",
+      "id": 11398925,
+      "comment_id": 1753230583,
+      "created_at": "2023-10-09T15:30:20Z",
+      "repoId": 143328315,
+      "pullRequestNo": 7642
     }
   ]
 }

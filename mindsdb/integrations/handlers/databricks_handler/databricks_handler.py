@@ -15,7 +15,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
@@ -25,7 +25,7 @@ class DatabricksHandler(DatabaseHandler):
     This handler handles connection and execution of the Databricks statements.
     """
 
-    name = 'databricks'
+    name = "databricks"
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
@@ -37,9 +37,14 @@ class DatabricksHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'databricks'
+        self.dialect = "databricks"
 
-        optional_parameters = ['session_configuration', 'http_headers', 'catalog', 'schema']
+        optional_parameters = [
+            "session_configuration",
+            "http_headers",
+            "catalog",
+            "schema",
+        ]
         for parameter in optional_parameters:
             if parameter not in connection_data:
                 connection_data[parameter] = None
@@ -65,13 +70,13 @@ class DatabricksHandler(DatabaseHandler):
             return self.connection
 
         self.connection = sql.connect(
-            server_hostname=self.connection_data['server_hostname'],
-            http_path=self.connection_data['http_path'],
-            access_token=self.connection_data['access_token'],
-            session_configuration=self.connection_data['session_configuration'],
-            http_headers=self.connection_data['http_headers'],
-            catalog=self.connection_data['catalog'],
-            schema=self.connection_data['schema']
+            server_hostname=self.connection_data["server_hostname"],
+            http_path=self.connection_data["http_path"],
+            access_token=self.connection_data["access_token"],
+            session_configuration=self.connection_data["session_configuration"],
+            http_headers=self.connection_data["http_headers"],
+            catalog=self.connection_data["catalog"],
+            schema=self.connection_data["schema"],
         )
         self.is_connected = True
 
@@ -103,7 +108,9 @@ class DatabricksHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Databricks {self.connection_data["schema"]}, {e}!')
+            log.logger.error(
+                f'Error connecting to Databricks {self.connection_data["schema"]}, {e}!'
+            )
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -133,20 +140,18 @@ class DatabricksHandler(DatabaseHandler):
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         data_frame=pd.DataFrame(
-                            result,
-                            columns=[x[0] for x in cursor.description]
-                        )
+                            result, columns=[x[0] for x in cursor.description]
+                        ),
                     )
 
                 else:
                     response = Response(RESPONSE_TYPE.OK)
                     connection.commit()
             except Exception as e:
-                log.logger.error(f'Error running query: {query} on {self.connection_data["schema"]}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(e)
+                log.logger.error(
+                    f'Error running query: {query} on {self.connection_data["schema"]}!'
                 )
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         if need_to_close is True:
             self.disconnect()
@@ -178,7 +183,7 @@ class DatabricksHandler(DatabaseHandler):
         """
         result = self.native_query(query)
         df = result.data_frame
-        result.data_frame = df.rename(columns={'tableName': 'table_name'})
+        result.data_frame = df.rename(columns={"tableName": "table_name"})
         return result
 
     def get_columns(self, table_name: str) -> StatusResponse:
@@ -194,62 +199,62 @@ class DatabricksHandler(DatabaseHandler):
         result = self.native_query(query)
         df = result.data_frame
 
-        drop_row = df[df['col_name'] == ''].index.tolist()[0]
-        df = df.iloc[:drop_row + 1]
+        drop_row = df[df["col_name"] == ""].index.tolist()[0]
+        df = df.iloc[: drop_row + 1]
 
-        result.data_frame = df.rename(columns={'col_name': 'column_name'})
+        result.data_frame = df.rename(columns={"col_name": "column_name"})
         return result
 
 
 connection_args = OrderedDict(
     server_hostname={
-        'type': ARG_TYPE.STR,
-        'description': 'The server hostname for the cluster or SQL warehouse.',
-        'required': True,
-        'label': 'Server_hostname'
+        "type": ARG_TYPE.STR,
+        "description": "The server hostname for the cluster or SQL warehouse.",
+        "required": True,
+        "label": "Server_hostname",
     },
     http_path={
-        'type': ARG_TYPE.STR,
-        'description': 'The HTTP path of the cluster or SQL warehouse.',
-        'required': True,
-        'label': 'Http path'
+        "type": ARG_TYPE.STR,
+        "description": "The HTTP path of the cluster or SQL warehouse.",
+        "required": True,
+        "label": "Http path",
     },
     access_token={
-        'type': ARG_TYPE.STR,
-        'description': 'A Databricks personal access token for the workspace for the cluster or SQL warehouse.',
-        'required': True,
-        'label': 'Access token'
+        "type": ARG_TYPE.STR,
+        "description": "A Databricks personal access token for the workspace for the cluster or SQL warehouse.",
+        "required": True,
+        "label": "Access token",
     },
     session_configuration={
-        'type': ARG_TYPE.STR,
-        'description': 'A dictionary of Spark session configuration parameters. This parameter is optional.',
-        'required': False,
-        'label': 'Session configuration'
+        "type": ARG_TYPE.STR,
+        "description": "A dictionary of Spark session configuration parameters. This parameter is optional.",
+        "required": False,
+        "label": "Session configuration",
     },
     http_headers={
-        'type': ARG_TYPE.STR,
-        'description': 'Additional (key, value) pairs to set in HTTP headers on every RPC request the client makes.'
-                       ' This parameter is optional.',
-        'required': False,
-        'label': 'Http headers'
+        "type": ARG_TYPE.STR,
+        "description": "Additional (key, value) pairs to set in HTTP headers on every RPC request the client makes."
+        " This parameter is optional.",
+        "required": False,
+        "label": "Http headers",
     },
     catalog={
-        'type': ARG_TYPE.STR,
-        'description': 'Catalog to use for the connection. This parameter is optional.',
-        'required': False,
-        'label': 'Catalog'
+        "type": ARG_TYPE.STR,
+        "description": "Catalog to use for the connection. This parameter is optional.",
+        "required": False,
+        "label": "Catalog",
     },
     schema={
-        'type': ARG_TYPE.STR,
-        'description': 'Schema (database) to use for the connection. This parameter is optional.',
-        'required': False,
-        'label': 'Schema'
-    }
+        "type": ARG_TYPE.STR,
+        "description": "Schema (database) to use for the connection. This parameter is optional.",
+        "required": False,
+        "label": "Schema",
+    },
 )
 
 connection_args_example = OrderedDict(
-    server_hostname='adb-1234567890123456.7.azuredatabricks.net',
-    http_path='sql/protocolv1/o/1234567890123456/1234-567890-test123',
-    access_token='dapi1234567890ab1cde2f3ab456c7d89efa',
-    schema='sales'
+    server_hostname="adb-1234567890123456.7.azuredatabricks.net",
+    http_path="sql/protocolv1/o/1234567890123456/1234-567890-test123",
+    access_token="dapi1234567890ab1cde2f3ab456c7d89efa",
+    schema="sales",
 )

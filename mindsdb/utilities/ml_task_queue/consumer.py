@@ -142,9 +142,10 @@ class MLTaskConsumer:
         while True:
             while self.get_avg_cpu_usage() > 60 or max(self.cpu_stat[-3:]) > 60:
                 time.sleep(1)
-            while (len(list(processes_dir.iterdir())) * 2) >= os.cpu_count():
-                time.sleep(1)
-                clean_unlinked_process_marks()
+            if processes_dir.is_dir():
+                while (len(list(processes_dir.iterdir())) * 2) >= os.cpu_count():
+                    time.sleep(1)
+                    clean_unlinked_process_marks()
             if (self.get_avg_cpu_usage() > 60 or max(self.cpu_stat[-3:]) > 60) is False:
                 return
 

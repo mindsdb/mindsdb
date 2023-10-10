@@ -24,7 +24,7 @@ class NotionHandlerArgs(BaseModel):
     ft_api_info: dict = None
     ft_result_stats: dict = None
     runtime: str = None
-    notion_api_token: str = None
+    api_token: str = None
 
     class Config:
         # for all args that are not expected, raise an error
@@ -43,22 +43,13 @@ class NotionHandler(APIHandler):
 
         args = kwargs.get("connection_data", {})
         self.connection_args = {}
+        self.key ="api_token"
 
         handler_config = Config().get("notion_handler", {})
-        # allow either of notion_api_token or api_token from parameters
-        token_name = ["notion_api_token", "api_token"]
-        for k in token_name:
-            if len(self.connection_args.keys()) > 0:
-                self.connection_args[k] = self.connection_args.get(
-                    list(self.connection_args.keys())[0]
-                )
-            # read from parameters/environment variables/config
-            if k in args:
-                self.connection_args[k] = args[k]
-            elif f"NOTION_{k.upper()}" in os.environ:
-                self.connection_args[k] = os.environ[f"NOTION_{k.upper()}"]
-            elif k in handler_config:
-                self.connection_args[k] = handler_config[k]
+
+        # set the api token from the args in create query
+        if self.key in args:
+            self.connection_args[self.key] = args[self.key]
 
         self.api = None
         self.is_connected = False
@@ -74,7 +65,7 @@ class NotionHandler(APIHandler):
         self._register_table("comments", notion_comments_data)
 
     def connect(self, args=None, **kwargs):
-        api_token = self.connection_args["api_token"]
+        api_token = self.connection_args[self.key]
         notion = Client(auth=api_token)
         return notion
 
@@ -87,7 +78,7 @@ class NotionHandler(APIHandler):
 
         except Exception as e:
             response.error_message = (
-                f"Error connecting to Notion api: {e}. Check notion_api_token"
+                f"Error connecting to Notion api: {e}. Check api_token"
             )
             log.logger.error(response.error_message)
             response.success = False

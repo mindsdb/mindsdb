@@ -161,7 +161,7 @@ class NotionPagesTable(APITable):
     def insert(self, query: ast.Insert):
         columns = [col.name for col in query.columns]
 
-        insert_params = ("notion_api_token",)
+        insert_params = ("api_token",)
         for p in insert_params:
             if p not in self.handler.connection_args:
                 raise Exception(

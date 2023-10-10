@@ -100,6 +100,7 @@ def test_get_all_chatbots(client, test_db):
     expected_chatbot = {
         'name': 'test_get_all_chatbots',
         'model_name': 'test_model',
+        'agent': actual_chatbot['agent'],
         'database_id': test_db['id'],
         'database': 'example_db',
         'last_error': None,
@@ -140,6 +141,7 @@ def test_get_chatbot(client, test_db):
     expected_chatbot = {
         'name': 'test_get_chatbot',
         'model_name': 'test_model',
+        'agent': actual_chatbot['agent'],
         'database_id': test_db['id'],
         'database': 'example_db',
         'last_error': None,
@@ -183,6 +185,7 @@ def test_post_chatbot(client, test_db):
     expected_chatbot = {
         'name': 'test_post_chatbot',
         'model_name': 'test_model',
+        'agent_id': created_chatbot['agent_id'],
         'database_id': test_db['id'],
         'params': {
             'param1': 'value1'
@@ -266,7 +269,7 @@ def test_post_chatbot_model_does_not_exist_fails(client, test_db):
         }
     }
     response = client.post('/api/projects/mindsdb/chatbots', json=chatbot_data, follow_redirects=True)
-    assert '400' in response.status
+    assert '404' in response.status
 
 
 def test_post_chatbot_project_does_not_exist_fails(client, test_db):
@@ -304,6 +307,7 @@ def test_put_chatbot_create(client, test_db):
     expected_chatbot = {
         'name': 'test_put_chatbot_create',
         'model_name': 'test_model',
+        'agent_id': created_chatbot['agent_id'],
         'database_id': test_db['id'],
         'params': {
             'param1': 'value1'
@@ -344,6 +348,7 @@ def test_put_chatbot_update(client, test_db):
     expected_chatbot = {
         'name': 'test_put_chatbot_update',
         'model_name': 'test_model',
+        'agent_id': updated_chatbot['agent_id'],
         'database_id': test_db['id'],
         'params': {
             'param1': 'value1',

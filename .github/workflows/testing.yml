@@ -10,7 +10,7 @@ defaults:
 jobs:
 
   test-file-handler:
-    name: Add issue to project
+    name: Test file_handler
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

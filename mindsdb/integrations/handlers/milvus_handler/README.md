@@ -98,11 +98,25 @@ If you omit the `search_vector`, `LIMIT` or `search_default_limit` amount of ent
 ```sql
 SELECT * from milvus_datasource.test
 ```
+```sql
+TODO: example with metadata
+```
+
+### DELETE
+
+You can delete entries using `DELETE` just like in SQL.
+There are a few caveats to keep in mind:
+- Milvus only supports deleting entities with clearly specified primary keys
+- You can only use `IN` operator
+
+```sql
+DELETE FROM milvus_datasource.test
+WHERE id IN (1, 2, 3);
+```
 
 ### UPDATE
 
 Updating records is not supported by Milvus API. You can try using combination of `DELETE` and `INSERT`
-
 
 
 

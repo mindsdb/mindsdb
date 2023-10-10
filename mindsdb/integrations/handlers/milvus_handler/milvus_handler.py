@@ -2,6 +2,9 @@ from collections import OrderedDict
 from typing import List, Optional
 
 import pandas as pd
+from pymilvus import (Collection, CollectionSchema, DataType, FieldSchema,
+                      connections, utility)
+
 from mindsdb.integrations.libs.const import \
     HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
@@ -12,8 +15,6 @@ from mindsdb.integrations.libs.response import \
 from mindsdb.integrations.libs.vectordatabase_handler import (
     FilterCondition, FilterOperator, TableField, VectorStoreHandler)
 from mindsdb.utilities import log
-from pymilvus import (Collection, CollectionSchema, DataType, FieldSchema,
-                      connections, utility)
 
 
 class MilvusHandler(VectorStoreHandler):
@@ -80,8 +81,7 @@ class MilvusHandler(VectorStoreHandler):
         """Check the connection to the Milvus database."""
         response_code = StatusResponse(False)
         try:
-            response_code.success = connections.has_connection(
-                self._connection_data["alias"])
+            response_code.success = connections.has_connection(self._connection_data["alias"])
         except Exception as e:
             log.logger.error(f"Error checking Milvus connection: {e}!")
             response_code.error_message = str(e)
@@ -127,9 +127,7 @@ class MilvusHandler(VectorStoreHandler):
             raise Exception(f"Operator {operator} is not supported by Milvus!")
         return mapping[operator]
 
-    def _translate_metadata_conditions(
-        self, conditions: List[FilterCondition]
-    ) -> Optional[str]:
+    def _translate_conditions(self, conditions: List[FilterCondition], exclude_id: bool = True) -> Optional[str]:
         """
         Translate a list of FilterCondition objects a string that can be used by Milvus.
         E.g.,
@@ -146,22 +144,20 @@ class MilvusHandler(VectorStoreHandler):
             )
         ]
         Is converted to: "(price < 1000) and (price > 300)"
+        If exclude_id is set to true then id column is ignored
         """
         # Ignore all non-metadata conditions
-        if conditions is None:
-            return None
-        metadata_conditions = [
+        filtered_conditions = [
             condition
             for condition in conditions
-            if condition.column.startswith(TableField.METADATA.value)
+            if condition.column.startswith(TableField.METADATA.value) or condition.column.startswith(TableField.ID.value)
         ]
-        if len(metadata_conditions) == 0:
+        if len(filtered_conditions) == 0:
             return None
         # Translate each metadata condition into a dict
         milvus_conditions = []
-        for condition in metadata_conditions:
-            milvus_conditions.append(
-                f"({condition.column.split('.')[-1]} {self._get_chromadb_operator(condition.op)} {condition.value})")
+        for condition in filtered_conditions:
+            milvus_conditions.append(f"({condition.column.split('.')[-1]} {self._get_milvus_operator(condition.op)} {condition.value})")
         # Combine all metadata conditions into a single string and return
         return " and ".join(milvus_conditions) if milvus_conditions else None
 
@@ -202,10 +198,8 @@ class MilvusHandler(VectorStoreHandler):
         if columns:
             search_arguments["output_fields"] = columns
         else:
-            search_arguments["output_fields"] = [
-                schema_obj.name for schema_obj in self.SCHEMA]
-        search_arguments["expr"] = self._translate_metadata_conditions(
-            conditions)
+            search_arguments["output_fields"] = [schema_obj.name for schema_obj in self.SCHEMA]
+        search_arguments["expr"] = self._translate_conditions(conditions)
         # NOTE: According to api sum of offset and limit should be less than 16384.
         api_limit = 16384
         if limit is not None and offset is not None and limit + offset >= api_limit:
@@ -228,10 +222,7 @@ class MilvusHandler(VectorStoreHandler):
             search_arguments["param"]["ignore_growing"] = self._search_params["search_ignore_growing"]
             search_arguments["param"]["param"] = self._search_params["search_ignore_growing"]
             results = collection.search(**search_arguments)
-            columns_required = [
-                TableField.ID.value,
-                TableField.DISTANCE.value
-            ]
+            columns_required = [TableField.ID.value, TableField.DISTANCE.value]
             if TableField.CONTENT.value in columns:
                 columns_required.append(TableField.CONTENT.value)
             if TableField.EMBEDDINGS.value in columns:
@@ -330,8 +321,7 @@ class MilvusHandler(VectorStoreHandler):
             data = data[columns]
             if TableField.METADATA.value in data.columns:
                 rows = data[TableField.METADATA.value].to_list()
-                data = pd.concat(
-                    [data, pd.DataFrame.from_records(rows)], axis=1)
+                data = pd.concat([data, pd.DataFrame.from_records(rows)], axis=1)
             collection.insert(data[columns])
         except Exception as e:
             return Response(
@@ -343,35 +333,25 @@ class MilvusHandler(VectorStoreHandler):
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
     ) -> HandlerResponse:
-        metadata_filter = self._translate_metadata_conditions(conditions)
-        id_filters = [
-            condition.value
-            for condition in conditions
-            if condition.column == TableField.ID.value
-        ] or None
-        if id_filters:
+        filters = self._translate_conditions(conditions, exclude_id=False)
+        if not filters:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
-                error_message="Milvus does not support deletion by IDs",
-            )
-        if not metadata_filter:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message="Metadata filters are required",
+                error_message="Some filters are required, use DROP TABLE to delete everything",
             )
         try:
             collection = Collection(table_name)
         except Exception as e:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error retrieving collection `table_name`: {e}",
+                error_message=f"Error retrieving collection `{table_name}`: {e}",
             )
         try:
-            collection.delete(metadata_filter)
+            collection.delete(filters)
         except Exception as e:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error deleting from collection `table_name`: {e}",
+                error_message=f"Error deleting from collection `{table_name}`: {e}",
             )
         return Response(resp_type=RESPONSE_TYPE.OK)
 
@@ -387,18 +367,16 @@ class MilvusHandler(VectorStoreHandler):
             )
         try:
             field_names = {field["name"] for field in collection.schema.fields}
-            schema = [
-                mindsdb_schema_field for mindsdb_schema_field in self.SCHEMA if mindsdb_schema_field["name"] in field_names]
+            schema = [mindsdb_schema_field for mindsdb_schema_field in self.SCHEMA if mindsdb_schema_field["name"] in field_names]
             data = pd.DataFrame(schema)
             data.columns = ["COLUMN_NAME", "DATA_TYPE"]
-            return HandlerResponse(
-                data_frame=data,
-            )
+            return HandlerResponse(data_frame=data)
         except Exception as e:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
                 error_message=f"Error finding table: {e}",
             )
+
 
 connection_args = OrderedDict(
     alias={

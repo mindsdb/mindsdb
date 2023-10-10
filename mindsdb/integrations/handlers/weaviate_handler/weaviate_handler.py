@@ -290,13 +290,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         )
 
         # query to get all metadata fields
-        metadata_query = (
-            "associatedMetadata {... on "
-            + metadata_table
-            + " { "
-            + metadata_fields
-            + " }}"
-        )
+        metadata_query = f"associatedMetadata {{ ... on {metadata_table} {{ {metadata_fields} }} }}"
 
         if columns is not None and len(columns) > 0:
             query = self._client.query.get(
@@ -412,9 +406,7 @@ class WeaviateDBHandler(VectorStoreHandler):
             raise Exception("Delete query must have at least one condition!")
         metadata_table_name = table_name.capitalize() + "_metadata"
         # query to get metadata ids
-        metadata_query = (
-            "associatedMetadata { ... on " + metadata_table_name + "{ id } }"
-        )
+        metadata_query = f"associatedMetadata {{ ... on {metadata_table_name} {{ id }} }}"
         result = (
             self._client.query.get(
                 table_name,
@@ -425,27 +417,26 @@ class WeaviateDBHandler(VectorStoreHandler):
             .do()
         )
         result = result["data"]["Get"][table_name]
-        for query_obj in result:
-            obj_id = query_obj["_additional"]["id"]
-            meta_id = query_obj["associatedMetadata"]["id"]
-            # deleting the reference
-            self._client.data_object.reference.delete(
-                from_class_name=table_name,
-                from_uuid=obj_id,
-                from_property_name="associatedMetadata",
-                to_class_name=metadata_table_name,
-                to_uuid=meta_id,
-            )
-            # deleting the metadata record
-            self._client.data_object.delete(
-                uuid=meta_id,
-                class_name=metadata_table_name,
-            )
-            # deleting the data record
-            self._client.data_object.delete(
-                uuid=obj_id,
-                class_name=table_name,
-            )
+
+        metadata_table_name = table_name.capitalize() + "_metadata"
+        table_ids = [i['_additional']['id'] for i in result['data']['Get'][table_name]]
+        metadata_ids = [i['associatedMetadata']['id'] for i in result['data']['Get'][metadata_table_name]]
+        self._client.batch.delete_objects(
+            class_name=table_name,
+            where={
+                'path': ['id'],
+                'operator': 'ContainsAny',
+                'valueTextArray': table_ids
+            },
+        )
+        self._client.batch.delete_objects(
+            class_name=metadata_table_name,
+            where={
+                'path': ['id'],
+                'operator': 'ContainsAny',
+                'valueTextArray': metadata_ids
+            },
+        )
         return Response(resp_type=RESPONSE_TYPE.OK)
 
     def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
@@ -484,6 +475,26 @@ class WeaviateDBHandler(VectorStoreHandler):
         Delete a class from the weaviate database.
         """
         metadata_table_name = table_name.capitalize() + "_metadata"
+        table_id_query = self._client.query.get(table_name).with_additional(["id"]).do()
+        table_ids = [i['_additional']['id'] for i in table_id_query['data']['Get'][table_name]]
+        metadata_table_id_query = self._client.query.get(metadata_table_name).with_additional(["id"]).do()
+        metadata_ids = [i['_additional']['id'] for i in metadata_table_id_query['data']['Get'][metadata_table_name]]
+        self._client.batch.delete_objects(
+            class_name=table_name,
+            where={
+                'path': ['id'],
+                'operator': 'ContainsAny',
+                'valueTextArray': table_ids
+            },
+        )
+        self._client.batch.delete_objects(
+            class_name=metadata_table_name,
+            where={
+                'path': ['id'],
+                'operator': 'ContainsAny',
+                'valueTextArray': metadata_ids
+            },
+        )
         try:
             self._client.schema.delete_class(table_name)
             self._client.schema.delete_class(metadata_table_name)

@@ -17,6 +17,7 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.integrations.libs.process_cache import process_cache
 from mindsdb.utilities.ml_task_queue.utils import RedisKey, StatusNotifier, to_bytes, from_bytes
 from mindsdb.utilities.fs import clean_unlinked_process_marks
+from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.ml_task_queue.const import (
     ML_TASK_TYPE,
     ML_TASK_STATUS,
@@ -235,6 +236,7 @@ class MLTaskConsumer:
                 pass
 
 
+@mark_process(name='internal', custom_mark='ml_task_consumer')
 def start(verbose: bool) -> None:
     """ Create task queue consumer and start listen the queue
     """

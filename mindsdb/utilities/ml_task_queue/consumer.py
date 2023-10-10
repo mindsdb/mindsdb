@@ -6,6 +6,7 @@ import tempfile
 import threading
 from pathlib import Path
 from functools import wraps
+from collections.abc import Callable
 
 import psutil
 from walrus import Database
@@ -25,18 +26,37 @@ from mindsdb.utilities.ml_task_queue.const import (
 )
 
 
-def save_thread_link(func):
+def _save_thread_link(func: Callable) -> Callable:
+    """ Decorator for MLTaskConsumer.
+        Save thread in which func is executed to a list.
+    """
     @wraps(func)
-    def wrapper(self, *args, **kwargs):
+    def wrapper(self, *args, **kwargs) -> None:
         current_thread = threading.current_thread()
         self._listen_message_threads.append(current_thread)
-        result = func(self, *args, **kwargs)
-        self._listen_message_threads.remove(current_thread)
+        try:
+            result = func(self, *args, **kwargs)
+        finally:
+            self._listen_message_threads.remove(current_thread)
         return result
     return wrapper
 
 
 class MLTaskConsumer:
+    """ Listener of ML tasks queue and tasks executioner.
+        Each new message waited and executed in separate thread.
+
+        Attributes:
+            _ready_event (Event): set if ready to start new queue listen thread
+            _stop_event (Event): set if need to stop all threads/processes
+            cpu_stat (list[float]): CPU usage statistic. Each value is 0-100 float representing CPU usage in %
+            _collect_cpu_stat_thread (Thread): pointer to thread that collecting CPU usage statistic
+            _listen_message_threads (list[Thread]): list of pointers to threads where queue messages are listening/processing
+            db (Redis): database object
+            cache: redis cache abstrtaction
+            consumer_group: redis consumer group object
+    """
+
     def __init__(self) -> None:
         self._ready_event = threading.Event()
         self._ready_event.set()
@@ -96,13 +116,15 @@ class MLTaskConsumer:
         self.consumer_group.consumer(TASKS_STREAM_CONSUMER_NAME)
         # endregion
 
-    def _collect_cpu_stat(self):
+    def _collect_cpu_stat(self) -> None:
+        """ Collect CPU usage statistic. Executerd in thread.
+        """
         while self._stop_event.is_set() is False:
             self.cpu_stat = self.cpu_stat[1:]
             self.cpu_stat.append(psutil.cpu_percent())
             time.sleep(1)
 
-    def get_avg_cpu_usage(self):
+    def get_avg_cpu_usage(self) -> float:
         """ get average CPU usage for last period (10s by default)
 
             Returns:
@@ -110,8 +132,11 @@ class MLTaskConsumer:
         """
         return sum(self.cpu_stat) / len(self.cpu_stat)
 
-    def wait_cpu_free(self):
-        """ wait untill CPU usage will be low
+    def wait_free_resources(self) -> None:
+        """ Sleep in thread untill there are free resources. Checks:
+            - avg CPU usage is less than 60%
+            - current CPU usage is less than 60%
+            - current tasks count is less than (N CPU cores) / 2
         """
         processes_dir = Path(tempfile.gettempdir()).joinpath('mindsdb/processes/learn/')
         while True:
@@ -123,11 +148,13 @@ class MLTaskConsumer:
             if (self.get_avg_cpu_usage() > 60 or max(self.cpu_stat[-3:]) > 60) is False:
                 return
 
-    @save_thread_link
-    def _listen(self):
+    @_save_thread_link
+    def _listen(self) -> None:
+        """ Listen message queue untill get new message. Execute task.
+        """
         message = None
         while message is None:
-            self.wait_cpu_free()
+            self.wait_free_resources()
             if self._stop_event.is_set():
                 return
             message = self.consumer_group.read(count=1, block=1000, consumer=TASKS_STREAM_CONSUMER_NAME)
@@ -184,7 +211,9 @@ class MLTaskConsumer:
             self.db.publish(redis_key.status, ML_TASK_STATUS.COMPLETE.value)
             self.cache.set(redis_key.status, ML_TASK_STATUS.COMPLETE.value, 180)
 
-    def run(self):
+    def run(self) -> None:
+        """ Start new listen thread each time when _ready_event is set
+        """
         self._ready_event.set()
         while self._stop_event.is_set() is False:
             self._ready_event.wait(timeout=1)
@@ -193,7 +222,9 @@ class MLTaskConsumer:
             self._ready_event.clear()
             threading.Thread(target=self._listen).start()
 
-    def stop(self):
+    def stop(self) -> None:
+        """ Stop all executing threads
+        """
         self._stop_event.set()
         for thread in (*self._listen_message_threads, self._collect_cpu_stat_thread):
             try:
@@ -203,7 +234,9 @@ class MLTaskConsumer:
                 pass
 
 
-def start(verbose: bool):
+def start(verbose: bool) -> None:
+    """ Create task queue consumer and start listen the queue
+    """
     try:
         consumer = MLTaskConsumer()
         signal.signal(signal.SIGTERM, lambda _x, _y: consumer.stop())

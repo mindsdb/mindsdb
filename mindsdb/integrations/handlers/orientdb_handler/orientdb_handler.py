@@ -41,6 +41,20 @@ class OrientDBHandler(DatabaseHandler):
         if self.is_connected is True:
             self.disconnect()
 
+    def _connect_client(self):
+        # Create an OrientDB client
+        self.connection = OrientDB(
+            host=self.connection_data.get("host"),
+            port=self.connection_data.get("port"),
+        )
+
+    def _connect_to_database(self):
+        self.connection.db_open(
+            db_name=self.connection_data.get("database"),
+            user=self.connection_data.get("user"),
+            password=self.connection_data.get("password"),
+        )
+
     def connect(self) -> StatusResponse:
         """
         Connect to the OrientDB database.
@@ -51,30 +65,11 @@ class OrientDBHandler(DatabaseHandler):
 
         status_response = StatusResponse()
         if self.is_connected is False:
-            try:
-                # Create an OrientDB client
-                self.connection = OrientDB(
-                    host=self.connection_data.get("host"),
-                    port=self.connection_data.get("port"),
-                )
-            except Exception as e:
-                log.logger.error(f"Error in creating OrientDB client: {e}!")
-                status_response.success = False
-                status_response.error_message = str(e)
+            self._connect_client()
+            self._connect_to_database()
 
-            try:
-                # Open the database connection
-                self.connection.db_open(
-                    db_name=self.connection_data.get("database"),
-                    user=self.connection_data.get("user"),
-                    password=self.connection_data.get("password"),
-                )
-            except Exception as e:
-                log.logger.error(
-                    f'Error connecting to database: {self.connection_data.get("database")}, {e}!'
-                )
-                status_response.success = False
-                status_response.error_message = str(e)
+            status_response.success = False
+            status_response.error_message = str("Error connecting to database.")
 
             self.is_connected = True
         return status_response

@@ -3,17 +3,15 @@ from mindsdb.integrations.libs.const import HANDLER_TYPE
 from .__about__ import __version__ as version, __description__ as description
 
 try:
-    from .d0lt_handler import (
-        D0ltHandler as Handler,
-    )
+    from .openbb_handler import OpenBBHandler as Handler
 
     import_error = None
 except Exception as e:
     Handler = None
     import_error = e
 
-title = "D0lt"
-name = "d0lt"
+title = "OpenBB"
+name = "openbb"
 type = HANDLER_TYPE.DATA
 icon_path = "icon.svg"
 

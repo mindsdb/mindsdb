@@ -72,7 +72,7 @@ class TestWeaviateHandler(BaseExecutorTest):
             }
         )
 
-        self.set_handler(postgres_handler_mock, "weaviate", tables={"test_table": df})
+        self.set_handler(postgres_handler_mock, "weaviate", tables={"test_table2": df})
 
         sql = """
         CREATE TABLE weaviate_test.test_table2 (
@@ -93,7 +93,7 @@ class TestWeaviateHandler(BaseExecutorTest):
                 "embeddings": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]],
             }
         )
-        self.set_handler(postgres_handler_mock, "weaviate", tables={"test_table": df})
+        self.set_handler(postgres_handler_mock, "weaviate", tables={"test_table3": df})
 
         # create a table
         sql = """

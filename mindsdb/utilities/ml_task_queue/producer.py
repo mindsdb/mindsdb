@@ -16,6 +16,15 @@ from mindsdb.utilities.ml_task_queue.const import (
 
 
 class MLTaskProducer:
+    """ Interface around the redis for putting tasks to the queue
+
+        Attributes:
+            db (Redis): database object
+            stream
+            cache
+            pubsub
+    """
+
     def __init__(self) -> None:
         config = Config().get('ml_task_queue', {})
         self.db = Database(
@@ -35,10 +44,17 @@ class MLTaskProducer:
         self.cache = self.db.cache()
         self.pubsub = self.db.pubsub()
 
-    def apply_async(self, task_type: ML_TASK_TYPE, model_id: int, payload: dict, dataframe: DataFrame = None) -> object:
-        '''
+    def apply_async(self, task_type: ML_TASK_TYPE, model_id: int, payload: dict, dataframe: DataFrame = None) -> Task:
+        ''' Add tasks to the queue
+
+            Args:
+                task_type (ML_TASK_TYPE): type of the task
+                model_id (int): model identifier
+                payload (dict): lightweight model data that will be added to stream message
+                dataframe (DataFrame): dataframe will be transfered via regular redis storage
+
             Returns:
-                str: task key in queue
+                Task: object representing the task
         '''
         try:
             payload = pickle.dumps(payload, protocol=5)
@@ -57,8 +73,6 @@ class MLTaskProducer:
 
             self.stream.add(message)
             return Task(self.db, redis_key)
-
         except ConnectionError:
-            # try to reconnect and send again?
             print('Cant send message to redis: connect failed')
             raise

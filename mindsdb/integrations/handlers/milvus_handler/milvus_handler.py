@@ -12,7 +12,8 @@ from mindsdb.integrations.libs.response import \
 from mindsdb.integrations.libs.vectordatabase_handler import (
     FilterCondition, FilterOperator, TableField, VectorStoreHandler)
 from mindsdb.utilities import log
-from pymilvus import Collection, connections, utility
+from pymilvus import (Collection, CollectionSchema, DataType, FieldSchema,
+                      connections, utility)
 
 
 class MilvusHandler(VectorStoreHandler):
@@ -224,7 +225,8 @@ class MilvusHandler(VectorStoreHandler):
                         if col != TableField.DISTANCE.value:
                             data[col].append(hit.entity.get(col))
                         else:
-                            data[TableField.DISTANCE.value].append(hit.distance)
+                            data[TableField.DISTANCE.value].append(
+                                hit.distance)
             return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(data))
         else:
             # Basic search
@@ -242,38 +244,78 @@ class MilvusHandler(VectorStoreHandler):
             results = collection.query(**search_arguments)
             return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame.from_records(results))
 
+    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
+        """Create a collection with default parameters in the Milvus database as described in documentation."""
+        id = FieldSchema(
+            name=TableField.ID.value,
+            dtype=DataType.INT64,
+            is_primary=True,
+        )
+        embeddings = FieldSchema(
+            name=TableField.EMBEDDINGS.value,
+            dtype=DataType.FLOAT_VECTOR,
+            dim=8
+        )
+        content = FieldSchema(
+            name=TableField.CONTENT.value,
+            dtype=DataType.VARCHAR,
+            max_length=2000,
+            default_value="",
+        )
+        schema = CollectionSchema(
+            fields=[id, content, embeddings],
+            description="MindsDB generated table",
+            enable_dynamic_field=True
+        )
+        collection_name = table_name
+        collection = None
+        try:
+            collection = Collection(
+                name=collection_name,
+                schema=schema,
+                using="default",
+            )
+        except Exception as e:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Unable to create collection `{table_name}`: {e}"
+            )
+        try:
+            collection.create_index(
+                field_name=TableField.EMBEDDINGS.value,
+                index_params={
+                    "index_type": "AUTOINDEX",
+                    "metric_type": "L2",
+                    "params": {}
+                }
+            )
+        except Exception as e:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Unable to create index on collection `{table_name}`: {e}"
+            )
+        return Response(resp_type=RESPONSE_TYPE.OK)
+
     def insert(
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None
     ) -> HandlerResponse:
-        """
-        Insert data into the Milvus database.
-        """
-
-        collection = self._client.get_collection(table_name)
-
-        # drop columns with all None values
-
-        data.dropna(axis=1, inplace=True)
-
-        data = data.to_dict(orient="list")
-
-        collection.add(
-            ids=data[TableField.ID.value],
-            documents=data.get(TableField.CONTENT.value),
-            embeddings=data[TableField.EMBEDDINGS.value],
-            metadatas=data.get(TableField.METADATA.value),
-        )
-
+        """Insert data into the Milvus collection."""
+        collection = None
+        try:
+            collection = Collection(table_name)
+        except Exception as e:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Unable to fetch collection `{table_name}`: {e}"
+            )
+        try:
+            collection.insert(data[columns])
+        except Exception as e:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Unable to insert data into collection `{table_name}`: {e}"
+            )
         return Response(resp_type=RESPONSE_TYPE.OK)
-
-    def update(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
-        """
-        Update data in the Milvus database.
-        TODO: not implemented yet
-        """
-        return super().update(table_name, data, columns)
 
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
@@ -292,10 +334,14 @@ class MilvusHandler(VectorStoreHandler):
         collection.delete(ids=id_filters, where=filters)
         return Response(resp_type=RESPONSE_TYPE.OK)
 
-    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
-        """Create a collection with the given name in the Milvus database."""
-        self._client.create_collection(table_name, get_or_create=if_not_exists)
-        return Response(resp_type=RESPONSE_TYPE.OK)
+    def update(
+        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
+    ) -> HandlerResponse:
+        """
+        Update data in the Milvus database.
+        TODO: not implemented yet
+        """
+        return super().update(table_name, data, columns)
 
     def get_columns(self, table_name: str) -> HandlerResponse:
         # check if collection exists

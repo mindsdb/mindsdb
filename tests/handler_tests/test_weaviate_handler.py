@@ -269,10 +269,10 @@ class TestWeaviateHandler(BaseExecutorTest):
                 "embeddings": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]],
             }
         )
-        self.set_handler(postgres_handler_mock, "weaviate", tables={"test_table": df})
+        self.set_handler(postgres_handler_mock, "weaviate", tables={"test_table6": df})
         # create a table
         sql = """
-            CREATE TABLE weaviate_test.test_table (
+            CREATE TABLE weaviate_test.test_table6 (
                 SELECT * FROM weaviate.df
             )
         """
@@ -280,13 +280,13 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # query a table without any filters
         sql = """
-            SELECT * FROM weaviate_test.test_table
+            SELECT * FROM weaviate_test.test_table6
         """
         self.run_sql(sql)
 
         # query a table with id
         sql = """
-            SELECT * FROM weaviate_test.test_table
+            SELECT * FROM weaviate_test.test_table6
             WHERE id = '7fef88f7-411d-5669-b42d-bf5fc7f9b58b'
         """
         ret = self.run_sql(sql)
@@ -294,7 +294,7 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # query a table with a search vector, without limit
         sql = """
-            SELECT * FROM weaviate_test.test_table
+            SELECT * FROM weaviate_test.test_table6
             WHERE search_vector = '[1.0, 2.0, 3.0]'
         """
         ret = self.run_sql(sql)
@@ -302,7 +302,7 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # query a table with a search vector, with limit
         sql = """
-            SELECT * FROM weaviate_test.test_table
+            SELECT * FROM weaviate_test.test_table6
             WHERE search_vector = '[1.0, 2.0, 3.0]'
             LIMIT 1
         """
@@ -311,7 +311,7 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # query a table with a metadata filter
         sql = """
-            SELECT * FROM weaviate_test.test_table
+            SELECT * FROM weaviate_test.test_table6
             WHERE `metadata.test` = 'test'
         """
         ret = self.run_sql(sql)
@@ -319,7 +319,7 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # query a table with a metadata filter and a search vector
         sql = """
-            SELECT * FROM weaviate_test.test_table
+            SELECT * FROM weaviate_test.test_table6
             WHERE `metadata.test` = 'test'
             AND search_vector = '[1.0, 2.0, 3.0]'
         """
@@ -330,14 +330,14 @@ class TestWeaviateHandler(BaseExecutorTest):
     def test_update(self):
         # update a table with a metadata filter
         sql = """
-            UPDATE weaviate_test.test_table
+            UPDATE weaviate_test.test_table6
             SET `metadata.test` = 'test2'
             WHERE `metadata.test` = 'test'
         """
         self.run_sql(sql)
         # check if the data is updated
         sql = """
-            SELECT * FROM weaviate_test.test_table
+            SELECT * FROM weaviate_test.test_table6
             WHERE `metadata.test` = 'test2'
         """
         ret = self.run_sql(sql)
@@ -345,14 +345,14 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # update the embeddings
         sql = """
-            UPDATE weaviate_test.test_table
+            UPDATE weaviate_test.test_table6
             SET embedding = [3.0, 2.0, 1.0]
             WHERE `metadata.test` = 'test2'
         """
         self.run_sql(sql)
         # check if the data is updated
         sql = """
-            SELECT * FROM weaviate_test.test_table
+            SELECT * FROM weaviate_test.test_table6
             WHERE `metadata.test` = 'test2'
         """
         ret = self.run_sql(sql)
@@ -361,7 +361,7 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # update multiple columns
         sql = """
-            UPDATE weaviate_test.test_table
+            UPDATE weaviate_test.test_table6
             SET `metadata.test` = 'test3',
                 embedding = [1.0, 2.0, 3.0]
                 content = 'this is a test'
@@ -370,7 +370,7 @@ class TestWeaviateHandler(BaseExecutorTest):
         self.run_sql(sql)
         # check if the data is updated
         sql = """
-            SELECT * FROM weaviate_test.test_table
+            SELECT * FROM weaviate_test.test_table6
             WHERE `metadata.test` = 'test3'
         """
         ret = self.run_sql(sql)
@@ -380,7 +380,7 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # update a table with a search vector filter is not allowed
         sql = """
-            UPDATE weaviate_test.test_table
+            UPDATE weaviate_test.test_table6
             SET `metadata.test = 'test2'
             WHERE search_vector = [1.0, 2.0, 3.0]
         """
@@ -389,13 +389,13 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # update a table without any filters is allowed
         sql = """
-            UPDATE weaviate_test.test_table
+            UPDATE weaviate_test.test_table6
             SET metadata.test = 'test3'
         """
         self.run_sql(sql)
         # check if the data is updated
         sql = """
-            SELECT * FROM weaviate_test.test_table
+            SELECT * FROM weaviate_test.test_table6
             WHERE `metadata.test` = 'test3'
         """
         ret = self.run_sql(sql)
@@ -403,7 +403,7 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # update a table with a search vector filter and a metadata filter is not allowed
         sql = """
-            UPDATE weaviate_test.test_table
+            UPDATE weaviate_test.test_table6
             SET metadata.test = 'test3'
             WHERE metadata.test = 'test2'
             AND search_vector = [1.0, 2.0, 3.0]
@@ -421,11 +421,11 @@ class TestWeaviateHandler(BaseExecutorTest):
                 "embeddings": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]],
             }
         )
-        self.set_handler(postgres_handler_mock, "weaviate", tables={"test_table": df})
+        self.set_handler(postgres_handler_mock, "weaviate", tables={"test_table7": df})
 
         # create a table
         sql = """
-            CREATE TABLE weaviate_test.test_table (
+            CREATE TABLE weaviate_test.test_table7 (
                 SELECT * FROM weaviate.df
             )
         """
@@ -433,13 +433,13 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # delete from a table with a metadata filter
         sql = """
-            DELETE FROM weaviate_test.test_table
+            DELETE FROM weaviate_test.test_table7
             WHERE `metadata.test` = 'test1'
         """
         self.run_sql(sql)
         # check if the data is deleted
         sql = """
-            SELECT * FROM weaviate_test.test_table
+            SELECT * FROM weaviate_test.test_table7
             WHERE `metadata.test` = 'test2'
         """
         ret = self.run_sql(sql)
@@ -447,13 +447,13 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # delete by id
         sql = """
-            DELETE FROM weaviate_test.test_table
+            DELETE FROM weaviate_test.test_table7
             WHERE id = '0ff1e264-520d-543a-87dd-181a491e667e'
         """
         self.run_sql(sql)
         # check if the data is deleted
         sql = """
-            SELECT * FROM weaviate_test.test_table
+            SELECT * FROM weaviate_test.test_table7
             WHERE id = '0ff1e264-520d-543a-87dd-181a491e667e'
         """
         ret = self.run_sql(sql)
@@ -461,7 +461,7 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # delete from a table with a search vector filter is not allowed
         sql = """
-            DELETE FROM weaviate_test.test_table
+            DELETE FROM weaviate_test.test_table7
             WHERE search_vector = [1.0, 2.0, 3.0]
         """
         with pytest.raises(Exception):
@@ -469,7 +469,7 @@ class TestWeaviateHandler(BaseExecutorTest):
 
         # delete from a table without any filters is not allowed
         sql = """
-            DELETE FROM weaviate_test.test_table
+            DELETE FROM weaviate_test.test_table7
         """
         with pytest.raises(Exception):
             self.run_sql(sql)

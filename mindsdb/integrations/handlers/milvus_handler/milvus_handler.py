@@ -201,6 +201,7 @@ class MilvusHandler(VectorStoreHandler):
         # Execute query
         results = None
         if vector_filter:
+            # Vector search
             search_arguments["data"] = vector_filter
             search_arguments["anns_field"] = TableField.EMBEDDINGS.value
             search_arguments["param"] = self._search_params
@@ -226,6 +227,7 @@ class MilvusHandler(VectorStoreHandler):
                             data[TableField.DISTANCE.value].append(hit.distance)
             return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(data))
         else:
+            # Basic search
             if not search_arguments["expr"]:
                 search_arguments["expr"] = ""
                 # If no expression, query requires a limit
@@ -317,42 +319,42 @@ class MilvusHandler(VectorStoreHandler):
 connection_args = OrderedDict(
     alias={
         "type": ARG_TYPE.STR,
-        "description": "chromadb server host",
+        "description": "alias of the Milvus connection to construct",
         "required": True,
     },
     host={
         "type": ARG_TYPE.STR,
-        "description": "chromadb server port",
+        "description": "IP address of the Milvus server",
         "required": True,
     },
     port={
         "type": ARG_TYPE.INT,
-        "description": "chromadb server port",
+        "description": "port of the Milvus server",
         "required": True,
     },
     user={
         "type": ARG_TYPE.STR,
-        "description": "chromadb server port",
+        "description": "username of the Milvus server",
         "required": True,
     },
     password={
         "type": ARG_TYPE.STR,
-        "description": "chromadb server port",
+        "description": "password of the username of the Milvus server",
         "required": True,
     },
     search_metric_type={
         "type": ARG_TYPE.STR,
-        "description": "Metric type used for searches",
+        "description": "metric type used for searches",
         "required": False,
     },
     search_ignore_growing={
         "type": ARG_TYPE.BOOL,
-        "description": "Metric type used for searches",
+        "description": "whether to ignore growing segments during similarity searches",
         "required": False,
     },
     search_params={
         "type": ARG_TYPE.DICT,
-        "description": "Metric type used for searches",
+        "description": "specific to the `search_metric_type`",
         "required": False,
     },
 )

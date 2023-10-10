@@ -21,9 +21,10 @@ The required arguments to establish a connection are:
 The optional arguments to establish a connection are:
 
 These are used for `SELECT` queries:
-* `search_metric_type`: metric type used for searches
-* `search_ignore_growing`: whether to ignore growing segments during similarity searches
-* `search_params`: specific to the `search_metric_type`
+* `search_default_limit`: default limit to be passed in select statements (default=100)
+* `search_metric_type`: metric type used for searches (default="L2")
+* `search_ignore_growing`: whether to ignore growing segments during similarity searches (default=False)
+* `search_params`: specific to the `search_metric_type` (default={"nprobe": 10})
 
 These are used for `CREATE` queries:
 * `create_embedding_dim`: embedding dimension for creating table (default=8)
@@ -56,6 +57,7 @@ WITH
     "port": 19530,
     "user": "username",
     "password": "password",
+    "search_default_limit": 100,
     "search_metric_type": "L2",
     "search_ignore_growing": True,
     "search_params": {"nprobe": 10},
@@ -89,9 +91,9 @@ WHERE search_vector = '[3.0, 1.0, 2.0, 4.5]'
 LIMIT 10;
 ```
 
-One thing to note is that `LIMIT` is required to use `search_vector`
+One thing to note is that if you omit `LIMIT`, the `search_default_limit` is used since Milvus requires it
 
-If you omit the `search_vector`, 100 entires in collection are returned
+If you omit the `search_vector`, `LIMIT` or `search_default_limit` amount of entires in collection are returned
 
 ```sql
 SELECT * from milvus_datasource.test

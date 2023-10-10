@@ -25,15 +25,17 @@ class MilvusHandler(VectorStoreHandler):
         super().__init__(name)
         self._connection_data = kwargs["connection_data"]
         # Extract parameters used while searching and leave the rest for establishing connection
-        search_param_names = {
-            "search_metric_type": "metric_type",
-            "search_ignore_growing": "ignore_growing",
-            "search_params": "param"
+        self._search_limit = 100
+        if "search_default_limit" in self._connection_data:
+            self._search_limit = self._connection_data["search_default_limit"]
+        self._search_params = {
+            "search_metric_type": "L2",
+            "search_ignore_growing": False,
+            "search_params": {"nprobe": 10},
         }
-        self._search_params = {}
-        for search_param_alias, actual_search_param_name in search_param_names.items():
-            if search_param_alias in self._connection_data:
-                self._search_params[actual_search_param_name] = self._connection_data[search_param_alias]
+        for search_param_name in self._search_params:
+            if search_param_name in self._connection_data:
+                self._search_params[search_param_name] = self._connection_data[search_param_name]
         # Extract parameters used for creating tables
         self._create_table_params = {
             "create_embedding_dim": 8,
@@ -192,8 +194,10 @@ class MilvusHandler(VectorStoreHandler):
             ]
         )
 
-        # Generate search parameters
-        search_arguments = {}
+        # Generate search arguments
+        search_arguments = {
+            "param": {}
+        }
         # TODO: check if distance in columns work
         if columns:
             search_arguments["output_fields"] = columns
@@ -211,16 +215,18 @@ class MilvusHandler(VectorStoreHandler):
             )
         if limit is not None:
             search_arguments["limit"] = limit
+        else:
+            search_arguments["limit"] = self._search_limit
         if offset is not None:
             search_arguments["param"]["offset"] = offset
 
-        # Execute query
-        results = None
+        # Vector search
         if vector_filter:
-            # Vector search
             search_arguments["data"] = vector_filter
             search_arguments["anns_field"] = TableField.EMBEDDINGS.value
-            search_arguments["param"] = self._search_params
+            search_arguments["param"]["metric_type"] = self._search_params["search_metric_type"]
+            search_arguments["param"]["ignore_growing"] = self._search_params["search_ignore_growing"]
+            search_arguments["param"]["param"] = self._search_params["search_ignore_growing"]
             results = collection.search(**search_arguments)
             columns_required = [
                 TableField.ID.value,
@@ -247,9 +253,6 @@ class MilvusHandler(VectorStoreHandler):
             # Basic search
             if not search_arguments["expr"]:
                 search_arguments["expr"] = ""
-                # If no expression, query requires a limit
-                if "limit" not in search_arguments:
-                    search_arguments["limit"] = 100
             search_arguments["output_fields"] = [
                 TableField.ID.value,
                 TableField.CONTENT.value,
@@ -397,7 +400,6 @@ class MilvusHandler(VectorStoreHandler):
                 error_message=f"Error finding table: {e}",
             )
 
-
 connection_args = OrderedDict(
     alias={
         "type": ARG_TYPE.STR,
@@ -423,6 +425,11 @@ connection_args = OrderedDict(
         "type": ARG_TYPE.STR,
         "description": "password of the username of the Milvus server",
         "required": True,
+    },
+    search_default_limit={
+        "type": ARG_TYPE.INT,
+        "description": "default limit to be passed in select statements",
+        "required": False,
     },
     search_metric_type={
         "type": ARG_TYPE.STR,
@@ -492,6 +499,7 @@ connection_args_example = OrderedDict(
     port=19530,
     user="username",
     password="password",
+    search_default_limit=100,
     search_metric_type="L2",
     search_ignore_growing=True,
     search_params={"nprobe": 10},

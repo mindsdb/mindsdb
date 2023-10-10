@@ -44,7 +44,7 @@ class UPDATEQueryParser(BaseQueryParser):
                 if value[0] not in self.supported_columns:
                     raise UnsupportedColumnException(f"Unsupported column: {value[0]}")
             
-            values_to_update[value[0]] = value[1].value
+            values_to_update[value[0]] = value[1]
 
         return values_to_update
 

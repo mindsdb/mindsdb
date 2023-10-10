@@ -50,12 +50,11 @@ class Auto_ts_Handler(BaseMLEngine):
         """
         args = args['using']
 
-        # Set default values
-        time_interval = 'D'
         score_type = 'rmse'
         non_seasonal_pdq = (3, 1, 3)
+        time_interval = 'M'
         seasonality = False
-        model_type = 'stats'
+        model_type = 'best'
         cv = 5
         sep = ','
         seasonal_period=None
@@ -67,13 +66,13 @@ class Auto_ts_Handler(BaseMLEngine):
         if 'non_seasonal_pdq' in args:
             non_seasonal_pdq = args['non_seasonal_pdq']
         if 'seasonal_period' in args:
-            seasonal_period = args['seasonal_period']
+            seasonal_period = int(args['seasonal_period'])
         if 'seasonality' in args:
             seasonality = args['seasonality']
         if 'model_type' in args:
             model_type = args['model_type']
         if 'cv' in args:
-            cv = args['cv']
+            cv = int(args['cv'])
         if 'sep' in args:
             sep = args['sep']
 

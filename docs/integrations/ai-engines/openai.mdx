@@ -1,13 +1,44 @@
 ---
-title: MindsDB and OpenAI
+title: OpenAI
 sidebarTitle: OpenAI
 ---
 
-MindsDB lets you create models that utilize features provided by OpenAI models.
+In this section, we present how to bring OpenAI models to MindsDB.
 
-## How to Bring the OpenAI Model to MindsDB
+[OpenAI](https://openai.com/) is an AI research organization and company, known for developing AI models like GPT-3 and GPT-4. Their mission is to advance AI for the betterment of humanity, emphasizing transparency, safety, and ethics in AI development.
 
-We use the [`CREATE MODEL`](/sql/create/model) statement to bring the OpenAI models to MindsDB.
+Read on to find out how to use OpenAI models within MinsdDB.
+
+## Setup
+
+MindsDB provides the [OpenAI handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/openai_handler) that enables you to create OpenAI models within MindsDB.
+
+### AI Engine
+
+Before creating a model, it is required to create an AI engine based on the provided handler.
+
+<Tip>
+If you installed MindsDB locally, make sure to install all OpenAI dependencies from the [requirements.txt](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/openai_handler/requirements.txt) file.
+</Tip>
+
+You can create an OpenAI engine using this command:
+
+```sql
+CREATE ML_ENGINE openai_engine
+FROM openai
+USING
+    api_key = 'your-openai-api-key';
+```
+
+<Tip>
+Please note that you need to provide your OpenAI API key. See OpenAI’s [help center](https://help.openai.com/en/articles/4936850-where-do-i-find-my-secret-api-key) or alternatively, watch [this video](https://www.youtube.com/watch?v=EQQjdwdVQ-M).
+</Tip>
+
+The name of the engine (here, `openai_engine`) should be used as a value for the `engine` parameter in the `USING` clause of the `CREATE MODEL` statement.
+
+### AI Model
+
+The [`CREATE MODEL`](/sql/create/model) statement is used to create, train, and deploy models within MindsDB.
 
 ```sql
 CREATE MODEL model_name
@@ -19,28 +50,14 @@ USING
     ...;
 ```
 
-MindsDB provides an OpenAI API key by default. But if you want to use your own OpenAI API key, please create an ML engine using the command below, passing your OpenAI API key:
-
-```sql
-CREATE ML_ENGINE openai2
-FROM openai
-USING
-    api_key = 'YOUR_OPENAI_API_KEY';
-```
-
-<Tip>
-**MindsDB Pro**
-Please note that it is required to provide an OpenAI API key when using MindsDB Pro version.
-</Tip>
-
-<Note>
-If you want to use the OpenAI API key provided by MindsDB, please confirm your email. Alternatively, you have the option to utilize your own OpenAI API key by specifying it in the `api_key` parameter.
-</Note>
-
 <Info>
 **Default Model**
 When you create an OpenAI model in MindsDB, it uses the `gpt-3.5-turbo` model by default. But you can use the `gpt-4` model as well by passing it to the `model-name` parameter in the `USING` clause of the `CREATE MODEL` statement.
 </Info>
+
+The `USING` clause takes more parameters depending on the operation mode. Follow the next section to learn about available operation modes.
+
+## Operation Modes
 
 Let's go through the available operation modes.
 
@@ -48,7 +65,7 @@ Let's go through the available operation modes.
 Please note that the examples presented here use SQL. To see how to create OpenAI models in Mongo database using MQL, check out [this example on sentiment classification](/nlp/nlp-mindsdb-openai#example-using-mql).
 </Tip>
 
-### Operation Mode 1: Answering Questions without Context
+### Answering Questions without Context
 
 Here is how to create a model that answers questions without context:
 
@@ -107,7 +124,7 @@ On execution, we get:
 +---------------------------+-------------------------------+
 ```
 
-### Operation Mode 2: Answering Questions with Context
+### Answering Questions with Context
 
 Here is how to create a model that answers questions with context:
 
@@ -168,7 +185,7 @@ On execution, we get:
 +-------------------+------------------+---------------------------------------------------------+
 ```
 
-### Operation Mode 3: Prompt Completion
+### Prompt Completion
 
 Here is how to create a model that offers the most flexible mode of operation. It answers any query provided in the `prompt_template` parameter.
 
@@ -252,9 +269,9 @@ On execution, we get:
 +----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
-## Available Modes
+## Model Modes
 
-You can define a mode for OpenAI models as follows:
+You can define a mode for OpenAI models using the `mode` parameter in the `USING` clause.
 
 ```sql
 CREATE MODEL model_name
@@ -265,15 +282,17 @@ USING
    prompt_template = 'message to the model';
 ```
 
-The available modes include `default`, `conversational`, `conversational-full`, `image`, `embedding`.
+The available modes include `default`, `conversational`, `conversational-full`, `image`, and `embedding`.
 
 - The `default` mode is used by default. The model replies to the `prompt_template` message.
 - The `conversational` mode enables the model to read and reply to multiple messages.
 - The `conversational-full` mode enables the model to read and reply to multiple messages, one reply per message.
-- The `image` mode is used when we want the model to create an image instead of a text reply.
+- The `image` mode is used to create an image instead of a text reply.
 - The `embedding` mode enables the model to return output in the form of embeddings.
 
-## Example
+## Examples
+
+### Sentiment Analysis
 
 Let's go through a sentiment classification example to understand better how to bring OpenAI models to MindsDB as AI tables.
 
@@ -281,7 +300,7 @@ Let's go through a sentiment classification example to understand better how to 
 CREATE MODEL mindsdb.sentiment_classifier                           
 PREDICT sentiment
 USING
-  engine = 'openai',              
+  engine = 'openai_engine',              
   prompt_template = 'predict the sentiment of the text:{{review}} exactly as either positive or negative or neutral';
 ```
 
@@ -358,7 +377,7 @@ On execution, we get:
 +----------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
-## Fine-Tuning of OpenAI Models
+### Fine-Tuning of OpenAI Models
 
 All OpenAI models belong to the group of Large Language Models (LLMs). By definition, these are pre-trained on large amounts of data. However, it is possible to fine-tune these models with a task-specific dataset for a defined use case.
 

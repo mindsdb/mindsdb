@@ -241,7 +241,6 @@ class WeaviateDBHandler(VectorStoreHandler):
     ) -> HandlerResponse:
         table_name = table_name.capitalize()
         # columns which we will always provide in the result
-        fixed_columns = ["id", "embeddings", "distance", "metadata"]
         filters = None
         if conditions:
             non_metadata_conditions = [
@@ -279,7 +278,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         else:
             vector_filter = None
 
-        for col in fixed_columns:
+        for col in ["id", "embeddings", "distance", "metadata"]:
             if col in columns:
                 columns.remove(col)
 
@@ -342,7 +341,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         if columns:
             payload = {
                 column: payload[column]
-                for column in columns + fixed_columns
+                for column in columns + ["id", "embeddings", "distance", "metadata"]
                 if column != TableField.EMBEDDINGS.value
             }
 

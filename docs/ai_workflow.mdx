@@ -1,0 +1,99 @@
+---
+title: AI Workflow
+sidebarTitle: AI Workflow
+---
+
+AI Workflow, as defined by MindsDB, comprises steps that include fetching data from a user-defined data source, deploying a production-ready AI model, and, if required, training it with data. Subsequently, the model generates predictions or forecasts, which can be stored in an application or another data source.
+
+![What is MindsDB](/assets/what_is_mindsdb2.png)
+
+MindsDB integrates numerous data sources, applications, and AI frameworks. You can choose from a wide variety of integrations and create your custom AI Workflow, following the steps outlined in the **AI Workflow** documentation section.
+
+## How to Create and Automate AI Workflows with MindsDB
+
+Follow the steps below that guide you through the process of creating and automating your custom AI Workflow.
+
+<Tip>
+Please note that each step has its dedicated chapter in the **AI Workflow** documentation section.
+</Tip>
+
+### Step 1. Getting Started
+
+MindsDB offers five development environments:
+
+- SQL
+- Mongo-QL
+- Python
+- JavaScript
+- REST API
+
+Choose the one that fits your requirements. Each dev environment enables you to interact with MindsDB using our custom syntax.
+
+### Step 2. Integrate Data Sources
+
+MindsDB integrates numerous data sources, including databases, data warehouses, applications, and more.
+
+<Tip>
+Follow [this link](/integrations/data-sources-overview) for a full overview of data sources available at MindsDB.
+</Tip>
+
+You can create a connection between your data source and MindsDB using the `CREATE DATABASE` statement in SQL or the corresponding one for other dev environments.
+
+Once the connection is established, you can access your data directly from MinsdDB and use it for training AI models or making predictions, as you'll see in the following steps.
+
+### Step 3. Create AI Engines
+
+MindsDB integrates numerous AI frameworks. Before you can create an AI model, it is required to create an ML engine based on the AI framework of your choice. Oftentimes, the creation of an ML engine requires users to provide parameters such as API keys.
+
+<Tip>
+Follow [this link](/integrations/ml-engines-overview) for a full overview of AI engines available at MindsDB.
+</Tip>
+
+You can create an ML engine using the `CREATE ML_ENGINE` statement in SQL, or corresponding one for other dev environments.
+
+Once the ML engine is created successfully, you can proceed to create an AI model, as shown in the following steps.
+
+### Step 4. Create Projects
+
+In MindsDB, all objects (including models, views, jobs, etc.) are stored within projects. You can use the default `mindsdb` project or create your own to store use-case-specific objects in different projects.
+
+You can create projects using the `CREATE PROJECT` statement in SQL, or corresponding one for other dev environments.
+
+Please note that this step is optional, as you can use the default `mindsdb` project.
+
+### Step 5. Deploy and Use Models
+
+MindsDB enables you to not only create, train, and deploy models using a single SQL statement but also describe, retrain, and finetune models. This section stores all commands related to working with models within MindsDB.
+
+You can create models using the `CREATE MODEL` statement in SQL, or corresponding one for other dev environments. After that, you can utilize a wide range of features that enable you to get relevant data about models and also update models regularly to improve performance and accuracy.
+
+Once the model is ready, you can make predictions with a single SQL statement.
+
+### Step 6. Get Predictions
+
+In MindsDB, you can get batch predictions by simply joining the model, also called an [AI Table](/generative-ai-tables), with the input data table. Alternatively, you can query the model for a single prediction, providing the input data in the `WHERE` clause.
+
+Once you get the predictions or, in the case of time-series models, forecasts, you can save them into a data source or feed them into an application. The next step outlines how you can work with tables, views, and files in MindsDB to fulfill the requirements of your use case.
+
+### Step 7. Tables, Views, and Files
+
+MindsDB enables you to create views, upload files, and work with tables from the connected data sources. All these objects can be used to store the data and predictions.
+
+### Step 8. Automate Workflows
+
+Finally, MindsDB facilitates AI automation by providing the Jobs feature. Jobs enable you to schedule and automate the execution of all commands described in the previous seven steps.
+
+Here is a good AI automation example:
+
+- You've got trading data coming from the [Binance]() integration and is updated every one minute.
+- You create an AI model that is trained using data from Binance to forecast the open price value for a specific trading pair (e.g. BTC/USDT).
+- You connect a [Slack]() workspace to MindsDB and send real-time forecasts as Slack notifications.
+- You automate this process by creating a job that does the following:
+    - The job retrains an AI model with the latest data to ensure the best performance and accuracy.
+    - Next, the job queries the AI model joined with the Binance data to get the latest real-time forecasts, and subsequently, inserts them to the Slack workspace.
+
+There you go! You just automated real-time trading data forecasts as Slack notifications.
+
+<Tip>
+Are you ready to try it out? Follow the [Real-Time Trading Alerts](https://mindsdb.com/blog/automate-ai-workflows-with-mindsdb-real-time-trading-alerts) tutorial to see AI Workflow automation using Jobs in action.
+</Tip>

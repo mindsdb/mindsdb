@@ -6,7 +6,6 @@ from nixtlats import TimeGPT
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.utilities.time_series_utils import get_results_from_nixtla_df
-
 # TODO: add E2E tests.
 
 class TimeGPTHandler(BaseMLEngine):
@@ -22,24 +21,43 @@ class TimeGPTHandler(BaseMLEngine):
         Create the TimeGPT Handler.
         Requires specifying the target column and usual time series arguments. Saves model config for later usage.
         """
-        time_settings = args["timeseries_settings"]
+        self.generative = True
+        time_settings = args.get("timeseries_settings", {})
         using_args = args["using"]
 
-        assert time_settings["is_timeseries"], "Specify time series settings in your query"
+        mode = 'forecasting'
+        if args.get("__mdb_sql_task", None):
+            mode = args["__mdb_sql_task"].lower()
+
+        if mode == 'forecasting':
+            assert time_settings["is_timeseries"], "Specify time series settings in your query"
+
         model_args = {
             'token': get_api_key('TIMEGPT_TOKEN', using_args, self.engine_storage, strict=True),
             "target": target,
-            "horizon": time_settings["horizon"],
-            "order_by": time_settings["order_by"],
-            "group_by": time_settings.get("group_by", []),
             "freq": using_args.get("frequency", None),
             "finetune_steps": using_args.get("finetune_steps", 0),
             "validate_token": using_args.get("validate_token", False),
             "date_features": using_args.get("date_features", False),
             "date_features_to_one_hot": using_args.get("date_features_to_one_hot", True),
             "clean_ex_first": using_args.get("clean_ex_first", True),
-            "level": using_args.get("level", [90])
+            "level": using_args.get("level", [90]),
+            "add_history": using_args.get("add_history", False),
+            'mode': mode,
         }
+
+        if time_settings:
+            model_args["horizon"] = time_settings["horizon"]
+            model_args["order_by"] = time_settings["order_by"]
+            model_args["group_by"] = time_settings.get("group_by", [])
+
+        if mode == 'anomalydetection':
+            model_args["target"] = using_args['target'] if target is None else target
+            model_args["horizon"] = using_args.get('horizon', 1)
+            model_args["order_by"] = using_args['order_by']
+            model_args["group_by"] = using_args.get("group_by", [])
+            model_args['add_history'] = True
+
         assert isinstance(model_args["level"], list), "`level` must be a list of integers"
         assert all([isinstance(l, int) for l in model_args["level"]]), "`level` must be a list of integers"
 
@@ -48,14 +66,15 @@ class TimeGPTHandler(BaseMLEngine):
     def predict(self, df, args={}):
         """ Makes forecasts with the TimeGPT API. """
         model_args = self.model_storage.json_get("model_args")
+        args = args['predict_params']
         prediction_df = self._transform_to_nixtla_df(df, model_args)
         timegpt = TimeGPT(token=model_args['token'])
 
         forecast_df = timegpt.forecast(
             prediction_df,
 
-            # TODO: supporting param override when joining is blocked by mindsdb_sql#285
-            h=args.get("horizon", model_args["horizon"]),
+            # TODO: supporting param override when JOINing with a WHERE clause is blocked by mindsdb_sql#285
+            h=args.get("horizon", model_args.get("horizon", 1)),
             freq=args.get("freq", model_args["freq"]),  # automatically infers correct frequency if not provided by user
             level=model_args["level"],
             finetune_steps=args.get('finetune_steps', model_args['finetune_steps']),
@@ -64,12 +83,32 @@ class TimeGPTHandler(BaseMLEngine):
             date_features_to_one_hot=args.get('date_features_to_one_hot', model_args['date_features_to_one_hot']),
             clean_ex_first=args.get('clean_ex_first', model_args['clean_ex_first']),
 
-            # TODO: enable these post-refactor
+            # anomaly detection
+            add_history=args.get('add_history', model_args['add_history']),  # insample bounds and anomaly detection
+
+            # TODO: enable this post-refactor
             # X_df=None,  # exogenous variables
-            # add_history=False,  # insample
         )
-        results_df = forecast_df[['unique_id', 'ds', 'TimeGPT']]
-        results_df = get_results_from_nixtla_df(results_df, model_args)
+
+        if model_args['mode'] == 'forecasting':
+            results_df = forecast_df[['unique_id', 'ds', 'TimeGPT']]
+            results_df = get_results_from_nixtla_df(results_df, model_args)
+        elif model_args['mode'] == 'anomalydetection':
+            forecast_df['ds'] = pd.to_datetime(forecast_df['ds'])
+            results_df = forecast_df.merge(prediction_df, how='inner')  # some rows drop because of TimeGPT's cold start
+            results_df['anomaly'] = (results_df['y'] > results_df[f'TimeGPT-hi-{model_args["level"][0]}']) | (results_df['y'] < results_df[f'TimeGPT-lo-{model_args["level"][0]}'])
+
+            forecast_df = results_df  # rewrite forecast_df so that we can reuse code below for prediction intervals
+            results_df = get_results_from_nixtla_df(results_df, model_args)
+            results_df = results_df.rename({'y': f'observed_{model_args["target"]}'}, axis=1)
+        else:
+            raise Exception(f'Unsupported prediction mode: {model_args["mode"]}')
+
+        # infer date
+        ds_col = model_args["order_by"]
+        if not pd.api.types.is_datetime64_any_dtype(results_df[ds_col]):
+            results_df[ds_col] = pd.to_datetime(results_df[ds_col])
+
         results_df = results_df.rename({'TimeGPT': model_args['target']}, axis=1)
 
         # add prediction intervals
@@ -129,6 +168,7 @@ class TimeGPTHandler(BaseMLEngine):
         else: 
             df[date_column] = pd.to_datetime(df[date_column])
         df[date_column] = df[date_column].dt.strftime('%Y-%m-%dT%H:%M:%S')  # convert to ISO 8601 format
+        df[date_column] = pd.to_datetime(df[date_column])
         return df
 
     # TODO: consolidate this method with the ones in time_series_utils.py
@@ -141,7 +181,7 @@ class TimeGPTHandler(BaseMLEngine):
                 nixtla_df[col] = nixtla_df[col].astype(str)
             nixtla_df["unique_id"] = nixtla_df[gby].agg("/".join, axis=1)
             group_col = "ignore this"
-        elif len(gby) == 1:
+        elif len(gby) == 1 and gby[0] is not None:
             group_col = settings_dict["group_by"][0]
         else:
             group_col = '__unique_id'

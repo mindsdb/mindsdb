@@ -157,7 +157,7 @@ connection_args = OrderedDict(
     },
     host={
         'type': ARG_TYPE.STR,
-        'description': 'The host name or IP address of the Amazon Aurora DB cluster. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.'
+        'description': 'The host name or IP address of the Amazon Aurora DB cluster.'
     },
     port={
         'type': ARG_TYPE.INT,

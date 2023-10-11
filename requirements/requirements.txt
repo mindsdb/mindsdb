@@ -6,6 +6,10 @@ flask-restx >= 1.0.1, < 2.0.0
 flask >= 1.0, < 2.0
 itsdangerous==2.0.1
 jinja2<3.1.0
+langchain~=0.0.267
+pdf2image~=1.16.3
+pdfminer.six==20221105
+unstructured~=0.10.18
 python-multipart >= 0.0.5
 pyparsing == 2.3.1
 cryptography>=35.0
@@ -23,7 +27,7 @@ redis==4.6.0
 walrus==0.9.2
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
-mindsdb-sql >= 0.7.0, < 0.8.0
+mindsdb-sql >= 0.7.1, < 0.8.0
 mindsdb-evaluator >= 0.0.7, < 0.1.0
 checksumdir >= 1.2.0
 duckdb == 0.6.1
@@ -37,4 +41,5 @@ dataprep_ml
 python-magic >= 0.4.27
 openpyxl >= 3.1.1
 dill == 0.3.6
-slack_sdk
+slack_sdk==3.21.3
+watchfiles==0.19.0

@@ -75,7 +75,7 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==23.1.2 &
         teradatasql teradatasqlalchemy || true && \
     pip install --prefer-binary --no-cache-dir \
         sqlalchemy-sqlany sqlanydb || true && \
-    pip install --prefer-binary --no-cache-dir openai==0.27.0 || true && \
+    pip install --prefer-binary --no-cache-dir openai==0.28.0 || true && \
     pip install --prefer-binary --no-cache-dir tiktoken==0.3.0 || true && \
     pip install --prefer-binary --no-cache-dir tweepy || true && \
     pip install --prefer-binary --no-cache-dir slack_sdk || true && \
@@ -84,16 +84,27 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==23.1.2 &
     pip install --prefer-binary --no-cache-dir 'statsforecast>=1.4.0, <2.0' || true && \
     pip install --no-cache-dir google-api-python-client google-auth-httplib2 google-auth-oauthlib || true && \
     pip install --no-cache-dir 'llama-index==0.6.11' || true && \
-    pip install --no-cache-dir 'wikipedia==1.4.0' 'langchain==0.0.146' || true && \
+    pip install --no-cache-dir 'wikipedia==1.4.0' 'langchain==0.0.192' || true && \
     pip install --no-cache-dir 'pysurrealdb' 'websocket' || true && \
     pip install --no-cache-dir 'pygithub' || true && \
     pip install --prefer-binary --no-cache-dir hugging_py_face || true && \
     pip install --no-cache-dir pyignite || true && \
     pip install --no-cache-dir 'duckdb==0.6.1' || true && \
     pip install --prefer-binary --no-cache-dir ShopifyApi || true && \
+    pip install --prefer-binary --no-cache-dir plaid-python || true && \
+    pip install --prefer-binary --no-cache-dir atlassian-python-api || true && \
     pip install --no-cache-dir 'binance-connector==2.0.0' || true && \
     pip install --prefer-binary --no-cache-dir 'monkeylearn==3.6.0' || true && \
-    pip install --prefer-binary --no-cache-dir 'nixtlats>=0.1.4' || true
+    pip install --prefer-binary --no-cache-dir 'nixtlats>=0.1.4' || true && \
+    pip install --prefer-binary --no-cache-dir 'mediawikiapi' || true && \
+    pip install --prefer-binary --no-cache-dir 'stripe' || true && \
+    pip install --prefer-binary --no-cache-dir 'python-gitlab' || true && \
+    pip install --prefer-binary --no-cache-dir 'pymsteams' || true && \
+    pip install --prefer-binary --no-cache-dir bs4 pymupdf || true && \
+    pip install --prefer-binary --no-cache-dir 'sib_api_v3_sdk' || true && \
+    pip install --prefer-binary --no-cache-dir 'newsapi-python' || true && \
+    pip install --prefer-binary --no-cache-dir 'databend-sqlalchemy' || true
+
 
 ARG VERSION=
 RUN pip install --no-cache-dir mindsdb${VERSION:+"==$VERSION"}

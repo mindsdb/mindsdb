@@ -74,21 +74,21 @@ if __name__ == '__main__':
     args = args_parse()
 
     # ---- CHECK SYSTEM ----
-    if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 6):
+    if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 8):
         print("""
-     MindsDB server requires Python >= 3.7 to run
+     MindsDB requires Python >= 3.8 to run
 
-     Once you have Python 3.7 installed you can tun mindsdb as follows:
+     Once you have Python 3.8 installed you can tun mindsdb as follows:
 
      1. create and activate venv:
-     python3.7 -m venv venv
+     python3.8 -m venv venv
      source venv/bin/activate
 
      2. install MindsDB:
      pip3 install mindsdb
 
      3. Run MindsDB
-     python3.7 -m mindsdb
+     python3.8 -m mindsdb
 
      More instructions in https://docs.mindsdb.com
          """)
@@ -237,9 +237,11 @@ if __name__ == '__main__':
             db.session.commit()
         # endregion
 
-    if args.api is None:
+    if args.api is None:  # If "--api" option is not specified, start the default APIs
         api_arr = ['http', 'mysql']
-    else:
+    elif args.api == "":  # If "--api=" (blank) is specified, don't start any APIs
+        api_arr = []
+    else:  # The user has provided a list of APIs to start
         api_arr = args.api.split(',')
 
     with_nlp = False

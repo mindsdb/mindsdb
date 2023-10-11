@@ -161,7 +161,7 @@ class PineconeHandler(VectorStoreHandler):
 
     def insert(self, table_name: str, data: pd.DataFrame, columns: List[str] = None) -> HandlerResponse:
         """Insert data into pinecone index passed in through `table_name` parameter."""
-        upsert_batch_size = 99 # API reccomendation
+        upsert_batch_size = 99  # API reccomendation
         index = self._get_index_handle(table_name)
         if index is None:
             return Response(

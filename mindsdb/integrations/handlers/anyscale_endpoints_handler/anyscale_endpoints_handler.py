@@ -54,12 +54,10 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         if attribute == 'args':
             return pd.DataFrame(args.items(), columns=['key', 'value'])
         elif attribute == 'metadata':
-            # TODO: reimplement commented from huggingface's model cards (e.g. https://huggingface.co/meta-llama/Llama-2-7b-chat-hf)  # noqa
-            # api_key = get_api_key('openai', args, self.engine_storage)
-            # meta = openai.Model.retrieve(model_name, api_key=api_key)
-            # return pd.DataFrame(meta.items(), columns=['key', 'value'])
+            # we opt for the URL because some models require completing a form to access their artifacts
             model_name = args.get('model_name', self.default_model)
-            return pd.DataFrame({'model_name': [model_name]})
+            model_card_url = 'https://huggingface.co/' + model_name
+            return pd.DataFrame({'model_name': [model_name], 'model_card': [model_card_url]})
         else:
             tables = ['args', 'metadata']
             return pd.DataFrame(tables, columns=['tables'])

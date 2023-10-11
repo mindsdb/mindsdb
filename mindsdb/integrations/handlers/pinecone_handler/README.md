@@ -15,7 +15,7 @@ The required arguments to establish a connection are:
 * `api_key`: the API key that can be found in your pinecone account
 * `environment`: the environment name corresponding to the `api_key`
 
-The optional arguments are:
+These optional arguments are used with `CREATE` statements:
 
 * `dimension`: dimensions of the vectors to be stored in the index (default=8)
 * `metric`: distance metric to be used for similarity search (default='cosine')

@@ -144,7 +144,12 @@ class VectorStoreHandler(BaseHandler):
                         else:
                             right_hand = node.args[1].value
                     elif isinstance(node.args[1], Tuple):
-                        right_hand = [item.value for item in node.args[1].items]
+                        right_hand = [
+                            ast.literal_eval(item.value)
+                            if isinstance(item, Constant)
+                            else item.value
+                            for item in node.args[1].items
+                        ]
                     else:
                         raise Exception(f"Unsupported right hand side: {node.args[1]}")
                     conditions.append(

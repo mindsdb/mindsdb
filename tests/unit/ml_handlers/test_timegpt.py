@@ -7,7 +7,7 @@ import pandas as pd
 
 from mindsdb_sql import parse_sql
 
-from tests.unit.executor_test_base import BaseExecutorTest
+from ..executor_test_base import BaseExecutorTest
 # from mindsdb.integrations.handlers.timegpt_handler.timegpt_handler import TimeGPTHandler
 
 
@@ -68,14 +68,10 @@ class TestTimeGPT(BaseExecutorTest):
             )
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_forecast_no_group(self, mock_handler):
+    def test_forecast_group(self, mock_handler):
         # create project
         self.run_sql("create database proj")
-        df = pd.DataFrame.from_dict({
-            "ds": ['1749-01', '1749-02', '1749-03', '1749-04', '1749-05', '1749-06', '1749-07', '1749-08', '1749-09', '1749-10'],
-            "y": [58.0, 62.6, 70.0, 55.7, 85.0, 83.5, 94.8, 66.3, 75.9, 75.5],
-            "gby": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-        })
+        df = pd.read_csv('tests/unit/ml_handlers/data/house_sales.csv')
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         self.run_sql(f"""create ml_engine timegpt from timegpt using api_key='{TIME_GPT_API_KEY}';""")
@@ -83,11 +79,11 @@ class TestTimeGPT(BaseExecutorTest):
         self.run_sql(
             f"""
            create model proj.test_timegpt_forecast
-           predict y
-           order by ds
-           group by gby
-           window 5
-           horizon 3
+           predict ma
+           order by saledate
+           group by type, bedrooms
+           window 128
+           horizon 5
            using
              engine='timegpt',
              api_key='{TIME_GPT_API_KEY}';
@@ -97,10 +93,10 @@ class TestTimeGPT(BaseExecutorTest):
 
         self.run_sql(
             """
-            SELECT p.answer
+            SELECT p.ma
             FROM proj.test_timegpt_forecast as p
             JOIN pg.df as t
-            WHERE ds > LATEST;
+            WHERE p.saledate > LATEST;
         """
         )
 

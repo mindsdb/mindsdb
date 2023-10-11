@@ -1,6 +1,6 @@
 import paypalrestsdk
 
-from mindsdb.integrations.handlers.paypal_handler.paypal_tables import PaymentsTable
+from mindsdb.integrations.handlers.paypal_handler.paypal_tables import PaymentsTable, PayoutsTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -34,7 +34,8 @@ class PayPalHandler(APIHandler):
         self.is_connected = False
 
         payments_data = PaymentsTable(self)
-        self._register_table("payments", payments_data)
+        payouts_data = PayoutsTable(self)
+        self._register_table("payments", payments_data, "payouts", payouts_data)
 
     def connect(self):
         """

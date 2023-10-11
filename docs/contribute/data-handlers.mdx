@@ -189,47 +189,65 @@ Here is a step-by-step guide:
 
 ### The `connection_args` Dictionary
 
-The `connection_arg` dictionary contains all required arguments to establish the connection.
+The `connection_args` dictionary contains all of arguments used to establish the connection along with their descriptions, types, labels and whether they are required or not.
 
-Here is an example of the `connection_arg` dictionary from the [MySQL handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mysql_handler).
+Here is an example of the `connection_args` dictionary from the [MySQL handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mysql_handler).
 
 ```py
 connection_args = OrderedDict(
     user = {
         'type': ARG_TYPE.STR,
         'description': 'The user name used to authenticate with the MySQL server.'
+        'required': True,
+        'label': 'User'
     },
     password = {
         'type': ARG_TYPE.STR,
         'description': 'The password to authenticate the user with the MySQL server.'
+        'required': True,
+        'label': 'Password'
     },
     database = {
         'type': ARG_TYPE.STR,
         'description': 'The database name to use when connecting with the MySQL server.'
+        'required': True,
+        'label': 'Database'
     },
     host = {
         'type': ARG_TYPE.STR,
         'description': 'The host name or IP address of the MySQL server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.'
+        'required': True,
+        'label': 'Host'
     },
     port = {
         'type': ARG_TYPE.INT,
         'description': 'The TCP/IP port of the MySQL server. Must be an integer.'
+        'required': True,
+        'label': 'Port'
     },
     ssl = {
         'type': ARG_TYPE.BOOL,
         'description': 'Set it to False to disable ssl.'
+        'required': False,
+        'label': 'SSL'
     },
     ssl_ca = {
         'type': ARG_TYPE.PATH,
         'description': 'Path or URL of the Certificate Authority (CA) certificate file'
+        'required': False,
+        'label': 'SSL Certificate Authority'
     },
     ssl_cert = {
         'type': ARG_TYPE.PATH,
         'description': 'Path name or URL of the server public key certificate file'
+        'required': False,
+        'label': 'SSL Certificates'
     },
     ssl_key = {
         'type': ARG_TYPE.PATH,
         'description': 'The path name or URL of the server private key file'
+        'required': False,
+        'label': 'SSL Keys'
     }
 )
 ```
@@ -252,7 +270,7 @@ connection_args_example = OrderedDict(
 
 ### Exporting All Required Variables
 
-This is what should be exported in the `__init__.py` file:
+The following should be exported in the `__init__.py` file of the handler:
 
 - The `Handler` class.
 - The `version` of the handler.
@@ -265,21 +283,48 @@ This is what should be exported in the `__init__.py` file:
 - The `connection_args_example` dictionary with an example of the connection arguments.
 - The `import_error` message that is used if the import of the `Handler` class fails.
 
-Let's look at an example of the `__init__.py` file.
+A few of these variables are defined in another file called `__about__.py`. This file is imported in the `__init__.py` file.
+
+Here is an example of the `__init__.py` file for the [MySQL handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mysql_handler).
 
 ```py
-...
-title = 'Trino'
-version = 0.1
-description = 'Integration for connection to TrinoDB'
-name = 'trino'
+
+from .__about__ import __version__ as version, __description__ as description
+try:
+    from .mysql_handler import (
+        MySQLHandler as Handler,
+        connection_args_example,
+        connection_args
+    )
+    import_error = None
+except Exception as e:
+    Handler = None
+    import_error = e
+
+title = 'MySQL'
+name = 'mysql'
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.png'
+icon_path = 'icon.svg'
 
 __all__ = [
-    'Handler', 'version', 'name', 'type', 'title',
-    'description', 'connection_args_example', 'icon_path'
+    'Handler', 'version', 'name', 'type', 'title', 'description',
+    'connection_args', 'connection_args_example', 'import_error', 'icon_path'
 ]
+```
+
+The `__about__.py` file for the same [MySQL handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mysql_handler) contains the following variables:
+
+```py
+__title__ = 'MindsDB MySQL handler'
+__package_name__ = 'mindsdb_mysql_handler'
+__version__ = '0.0.1'
+__description__ = "MindsDB handler for MySQL"
+__author__ = 'MindsDB Inc'
+__github__ = 'https://github.com/mindsdb/mindsdb'
+__pypi__ = 'https://pypi.org/project/mindsdb/'
+__license__ = 'GPL-3.0'
+__copyright__ = 'Copyright 2022- mindsdb'
+
 ```
 
 ## Check out our Database Handlers!

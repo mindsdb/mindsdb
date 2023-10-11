@@ -167,6 +167,7 @@ class Predictor(Base):
     training_phase_current = Column(Integer)
     training_phase_total = Column(Integer)
     training_phase_name = Column(String)
+    hostname = Column(String)
 
     @staticmethod
     def get_name_and_version(full_name):
@@ -317,6 +318,7 @@ class ChatBots(Base):
             'id': self.id,
             'name': self.name,
             'project_id': self.project_id,
+            'agent_id': self.agent_id,
             'model_name': self.model_name,
             'params': self.params,
             'created_at': self.created_at,

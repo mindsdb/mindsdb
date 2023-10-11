@@ -59,7 +59,7 @@ The first step is to create a database with the new `paypal` engine by passing i
 
 ~~~~sql
 CREATE DATABASE paypal_datasource
-WITH ENGINE = 'stripe',
+WITH ENGINE = 'paypal',
 PARAMETERS = {
   "mode": "sandbox",
   "client_id": "EBWKjlELKMYqRNQ6sYvFo64FtaRLRR5BdHEESmha49TM",

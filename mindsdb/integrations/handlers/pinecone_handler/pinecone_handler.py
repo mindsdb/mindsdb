@@ -3,6 +3,7 @@ from typing import List, Optional
 
 import pinecone
 import pandas as pd
+import ast
 
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
@@ -262,6 +263,23 @@ class PineconeHandler(VectorStoreHandler):
                     error_message="You cannot have multiple search_vectors in query"
                 )
             query["vector"] = vector_filter[0]
+            # For subqueries, the vector filter is a list of list of strings
+            if isinstance(query["vector"], list):
+                if len(query["vector"]) > 1:
+                    return Response(
+                        resp_type=RESPONSE_TYPE.ERROR,
+                        error_message="You cannot have multiple search_vectors in query"
+                    )
+                query["vector"] = query["vector"][0]
+                # Try converting the resulting string to list of floats
+                if isinstance(query["vector"], str):
+                    try:
+                        query["vector"] = ast.literal_eval(query["vector"])
+                    except Exception as e:
+                        return Response(
+                            resp_type=RESPONSE_TYPE.ERROR,
+                            error_message=f"Cannot parse the search vector '{query['vector']}'into a list: {e}"
+                        )
         # check for limit
         if limit is not None:
             query["top_k"] = limit
@@ -278,7 +296,7 @@ class PineconeHandler(VectorStoreHandler):
                 if condition.column == TableField.ID.value
             ] or None
         if id_filters:
-            if bool(len(id_filters)):
+            if len(id_filters) > 1:
                 return Response(
                     resp_type=RESPONSE_TYPE.ERROR,
                     error_message="You cannot have multiple IDs in query"
@@ -287,6 +305,7 @@ class PineconeHandler(VectorStoreHandler):
         # exec query
         result = None
         try:
+            print(f"VECTOR: {query['vector']}")
             result = index.query(**query)
         except Exception as e:
             return Response(

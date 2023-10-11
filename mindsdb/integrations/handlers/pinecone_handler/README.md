@@ -19,9 +19,11 @@ The required arguments to establish a connection are:
 
 - [ ] `CREATE TABLE` support
     - Creating a table in Pinecone requires 2 additional parameters: dimension and metric
+- [ ] `DROP TABLE` support
 - [ ] Support for [namespaces](https://docs.pinecone.io/docs/namespaces)
 - [ ] Display score/distance
 - [ ] Support for creating/reading sparse values
+- [ ] `content` column is not supported since it does not exist in Pinecone
 
 ## Usage
 
@@ -47,6 +49,15 @@ LIMIT 1
 ```sql
 SELECT * from pinecone_dev.temp
 WHERE search_vector = "[1,2,3,4,5,6,7,8]"
+```
+
+If you are using subqueries, make sure that the result is only a single row since the use of multiple search vectors is not allowed
+
+```sql
+SELECT * from pinecone_database.temp
+WHERE search_vector = (
+    SELECT embeddings FROM sqlitetesterdb.test WHERE id = 10
+)
 ```
 
 Optionally, you can filter based on metadata too:
@@ -76,3 +87,10 @@ SELECT * FROM mysql_demo_db.temp LIMIT 10);
 ```
 
 To update records, you can use insert statement. When there is a conflicting ID in pinecone index, the record is updated with new values.
+
+```sql
+INSERT INTO pinecone_test.testtable (id,content,metadata,embeddings)
+VALUES (
+    'id1', 'this is a test', '{"test": "test"}', '[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]'
+);
+```

@@ -75,15 +75,36 @@ WITH
 
 ### DROP DATABASE
 
-To drop a collection use this command
+To drop the connection, use this command
 
 ```sql
 DROP DATABASE milvus_datasource;
 ```
 
+### CREATE TABLE
+
+To insert data from a pre-existing table, use `CREATE`
+
+```sql
+CREATE TABLE milvus_datasource.test
+(SELECT * FROM sqlitedb.test);
+```
+
+### DROP TABLE
+
+To drop a Milvus collection use this command
+
+```sql
+DROP TABLE milvus_datasource.tablename;
+```
+
+
 ### SELECT
 
 To query database using a search vector, you can use `search_vector` in `WHERE` clause
+
+Caveats:
+- If you omit `LIMIT`, the `search_default_limit` is used since Milvus requires it
 
 ```sql
 SELECT * from milvus_datasource.test
@@ -91,13 +112,12 @@ WHERE search_vector = '[3.0, 1.0, 2.0, 4.5]'
 LIMIT 10;
 ```
 
-One thing to note is that if you omit `LIMIT`, the `search_default_limit` is used since Milvus requires it
-
-If you omit the `search_vector`, `LIMIT` or `search_default_limit` amount of entires in collection are returned
+If you omit the `search_vector`, this becomes a basic search and `LIMIT` or `search_default_limit` amount of entires in collection are returned
 
 ```sql
 SELECT * from milvus_datasource.test
 ```
+
 ```sql
 TODO: example with metadata
 ```
@@ -105,7 +125,8 @@ TODO: example with metadata
 ### DELETE
 
 You can delete entries using `DELETE` just like in SQL.
-There are a few caveats to keep in mind:
+
+Caveats:
 - Milvus only supports deleting entities with clearly specified primary keys
 - You can only use `IN` operator
 

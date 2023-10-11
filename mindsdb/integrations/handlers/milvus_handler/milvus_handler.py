@@ -91,7 +91,7 @@ class MilvusHandler(VectorStoreHandler):
         """Get the list of collections in the Milvus database."""
         collections = utility.list_collections()
         collections_name = pd.DataFrame(
-            columns=["table_name"],
+            columns=["TABLE_NAME"],
             data=[collection for collection in collections],
         )
         return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=collections_name)
@@ -127,7 +127,7 @@ class MilvusHandler(VectorStoreHandler):
             raise Exception(f"Operator {operator} is not supported by Milvus!")
         return mapping[operator]
 
-    def _translate_conditions(self, conditions: List[FilterCondition], exclude_id: bool = True) -> Optional[str]:
+    def _translate_conditions(self, conditions: Optional[List[FilterCondition]], exclude_id: bool = True) -> Optional[str]:
         """
         Translate a list of FilterCondition objects a string that can be used by Milvus.
         E.g.,
@@ -146,6 +146,8 @@ class MilvusHandler(VectorStoreHandler):
         Is converted to: "(price < 1000) and (price > 300)"
         If exclude_id is set to true then id column is ignored
         """
+        if not conditions:
+            return
         # Ignore all non-metadata conditions
         filtered_conditions = [
             condition
@@ -322,7 +324,7 @@ class MilvusHandler(VectorStoreHandler):
             if TableField.METADATA.value in data.columns:
                 rows = data[TableField.METADATA.value].to_list()
                 data = pd.concat([data, pd.DataFrame.from_records(rows)], axis=1)
-            collection.insert(data[columns])
+            collection.insert(data.to_dict(orient="records"))
         except Exception as e:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,

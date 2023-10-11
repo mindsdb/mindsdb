@@ -19,7 +19,7 @@ The required arguments to establish a connection are:
 
 ## Usage
 
-In order to make use of this handler and connect to a ChromaDB server in MindsDB, the following syntax can be used:
+In order to make use of this handler and connect to a hosted ChromaDB instance in MindsDB, the following syntax can be used:
 
 ```sql
 CREATE DATABASE chroma_dev
@@ -27,6 +27,16 @@ WITH ENGINE = "chromadb",
 PARAMETERS = {
    "chroma_server_host": "localhost",
    "chroma_server_http_port": 8000
+    }
+```
+
+Another option is to use in memory ChromaDB instance, you can do so by using the following syntax:
+
+```sql
+CREATE DATABASE chroma_dev
+WITH ENGINE = "chromadb",
+PARAMETERS = {
+   "persist_directory": <persist_directory>
     }
 ```
 

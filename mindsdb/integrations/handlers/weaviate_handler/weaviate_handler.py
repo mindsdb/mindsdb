@@ -186,6 +186,7 @@ class WeaviateDBHandler(VectorStoreHandler):
             },
         ]}
         """
+        table_name = table_name.capitalize()
         metadata_table_name = table_name.capitalize() + "_metadata"
         if conditions is None and meta_conditions is None:
             return None
@@ -237,6 +238,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         offset: int = None,
         limit: int = None,
     ) -> HandlerResponse:
+        table_name = table_name.capitalize()
         # columns which we will always provide in the result
         fixed_columns = ["id", "embeddings", "distance", "metadata"]
         filters = None
@@ -356,6 +358,8 @@ class WeaviateDBHandler(VectorStoreHandler):
         Insert data into the Weaviate database.
         """
 
+        table_name = table_name.capitalize()
+
         # drop columns with all None values
 
         data.dropna(axis=1, inplace=True)
@@ -391,6 +395,8 @@ class WeaviateDBHandler(VectorStoreHandler):
         """
         Update data in the weaviate database.
         """
+        table_name = table_name.capitalize()
+
         dict_list = data.to_dict("records")
         for row in dict_list:
             self._client.data_object.update(
@@ -403,6 +409,8 @@ class WeaviateDBHandler(VectorStoreHandler):
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
     ) -> HandlerResponse:
+
+        table_name = table_name.capitalize()
         filters = self._translate_condition(table_name, conditions)
 
         if filters is None:
@@ -446,6 +454,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         """
         Create a class with the given name in the weaviate database.
         """
+        table_name = table_name.capitalize()
         # separate metadata table for each table (as different tables will have different metadata columns)
         # this reduces the query time using metadata but increases the insertion time
         metadata_table_name = table_name.capitalize() + "_metadata"
@@ -477,6 +486,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         """
         Delete a class from the weaviate database.
         """
+        table_name = table_name.capitalize()
         metadata_table_name = table_name.capitalize() + "_metadata"
         table_id_query = self._client.query.get(table_name).with_additional(["id"]).do()
         table_ids = [
@@ -534,6 +544,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=table_name)
 
     def get_columns(self, table_name: str) -> HandlerResponse:
+        table_name = table_name.capitalize()
         # check if table exists
         try:
             table = self._client.schema.get(table_name)
@@ -551,6 +562,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         return Response(data_frame=data, resp_type=RESPONSE_TYPE.OK)
 
     def add_metadata(self, data: dict, table_name: str):
+        table_name = table_name.capitalize()
         metadata_table_name = table_name.capitalize() + "_metadata"
         self._client.schema.get(metadata_table_name)
         # getting existing metadata fields
@@ -578,7 +590,7 @@ class WeaviateDBHandler(VectorStoreHandler):
                     }
                 # when a new column is identified, it is added to the metadata table
                 self._client.schema.property.create(
-                    table_name.capitalize() + "_metadata", add_prop
+                    metadata_table_name, add_prop
                 )
         metadata_id = self._client.data_object.create(
             data_object=data, class_name=table_name.capitalize() + "_metadata"

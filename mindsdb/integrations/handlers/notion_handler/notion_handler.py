@@ -1,4 +1,3 @@
-import os
 import time
 import pandas as pd
 from collections import defaultdict
@@ -21,9 +20,6 @@ from .notion_table import (
 
 class NotionHandlerArgs(BaseModel):
     target: str = None
-    ft_api_info: dict = None
-    ft_result_stats: dict = None
-    runtime: str = None
     api_token: str = None
 
     class Config:
@@ -41,15 +37,12 @@ class NotionHandler(APIHandler):
         """
         super().__init__(name)
 
-        args = kwargs.get("connection_data", {})
-        self.connection_args = {}
-        self.key ="api_token"
-
-        handler_config = Config().get("notion_handler", {})
+        self.connection_args = kwargs.get("connection_data", {})
+        self.key = "api_token"
 
         # set the api token from the args in create query
-        if self.key in args:
-            self.connection_args[self.key] = args[self.key]
+        if self.key in self.connection_args:
+            self.connection_args[self.key] = self.connection_args[self.key]
 
         self.api = None
         self.is_connected = False
@@ -136,12 +129,12 @@ class NotionHandler(APIHandler):
             },
         }
 
-        api = self.connect()
+        self.api = self.connect()
         # use the service as the resource to query(database, page, block, comment)
         # and query as the type of method(retrieve, list, query)
         service, query = method_name.split(".")
         if service in ["databases", "pages", "blocks", "comments"]:
-            method = getattr(api, service)
+            method = getattr(self.api, service)
             if query:
                 method = getattr(method, query)
 

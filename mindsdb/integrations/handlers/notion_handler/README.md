@@ -13,7 +13,7 @@ This handler was implemented as per the MindsDB API Handler documentation.
 
 
 The required arguments to establish a connection are,
-* `notion_api_token`: API key for acessing the Notion instance.
+* `api_token`: API key for acessing the Notion instance.
 
 
 ## Usage
@@ -30,15 +30,17 @@ parameters={
 
 ## Implemented Features
 
-Now, you can use this established connection to query your table as follows,
+Now, you can use this established connection to query your table as follows:
 
 ### Database
 
-[Databases](https://developers.notion.com/reference/database are like a collection of pages. It also has properties allowing to store and organize data in a structured way.
+[Databases](https://developers.notion.com/reference/database) are like a collection of pages. It also has properties allowing to store and organize data in a structured way.
 
 ```sql
 SELECT * FROM notion_test.database where database_id='<your-db-id>';
 ```
+
+NOTE: In order to fetch database from notion, mindsdb will require the database_id.
 
 > To get a database_id, just navigate to the database web page and copy the URL, the id then is the portion between the `/` and `?`
 >
@@ -56,6 +58,8 @@ A [Page](https://developers.notion.com/reference/page) is a collection of blocks
 SELECT * FROM notion_test.pages where page_id='<your-page-id>';
 ```
 
+NOTE: In order to fetch a page from notion, mindsdb will require the page_id.
+
 > To get the page_id, copy the URL and select the id comming after the `title` of the page and the `-` .
 >
 > Example:
@@ -71,6 +75,8 @@ A [Block](https://developers.notion.com/reference/block) is a piece of content i
 ```sql
 SELECT * FROM notion_test.blocks where block_id='<your-block-id>';
 ```
+
+NOTE: In order to fetch a block from notion, mindsdb will require the block_id.
 
 > To get the block id, right clicking the block will open a options tray and click `Copy link to block` this will provide the link to the block for that page. Then the block id is the fragment in that link i.e. after the part after the `#` in the link
 >

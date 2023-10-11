@@ -6,8 +6,8 @@ from nixtlats import TimeGPT
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.utilities.time_series_utils import get_results_from_nixtla_df
-
 # TODO: add E2E tests.
+
 
 class TimeGPTHandler(BaseMLEngine):
     """
@@ -27,7 +27,7 @@ class TimeGPTHandler(BaseMLEngine):
         using_args = args["using"]
 
         mode = 'forecasting'
-        if args.get("__mdb_sql_task", None).lower() in ('forecasting', 'anomalydetection'):
+        if args.get("__mdb_sql_task", '').lower() in ('forecasting', 'anomalydetection'):
             mode = args["__mdb_sql_task"].lower()
 
         if mode == 'forecasting':
@@ -44,7 +44,7 @@ class TimeGPTHandler(BaseMLEngine):
             "clean_ex_first": using_args.get("clean_ex_first", True),
             "level": using_args.get("level", [90]),
             "add_history": using_args.get("add_history", False),
-            'mode': mode
+            'mode': mode,
         }
 
         if time_settings:
@@ -87,7 +87,7 @@ class TimeGPTHandler(BaseMLEngine):
             # anomaly detection
             add_history=args.get('add_history', model_args['add_history'])  # insample bounds and anomaly detection
 
-            # TODO: enable this post-refactor
+            # TODO: enable this post-refactor (#6861)
             # X_df=None,  # exogenous variables
         )
 
@@ -105,7 +105,13 @@ class TimeGPTHandler(BaseMLEngine):
         else:
             raise Exception(f'Unsupported prediction mode: {model_args["mode"]}')
 
+        # infer date
+        ds_col = model_args["order_by"]
+        if not pd.api.types.is_datetime64_any_dtype(results_df[ds_col]):
+            results_df[ds_col] = pd.to_datetime(results_df[ds_col])
+
         results_df = results_df.rename({'TimeGPT': model_args['target']}, axis=1)
+
         # add prediction intervals
         levels = sorted(model_args['level'], reverse=True)
         for i, level in enumerate(levels):

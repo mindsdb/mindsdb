@@ -35,8 +35,8 @@ class TestWeaviateHandler(BaseExecutorTest):
             CREATE DATABASE weaviate_test
             WITH ENGINE = "weaviate",
             PARAMETERS = {{
-                "weaviate_url" : "{"https://sample-w67r8jcu.weaviate.network"}",
-                "weaviate_api_key": "{"I8gFxEgiDovGeDAzE7y0ActDzsw2hA2F2tXd"}"
+                "weaviate_url" : "{""}",
+                "weaviate_api_key": "{""}"
             }}
         """
         )

@@ -59,7 +59,7 @@ WHERE id = "abc" AND temp.metadata.hello < 100
 You can delete records using `id` or `metadata` like so:
 
 ```sql
-SELECT * from pinecone_dev.temp
+DELETE FROM pinecone_dev.temp
 WHERE id = "abc"
 ```
 

@@ -27,8 +27,8 @@ class TimeGPTHandler(BaseMLEngine):
         using_args = args["using"]
 
         mode = 'forecasting'
-        if args.get("__mdb_sql_task", '').lower() in ('forecasting', 'anomalydetection'):
-            mode = args["__mdb_sql_task"].lower()
+        if args.get('__mdb_sql_task', False) and args['__mdb_sql_task'].lower() in ('forecasting', 'anomalydetection'):
+            mode = args['__mdb_sql_task'].lower()
 
         if mode == 'forecasting':
             assert time_settings["is_timeseries"], "Specify time series settings in your query"

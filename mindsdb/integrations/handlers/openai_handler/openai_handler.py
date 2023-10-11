@@ -24,6 +24,7 @@ from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.libs.llm_utils import get_completed_prompts
 
 CHAT_MODELS = ('gpt-3.5-turbo', 'gpt-3.5-turbo-16k', 'gpt-4', 'gpt-4-32k')
+OPENAI_API_BASE = 'https://api.openai.com/v1'
 
 
 class OpenAIHandler(BaseMLEngine):
@@ -124,7 +125,7 @@ class OpenAIHandler(BaseMLEngine):
         self.model_storage.json_set('args', args)
 
 
-    def predict(self, df, args=None):
+    def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         """
         If there is a prompt template, we use it. Otherwise, we use the concatenation of `context_column` (optional) and `question_column` to ask for a completion.
         """ # noqa

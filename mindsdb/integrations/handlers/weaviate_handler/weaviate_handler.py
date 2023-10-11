@@ -429,9 +429,9 @@ class WeaviateDBHandler(VectorStoreHandler):
         metadata_table_name = table_name.capitalize() + "_metadata"
         table_ids = []
         metadata_ids = []
-        for i in result["data"]["Get"][table_name]:
+        for i in result:
             table_ids.append(i["_additional"]["id"])
-            metadata_ids.append(i["associatedMetadata"]["_additional"][0]['id'])
+            metadata_ids.append(i["associatedMetadata"][0]["_additional"]['id'])
         self._client.batch.delete_objects(
             class_name=table_name,
             where={

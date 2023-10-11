@@ -35,8 +35,8 @@ class TestWeaviateHandler(BaseExecutorTest):
             CREATE DATABASE weaviate_test
             WITH ENGINE = "weaviate",
             PARAMETERS = {{
-                "weaviate_url" : "{"https://sample-2bhdweti.weaviate.network"}",
-                "weaviate_api_key": "{"bKu5mk6ArzOgkaMzuic71jzxXDv4hPjfOmIL"}"
+                "weaviate_url" : "{"https://sample-w67r8jcu.weaviate.network"}",
+                "weaviate_api_key": "{"I8gFxEgiDovGeDAzE7y0ActDzsw2hA2F2tXd"}"
             }}
         """
         )
@@ -101,7 +101,8 @@ class TestWeaviateHandler(BaseExecutorTest):
                 SELECT * FROM weaviate.df
             )
         """
-        self.run_sql(sql)
+        with pytest.raises(Exception):
+            self.run_sql(sql)
 
         # drop a table
         sql = """

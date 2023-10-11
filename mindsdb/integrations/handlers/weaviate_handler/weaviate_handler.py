@@ -290,7 +290,9 @@ class WeaviateDBHandler(VectorStoreHandler):
         )
 
         # query to get all metadata fields
-        metadata_query = f"associatedMetadata {{ ... on {metadata_table} {{ {metadata_fields} }} }}"
+        metadata_query = (
+            f"associatedMetadata {{ ... on {metadata_table} {{ {metadata_fields} }} }}"
+        )
 
         if columns is not None and len(columns) > 0:
             query = self._client.query.get(
@@ -407,12 +409,9 @@ class WeaviateDBHandler(VectorStoreHandler):
             raise Exception("Delete query must have at least one condition!")
         metadata_table_name = table_name.capitalize() + "_metadata"
         # query to get metadata ids
-        metadata_query = f"associatedMetadata {{ ... on {metadata_table_name} {{ id }} }}"
+        metadata_query = f"associatedMetadata {{ ... on {metadata_table_name} {{ _additional {{ id }} }} }}"
         result = (
-            self._client.query.get(
-                table_name,
-                metadata_query,
-            )
+            self._client.query.get(table_name, metadata_query)
             .with_additional(["id"])
             .with_where(filters)
             .do()
@@ -420,22 +419,25 @@ class WeaviateDBHandler(VectorStoreHandler):
         result = result["data"]["Get"][table_name]
 
         metadata_table_name = table_name.capitalize() + "_metadata"
-        table_ids = [i['_additional']['id'] for i in result['data']['Get'][table_name]]
-        metadata_ids = [i['associatedMetadata']['id'] for i in result['data']['Get'][metadata_table_name]]
+        table_ids = [i["_additional"]["id"] for i in result["data"]["Get"][table_name]]
+        metadata_ids = [
+            i["associatedMetadata"]["id"]
+            for i in result["data"]["Get"][metadata_table_name]
+        ]
         self._client.batch.delete_objects(
             class_name=table_name,
             where={
-                'path': ['id'],
-                'operator': 'ContainsAny',
-                'valueTextArray': table_ids
+                "path": ["id"],
+                "operator": "ContainsAny",
+                "valueTextArray": table_ids,
             },
         )
         self._client.batch.delete_objects(
             class_name=metadata_table_name,
             where={
-                'path': ['id'],
-                'operator': 'ContainsAny',
-                'valueTextArray': metadata_ids
+                "path": ["id"],
+                "operator": "ContainsAny",
+                "valueTextArray": metadata_ids,
             },
         )
         return Response(resp_type=RESPONSE_TYPE.OK)
@@ -477,23 +479,30 @@ class WeaviateDBHandler(VectorStoreHandler):
         """
         metadata_table_name = table_name.capitalize() + "_metadata"
         table_id_query = self._client.query.get(table_name).with_additional(["id"]).do()
-        table_ids = [i['_additional']['id'] for i in table_id_query['data']['Get'][table_name]]
-        metadata_table_id_query = self._client.query.get(metadata_table_name).with_additional(["id"]).do()
-        metadata_ids = [i['_additional']['id'] for i in metadata_table_id_query['data']['Get'][metadata_table_name]]
+        table_ids = [
+            i["_additional"]["id"] for i in table_id_query["data"]["Get"][table_name]
+        ]
+        metadata_table_id_query = (
+            self._client.query.get(metadata_table_name).with_additional(["id"]).do()
+        )
+        metadata_ids = [
+            i["_additional"]["id"]
+            for i in metadata_table_id_query["data"]["Get"][metadata_table_name]
+        ]
         self._client.batch.delete_objects(
             class_name=table_name,
             where={
-                'path': ['id'],
-                'operator': 'ContainsAny',
-                'valueTextArray': table_ids
+                "path": ["id"],
+                "operator": "ContainsAny",
+                "valueTextArray": table_ids,
             },
         )
         self._client.batch.delete_objects(
             class_name=metadata_table_name,
             where={
-                'path': ['id'],
-                'operator': 'ContainsAny',
-                'valueTextArray': metadata_ids
+                "path": ["id"],
+                "operator": "ContainsAny",
+                "valueTextArray": metadata_ids,
             },
         )
         try:

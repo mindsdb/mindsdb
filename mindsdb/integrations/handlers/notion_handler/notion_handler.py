@@ -6,7 +6,6 @@ from pydantic import BaseModel, Extra
 from notion_client import Client
 
 from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 
@@ -146,7 +145,6 @@ class NotionHandler(APIHandler):
         includes = defaultdict(list)
 
         max_page_size = 100
-        min_page_size = 10
         left = None
 
         limit_exec_time = time.time() + 60

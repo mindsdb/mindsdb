@@ -19,7 +19,7 @@ class NotionDatabaseTable(APITable):
         filters = []
         for op, arg1, arg2 in conditions:
             if op == "or":
-                raise NotImplementedError(f"OR is not supported")
+                raise NotImplementedError("OR is not supported")
 
             if arg1 == "database_id":
                 if op == "=":
@@ -93,7 +93,7 @@ class NotionPagesTable(APITable):
         filters = []
         for op, arg1, arg2 in conditions:
             if op == "or":
-                raise NotImplementedError(f"OR is not supported")
+                raise NotImplementedError("OR is not supported")
 
             if arg1 == "page_id":
                 if op == "=":
@@ -218,8 +218,7 @@ class NotionPagesTable(APITable):
                     }
                 ]
 
-                ret = self.handler.call_notion_api("pages.create", params)
-                inserted_id = ret.id[0]
+                self.handler.call_notion_api("pages.create", params)
 
 
 class NotionBlocksTable(APITable):
@@ -230,7 +229,7 @@ class NotionBlocksTable(APITable):
         filters = []
         for op, arg1, arg2 in conditions:
             if op == "or":
-                raise NotImplementedError(f"OR is not supported")
+                raise NotImplementedError("OR is not supported")
 
             if arg1 == "block_id":
                 if op == "=":
@@ -333,7 +332,7 @@ class NotionCommentsTable(APITable):
         filters = []
         for op, arg1, arg2 in conditions:
             if op == "or":
-                raise NotImplementedError(f"OR is not supported")
+                raise NotImplementedError("OR is not supported")
 
             if arg1 == "block_id":
                 if op == "=":

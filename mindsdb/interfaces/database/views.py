@@ -1,5 +1,6 @@
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
+from mindsdb.interfaces.query_context.context_controller import contextController
 
 
 class ViewController:
@@ -64,6 +65,8 @@ class ViewController:
             raise Exception(f'View not found: {name}')
         db.session.delete(rec)
         db.session.commit()
+
+        contextController.drop_query_context('view', rec.id)
 
     def _get_view_record_data(self, record):
         return {

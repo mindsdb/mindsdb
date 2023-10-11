@@ -43,7 +43,7 @@ For more information about how these perameters map to Milvus API, look at Milvu
 
 Before continuing, make sure that `pymilvus` version is same as your Milvus instance version.
 
-### CREATE DATABASE
+### Creating connection
 
 In order to make use of this handler and connect to a Milvus server in MindsDB, the following syntax can be used:
 
@@ -73,7 +73,7 @@ WITH
 };
 ```
 
-### DROP DATABASE
+### Dropping connection
 
 To drop the connection, use this command
 
@@ -81,7 +81,7 @@ To drop the connection, use this command
 DROP DATABASE milvus_datasource;
 ```
 
-### CREATE TABLE
+### Creating tables
 
 To insert data from a pre-existing table, use `CREATE`
 
@@ -90,7 +90,7 @@ CREATE TABLE milvus_datasource.test
 (SELECT * FROM sqlitedb.test);
 ```
 
-### DROP TABLE
+### Dropping collections
 
 To drop a Milvus collection use this command
 
@@ -98,13 +98,14 @@ To drop a Milvus collection use this command
 DROP TABLE milvus_datasource.tablename;
 ```
 
-
-### SELECT
+### Querying and selecting
 
 To query database using a search vector, you can use `search_vector` in `WHERE` clause
 
 Caveats:
 - If you omit `LIMIT`, the `search_default_limit` is used since Milvus requires it
+- Metadata column is not supported, but if the collection has dynamic schema enabled, you can query like normal, see the example below
+- Dynamic fields cannot be displayed but can be queried
 
 ```sql
 SELECT * from milvus_datasource.test
@@ -118,11 +119,14 @@ If you omit the `search_vector`, this becomes a basic search and `LIMIT` or `sea
 SELECT * from milvus_datasource.test
 ```
 
+You can use `WHERE` clause on dynamic fields like normal SQL
+
 ```sql
-TODO: example with metadata
+SELECT * FROM milvus_datasource.createtest
+WHERE category = "science";
 ```
 
-### DELETE
+### Deleting records
 
 You can delete entries using `DELETE` just like in SQL.
 
@@ -135,51 +139,6 @@ DELETE FROM milvus_datasource.test
 WHERE id IN (1, 2, 3);
 ```
 
-### UPDATE
+### Updating
 
 Updating records is not supported by Milvus API. You can try using combination of `DELETE` and `INSERT`
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-You can insert data into a new collection like so
-
-```sql
-create table chroma_dev.fda_10 (
-select * from mysql_demo_db.demo_fda_context limit 10);
-```
-
-You can query a collection within your Milvus as follows:
-
-```sql
-SELECT *
-FROM chroma_dev.fda_10
-Limit 5
-```
-
-You can also filter a collection on metadata
-
-```sql
-SELECT *
-FROM chroma_dev.fda_context_10
-Where meta_data_filter = "column:type_of_product"
-```
-
-Or alternatively it is possible to do a semantic search
-
-```sql
-SELECT *
-FROM chroma_dev.fda_context_10
-Where search_query='products for cold' limit 20
-
-```

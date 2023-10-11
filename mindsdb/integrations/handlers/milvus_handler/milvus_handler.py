@@ -159,6 +159,8 @@ class MilvusHandler(VectorStoreHandler):
         # Translate each metadata condition into a dict
         milvus_conditions = []
         for condition in filtered_conditions:
+            if isinstance(condition.value, str):
+                condition.value = f"'{condition.value}'"
             milvus_conditions.append(f"({condition.column.split('.')[-1]} {self._get_milvus_operator(condition.op)} {condition.value})")
         # Combine all metadata conditions into a single string and return
         return " and ".join(milvus_conditions) if milvus_conditions else None
@@ -229,9 +231,6 @@ class MilvusHandler(VectorStoreHandler):
                 columns_required.append(TableField.CONTENT.value)
             if TableField.EMBEDDINGS.value in columns:
                 columns_required.append(TableField.EMBEDDINGS.value)
-            # TODO: convert metadata somehow
-            # if TableField.METADATA.value in columns:
-            #    columns_required.append(TableField.METADATA.value)
             data = {k: [] for k in columns_required}
             for hits in results:
                 for hit in hits:
@@ -239,8 +238,7 @@ class MilvusHandler(VectorStoreHandler):
                         if col != TableField.DISTANCE.value:
                             data[col].append(hit.entity.get(col))
                         else:
-                            data[TableField.DISTANCE.value].append(
-                                hit.distance)
+                            data[TableField.DISTANCE.value].append(hit.distance)
             return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(data))
         else:
             # Basic search
@@ -250,7 +248,6 @@ class MilvusHandler(VectorStoreHandler):
                 TableField.ID.value,
                 TableField.CONTENT.value,
                 TableField.EMBEDDINGS.value,
-                TableField.METADATA.value,
             ] if not columns else columns
             results = collection.query(**search_arguments)
             return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame.from_records(results))
@@ -320,10 +317,13 @@ class MilvusHandler(VectorStoreHandler):
                 error_message=f"Unable to fetch collection `{table_name}`: {e}"
             )
         try:
+            print(f"DATA: {data}")
             data = data[columns]
             if TableField.METADATA.value in data.columns:
                 rows = data[TableField.METADATA.value].to_list()
                 data = pd.concat([data, pd.DataFrame.from_records(rows)], axis=1)
+                data.drop(TableField.METADATA.value, axis=1, inplace=True)
+            print(f"DTYPES: {data.dtypes}")
             collection.insert(data.to_dict(orient="records"))
         except Exception as e:
             return Response(

@@ -15,10 +15,16 @@ The required arguments to establish a connection are:
 * `api_key`: the API key that can be found in your pinecone account
 * `environment`: the environment name corresponding to the `api_key`
 
+The optional arguments are:
+
+* `dimension`: dimensions of the vectors to be stored in the index (default=8)
+* `metric`: distance metric to be used for similarity search (default='cosine')
+* `pods`: number of pods for the index to use, including replicas (default=1)
+* `replicas`: the number of replicas. replicas duplicate your index. they provide higher availability and throughput (default=1)
+* `pod_type`: the type of pod to use, refer to pinecone documentation (default='p1')
+
 ## Limitations
 
-- [ ] `CREATE TABLE` support
-    - Creating a table in Pinecone requires 2 additional parameters: dimension and metric
 - [ ] `DROP TABLE` support
 - [ ] Support for [namespaces](https://docs.pinecone.io/docs/namespaces)
 - [ ] Display score/distance
@@ -74,6 +80,8 @@ DELETE FROM pinecone_dev.temp
 WHERE id = "abc"
 ```
 
+Note that deletion through metadata is not supported in starter tier
+
 ```sql
 DELETE FROM pinecone_dev.temp
 WHERE temp.metadata.tbd = true
@@ -86,7 +94,7 @@ CREATE TABLE pinecone_dev.temp (
 SELECT * FROM mysql_demo_db.temp LIMIT 10);
 ```
 
-To update records, you can use insert statement. When there is a conflicting ID in pinecone index, the record is updated with new values.
+To update records, you can use insert statement. When there is a conflicting ID in pinecone index, the record is updated with new values. It might take a bit to see it reflected.
 
 ```sql
 INSERT INTO pinecone_test.testtable (id,content,metadata,embeddings)

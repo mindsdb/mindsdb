@@ -32,6 +32,16 @@ class PineconeHandler(VectorStoreHandler):
             "api_key": self._connection_data.get("api_key"),
             "environment": self._connection_data.get("environment")
         }
+        self._table_create_params = {
+            "dimension": 8,
+            "metric": "cosine",
+            "pods": 1,
+            "replicas": 1,
+            "pod_type": 'p1',
+        }
+        for key in self._table_create_params:
+            if key in self._connection_data:
+                self._table_create_params[key] = self._connection_data[key]
         self.is_connected = False
         self.connect()
 
@@ -160,6 +170,17 @@ class PineconeHandler(VectorStoreHandler):
         )
         return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=indexes_names)
 
+    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
+        """Create an index with the given name in the Pinecone database."""
+        try:
+            pinecone.create_index(name=table_name, **self._table_create_params)
+        except Exception as e:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Error creating index '{table_name}': {e}"
+            )
+        return Response(resp_type=RESPONSE_TYPE.OK)
+
     def insert(self, table_name: str, data: pd.DataFrame, columns: List[str] = None) -> HandlerResponse:
         """Insert data into pinecone index passed in through `table_name` parameter."""
         upsert_batch_size = 99  # API reccomendation
@@ -264,22 +285,19 @@ class PineconeHandler(VectorStoreHandler):
                 )
             query["vector"] = vector_filter[0]
             # For subqueries, the vector filter is a list of list of strings
-            if isinstance(query["vector"], list):
+            if isinstance(query["vector"], list) and isinstance(query["vector"][0], str):
                 if len(query["vector"]) > 1:
                     return Response(
                         resp_type=RESPONSE_TYPE.ERROR,
                         error_message="You cannot have multiple search_vectors in query"
                     )
-                query["vector"] = query["vector"][0]
-                # Try converting the resulting string to list of floats
-                if isinstance(query["vector"], str):
-                    try:
-                        query["vector"] = ast.literal_eval(query["vector"])
-                    except Exception as e:
-                        return Response(
-                            resp_type=RESPONSE_TYPE.ERROR,
-                            error_message=f"Cannot parse the search vector '{query['vector']}'into a list: {e}"
-                        )
+                try:
+                    query["vector"] = ast.literal_eval(query["vector"][0])
+                except Exception as e:
+                    return Response(
+                        resp_type=RESPONSE_TYPE.ERROR,
+                        error_message=f"Cannot parse the search vector '{query['vector']}'into a list: {e}"
+                    )
         # check for limit
         if limit is not None:
             query["top_k"] = limit
@@ -305,7 +323,6 @@ class PineconeHandler(VectorStoreHandler):
         # exec query
         result = None
         try:
-            print(f"VECTOR: {query['vector']}")
             result = index.query(**query)
         except Exception as e:
             return Response(
@@ -341,10 +358,39 @@ connection_args = OrderedDict(
         "description": "The environment name corresponding to the `api_key`",
         "required": True,
     },
+    dimension={
+        "type": ARG_TYPE.INT,
+        "description": "dimensions of the vectors to be stored in the index (default=8)",
+        "required": False,
+    },
+    metric={
+        "type": ARG_TYPE.STR,
+        "description": "distance metric to be used for similarity search (default='cosine')",
+        "required": False,
+    },
+    pods={
+        "type": ARG_TYPE.INT,
+        "description": "number of pods for the index to use, including replicas (default=1)",
+        "required": False,
+    },
+    replicas={
+        "type": ARG_TYPE.INT,
+        "description": "the number of replicas. replicas duplicate your index. they provide higher availability and throughput (default=1)",
+        "required": False,
+    },
+    pod_type={
+        "type": ARG_TYPE.STR,
+        "description": "the type of pod to use, refer to pinecone documentation (default='p1')",
+        "required": False,
+    },
 )
-
 
 connection_args_example = OrderedDict(
     api_key="00000000-0000-0000-0000-000000000000",
     environment="gcp-starter",
+    dimension=8,
+    metric="cosine",
+    pods=1,
+    replicas=1,
+    pod_type='p1',
 )

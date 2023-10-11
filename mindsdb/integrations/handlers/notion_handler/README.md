@@ -18,14 +18,15 @@ The required arguments to establish a connection are,
 
 ## Usage
 In order to make use of this handler and connect to an Notion in MindsDB, the following syntax can be used,
-~~~~sql
+
+```sql
 CREATE DATABASE notion_source
 WITH
 engine='notion',
 parameters={
-    "notion_api_token": "<notion-api-token>",
+    "api_token": "<notion-api-token>",
 };
-~~~~
+```
 
 ## Implemented Features
 
@@ -35,9 +36,9 @@ Now, you can use this established connection to query your table as follows,
 
 [Databases](https://developers.notion.com/reference/database are like a collection of pages. It also has properties allowing to store and organize data in a structured way.
 
-~~~~sql
+```sql
 SELECT * FROM notion_test.database where database_id='<your-db-id>';
-~~~~
+```
 
 > To get a database_id, just navigate to the database web page and copy the URL, the id then is the portion between the `/` and `?`
 >

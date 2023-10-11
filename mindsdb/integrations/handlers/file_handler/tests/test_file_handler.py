@@ -7,6 +7,7 @@ import magic
 import pandas
 import pandas as pd
 import pytest
+from pytest_lazyfixture import lazy_fixture
 
 from mindsdb.integrations.handlers.file_handler.file_handler import FileHandler
 
@@ -114,46 +115,51 @@ def parquet_file(temp_dir) -> str:
 class TestIsItX:
     """Tests all of the 'is_it_x()' functions to determine a file's type"""
 
-    def test_is_it_csv(self, csv_file, json_file):
-        with open(csv_file, "r") as fh:
-            assert FileHandler.is_it_csv(StringIO(fh.read()))
-        # We can't test a xlsx here because they're binary files
-        # with open(xlsx_file, "r") as fh:
-        #     assert not FileHandler.is_it_csv(StringIO(fh.read()))
-        with open(json_file, "r") as fh:
-            print(FileHandler.is_it_csv(StringIO(fh.read())))
-            assert not FileHandler.is_it_csv(StringIO(fh.read()))
-        # We can't test a parquet here because they're binary files
-        # with open(parquet_file, "r") as fh:
-        #     assert not FileHandler.is_it_csv(StringIO(fh.read()))
+    # We can't test xlsx or parquet here because they're binary files
+    @pytest.mark.parametrize(
+        "file_path,result",
+        [(lazy_fixture("csv_file"), True), (lazy_fixture("json_file"), False)],
+    )
+    def test_is_it_csv(self, file_path, result):
+        with open(file_path, "r") as fh:
+            assert FileHandler.is_it_csv(StringIO(fh.read())) is result
 
-    def test_is_it_xlsx(self, csv_file, xlsx_file, json_file, parquet_file):
-        assert not FileHandler.is_it_xlsx(csv_file)
-        assert FileHandler.is_it_xlsx(xlsx_file)
-        assert not FileHandler.is_it_xlsx(json_file)
-        assert not FileHandler.is_it_xlsx(parquet_file)
+    @pytest.mark.parametrize(
+        "file_path,result",
+        [
+            (lazy_fixture("csv_file"), False),
+            (lazy_fixture("xlsx_file"), True),
+            (lazy_fixture("json_file"), False),
+            (lazy_fixture("parquet_file"), False),
+        ],
+    )
+    def test_is_it_xlsx(self, file_path, result):
+        assert FileHandler.is_it_xlsx(file_path) is result
 
-    def test_is_it_json(self, csv_file, json_file):
-        with open(csv_file, "r") as fh:
-            assert not FileHandler.is_it_json(StringIO(fh.read()))
-        # We can't test a xlsx here because they're binary files
-        # with open(xlsx_file, "r") as fh:
-        #     assert not FileHandler.is_it_json(StringIO(fh.read()))
-        with open(json_file, "r") as fh:
-            assert FileHandler.is_it_json(StringIO(fh.read()))
-        # We can't test a parquet here because they're binary files
-        # with open(parquet_file, "r") as fh:
-        #     assert not FileHandler.is_it_json(parquet_file)
+    # We can't test xlsx or parquet here because they're binary files
+    @pytest.mark.parametrize(
+        "file_path,result",
+        [
+            (lazy_fixture("csv_file"), False),
+            (lazy_fixture("json_file"), True),
+        ],
+    )
+    def test_is_it_json(self, file_path, result):
+        with open(file_path, "r") as fh:
+            assert FileHandler.is_it_json(StringIO(fh.read())) is result
 
-    def test_is_it_parquet(self, csv_file, xlsx_file, json_file, parquet_file):
-        with open(csv_file, "rb") as fh:
-            assert not FileHandler.is_it_parquet(BytesIO(fh.read()))
-        with open(xlsx_file, "rb") as fh:
-            assert not FileHandler.is_it_parquet(BytesIO(fh.read()))
-        with open(json_file, "rb") as fh:
-            assert not FileHandler.is_it_parquet(BytesIO(fh.read()))
-        with open(parquet_file, "rb") as fh:
-            assert FileHandler.is_it_parquet(BytesIO(fh.read()))
+    @pytest.mark.parametrize(
+        "file_path,result",
+        [
+            (lazy_fixture("csv_file"), False),
+            (lazy_fixture("xlsx_file"), False),
+            (lazy_fixture("json_file"), False),
+            (lazy_fixture("parquet_file"), True),
+        ],
+    )
+    def test_is_it_parquet(self, file_path, result):
+        with open(file_path, "rb") as fh:
+            assert FileHandler.is_it_parquet(BytesIO(fh.read())) is result
 
 
 def test_get_file_path_with_csv(mocker, csv_file_path: str):

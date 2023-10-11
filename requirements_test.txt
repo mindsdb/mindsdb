@@ -4,6 +4,7 @@ jinja2<3.1.0
 netifaces >= 0.11.0
 mysql-connector-python==8.0.29
 pytest
+pytest-lazy-fixture~=0.6.3
 pytest-subtests
 flake8==5.0.4
 pycodestyle==2.9.1

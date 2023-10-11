@@ -33,7 +33,7 @@ CREATE MODEL mindsdb.gpt_model
 PREDICT response
 USING
 engine = 'openai',
--- api_key = 'your openai key', -- in MindsDB cloud accounts we provide a default key 
+api_key = 'your openai key',
 model_name = 'gpt-4', -- you can also use 'text-davinci-003' or 'gpt-3.5-turbo'
 prompt_template = 'respond to {{text}} by {{author_username}}'; 
 ```
@@ -71,7 +71,7 @@ PREDICT response
 USING
 engine = 'openai',
 max_tokens = 300,
--- api_key = 'your openai key, -- in MindsDB cloud accounts we provide a default key
+api_key = 'your openai key,
 model_name = 'gpt-4', -- you can also use 'text-davinci-003' or 'gpt-3.5-turbo'
 prompt_template = 'From input message: {{text}}\
 by from_user: {{author_username}}\

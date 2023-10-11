@@ -15,3 +15,5 @@ XXX Test Failed: (link to the test results in your GitHub repository), (link to 
 </br>
 Email handler for Outlook - Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Email-Handler/Testing.md
 </br>
+QuestDB ML Integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/QuestDB/Testing.md
+</br>

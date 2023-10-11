@@ -3,7 +3,7 @@ from collections import OrderedDict
 from mindsdb.integrations.handlers.dockerhub_handler.dockerhub_tables import (
     DockerHubRepoImagesSummaryTable
 )
-from mindsdb.integrations.handlers.dockerhub_handler.DockerHubClient import DockerHubClient
+from mindsdb.integrations.handlers.dockerhub_handler.dockerhub import DockerHubClient
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

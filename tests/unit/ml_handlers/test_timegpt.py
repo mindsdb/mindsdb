@@ -4,18 +4,17 @@ import pytest
 from unittest.mock import patch
 
 import pandas as pd
-
 from mindsdb_sql import parse_sql
 
 from ..executor_test_base import BaseExecutorTest
-# from mindsdb.integrations.handlers.timegpt_handler.timegpt_handler import TimeGPTHandler
-
-
-TIME_GPT_API_KEY = os.environ.get("TIME_GPT_API_KEY")
-os.environ["TIMEGPT_API_KEY"] = TIME_GPT_API_KEY
 
 
 class TestTimeGPT(BaseExecutorTest):
+    @staticmethod
+    def get_api_key():
+        """Retrieve TimeGPT API key from environment variables"""
+        return os.environ.get("TIME_GPT_API_KEY") or os.environ.get("TIMEGPT_API_KEY")
+
     def wait_predictor(self, project, name):
         # wait
         done = False
@@ -41,7 +40,7 @@ class TestTimeGPT(BaseExecutorTest):
     def test_missing_required_keys(self):
         # create project
         self.run_sql("create database proj")
-        self.run_sql(f"""create ml_engine timegpt from timegpt using api_key='{TIME_GPT_API_KEY}';""")
+        self.run_sql(f"""create ml_engine timegpt from timegpt using api_key='{self.get_api_key()}';""")
         # with pytest.raises(Exception):
         self.run_sql(
             """
@@ -54,7 +53,7 @@ class TestTimeGPT(BaseExecutorTest):
 
     def test_unknown_arguments(self):
         self.run_sql("create database proj")
-        self.run_sql(f"""create ml_engine timegpt from timegpt using api_key='{TIME_GPT_API_KEY}';""")
+        self.run_sql(f"""create ml_engine timegpt from timegpt using api_key='{self.get_api_key()}';""")
         with pytest.raises(Exception):
             self.run_sql(
                 f"""
@@ -62,7 +61,7 @@ class TestTimeGPT(BaseExecutorTest):
                 predict answer
                 using
                     engine='timegpt',
-                    api_key='{TIME_GPT_API_KEY}',
+                    api_key='{self.get_api_key()}',
                     evidently_wrong_argument='wrong value';  --- this is a wrong argument name
             """
             )
@@ -74,7 +73,7 @@ class TestTimeGPT(BaseExecutorTest):
         df = pd.read_csv('tests/unit/ml_handlers/data/house_sales.csv')
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
-        self.run_sql(f"""create ml_engine timegpt from timegpt using api_key='{TIME_GPT_API_KEY}';""")
+        self.run_sql(f"""create ml_engine timegpt from timegpt using api_key='{self.get_api_key()}';""")
 
         self.run_sql(
             f"""
@@ -86,7 +85,7 @@ class TestTimeGPT(BaseExecutorTest):
            horizon 5
            using
              engine='timegpt',
-             api_key='{TIME_GPT_API_KEY}';
+             api_key='{self.get_api_key()}';
         """
         )
         self.wait_predictor("proj", "test_timegpt_forecast")

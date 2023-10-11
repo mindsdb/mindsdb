@@ -101,11 +101,16 @@ class Auto_ts_Handler(BaseMLEngine):
         """
         Predicts using the best Auto_ts model.
         """
+        args = self.model_storage.json_get('args')
+        target = args['target']
         model = dill.loads(self.model_storage.file_get('model'))
-        df['sales'] = model.predict(testdata=df,model='best',simple=False)['yhat'].values
+        df[f'{target}_preds'] = model.predict(testdata=df,model='best',simple=False)['yhat'].values
         return df
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
-
-        raise NotImplementedError
+        """
+        Describes the model.
+        """
+        args = self.model_storage.json_get('args')
+        return pd.DataFrame(args, index=[0])
 

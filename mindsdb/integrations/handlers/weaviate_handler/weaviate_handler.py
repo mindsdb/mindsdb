@@ -138,8 +138,8 @@ class WeaviateDBHandler(VectorStoreHandler):
                 float: "valueIntList",
                 bool: "valueBooleanList",
             }
-            if not (value):
-                raise Exception(f"Empty list is not supported")
+            if not value:
+                raise Exception("Empty list is not supported")
             value_type = value_list_types.get(type(value[0]))
 
         else:
@@ -152,7 +152,7 @@ class WeaviateDBHandler(VectorStoreHandler):
             }
             value_type = value_primitive_types.get(type(value))
 
-        if not (value_type):
+        if not value_type:
             raise Exception(f"Value type {type(value)} is not supported by weaviate!")
 
         return value_type
@@ -273,7 +273,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         # check if embedding vector filter is present
         vector_filter = (
             None
-            if not (conditions)
+            if not conditions
             else [
                 condition
                 for condition in conditions
@@ -433,7 +433,7 @@ class WeaviateDBHandler(VectorStoreHandler):
             non_metadata_conditions if non_metadata_conditions else None,
             metadata_conditions if metadata_conditions else None,
         )
-        if not (filters):
+        if not filters:
             raise Exception("Delete query must have at least one condition!")
         metadata_table_name = table_name.capitalize() + "_metadata"
         # query to get metadata ids

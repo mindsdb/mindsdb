@@ -9,11 +9,6 @@ import pandas as pd
 import pytest
 
 from mindsdb.integrations.handlers.file_handler.file_handler import FileHandler
-from mindsdb.integrations.handlers.file_handler.tests.conftest import (
-    assert_identified_as,
-    assert_not_identified_as,
-    read_csv_file,
-)
 
 # def native_query(self, query: Any) -> HandlerResponse:
 #     """Receive raw query and act upon it somehow.
@@ -69,14 +64,7 @@ def assert_identified_as(data_format, file_path, is_identified):
     assert is_identified, f"{file_path} should be identified as {data_format}"
 
 
-# All files will have the following content:
-#
-# |  col_one  |  col_two  | col_three |
-# |-----------|-----------|-----------|
-# |     1     |     -1    |    0.1    |
-# |     2     |     -2    |    0.2    |
-# |     3     |     -3    |    0.3    |
-
+# Define a table to use as content for all of the file types
 test_file_content = [
     ["col_one", "col_two", "col_three"],
     [1, -1, 0.1],
@@ -87,14 +75,14 @@ test_file_content = [
 
 @pytest.fixture()
 def temp_dir():
-    return tempfile.mkdtemp(prefix="test_file_handler")
+    return tempfile.mkdtemp(prefix="test_file_handler_")
 
 
 @pytest.fixture
 def csv_file(temp_dir) -> str:
     file_path = os.path.join(temp_dir, "test_data.csv")
     df = pandas.DataFrame(test_file_content)
-    df.to_csv(file_path, index=False)
+    df.to_csv(file_path)
     return file_path
 
 
@@ -102,7 +90,7 @@ def csv_file(temp_dir) -> str:
 def xlsx_file(temp_dir) -> str:
     file_path = os.path.join(temp_dir, "test_data.xlsx")
     df = pandas.DataFrame(test_file_content)
-    df.to_excel(file_path, index=False)
+    df.to_excel(file_path)
     return file_path
 
 
@@ -110,7 +98,7 @@ def xlsx_file(temp_dir) -> str:
 def json_file(temp_dir) -> str:
     file_path = os.path.join(temp_dir, "test_data.json")
     df = pandas.DataFrame(test_file_content)
-    df.to_json(file_path, index=False)
+    df.to_json(file_path)
     return file_path
 
 
@@ -118,18 +106,26 @@ def json_file(temp_dir) -> str:
 def parquet_file(temp_dir) -> str:
     file_path = os.path.join(temp_dir, "test_data.parquet")
     df = pandas.DataFrame(test_file_content)
-    df.to_parquet(file_path, index=False)
+    df = df.astype(str)
+    df.to_parquet(file_path)
     return file_path
 
 
 class TestIsItX:
     """Tests all of the 'is_it_x()' functions to determine a file's type"""
 
-    def test_is_it_csv(self, csv_file, xlsx_file, json_file, parquet_file):
-        assert FileHandler.is_it_csv(csv_file)
-        assert not FileHandler.is_it_csv(xlsx_file)
-        assert not FileHandler.is_it_csv(json_file)
-        assert not FileHandler.is_it_csv(parquet_file)
+    def test_is_it_csv(self, csv_file, json_file):
+        with open(csv_file, "r") as fh:
+            assert FileHandler.is_it_csv(StringIO(fh.read()))
+        # We can't test a xlsx here because they're binary files
+        # with open(xlsx_file, "r") as fh:
+        #     assert not FileHandler.is_it_csv(StringIO(fh.read()))
+        with open(json_file, "r") as fh:
+            print(FileHandler.is_it_csv(StringIO(fh.read())))
+            assert not FileHandler.is_it_csv(StringIO(fh.read()))
+        # We can't test a parquet here because they're binary files
+        # with open(parquet_file, "r") as fh:
+        #     assert not FileHandler.is_it_csv(StringIO(fh.read()))
 
     def test_is_it_xlsx(self, csv_file, xlsx_file, json_file, parquet_file):
         assert not FileHandler.is_it_xlsx(csv_file)
@@ -137,11 +133,17 @@ class TestIsItX:
         assert not FileHandler.is_it_xlsx(json_file)
         assert not FileHandler.is_it_xlsx(parquet_file)
 
-    def test_is_it_json(self, csv_file, xlsx_file, json_file, parquet_file):
-        assert not FileHandler.is_it_json(csv_file)
-        assert not FileHandler.is_it_json(xlsx_file)
-        assert FileHandler.is_it_json(json_file)
-        assert not FileHandler.is_it_json(parquet_file)
+    def test_is_it_json(self, csv_file, json_file):
+        with open(csv_file, "r") as fh:
+            assert not FileHandler.is_it_json(StringIO(fh.read()))
+        # We can't test a xlsx here because they're binary files
+        # with open(xlsx_file, "r") as fh:
+        #     assert not FileHandler.is_it_json(StringIO(fh.read()))
+        with open(json_file, "r") as fh:
+            assert FileHandler.is_it_json(StringIO(fh.read()))
+        # We can't test a parquet here because they're binary files
+        # with open(parquet_file, "r") as fh:
+        #     assert not FileHandler.is_it_json(parquet_file)
 
     def test_is_it_parquet(self, csv_file, xlsx_file, json_file, parquet_file):
         with open(csv_file, "rb") as fh:

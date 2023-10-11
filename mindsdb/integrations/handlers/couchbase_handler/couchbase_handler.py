@@ -14,7 +14,7 @@ from mindsdb.integrations.libs.response import (
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.exceptions import UnAmbiguousTimeoutException
-from couchbase.options import ClusterOptions, ClusterTimeoutOptions
+from couchbase.options import ClusterOptions
 from couchbase.exceptions import KeyspaceNotFoundException, CouchbaseException
 
 
@@ -62,7 +62,7 @@ class CouchbaseHandler(DatabaseHandler):
             options.apply_profile('wan_development')
 
             endpoint = f"couchbases://{self.connection_data.get('host')}"
-            
+
         else:
             endpoint = f"couchbase://{self.connection_data.get('host')}"
 

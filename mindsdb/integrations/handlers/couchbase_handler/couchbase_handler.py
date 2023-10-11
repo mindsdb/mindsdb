@@ -9,7 +9,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
@@ -20,20 +20,20 @@ from couchbase.exceptions import KeyspaceNotFoundException, CouchbaseException
 
 class CouchbaseHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Couchbase statements. 
+    This handler handles connection and execution of the Couchbase statements.
     """
 
-    name = 'couchbase'
-    #TODO: Check the timeout value with the sdk default time
+    name = "couchbase"
+    # TODO: Check the timeout value with the sdk default time
     DEFAULT_TIMEOUT_SECONDS = 60
 
     def __init__(self, name, **kwargs):
         super().__init__(name)
         self.connection_data = kwargs.get("connection_data")
 
-        self.scope = self.connection_data.get('scope') or '_default'
+        self.scope = self.connection_data.get("scope") or "_default"
 
-        self.bucket_name = self.connection_data.get('bucket')
+        self.bucket_name = self.connection_data.get("bucket")
         self.cluster = None
 
         self.is_connected = False
@@ -41,32 +41,34 @@ class CouchbaseHandler(DatabaseHandler):
     def connect(self):
         """
         Set up connections required by the handler.
-        
+
         Returns:
             The connected cluster.
         """
         if self.is_connected:
             return self.cluster
 
-        endpoint = self.connection_data.get('host')
-        username = self.connection_data.get('user')
-        password = self.connection_data.get('password')
-
-        timeout_opts = ClusterTimeoutOptions(kv_timeout=timedelta(seconds=self.DEFAULT_TIMEOUT_SECONDS))
-
         auth = PasswordAuthenticator(
-            username,
-            password,
+            self.connection_data.get("user"),
+            self.connection_data.get("password"),
             # NOTE: If using SSL/TLS, add the certificate path.
             # We strongly reccomend this for production use.
             # cert_path=cert_path
         )
-        cluster = Cluster.connect(
-            f'couchbase://{endpoint}',
-            ClusterOptions(
-                authenticator=auth,
-                timeout_options=timeout_opts
-            )
+
+        options = ClusterOptions(auth)
+
+        if 'cloud.couchbase.com' in self.connection_data.get("host"):
+            options.apply_profile('wan_development')
+
+            endpoint = f"couchbases://{self.connection_data.get('host')}"
+            
+        else:
+            endpoint = f"couchbase://{self.connection_data.get('host')}"
+
+        cluster = Cluster(
+            endpoint,
+            options,
         )
 
         try:
@@ -75,12 +77,12 @@ class CouchbaseHandler(DatabaseHandler):
             self.cluster = cluster
         except UnAmbiguousTimeoutException:
             self.is_connected = False
-            raise 
-        
+            raise
+
         return self.cluster
 
     def disconnect(self):
-        """ Close any existing connections
+        """Close any existing connections
         Should switch self.is_connected.
         """
         if self.is_connected is False:
@@ -100,7 +102,9 @@ class CouchbaseHandler(DatabaseHandler):
             cluster = self.connect()
             result.success = cluster.connected
         except UnAmbiguousTimeoutException as e:
-            log.logger.error(f'Error connecting to Couchbase {self.connection_data["bucket"]}, {e}!')
+            log.logger.error(
+                f'Error connecting to Couchbase {self.connection_data["bucket"]}, {e}!'
+            )
             result.error_message = str(e)
 
         if result.success is True and need_to_close:
@@ -111,17 +115,17 @@ class CouchbaseHandler(DatabaseHandler):
 
     def native_query(self, query: str) -> Response:
         """Execute a raw query against Couchbase.
-        
+
         Args:
             query (str): Raw Couchbase query.
-            
+
         Returns:
             HandlerResponse containing query results.
         """
         self.connect()
         bucket = self.cluster.bucket(self.bucket_name)
         cb = bucket.scope(self.scope)
-        
+
         data = {}
         try:
             for collection in cb.query(query):
@@ -132,11 +136,16 @@ class CouchbaseHandler(DatabaseHandler):
                     else:
                         for k, v in collection.items():
                             data.setdefault(k, []).append(v)
-            
-            response = Response(RESPONSE_TYPE.TABLE, pd.DataFrame(data) if data else RESPONSE_TYPE.OK)
+
+            response = Response(
+                RESPONSE_TYPE.TABLE, pd.DataFrame(data) if data else RESPONSE_TYPE.OK
+            )
         except CouchbaseException as e:
-            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e.error_context.first_error_message))
-        
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e.error_context.first_error_message),
+            )
+
         return response
 
     def query(self, query: ASTNode) -> Response:
@@ -160,16 +169,13 @@ class CouchbaseHandler(DatabaseHandler):
             for collection in scope.collections:
                 unique_collections.add(collection.name)
         collections = list(unique_collections)
-        df = pd.DataFrame(collections, columns=['TABLE_NAME'])
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
+        df = pd.DataFrame(collections, columns=["TABLE_NAME"])
+        response = Response(RESPONSE_TYPE.TABLE, df)
 
         return response
 
     def get_columns(self, table_name) -> Response:
-        """ Returns a list of entity columns
+        """Returns a list of entity columns
         Args:
             table_name (str): name of one of tables returned by self.get_tables()
         Returns:
@@ -187,22 +193,19 @@ class CouchbaseHandler(DatabaseHandler):
         cb = bucket.scope(self.scope)
 
         try:
-            q = f'SELECT * FROM `{table_name}` limit 1'
+            q = f"SELECT * FROM `{table_name}` limit 1"
             row_iter = cb.query(q)
             # print(row_iter.execute())
             data = []
             for row in row_iter:
                 for k, v in row[table_name].items():
                     data.append([k, type(v).__name__])
-            df = pd.DataFrame(data, columns=['Field', 'Type'])
-            response = Response(
-                RESPONSE_TYPE.TABLE,
-                df
-            )
+            df = pd.DataFrame(data, columns=["Field", "Type"])
+            response = Response(RESPONSE_TYPE.TABLE, df)
         except KeyspaceNotFoundException as e:
             response = Response(
                 RESPONSE_TYPE.ERROR,
-                error_message=f'Error: {e.error_context.first_error_message}'
+                error_message=f"Error: {e.error_context.first_error_message}",
             )
 
         return response
@@ -210,29 +213,26 @@ class CouchbaseHandler(DatabaseHandler):
 
 connection_args = OrderedDict(
     user={
-        'type': ARG_TYPE.STR,
-        'description': 'The user name used to authenticate with the Couchbase server.'
+        "type": ARG_TYPE.STR,
+        "description": "The user name used to authenticate with the Couchbase server.",
     },
     password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the Couchbase server.'
+        "type": ARG_TYPE.STR,
+        "description": "The password to authenticate the user with the Couchbase server.",
     },
     bucket={
-        'type': ARG_TYPE.STR,
-        'description': 'The database/bucket name to use when connecting with the Couchbase server.'
+        "type": ARG_TYPE.STR,
+        "description": "The database/bucket name to use when connecting with the Couchbase server.",
     },
     host={
-        'type': ARG_TYPE.STR,
-        'description': '--your-instance--.dp.cloud.couchbase.com or IP address of the Couchbase server.'
+        "type": ARG_TYPE.STR,
+        "description": "--your-instance--.dp.cloud.couchbase.com or IP address of the Couchbase server.",
     },
     scope={
-        'type': ARG_TYPE.STR,
-        'description': 'The scope use in the query context in Couchbase server. If blank, scope will be "_default".'
-    }
+        "type": ARG_TYPE.STR,
+        "description": 'The scope use in the query context in Couchbase server. If blank, scope will be "_default".',
+    },
 )
 connection_args_example = OrderedDict(
-    host='127.0.0.1',
-    user='root',
-    password='password',
-    bucket='bucket'
+    host="127.0.0.1", user="root", password="password", bucket="bucket"
 )

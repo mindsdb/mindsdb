@@ -12,54 +12,58 @@ This handler uses `chromadb` python library connect to a chromadb instance, it u
 
 The required arguments to establish a connection are:
 
-* `chroma_api_impl`: the api implementation, likely should be `rest` or `local`
 * `chroma_server_host`: the host name or IP address of the ChromaDB instance
 * `chroma_server_http_port`: the port to use when connecting
-* `persist_directory`: the directory to use for persisting data, this should only be used when `chroma_api_impl` is set to `local`
+* `persist_directory`: the directory to use for persisting data
 
 
 ## Usage
 
-In order to make use of this handler and connect to a ChromaDB server in MindsDB, the following syntax can be used:
+In order to make use of this handler and connect to a hosted ChromaDB instance in MindsDB, the following syntax can be used:
 
 ```sql
 CREATE DATABASE chroma_dev
 WITH ENGINE = "chromadb",
 PARAMETERS = {
-   "chroma_api_impl": "rest",
    "chroma_server_host": "localhost",
-   "chroma_server_http_port": 8000,
+   "chroma_server_http_port": 8000
+    }
+```
+
+Another option is to use in memory ChromaDB instance, you can do so by using the following syntax:
+
+```sql
+CREATE DATABASE chroma_dev
+WITH ENGINE = "chromadb",
+PARAMETERS = {
+   "persist_directory": <persist_directory>
     }
 ```
 
 You can insert data into a new collection like so
 
 ```sql
-create table chroma_dev.fda_10 (
-select * from mysql_demo_db.demo_fda_context limit 10);
+create table chroma_dev.test_embeddings (
+SELECT embeddings,'{"source": "fda"}' as metadata FROM mysql_demo_db.test_embeddings
+);
 ```
 
 You can query a collection within your ChromaDB as follows:
 
 ```sql
-SELECT *
-FROM chroma_dev.fda_10
-Limit 5
+SELECT * FROM chroma_dev.test_embeddings;
 ```
 
-You can also filter a collection on metadata
+filter by metadata
 
 ```sql
-SELECT *
-FROM chroma_dev.fda_context_10
-Where meta_data_filter = "column:type_of_product"
+SELECT * FROM chroma_dev.test_embeddings
+where `metadata.source` = "fda";
 ```
 
-Or alternatively it is possible to do a semantic search
+search for similar embeddings
 
 ```sql
-SELECT *
-FROM chroma_dev.fda_context_10
-Where search_query='products for cold' limit 20
-
+SELECT * FROM chroma_dev.test_embeddings
+WHERE search_vector = (select embeddings from mysql_demo_db.test_embeddings limit 1);
 ```

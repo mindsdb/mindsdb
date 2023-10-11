@@ -473,10 +473,9 @@ class WeaviateDBHandler(VectorStoreHandler):
         """
         Create a class with the given name in the weaviate database.
         """
-        table_name = table_name.capitalize()
         # separate metadata table for each table (as different tables will have different metadata columns)
         # this reduces the query time using metadata but increases the insertion time
-        metadata_table_name = table_name.capitalize() + "_metadata"
+        metadata_table_name = table_name + "_metadata"
         if not self._client.schema.exists(metadata_table_name):
             self._client.schema.create_class({"class": metadata_table_name})
         if not self._client.schema.exists(table_name):
@@ -495,9 +494,9 @@ class WeaviateDBHandler(VectorStoreHandler):
             )
             add_prop = {
                 "name": "associatedMetadata",
-                "dataType": [metadata_table_name],
+                "dataType": [metadata_table_name.capitalize()],
             }
-            self._client.schema.property.create(table_name, add_prop)
+            self._client.schema.property.create(table_name.capitalize(), add_prop)
 
         return Response(resp_type=RESPONSE_TYPE.OK)
 

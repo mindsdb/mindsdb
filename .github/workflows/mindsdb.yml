@@ -73,7 +73,7 @@ jobs:
           pip install git+https://github.com/mindsdb/mindsdb_sql.git@staging --upgrade --no-cache-dir  # install post lightwood so it does not get overwritten
     - name: Install ML engine related dependencies
       run: |
-        for engine in openai; do  # statsforecast huggingface lightwood
+        for engine in openai timegpt; do  # statsforecast huggingface lightwood
           pip install -r ./mindsdb/integrations/handlers/${engine}_handler/requirements.txt
         done
       shell: bash
@@ -121,6 +121,7 @@ jobs:
           # First-tier ML engines
           echo -e "\n===============test ML engines===============\n"
           pytest -vx tests/unit/ml_handlers/test_openai.py
+          pytest -vx tests/unit/ml_handlers/test_timegpt.py
         
           # pending rework
           # pytest -vx tests/unit/ml_handlers/test_statsforecast.py

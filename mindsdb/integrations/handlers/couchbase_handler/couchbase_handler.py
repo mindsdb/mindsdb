@@ -48,24 +48,26 @@ class CouchbaseHandler(DatabaseHandler):
         if self.is_connected:
             return self.cluster
 
-        endpoint = self.connection_data.get("host")
-        username = self.connection_data.get("user")
-        password = self.connection_data.get("password")
-
-        timeout_opts = ClusterTimeoutOptions(
-            kv_timeout=timedelta(seconds=self.DEFAULT_TIMEOUT_SECONDS)
-        )
-
         auth = PasswordAuthenticator(
-            username,
-            password,
+            self.connection_data.get("user"),
+            self.connection_data.get("password"),
             # NOTE: If using SSL/TLS, add the certificate path.
             # We strongly reccomend this for production use.
             # cert_path=cert_path
         )
-        cluster = Cluster.connect(
-            f"couchbase://{endpoint}",
-            ClusterOptions(authenticator=auth, timeout_options=timeout_opts),
+
+        options = ClusterOptions(auth)
+
+        if 'cloud.couchbase.com' in self.connection_data.get("host"):
+            options.apply_profile('wan_development')
+
+            endpoint = f"couchbases://{self.connection_data.get('host')}"
+        else:
+            endpoint = f"couchbase://{self.connection_data.get('host')}"
+
+        cluster = Cluster(
+            endpoint,
+            options,
         )
 
         try:

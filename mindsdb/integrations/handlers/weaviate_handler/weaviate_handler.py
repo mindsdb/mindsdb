@@ -35,7 +35,10 @@ class WeaviateDBHandler(VectorStoreHandler):
             "weaviate_api_key": self._connection_data.get("weaviate_api_key"),
         }
 
-        if not(self._client_config.get("weaviate_url") and self._client_config.get("weaviate_api_key")):
+        if not (
+            self._client_config.get("weaviate_url")
+            and self._client_config.get("weaviate_api_key")
+        ):
             raise Exception(
                 "Both url + api key client secret are required for weaviate connection!"
             )
@@ -46,7 +49,13 @@ class WeaviateDBHandler(VectorStoreHandler):
 
     def _get_client(self) -> weaviate.Client:
         client_config = self._client_config
-        if not (client_config and (self._client_config.get("weaviate_url") and self._client_config.get("weaviate_api_key"))):
+        if not (
+            client_config
+            and (
+                self._client_config.get("weaviate_url")
+                and self._client_config.get("weaviate_api_key")
+            )
+        ):
             raise Exception("Client config is not set! or missing parameters")
 
         # decide the client type to be used, either persistent or httpclient
@@ -129,7 +138,7 @@ class WeaviateDBHandler(VectorStoreHandler):
                 float: "valueIntList",
                 bool: "valueBooleanList",
             }
-            if not(value):
+            if not (value):
                 raise Exception(f"Empty list is not supported")
             value_type = value_list_types.get(type(value[0]))
 
@@ -143,7 +152,7 @@ class WeaviateDBHandler(VectorStoreHandler):
             }
             value_type = value_primitive_types.get(type(value))
 
-        if not(value_type):
+        if not (value_type):
             raise Exception(f"Value type {type(value)} is not supported by weaviate!")
 
         return value_type
@@ -187,7 +196,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         table_name = table_name.capitalize()
         metadata_table_name = table_name.capitalize() + "_metadata"
         #
-        if not(conditions and meta_conditions):
+        if not (conditions or meta_conditions):
             return None
 
         # we translate each condition into a single dict
@@ -263,8 +272,8 @@ class WeaviateDBHandler(VectorStoreHandler):
 
         # check if embedding vector filter is present
         vector_filter = (
-            []
-            if conditions
+            None
+            if not (conditions)
             else [
                 condition
                 for condition in conditions
@@ -272,11 +281,6 @@ class WeaviateDBHandler(VectorStoreHandler):
                 or condition.column == TableField.EMBEDDINGS.value
             ]
         )
-
-        if vector_filter:
-            vector_filter = vector_filter[0]
-        else:
-            vector_filter = None
 
         for col in ["id", "embeddings", "distance", "metadata"]:
             if col in columns:
@@ -309,6 +313,8 @@ class WeaviateDBHandler(VectorStoreHandler):
         if vector_filter:
             # similarity search
             # assuming the similarity search is on content
+            # assuming there would be only one vector based search per query
+            vector_filter = vector_filter[0]
             near_vector = {
                 "vector": eval(vector_filter.value)
                 if isinstance(vector_filter.value, str)
@@ -409,15 +415,14 @@ class WeaviateDBHandler(VectorStoreHandler):
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
     ) -> HandlerResponse:
-
         table_name = table_name.capitalize()
         non_metadata_conditions = [
-                condition
-                for condition in conditions
-                if not condition.column.startswith(TableField.METADATA.value)
-                and condition.column != TableField.SEARCH_VECTOR.value
-                and condition.column != TableField.EMBEDDINGS.value
-            ]
+            condition
+            for condition in conditions
+            if not condition.column.startswith(TableField.METADATA.value)
+            and condition.column != TableField.SEARCH_VECTOR.value
+            and condition.column != TableField.EMBEDDINGS.value
+        ]
         metadata_conditions = [
             condition
             for condition in conditions
@@ -428,8 +433,7 @@ class WeaviateDBHandler(VectorStoreHandler):
             non_metadata_conditions if non_metadata_conditions else None,
             metadata_conditions if metadata_conditions else None,
         )
-
-        if not(filters):
+        if not (filters):
             raise Exception("Delete query must have at least one condition!")
         metadata_table_name = table_name.capitalize() + "_metadata"
         # query to get metadata ids
@@ -446,7 +450,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         metadata_ids = []
         for i in result:
             table_ids.append(i["_additional"]["id"])
-            metadata_ids.append(i["associatedMetadata"][0]["_additional"]['id'])
+            metadata_ids.append(i["associatedMetadata"][0]["_additional"]["id"])
         self._client.batch.delete_objects(
             class_name=table_name,
             where={
@@ -604,9 +608,7 @@ class WeaviateDBHandler(VectorStoreHandler):
                         "dataType": ["string"],
                     }
                 # when a new column is identified, it is added to the metadata table
-                self._client.schema.property.create(
-                    metadata_table_name, add_prop
-                )
+                self._client.schema.property.create(metadata_table_name, add_prop)
         metadata_id = self._client.data_object.create(
             data_object=data, class_name=table_name.capitalize() + "_metadata"
         )

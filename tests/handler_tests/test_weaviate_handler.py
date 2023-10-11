@@ -35,8 +35,8 @@ class TestWeaviateHandler(BaseExecutorTest):
             CREATE DATABASE weaviate_test
             WITH ENGINE = "weaviate",
             PARAMETERS = {{
-                "weaviate_url" : "{""}",
-                "weaviate_api_key": "{""}"
+                "weaviate_url" : "{"https://sample-q4x5xe6o.weaviate.network"}",
+                "weaviate_api_key": "{"QBHA2JJ3PxXF6Rs8cl3a6IsYjp0jDFh0sehv"}"
             }}
         """
         )
@@ -65,7 +65,10 @@ class TestWeaviateHandler(BaseExecutorTest):
     def test_create_with_select(self, postgres_handler_mock):
         df = pd.DataFrame(
             {
-                "id": ["6af613b6-569c-5c22-9c37-2ed93f31d3af", "b04965e6-a9bb-591f-8f8a-1adcb2c8dc39"],
+                "id": [
+                    "6af613b6-569c-5c22-9c37-2ed93f31d3af",
+                    "b04965e6-a9bb-591f-8f8a-1adcb2c8dc39",
+                ],
                 "content": ["this is a test", "this is a test"],
                 "metadata": [{"test": "test"}, {"test": "test"}],
                 "embeddings": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]],
@@ -87,7 +90,10 @@ class TestWeaviateHandler(BaseExecutorTest):
     def test_drop_table(self, postgres_handler_mock):
         df = pd.DataFrame(
             {
-                "id": ["4b166dbe-d99d-5091-abdd-95b83330ed3a", "98123fde-012f-5ff3-8b50-881449dac91a"],
+                "id": [
+                    "4b166dbe-d99d-5091-abdd-95b83330ed3a",
+                    "98123fde-012f-5ff3-8b50-881449dac91a",
+                ],
                 "content": ["this is a test", "this is a test"],
                 "metadata": [{"test": "test"}, {"test": "test"}],
                 "embeddings": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]],
@@ -121,7 +127,11 @@ class TestWeaviateHandler(BaseExecutorTest):
     def test_insert_into(self, postgres_handler_mock):
         df = pd.DataFrame(
             {
-                "id": ["6ed955c6-506a-5343-9be4-2c0afae02eef", "c8691da2-158a-5ed6-8537-0e6f140801f2", "a6c4fc8f-6950-51de-a9ae-2c519c465071"],
+                "id": [
+                    "6ed955c6-506a-5343-9be4-2c0afae02eef",
+                    "c8691da2-158a-5ed6-8537-0e6f140801f2",
+                    "a6c4fc8f-6950-51de-a9ae-2c519c465071",
+                ],
                 "content": ["this is a test", "this is a test", "this is a test"],
                 "metadata": [{"test": "test1"}, {"test": "test2"}, {"test": "test3"}],
                 "embeddings": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0], [1.0, 2.0, 3.0]],
@@ -129,7 +139,11 @@ class TestWeaviateHandler(BaseExecutorTest):
         )
         df2 = pd.DataFrame(
             {
-                "id": ["a9f96b98-dd44-5216-ab0d-dbfc6b262edf", "e99caacd-6c45-5906-bd9f-b79e62f25963", "e4d80b30-151e-51b5-9f4f-18a3b82718e6"],
+                "id": [
+                    "a9f96b98-dd44-5216-ab0d-dbfc6b262edf",
+                    "e99caacd-6c45-5906-bd9f-b79e62f25963",
+                    "e4d80b30-151e-51b5-9f4f-18a3b82718e6",
+                ],
                 "content": ["this is a test", "this is a test", "this is a test"],
                 "metadata": [{"test": "test1"}, {"test": "test2"}, {"test": "test3"}],
                 "embeddings": [
@@ -264,7 +278,10 @@ class TestWeaviateHandler(BaseExecutorTest):
     def test_select_from(self, postgres_handler_mock):
         df = pd.DataFrame(
             {
-                "id": ["7fef88f7-411d-5669-b42d-bf5fc7f9b58b", "52524d6e-10dc-5261-aa36-8b2efcbaa5f0"],
+                "id": [
+                    "7fef88f7-411d-5669-b42d-bf5fc7f9b58b",
+                    "52524d6e-10dc-5261-aa36-8b2efcbaa5f0",
+                ],
                 "content": ["this is a test", "this is a test"],
                 "metadata": [{"test": "test"}, {"test": "test"}],
                 "embeddings": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]],
@@ -416,7 +433,10 @@ class TestWeaviateHandler(BaseExecutorTest):
     def test_delete(self, postgres_handler_mock):
         df = pd.DataFrame(
             {
-                "id": ["91c274f2-9a0d-5ce6-ac3d-7529f452df21", "0ff1e264-520d-543a-87dd-181a491e667e"],
+                "id": [
+                    "91c274f2-9a0d-5ce6-ac3d-7529f452df21",
+                    "0ff1e264-520d-543a-87dd-181a491e667e",
+                ],
                 "content": ["this is a test", "this is a test"],
                 "metadata": [{"test": "test1"}, {"test": "test2"}],
                 "embeddings": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]],

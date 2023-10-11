@@ -2,18 +2,14 @@ from collections import OrderedDict
 from typing import List, Optional
 
 import pandas as pd
-from pymilvus import (Collection, CollectionSchema, DataType, FieldSchema,
-                      connections, utility)
+from pymilvus import Collection, CollectionSchema, DataType, FieldSchema, connections, utility
 
-from mindsdb.integrations.libs.const import \
-    HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse
 from mindsdb.integrations.libs.response import HandlerResponse as Response
-from mindsdb.integrations.libs.response import \
-    HandlerStatusResponse as StatusResponse
-from mindsdb.integrations.libs.vectordatabase_handler import (
-    FilterCondition, FilterOperator, TableField, VectorStoreHandler)
+from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
+from mindsdb.integrations.libs.vectordatabase_handler import FilterCondition, FilterOperator, TableField, VectorStoreHandler
 from mindsdb.utilities import log
 
 
@@ -317,13 +313,11 @@ class MilvusHandler(VectorStoreHandler):
                 error_message=f"Unable to fetch collection `{table_name}`: {e}"
             )
         try:
-            print(f"DATA: {data}")
             data = data[columns]
             if TableField.METADATA.value in data.columns:
                 rows = data[TableField.METADATA.value].to_list()
                 data = pd.concat([data, pd.DataFrame.from_records(rows)], axis=1)
                 data.drop(TableField.METADATA.value, axis=1, inplace=True)
-            print(f"DTYPES: {data.dtypes}")
             collection.insert(data.to_dict(orient="records"))
         except Exception as e:
             return Response(

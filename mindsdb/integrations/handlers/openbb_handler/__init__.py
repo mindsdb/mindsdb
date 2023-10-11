@@ -1,19 +1,19 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
+from .__about__ import __version__ as version, __description__ as description
+
 try:
-    from .datastax_handler import DatastaxHandler as Handler, connection_args
+    from .openbb_handler import OpenBBHandler as Handler
 
     import_error = None
 except Exception as e:
     Handler = None
     import_error = e
-from .__about__ import __version__ as version, __description__ as description
 
-
-title = "Datastax Astra DB"
-name = "astra"
+title = "OpenBB"
+name = "openbb"
 type = HANDLER_TYPE.DATA
-icon_path = "logo.png"
+icon_path = "icon.svg"
 
 __all__ = [
     "Handler",
@@ -22,7 +22,6 @@ __all__ = [
     "type",
     "title",
     "description",
-    "connection_args",
     "import_error",
     "icon_path",
 ]

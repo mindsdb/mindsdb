@@ -146,7 +146,9 @@ class StatsForecastHandler(BaseMLEngine):
 
         sf = StatsForecast(models=[], freq=model_args["frequency"], df=training_df)
         sf.fitted_ = fitted_models
+        model_name = str(fitted_models[0][0])
         forecast_df = sf.predict(model_args["horizon"])
+        forecast_df.index = forecast_df.index.astype(str)
 
         if model_args["hierarchy"]:
             hier_df = dill.loads(self.model_storage.file_get("hier_df"))
@@ -158,6 +160,7 @@ class StatsForecastHandler(BaseMLEngine):
             results_df = forecast_df[forecast_df.index.isin(groups_to_keep)]
 
         result = get_results_from_nixtla_df(results_df, model_args)
+        result = result.rename(columns={model_name: model_args['target']})
         return result
 
     def describe(self, attribute=None):

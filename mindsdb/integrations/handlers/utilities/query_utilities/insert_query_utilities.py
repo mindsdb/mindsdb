@@ -19,8 +19,7 @@ class INSERTQueryParser(BaseQueryParser):
     all_mandatory : Optional[Any], Optional (default=True)
         Whether all mandatory columns must be present in the query. If False, only one of the mandatory columns must be present.
     """
-    def __init__(self, query: ast.Insert, supported_columns: Optional[List[Text]] = None, mandatory_columns: Optional[List[Text]] = None, all_mandatory: Optional[Any] = True,
-                 df: pd.DataFrame=None):
+    def __init__(self, query: ast.Insert, supported_columns: Optional[List[Text]] = None, mandatory_columns: Optional[List[Text]] = None, all_mandatory: Optional[Any] = True):
         super().__init__(query)
         self.supported_columns = supported_columns
         self.mandatory_columns = mandatory_columns

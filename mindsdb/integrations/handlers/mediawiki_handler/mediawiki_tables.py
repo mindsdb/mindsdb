@@ -46,7 +46,19 @@ class PagesTable(APITable):
         )
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        title, page_id = self.validate_where_conditions(where_conditions);
+        title, page_id = None, None
+        for condition in where_conditions:
+            if condition[1] == 'title':
+                if condition[0] != '=':
+                    raise ValueError(f"Unsupported operator '{condition[0]}' for column '{condition[1]}' in WHERE clause.")
+                title = condition[2]
+            elif condition[1] == 'pageid':
+                if condition[0] != '=':
+                    raise ValueError(f"Unsupported operator '{condition[0]}' for column '{condition[1]}' in WHERE clause.")
+                page_id = condition[2]
+            else:
+                raise ValueError(f"Unsupported column '{condition[1]}' in WHERE clause.")
+
         pages_df = pd.json_normalize(self.get_pages(title=title, page_id=page_id, limit=result_limit))
 
         select_statement_executor = SELECTQueryExecutor(
@@ -59,28 +71,11 @@ class PagesTable(APITable):
 
         return pages_df
 
-    def validate_where_conditions(self, conditions):
-        title, page_id = None, None
-        for condition in conditions:
-            if condition[1] == 'title':
-                if condition[0] != '=':
-                    raise ValueError(f"Unsupported operator '{condition[0]}' for column '{condition[1]}' in WHERE clause.")
-                title = condition[2]
-            elif condition[1] == 'pageid':
-                if condition[0] != '=':
-                    raise ValueError(f"Unsupported operator '{condition[0]}' for column '{condition[1]}' in WHERE clause.")
-                page_id = condition[2]
-            else:
-                raise ValueError(f"Unsupported column '{condition[1]}' in WHERE clause.")
-
-        return title, page_id
-
     def insert(self, query: ast.Insert) -> None:
         """
-        Updates MediaWiki pages data based on the provided SQL INSERT query.
+        Creates MediaWiki pages data based on the provided SQL INSERT query.
 
-        This method parses the given query, validates the WHERE conditions, fetches the relevant pages,
-        and applies the updates.
+        This method parses the given query and creates the updates.
 
         Parameters
         ----------

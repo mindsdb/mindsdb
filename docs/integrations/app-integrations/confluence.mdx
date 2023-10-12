@@ -1,0 +1,58 @@
+---
+title: Confluence
+sidebarTitle: Confluence
+---
+
+In this section, we present how to connect Confluence to MindsDB.
+
+[Confluence](https://www.atlassian.com/software/confluence) is a popular collaboration and documentation tool developed by Atlassian, a software company known for its suite of productivity and project management software. Confluence is designed to help teams and organizations collaborate, share information, and create and manage various types of content.
+
+Data from Confluence can be utilized within MindsDB to train AI models and make predictions.
+
+## Connection
+
+This handler is implemented using `atlassian-python-api`, a library that provides a simple and convenient way to interact with Atlassian products.
+
+The required arguments to establish a connection are as follows:
+
+* `url` is a Confluence-hosted URL instance.
+* `confluence_api_token` is a token used to authenticate.
+
+<Tip>
+Please follow [this link](https://docs.searchunify.com/Content/Content-Sources/Atlassian-Jira-Confluence-Authentication-Create-API-Token.htm) to generate the token for accessing the Confluence API.
+</Tip>
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/confluence_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+In order to make use of this handler and connect the Confluence app to MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE mindsdb_confluence
+WITH
+    ENGINE = 'confluence',
+    PARAMETERS = {
+    "url": "your_confluence_url",
+    "username": "your_username",
+    "password":"access_token"
+    };
+```
+
+It creates a database that comes with the `pages` table.
+
+## Usage
+
+Now you can query your data, like this:
+
+```sql
+SELECT id, key, name, type
+FROM mindsdb_confluence.pages
+WHERE type = "personal"
+ORDER BY id ASC, name DESC
+LIMIT 10;
+```
+
+<Info>
+For more information about available actions and development plans, visit [this page](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/confluence_handler/README.md).
+</Info>

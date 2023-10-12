@@ -1,0 +1,50 @@
+---
+title: List Models
+sidebarTitle: List Models
+---
+
+## Description
+
+The `db.predictors.find()` function lists all models.
+
+## Syntax
+
+We can list all the available predictors using the `db.predictors.find()` method.
+
+```sql
+db.predictors.find({});
+```
+
+On execution, we get:
+
+```json
+{
+    "name": "home_rentals_model",
+    "status": "complete",
+    "accuracy": "1.0",
+    "predict": "rental_price",
+    "update_status": "up_to_date",
+    "mindsdb_version": "22.8.3.1",
+    "error": null,
+    "select_data_query": "",
+    "training_options": ""
+},
+{
+    "name": "other_model",
+    "status": "complete",
+    "accuracy": "1.0",
+    "predict": "value_to_be_predicted",
+    "update_status": "up_to_date",
+    "mindsdb_version": "22.8.3.1",
+    "error": null,
+    "select_data_query": "",
+    "training_options": ""
+}
+```
+
+Alternatively, you can query the `models` and `models_versions` tables.
+
+```sql
+> db.models.find()
+> db.models_versions.find()
+```

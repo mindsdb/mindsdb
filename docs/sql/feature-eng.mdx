@@ -315,9 +315,7 @@ Finally, let's check the predictor status whose value is `generating` at first, 
   <Tab title="Using the Base Table">
 
     ```sql
-    SELECT *
-    FROM mindsdb.models
-    WHERE name='price_predictor';
+    DESCRIBE price_predictor;
     ```
 
     On execution, we get:
@@ -333,9 +331,7 @@ Finally, let's check the predictor status whose value is `generating` at first, 
   <Tab title="Using the Base Table + 2 More Columns">
 
     ```sql
-    SELECT *
-    FROM mindsdb.models
-    WHERE name='price_predictor_plus_2_columns';
+    DESCRIBE price_predictor_plus_2_columns;
     ```
 
     On execution, we get:
@@ -351,9 +347,7 @@ Finally, let's check the predictor status whose value is `generating` at first, 
   <Tab title="Using the Base Table + 4 More Columns">
 
     ```sql
-    SELECT *
-    FROM mindsdb.models
-    WHERE name='price_predictor_plus_another_2_columns';
+    DESCRIBE price_predictor_plus_another_2_columns;
     ```
 
     On execution, we get:
@@ -592,9 +586,7 @@ Next, we check the status of both predictors.
 We start with the predictor based on the partial table.
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name='price_predictor_car_sales';
+DESCRIBE price_predictor_car_sales;
 ```
 
 On execution, we get:
@@ -610,9 +602,7 @@ On execution, we get:
 And now, for the predictor based on the full table.
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name='price_predictor_car_sales_info';
+DESCRIBE price_predictor_car_sales_info;
 ```
 
 On execution, we get:

@@ -1,0 +1,12 @@
+---
+title: List Data Handlers
+sidebarTitle: List Data Handlers
+---
+
+Here is how you can fetch all available data handlers directly from JavaScript code:
+
+```
+const query = 'SHOW HANDLERS WHERE type = \‘data\'’;
+result = await MindsDB.SQL.runQuery(query);
+console.log(result);
+```

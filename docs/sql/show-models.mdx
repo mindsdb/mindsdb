@@ -1,0 +1,23 @@
+---
+title: List Models
+sidebarTitle: List Models
+---
+
+## Description
+
+The `SHOW MODELS` statement lists all models created in MindsDB.
+
+## Syntax
+
+Here is how to list all models:
+
+```sql
+SHOW MODELS;
+```
+
+Alternatively, you can query the `models` and `models_versions` tables.
+
+```sql
+SELECT * FROM project_name.models;
+SELECT * FROM project_name.models_versions;
+```

@@ -1,0 +1,109 @@
+---
+title: MindsDB and MonkeyLearn
+sidebarTitle: MonkeyLearn
+---
+
+MonkeyLearn is a No-code text analysis tool. MindsDB allows you to use pre-built & custom MonkeyLearn models to use its features like classifying text according to user needs and fields of interest like business, reviews, comments, and customer feedback.
+
+## How to bring MonkeyLearn Models to MindsDB
+
+Before creating a model, you will need to create the ML_ENGINE for MonkeyLearn using the `CREATE ML_ENGINE` syntax
+
+```sql
+Create ML_ENGINE monkeylearn
+FROM monkeylearn
+```
+
+<p align="center">
+  <img src="/assets/tutorials/monkeylearn/1.create_ml.png" />
+</p>
+
+
+Once the ML_ENGINE is created, we use the `CREATE MODEL` statement to bring MonkeyLearn models to MindsDB.
+
+For this example, you will make use of MonkeyLearn's pre-made model `E-commerce Support Ticket Classifier`.
+
+```sql
+CREATE MODEL mindsdb.ecommerce_ticket_classifier
+PREDICT tag
+USING
+engine = 'monkeylearn',
+api_key = 'api_key',
+model_id = 'model_id',
+input_column = 'text';
+```
+
+On execution, you get:
+
+<p align="center">
+  <img src="/assets/tutorials/monkeylearn/createmodel1.png" />
+</p>
+
+Where:
+
+| Expression                             | Description                                              |
+|----------------------------------------|----------------------------------------------------------|
+| `ecommerce_ticket_classifier`          | The model name provided to the model created in MindsDB. |
+| `tag`     	                           | The column that will provide the predicted result.       | 
+| `engine`                               | The ML framework engine used, which is MonkeyLearn.      | 
+| `api_key`                              | The API Key of the model provided by MonkeyLearn.        | 
+| `model_id`                             | The respective model's ID you want to make use of.       | 
+| `input_column`                         | Specifies the input column fed to the model              | 
+
+
+You can use the `DESCRIBE` syntax to verify the model's status.
+
+```sql
+DESCRIBE ecommerce_ticket_classifier;
+```
+
+On execution, you get:
+
+<p align="center">
+  <img src="/assets/tutorials/monkeylearn/4.describe.png" />
+</p>
+
+Use the `SELECT` statement to make a prediction on the model.
+
+```sql
+SELECT * FROM ecommerce_ticket_classifier
+WHERE text = 'Where is my order? The delivery status shows shipped. When I call the delivery driver there is no response!';
+```
+
+On execution, you get:
+
+<p align="center">
+  <img src="/assets/tutorials/monkeylearn/5.select_prediction.png" />
+</p>
+
+### Create and train a model. 
+
+You can also create a model with a dataset. For this example, we will be using a dataset consisting of messages for E-commerce support tickets. The dataset will be [uploaded as a file](https://docs.mindsdb.com/sql/create/file)  onto the GUI.
+
+Use the `CREATE MODEL` syntax:
+
+```sql
+CREATE MODEL mindsdb.ecommerce_ticket_classifier2
+FROM files (select * from queries2)
+PREDICT tag
+USING
+engine = 'monkeylearn',
+api_key = 'api_key',
+model_id = 'model_id',
+input_column = 'text';
+```
+
+Use the `SELECT` statement to make a prediction
+
+```sql
+SELECT * FROM ecommerce_ticket_classifier2
+WHERE text = 'I ordered 4 units but only received 3';
+```
+
+On execution, you get:
+
+<p align="center">
+  <img src="/assets/tutorials/monkeylearn/10.select_prediction.png" />
+</p>
+
+The MindsDB model created with the MonkeyLearn model successfully predicted the tag of an E-commerce support ticket according to the text input.

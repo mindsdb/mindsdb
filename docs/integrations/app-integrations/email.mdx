@@ -1,0 +1,94 @@
+---
+title: Email
+sidebarTitle: Email
+---
+
+In this section, we present how to connect Email accounts to MindsDB.
+
+By connecting your email account to MindsDB, you can utilize various AI models available within MindsDB to summarize emails, detect spam, or even automate email replies.
+
+<Note>
+Please note that currently you can connect Gmail and Outlook accounts using this integration.
+</Note>
+
+## Connection
+
+This handler was implemented using standard Python libraries: `email`, `imaplib`, and `smtplib`.
+
+The Email handler is initialized with the following required parameters:
+
+* `email` stores an email address used for authentication.
+* `password` stores a password used for authentication.
+
+Additionally, the following optional parameters can be passed:
+
+* `smtp_server` used to send emails. Defaults to `smtp.gmail.com`.
+* `smtp_port` used to send emails. Defaults to `587`.
+* `imap_server` used to receive emails. Defaults to `imap.gmail.com`.
+
+<Tip>
+At the moment, the handler has been tested with Gmail and Outlook accounts.
+
+To use the handler on a Gmail account, you must create an app password following [this instruction](https://support.google.com/accounts/answer/185833?hl=en) and use its value for the `password` parameter.
+
+By default, the Email handler connects to Gmail. If you want to use other email providers as Outlook, add the values for `imap_server` and `smtp_server` parameters.
+</Tip>
+
+### Gmail
+
+To connect your Gmail account to MindsDB, use the below `CREATE DATABASE` statement:
+
+```sql
+CREATE DATABASE email_datasource
+WITH ENGINE = 'email',
+PARAMETERS = {
+  "email": "youremail@gmail.com",
+  "password": "yourpassword"
+};
+```
+
+It creates a database that comes with the `emails` table.
+
+### Outlook
+
+To connect your Outlook account to MindsDB, use the below `CREATE DATABASE` statement:
+
+```sql
+CREATE DATABASE email_datasource
+WITH ENGINE = 'email',
+PARAMETERS = {
+  "email": "youremail@gmail.com",
+  "password": "yourpassword",
+  "smtp_server": "smtp.office365.com", 
+  "smtp_port": "587", 
+  "imap_server": "outlook.office365.com" 
+};
+```
+
+It creates a database that comes with the `emails` table.
+
+## Usage
+
+Now you can query for emails like this:
+
+```sql
+SELECT *
+FROM email_datasource.emails;
+```
+
+And you can apply filters like this:
+
+```sql
+SELECT id, to, subject, body
+FROM email_datasource.emails
+WHERE subject = 'MindsDB'
+ORDER BY id
+LIMIT 5;
+```
+
+Or, write emails like this:
+
+```sql
+INSERT INTO email_datasource.emails(to, subject, body)
+VALUES ("toemail@outlook.com", "MindsDB", "Hello from MindsDB!");
+```

@@ -1,7 +1,7 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
 try:
-    from .mongodb_handler import MongoDBHandler as Handler
+    from .mongodb_handler import MongoDBHandler as Handler, connection_args_example, connection_args
     import_error = None
 except Exception as e:
     Handler = None
@@ -16,5 +16,5 @@ icon_path = 'icon.svg'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description',
-    'import_error', 'icon_path'
+    'connection_args', 'connection_args_example', 'import_error', 'icon_path'
 ]

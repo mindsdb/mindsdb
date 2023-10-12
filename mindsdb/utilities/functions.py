@@ -1,6 +1,9 @@
 import argparse
 import datetime
 from functools import wraps
+import hashlib
+import base64
+from cryptography.fernet import Fernet
 
 import requests
 from mindsdb_sql import get_lexer_parser
@@ -109,16 +112,16 @@ def resolve_model_identifier(name: Identifier) -> tuple:
 
         Examples:
             >>> resolve_model_identifier(['a', 'b'])
-            ('a', 'b', None, None)
+            ('a', 'b', None)
 
             >>> resolve_model_identifier(['a', '1'])
-            (None, 'a', 1, None)
+            (None, 'a', 1)
 
             >>> resolve_model_identifier(['a'])
-            (None, 'a', None, None)
+            (None, 'a', None)
 
             >>> resolve_model_identifier(['a', 'b', 'c'])
-            ('a', 'b', None, 'c')
+            (None, None, None)  # not found
 
         Args:
             name (list): Identifier parts
@@ -130,7 +133,6 @@ def resolve_model_identifier(name: Identifier) -> tuple:
     database_name = None
     model_name = None
     model_version = None
-    describe = None
     parts_count = len(name)
     if parts_count == 1:
         database_name = None
@@ -151,5 +153,25 @@ def resolve_model_identifier(name: Identifier) -> tuple:
         if name[2].isdigit():
             model_version = int(name[2])
         else:
-            describe = name[2]
-    return (database_name, model_name, model_version, describe)
+            # not found
+            return None, None, None
+
+    return database_name, model_name, model_version
+
+
+def encrypt(string: bytes, key: str) -> bytes:
+    hashed_string = hashlib.sha256(key.encode()).digest()
+
+    fernet_key = base64.urlsafe_b64encode(hashed_string)
+
+    cipher = Fernet(fernet_key)
+    return cipher.encrypt(string)
+
+
+def decrypt(encripted: bytes, key: str) -> bytes:
+    hashed_string = hashlib.sha256(key.encode()).digest()
+
+    fernet_key = base64.urlsafe_b64encode(hashed_string)
+
+    cipher = Fernet(fernet_key)
+    return cipher.decrypt(encripted)

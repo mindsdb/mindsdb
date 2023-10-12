@@ -28,9 +28,9 @@ def upgrade():
     with op.batch_alter_table('integration', schema=None) as batch_op:
         batch_op.add_column(sa.Column('engine', sa.String()))
 
-    integrations = conn.execute('''
+    integrations = conn.execute(text('''
         select id, name, data from integration
-    ''').fetchall()
+    ''')).fetchall()
 
     for row in integrations:
         try:
@@ -77,9 +77,9 @@ def downgrade():
     conn = op.get_bind()
     session = sa.orm.Session(bind=conn)
 
-    integrations = conn.execute('''
+    integrations = conn.execute(sa.text('''
         select id, name, type, data from integration
-    ''').fetchall()
+    ''')).fetchall()
 
     for row in integrations:
         try:

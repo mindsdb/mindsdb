@@ -8,7 +8,9 @@ On start-up, MindsDB consists of one system database (`information_schema`), one
 You can verify it by running the following SQL commands:
 
 ```sql
-SHOW [FULL] DATABASES;
+SHOW DATABASES;
+
+SHOW FULL DATABASES;
 ```
 
 On execution, we get:
@@ -26,7 +28,9 @@ On execution, we get:
 And:
 
 ```sql
-SHOW [FULL] TABLES;
+SHOW TABLES;
+
+SHOW FULL TABLES;
 ```
 
 On execution, we get:
@@ -55,67 +59,79 @@ Don't forget to replace *table_name* with the table of your interest.
 
 Let's query for the following:
 
-* The `databases` table lists all the databases including their name, type, and engine.
+* All the available handlers, including data and ML handlers, used to create database connections and AI engines.
+
+  ```sql
+  SELECT *
+  FROM information_schema.handlers;
+  ```
+
+  Or, alternatively:
+
+  ```sql
+  SHOW HANDLERS;
+  ```
+
+* All the available data handlers used to create database connections.
+
+  ```sql
+  SELECT *
+  FROM information_schema.handlers
+  WHERE type = 'data';
+  ```
+
+  Or, alternatively:
+
+  ```sql
+  SHOW HANDLERS
+  WHERE type = 'data';
+  ```
+
+* All the available ML handlers used to create AI engines.
+
+  ```sql
+  SELECT *
+  FROM information_schema.handlers
+  WHERE type = 'ml';
+  ```
+
+  Or, alternatively:
+
+  ```sql
+  SHOW HANDLERS
+  WHERE type = 'ml';
+  ```
+
+* All the created database connections:
 
   ```sql
   SELECT *
   FROM information_schema.databases;
   ```
 
-  On execution, we get:
+  Or, alternatively:
 
   ```sql
-  +------------------+-------+--------+
-  |NAME              |TYPE   |ENGINE  |
-  +------------------+-------+--------+
-  |information_schema|system |[NULL]  |
-  |mindsdb           |project|[NULL]  |
-  |my_new_project    |project|[NULL]  |
-  |files             |data   |files   |
-  +------------------+-------+--------+
+  SHOW DATABASES;
+
+  SHOW FULL DATABASES;
   ```
 
-* The `handlers` table lists all the available ML handlers.
+  <Info>
+  Please note that if you modify the connection arguments in the handler's code, the changes are visible in this table.
+  </Info>
 
-  ```sql
-  SELECT *
-  FROM information_schema.handlers;
-  -- or
-  SHOW HANDLERS;
-  ```
-
-  On execution, we get:
-
-  ```sql
-  +------------------+------------+---------------------------------+-------+------------------------------------------------------------------------------+----------------+----------------------+------+
-  |NAME              |TITLE       |DESCRIPTION                      |VERSION|CONNECTION_ARGS                                                               |IMPORT_SUCCESS  |IMPORT_ERROR          |FIELD8|
-  +------------------+------------+---------------------------------+-------+------------------------------------------------------------------------------+----------------+----------------------+------+
-  |merlion           |Merlion     |MindsDB handler for Merlion      |0.0.1  |[NULL]                                                                        |true            |[NULL]                |      |
-  |byom              |BYOM        |MindsDB handler for BYOM         |0.0.1  |{'model_code': {'type': 'path', 'description': 'The path name to model code'}}|true            |[NULL]                |      |
-  |ludwig            |Ludwig      |MindsDB handler for Ludwig AutoML|0.0.2  |[NULL]                                                                        |false           |No module named 'dask'|      |
-  |lightwood         |Lightwood   |[NULL]                           |1.0.0  |[NULL]                                                                        |true            |[NULL]                |      |
-  |huggingface       |Hugging Face|MindsDB handler for Higging Face |0.0.1  |[NULL]                                                                        |true            |[NULL]                |      |
-  +------------------+------------+---------------------------------+-------+------------------------------------------------------------------------------+----------------+----------------------+------+
-  ```
-
-* The `ml_engines` table lists all the ML engines. These are the instantiated ML handlers. Check out our [docs on the `CREATE ML _ENGINE` command](/sql/create/ml_engine/) to learn more.
+* All the created AI engines:
 
   ```sql
   SELECT *
   FROM information_schema.ml_engines;
-  -- or
-  SHOW ML_ENGINES;
   ```
 
-  On execution, we get:
+  Or, alternatively:
 
   ```sql
-  +------------------+-----------+----------------+
-  |NAME              |HANDLER    |CONNECTION_DATA |
-  +------------------+-----------+----------------+
-  |huggingface       |huggingface|{'password': ''}|
-  |lightwood         |lightwood  |{'password': ''}|
-  +------------------+-----------+----------------+
+  SHOW ML_ENGINES;
   ```
 
 ## The `mindsdb` Project

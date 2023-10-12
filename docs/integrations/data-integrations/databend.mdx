@@ -1,0 +1,50 @@
+---
+title: Databend
+sidebarTitle: Databend
+---
+
+This is the implementation of the Databend data handler for MindsDB.
+
+[Databend](https://databend.rs/) is a modern cloud data warehouse that empowers your object storage for real-time analytics.
+
+## Implementation
+
+This handler is implemented by extending the ClickHouse handler.
+
+The required arguments to establish a connection are as follows:
+
+* `protocol` is the protocol to query Databend. Supported values include `native`, `http`, `https`. It defaults to `native` if not provided.
+* `host` is the host name or IP address of the Databend warehouse.
+* `port` is the TCP/IP port of the Databend warehouse.
+* `user` is the username used to authenticate with the Databend warehouse.
+* `password` is the password to authenticate the user with the Databend warehouse.
+* `database` is the database name to use when connecting with the Databend warehouse.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/databend_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the Databend database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE databend_datasource
+WITH
+    engine = 'databend',
+    parameters = {
+        "protocol": "https",
+        "user": "root",
+        "port": 443,
+        "password": "password",
+        "host": "some-url.aws-us-east-2.default.databend.com",
+        "database": "test_db"
+    };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM databend_datasource.example_tbl;
+```

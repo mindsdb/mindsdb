@@ -1,0 +1,50 @@
+---
+title: MonetDB
+sidebarTitle: MonetDB
+---
+
+This is the implementation of the MonetDB data handler for MindsDB.
+
+[MonetDB](https://www.monetdb.org/) is an open-source column-oriented relational database management system originally developed at the Centrum Wiskunde & Informatica in the Netherlands. It is designed to provide high performance on complex queries against large databases, such as combining tables with hundreds of columns and millions of rows.
+
+## Implementation
+
+This handler is implemented using `pymonetdb`, a Python library that allows you to use Python code to run SQL commands on the MonetDB database.
+
+The required arguments to establish a connection are as follows:
+
+* `user` is the username associated with the database.
+* `password` is the password to authenticate your access.
+* `host` is the host name or IP address.
+* `port` is the port through which TCP/IP connection is to be made.
+* `database` is the database name to be connected.
+* `schema_name` is the schema name to get tables. It is optional and defaults to the current schema if not provided.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/monetdb_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the MonetDB database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE monetdb_datasource
+WITH
+    engine = 'monetdb',
+    parameters = {
+        "user": "monetdb",
+        "password": "monetdb",
+        "host": "127.0.0.1",
+        "port": 50000,
+        "schema_name": "sys",
+        "database": "demo"
+    };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM monetdb_datasource.demo;
+```

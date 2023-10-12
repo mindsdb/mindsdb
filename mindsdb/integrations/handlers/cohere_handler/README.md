@@ -27,7 +27,7 @@ USING
 ~~~~
 
 ### Detect_language 
-
+Create a model:
 ~~~~sql
 CREATE MODEL mindsdb.cohere_language_detector
 PREDICT language
@@ -36,7 +36,9 @@ USING
   column = 'text',
   engine = 'cohere',
   api_key = 'your_api_key'
-
+~~~~
+Query the model:
+~~~~sql
 SELECT text, language
 FROM mindsdb.cohere_language_detector
 WHERE text = 'Здравствуй, Мир';

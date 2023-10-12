@@ -1,50 +1,51 @@
 ---
-title: ML Models in MindsDB
+title: Models
+sidebarTitle: Models
 ---
 
-In this section, we go through the ML model types available in MindsDB. These are regression models, classification models, and time series models.
+In this section, we go through the AI models types available in MindsDB. These are regression models, classification models, time series models, and large language models (LLMs).
 
 <Note>
 **Disclaimer**
 
-In this section, we describe the default behavior using the Lightwood ML engine. Other ML handlers may behave differently. For example, some may not perform validation automatically when creating a model, as numerous behaviors are handler-specific.
+In this section, we describe the default behavior using the Lightwood ML engine for regression, classification, and time series models. Other ML handlers may behave differently. For example, some may not perform validation automatically when creating a model, as numerous behaviors are handler-specific.
 </Note>
 
-## What is an ML Model?
+## What is an AI models?
 
-A machine learning (ML) model is a program trained using the available data in order to learn how to recognize patterns and behaviors to predict future data. There are various types of ML models that use different learning paradigms, but MindsDB models are all *supervised* because they learn from pairs of input data and expected output.
+A machine learning (ML) model is a program trained using the available data in order to learn how to recognize patterns and behaviors to predict future data. There are various types of AI models that use different learning paradigms, but MindsDB models are all *supervised* because they learn from pairs of input data and expected output.
 
-You input data into an ML model. It processes this input data, searching for patterns and correlations. After that, the ML model returns output data defined based on the input data.
+You input data into an AI models. It processes this input data, searching for patterns and correlations. After that, the AI models returns output data defined based on the input data.
 
 ### Features
 
-Features are variables that an ML model uses as input data to search for patterns and predict the target variable. In tabular datasets, features usually correspond to single columns.
+Features are variables that an AI models uses as input data to search for patterns and predict the target variable. In tabular datasets, features usually correspond to single columns.
 
 ### Target
 
-The target is a variable of interest that an ML model predicts based on the information fetched out of the features.
+The target is a variable of interest that an AI models predicts based on the information fetched out of the features.
 
 ### Training Dataset
 
-The training dataset is used during the training phase of an ML model. It contains both feature variables and a target variable. As its name indicates, it is used to train an ML model.
+The training dataset is used during the training phase of an AI models. It contains both feature variables and a target variable. As its name indicates, it is used to train an AI model.
 
-The ML model takes the entire training dataset as input. It learns the patterns and relationships between feature variables and target values.
+The AI model takes the entire training dataset as input. It learns the patterns and relationships between feature variables and target values.
 
 Once the training process is complete, one can move on to the validation phase.
 
 ### Validation Dataset
 
-The validation dataset is used during the validation phase of an ML model. It contains both feature variables and a target variable, like the training dataset. But as its name indicates, it is used to validate the predictions made by an ML model. It has no overlap with the training dataset, as it is a *held-out* set to simulate a real scenario where the model generates predictions for novel input data.
+The validation dataset is used during the validation phase of an AI models. It contains both feature variables and a target variable, like the training dataset. But as its name indicates, it is used to validate the predictions made by an AI models. It has no overlap with the training dataset, as it is a *held-out* set to simulate a real scenario where the model generates predictions for novel input data.
 
-The ML model takes only the feature variables from the validation dataset as input. Based on what the model learns during the training process, it makes predictions for the values of a target variable.
+The AI models takes only the feature variables from the validation dataset as input. Based on what the model learns during the training process, it makes predictions for the values of a target variable.
 
-Now comes the validation step. To assess the accuracy of the ML model, one compares the target variable values from the validation dataset with the target variable values predicted by the ML model. The closer these values are to each other, the better accuracy of the ML model.
+Now comes the validation step. To assess the accuracy of the AI models, one compares the target variable values from the validation dataset with the target variable values predicted by the AI models. The closer these values are to each other, the better accuracy of the AI models.
 
 ### Input Dataset
 
 After completing the training and validation phases, one can provide the input dataset consisting of only the feature variables to predict the target variable values.
 
-## How is an ML Model Created?
+## How is an AI Model Created?
 
 In MindsDB, we use the [CREATE MODEL](/sql/create/model/) statement to create, train, and validate a model.
 
@@ -76,7 +77,7 @@ Here, the features are `companyId`, `jobType`, `degree`, `major`, `industry`, `y
 
 And the target variable is `salary`.
 
-Let's create and train an ML model using this training dataset.
+Let's create and train an AI models using this training dataset.
 
 ```sql
 CREATE MODEL salary_predictor
@@ -129,7 +130,7 @@ On execution, we get:
 +------+------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
-By comparing the real salary values for the defined individuals and the predicted salary values, one can figure out the accuracy of the ML model.
+By comparing the real salary values for the defined individuals and the predicted salary values, one can figure out the accuracy of the AI models.
 
 <Note>
 Please note that MindsDB calculates the model's accuracy by default while running the `CREATE MODEL` statement. However, it is not guaranteed that all ML engines do this.
@@ -143,9 +144,9 @@ By default, the `CREATE MODEL` statement does the following:
 - it compares the true and predicted values of a target to define the model's accuracy.
 </Note>
 
-Let's look at the basic types of ML models.
+Let's look at the basic types of AI models.
 
-## ML Model Types
+## AI Model Types
 
 ### Regression Models
 
@@ -181,7 +182,7 @@ Here, the features are `number_of_rooms`, `number_of_bathrooms`, `sqft`, `locati
 
 And the target variable is `rental_price`.
 
-Let's create and train an ML model.
+Let's create and train an AI models.
 
 ```sql
 CREATE MODEL mindsdb.home_rentals_model
@@ -253,7 +254,7 @@ Here, the features are `customerid`, `gender`, `seniorcitizen`, `partner`, `depe
 
 And the target variable is `churn`.
 
-Let's create and train an ML model.
+Let's create and train an AI models.
 
 ```sql
 CREATE MODEL churn_predictor
@@ -336,7 +337,7 @@ Here, the features are `saledate`, `type`, and `bedrooms`.
 
 And the target variable is `ma`.
 
-Let's create and train an ML model.
+Let's create and train an AI models.
 
 ```sql
 CREATE MODEL mindsdb.house_sales_predictor
@@ -383,6 +384,20 @@ On execution, we get:
 
 For details, check out [this tutorial](/sql/tutorials/house-sales-forecasting/).
 
+### Large Language Models
+
+Large language models are advanced artificial intelligence systems designed to process and generate human-like language. These models leverage deep learning techniques, such as transformer architectures, to analyze vast amounts of text data and learn complex patterns and relationships within the language.
+
+Large language models have applications in chatbots, content generation, language translation, sentiment analysis, and various natural language processing tasks.
+
+#### Example
+
+Check out examples here:
+
+- [Slack chatbot](/sql/tutorials/slack-chatbot)
+- [Sentiment analysis](/nlp/sentiment-analysis-inside-mysql-with-openai)
+- [NLP examples](/nlp/nlp-extended-examples)
+
 ## How it Works in the Background
 
 MindsDB uses the Lightwood ML engine by default. This section takes a closer look at how this package automatically chooses what type of model to use.
@@ -395,7 +410,7 @@ To give you some details on how MindsDB creates a model using different mixers, 
 
 And here comes the breakdown:
 - This [piece of code](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L238,L351) adds mixers to the `submodels` array depending on the model type and the data type of the target variable.
-- And [here](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L353,L358), we choose the best of submodels to be used to create, train, and validate our ML model.
+- And [here](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L353,L358), we choose the best of submodels to be used to create, train, and validate our AI models.
 
 Let's dive into the details of how MindsDB picks the mixers.
 
@@ -450,7 +465,7 @@ A good example is the [Home Rentals model](/sql/tutorials/home-rentals#training-
 <br></br>
 
 <Note>
-MindsDB may use one or multiple mixers while preparing a model. Depending on the model type and the data type of the target variable, one mixer is chosen or a set of mixers are ensembled to create, train, and validate an ML model.
+MindsDB may use one or multiple mixers while preparing a model. Depending on the model type and the data type of the target variable, one mixer is chosen or a set of mixers are ensembled to create, train, and validate an AI models.
 </Note>
 
 The three cases above describe how MindsDB chooses the mixer candidates and stores them in the `submodels` array.
@@ -460,16 +475,25 @@ By default, after training all relevant mixers in the `submodels` array, MindsDB
 But you can always use a different ensemble that may aggregate multiple mixers per model, such as the [MeanEnsemble](https://lightwood.io/ensemble.html#ensemble.MeanEnsemble), [ModeEnsemble](https://lightwood.io/ensemble.html#ensemble.ModeEnsemble), [StackedEnsemble](https://lightwood.io/ensemble.html#ensemble.StackedEnsemble), [TsStackedEnsemble](https://lightwood.io/ensemble.html#ensemble.TsStackedEnsemble), or [WeightedMeanEnsemble](https://lightwood.io/ensemble.html#ensemble.WeightedMeanEnsemble) ensemble type.
 [Here](https://github.com/mindsdb/lightwood/tree/staging/lightwood/ensemble), you'll find implementations of all ensemble types.
 
-## What's Next?
+<Info>
+**Next Steps**
 
-Have fun while trying out different ML models yourself!
+Below are the links to help you explore further.
 
-- Bookmark [MindsDB repository on GitHub](https://github.com/mindsdb/mindsdb).
-- Sign up for a free [MindsDB account](https://cloud.mindsdb.com/register).
-- Engage with the MindsDB community on
-  [Slack](https://mindsdb.com/joincommunity) or
-  [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions and
-  share your ideas and thoughts.
+<CardGroup cols={3}>
 
-If this material was helpful, please give us a GitHub star
-[here](https://github.com/mindsdb/mindsdb).
+    <Card title="CREATE MODEL" icon="link" href="/sql/create/model">CUstom SQL syntax.</Card>
+    <Card title="db.predictors.insertOne()" icon="link" href="/mongo/models/insertOne">Custom Mongo-QL syntax.</Card>
+    <Card title="project.create_model()" icon="link" href="/sdk_python/create_model">Directly in Python.</Card>
+    
+
+</CardGroup>
+
+<CardGroup cols={3}>
+
+    <Card title="MindsDB.Models.trainModel()" icon="link" href="/sdk_javascript/create_model">Directly in JavaScript.</Card>
+    <Card title="Train a Model" icon="link" href="/rest/models/train-model">Using REST APIs.</Card>
+
+</CardGroup>
+
+</Info>

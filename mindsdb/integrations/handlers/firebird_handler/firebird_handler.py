@@ -5,6 +5,7 @@ import pandas as pd
 import fdb
 
 from mindsdb_sql import parse_sql
+from sqlalchemy_firebird.base import FBDialect
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base import DatabaseHandler
 
@@ -153,7 +154,7 @@ class FirebirdHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        renderer = SqlalchemyRender('firebird')
+        renderer = SqlalchemyRender(FBDialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 

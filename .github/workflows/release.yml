@@ -13,7 +13,7 @@ jobs:
    #TODO: in the future migrate to https://github.com/hashicorp/packer-github-actions, when we can send config as an url
       runs-on: ubuntu-latest
       steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.5.3
       - name: Deploy AMI's
         env:
           ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
@@ -36,9 +36,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: build_amis_packer
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3.5.3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4.7.0
       with:
         python-version: '3.7'
     - name: Create version files
@@ -62,7 +62,7 @@ jobs:
       runs-on: ubuntu-latest
       needs: create_version_file
       steps:
-        - uses: actions/checkout@v2
+        - uses: actions/checkout@v3.5.3
         - name: Docker Login
           uses: docker/login-action@v1
           with:

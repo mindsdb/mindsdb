@@ -1,0 +1,32 @@
+---
+title: Manage Model Versions
+sidebarTitle: Manage Model Versions
+---
+
+Below are the functions that let you work with multiple version of a model.
+
+Use the `list_versions()` method to view all available version of a model:
+
+```bash
+model_name.list_versions()
+```
+
+Use the `get_version()` method to use a specific version of a model:
+
+```bash
+model_name.get_version(9)
+```
+
+Use the `set_active()` method to set a specific version of a model as active:
+
+```bash
+model_name.set_active(9)
+```
+
+Use the `drop_model_version()` method to remove a specific version of a model:
+
+```bash
+project.drop_model_version('my_model', 3)
+```
+
+Please note that the model version should be deactivated before it is removed.

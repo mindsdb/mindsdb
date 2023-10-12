@@ -27,9 +27,9 @@ def upgrade():
 
     conn = op.get_bind()
     session = sa.orm.Session(bind=conn)
-    predictors = conn.execute('''
+    predictors = conn.execute(text('''
         select id, data, update_status, json_ai, code from predictor
-    ''').fetchall()
+    ''')).fetchall()
 
     for row in predictors:
         try:

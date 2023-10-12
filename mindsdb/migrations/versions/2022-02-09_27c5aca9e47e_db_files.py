@@ -60,7 +60,7 @@ def upgrade():
         batch_op.add_column(sa.Column('ds_class', sa.String(), nullable=True))
 
     session = sa.orm.Session(bind=conn)
-    dsatasources = conn.execute('select id, analysis from datasource').fetchall()
+    dsatasources = conn.execute(sa.text('select id, analysis from datasource')).fetchall()
     for row in dsatasources:
         if row['analysis'] is not None:
             # NOTE 'returning' is relatively new in sqlite, so better will be use select after insert.

@@ -1,0 +1,83 @@
+---
+title: MongoDB
+sidebarTitle: MongoDB
+---
+
+This is the implementation of the MongoDB data handler for MindsDB.
+
+[MongoDB](https://www.mongodb.com/) is an open-source cross-platform document-oriented database program. It is classified as a NoSQL database.
+
+## Implementation
+
+This handler is implemented using `pymongo`, a Python library that contains tools for working with the MongoDB database.
+
+The required arguments to establish a connection are as follows:
+
+* `username` is the username associated with the database.
+* `password` is the password to authenticate your access.
+* `host` is the host name or IP address.
+* `port` is the port through which TCP/IP connection is to be made.
+* `database` is the database name to be connected.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/mongodb_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the MongoDB database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE mongo_datasource
+WITH
+  ENGINE = 'mongodb',
+  PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": 27017,
+    "username": "mongo",
+    "password": "password",
+    "database": "database"
+  };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM mongo_datasource.demo;
+```
+
+<Warning>
+**For this connection, we strongly suggest using the Mongo API instead of the SQL API.**
+
+MindsDB has a dedicated [Mongo API](/mongo/collection-structure/) that allows you to use the full power of the MindsDB platform.
+Using the Mongo API feels more natural for MongoDB users and allows you to use all the features of MindsDB.
+
+You can find the instructions on how to connect MindsDB to [MongoDB Compass](/connect/mongo-compass) or [MongoDB Shell](/connect/mongo-shell) and proceed with the [Mongo API documentation](/mongo/collection-structure/) for further details.
+</Warning>
+
+<Tip>
+Once you connected MindsDB to MongoDB Compass or MongoDB Shell, you can run this command to connect your database to MindsDB:
+
+```sql
+test> use mindsdb
+mindsdb> db.databases.insertOne({
+            'name': 'mongo_datasource',
+            'engine': 'mongodb',
+            'connection_args': {
+                "host": "127.0.0.1",
+                "port": 27017,
+                "username": "mongo",
+                "password": "password",
+                "database": "database"
+            }
+        })
+```
+
+Then you can query your data, like this:
+
+```sql
+mindsdb> use mongo_datasource
+mongo_datasource> db.demo.find({}).limit(3)
+```
+</Tip>

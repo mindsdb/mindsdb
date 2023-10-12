@@ -1,0 +1,12 @@
+---
+title: List Data Handlers
+sidebarTitle: List Data Handlers
+---
+
+Here is how you can fetch all available data handlers directly from Python code:
+
+```
+mindsdb = server.get_project('mindsdb')
+data_handlers = mindsdb.query('SHOW HANDLERS WHERE type = \'data\'')
+print(data_handlers.fetch())
+```

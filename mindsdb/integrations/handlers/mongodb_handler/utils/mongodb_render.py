@@ -10,9 +10,29 @@ class MongodbRender:
     def to_mongo_query(self, node):
         if isinstance(node, Select):
             return self.select(node)
-        raise NotImplementedError(f'Unknown statement: {node.__name__}')
+        elif isinstance(node, Update):
+            return self.update(node)
+        raise NotImplementedError(f'Unknown statement: {node.__class__.__name__}')
 
-    def select(self, node):
+    def update(self, node: Update):
+        collection = node.table.parts[-1]
+        mquery = MongoQuery(collection)
+
+        filters = self.handle_where(node.where)
+        row = {
+            k: v.value
+            for k, v in node.update_columns.items()
+        }
+        mquery.add_step({
+            'method': 'update_many',
+            'args': [
+                filters,
+                {"$set": row}
+            ]
+        })
+        return mquery
+
+    def select(self, node: Select):
         # collection
         if not isinstance(node.from_table, Identifier):
             raise NotImplementedError(f'Not supported from {node.from_table}')

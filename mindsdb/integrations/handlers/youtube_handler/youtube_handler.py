@@ -1,4 +1,4 @@
-from mindsdb.integrations.handlers.youtube_handler.youtube_tables import YoutubeGetCommentsTable
+from mindsdb.integrations.handlers.youtube_handler.youtube_tables import YoutubeGetCommentsTable, YoutubeChannelTable, YoutubeVideoTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -6,14 +6,10 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities.log import get_log
 from mindsdb_sql import parse_sql
 
-import requests
-import pandas as pd
-import json
 from collections import OrderedDict
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
 
 logger = get_log("integrations.youtube_handler")
 
@@ -40,6 +36,11 @@ class YoutubeHandler(APIHandler):
         youtube_video_comments_data =YoutubeGetCommentsTable(self)
         self._register_table("get_comments", youtube_video_comments_data)
 
+        youtube_channel_data = YoutubeChannelTable(self)
+        self._register_table("channel", youtube_channel_data)
+
+        youtube_video_data = YoutubeVideoTable(self)
+        self._register_table("video", youtube_video_data)
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.
@@ -95,8 +96,10 @@ class YoutubeHandler(APIHandler):
 connection_args = OrderedDict(
     youtube_access_token={
         'type': ARG_TYPE.STR,
-        'description': 'API Token for accessing Youtube Application API'
-    }
+        'description': 'API Token for accessing Youtube Application API',
+        'required': True,
+        'label': 'Youtube access token',
+    }   
 )
 
 connection_args_example = OrderedDict(

@@ -211,13 +211,13 @@ class Responce(Responder):
             )
             run_sql_command(request_env, ast_query)
 
-    def _insert_ml_enine(self, query, request_env, mindsdb_env):
+    def _insert_ml_engine(self, query, request_env, mindsdb_env):
         for doc in query['documents']:
 
             ast_query = CreateMLEngine(
                 name=Identifier(doc['name']),
                 handler=doc['handler'],
-                params=doc['params']
+                params=doc.get('params')
             )
 
             run_sql_command(request_env, ast_query)
@@ -235,7 +235,7 @@ class Responce(Responder):
             self._insert_job(query, request_env, mindsdb_env)
 
         elif table == 'ml_engines':
-            self._insert_ml_enine(query, request_env, mindsdb_env)
+            self._insert_ml_engine(query, request_env, mindsdb_env)
 
         else:
             # regular insert

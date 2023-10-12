@@ -1,0 +1,1089 @@
+---
+title: MindsDB and HuggingFace
+sidebarTitle: HuggingFace
+---
+
+Hugging Face facilitates building, training, and deploying ML models. Now you can create Hugging Face models within MindsDB.
+
+<Note>
+Please note that if you use local installation of MindsDB, instead of MindsDB Cloud, you should install `transformers==4.21.0` to be able to use the Hugging Face models.
+</Note>
+
+## How to Bring the Hugging Face Model to MindsDB
+
+We use the [`CREATE MODEL`](/sql/create/model) statement to bring the Hugging Face models to MindsDB.
+
+<Tabs>
+<Tab title="Downloading Models from Hugging Face Repository">
+One way is to download Hugging Face models from their repository. To do so, you need to specify the `model_name` parameter.
+
+```sql
+CREATE MODEL mindsdb.spam_classifier
+PREDICT PRED
+USING
+  engine = 'huggingface',
+  task = 'text-classification',
+  model_name = 'mrm8488/bert-tiny-finetuned-sms-spam-detection',
+  input_column = 'text_spammy',
+  labels = ['ham', 'spam'];
+```
+</Tab>
+
+<Tab title="Using Hugging Face Inference API">
+Another way is to specify a task to be performed by the model and the Hugging Face Inference API does the rest.
+
+```sql
+CREATE MODEL mindsdb.sentiment_classifier
+PREDICT sentiment
+USING
+  engine = 'hf_inference_api',
+  task = 'text-classification',
+  column = 'text';
+```
+
+Please note that in order to use the Hugging Face Inference API, you need to create the `hf_inference_api` ML engine using your Hugging Face token:
+
+```sql
+CREATE ML_ENGINE hf_inference_api
+FROM huggingface_api
+USING api_key = 'hf_xxx';
+```
+
+You can generate Hugging Face tokens in the `Setings -> Access Tokens` tab of your Hugging Face account.
+</Tab>
+</Tabs>
+
+Let's go through some sample models.
+
+<Tip>
+Please note that the examples presented here use SQL. To see how to create Hugging Face models in Mongo database using MQL, check out [this example on sentiment classification](/nlp/nlp-mindsdb-hf#example-using-mql).
+</Tip>
+
+### Model 1: Spam Classifier
+
+Here is an example of a binary classification. The model determines whether a text string is a spam or not.
+
+<Tabs>
+<Tab title="Downloading Models from Hugging Face Repository">
+```sql
+CREATE MODEL mindsdb.spam_classifier
+PREDICT PRED
+USING
+  engine = 'huggingface',
+  task = 'text-classification',
+  model_name = 'mrm8488/bert-tiny-finetuned-sms-spam-detection',
+  input_column = 'text_spammy',
+  labels = ['ham', 'spam'];
+```
+
+Before querying for predictions, we should verify the status of the `spam_classifier` model.
+
+```sql
+DESCRIBE spam_classifier;
+```
+
+On execution, we get:
+
+```sql
++---------------+-------+--------+--------+-------+-------------+---------------+------+-----------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|NAME           |PROJECT|STATUS  |ACCURACY|PREDICT|UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY|TRAINING_OPTIONS                                                                                                                                                                                               |
++---------------+-------+--------+--------+-------+-------------+---------------+------+-----------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|spam_classifier|mindsdb|complete|[NULL]  |PRED   |up_to_date   |22.10.2.1      |[NULL]|[NULL]           |{'target': 'PRED', 'using': {'engine': 'huggingface', 'task': 'text-classification', 'model_name': 'mrm8488/bert-tiny-finetuned-sms-spam-detection', 'input_column': 'text_spammy', 'labels': ['ham', 'spam']}}|
++---------------+-------+--------+--------+-------+-------------+---------------+------+-----------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT h.*, t.text_spammy AS input_text
+FROM example_db.demo_data.hf_test AS t
+JOIN mindsdb.spam_classifier AS h;
+```
+
+On execution, we get:
+
+```sql
++----+---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|PRED|PRED_explain                                             |input_text                                                                                                                                                       |
++----+---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|spam|{'spam': 0.9051626920700073, 'ham': 0.09483727067708969} |Free entry in 2 a wkly comp to win FA Cup final tkts 21st May 2005. Text FA to 87121 to receive entry question(std txt rate)T&C's apply 08452810075over18's      |
+|ham |{'ham': 0.9380123615264893, 'spam': 0.061987683176994324}|Nah I don't think he goes to usf, he lives around here though                                                                                                    |
+|spam|{'spam': 0.9064534902572632, 'ham': 0.09354648739099503} |WINNER!! As a valued network customer you have been selected to receivea £900 prize reward! To claim call 09061701461. Claim code KL341. Valid 12 hours only.    |
++----+---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+</Tab>
+
+<Tab title="Using Hugging Face Inference API">
+```sql
+CREATE MODEL mindsdb.spam_classifier
+PREDICT PRED
+USING
+  engine = 'hf_inference_api',
+  task = 'text-classification',
+  column = 'text_spammy';
+```
+
+<Note>
+Please note that the `text-classification` task uses two labels: `POSITIVE` and `NEGATIVE`.
+</Note>
+</Tab>
+</Tabs>
+
+### Model 2: Sentiment Classifier
+
+Here is an example of a multi-value classification. The model determines a sentiment of a text string, where possible values are `negative`, `neutral`, and `positive`.
+
+<Tabs>
+<Tab title="Downloading Models from Hugging Face Repository">
+```sql
+CREATE MODEL mindsdb.sentiment_classifier
+PREDICT sentiment
+USING
+  engine = 'huggingface',
+  task = 'text-classification',
+  model_name = 'cardiffnlp/twitter-roberta-base-sentiment',
+  input_column = 'text_short',
+  labels = ['negative', 'neutral', 'positive'];
+```
+
+Before querying for predictions, we should verify the status of the `sentiment_classifier` model.
+
+```sql
+DESCRIBE sentiment_classifier;
+```
+
+On execution, we get:
+
+```sql
++--------------------+-------+--------+--------+---------+-------------+---------------+------+-----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|NAME                |PROJECT|STATUS  |ACCURACY|PREDICT  |UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY|TRAINING_OPTIONS                                                                                                                                                                                                                  |
++--------------------+-------+--------+--------+---------+-------------+---------------+------+-----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|sentiment_classifier|mindsdb|complete|[NULL]  |sentiment|up_to_date   |22.10.2.1      |[NULL]|[NULL]           |{'target': 'sentiment', 'using': {'engine': 'huggingface', 'task': 'text-classification', 'model_name': 'cardiffnlp/twitter-roberta-base-sentiment', 'input_column': 'text_short', 'labels': ['negative', 'neutral', 'positive']}}|
++--------------------+-------+--------+--------+---------+-------------+---------------+------+-----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT h.*, t.text_short AS input_text
+FROM example_db.demo_data.hf_test AS t
+JOIN mindsdb.sentiment_classifier AS h;
+```
+
+On execution, we get:
+
+```sql
++---------+----------------------------------------------------------------------------------------------------+-------------------+
+|sentiment|sentiment_explain                                                                                   |input_text         |
++---------+----------------------------------------------------------------------------------------------------+-------------------+
+|negative |{'negative': 0.9679920077323914, 'neutral': 0.02736542373895645, 'positive': 0.0046426113694906235} |I hate tacos       |
+|positive |{'positive': 0.7607280015945435, 'neutral': 0.2332666665315628, 'negative': 0.006005281116813421}   |I want to dance    |
+|positive |{'positive': 0.9835041761398315, 'neutral': 0.014900505542755127, 'negative': 0.0015953202964738011}|Baking is the best |
++---------+----------------------------------------------------------------------------------------------------+-------------------+
+```
+</Tab>
+
+<Tab title="Using Hugging Face Inference API">
+```sql
+CREATE MODEL mindsdb.sentiment_classifier
+PREDICT sentiment
+USING
+  engine = 'hf_inference_api',
+  task = 'text-classification',
+  column = 'text_short';
+```
+
+<Note>
+Please note that the `text-classification` task uses two labels: `POSITIVE` and `NEGATIVE`.
+</Note>
+</Tab>
+</Tabs>
+
+### Model 3: Zero-Shot Classifier
+
+Here is an example of a zero-shot classification. The model determines to which of the defined categories a text string belongs.
+
+<Tabs>
+<Tab title="Downloading Models from Hugging Face Repository">
+```sql
+CREATE MODEL mindsdb.zero_shot_tcd
+PREDICT topic
+USING
+  engine = 'huggingface',
+  task = 'zero-shot-classification',
+  model_name = 'facebook/bart-large-mnli',
+  input_column = 'text_short',
+  candidate_labels = ['travel', 'cooking', 'dancing'];
+```
+
+Before querying for predictions, we should verify the status of the `zero_shot_tcd` model.
+
+```sql
+DESCRIBE zero_shot_tcd;
+```
+
+On execution, we get:
+
+```sql
++-------------+-------+--------+--------+--------+-------------+---------------+------+-----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|NAME         |PROJECT|STATUS  |ACCURACY|PREDICT |UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY|TRAINING_OPTIONS                                                                                                                                                                                                         |
++-------------+-------+--------+--------+--------+-------------+---------------+------+-----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|zero_shot_tcd|mindsdb|complete|[NULL]  |topic   |up_to_date   |22.10.2.1      |[NULL]|[NULL]           |{'target': 'topic', 'using': {'engine': 'huggingface', 'task': 'zero-shot-classification', 'model_name': 'facebook/bart-large-mnli', 'input_column': 'text_short', 'candidate_labels': ['travel', 'cooking', 'dancing']}}|
++-------------+-------+--------+--------+--------+-------------+---------------+------+-----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT h.*, t.text_short AS input_text
+FROM example_db.demo_data.hf_test AS t
+JOIN mindsdb.zero_shot_tcd AS h;
+```
+
+On execution, we get:
+
+```sql
++-------+--------------------------------------------------------------------------------------------------+-------------------+
+|topic  |topic_explain                                                                                     |input_text         |
++-------+--------------------------------------------------------------------------------------------------+-------------------+
+|cooking|{'cooking': 0.7530364990234375, 'travel': 0.1607145369052887, 'dancing': 0.08624900877475739}     |I hate tacos       |
+|dancing|{'dancing': 0.9746809601783752, 'travel': 0.015539299696683884, 'cooking': 0.009779711253941059}  |I want to dance    |
+|cooking|{'cooking': 0.9936348795890808, 'travel': 0.0034196735359728336, 'dancing': 0.0029454431496560574}|Baking is the best |
++-------+--------------------------------------------------------------------------------------------------+-------------------+
+```
+</Tab>
+<Tab title="Using Hugging Face Inference API">
+```sql
+CREATE MODEL mindsdb.zero_shot_tcd
+PREDICT topic
+USING
+  engine = 'hf_inference_api',
+  task = 'zero-shot-classification',
+  candidate_labels = ['travel', 'cooking', 'dancing'],
+  column = 'text_short';
+```
+</Tab>
+</Tabs>
+
+### Model 4: Translation
+
+Here is an example of a translation. The model gets an input string in English and translates it into French.
+
+<Tabs>
+<Tab title="Downloading Models from Hugging Face Repository">
+```sql
+CREATE MODEL mindsdb.translator_en_fr
+PREDICT translated
+USING
+  engine = 'huggingface',
+  task = 'translation',
+  model_name = 't5-base',
+  input_column = 'text_short',
+  lang_input = 'en',
+  lang_output = 'fr';
+```
+
+Before querying for predictions, we should verify the status of the `translator_en_fr` model.
+
+```sql
+DESCRIBE translator_en_fr;
+```
+
+On execution, we get:
+
+```sql
++----------------+-------+--------+--------+----------+-------------+---------------+------+-----------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|NAME            |PROJECT|STATUS  |ACCURACY|PREDICT   |UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY|TRAINING_OPTIONS                                                                                                                                                                   |
++----------------+-------+--------+--------+----------+-------------+---------------+------+-----------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|translator_en_fr|mindsdb|complete|[NULL]  |translated|up_to_date   |22.10.2.1      |[NULL]|[NULL]           |{'target': 'translated', 'using': {'engine': 'huggingface', 'task': 'translation', 'model_name': 't5-base', 'input_column': 'text_short', 'lang_input': 'en', 'lang_output': 'fr'}}|
++----------------+-------+--------+--------+----------+-------------+---------------+------+-----------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT h.*, t.text_short AS input_text
+FROM example_db.demo_data.hf_test AS t
+JOIN mindsdb.translator_en_fr AS h;
+```
+
+On execution, we get:
+
+```sql
++-------------------------------+-------------------+
+|translated                     |input_text         |
++-------------------------------+-------------------+
+|Je déteste les tacos           |I hate tacos       |
+|Je veux danser                 |I want to dance    |
+|La boulangerie est la meilleure|Baking is the best |
++-------------------------------+-------------------+
+```
+</Tab>
+
+<Tab title="Using Hugging Face Inference API">
+
+<Note>
+Translation is currently not supported using the Huggingface Inference API.
+</Note>
+</Tab>
+</Tabs>
+
+### Model 5: Summarisation
+
+Here is an example of a summarisation.
+
+
+<Tabs>
+<Tab title="Downloading Models from Hugging Face Repository">
+```sql
+CREATE MODEL mindsdb.summarizer_10_20
+PREDICT text_summary
+USING
+  engine = 'huggingface',
+  task = 'summarization',
+  model_name = 'sshleifer/distilbart-cnn-12-6',
+  input_column = 'text_long',
+  min_output_length = 10,
+  max_output_length = 20;
+```
+
+Before querying for predictions, we should verify the status of the `summarizer_10_20` model.
+
+```sql
+DESCRIBE summarizer_10_20;
+```
+
+On execution, we get:
+
+```sql
++----------------+-------+--------+--------+------------+-------------+---------------+------+-----------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|NAME            |PROJECT|STATUS  |ACCURACY|PREDICT     |UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY|TRAINING_OPTIONS                                                                                                                                                                                                     |
++----------------+-------+--------+--------+------------+-------------+---------------+------+-----------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|summarizer_10_20|mindsdb|complete|[NULL]  |text_summary|up_to_date   |22.10.2.1      |[NULL]|[NULL]           |{'target': 'text_summary', 'using': {'engine': 'huggingface', 'task': 'summarization', 'model_name': 'sshleifer/distilbart-cnn-12-6', 'input_column': 'text_long', 'min_output_length': 10, 'max_output_length': 20}}|
++----------------+-------+--------+--------+------------+-------------+---------------+------+-----------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT h.*, t.text_long AS input_text
+FROM example_db.demo_data.hf_test AS t
+JOIN mindsdb.summarizer_10_20 AS h;
+```
+
+On execution, we get:
+
+```sql
++--------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|text_summary                                                                                                  |input_text                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
++--------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|A taco is a traditional Mexican food consisting of a small hand-sized corn- or                                |A taco is a traditional Mexican food consisting of a small hand-sized corn- or wheat-based tortilla topped with a filling. The tortilla is then folded around the filling and eaten by hand. A taco can be made with a variety of fillings, including beef, pork, chicken, seafood, beans, vegetables, and cheese, allowing for great versatility and variety.                                                                                                                                                                                                                                                                                                                                              |
+|Dance is a performing art form consisting of sequences of movement, either improvised or purposefully selected|Dance is a performing art form consisting of sequences of movement, either improvised or purposefully selected. This movement has aesthetic and often symbolic value.[nb 1] Dance can be categorized and described by its choreography, by its repertoire of movements, or by its historical period or place of origin.                                                                                                                                                                                                                                                                                                                                                                                     |
+|Baking is a method of preparing food that uses dry heat, typically in an oven                                 |Baking is a method of preparing food that uses dry heat, typically in an oven, but can also be done in hot ashes, or on hot stones. The most common baked item is bread but many other types of foods can be baked. Heat is gradually transferred from the surface of cakes, cookies, and pieces of bread to their center. As heat travels through, it transforms batters and doughs into baked goods and more with a firm dry crust and a softer center. Baking can be combined with grilling to produce a hybrid barbecue variant by using both methods simultaneously, or one after the other. Baking is related to barbecuing because the concept of the masonry oven is similar to that of a smoke pit.|
++--------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+</Tab>
+
+<Tab title="Using Hugging Face Inference API">
+```sql
+CREATE MODEL mindsdb.summarizer_10_20
+PREDICT text_summary
+USING
+  engine = 'hf_inference_api',
+  task = 'summarization',
+  column = 'text_long',
+  min_output_length = 10,
+  max_output_length = 20;
+```
+</Tab>
+</Tabs>
+
+### Model 6: Fill Mask
+
+Here is an example of a masked language modeling task.
+
+<Tabs>
+<Tab title="Downloading Models from Hugging Face Repository">
+```sql
+CREATE MODEL mindsdb.fill_mask
+PREDICT text_filled
+USING
+  engine = 'huggingface',
+  task = 'fill-mask',
+  model_name = 'bert-base-uncased',
+  input_column = 'text';
+```
+
+Before querying for predictions, we should verify the status of the `fill_mask` model.
+
+```sql
+DESCRIBE fill_mask;
+```
+
+On execution, we get:
+
+```sql
++----------------+-------+--------+--------+------------+-------------+---------------+------+-----------------+--------------------------------------------------------------------------------------------------------------------+
+|NAME            |PROJECT|STATUS  |ACCURACY|PREDICT     |UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY|TRAINING_OPTIONS                                                                                                    |
++----------------+-------+--------+--------+------------+-------------+---------------+------+-----------------+--------------------------------------------------------------------------------------------------------------------+
+|fill_mask       |mindsdb|complete|[NULL]  |text_filled |up_to_date   |23.3.5.0       |[NULL]|[NULL]           |{'target': 'text_filled', 'using': {'task': 'fill-mask', 'model_name': 'bert-base-uncased', 'input_column': 'text'}}|
++----------------+-------+--------+--------+------------+-------------+---------------+------+-----------------+--------------------------------------------------------------------------------------------------------------------+
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT h.*, t.text AS input_text
+FROM demo.texts AS t
+JOIN mindsdb.fill_mask AS h;
+```
+
+On execution, we get:
+
+```sql
++-------------------------+---------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|text_filled              |input_text                 |text_filled_explain                                                                                                                                                                                                                                           |
++-------------------------+---------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|the food was great!      |The [MASK] was great!      |{'the food was great!': 0.16309359669685364, 'the party was great!': 0.06305009871721268, 'the fun was great!': 0.04633583873510361, 'the show was great!': 0.043319422751665115, 'the music was great!': 0.02990395948290825}                                |
+|the weather is good today|The weather is [MASK] today|{'the weather is good today': 0.22563229501247406, 'the weather is warm today': 0.07954009622335434, 'the weather is fine today': 0.047255873680114746, 'the weather is better today': 0.034303560853004456, 'the weather is mild today': 0.03092862293124199}|
++-------------------------+---------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+</Tab>
+<Tab title="Using Hugging Face Inference API">
+```sql
+CREATE MODEL mindsdb.fill_mask
+PREDICT text_filled
+USING
+  engine = 'hf_inference_api',
+  task = 'fill-mask',
+  column = 'text';
+```
+</Tab>
+</Tabs>
+
+## HuggingFace + MindsDB Models Library
+
+### Text Classification
+
+#### Spam
+
+Let's create a model.
+
+```sql
+CREATE MODEL mindsdb.hf_spam
+PREDICT PRED
+USING
+ engine = 'huggingface',
+ task = 'text-classification',
+ model_name = 'mariagrandury/roberta-base-finetuned-sms-spam-detection',
+ input_column = 'text',
+ labels = ['spam', 'ham'];
+```
+
+And check its status.
+
+```sql
+DESCRIBE hf_spam;
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT *
+FROM mindsdb.hf_spam
+WHERE text = 'I like you. I love you.';
+```
+
+On execution, we get:
+
+```sql
++----+--------------------------------------------------------+-----------------------+
+|PRED|PRED_explain                                            |text                   |
++----+--------------------------------------------------------+-----------------------+
+|spam|{"ham":0.00020051795581821352,"spam":0.9997995495796204}|I like you. I love you.|
++----+--------------------------------------------------------+-----------------------+
+```
+
+#### Sentiment
+
+Let's create a model.
+
+```sql
+CREATE MODEL mindsdb.hf_sentiment
+PREDICT PRED
+USING
+ engine = 'huggingface',
+ task = 'text-classification',
+ model_name = 'cardiffnlp/twitter-roberta-base-sentiment',
+ input_column = 'text',
+ labels = ['neg', 'neu', 'pos'];
+```
+
+And check its status.
+
+```sql
+DESCRIBE hf_sentiment;
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT *
+FROM mindsdb.hf_sentiment
+WHERE text = 'I like you. I love you.';
+```
+
+On execution, we get:
+
+```sql
++----+--------------------------------------------------------------------------------+-----------------------+
+|PRED|PRED_explain                                                                    |text                   |
++----+--------------------------------------------------------------------------------+-----------------------+
+|pos |{"neg":0.003046575468033552,"neu":0.021965451538562775,"pos":0.9749879240989685}|I like you. I love you.|
++----+--------------------------------------------------------------------------------+-----------------------+
+```
+
+#### Sentiment (Finance)
+
+Let's create a model.
+
+```sql
+CREATE MODEL mindsdb.hf_sentiment_finance
+PREDICT PRED
+USING
+ engine = 'huggingface',
+ task = 'text-classification',
+ model_name = 'ProsusAI/finbert',
+ input_column = 'text';
+```
+
+And check its status.
+
+```sql
+DESCRIBE hf_sentiment_finance;
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT *
+FROM mindsdb.hf_sentiment_finance
+WHERE text = 'Stocks rallied and the British pound gained.';
+```
+
+On execution, we get:
+
+```sql
++--------+-------------------------------------------------------------------------------------------+--------------------------------------------+
+|PRED    |PRED_explain                                                                               |text                                        |
++--------+-------------------------------------------------------------------------------------------+--------------------------------------------+
+|positive|{"negative":0.0344734713435173,"neutral":0.06716493517160416,"positive":0.8983616232872009}|Stocks rallied and the British pound gained.|
++--------+-------------------------------------------------------------------------------------------+--------------------------------------------+
+```
+
+#### Emotions (6)
+
+Let's create a model.
+
+```sql
+CREATE MODEL mindsdb.hf_emotions_6
+PREDICT PRED
+USING
+ engine = 'huggingface',
+ task = 'text-classification',
+ model_name = 'j-hartmann/emotion-english-distilroberta-base',
+ input_column = 'text';
+```
+
+And check its status.
+
+```sql
+DESCRIBE hf_emotions_6;
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT *
+FROM mindsdb.hf_emotions_6
+WHERE text = 'Oh Happy Day';
+```
+
+On execution, we get:
+
+```sql
++----+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------+
+|PRED|PRED_explain                                                                                                                                                                                                   |text        |
++----+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------+
+|joy |{"anger":0.0028446922078728676,"disgust":0.0009613594156689942,"fear":0.0007112706662155688,"joy":0.7692911624908447,"neutral":0.037753619253635406,"sadness":0.015293814241886139,"surprise":0.17314413189888}|Oh Happy Day|
++----+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------+
+```
+
+#### Toxicity
+
+Let's create a model.
+
+```sql
+CREATE MODEL mindsdb.hf_toxicity
+PREDICT PRED
+USING
+ engine = 'huggingface',
+ task = 'text-classification',
+ model_name = 'SkolkovoInstitute/roberta_toxicity_classifier',
+ input_column = 'text';
+```
+
+And check its status.
+
+```sql
+DESCRIBE hf_toxicity;
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT *
+FROM mindsdb.hf_toxicity
+WHERE text = 'I like you. I love you.';
+```
+
+On execution, we get:
+
+```sql
++-------+-------------------------------------------------------------+-----------------------+
+|PRED   |PRED_explain                                                 |text                   |
++-------+-------------------------------------------------------------+-----------------------+
+|neutral|{"neutral":0.9999547004699707,"toxic":0.00004535282641882077}|I like you. I love you.|
++-------+-------------------------------------------------------------+-----------------------+
+```
+
+#### ESG (6)
+
+Let's create a model.
+
+```sql
+CREATE MODEL mindsdb.hf_esg_6
+PREDICT PRED
+USING
+ engine = 'huggingface',
+ task = 'text-classification',
+ model_name = 'yiyanghkust/finbert-esg',
+ input_column = 'text';
+```
+
+And check its status.
+
+```sql
+DESCRIBE hf_esg_6;
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT * FROM  mindsdb.hf_esg_6
+WHERE text = 'Rhonda has been volunteering for several years for a variety of charitable community programs.';
+```
+
+On execution, we get:
+
+```sql
++------+---------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------+
+|PRED  |PRED_explain                                                                                                                     |text                                                                                          |
++------+---------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------+
+|Social|{"Environmental":0.0034267122391611338,"Governance":0.004729956854134798,"None":0.001239194767549634,"Social":0.9906041026115417}|Rhonda has been volunteering for several years for a variety of charitable community programs.|
++------+---------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------+
+```
+
+#### ESG (26)
+
+Let's create a model.
+
+```sql
+CREATE MODEL mindsdb.hf_esg_26
+PREDICT PRED
+USING
+ engine = 'huggingface',
+ task = 'text-classification',
+ model_name = 'yiyanghkust/finbert-esg',
+ input_column = 'text';
+```
+
+And check its status.
+
+```sql
+DESCRIBE hf_esg_26;
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT *
+FROM mindsdb.hf_esg_26
+WHERE text = 'We believe it is essential to establish validated conflict-free sources of 3TG within the Democratic Republic of the Congo (the “DRC”) and adjoining countries (together, with the DRC, the “Covered Countries”), so that these minerals can be procured in a way that contributes to economic growth and development in the region. To aid in this effort, we have established a conflict minerals policy and an internal team to implement the policy.';
+```
+
+On execution, we get:
+
+```sql
++------+-----------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|PRED  |PRED_explain                                                                                                                 |text                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
++------+-----------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|Social|{"Environmental":0.2031959593296051,"Governance":0.08251894265413284,"None":0.050893042236566544,"Social":0.6633920073509216}|We believe it is essential to establish validated conflict-free sources of 3TG within the Democratic Republic of the Congo (the “DRC”) and adjoining countries (together, with the DRC, the “Covered Countries”), so that these minerals can be procured in a way that contributes to economic growth and development in the region. To aid in this effort, we have established a conflict minerals policy and an internal team to implement the policy.|
++------+-----------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+#### Hate Speech
+
+Let's create a model.
+
+```sql
+CREATE MODEL mindsdb.hf_hate
+PREDICT PRED
+USING
+ engine = 'huggingface',
+ task = 'text-classification',
+ model_name = 'Hate-speech-CNERG/bert-base-uncased-hatexplain',
+ input_column = 'text';
+```
+
+And check its status.
+
+```sql
+DESCRIBE hf_hate;
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT *
+FROM mindsdb.hf_hate
+WHERE text = 'I like you. I love you.';
+```
+
+On execution, we get:
+
+```sql
++------+-----------------------------------------------------------------------------------------------+-----------------------+
+|PRED  |PRED_explain                                                                                   |text                   |
++------+-----------------------------------------------------------------------------------------------+-----------------------+
+|normal|{"hate speech":0.03551718592643738,"normal":0.7747423648834229,"offensive":0.18974047899246216}|I like you. I love you.|
++------+-----------------------------------------------------------------------------------------------+-----------------------+
+```
+
+#### Crypto Buy Signals
+
+Let's create a model.
+
+```sql
+CREATE MODEL mindsdb.hf_crypto
+PREDICT PRED
+USING
+ engine = 'huggingface',
+ task = 'text-classification',
+ model_name = 'ElKulako/cryptobert',
+ input_column = 'text';
+```
+
+And check its status.
+
+```sql
+DESCRIBE hf_crypto;
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT *
+FROM mindsdb.hf_crypto
+WHERE text = 'BTC is killing it right now';
+```
+
+On execution, we get:
+
+```sql
++-------+------------------------------------------------------------------------------------------+---------------------------+
+|PRED   |PRED_explain                                                                              |text                       |
++-------+------------------------------------------------------------------------------------------+---------------------------+
+|Bullish|{"Bearish":0.0002816587220877409,"Bullish":0.559426486492157,"Neutral":0.4402918517589569}|BTC is killing it right now|
++-------+------------------------------------------------------------------------------------------+---------------------------+
+```
+
+#### US Political Party
+
+Let's create a model.
+
+```sql
+CREATE MODEL mindsdb.hf_us_party
+PREDICT PRED
+USING
+ engine = 'huggingface',
+ task = 'text-classification',
+ model_name = 'm-newhauser/distilbert-political-tweets',
+ input_column = 'text';
+```
+
+And check its status.
+
+```sql
+DESCRIBE hf_us_party;
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT *
+FROM mindsdb.hf_us_party
+WHERE text = 'This pandemic has shown us clearly the vulgarity of our healthcare system. Highest costs in the world, yet not enough nurses or doctors. Many millions uninsured, while insurance company profits soar. The struggle continues. Healthcare is a human right. Medicare for all.';
+```
+
+On execution, we get:
+
+```sql
++--------+-------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|PRED    |PRED_explain                                                       |text                                                                                                                                                                                                                                                                          |
++--------+-------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|Democrat|{"Democrat":0.9999973773956299,"Republican":0.00000261212517216336}|This pandemic has shown us clearly the vulgarity of our healthcare system. Highest costs in the world, yet not enough nurses or doctors. Many millions uninsured, while insurance company profits soar. The struggle continues. Healthcare is a human right. Medicare for all.|
++--------+-------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+#### Question Detection
+
+Let's create a model.
+
+```sql
+CREATE MODEL mindsdb.hf_question
+PREDICT PRED
+USING
+ engine = 'huggingface',
+ task = 'text-classification',
+ model_name = 'shahrukhx01/bert-mini-finetune-question-detection',
+ input_column = 'text',
+ labels = ['question', 'query'];
+```
+
+And check its status.
+
+```sql
+DESCRIBE hf_question;
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT *
+FROM mindsdb.hf_question
+WHERE text = 'Where can I buy electronics in London';
+```
+
+On execution, we get:
+
+```sql
++-----+--------------------------------------------------------------+-------------------------------------+
+|PRED |PRED_explain                                                  |text                                 |
++-----+--------------------------------------------------------------+-------------------------------------+
+|query|{"query":0.9997773766517639,"question":0.00022261829872149974}|Where can I buy electronics in London|
++-----+--------------------------------------------------------------+-------------------------------------+
+```
+
+#### Industry
+
+Let's create a model.
+
+```sql
+CREATE MODEL mindsdb.hf_industry
+PREDICT PRED
+USING
+ engine = 'huggingface',
+ task = 'text-classification',
+ model_name = 'sampathkethineedi/industry-classification',
+ input_column = 'text';
+```
+
+And check its status.
+
+```sql
+DESCRIBE hf_industry;
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT *
+FROM mindsdb.hf_industry
+WHERE text = 'Low latency is one of our best cloud features';
+```
+
+On execution, we get:
+
+```sql
++----------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------+
+|PRED            |PRED_explain                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |text                                         |
++----------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------+
+|Systems Software|{"Advertising":0.000006795735771447653,"Aerospace & Defense":0.00001537964453746099,"Apparel Retail":5.350161131900677e-7,"Apparel, Accessories & Luxury Goods":0.000002604161181807285,"Application Software":0.009111878462135792,"Asset Management & Custody Banks":0.00003155150625389069,"Auto Parts & Equipment":0.000015504940165556036,"Biotechnology":6.533917940032552e-8,"Building Products":7.348538133555849e-8,"Casinos & Gaming":0.000013775999832432717,"Commodity Chemicals":0.0000010432338513055583,"Communications Equipment":0.000019887389498762786,"Construction & Engineering":0.000001826199536480999,"Construction Machinery & Heavy Trucks":0.000009827364920056425,"Consumer Finance":0.0000018292046206624946,"Data Processing & Outsourced Services":0.0000010666744856280275,"Diversified Metals & Mining":0.000006960767223063158,"Diversified Support Services":0.000016824227714096196,"Electric Utilities":0.000003896044290740974,"Electrical Components & Equipment":0.000001626394464437908,"Electronic Equipment & Instruments":0.00003863943129545078,"Environmental & Facilities Services":0.000736175337806344,"Gold":0.00002220332135038916,"Health Care Equipment":4.6927588925882446e-8,"Health Care Facilities":7.432880124724761e-7,"Health Care Services":6.929263918209472e-7,"Health Care Supplies":2.1007431882935634e-7,"Health Care Technology":0.000003907185146090342,"Homebuilding":3.903339234057057e-7,"Hotels, Resorts & Cruise Lines":6.0527639789143e-7,"Human Resource & Employment Services":5.48697983049351e-7,"IT Consulting & Other Services":0.0000723653138265945,"Industrial Machinery":7.230253231682582e-7,"Integrated Telecommunication Services":2.8266379104024963e-7,"Interactive Media & Services":0.00003454017496551387,"Internet & Direct Marketing Retail":0.000003871373337460682,"Internet Services & Infrastructure":0.0007196652004495263,"Investment Banking & Brokerage":0.0000040634336073708255,"Leisure Products":0.000002158361439796863,"Life Sciences Tools & Services":0.000002861268058040878,"Movies & Entertainment":0.000007286199888767442,"Oil & Gas Equipment & Services":0.000004376991455501411,"Oil & Gas Exploration & Production":0.000005569149834627751,"Oil & Gas Refining & Marketing":0.000012647416951949708,"Oil & Gas Storage & Transportation":0.000005852583853993565,"Packaged Foods & Meats":0.0000011130315442642313,"Personal Products":0.00000970239307207521,"Pharmaceuticals":0.0000037546726616710657,"Property & Casualty Insurance":0.000006116194072092185,"Real Estate Operating Companies":0.00001882187461887952,"Regional Banks":0.0000011669454806906288,"Research & Consulting Services":0.000024276219846797176,"Restaurants":8.598511840318679e-7,"Semiconductors":0.0000021006283077440457,"Specialty Chemicals":0.000004160017397225602,"Specialty Stores":2.644004553076229e-7,"Steel":0.0000013566890402216814,"Systems Software":0.9889177083969116,"Technology Distributors":0.00001339179198112106,"Technology Hardware, Storage & Peripherals":0.00004790363891515881,"Thrifts & Mortgage Finance":3.924862141957419e-7,"Trading Companies & Distributors":0.0000035233156268077437}|Low latency is one of our best cloud features|
++----------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------+
+```
+
+### Zero-Shot Classification
+
+#### Bart
+
+Let's create a model.
+
+```sql
+CREATE MODEL mindsdb.hf_zs_bart
+PREDICT PRED
+USING
+ engine = 'huggingface',
+ task = 'zero-shot-classification',
+ model_name = 'facebook/bart-large-mnli',
+ input_column = 'text',
+ candidate_labels = ['Books', 'Household', 'Clothing & Accessories', 'Electronics'];
+```
+
+And check its status.
+
+```sql
+DESCRIBE hf_zs_bart;
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT *
+FROM mindsdb.hf_zs_bart
+WHERE text = 'Paper Plane Design Framed Wall Hanging Motivational Office Decor Art Prints';
+```
+
+On execution, we get:
+
+```sql
++---------+------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
+|PRED     |PRED_explain                                                                                                                              |text                                                                       |
++---------+------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
+|Household|{"Books":0.1876104772090912,"Clothing & Accessories":0.08688066899776459,"Electronics":0.14785148203372955,"Household":0.5776574015617371}|Paper Plane Design Framed Wall Hanging Motivational Office Decor Art Prints|
++---------+------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------+
+```
+
+### Translation
+
+#### English to French (T5)
+
+Let's create a model.
+
+```sql
+CREATE MODEL mindsdb.hf_t5_en_fr
+PREDICT PRED
+USING
+ engine = 'huggingface',
+ task = 'translation',
+ model_name = 't5-base',
+ input_column = 'text',
+ lang_input = 'en',
+ lang_output = 'fr';
+```
+
+And check its status.
+
+```sql
+DESCRIBE hf_t5_en_fr;
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT *
+FROM mindsdb.hf_t5_en_fr
+WHERE text = 'The monkey is on the branch';
+```
+
+On execution, we get:
+
+```sql
++---------------------------+---------------------------+
+|PRED                       |text                       |
++---------------------------+---------------------------+
+|Le singe est sur la branche|The monkey is on the branch|
++---------------------------+---------------------------+
+```
+
+### Summarization
+
+#### Bart
+
+Let's create a model.
+
+```sql
+CREATE MODEL mindsdb.hf_bart_sum_20
+PREDICT PRED
+USING
+ engine = 'huggingface',
+ task = 'summarization',
+ model_name = 'sshleifer/distilbart-cnn-12-6',
+ input_column = 'text',
+ min_output_length = 5,
+ max_output_length = 20;
+```
+
+And check its status.
+
+```sql
+DESCRIBE hf_bart_sum_20;
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT *
+FROM mindsdb.hf_bart_sum_20
+WHERE text = 'The tower is 324 metres (1,063 ft) tall, about the same height as an 81-storey building, and the tallest structure in Paris. Its base is square, measuring 125 metres (410 ft) on each side. During its construction, the Eiffel Tower surpassed the Washington Monument to become the tallest man-made structure in the world, a title it held for 41 years until the Chrysler Building in New York City was finished in 1930. It was the first structure to reach a height of 300 metres. Due to the addition of a broadcasting aerial at the top of the tower in 1957, it is now taller than the Chrysler Building by 5.2 metres (17 ft). Excluding transmitters, the Eiffel Tower is the second tallest free-standing structure in France after the Millau Viaduct.';
+```
+
+On execution, we get:
+
+```sql
++-------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|PRED                                                   |text                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
++-------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|The tower is 324 metres (1,063 ft) tall, about the same|The tower is 324 metres (1,063 ft) tall, about the same height as an 81-storey building, and the tallest structure in Paris. Its base is square, measuring 125 metres (410 ft) on each side. During its construction, the Eiffel Tower surpassed the Washington Monument to become the tallest man-made structure in the world, a title it held for 41 years until the Chrysler Building in New York City was finished in 1930. It was the first structure to reach a height of 300 metres. Due to the addition of a broadcasting aerial at the top of the tower in 1957, it is now taller than the Chrysler Building by 5.2 metres (17 ft). Excluding transmitters, the Eiffel Tower is the second tallest free-standing structure in France after the Millau Viaduct.|
++-------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+#### Google Pegasus
+
+Let's create a model.
+
+```sql
+CREATE MODEL mindsdb.hf_peg_sum_20
+PREDICT PRED
+USING
+ engine = 'huggingface',
+ task = 'summarization',
+ model_name = 'google/pegasus-xsum',
+ input_column = 'text',
+ min_output_length = 5,
+ max_output_length = 20;
+```
+
+And check its status.
+
+```sql
+DESCRIBE hf_peg_sum_20;
+```
+
+Once the status is `complete`, we can query for predictions.
+
+```sql
+SELECT *
+FROM mindsdb.hf_peg_sum_20
+WHERE text = 'The tower is 324 metres (1,063 ft) tall, about the same height as an 81-storey building, and the tallest structure in Paris. Its base is square, measuring 125 metres (410 ft) on each side. During its construction, the Eiffel Tower surpassed the Washington Monument to become the tallest man-made structure in the world, a title it held for 41 years until the Chrysler Building in New York City was finished in 1930. It was the first structure to reach a height of 300 metres. Due to the addition of a broadcasting aerial at the top of the tower in 1957, it is now taller than the Chrysler Building by 5.2 metres (17 ft). Excluding transmitters, the Eiffel Tower is the second tallest free-standing structure in France after the Millau Viaduct.';
+```
+
+On execution, we get:
+
+```sql
++------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|PRED                                            |text                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
++------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|The Eiffel Tower is a landmark in Paris, France.|The tower is 324 metres (1,063 ft) tall, about the same height as an 81-storey building, and the tallest structure in Paris. Its base is square, measuring 125 metres (410 ft) on each side. During its construction, the Eiffel Tower surpassed the Washington Monument to become the tallest man-made structure in the world, a title it held for 41 years until the Chrysler Building in New York City was finished in 1930. It was the first structure to reach a height of 300 metres. Due to the addition of a broadcasting aerial at the top of the tower in 1957, it is now taller than the Chrysler Building by 5.2 metres (17 ft). Excluding transmitters, the Eiffel Tower is the second tallest free-standing structure in France after the Millau Viaduct.|
++------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```

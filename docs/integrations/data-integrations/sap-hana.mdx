@@ -1,0 +1,82 @@
+---
+title: SAP HANA
+sidebarTitle: SAP HANA
+---
+
+This is the implementation of the SAP HANA data handler for MindsDB.
+
+[SAP HANA](https://www.sap.com/products/technology-platform/hana/what-is-sap-hana.html), where HANA stands for High-performance ANalytic Appliance, is a multi-model database that stores data in its memory instead of keeping it on a disk. The column-oriented in-memory database design used by SAP HANA allows users to run advanced analytics alongside high-speed transactions in a single system.
+
+## Implementation
+
+This handler is implemented using `hdbcli`, the Python driver for SAP HANA.
+
+The required arguments to establish a connection are as follows:
+
+* `host` is the host name or IP address of the SAP HANA instance.
+* `port` is the port number of the SAP HANA instance.
+* `user` specifies the user name.
+* `password` specifies the password for the user.
+* `schema` sets the current schema, which is used for identifiers without a defined schema.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/hana_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+You can use the below SQL statements to create a schema in SAP HANA called `MINDSDB` and a table called `TEST`.
+
+```sql
+CREATE SCHEMA MINDSDB;
+
+CREATE TABLE MINDSDB.TEST
+(
+    ID          INTEGER NOT NULL,
+    NAME        NVARCHAR(1),
+    DESCRIPTION NVARCHAR(1)
+);
+
+CREATE UNIQUE INDEX MINDSDB.TEST_ID_INDEX
+    ON MINDSDB.TEST (ID);
+
+ALTER TABLE MINDSDB.TEST
+    ADD CONSTRAINT TEST_PK
+        PRIMARY KEY (ID);
+
+INSERT INTO MINDSDB.TEST
+VALUES (1, 'h', 'w');
+```
+
+In order to make use of this handler and connect to the SAP HANA database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE sap_hana_trial
+WITH
+    ENGINE = 'hana',
+    PARAMETERS = {
+        "user": "DBADMIN",
+        "password": "password",
+        "host": "<uuid>.hana.trial-us10.hanacloud.ondemand.com",
+        "port": "443",
+        "schema": "MINDSDB",
+        "encrypt": true
+    };
+```
+
+<Note>
+The above example assumes usage of SAP HANA Cloud, which requires the `encrypt` parameter to be set to `true` and uses port `443`.
+</Note>
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM sap_hana_trial.test;
+```
+
+On execution, we get:
+
+| ID  | NAME | DESCRIPTION |
+| --- | ---- | ----------- |
+| 1   | h    | w           |

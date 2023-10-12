@@ -1,0 +1,51 @@
+---
+title: SurrealDB
+sidebarTitle: SurrealDB
+---
+
+This is the implementation of the SurrealDB data handler for MindsDB.
+
+[SurrealDB](https://surrealdb.com/) is an innovative NewSQL cloud database, suitable for serverless applications, jamstack applications, single-page applications, and traditional applications.
+
+## Implementation
+
+This handler was implemented by using the python library `pysurrealdb`.
+
+The required arguments to establish a connection are:
+
+* `host`: the host name of the Surrealdb connection
+* `port`: the port to use when connecting
+* `user`: the user to authenticate
+* `password`: the password to authenticate the user
+* `database`: database name to be connected
+* `namespace`: namespace name to be connected
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/surrealdb_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+To establish a connection with our SurrealDB server which is running locally with the public cloud instance. We are going to use `ngrok tunneling` to connect cloud instance to the local SurrealDB server. You can follow this [guide](https://docs.mindsdb.com/sql/create/database#making-your-local-database-available-to-mindsdb) for that.
+
+Let's make the connection with the MindsDB public cloud 
+
+```sql
+CREATE DATABASE exampledb
+WITH ENGINE = 'surrealdb',
+PARAMETERS = {
+  "host": "6.tcp.ngrok.io",
+  "port": "17141",
+  "user": "root",
+  "password": "root",
+  "database": "testdb",
+  "namespace": "testns"
+};
+```
+
+Please change the `host` and `port` properties in the `PARAMETERS` clause based on the values which you got.
+
+We can also query the `dev` table which we created with
+```sql
+SELECT * FROM exampledb.dev;
+```

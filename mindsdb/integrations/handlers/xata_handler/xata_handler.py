@@ -2,7 +2,9 @@ from collections import OrderedDict
 from typing import List, Optional
 
 import pandas as pd
+import json
 import xata
+from xata.helpers import BulkProcessor
 
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
@@ -121,7 +123,7 @@ class XataHandler(VectorStoreHandler):
         try:
             # But at least try to see if the table is valid
             resp = self._client.table().get_columns(table_name)
-            if "message" in resp:
+            if not resp.is_success():
                 raise Exception(f"Error getting columns: {resp['message']}")
         except Exception as e:
             return Response(
@@ -146,6 +148,64 @@ class XataHandler(VectorStoreHandler):
                 resp_type=RESPONSE_TYPE.ERROR,
                 error_message=f"Error getting list of tables: {e}",
             )
+
+    def insert(self, table_name: str, data: pd.DataFrame, columns: List[str] = None) -> HandlerResponse:
+        """ Insert data into the Xata database. """
+        # Preprocess data
+        data = data.to_dict("records")
+        # Convert metadata to json
+        if "metadata" in data.columns:
+            data["metadata"] = data["metadata"].apply(json.loads)
+        if len(data) > 1:
+            # Bulk processing
+            try:
+                bp = BulkProcessor(self._client, throw_exception=True)
+                bp.put_records(table_name, data)
+                bp.flush_queue()
+            except Exception as e:
+                return Response(
+                    resp_type=RESPONSE_TYPE.ERROR,
+                    error_message=f"Error inserting data into '{table_name}': {e}",
+                )
+        elif len(data) == 0:
+            # Skip
+            return Response(resp_type=RESPONSE_TYPE.OK)
+        elif "id" in data[0] and TableField.ID.value in columns:
+            # If id present
+            id = data[0]["id"]
+            rest_of_data = data[0].copy()
+            del rest_of_data["id"]
+            try:
+                resp = self._client.records().insert_with_id(
+                    table_name=table_name,
+                    record_id=id,
+                    payload=rest_of_data,
+                    create_only=True,
+                    columns=columns
+                )
+                if not resp.is_success():
+                    raise Exception(resp["message"])
+            except Exception as e:
+                return Response(
+                    resp_type=RESPONSE_TYPE.ERROR,
+                    error_message=f"Error inserting data into '{table_name}': {e}",
+                )
+        else:
+            # If id not present
+            try:
+                resp = self._client.records().insert(
+                    table_name=table_name,
+                    payload=data[0],
+                    columns=columns
+                )
+                if not resp.is_success():
+                    raise Exception(resp["message"])
+            except Exception as e:
+                return Response(
+                    resp_type=RESPONSE_TYPE.ERROR,
+                    error_message=f"Error inserting data into '{table_name}': {e}",
+                )
+        return Response(resp_type=RESPONSE_TYPE.OK)
 
 
 
@@ -235,30 +295,6 @@ class XataHandler(VectorStoreHandler):
             payload[TableField.DISTANCE.value] = distances
         result_df = pd.DataFrame(payload)
         return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=result_df)
-
-    def insert(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
-        """
-        Insert data into the Xata database.
-        """
-
-        collection = self._client.get_collection(table_name)
-
-        # drop columns with all None values
-
-        data.dropna(axis=1, inplace=True)
-
-        data = data.to_dict(orient="list")
-
-        collection.add(
-            ids=data[TableField.ID.value],
-            documents=data.get(TableField.CONTENT.value),
-            embeddings=data[TableField.EMBEDDINGS.value],
-            metadatas=data.get(TableField.METADATA.value),
-        )
-
-        return Response(resp_type=RESPONSE_TYPE.OK)
 
     def update(
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None

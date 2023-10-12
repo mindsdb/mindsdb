@@ -24,6 +24,8 @@ from mindsdb.integrations.libs.response import (
 from .tripadvisor_table import SearchLocationTable
 from .tripadvisor_table import LocationDetailsTable
 from .tripadvisor_table import ReviewsTable
+from .tripadvisor_table import PhotosTable
+from .tripadvisor_table import NearbyLocationTable
 from .tripadvisor_api import TripAdvisorAPI
 from .tripadvisor_api import TripAdvisorAPICall
 
@@ -63,6 +65,12 @@ class TripAdvisorHandler(APIHandler):
 
         tripAdvisorReviews = ReviewsTable(self)
         self._register_table("reviewsTable", tripAdvisorReviews)
+
+        tripAdvisorPhotos = PhotosTable(self)
+        self._register_table("photosTable", tripAdvisorPhotos)
+
+        tripAdvisorNearbyLocation = NearbyLocationTable(self)
+        self._register_table("nearbyLocationTable", tripAdvisorNearbyLocation)
 
     def connect(self, api_version=2):
         """Check the connection with TripAdvisor API"""
@@ -223,6 +231,58 @@ class TripAdvisorHandler(APIHandler):
                 "is_machine_translated": loc.get("is_machine_translated"),
                 "user": str(loc.get("user")),
                 "subratings": str(loc.get("subratings")),
+            }
+            result.append(data)
+
+        result = pd.DataFrame(result)
+        return result
+    
+    def call_tripadvisor_photos_api(
+        self, method_name: str = None, params: dict = None
+    ) -> pd.DataFrame:
+        """It processes the JSON data from the call and transforms it into pandas.Dataframe"""
+        if self.is_connected is False:
+            self.connect()
+
+        locations = self.api.getTripAdvisorData(TripAdvisorAPICall.PHOTOS, **params)
+        result = []
+
+        for loc in locations:
+            data = {
+                "id": loc.get("id"),
+                "is_blessed": loc.get("is_blessed"),
+                "album": loc.get("album"),
+                "caption": loc.get("caption"),
+                "published_date": loc.get("published_date"),
+                "images": str(loc.get("images")),
+                "source": str(loc.get("source")),
+                "user": str(loc.get("user")),
+            }
+            result.append(data)
+
+        result = pd.DataFrame(result)
+        return result
+    
+    def call_tripadvisor_nearby_location_api(
+        self, method_name: str = None, params: dict = None
+    ) -> pd.DataFrame:
+        """It processes the JSON data from the call and transforms it into pandas.Dataframe"""
+        if self.is_connected is False:
+            self.connect()
+
+        locations = self.api.getTripAdvisorData(TripAdvisorAPICall.NEARBY_SEARCH, **params)
+        result = []
+
+        print("RESULT: ", result)
+
+        for loc in locations:
+            data = {
+                "location_id": loc.get("location_id"),
+                "name": loc.get("name"),
+                "distance": loc.get("distance"),
+                "rating": loc.get("rating"),
+                "bearing": loc.get("bearing"),
+                "address_obj": str(loc.get("address_obj")),
             }
             result.append(data)
 

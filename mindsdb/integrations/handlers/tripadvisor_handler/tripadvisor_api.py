@@ -10,6 +10,7 @@ class TripAdvisorAPICall(Enum):
     LOCATION_DETAILS = 2
     PHOTOS = 3
     REVIEWS = 4
+    NEARBY_SEARCH = 5
 
 
 class TripAdvisorAPI:
@@ -142,6 +143,49 @@ class TripAdvisorAPI:
 
         response = self.getResponse(url)
         return response
+    
+    def location_photos(self, url: str, locationId: str, language: str = "en") -> Response:
+        '''
+        The Location Photos request returns up to 5 high-quality photos for a specific location. Please note that the limits are different for the beta subscribers.
+        You need to upgrade to get the higher limits mentioned here. The photos are ordered by recency.
+
+        Args:
+            locationId (str): A unique identifier for a location on Tripadvisor. The location ID can be obtained using the Location Search.
+            language (str): The language in which to return results (e.g. "en" for English or "es" for Spanish) from the list of our Supported Languages.
+
+        Returns:
+            response: Response object with response data as application/json
+        '''
+        url = url + "{locationId}/photos?language={language}&key={api_key}".format(locationId=locationId, language=language, api_key=self.api_key)
+        response = self.getResponse(url)
+        return response
+    
+    def location_nearby_search(self, url: str, params_dict: dict, language: str = "en") -> Response:
+        '''
+        The Nearby Location Search request returns up to 10 locations found near the given latitude/longtitude.
+        You can use category ("hotels", "attractions", "restaurants", "geos"), phone number, address to search with more accuracy.
+
+        Args:
+            latLong (str): Latitude/Longitude pair to scope down the search around a specifc point - eg. "42.3455,-71.10767".
+            category (str): Filters result set based on property type. Valid options are "hotels", "attractions", "restaurants", and "geos".
+            phone (str): Phone number to filter the search results by (this can be in any format with spaces and dashes but without the "+" sign at the beginning).
+            address (str): Address to filter the search results by.
+            radius (int): Length of the radius from the provided latitude/longitude pair to filter results.
+            radiusUnit (str): Unit for length of the radius. Valid options are "km", "mi", "m" (km=kilometers, mi=miles, m=meters.
+            language (str): The language in which to return results (e.g. "en" for English or "es" for Spanish) from the list of our Supported Languages.
+
+        Returns:
+            response: Response object with response data as application/json
+        '''
+
+        url = url + "nearby_search?language={language}&key={api_key}&".format(
+            api_key=self.api_key, language=language
+        )
+
+        url = self.getURLQuery(url, params_dict)
+        response = self.getResponse(url)
+
+        return response
 
     def getTripAdvisorData(self, apiCall, **params):
         """
@@ -162,4 +206,12 @@ class TripAdvisorAPI:
 
         elif apiCall == TripAdvisorAPICall.REVIEWS:
             response = self.location_reviews(url, params_dict["locationId"])
+            return response.json()["data"]
+        
+        elif apiCall == TripAdvisorAPICall.PHOTOS:
+            response = self.location_photos(url, params_dict["locationId"])
+            return response.json()["data"]
+
+        elif apiCall == TripAdvisorAPICall.NEARBY_SEARCH:
+            response = self.location_nearby_search(url, params_dict)
             return response.json()["data"]

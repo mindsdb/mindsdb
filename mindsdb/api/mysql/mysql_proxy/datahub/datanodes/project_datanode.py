@@ -1,7 +1,6 @@
 from copy import deepcopy
 
 from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
     Identifier,

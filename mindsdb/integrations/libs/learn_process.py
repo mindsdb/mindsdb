@@ -10,7 +10,6 @@ from mindsdb_sql.parser.ast import Identifier, Select, Star, NativeQuery
 import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 from mindsdb.integrations.utilities.sql_utils import make_sql_session
-from mindsdb.integrations.handlers_client.ml_client_factory import MLClientFactory
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 from mindsdb.interfaces.model.functions import get_model_records
@@ -48,8 +47,18 @@ handlers_cacher = HandlersCache()
 
 
 @mark_process(name='learn')
-def predict_process(predictor_record, ml_engine_name, handler_class, integration_id, df, args):
+def predict_process(payload, dataframe):
     db.init()
+    integration_id = payload['handler_meta']['integration_id']
+    predictor_record = payload['predictor_record']
+    args = payload['args']
+    module_path = payload['handler_meta']['module_path']
+    class_name = payload['handler_meta']['class_name']
+    ml_engine_name = payload['handler_meta']['engine']
+
+    module = importlib.import_module(module_path)
+    HandlerClass = getattr(module, class_name)
+    handler_class = HandlerClass
 
     if predictor_record.id not in handlers_cacher:
         handlerStorage = HandlerStorage(integration_id)
@@ -62,13 +71,13 @@ def predict_process(predictor_record, ml_engine_name, handler_class, integration
     else:
         ml_handler = handlers_cacher[predictor_record.id]
 
-    if ml_engine_name == 'LightwoodHandler':
+    if ml_engine_name == 'lightwood':
         args['code'] = predictor_record.code
         args['target'] = predictor_record.to_predict[0]
         args['dtype_dict'] = predictor_record.dtype_dict
         args['learn_args'] = predictor_record.learn_args
 
-    if ml_engine_name in ('LangChainHandler',):
+    if ml_engine_name == 'langchain':
         from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
         from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
 
@@ -79,16 +88,13 @@ def predict_process(predictor_record, ml_engine_name, handler_class, integration
 
         args['executor'] = command_executor
 
-    predictions = ml_handler.predict(df, args)
+    predictions = ml_handler.predict(dataframe, args)
     ml_handler.close()
     return predictions
 
 
 @mark_process(name='learn')
-def learn_process(class_path, engine, integration_id,
-                  predictor_id, problem_definition, set_active,
-                  base_predictor_id=None, training_data_df=None,
-                  data_integration_ref=None, fetch_data_query=None, project_name=None):
+def learn_process(payload, dataframe):
     ctx.profiling = {
         'level': 0,
         'enabled': True,
@@ -100,9 +106,20 @@ def learn_process(class_path, engine, integration_id,
         from mindsdb.interfaces.database.database import DatabaseController
         db.init()
 
+        data_integration_ref = payload['data_integration_ref']
+        problem_definition = payload['problem_definition']
+        fetch_data_query = payload['fetch_data_query']
+        project_name = payload['project_name']
+        predictor_id = payload['model_id']
+        # engine = payload['handler_meta']['engine']
+        integration_id = payload['handler_meta']['integration_id']
+        base_predictor_id = payload.get('base_model_id')
+        set_active = payload['set_active']
+        class_path = (payload['handler_meta']['module_path'], payload['handler_meta']['class_name'])
+
         try:
             target = problem_definition.get('target', None)
-
+            training_data_df = None
             if data_integration_ref is not None:
                 database_controller = DatabaseController()
                 sql_session = make_sql_session()
@@ -138,7 +155,6 @@ def learn_process(class_path, engine, integration_id,
             module_name, class_name = class_path
             module = importlib.import_module(module_name)
             HandlerClass = getattr(module, class_name)
-            HandlerClass = MLClientFactory(handler_class=HandlerClass, engine=engine)
 
             handlerStorage = HandlerStorage(integration_id)
             modelStorage = ModelStorage(predictor_id)

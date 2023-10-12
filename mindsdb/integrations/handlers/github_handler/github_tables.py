@@ -1121,7 +1121,12 @@ class GithubMilestonesTable(APITable):
                                         "description": self.check_none(raw_data["description"]),
                                         "creator": self.check_none(raw_data["creator"]),
                                         "open_issues": self.check_none(raw_data["open_issues"]),
-                                        "closed_issues": self.check_none(raw_data["closed_issues"])
+                                        "closed_issues": self.check_none(raw_data["closed_issues"]),
+                                        "state": self.check_none(raw_data["state"]), 
+                                        "created_at": self.check_none(raw_data["created_at"]),
+                                        "updated_at": self.check_none(raw_data["updated_at"]),
+                                        "due_on": self.check_none(raw_data["due_on"]),
+                                        "closed_at": self.check_none(raw_data["closed_at"])
                                     }
                                 ]
                             ),

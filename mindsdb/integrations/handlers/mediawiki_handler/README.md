@@ -40,15 +40,32 @@ The MediaWiki handler does not require any parameters to be initialized.
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+  - [x] Support INSERT
+    - [ ] Support INSERT with SELECT
+    - [ ] Support INSERT with SELECT + WHERE
+    - [ ] Support INSERT without defined columns
 
 ## Limitations
 - Only the page ID, title, original title, content, summary, url and categories are returned for each page.
 - WHERE clause only supports filtering by page ID and title.
+- NOT Supported: INSERT with SELECT + WHERE
+~~~~sql
+INSERT INTO table2 (column1, column2, column3, ...)
+   SELECT column1, column2, column3, ...
+   FROM table1
+   WHERE condition;
+~~~~
+- NOT Supported: INSERT without defined columns
+
+~~~~sql
+INSERT INTO table_name
+VALUES (value1, value2, value3, ...);
+~~~~
 
 Note: If a query is made without a WHERE clause, the handler will return 20 random pages.
 
 ## TODO
-- [ ] Support INSERT, UPDATE and DELETE for Pages table
+- [ ] Support UPDATE and DELETE for Pages table
 - [ ] Support more columns for Pages table
 
 ## Example Usage
@@ -74,4 +91,10 @@ FROM mediawiki_datasource.pages
 WHERE title = 'Barack'
 ORDER BY pageid
 LIMIT 5
+~~~~
+
+Insert:
+~~~~sql
+ INSERT INTO mediawiki_datasource.pages ('pageid','title','original_title','content','summary','url','categories') 
+ VALUES  (621307299,'Uniique-Egchocephalothrips','Orig-Egchocephalothrips','Content','Summary','Url','Categ')
 ~~~~

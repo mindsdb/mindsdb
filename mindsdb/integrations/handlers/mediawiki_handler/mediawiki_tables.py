@@ -1,3 +1,5 @@
+import json
+
 import pandas as pd
 
 from typing import List
@@ -8,7 +10,7 @@ from mindsdb_sql.parser import ast
 
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 
-from mindsdb.integrations.handlers.utilities.query_utilities import INSERTQueryParser, INSERTQueryExecutor
+from mindsdb.integrations.handlers.utilities.query_utilities import INSERTQueryParser
 
 from mindsdb.utilities.log import get_log
 
@@ -98,39 +100,16 @@ class PagesTable(APITable):
             query,
             self.get_columns()
         )
-        # set_clauses, where_conditions = insert_statements_parser.parse_query()
+        values_to_insert = insert_statements_parser.parse_query()
 
-        title, page_id = self.validate_where_conditions(where_conditions)
-
-        pages_df = pd.json_normalize(self.get_pages(title=title, page_id=page_id))
-
-        # insert_statement_executor = INSERTQueryExecutor(
-        #     pages_df,
-        #     set_clauses,
-        #     where_conditions
-        # )
-        # pages_df = insert_statement_executor.execute_query()
-
-        #Since we didn't reindex pages_df we can loop through the changes and POST them to the API:Edit endpoint
-        for index, row in pages_df.iterrows():
+        if values_to_insert:
+            row = values_to_insert[0]
             self.handler.call_application_api('edit', {
                 'title': row['title'],
-                'content': row['content'],
-                'summary': row['summary']
+                'text': row['content'],
+                'summary': row['summary'],
+                'headers': json.dumps([{'Accept': 'application/json'},{'Content-Type': 'application/x-www-form-urlencoded'}])
             })
-
-        return pages_df
-
-        """         
-        Fetch Login
-        Login
-        CSRF
-        API:Edit {
-            title:
-            content:
-            etc:
-        } 
-        """
 
     def get_columns(self) -> List[str]:
         return ['pageid', 'title', 'original_title', 'content', 'summary', 'url', 'categories']

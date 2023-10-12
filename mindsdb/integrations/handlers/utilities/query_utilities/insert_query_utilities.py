@@ -1,10 +1,10 @@
+import pandas as pd
+from .exceptions import UnsupportedColumnException, MandatoryColumnException, ColumnCountMismatchException
+from mindsdb.integrations.handlers.utilities.query_utilities.base_query_utilities import BaseQueryParser
 from mindsdb_sql.parser import ast
 from typing import Text, List, Dict, Any, Optional
 
-from .exceptions import UnsupportedColumnException, MandatoryColumnException, ColumnCountMismatchException
-
-
-class INSERTQueryParser(BaseQueryExecutor):
+class INSERTQueryParser(BaseQueryParser):
     """
     Parses a INSERT query into its component parts.
 
@@ -19,8 +19,9 @@ class INSERTQueryParser(BaseQueryExecutor):
     all_mandatory : Optional[Any], Optional (default=True)
         Whether all mandatory columns must be present in the query. If False, only one of the mandatory columns must be present.
     """
-    def __init__(self, query: ast.Insert, supported_columns: Optional[List[Text]] = None, mandatory_columns: Optional[List[Text]] = None, all_mandatory: Optional[Any] = True):
-        self.query = query
+    def __init__(self, query: ast.Insert, supported_columns: Optional[List[Text]] = None, mandatory_columns: Optional[List[Text]] = None, all_mandatory: Optional[Any] = True,
+                 df: pd.DataFrame=None):
+        super().__init__(query)
         self.supported_columns = supported_columns
         self.mandatory_columns = mandatory_columns
         self.all_mandatory = all_mandatory
@@ -38,7 +39,6 @@ class INSERTQueryParser(BaseQueryExecutor):
                 raise ColumnCountMismatchException("Number of columns does not match the number of values")
             else:
                 values_to_insert.append(dict(zip(columns, value)))
-
         return values_to_insert
 
     def parse_columns(self):
@@ -69,60 +69,3 @@ class INSERTQueryParser(BaseQueryExecutor):
         Parses the values in the query.
         """
         return self.query.values
-
-class INSERTQueryExecutor(BaseQueryExecutor):
-    """
-    Executes an INSERT query.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Given table.
-    where_conditions : List[List[Text]]
-        WHERE conditions of the query.
-
-    NOTE: This class DOES NOT Insert the relevant records of the entity for you, it will simply return the records that need to be inserted based on the WHERE conditions.
-
-          This class expects all of the entities to be passed in as a DataFrane and filters out the relevant records based on the WHERE conditions.
-          Because all of the records need to be extracted to be passed in as a DataFrame, this class is not very computationally efficient.
-          Therefore, DO NOT use this class if the API/SDK that you are using supports deleting records in bulk.
-
-    """
-    def __init__(self, df: pd.DataFrame,
-                 values_clause: List[Tuple[Text, Any]],
-                 into_clauses: List[Tuple[Text, Any]],
-                 where_conditions: List[List[Text]]):
-        self.__init__(df, where_conditions)
-        self.values_clauses = values_clauses
-        self.into_clauses = into_clauses
-
-
-    def execute_query(self) -> pd.DataFrame:
-        """
-        Execute the query.
-        """
-        self.execute_where_clause()
-
-        self.execute_values_clause()
-        self.execute_into_clause()
-
-        return self.df
-
-    def execute_values_clause(self)  -> None:
-        """
-        Execute the set clause of the query.
-        """
-        for column, value in self.set_clauses.items():
-            if not isinstance(column, str):
-                raise ValueError("The column name should be a string")
-
-            self.df[column] = value
-
-    def execute_into_clause(self)  -> None:
-        """
-        Execute the set clause of the query.
-        """
-        for column, value in self.set_clauses.items():
-            if not isinstance(column, str):
-                raise ValueError("The column name should be a string")
-            self.df[column] = value

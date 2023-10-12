@@ -1,3 +1,5 @@
+import json
+
 from mediawikiapi import MediaWikiAPI
 
 from mindsdb.integrations.handlers.mediawiki_handler.mediawiki_tables import PagesTable
@@ -49,7 +51,7 @@ class MediaWikiHandler(APIHandler):
         self.kwargs= kwargs
         self.API_URL = 'https://www.mediawiki.org/w/api.php'
         self.username = username if username else None #How do we get these?
-        self.password = password if password else None#How do we get these?
+        self.password = password if password else None #How do we get these?
         self.isLogged= False
         self.connection = None
         self.is_connected = False
@@ -128,7 +130,9 @@ class MediaWikiHandler(APIHandler):
             if csrf is not None:
                 params['csrf'] = csrf
                 params.update({'action': operation})
-                response = requests.post(self.API_URL, params=params, timeout=5)
+                if params['headers']:
+                    headers = json.loads(params['headers'])
+                response = requests.post(self.API_URL, params=params, headers=headers, timeout=5)
                 df = pd.DataFrame(response.json())
                 return df
         except Exception as e:

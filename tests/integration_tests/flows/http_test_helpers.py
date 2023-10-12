@@ -9,28 +9,38 @@ class HTTPHelperMixin:
     _sql_via_http_context = {}
 
     @staticmethod
-    def api_request(method, url, payload=None):
+    def api_request(method, url, payload=None, headers=None):
         method = method.lower()
 
         fnc = getattr(requests, method)
 
         url = f'{HTTP_API_ROOT}/{url.lstrip("/")}'
-        response = fnc(url, json=payload)
+        response = fnc(url, json=payload, headers=headers)
 
         return response
 
-    def sql_via_http(self, request: str, expected_resp_type: str = None, context: dict = None) -> dict:
+    def sql_via_http(self, request: str, expected_resp_type: str = None, context: dict = None,
+                     headers: dict = None, company_id: int = None) -> dict:
         if context is None:
             context = self._sql_via_http_context
+
+        if headers is None:
+            headers = {}
+        if company_id is not None:
+            headers['company-id'] = str(company_id)
+
         payload = {
             'query': request,
             'context': context
         }
-        response = self.api_request('post', '/sql/query', payload)
+        response = self.api_request('post', '/sql/query', payload, headers)
 
         assert response.status_code == 200, f"sql/query is not accessible - {response.text}"
         response = response.json()
-        assert response.get('type') == (expected_resp_type or [RESPONSE_TYPE.OK, RESPONSE_TYPE.TABLE, RESPONSE_TYPE.ERROR]), response  # noqa
+        if expected_resp_type is not None:
+            assert response.get('type') == expected_resp_type, response
+        else:
+            assert response.get('type') in [RESPONSE_TYPE.OK, RESPONSE_TYPE.TABLE, RESPONSE_TYPE.ERROR], response
         assert isinstance(response.get('context'), dict)
         if response['type'] == 'table':
             assert isinstance(response.get('data'), list)
@@ -41,16 +51,19 @@ class HTTPHelperMixin:
         self._sql_via_http_context = response['context']
         return response
 
-    def await_model(self, model_name, timeout=60):
+    def await_model(self, model_name: str, project_name: str = 'mindsdb',
+                    version_number: int = 1, timeout: int = 60):
         start = time.time()
         status = None
         while (time.time() - start) < timeout:
-            resp = self.sql_via_http('show models', RESPONSE_TYPE.TABLE)
-            name_index = [x.lower() for x in resp['column_names']].index('name')
-            status_index = [x.lower() for x in resp['column_names']].index('status')
-            for row in resp['data']:
-                if row[name_index] == model_name:
-                    status = row[status_index]
+            response = self.sql_via_http(
+                f"""
+                    SELECT status
+                    FROM {project_name}.models
+                    WHERE name='{model_name}' and version = {version_number}
+                """, RESPONSE_TYPE.TABLE
+            )
+            status = response['data'][0][0]
             if status in ['complete', 'error']:
                 break
             time.sleep(1)

@@ -114,8 +114,8 @@ class Project:
             name=view_name,
             project_name=self.name
         )
-        subquery_ast = parse_sql(view_meta['query'], dialect='mindsdb')
-        return subquery_ast
+        view_meta['query_ast'] = parse_sql(view_meta['query'], dialect='mindsdb')
+        return view_meta
 
     @staticmethod
     def _get_model_data(predictor_record, integraion_record):

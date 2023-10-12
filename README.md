@@ -55,7 +55,7 @@
 [MindsDB's](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) **AI Virtual Database** empowers developers to connect any AI/ML model to any datasource. This includes relational and non-relational databases, data warehouses and SaaS applications.
  [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Build%20AI-Centered%20Applications%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,nlp,machine_learning,neural_networks,databases,gpt3)
 
-MindsDB offers three primary benefits to its users. 
+MindsDB offers two primary benefits to its users. 
 1. Hook AI models to run automatically as new data is observed and plug the output into any of our integrations. 
 2. Automate training and finetuning AI models from data contained in any of the 130+ datasources we support.
   

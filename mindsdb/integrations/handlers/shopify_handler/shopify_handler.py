@@ -1,7 +1,7 @@
 import shopify
 import requests
 
-from mindsdb.integrations.handlers.shopify_handler.shopify_tables import ProductsTable, CustomersTable, OrdersTable, InventoryLevelTable, LocationTable, CustomerReviews, CarrierServiceTable
+from mindsdb.integrations.handlers.shopify_handler.shopify_tables import ProductsTable, CustomersTable, OrdersTable, InventoryLevelTable, LocationTable, CustomerReviews, CarrierServiceTable, ShippingZoneTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -54,6 +54,9 @@ class ShopifyHandler(APIHandler):
 
         carrier_service_data = CarrierServiceTable(self)
         self._register_table("carrier_service", carrier_service_data)
+
+        shipping_zone_data = ShippingZoneTable(self)
+        self._register_table("shipping_zone", shipping_zone_data)
 
     def connect(self):
         """

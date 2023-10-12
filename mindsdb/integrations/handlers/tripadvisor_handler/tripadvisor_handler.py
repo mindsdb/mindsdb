@@ -1,9 +1,4 @@
 import os
-import datetime as dt
-
-import time
-from collections import defaultdict
-from typing import Any
 
 import pandas as pd
 
@@ -11,14 +6,10 @@ from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 
 
-from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from mindsdb.integrations.utilities.date_utils import parse_utc_date
+from mindsdb.integrations.libs.api_handler import APIHandler
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-    RESPONSE_TYPE,
 )
 
 from .tripadvisor_table import SearchLocationTable
@@ -163,7 +154,6 @@ class TripAdvisorHandler(APIHandler):
             "website": loc.get("website"),
             "write_review": loc.get("write_review"),
             "ranking_data": str(loc.get("ranking_data")),
-            "rating": loc.get("rating"),
             "rating_image_url": loc.get("rating_image_url"),
             "num_reviews": loc.get("num_reviews"),
             "review_rating_count": loc.get("review_rating_count"),
@@ -175,10 +165,10 @@ class TripAdvisorHandler(APIHandler):
             "brand": loc.get("brand"),
             "ancestors": str(loc.get("ancestors")),
             "periods": str(loc.get("hours").get("periods"))
-            if loc.get("hours") != None
+            if loc.get("hours") is not None
             else None,
             "weekday": str(loc.get("hours").get("weekday_text"))
-            if loc.get("weekday") != None
+            if loc.get("weekday") is not None
             else None,
             "amenities": str(loc.get("amenities")),
             "features": str(loc.get("features")),

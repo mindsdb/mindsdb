@@ -119,8 +119,8 @@ def learn_process(class_path, engine, integration_id,
                 elif data_integration_ref['type'] == 'view':
                     project = database_controller.get_project(project_name)
                     query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
-                    view_query_ast = project.query_view(query_ast)
-                    sqlquery = SQLQuery(view_query_ast, session=sql_session)
+                    view_meta = project.query_view(query_ast)
+                    sqlquery = SQLQuery(view_meta['query_ast'], session=sql_session)
 
                 result = sqlquery.fetch(view='dataframe')
                 training_data_df = result['result']

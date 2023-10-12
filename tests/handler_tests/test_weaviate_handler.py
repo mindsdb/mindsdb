@@ -1,7 +1,9 @@
 # check if weaviate is installed
+import re
 import importlib
 from unittest.mock import patch
-
+import tempfile
+import psutil
 import pandas as pd
 import pytest
 from mindsdb_sql import parse_sql
@@ -30,16 +32,24 @@ class TestWeaviateHandler(BaseExecutorTest):
     def setup_method(self):
         super().setup_method()
         # create a weaviate database connection
+        tmp_directory = tempfile.mkdtemp()
         self.run_sql(
             f"""
             CREATE DATABASE weaviate_test
             WITH ENGINE = "weaviate",
             PARAMETERS = {{
-                "weaviate_url" : "{"https://sample-q4x5xe6o.weaviate.network"}",
-                "weaviate_api_key": "{"QBHA2JJ3PxXF6Rs8cl3a6IsYjp0jDFh0sehv"}"
+                "persistence_directory": "{tmp_directory}"
             }}
         """
         )
+
+    @staticmethod
+    def teardown_class(cls):
+        super().teardown_class(cls)
+        for proc in psutil.process_iter():
+            # check whether the process name matches (kill orphan processes)
+            if re.search("weaviate*", proc.name()):
+                proc.kill()
 
     @pytest.mark.xfail(reason="create table for vectordatabase is not well supported")
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")

@@ -2,8 +2,11 @@ from collections import OrderedDict
 from datetime import datetime
 from typing import List, Optional
 
+import os
 import weaviate
+from weaviate.embedded import EmbeddedOptions
 import pandas as pd
+
 
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
@@ -33,40 +36,54 @@ class WeaviateDBHandler(VectorStoreHandler):
         self._client_config = {
             "weaviate_url": self._connection_data.get("weaviate_url"),
             "weaviate_api_key": self._connection_data.get("weaviate_api_key"),
+            "persistence_directory": self._connection_data.get("persistence_directory"),
         }
 
         if not (
             self._client_config.get("weaviate_url")
-            and self._client_config.get("weaviate_api_key")
+            or self._client_config.get("persistence_directory")
         ):
             raise Exception(
-                "Both url + api key client secret are required for weaviate connection!"
+                "Either url or persist_directory is required for weaviate connection!"
             )
 
         self._client = None
+        self._embedded_options = None
         self.is_connected = False
         self.connect()
 
     def _get_client(self) -> weaviate.Client:
-        client_config = self._client_config
         if not (
-            client_config
+            self._client_config
             and (
                 self._client_config.get("weaviate_url")
-                and self._client_config.get("weaviate_api_key")
+                or self._client_config.get("persistence_directory")
             )
         ):
             raise Exception("Client config is not set! or missing parameters")
 
         # decide the client type to be used, either persistent or httpclient
-        return weaviate.Client(
-            url=client_config["weaviate_url"],
-            auth_client_secret=weaviate.AuthApiKey(
-                api_key=client_config["weaviate_api_key"]
-            ),
-        )
+        if self._client_config.get("persistence_directory"):
+            self._embedded_options = EmbeddedOptions(
+                persistence_data_path=self._client_config.get("persistence_directory")
+            )
+            return weaviate.Client(embedded_options=self._embedded_options)
+        if self.client_config.get("weaviate_api_key"):
+            return weaviate.Client(
+                url=self._client_config["weaviate_url"],
+                auth_client_secret=weaviate.AuthApiKey(
+                    api_key=self._client_config["weaviate_api_key"]
+                ),
+            )
+        return weaviate.Client(url=self._client_config["weaviate_url"])
 
     def __del__(self):
+        self.is_connected = False
+        if self._embedded_options:
+            self._client._connection.embedded_db.stop()
+            del self._embedded_options
+        self._embedded_options = None
+        self._client._connection.close()
         if self._client:
             del self._client
 
@@ -88,7 +105,11 @@ class WeaviateDBHandler(VectorStoreHandler):
 
         if not self.is_connected:
             return
-
+        if self._embedded_options:
+            self._client._connection.embedded_db.stop()
+            del self._embedded_options
+        del self._client
+        self._embedded_options = None
         self._client = None
         self.is_connected = False
 
@@ -402,13 +423,43 @@ class WeaviateDBHandler(VectorStoreHandler):
         Update data in the weaviate database.
         """
         table_name = table_name.capitalize()
+        metadata_table_name = table_name.capitalize() + "_metadata"
+        data_list = data.to_dict("records")
+        for row in data_list:
+            non_metadata_keys = [
+                key
+                for key in row.keys()
+                if key and not key.startswith(TableField.METADATA.value)
+            ]
+            metadata_keys = [
+                key.split(".")[1]
+                for key in row.keys()
+                if key and key.startswith(TableField.METADATA.value)
+            ]
 
-        dict_list = data.to_dict("records")
-        for row in dict_list:
+            id_filter = {"path": ["id"], "operator": "Equal", "valueText": row["id"]}
+            metadata_id_query = f"associatedMetadata {{ ... on {metadata_table_name} {{ _additional {{ id }} }} }}"
+            result = (
+                self._client.query.get(table_name, metadata_id_query)
+                .with_additional(["id"])
+                .with_where(id_filter)
+                .do()
+            )
+
+            metadata_id = result["data"]["Get"][table_name][0]["associatedMetadata"][0][
+                "_additional"
+            ]["id"][0]
+            # updating table
             self._client.data_object.update(
                 uuid=row["id"],
                 class_name=table_name,
-                data_object={key: row[key] for key in row.keys()},
+                data_object={key: row[key] for key in non_metadata_keys},
+            )
+            # updating metadata
+            self._client.data_object.update(
+                uuid=metadata_id,
+                class_name=metadata_table_name,
+                data_object={key: row[key] for key in metadata_keys},
             )
         return Response(resp_type=RESPONSE_TYPE.OK)
 
@@ -617,17 +668,23 @@ class WeaviateDBHandler(VectorStoreHandler):
 connection_args = OrderedDict(
     weaviate_url={
         "type": ARG_TYPE.STR,
-        "description": "weaviate url",
-        "required": True,
+        "description": "weaviate url/ local endpoint",
+        "required": False,
     },
     weaviate_api_key={
         "type": ARG_TYPE.STR,
         "description": "weaviate API KEY",
-        "required": True,
+        "required": False,
+    },
+    persistence_directory={
+        "type": ARG_TYPE.STR,
+        "description": "persistence directory for chroma",
+        "required": False,
     },
 )
 
 connection_args_example = OrderedDict(
-    weaviate_url="https://sample-s3x8blpm.weaviate.network",
-    weaviate_api_key="mdMdLfFSbwcWqLI6NUNUseIoIS8yxnY84U5C",
+    weaviate_url="http://localhost:8080",
+    weaviate_api_key="<api_key>",
+    persistence_directory="chroma",
 )

@@ -678,7 +678,7 @@ connection_args = OrderedDict(
     },
     persistence_directory={
         "type": ARG_TYPE.STR,
-        "description": "persistence directory for chroma",
+        "description": "persistence directory for weaviate",
         "required": False,
     },
 )
@@ -686,5 +686,5 @@ connection_args = OrderedDict(
 connection_args_example = OrderedDict(
     weaviate_url="http://localhost:8080",
     weaviate_api_key="<api_key>",
-    persistence_directory="chroma",
+    persistence_directory="db_path",
 )

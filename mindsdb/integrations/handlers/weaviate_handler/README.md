@@ -5,15 +5,16 @@ This is the implementation of the Weaviate for MindsDB.
 ## Weaviate
 
 Weaviate is an open-source vector database. It allows you to store data objects and vector embeddings from your favorite ML-models, and scale seamlessly into billions of data objects.
-
+_
 ## Implementation
 
-This handler uses `weaviate-client` python library connect to a Milvus instance.
+This handler uses `weaviate-client` python library connect to a weaviate instance.
 
 The required arguments to establish a connection are:
 
 * `weaviate_url`: url of the weaviate database
-* `weaviate_api_key`: API key to authenticate with weaviate.
+* `weaviate_api_key`: API key to authenticate with weaviate (in case of cloud instance).
+* `persistence_directory`: directory to be used in case of local storage
 
 
 ### Creating connection
@@ -26,6 +27,22 @@ CREATE DATABASE weaviate_datasource
             PARAMETERS = {
                 "weaviate_url" : "https://sample.weaviate.network",
                 "weaviate_api_key": "api-key"
+};
+```
+
+```sql
+CREATE DATABASE weaviate_datasource
+            WITH ENGINE = "weaviate",
+            PARAMETERS = {
+                "weaviate_url" : "https://localhost:8080",
+};
+```
+
+```sql
+CREATE DATABASE weaviate_datasource
+            WITH ENGINE = "weaviate",
+            PARAMETERS = {
+                "persistence_directory" : "db_path",
 };
 ```
 
@@ -72,16 +89,16 @@ WHERE search_vector = '[3.0, 1.0, 2.0, 4.5]'
 LIMIT 10;
 ```
 
-Basic query with no 
+Basic query 
 
 ```sql
-SELECT * from milvus_datasource.test
+SELECT * from weaviate_datasource.test
 ```
 
 You can use `WHERE` clause on dynamic fields like normal SQL
 
 ```sql
-SELECT * FROM milvus_datasource.createtest
+SELECT * FROM weaviate_datasource.createtest
 WHERE category = "science";
 ```
 
@@ -89,15 +106,10 @@ WHERE category = "science";
 
 You can delete entries using `DELETE` just like in SQL.
 
-Caveats:
-- Milvus only supports deleting entities with clearly specified primary keys
-- You can only use `IN` operator
 
 ```sql
-DELETE FROM milvus_datasource.test
+DELETE FROM weaviate_datasource.test
 WHERE id IN (1, 2, 3);
 ```
 
-### Updating
-
-Updating records is not supported by Milvus API. You can try using combination of `DELETE` and `INSERT`
+Update is not supported by mindsdb vector database

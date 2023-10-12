@@ -116,6 +116,6 @@ connection_args = OrderedDict(
 )
 
 connection_args_example = OrderedDict(
-    username="username", 
+    username="username",
     password="password"
 )

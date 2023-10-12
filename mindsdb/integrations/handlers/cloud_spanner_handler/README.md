@@ -27,7 +27,7 @@ parameters={
     "instance_id":"my-instance",
     "database_id":"example-id",
     "project":"my-project",
-    "dialect": "postgres" // optinonal, default is 'googlesql'
+    "dialect": "postgres" -- optional, default is 'googlesql'
     "credentials":"{...}"
 };
 ```

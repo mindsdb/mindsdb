@@ -438,12 +438,12 @@ class Agents(Base):
 
 class QueryContext(Base):
     __tablename__ = 'query_context'
-    id = Column(Integer, primary_key=True)
-    company_id = Column(Integer, nullable=True)
+    id: int = Column(Integer, primary_key=True)
+    company_id: int = Column(Integer, nullable=True)
 
-    query = Column(String, nullable=False)
-    context_name = Column(String, nullable=False)
-    values = Column(JSON)
+    query: str = Column(String, nullable=False)
+    context_name: str = Column(String, nullable=False)
+    values: dict = Column(JSON)
 
-    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    created_at = Column(DateTime, default=datetime.datetime.now)
+    updated_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    created_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now)

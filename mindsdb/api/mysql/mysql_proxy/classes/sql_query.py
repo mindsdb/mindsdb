@@ -77,7 +77,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErLogicError,
     ErSqlWrongArguments
 )
-from mindsdb.interfaces.query_context.context_controller import contextController
+from mindsdb.interfaces.query_context.context_controller import query_context_controller
 from mindsdb.utilities.cache import get_cache, json_checksum
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark
@@ -570,7 +570,7 @@ class SQLQuery():
 
             query_traversal(query, fill_params)
 
-            query, context_callback = contextController.handle_db_context_vars(query, dn, self.session)
+            query, context_callback = query_context_controller.handle_db_context_vars(query, dn, self.session)
 
             data, columns_info = dn.query(
                 query=query,
@@ -579,12 +579,6 @@ class SQLQuery():
 
             if context_callback:
                 context_callback(data, columns_info)
-
-        # is it used?
-        # if this is query: execute it
-        # if isinstance(data, ASTNode):
-        #     subquery = SQLQuery(data, session=self.session)
-        #     return subquery.fetched_data
 
         result = ResultSet()
         for column in columns_info:

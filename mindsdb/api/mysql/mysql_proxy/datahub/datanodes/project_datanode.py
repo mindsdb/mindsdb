@@ -12,7 +12,7 @@ from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
-from mindsdb.interfaces.query_context.context_controller import contextController
+from mindsdb.interfaces.query_context.context_controller import query_context_controller
 
 
 class ProjectDataNode(DataNode):
@@ -89,12 +89,9 @@ class ProjectDataNode(DataNode):
         # endregion
 
         # region query to views
-        view_query_ast = self.project.query_view(query)
+        view_meta = self.project.query_view(query)
 
-        renderer = SqlalchemyRender('mysql')
-        view_meta = renderer.get_string(view_query_ast, with_failback=True)
-
-        contextController.set_context('view', view_meta['id'])
+        query_context_controller.set_context('view', view_meta['id'])
 
         try:
             sqlquery = SQLQuery(
@@ -104,7 +101,7 @@ class ProjectDataNode(DataNode):
             result = sqlquery.fetch(view='dataframe')
 
         finally:
-            contextController.release_context('view', view_meta['id'])
+            query_context_controller.release_context('view', view_meta['id'])
 
         if result['success'] is False:
             raise Exception(f"Cant execute view query: {view_meta['query_ast']}")

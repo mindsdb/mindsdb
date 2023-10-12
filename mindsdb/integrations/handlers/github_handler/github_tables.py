@@ -1059,3 +1059,106 @@ class GithubContributorsTable(APITable):
             "created_at",
             "updated_at"
         ]
+        
+class GithubMilestonesTable(APITable):
+    """The GitHub Milestones Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Pulls data from the GitHub "List repository milestones" API
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+
+            GitHub milestones matching the query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'milestones',
+            self.get_columns()
+        )
+
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        total_results = result_limit if result_limit else 20
+
+        self.handler.connect()
+
+        github_milestones_df = pd.DataFrame(columns=self.get_columns())
+
+        start = 0
+
+        while True:
+            try:
+
+                for milestone in self.handler.connection.get_repo(self.handler.repository).a.get_milestones()[start: start + 10]:
+                    
+                    raw_data = milestone.raw_data
+                    github_milestones_df = pd.concat(
+                        [
+                            github_milestones_df,
+                            pd.DataFrame(
+                                [
+                                    {
+                                        "url": self.check_none(raw_data["url"]),
+                                        "html_url": self.check_none(raw_data["html_url"]),
+                                        "labels_url": self.check_none(raw_data["labels_url"]),
+                                        "id": self.check_none(raw_data["id"]),
+                                        "node_id": self.check_none(raw_data["node_id"]),
+                                        "number": self.check_none(raw_data["number"]),
+                                        "title": self.check_none(raw_data["title"]),
+                                        "description": self.check_none(raw_data["description"]),
+                                        "creator": self.check_none(raw_data["creator"]),
+                                        "open_issues": self.check_none(raw_data["open_issues"]),
+                                        "closed_issues": self.check_none(raw_data["closed_issues"])
+                                    }
+                                ]
+                            ),
+                        ]
+                    )
+
+                    if github_milestones_df.shape[0] >= total_results:
+                        break
+            except IndexError:
+                break
+
+            if github_milestones_df.shape[0] >= total_results:
+                break
+            else:
+                start += 10
+
+        select_statement_executor = SELECTQueryExecutor(
+            github_milestones_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+
+        github_milestones_df = select_statement_executor.execute_query()
+
+        return github_milestones_df
+
+    def check_none(self, val):
+        return "" if val is None else val
+
+    def get_columns(self) -> List[str]:
+        """Gets all columns to be returned in pandas DataFrame responses
+
+        Returns
+        -------
+        List[str]
+            List of columns
+        """
+
+        return ['url', 'html_url', 'labels_url', 'id', 'node_id', 'number', 'title', 'description', 'creator', 'open_issues', 'closed_issues', 'state', 'created_at', 'updated_at', 'due_on', 'closed_at']

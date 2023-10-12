@@ -3,13 +3,11 @@
 This is the implementation of the Notion handler for MindsDB.
 
 ## Notion
-Notion is a note-taking and productivity freemium cloud platform.
+[Notion](https://www.notion.so/help/guides/what-is-notion) is a note-taking and productivity freemium cloud platform.
 In short, notion has all-in-one workspace tool that integrates kanban boards, tasks, wikis, and database.
-In this handler. python client of api is used and more information about this python client can be found [here](https://pypi.org/project/notion-client/)
-
 
 ## Implementation
-This handler was implemented as per the MindsDB API Handler documentation.
+This handler was implemented using notion-client library, a simple and easy to use client library for the official [Notion API](https://developers.notion.com/).
 
 
 The required arguments to establish a connection are,

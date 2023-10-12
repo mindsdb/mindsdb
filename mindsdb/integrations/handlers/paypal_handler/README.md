@@ -47,7 +47,6 @@ The PayPal handler is initialized with the following parameters:
 ## TODO
 
 - [ ] Support INSERT, UPDATE and DELETE for the Payments table
-- [ ] PayPal Invoices table
 - [ ] PayPal Orders table
 - [ ] PayPal Payouts table
 - [ ] PayPal Subscriptions table

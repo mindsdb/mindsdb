@@ -50,6 +50,7 @@ exclude =
   mindsdb/integrations/handlers/view_handler/view_handler.py
   mindsdb/integrations/handlers/yugabyte_handler/*
   mindsdb/integrations/handlers/opengauss_handler/*
+  mindsdb/integrations/handlers/dockerhub_handler/*
   mindsdb/integrations/libs/response.py
   mindsdb/integrations/utilities/utils.py
   mindsdb/interfaces/model/model_controller.py

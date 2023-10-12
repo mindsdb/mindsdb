@@ -1,16 +1,17 @@
-import sys
 import os
+import sys
 import time
 import json
 import subprocess
-import requests
 from pathlib import Path
 
 import docker
 import pytest
+import psutil
+import requests
 import netifaces
 import pandas as pd
-import psutil
+from walrus import Database
 
 from mindsdb.utilities.ps import get_child_pids
 
@@ -23,6 +24,24 @@ TEMP_DIR = Path(__file__).parent.absolute().joinpath('../../').joinpath(
 ).resolve()
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 CONFIG_PATH = TEMP_DIR.joinpath('config.json')
+
+
+def remove_container(container_name: str):
+    """ Stop and remove docker contaier
+
+        Args:
+            container_name (str): name of conteiner to remove
+    """
+    try:
+        docker_client = docker.from_env()
+        container = docker_client.containers.get(container_name)
+        try:
+            container.kill()
+        except Exception:
+            pass
+        container.remove()
+    except docker.errors.NotFound:
+        pass
 
 
 def make_test_csv(name, data):
@@ -127,12 +146,12 @@ def mindsdb_app(request, config):
         with open(config_path, "wt") as f:
             f.write(json.dumps(config))
 
-        use_gui = getattr(request.module, "USE_GUI", False)
-
         os.environ['CHECK_FOR_UPDATES'] = '0'
         cmd = ['python3', '-m', 'mindsdb', f'--api={api_str}', f'--config={config_path}', '--verbose']
-        if use_gui is False:
+        if getattr(request.module, "USE_GUI", False) is False:
             cmd.append('--no_studio')
+        if getattr(request.module, "ML_TASK_QUEUE_CONSUMER", False) is True:
+            cmd.append('--ml_task_queue_consumer')
         timeout = 90
 
     print('Starting mindsdb process!')
@@ -343,4 +362,45 @@ def maria_db(request):
 
     if not os.environ.get("MICROSERVICE_MODE", False):
         container.kill()
+        docker_client.close()
+
+
+@pytest.fixture(scope="module")
+def redis():
+    """ start redis docker contaienr
+    """
+    image_name = "redis:7.2.1"
+    docker_client = docker.from_env()
+    container_name = 'mindsdb-test-redis'
+
+    try:
+        remove_container(container_name)
+
+        docker_client.containers.run(
+            image_name,
+            detach=True,
+            network='host',
+            name=container_name
+        )
+
+        # region check connection to redis
+        db = Database(protocol=3)
+        start_time = time.time()
+        connected = False
+        while (connected is False) and (time.time() - start_time < 30):
+            try:
+                connected = db.ping()
+            except Exception:
+                pass
+            time.sleep(1)
+        if connected is False:
+            raise Exception("Cant conect to redis in 10s")
+        # endregion
+
+        yield
+    except Exception as e:
+        print(f'Got exception during redis container starting: {e}')
+        raise
+    finally:
+        remove_container(container_name)
         docker_client.close()

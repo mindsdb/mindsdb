@@ -62,13 +62,13 @@ class DockerHubRepoImagesSummaryTable(APITable):
         repo_images_summary_df = pd.DataFrame(columns=self.get_columns())
 
         response = self.handler.docker_client.get_images_summary(search_params["namespace"], search_params["repository"])
-        
+
         self.check_res(res=response)
 
         content = response["content"]
 
         repo_images_summary_df = pd.json_normalize({"active_from": content["active_from"], "total": content["statistics"]["total"], "active": content["statistics"]["active"], "inactive": content["statistics"]["inactive"]})
-        
+
         select_statement_executor = SELECTQueryExecutor(
             repo_images_summary_df,
             selected_columns,
@@ -82,7 +82,8 @@ class DockerHubRepoImagesSummaryTable(APITable):
         return repo_images_summary_df
 
     def check_res(self, res):
-        if res["code"] != 200: raise Exception("Error fetching results - " + res["error"])
+        if res["code"] != 200:
+            raise Exception("Error fetching results - " + res["error"])
 
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses

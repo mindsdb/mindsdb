@@ -35,6 +35,8 @@ class MilvusHandler(VectorStoreHandler):
                 self._search_params[search_param_name] = self._connection_data[search_param_name]
         # Extract parameters used for creating tables
         self._create_table_params = {
+            "create_auto_id": False,
+            "create_id_max_len": 64,
             "create_embedding_dim": 8,
             "create_dynamic_field": True,
             "create_content_max_len": 200,
@@ -252,8 +254,10 @@ class MilvusHandler(VectorStoreHandler):
         """Create a collection with default parameters in the Milvus database as described in documentation."""
         id = FieldSchema(
             name=TableField.ID.value,
-            dtype=DataType.INT64,
+            dtype=DataType.VARCHAR,
             is_primary=True,
+            max_length=self._create_table_params["create_id_max_len"],
+            auto_id=self._create_table_params["create_auto_id"]
         )
         embeddings = FieldSchema(
             name=TableField.EMBEDDINGS.value,
@@ -319,6 +323,7 @@ class MilvusHandler(VectorStoreHandler):
                 data = pd.concat([data, pd.DataFrame.from_records(rows)], axis=1)
                 data.drop(TableField.METADATA.value, axis=1, inplace=True)
             collection.insert(data.to_dict(orient="records"))
+            collection.flush()
         except Exception as e:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
@@ -329,6 +334,12 @@ class MilvusHandler(VectorStoreHandler):
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
     ) -> HandlerResponse:
+        # delete only supports IN operator
+        for condition in conditions:
+            if condition.op in [FilterOperator.EQUAL, FilterOperator.IN]:
+                condition.op = FilterOperator.IN
+                if not isinstance(condition.value, list):
+                    condition.value = [condition.value]
         filters = self._translate_conditions(conditions, exclude_id=False)
         if not filters:
             return Response(
@@ -344,6 +355,7 @@ class MilvusHandler(VectorStoreHandler):
             )
         try:
             collection.delete(filters)
+            collection.flush()
         except Exception as e:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
@@ -420,6 +432,16 @@ connection_args = OrderedDict(
         "description": "specific to the `search_metric_type`",
         "required": False,
     },
+    create_auto_id={
+        "type": ARG_TYPE.BOOL,
+        "description": "whether to auto generate id when inserting records with no ID (default=False)",
+        "required": False,
+    },
+    create_id_max_len={
+        "type": ARG_TYPE.STR,
+        "description": "maximum length of the id field when creating a table (default=64)",
+        "required": False,
+    },
     create_embedding_dim={
         "type": ARG_TYPE.INT,
         "description": "embedding dimension for creating table (default=8)",
@@ -477,6 +499,8 @@ connection_args_example = OrderedDict(
     search_metric_type="L2",
     search_ignore_growing=True,
     search_params={"nprobe": 10},
+    create_auto_id=False,
+    create_id_max_len=64,
     create_embedding_dim=8,
     create_dynamic_field=True,
     create_content_max_len=200,

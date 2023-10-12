@@ -27,6 +27,8 @@ These are used for `SELECT` queries:
 * `search_params`: specific to the `search_metric_type` (default={"nprobe": 10})
 
 These are used for `CREATE` queries:
+* `create_auto_id`: whether to auto generate id when inserting records with no ID (default=False)
+* `create_id_max_len`: maximum length of the id field when creating a table (default=64)
 * `create_embedding_dim`: embedding dimension for creating table (default=8)
 * `create_dynamic_field`: whether or not the created tables have dynamic fields or not (default=True)
 * `create_content_max_len`: max length of the content column (default=200)
@@ -57,19 +59,8 @@ WITH
     "port": 19530,
     "user": "username",
     "password": "password",
-    "search_default_limit": 100,
-    "search_metric_type": "L2",
-    "search_ignore_growing": True,
-    "search_params": {"nprobe": 10},
-    "create_embedding_dim": 8,
-    "create_dynamic_field": True,
-    "create_content_max_len": 200,
-    "create_content_default_value": "",
-    "create_schema_description": "MindsDB generated table",
-    "create_alias": "default",
-    "create_index_params": {},
-    "create_index_metric_type": "L2",
-    "create_index_type": "AUTOINDEX"
+    "create_embedding_dim": 3,
+    "create_auto_id": true
 };
 ```
 
@@ -92,11 +83,7 @@ CREATE TABLE milvus_datasource.test
 
 ### Dropping collections
 
-To drop a Milvus collection use this command
-
-```sql
-DROP TABLE milvus_datasource.tablename;
-```
+Dropping a collection is not supported
 
 ### Querying and selecting
 
@@ -137,6 +124,15 @@ Caveats:
 ```sql
 DELETE FROM milvus_datasource.test
 WHERE id IN (1, 2, 3);
+```
+
+### Inserting records
+
+You can also insert individual rows like so:
+
+```sql
+INSERT INTO milvus_test.testable (id,content,metadata,embeddings)
+VALUES ("id3", 'this is a test', '{"test": "test"}', '[1.0, 8.0, 9.0]');
 ```
 
 ### Updating

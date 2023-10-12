@@ -26,6 +26,7 @@ import mindsdb.utilities.profiler as profiler
 
 from .proc_wrapper import pd_decode, pd_encode, encode, decode
 from .proc_wrapper import import_string, find_model_class
+from .const import BYOM_METHOD
 
 
 BYOM_TYPE = Enum('BYOM_TYPE', ['SAFE', 'UNSAFE'])
@@ -78,6 +79,11 @@ class BYOMHandler(BaseMLEngine):
             )
 
         return self.model_wrapper
+
+    def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
+        mp = self._get_model_proxy()
+        model_state = self.model_storage.file_get('model')
+        return mp.describe(model_state, attribute)
 
     def create(self, target, df=None, args=None, **kwargs):
         model_proxy = self._get_model_proxy()
@@ -222,6 +228,13 @@ class ModelWrapperUnsafe:
 
         return pickle.dumps(self.model_instance.__dict__, protocol=5)
 
+    def describe(self, model_state, attribute: Optional[str] = None) -> pd.DataFrame:
+        if hasattr(self.model_instance, 'describe'):
+            model_state = pickle.loads(model_state)
+            self.model_instance.__dict__ = model_state
+            return self.model_instance.describe(attribute)
+        return pd.DataFrame()
+
     def check(self):
         pass
 
@@ -334,16 +347,16 @@ class ModelWrapperSafe:
     def check(self):
 
         params = {
-            'method': 'check',
+            'method': BYOM_METHOD.CHECK,
             'code': self.code,
         }
         return self._run_command(params)
 
     def train(self, df, target, args):
         params = {
-            'method': 'train',
-            'df': pd_encode(df),
+            'method': BYOM_METHOD.TRAIN,
             'code': self.code,
+            'df': pd_encode(df),
             'to_predict': target,
             'args': args,
         }
@@ -354,10 +367,10 @@ class ModelWrapperSafe:
     def predict(self, df, model_state, args):
 
         params = {
-            'method': 'predict',
+            'method': BYOM_METHOD.PREDICT,
             'code': self.code,
-            'df': pd_encode(df),
             'model_state': model_state,
+            'df': pd_encode(df),
             'args': args,
         }
         pred_df = self._run_command(params)
@@ -365,15 +378,25 @@ class ModelWrapperSafe:
 
     def finetune(self, df, model_state, args):
         params = {
-            'method': 'finetune',
+            'method': BYOM_METHOD.FINETUNE,
+            'code': self.code,
             'model_state': model_state,
             'df': pd_encode(df),
-            'code': self.code,
             'args': args,
         }
 
         model_state = self._run_command(params)
         return model_state
+
+    def describe(self, model_state, attribute: Optional[str] = None) -> pd.DataFrame:
+        params = {
+            'method': BYOM_METHOD.DESCRIBE,
+            'code': self.code,
+            'model_state': model_state,
+            'attribute': attribute
+        }
+        df = self._run_command(params)
+        return df
 
 
 connection_args = OrderedDict(

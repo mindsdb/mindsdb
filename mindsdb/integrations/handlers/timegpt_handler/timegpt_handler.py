@@ -8,6 +8,7 @@ from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.utilities.time_series_utils import get_results_from_nixtla_df
 # TODO: add E2E tests.
 
+
 class TimeGPTHandler(BaseMLEngine):
     """
     Integration with the Nixtla TimeGPT models for
@@ -26,8 +27,8 @@ class TimeGPTHandler(BaseMLEngine):
         using_args = args["using"]
 
         mode = 'forecasting'
-        if args.get("__mdb_sql_task", None):
-            mode = args["__mdb_sql_task"].lower()
+        if args.get('__mdb_sql_task', False) and args['__mdb_sql_task'].lower() in ('forecasting', 'anomalydetection'):
+            mode = args['__mdb_sql_task'].lower()
 
         if mode == 'forecasting':
             assert time_settings["is_timeseries"], "Specify time series settings in your query"
@@ -84,9 +85,9 @@ class TimeGPTHandler(BaseMLEngine):
             clean_ex_first=args.get('clean_ex_first', model_args['clean_ex_first']),
 
             # anomaly detection
-            add_history=args.get('add_history', model_args['add_history']),  # insample bounds and anomaly detection
+            add_history=args.get('add_history', model_args['add_history'])  # insample bounds and anomaly detection
 
-            # TODO: enable this post-refactor
+            # TODO: enable this post-refactor (#6861)
             # X_df=None,  # exogenous variables
         )
 

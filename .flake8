@@ -16,10 +16,6 @@ exclude =
   build/*
   mindsdb/microservices_grpc/*
   # TODO: clean up this code
-  mindsdb/integrations/handlers/d0lt_handler/tests/test_d0lt_handler.py
-  mindsdb/integrations/handlers/databricks_handler/databricks_handler.py
-  mindsdb/integrations/handlers/datastax_handler/datastax_handler.py
-  mindsdb/integrations/handlers/db2_handler/*
   mindsdb/integrations/handlers/druid_handler/druid_handler.py
   mindsdb/integrations/handlers/dynamodb_handler/dynamodb_handler.py
   mindsdb/integrations/handlers/elasticsearch_handler/elasticsearch_handler.py

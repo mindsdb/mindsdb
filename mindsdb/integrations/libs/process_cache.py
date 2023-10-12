@@ -6,6 +6,7 @@ from concurrent.futures import ProcessPoolExecutor, Future
 
 from pandas import DataFrame
 
+from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.ml_task_queue.const import ML_TASK_TYPE
 from mindsdb.integrations.libs.learn_process import learn_process, predict_process
@@ -179,12 +180,27 @@ class ProcessCache:
         """
         self._stop_event.set()
 
-    def init(self, preload_handlers: dict):
+    def init(self):
         """ run processes for specified handlers
-
-            Args:
-                preload_handlers (dict): {handler_class: count_of_processes}
         """
+        from mindsdb.interfaces.database.integrations import integration_controller
+        preload_handlers = {}
+        config = Config()
+        is_cloud = config.get('cloud', False)
+
+        if config['ml_task_queue']['type'] != 'redis':
+            lightwood_handler = integration_controller.handler_modules['lightwood']
+            if lightwood_handler.Handler is not None:
+                preload_handlers[lightwood_handler.Handler] = 4 if is_cloud else 1
+
+            huggingface_handler = integration_controller.handler_modules['huggingface']
+            if huggingface_handler.Handler is not None:
+                preload_handlers[huggingface_handler.Handler] = 1 if is_cloud else 0
+
+            openai_handler = integration_controller.handler_modules['openai']
+            if openai_handler.Handler is not None:
+                preload_handlers[openai_handler.Handler] = 1 if is_cloud else 0
+
         with self._lock:
             if self._init is False:
                 self._init = True

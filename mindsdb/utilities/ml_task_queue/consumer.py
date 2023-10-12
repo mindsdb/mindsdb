@@ -65,27 +65,7 @@ class MLTaskConsumer:
         self._stop_event = threading.Event()
         self._stop_event.clear()
 
-        # region preload ml handlers
-        from mindsdb.interfaces.database.integrations import integration_controller
-
-        config = Config()
-        is_cloud = config.get('cloud', False)
-
-        preload_hendlers = {}
-        lightwood_handler = integration_controller.handler_modules['lightwood']
-        if lightwood_handler.Handler is not None:
-            preload_hendlers[lightwood_handler.Handler] = 4 if is_cloud else 1
-
-        huggingface_handler = integration_controller.handler_modules['huggingface']
-        if huggingface_handler.Handler is not None:
-            preload_hendlers[huggingface_handler.Handler] = 1 if is_cloud else 0
-
-        openai_handler = integration_controller.handler_modules['openai']
-        if openai_handler.Handler is not None:
-            preload_hendlers[openai_handler.Handler] = 1 if is_cloud else 0
-
-        process_cache.init(preload_hendlers)
-        # endregion
+        process_cache.init()
 
         # region collect cpu usage statistic
         self.cpu_stat = [0] * 10
@@ -172,7 +152,7 @@ class MLTaskConsumer:
             message_content = message[1]
             self.consumer_group.streams[TASKS_STREAM_NAME].ack(message_id)
 
-            payload = pickle.loads(message_content[b'payload'])
+            payload = from_bytes(message_content[b'payload'])
             task_type = ML_TASK_TYPE(message_content[b'task_type'])
             model_id = int(message_content[b'model_id'])
             company_id = message_content[b'company_id']
@@ -243,9 +223,9 @@ class MLTaskConsumer:
 def start(verbose: bool) -> None:
     """ Create task queue consumer and start listen the queue
     """
+    consumer = MLTaskConsumer()
+    signal.signal(signal.SIGTERM, lambda _x, _y: consumer.stop())
     try:
-        consumer = MLTaskConsumer()
-        signal.signal(signal.SIGTERM, lambda _x, _y: consumer.stop())
         consumer.run()
     except Exception as e:
         consumer.stop()

@@ -2,6 +2,7 @@ from collections import OrderedDict
 from typing import List, Optional
 
 import pandas as pd
+import xata
 
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
@@ -24,51 +25,17 @@ class XataHandler(VectorStoreHandler):
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
-
         self._connection_data = kwargs.get("connection_data")
-
         self._client_config = {
-            "chroma_server_host": self._connection_data.get("chroma_server_host"),
-            "chroma_server_http_port": self._connection_data.get(
-                "chroma_server_http_port"
-            ),
-            "persist_directory": self._connection_data.get("persist_directory"),
+            "db_url": self._connection_data.get("db_url"),
+            "api_key": self._connection_data.get("api_key"),
         }
-
-        # either host + port or persist_directory is required
-        # but not both
-        if (
-            self._client_config["chroma_server_host"] is None
-            or self._client_config["chroma_server_http_port"] is None
-        ) and self._client_config["persist_directory"] is None:
-            raise Exception(
-                "Either host + port or persist_directory is required for Xata connection!"
-            )
-        elif (
-            self._client_config["chroma_server_host"] is not None
-            and self._client_config["chroma_server_http_port"] is not None
-        ) and self._client_config["persist_directory"] is not None:
-            raise Exception(
-                "Either host + port or persist_directory is required for Xata connection, but not both!"
-            )
-
+        self._create_table_params = {
+            "dimension": self._connection_data.get("db_url", 8),
+        }
         self._client = None
         self.is_connected = False
         self.connect()
-
-    def _get_client(self):
-        client_config = self._client_config
-        if client_config is None:
-            raise Exception("Client config is not set!")
-
-        # decide the client type to be used, either persistent or httpclient
-        if client_config["persist_directory"] is not None:
-            return xata.PersistentClient(path=client_config["persist_directory"])
-        else:
-            return xata.HttpClient(
-                host=client_config["chroma_server_host"],
-                port=client_config["chroma_server_http_port"],
-            )
 
     def __del__(self):
         if self.is_connected is True:
@@ -78,21 +45,18 @@ class XataHandler(VectorStoreHandler):
         """Connect to a Xata database."""
         if self.is_connected is True:
             return self._client
-
         try:
-            self._client = self._get_client()
+            self._client = xata.XataClient(**self._client_config)
             self.is_connected = True
             return self._client
         except Exception as e:
-            log.logger.error(f"Error connecting to Xata client, {e}!")
+            log.logger.error(f"Error connecting to Xata client: {e}!")
             self.is_connected = False
 
     def disconnect(self):
         """Close the database connection."""
-
         if self.is_connected is False:
             return
-
         self._client = None
         self.is_connected = False
 
@@ -100,92 +64,95 @@ class XataHandler(VectorStoreHandler):
         """Check the connection to the Xata database."""
         response_code = StatusResponse(False)
         need_to_close = self.is_connected is False
-
+        # NOTE: no direct way to test this
+        # try getting the user, if it fails, it means that we are not connected
         try:
-            self._client.heartbeat()
+            self._client.users().get()
             response_code.success = True
         except Exception as e:
-            log.logger.error(f"Error connecting to Xata , {e}!")
+            log.logger.error(f"Error connecting to Xata: {e}!")
             response_code.error_message = str(e)
         finally:
             if response_code.success is True and need_to_close:
                 self.disconnect()
             if response_code.success is False and self.is_connected is True:
                 self.is_connected = False
-
         return response_code
 
-    def _get_chromadb_operator(self, operator: FilterOperator) -> str:
-        mapping = {
-            FilterOperator.EQUAL: "$eq",
-            FilterOperator.NOT_EQUAL: "$ne",
-            FilterOperator.LESS_THAN: "$lt",
-            FilterOperator.LESS_THAN_OR_EQUAL: "$lte",
-            FilterOperator.GREATER_THAN: "$gt",
-            FilterOperator.GREATER_THAN_OR_EQUAL: "$gte",
-        }
-
-        if operator not in mapping:
-            raise Exception(f"Operator {operator} is not supported by Xata!")
-
-        return mapping[operator]
-
-    def _translate_metadata_condition(
-        self, conditions: List[FilterCondition]
-    ) -> Optional[dict]:
-        """
-        Translate a list of FilterCondition objects a dict that can be used by Xata.
-        E.g.,
-        [
-            FilterCondition(
-                column="metadata.created_at",
-                op=FilterOperator.LESS_THAN,
-                value="2020-01-01",
-            ),
-            FilterCondition(
-                column="metadata.created_at",
-                op=FilterOperator.GREATER_THAN,
-                value="2019-01-01",
-            )
-        ]
-        -->
-        {
-            "$and": [
-                {"created_at": {"$lt": "2020-01-01"}},
-                {"created_at": {"$gt": "2019-01-01"}}
-            ]
-        }
-        """
-        # we ignore all non-metadata conditions
-        if conditions is None:
-            return None
-        metadata_conditions = [
-            condition
-            for condition in conditions
-            if condition.column.startswith(TableField.METADATA.value)
-        ]
-        if len(metadata_conditions) == 0:
-            return None
-
-        # we translate each metadata condition into a dict
-        chroma_db_conditions = []
-        for condition in metadata_conditions:
-            metadata_key = condition.column.split(".")[-1]
-            chroma_db_conditions.append(
-                {
-                    metadata_key: {
-                        self._get_chromadb_operator(condition.op): condition.value
-                    }
+    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
+        """Create a table with the given name in the Xata database."""
+        try:
+            self._client.table().create(table_name)
+            self._client.table().set_schema(
+                table_name=table_name,
+                payload={
+                    "columns": [
+                        {
+                            "name": "embeddings",
+                            "type": "vector",
+                            "vector": {"dimension": self._create_table_params["dimension"]}
+                        },
+                        {"name": "content", "type": "text"},
+                        {"name": "metadata", "type": "json"},
+                    ]
                 }
             )
+        except Exception as e:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Unable to create table '{table_name}': {e}",
+            )
+        return Response(resp_type=RESPONSE_TYPE.OK)
 
-        # we combine all metadata conditions into a single dict
-        metadata_condition = (
-            {"$and": chroma_db_conditions}
-            if len(chroma_db_conditions) > 1
-            else chroma_db_conditions[0]
-        )
-        return metadata_condition
+    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
+        """Delete a table from the Xata database."""
+        try:
+            self._client.table().delete(table_name)
+        except Exception as e:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Error deleting table '{table_name}': {e}",
+            )
+        return Response(resp_type=RESPONSE_TYPE.OK)
+
+    def get_columns(self, table_name: str) -> HandlerResponse:
+        """Get columns of the given table"""
+        # Vector stores have predefined columns
+        try:
+            # But at least try to see if the table is valid
+            resp = self._client.table().get_columns(table_name)
+            if "message" in resp:
+                raise Exception(f"Error getting columns: {resp['message']}")
+        except Exception as e:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"{e}",
+            )
+        return super().get_columns(table_name)
+
+    def get_tables(self) -> HandlerResponse:
+        """Get the list of tables in the Xata database."""
+        try:
+            table_names = pd.DataFrame(
+                columns=["TABLE_NAME"],
+                data=[table_data["name"] for table_data in self._client.branch().get_details()["schema"]["tables"]],
+            )
+            return Response(
+                resp_type=RESPONSE_TYPE.TABLE,
+                data_frame=table_names
+            )
+        except Exception as e:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Error getting list of tables: {e}",
+            )
+
+
+
+
+
+
+
 
     def select(
         self,
@@ -319,73 +286,27 @@ class XataHandler(VectorStoreHandler):
         collection.delete(ids=id_filters, where=filters)
         return Response(resp_type=RESPONSE_TYPE.OK)
 
-    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
-        """
-        Create a collection with the given name in the Xata database.
-        """
-        self._client.create_collection(table_name, get_or_create=if_not_exists)
-        return Response(resp_type=RESPONSE_TYPE.OK)
-
-    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
-        """
-        Delete a collection from the Xata database.
-        """
-        try:
-            self._client.delete_collection(table_name)
-        except ValueError:
-            if if_exists:
-                return Response(resp_type=RESPONSE_TYPE.OK)
-            else:
-                return Response(
-                    resp_type=RESPONSE_TYPE.ERROR,
-                    error_message=f"Table {table_name} does not exist!",
-                )
-
-        return Response(resp_type=RESPONSE_TYPE.OK)
-
-    def get_tables(self) -> HandlerResponse:
-        """
-        Get the list of collections in the Xata database.
-        """
-        collections = self._client.list_collections()
-        collections_name = pd.DataFrame(
-            columns=["table_name"],
-            data=[collection.name for collection in collections],
-        )
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=collections_name)
-
-    def get_columns(self, table_name: str) -> HandlerResponse:
-        # check if collection exists
-        try:
-            _ = self._client.get_collection(table_name)
-        except ValueError:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Table {table_name} does not exist!",
-            )
-        return super().get_columns(table_name)
-
 
 connection_args = OrderedDict(
-    chroma_server_host={
+    db_url={
         "type": ARG_TYPE.STR,
-        "description": "xata server host",
-        "required": False,
+        "description": "Xata database url with region, database and, optionally the branch information",
+        "required": True,
     },
-    chroma_server_http_port={
+    api_key={
+        "type": ARG_TYPE.STR,
+        "description": "personal Xata API key",
+        "required": True,
+    },
+    dimension={
         "type": ARG_TYPE.INT,
-        "description": "xata server port",
-        "required": False,
-    },
-    persist_directory={
-        "type": ARG_TYPE.STR,
-        "description": "persistence directory for chroma",
+        "description": "default dimension of embeddings vector used to create table when using create (default=8)",
         "required": False,
     },
 )
 
 connection_args_example = OrderedDict(
-    chroma_server_host="localhost",
-    chroma_server_http_port=8000,
-    persist_directoryn="chroma",
+    db_url="https://...",
+    api_key="abc_def...",
+    dimension=8
 )

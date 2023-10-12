@@ -118,12 +118,8 @@ class ModelController():
         ml_handler_base = session.integration_controller.get_handler(integration_record.name)
 
         ml_handler = ml_handler_base._get_ml_handler(model_record.id)
-        if not hasattr(ml_handler, 'describe'):
-            raise Exception("ML handler doesn't support description")
-
 
         if attribute is None:
-            # show model record
             model_info = self.get_model_info(model_record)
 
             try:
@@ -139,7 +135,7 @@ class ModelController():
                     # first cell already has a list
                     attributes = attributes[0]
 
-            model_info.insert(0, 'tables', [attributes])
+            model_info.insert(0, 'TABLES', [attributes])
             return model_info
         else:
             return ml_handler.describe(attribute)

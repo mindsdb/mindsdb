@@ -476,10 +476,10 @@ class TestProjectStructure(BaseExecutorDummyML):
             '''
         )
         ret = self.run_sql('describe mindsdb.pred')
-        assert ret['tables'][0] == ['info']
+        assert ret['TABLES'][0] == ['info']
 
         ret = self.run_sql('describe pred')
-        assert ret['tables'][0] == ['info']
+        assert ret['TABLES'][0] == ['info']
 
         ret = self.run_sql('describe mindsdb.pred.info')
         assert ret['type'][0] == 'dummy'

@@ -13,5 +13,5 @@ datasets>=2.14.4
 nltk>=3.8.1
 rouge-score>=0.1.2
 dill==0.3.6 #for lightwood
-writerai # minimum Python >=3.9
+writerai #minimum Python >=3.9
 

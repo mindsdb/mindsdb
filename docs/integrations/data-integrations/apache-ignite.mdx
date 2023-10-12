@@ -1,0 +1,56 @@
+---
+title: Apache Ignite
+sidebarTitle: Apache Ignite
+---
+
+This is the implementation of the Apache Ignite data handler for MindsDB.
+
+[Apache Ignite](https://ignite.apache.org/docs/latest/) is a distributed database for high-performance computing with in-memory speed.
+
+## Implementation
+
+This handler is implemented using the `pyignite` library, the Apache Ignite thin (binary protocol) client for Python.
+
+The required arguments to establish a connection are as follows:
+
+* `host` is the host name or IP address of the Apache Ignite cluster's node.
+* `port` is the TCP/IP port of the Apache Ignite cluster's node. Must be an integer.
+
+There are several optional arguments that can be used as well,
+
+* `username` is the username used to authenticate with the Apache Ignite cluster. This parameter is optional. Default: None.
+* `password` is the password to authenticate the user with the Apache Ignite cluster. This parameter is optional. Default: None.
+* `schema` is the schema to use for the connection to the Apache Ignite cluster. This parameter is optional. Default: PUBLIC.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/ignite_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to an Apache Ignite database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE ignite_datasource
+WITH
+    ENGINE = 'ignite',
+    PARAMETERS = {
+        "host": "127.0.0.1",
+        "port": 10800,
+        "username": "admin",
+        "password": "password",
+        "schema": "example_schema"
+    };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM ignite_datasource.demo_table
+LIMIT 10;
+```
+
+<Tip>
+Currently, a connection can be established only to a single node in the cluster. In the future, we'll configure the client to automatically fail over to another node if the connection to the current node fails or times out by providing the hosts and ports for many nodes as explained [here](https://ignite.apache.org/docs/latest/thin-clients/python-thin-client).
+</Tip>

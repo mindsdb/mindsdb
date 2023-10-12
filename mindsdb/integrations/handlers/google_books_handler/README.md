@@ -21,7 +21,6 @@ this [here](https://developers.google.com/identity/protocols/oauth2/service-acco
 the [mindsdb/integrations/google_books_handler](mindsdb/integrations/handlers/google_books_handler) directory.
 
 ~~~~sql
-~~~~sql
 CREATE
 DATABASE my_books
 WITH  ENGINE = 'google_books',

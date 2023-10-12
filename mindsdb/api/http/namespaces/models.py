@@ -103,6 +103,7 @@ class ModelsList(Resource):
                 'mindsdb_version': model_df.at[0, 'MINDSDB_VERSION'],
                 'error': model_df.at[0, 'ERROR'],
                 'fetch_data_query': model_df.at[0, 'SELECT_DATA_QUERY'],
+                'problem_definition': model_df.at[0, 'TRAINING_OPTIONS']
             }, HTTPStatus.CREATED
         except Exception as e:
             return http_error(
@@ -135,6 +136,38 @@ class ModelResource(Resource):
                 HTTPStatus.NOT_FOUND,
                 'Model not found',
                 f'Model with name {model_name} not found')
+
+    @ns_conf.doc('update_model')
+    def put(self, project_name, model_name):
+        """Update model"""
+
+        session = SessionController()
+
+        project_datanode = session.datahub.get(project_name)
+        if project_datanode is None:
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Project not found',
+                f'Project name {project_name} does not exist')
+
+        if 'problem_definition' not in request.json:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'problem_definition required',
+                'Missing "problem_definition" field')
+
+        problem_definition = request.json['problem_definition']
+
+        model_name, version = Predictor.get_name_and_version(model_name)
+
+        session.model_controller.update_model(
+            session,
+            project_name,
+            model_name,
+            version=version,
+            problem_definition=problem_definition,
+        )
+        return session.model_controller.get_model(model_name, version=version, project_name=project_name)
 
     def delete(self, project_name, model_name):
         '''Deletes a model by name'''

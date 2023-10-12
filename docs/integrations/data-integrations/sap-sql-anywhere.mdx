@@ -1,0 +1,77 @@
+---
+title: SAP SQL Anywhere
+sidebarTitle: SAP SQL Anywhere
+---
+
+This is the implementation of the SAP SQL Anywhere data handler for MindsDB.
+
+[SAP SQL Anywhere](https://www.sap.com/products/technology-platform/sql-anywhere.html) is an embedded database for application software that enables secure and reliable data management for servers where no DBA is available and synchronization for tens of thousands of mobile devices, Internet of Things (IoT) systems, and remote environments.
+
+## Implementation
+
+This handler is implemented using `sqlanydb`, the Python driver for SAP SQL Anywhere.
+
+The required arguments to establish a connection are as follows:
+
+* `host` is the host name or IP address of the SAP SQL Anywhere instance.
+* `port` is the port number of the SAP SQL Anywhere instance.
+* `user` specifies the user name.
+* `password` specifies the password for the user.
+* `database` sets the current database.
+* `server` sets the current server.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/sqlany_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+You can use the below SQL statements to create a table in SAP SQL Anywhere called `TEST`.
+
+```sql
+CREATE TABLE TEST
+(
+    ID          INTEGER NOT NULL,
+    NAME        NVARCHAR(1),
+    DESCRIPTION NVARCHAR(1)
+);
+
+CREATE UNIQUE INDEX TEST_ID_INDEX
+    ON TEST (ID);
+
+ALTER TABLE TEST
+    ADD CONSTRAINT TEST_PK
+        PRIMARY KEY (ID);
+
+INSERT INTO TEST
+VALUES (1, 'h', 'w');
+```
+
+In order to make use of this handler and connect to the SAP SQL Anywhere database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE sap_sqlany_trial
+WITH
+    ENGINE = 'sqlany', 
+    PARAMETERS = {
+        "user": "DBADMIN",
+        "password": "password",
+        "host": "localhost",
+        "port": "55505",
+        "server": "TestMe",
+        "database": "MINDSDB"
+    };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM sap_sqlany_trial.test;
+```
+
+On execution, we get:
+
+| ID | NAME | DESCRIPTION |
+|----|------|-------------|
+| 1  | h    | w           |

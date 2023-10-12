@@ -50,11 +50,13 @@ class ProjectDataNode(DataNode):
         return self.project.get_columns(table_name)
 
     def predict(self, model_name: str, data, version=None, params=None):
-        project_tables = self.project.get_tables()
-        predictor_table_meta = project_tables[model_name]
-        if predictor_table_meta['update_status'] == 'available':
+        model_metadata = self.project.get_model(model_name)
+        if model_metadata is None:
+            raise Exception(f"Can't find model '{model_name}'")
+        model_metadata = model_metadata['metadata']
+        if model_metadata['update_status'] == 'available':
             raise Exception(f"model '{model_name}' is obsolete and needs to be updated. Run 'RETRAIN {model_name};'")
-        handler = self.integration_controller.get_handler(predictor_table_meta['engine_name'])
+        handler = self.integration_controller.get_handler(model_metadata['engine_name'])
         return handler.predict(model_name, data, project_name=self.project.name, version=version, params=params)
 
     def query(self, query=None, native_query=None, session=None):
@@ -68,7 +70,7 @@ class ProjectDataNode(DataNode):
             query.from_table.parts[0] = 'models'
             query_table = 'models'
         # endregion
-        if query_table in ('models', 'models_versions', 'jobs', 'jobs_history'):
+        if query_table in ('models', 'models_versions', 'jobs', 'jobs_history', 'mdb_triggers', 'chatbots'):
             new_query = deepcopy(query)
             project_filter = BinaryOperation('=', args=[
                 Identifier('project'),

@@ -3,7 +3,7 @@ from typing import List
 import pandas as pd
 
 from mindsdb.integrations.libs.api_handler import APITable
-from mindsdb.integrations.utilities.sql_utils import conditions_to_filter, project_dataframe
+from mindsdb.integrations.utilities.sql_utils import conditions_to_filter, project_dataframe, sort_dataframe
 from mindsdb_sql.parser import ast
 
 
@@ -70,6 +70,7 @@ class ChannelMessagesTable(APITable):
         message_rows = [message_to_dataframe_row(m) for m in message_data['messages']]
         df = pd.DataFrame(message_rows)
 
+        df = sort_dataframe(df, query.order_by)
         df = project_dataframe(df, query.targets, self.get_columns())
 
         return df
@@ -144,7 +145,7 @@ class DirectMessagesTable(APITable):
 
         message_rows = [message_to_dataframe_row(m) for m in message_data['messages']]
         df = pd.DataFrame(message_rows)
-
+        df = sort_dataframe(df, query.order_by)
         df = project_dataframe(df, query.targets, self.get_columns())
 
         return df

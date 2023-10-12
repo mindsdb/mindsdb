@@ -1,0 +1,40 @@
+---
+title: SQLite
+sidebarTitle: SQLite
+---
+
+This is the implementation of the SQLite data handler for MindsDB.
+
+[SQLite](https://www.sqlite.org/about.html) is an in-process library that implements a self-contained, serverless, zero-configuration, transactional SQL database engine. The code for SQLite is in the public domain and is thus free to use for either commercial or private purpose. SQLite is the most widely deployed database in the world with more applications than we can count, including several high-profile projects.
+
+## Implementation
+
+This handler is implemented using the standard `sqlite3` library that comes with Python.
+
+The only required argument to establish a connection is `db_file` that points to the database file that the connection is to be made to.
+
+Optionally, this may also be set to `:memory:` to create an in-memory database.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/sqlite_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the SQLite database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE sqlite_datasource
+WITH
+    engine = 'sqlite',
+    parameters = {
+        "db_file": "example.db"
+    };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM sqlite_datasource.example_tbl;
+```

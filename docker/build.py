@@ -26,7 +26,8 @@ def build_container(reltype):
         container_name = 'mindsdb/mindsdb_beta'
         dockerfile = 'beta'
 
-    command = f"docker build -f {dockerfile} {build_arg} -t {container_name}:latest -t {container_name}:{installer_version} ."
+    command = "docker system prune --all --force"
+    command += f" && DOCKER_BUILDKIT=1 docker build -f {dockerfile} {build_arg} -t {container_name}:latest -t {container_name}:{installer_version} ."
     command += f" && docker push {container_name} --all-tags"
 
     subprocess.run(command, shell=True, check=True)

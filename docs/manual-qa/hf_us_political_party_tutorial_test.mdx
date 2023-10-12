@@ -1,0 +1,37 @@
+## Testing: Hugging Face - US Political Party Tutorial
+
+Testing CREATE MODEL
+```sql
+CREATE MODEL mindsdb.hf_us_party
+PREDICT PRED 
+USING
+engine = 'huggingface',
+task = 'text-classification',
+model_name = 'm-newhauser/distilbert-political-tweets',
+input_column = 'text';
+```
+
+```sql
+## Table
+
+| NAME          | ENGINE      | PROJECT | ACTIVE | VERSION | STATUS     | ACCURACY | PREDICT | UPDATE_STATUS | MINDSDB_VERSION | ERROR  | SELECT_DATA_QUERY | TRAINING_OPTIONS                                                                                                                              | TAG    |
+| --------------| ----------- | ------- | ------ | ------- | ---------- | -------- | ------- | ------------- | --------------- | -------| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| hf_us_party   | huggingface | mindsdb | true   | 1       | generating | [NULL]   | PRED    | up_to_date    | 23.7.4.0        | [NULL] | [NULL]            | {'target': 'PRED', 'using': {'task': 'text-classification', 'model_name': 'm-newhauser/distilbert-political-tweets', 'input_column': 'text'}} | [NULL] |
+```
+
+Testing SELECT (making predictions)
+```sql
+SELECT *
+FROM mindsdb.hf_us_party
+WHERE text = 'This pandemic has shown us clearly the vulgarity of our healthcare system. Highest costs in the world, yet not enough nurses or doctors. Many millions uninsured, while insurance company profits soar. The struggle continues. Healthcare is a human right. Medicare for all.';
+
+```
+
+```sql
+## Table
+
+| PRED     | PRED_explain                                                           | text                                                                                                                                                                                                                                                                       |
+| -------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Democrat | {"Democrat":0.9999973773956299,"Republican":0.0000026121201699425} | This pandemic has shown us clearly the vulgarity of our healthcare system. Highest costs in the world, yet not enough nurses or doctors. Many millions uninsured, while insurance company profits soar. The struggle continues. Healthcare is a human right. Medicare for all. |
+
+```

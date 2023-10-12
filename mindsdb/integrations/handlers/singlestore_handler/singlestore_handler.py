@@ -1,5 +1,5 @@
 from ..mysql_handler import Handler as MySQLHandler
-
+from .__about__ import __version__ as version
 
 class SingleStoreHandler(MySQLHandler):
     """
@@ -8,4 +8,5 @@ class SingleStoreHandler(MySQLHandler):
     name = 'singlestore'
 
     def __init__(self, name, **kwargs):
+        kwargs['conn_attrs'] = {'mindsdb', 'MindsDB', version}
         super().__init__(name, **kwargs)

@@ -1,0 +1,45 @@
+---
+title: MediaWiki
+sidebarTitle: MediaWiki
+---
+
+In this section, we present how to connect MediaWiki to MindsDB.
+
+[MediaWiki](https://www.mediawiki.org/wiki/MediaWiki) is a free and open-source wiki software platform that is designed to enable the creation and management of wikis. It was originally developed for and continues to power Wikipedia. MediaWiki is highly customizable and can be used to create a wide range of collaborative websites and knowledge bases.
+
+Data from MediaWiki can be utilized within MindsDB to train AI models and chatbots using the wide range of available information.
+
+## Connection
+
+This handler was implemented using [MediaWikiAPI](https://github.com/lehinevych/MediaWikiAPI), the Python wrapper for the MediaWiki API.
+
+There are no connection arguments required to initialize the handler.
+
+To connect the MediaWiki API to MindsDB, the following CREATE DATABASE statement can be used:
+
+```sql
+CREATE DATABASE mediawiki_datasource
+WITH ENGINE = 'mediawiki'
+```
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/mediawiki_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+Now, you can query the MediaWiki API as follows:
+
+```sql
+SELECT * FROM mediawiki_datasource.pages
+```
+
+You can run more advanced queries to fetch specific pages in a defined order:
+
+```sql
+SELECT *
+FROM mediawiki_datasource.pages
+WHERE title = 'Barack'
+ORDER BY pageid
+LIMIT 5
+```

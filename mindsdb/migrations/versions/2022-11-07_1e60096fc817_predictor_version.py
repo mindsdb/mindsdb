@@ -28,11 +28,11 @@ def upgrade():
     session = sa.orm.Session(bind=conn)
 
     key0 = (None, None, None)
-    models = conn.execute('''
+    models = conn.execute(sa.text('''
         select company_id, project_id, name, id
         from predictor
         order by company_id, project_id, name, created_at
-    ''').fetchall()
+    ''')).fetchall()
     for model in models:
         key = (model['company_id'], model['project_id'], model['name'].lower())
 

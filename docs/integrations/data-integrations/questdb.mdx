@@ -1,0 +1,48 @@
+---
+title: QuestDB
+sidebarTitle: QuestDB
+---
+
+This is the implementation of the QuestDB data handler for MindsDB.
+
+[QuestDB](https://questdb.io/) is a columnar time-series database with high performance ingestion and SQL analytics. It is open-source and available on the cloud.
+
+## Implementation
+
+This handler is implemented by extending the PostgreSQL data handler.
+
+The required arguments to establish a connection are as follows:
+
+* `user` is the database user.
+* `password` is the database password.
+* `host` is the host name, IP address, or URL.
+* `port` is the port used to make TCP/IP connection.
+* `database` is the database name.
+* `public` stores a value of `True` or `False`. Defaults to `True` if left blank.
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/questdb_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+## Usage
+
+In order to make use of this handler and connect to the QuestDB server in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE questdb_datasource
+WITH
+  ENGINE = 'questdb',
+  PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": 8812,
+    "database": "qdb",
+    "user": "admin",
+    "password": "password"
+  };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM questdb_datasource.demo_table
+LIMIT 10;
+```

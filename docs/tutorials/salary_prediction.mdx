@@ -1,0 +1,142 @@
+---
+Predicting Salaries with MindsDB
+---
+
+## Introduction
+
+In this tutorial, we will use the [Employee Earnings Data](https://www.kaggle.com/datasets/mukeshmanral/employ-earnings-data) dataset to predict salaries for employees based on their qualifications, industry, and job type.
+
+Make sure you have access to a working MindsDB installation, either locally or at MindsDB Cloud. 
+
+Follow this guide to set up [Mindsdb cloud](https://docs.mindsdb.com/setup/cloud) or set up [locally](https://docs.mindsdb.com/setup/self-hosted/docker).
+
+## Data Setup
+
+### Connecting the Data
+
+Download the [employee dataset here](https://www.kaggle.com/datasets/mukeshmanral/employ-earnings-data?select=batch2_jobID_00B80TR.csv) and upload it by navigating to the Add button located in the top right corner then choose Upload File.
+
+Click on the Import File option to browse through your files and select the CSV file containing the dataset. You can add a suitable name. In this case we wil use jobs.
+
+Let's run a query to preview the data that we will use to train our predictor.
+
+```sql
+SELECT * 
+FROM files.jobs 
+LIMIT 10;
+```
+
+The query output is shown below.
+![Sample data](..\tutorials\images\salaries_predictions\data_sample.jpg)
+
+## Understanding the Data
+The dataset has eight columns where seven columns represent properties to be used to predict the employee salary column.
+
+The columns are as follows:
+
+|Column              |Description                       |Data Type |Usage   | 
+|---                 |---                               |---       |---     |
+|companyId           |Unique identifier for each company|Integer   |Feature | 
+|jobType             |Type of employment                |String    |Feature |  
+|degree              |Employee's degree                 |String    |Feature | 
+|major               |Employee's major                  |String    |Feature |
+|industry            |Employee's industry of work       |String    |Feature |
+|yearsExperience     |Employee's years of experience    |String    |Feature |
+|milesFromMetropolis |Distance from the metropolis      |Integer   |Feature |
+|salary              |Employee's salary                 |Integer   |Label   |
+
+A label is a column whose values will be predicted.
+
+A feature is a column used to train the model.
+
+## Training a model
+
+We will use the CREATE MODEL statement to create and train the machine learning model to predict salaries.
+
+We use the FROM statement to specify the input columns to be used for training. We will not use the companyID column because it does not affect the predictor's perfomance.
+
+We specify what we want to predict using the PREDICT statement.
+
+```sql
+CREATE MODEL mindsdb.salary_model
+FROM files
+(SELECT jobType,degree,major,industry,yearsExperience,milesFromMetropolis,salary FROM files.jobs)
+PREDICT salary;
+```
+### Status of a Predictor
+
+To monitor the status of the predictor use this SQL command:
+
+```sql
+DESCRIBE salary_model;
+```
+
+Right after creating the predictor, the model shows that it is in the generating phase.
+| status     |
+|------------|
+| generating |
+
+After some time the predictor moves to the training stage.
+
+| status   |
+|----------|
+| training |
+
+When the model is done training it should show the status as complete and we can now make predictions.
+| status   |
+|----------|
+| complete |
+
+## Making predictions
+
+### Making a single prediction
+
+Let's run the following query to make a single prediction.
+
+```sql
+SELECT salary, salary_explain
+FROM mindsdb.salary_model
+WHERE jobType = 'CFO'
+AND degree='MASTERS'
+AND major='MATH'
+AND industry='HEALTH'
+AND yearsExperience=10
+AND milesFromMetropolis=83;
+```
+
+The output is as shown below.
+
+![Single prediction](..\tutorials\images\salaries_predictions\single_prediction.jpg)
+
+The predictor's performance is quite accurate as the predicted value is 127 while the actual value provided in the dataset is 130. 
+
+The `salary_explain` column provides more details on the predictor's confidence of the values predicted.
+
+### Making batch predictions
+
+To make batch predictions for multiple rows in our dataset, we join the data table with the model using the JOIN statement.
+
+```sql
+SELECT  t.salary AS actual_salary,
+        m.salary AS predicted_salary,
+        t.jobType,t.degree, t.major,t.industry,t.yearsExperience,t.milesFromMetropolis
+FROM files.jobs AS t
+JOIN mindsdb.salary_model AS m
+LIMIT 10;
+```
+
+We will limit our predictions to 10 rows.
+
+![Batch predictions](..\tutorials\images\salaries_predictions\batch_predictions.jpg)
+
+The `actual_salary` column is the actual salary of the employee which is already available in the dataset.
+
+The `predicted_salary` column is the value predicted by the model we created.
+
+
+## What's Next?
+
+Want to learn more about MindsDB? Check out these resources:
+- [MindsDB](https://mindsdb.com/)
+- [GitHub](https://github.com/mindsdb/mindsdb/)
+- [Slack](https://mindsdb.com/joincommunity)

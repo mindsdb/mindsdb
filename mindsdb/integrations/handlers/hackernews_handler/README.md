@@ -32,9 +32,9 @@ This handler was implemented using the official HackerNews API. It provides a si
 
 ## Example Usage
 ```
-CREATE DATABASE my_hackernews;
-With 
-    ENGINE = 'hackernews',
+CREATE DATABASE my_hackernews
+WITH 
+ENGINE = 'hackernews'
 ```
 
 After setting up the HackerNews Handler, you can use SQL queries to fetch data from HackerNews:
@@ -47,9 +47,9 @@ LIMIT 2;
 
 Each Post has a unique ID. You can use this ID to fetch comments for a particular post.
 
-```
+```sql
 SELECT *
-FROM mysql_datasource.comments
+FROM my_hackernews.comments
 WHERE item_id=35662571
 LIMIT 1;
 ```

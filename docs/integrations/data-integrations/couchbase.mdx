@@ -1,0 +1,45 @@
+---
+title: Couchbase
+sidebarTitle: Couchbase
+---
+
+This is the implementation of the Couchbase data handler for MindsDB.
+
+[Couchbase](https://www.couchbase.com/) is an open-source, distributed multi-model NoSQL document-oriented database software package optimized for interactive applications. These applications may serve many concurrent users by creating, storing, retrieving, aggregating, manipulating and presenting data.
+
+## Implementation
+
+This handler is implemented using the `couchbase` library, the Python driver for Couchbase.
+
+The required arguments to establish a connection are as follows:
+* `host`: the host name or IP address of the Couchbase server
+* `bucket`: the bjcket name to use when connecting with the Couchbase server
+* `user`: the user to authenticate with the Couchbase server
+* `password`: the password to authenticate the user with the Couchbase server
+* `scope`:  scopes are a level of data organization within a bucket. If ommited, will default to `_default`
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/couchbase_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+In order to make use of this handler and connect to a Couchbase server in MindsDB, the following syntax can be used. Note, the example uses the default `travel-sample` bucket which can be enabled from the couchbase UI with pre-defined scope and documents. 
+
+```sql
+CREATE DATABASE couchbase_datasource
+WITH
+engine='couchbase',
+parameters={
+    "host": "127.0.0.1",
+    "bucket":"travel-sample",
+    "user": "admin",
+    "password": "password",
+    "scope": "inventory"
+};
+```
+
+Now, you can use this established connection to query your database as follows:
+
+```sql
+SELECT * FROM couchbase_datasource.airport
+```

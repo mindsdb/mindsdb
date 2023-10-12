@@ -35,6 +35,14 @@ class OracleHandler(DatabaseHandler):
         self.service_name = connection_data.get("service_name")
         self.user = connection_data.get("user")
         self.password = connection_data.get("password")
+        self.disable_oob = bool(connection_data.get("disable_oob"))
+
+        self.auth_mode = None
+        if 'auth_mode' in connection_data:
+            mode_name = 'AUTH_MODE_' + connection_data['auth_mode'].upper()
+            if not hasattr(oracledb, mode_name):
+                raise ValueError(f'Unknown auth mode: {mode_name}')
+            self.auth_mode = getattr(oracledb, mode_name)
 
         if self.sid is None and self.service_name is None:
             raise ValueError("Either 'sid' or 'service_name' must be given")
@@ -53,7 +61,10 @@ class OracleHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        connection = connect(user=self.user, password=self.password, dsn=self.dsn)
+        connection = connect(
+            user=self.user, password=self.password, dsn=self.dsn,
+            disable_oob=self.disable_oob, mode=self.auth_mode,
+        )
 
         self.is_connected = True
         self.connection = connection
@@ -141,7 +152,7 @@ class OracleHandler(DatabaseHandler):
         query = """
             SELECT table_name
             FROM user_tables
-            ORDER BY 1;
+            ORDER BY 1
         """
         return self.native_query(query)
 
@@ -184,6 +195,14 @@ connection_args = OrderedDict(
     password={
         "type": ARG_TYPE.STR,
         "description": "The password to authenticate the user against Oracle DB.",
+    },
+    disable_oob={
+        "type": ARG_TYPE.BOOL,
+        "description": "Disable out-of-band breaks",
+    },
+    auth_mode={
+        "type": ARG_TYPE.STR,
+        "description": "Database privilege for connection",
     },
 )
 

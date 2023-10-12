@@ -1,0 +1,11 @@
+---
+title: List Data Handlers
+sidebarTitle: List Data Handlers
+---
+
+You can list all available ML handlers by querying the `information_schema` database.
+
+```sql
+> use information_schema
+> db.handlers.find({'type': 'ml'})
+```

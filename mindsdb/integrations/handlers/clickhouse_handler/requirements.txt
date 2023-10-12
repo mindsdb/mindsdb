@@ -1,1 +1,2 @@
-clickhouse-sqlalchemy
+clickhouse-driver
+clickhouse-sqlalchemy @ git+https://github.com/StpMax/clickhouse-sqlalchemy@5eadc4f

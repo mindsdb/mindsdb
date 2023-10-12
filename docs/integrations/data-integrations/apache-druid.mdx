@@ -1,0 +1,48 @@
+---
+title: Apache Druid
+sidebarTitle: Apache Druid
+---
+
+This is the implementation of the Druid data handler for MindsDB.
+
+[Apache Druid](https://druid.apache.org/docs/latest/design) is a real-time analytics database designed for fast slice-and-dice analytics (_OLAP_ queries) on large data sets. Most often, Druid powers use cases where real-time ingestion, fast query performance, and high uptime are important.
+
+## Implementation
+
+This handler was implemented using the `pydruid` library, the Python API for Apache Druid.
+
+The required arguments to establish a connection are as follows:
+
+* `host` is the host name or IP address of the Apache Druid database.
+* `port` is the port that Apache Druid is running on.
+* `path` is the query path.
+* `scheme` is the URI schema. This parameter is optional and defaults to `http`.
+* `user` is the username used to authenticate with Apache Druid. This parameter is optional.
+* `password` is the password used to authenticate with Apache Druid. This parameter is optional.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/druid_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to Apache Druid in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE druid_datasource
+WITH
+    engine = 'druid',
+    parameters = {
+      "host": "localhost",
+      "port": 8888,
+      "path": "/druid/v2/sql/",
+      "scheme": "http"
+    };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM druid_datasource.example_tbl;
+```

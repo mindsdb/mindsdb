@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def index():
-    return "MindsDB Hanler Discovery", 200
+    return "MindsDB Handler Discovery", 200
 
 
 @app.route("/register", methods=["POST"])

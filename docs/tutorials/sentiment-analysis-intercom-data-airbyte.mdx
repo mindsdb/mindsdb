@@ -1,0 +1,96 @@
+---
+Augmenting Intercom Chats with GPT for Sentiment Analysis
+---
+
+## Introduction
+
+In this tutorial, we'll analyze sentiment of Intercom conversations. We'll use Airbyte to extract data from Intercom and store it into a Google BigQuery database. Then, we'll make this data available to MindsDB, create and deploy a GPT model within MindsDB, and join both data and a model to predict the sentiment values to be further analyzed in business analytics tools.
+
+## Data Setup
+
+We use Airbyte to pull data from Intercom and load it into a Google BigQuery database.
+
+You can try [Airbyte Cloud](https://airbyte.com/airbyte-cloud) or use the [Airbyte Open Source](https://github.com/airbytehq/airbyte) version.
+
+Follow [this video](https://www.youtube.com/watch?v=9ejCUKC9K7U) or [this detailed tutorial]() to learn how to pull conversation data from Intercom and load it into a Google BigQuery database using Airbyte and visualize it using Metabase analytics.
+
+## Connecting a Database
+
+Now you can connect the Google BigQuery database that stores the Intercom data to MindsDB.
+
+```sql
+CREATE DATABASE bqdataset
+WITH
+   engine = "bigquery",
+   parameters = {
+      "project_id": "bgtest-1111",
+      "dataset": "mydataset",
+      "service_account_keys": "/tmp/keys.json"
+   };
+```
+
+Follow [this instruction](https://docs.mindsdb.com/data-integrations/google-bigquery) to connect your database to MindsDB.
+
+## Creating a model
+
+Let's create a GPT model that we'll use to predict sentiment of Intercom conversations.
+
+```sql
+CREATE MODEL sentiment_classifier_model
+PREDICT sentiment
+USING
+    engine = 'openai',
+    model_name = 'text-davinci-003',
+    prompt_template = 'describe the user sentiment from the following conversation STRICTLY as positive or neutral or negative.\n###\n{{full_conversation}}     \n###\nSentiment [positive/neutral/negative]:';
+```
+
+Here is how we can check its status:
+
+```sql
+DESCRIBE sentiment_classifier_model;
+```
+
+Once the status is complete, we can proceeed to make predictions.
+
+## Making batch predictions
+
+Now we join our data table (joined_conversations) that stores Intercom conversations with the model (sentiment_classifier_model) created in MindsDB. That's how we can make batch predictions for all conversations at once.
+
+```sql
+SELECT 
+        joined_conversations.conversation_id,
+        -- joined_conversations.full_conversation,
+        sentiments.sentiment
+
+FROM
+
+    -- data table that stores conversations
+    (
+        -- using native bigquery syntax
+        SELECT * FROM bqdataset (
+            SELECT
+            conversation_id,
+            STRING_AGG(p.body, "\n" ORDER BY p.created_at ASC LIMIT 15) AS full_conversation,
+            FROM conversation_parts p
+            WHERE
+            JSON_VALUE(p.author, '$.type') = 'user'
+            GROUP BY conversation_id LIMIT 10
+        )
+    ) AS joined_conversations
+
+JOIN
+
+    -- model that analyzes sentiment
+    sentiment_classifier_model AS sentiments;
+```
+
+Run it in the MindsDB editor to find out the output.
+
+## What's Next?
+
+Want to learn more about MindsDB? Check out these resources:
+
+- [MindsDB](https://mindsdb.com/)
+- [MindsDB Documentation](https://docs.mindsdb.com/)
+- [Slack](https://mindsdb.com/joincommunity)
+- [GitHub](https://github.com/mindsdb/mindsdb/)

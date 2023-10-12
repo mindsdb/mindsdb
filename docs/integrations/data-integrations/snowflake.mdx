@@ -1,0 +1,70 @@
+---
+title: Snowflake
+sidebarTitle: Snowflake
+---
+
+This is the implementation of the Snowflake data handler for MindsDB.
+
+[Snowflake](https://www.snowflake.com/en/) is a cloud data warehouse that stores and analyzes data. It can automatically scale up/down its compute resources to load, integrate, and analyze data.
+
+## Implementation
+
+This handler is implemented using the Snowflake connector.
+
+The required arguments to establish a connection are as follows:
+
+* `host` is the host name or IP address. The host name comes from the Snowflake link (for example, `uvwxyz123.us-west.gcp.snowflakecomputing.com`).
+* `port` is the port used to make TCP/IP connection.
+* `database` is the database name. You can find it in the Snowflake dashboard under the Databases tab.
+* `user` is the database user.
+* `password` is the database password.
+* `account` is the Snowflake account. The account name comes from the Snowflake link (for example, `uvwxyz123.us-west.gcp`).
+* `schema` is the default schema name used to query the database.
+* `protocol` is the protocol that defaults to `https` if left blank.
+* `warehouse` is the warehouse account. You can find it in the Snowflake dashboard under the Warehouses tab.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/snowflake_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the Snowflake database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE snowflake_datasource
+WITH
+    ENGINE = 'snowflake',
+    PARAMETERS = {
+    "host": "uvwxyz123.us-west.gcp.snowflakecomputing.com",
+    "port": 443,
+    "database": "database_name",
+    "user": "user",
+    "password": "password",
+    "account": "uvwxyz123.us-west.gcp",
+    "schema": "schema_name",
+    "protocol": "https",
+    "warehouse": "warehouse_name"
+    };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM snowflake_datasource.example_table;
+```
+
+Please note that the above query uses the provided schema implicitly so it is equivalent to the following:
+
+```sql
+SELECT *
+FROM snowflake_datasource.schema_name.example_table;
+```
+
+If you have access to other schemas available in the connected Snowflake database, then you can query them as below:
+
+```sql
+SELECT *
+FROM snowflake_datasource.other_schema_name.example_table;
+```

@@ -79,7 +79,13 @@ def project_dataframe(df, targets, table_columns):
             col = target.parts[-1]
             col_df = df_cols_idx.get(col.lower())
             if col_df is not None:
-                df_col_rename[col_df] = col
+                if (
+                    hasattr(target, 'alias')
+                    and isinstance(target.alias, ast.Identifier)
+                ):
+                    df_col_rename[col_df] = target.alias.parts[0]
+                else:
+                    df_col_rename[col_df] = col
             columns.append(col)
         else:
             raise NotImplementedError
@@ -87,15 +93,32 @@ def project_dataframe(df, targets, table_columns):
     if len(df) == 0:
         df = pd.DataFrame([], columns=columns)
     else:
-
-        # adapt column names to projection
-        if len(df_col_rename) > 0:
-            df = df.rename(columns=df_col_rename)
-
         # add absent columns
         for col in set(columns) & set(df.columns) ^ set(columns):
             df[col] = None
 
         # filter by columns
         df = df[columns]
+
+    # adapt column names to projection
+    if len(df_col_rename) > 0:
+        df = df.rename(columns=df_col_rename)
+    return df
+
+
+def sort_dataframe(df, order_by: list):
+    cols = []
+    ascending = []
+    for order in order_by:
+        if not isinstance(order, ast.OrderBy):
+            continue
+
+        col = order.field.parts[-1]
+        if col not in df.columns:
+            continue
+
+        cols.append(col)
+        ascending.append(False if order.direction.lower() == 'desc' else True)
+    if len(cols) > 0:
+        df = df.sort_values(by=cols, ascending=ascending)
     return df

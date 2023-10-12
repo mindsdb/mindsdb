@@ -28,7 +28,14 @@ def execute_async(q_in, q_out):
         history_id = task['history_id']
 
         executor = JobsExecutor()
-        executor.execute_task_local(record_id, history_id)
+        try:
+            executor.execute_task_local(record_id, history_id)
+        except (KeyboardInterrupt, SystemExit):
+            q_out.put(True)
+            raise
+
+        except Exception:
+            db.session.rollback()
 
         q_out.put(True)
 

@@ -1,0 +1,12 @@
+---
+title: List ML Handlers
+sidebarTitle: List ML Handlers
+---
+
+Here is how you can fetch all available ML handlers directly from JavaScript code:
+
+```
+const query = 'SHOW HANDLERS WHERE type = \‘ml\'’;
+result = await MindsDB.SQL.runQuery(query);
+console.log(result);
+```

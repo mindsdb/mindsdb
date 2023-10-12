@@ -1,0 +1,67 @@
+---
+title: EdgelessDB
+sidebarTitle: EdgelessDB
+---
+
+This is the implementation of the EdgelessDB data handler for MindsDB.
+
+[Edgeless](https://edgeless.systems/) is a full SQL database, tailor-made for confidential computing. It seamlessly integrates with your existing tools and workflows to help you unlock the full potential of your data.
+
+## Implementation
+This handler is implemented by extending the MySQL connector.
+The required arguments to establish a connection are as follows:
+
+* `host`: the host name of the EdgelessDB connection
+* `port`: the port to use when connecting
+* `user`: the user to authenticate
+* `password`: the password to authenticate the user
+* `database`: database name
+
+To use the full potensial of EdgelessDB, you can also specify the following arguments:
+
+* `ssl`: whether to use SSL or not
+* `ssl_ca`: path or url to the CA certificate
+* `ssl_cert`: path or url to the client certificate
+* `ssl_key`: path or url to the client key
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/edgelessdb_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to use EdgelessDB as a data source in MindsDB, you need to use the following syntax:
+
+```sql
+CREATE DATABASE edgelessdb_datasource
+    WITH ENGINE = "EdgelessDB",
+    PARAMETERS = {
+    "user": "root",
+    "password": "test123@!Aabvhj",
+    "host": "localhost",
+    "port": 3306,
+    "database": "test_schema"
+    }
+```
+Or you can use the following syntax:
+
+```sql
+
+CREATE DATABASE edgelessdb_datasource2
+    WITH ENGINE = "EdgelessDB",
+    PARAMETERS = {
+    "user": "root",
+    "password": "test123@!Aabvhj",
+    "host": "localhost",
+    "port": 3306,
+    "database": "test_schema",
+    "ssl_cert": "/home/marios/demo/cert.pem",
+    "ssl_key": "/home/marios/demo/key.pem"
+    }
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT * FROM edgelessdb_datasource.table_name
+```

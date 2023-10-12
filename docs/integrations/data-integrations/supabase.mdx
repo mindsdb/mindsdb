@@ -1,0 +1,48 @@
+---
+title: Supabase
+sidebarTitle: Supabase
+---
+
+This is the implementation of the Supabase data handler for MindsDB.
+
+[Supabase](https://supabase.com/) is an open-source Firebase alternative.
+
+## Implementation
+
+This handler is implemented by extending the PostgreSQL data handler.
+
+The required arguments to establish a connection are as follows:
+
+* `user` is the database user.
+* `password` is the database password.
+* `host` is the host name, IP address, or URL.
+* `port` is the port used to make TCP/IP connection.
+* `database` is the database name.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/supabase_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the Supabase server in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE supabase_datasource
+WITH ENGINE = 'supabase',
+PARAMETERS = {
+  "host": "127.0.0.1",
+  "port": 54321,
+  "database": "test",
+  "user": "supabase",
+  "password": "password"
+};
+```
+
+You can use this established connection to query your database as follows:
+
+```sql
+SELECT *
+FROM supabase_datasource.public.rentals
+LIMIT 10;
+```

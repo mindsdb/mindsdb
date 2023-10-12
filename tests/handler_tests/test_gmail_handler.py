@@ -11,10 +11,10 @@ from unittest import mock
 class GmailHandlerTest(unittest.TestCase):
     def setUp(self) -> None:
         self.credentials_file = 'test1_credentials.json'
-        self.s3_credentials_file = 's3://your-bucket/test_credentials.json'
+        self.credentials_url = 's3://your-bucket/test_credentials.json'
         self.handler = GmailHandler(connection_data={
             'credentials_file': self.credentials_file,
-            's3_credentials_file': self.s3_credentials_file
+            'credentials_url': self.credentials_url
         })
 
     @patch('mindsdb.integrations.handlers.gmail_handler.gmail_handler.requests.get')  # Patching the requests.get method
@@ -26,7 +26,7 @@ class GmailHandlerTest(unittest.TestCase):
 
         result = self.handler._has_creds_file(self.credentials_file)
         # Assert that the requests.get method was called with the correct URL
-        mock_get.assert_called_once_with(self.s3_credentials_file)
+        mock_get.assert_called_once_with(self.credentials_url)
         # Assert that the method returns True
         self.assertTrue(result)
 

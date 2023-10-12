@@ -48,8 +48,8 @@ class Test(BaseExecutorMockPredictor):
         assert ret.error_code is None
 
         # check predictor input
-        predict_args = self.mock_predict.call_args[0][1]
-        assert predict_args['predict_params'] == {'p1': 'a', 'p2': {'x': 1, 'y': 2}}
+        predict_args = self.mock_predict.call_args[1]['params']
+        assert predict_args == {'p1': 'a', 'p2': {'x': 1, 'y': 2}}
 
         # --- inline prediction ---
         self.mock_predict.reset_mock()
@@ -59,5 +59,5 @@ class Test(BaseExecutorMockPredictor):
             using p1=1, p2=[1,2] 
         ''', dialect='mindsdb'))
 
-        predict_args = self.mock_predict.call_args[0][1]
-        assert predict_args['predict_params'] == {'p1': 1, 'p2': [1,2]}
+        predict_args = self.mock_predict.call_args[1]['params']
+        assert predict_args == {'p1': 1, 'p2': [1,2]}

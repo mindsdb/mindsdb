@@ -1,0 +1,29 @@
+version: "3.2"
+
+services:
+
+  mindsdb:
+    build:
+      context: .
+      dockerfile: docker/mindsdb.Dockerfile
+    platform: linux/amd64
+    restart: always
+    ports:
+      - '47334:47334'
+      - '47335:47335'
+      - '47336:47336'
+    # watchfiles will reload the app when python files are changed
+    command: bash -c "watchfiles --filter python 'python -m mindsdb' ."
+    environment:
+      MINDSDB_DOCKER_ENV: "True"
+      MINDSDB_STORAGE_DIR: "/mindsdb/var"
+      # OPENAI_API_KEY: "..."
+    volumes:
+      - type: bind
+        source: .
+        target: /mindsdb
+    healthcheck:
+      test:  ["CMD", "curl", "-f", "http://localhost:47334/api/util/ping"]
+      interval: 30s
+      timeout: 4s
+      retries: 100

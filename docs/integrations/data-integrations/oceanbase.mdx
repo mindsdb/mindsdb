@@ -1,0 +1,49 @@
+---
+title: OceanBase
+sidebarTitle: OceanBase
+---
+
+This is the implementation of the OceanBase data handler for MindsDB.
+
+OceanBase is a distributed relational database. It is the only distributed database in the world that has broken both TPC-C and TPC-H records. OceanBase adopts an independently developed integrated architecture, which encompasses both the scalability of a distributed architecture and the performance advantage of a centralized architecture. It supports hybrid transaction/analytical processing (HTAP) with one engine. Its features include strong data consistency, high availability, high performance, online scalability, high compatibility with SQL and mainstream relational databases, transparency to applications, and a high cost/performance ratio.
+
+## Implementation
+
+This handler is implemented by extending the MySQL data handler.
+
+The required arguments to establish a connection are as follows:
+
+* `user` is the database user.
+* `password` is the database password.
+* `host` is the host name, IP address, or URL.
+* `port` is the port used to make TCP/IP connection.
+* `database` is the database name.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/oceanbase_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the OceanBase server in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE oceanbase_datasource
+WITH
+  ENGINE = 'oceanbase',
+  PARAMETERS = {
+    "host": "127.0.0.1",
+    "user": "oceanbase_user",
+    "password": "password",
+    "port": 2881,
+    "database": "oceanbase_db"
+  };
+```
+
+Now, you can use this established connection to query your database as follows:
+
+```sql
+SELECT *
+FROM oceanbase_datasource.demo_table
+LIMIT 10;
+```

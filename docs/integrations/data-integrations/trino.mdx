@@ -1,0 +1,59 @@
+---
+title: Trino
+sidebarTitle: Trino
+---
+
+This is the implementation of the Trino data handler for MindsDB.
+
+[Trino](https://trino.io/) is an open-source distributed SQL query engine designed to query large data sets distributed over one or more heterogeneous data sources.
+
+## Implementation
+
+This handler is implemented using `pyhive`, a collection of Python DB-API and SQLAlchemy interfaces for Presto and Hive.
+
+The required arguments to establish a connection are as follows:
+
+* `user` is the database user.
+* `password` is the database password.
+* `host` is the host name, IP address, or URL.
+* `port` is the port used to make TCP/IP connection.
+
+There are some optional arguments as follows:
+
+* `auth` is the authentication method. Currently, only `basic` is supported.
+* `http_scheme` takes the value of `http`by default. It can be set to `https` as well.
+* `catalog` is the catalog.
+* `schema` is the schema name.
+* `with` defines default WITH-clause (properties) for ALL tables. This parameter is experimental and might be changed or removed in future release.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/trino_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the Trino database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE trino_datasource
+WITH
+  ENGINE = 'trino',
+  PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": 443,
+    "auth": "basic",
+    "http_scheme": "https",
+    "user": "trino",
+    "password": "password",
+    "catalog": "default",
+    "schema": "test",
+    "with": "with (transactional = true)"
+  };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM trino_datasource.demo_table;
+```

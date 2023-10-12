@@ -93,7 +93,8 @@ class FrappeClient(object):
             json=data,
             headers=self.headers)
         if not post_response.ok:
-            post_response.raise_for_status()
+            if 400 <= post_response.status_code < 600:
+                raise requests.HTTPError(f'{post_response.reason}: {post_response.text}', response=post_response)
         return post_response.json()['data']
 
     def ping(self) -> bool:

@@ -35,9 +35,9 @@ def upgrade():
 
     conn = op.get_bind()
     session = sa.orm.Session(bind=conn)
-    predictors = conn.execute('''
+    predictors = conn.execute(sa.text('''
         select id, json_ai from predictor
-    ''').fetchall()
+    ''')).fetchall()
 
     for row in predictors:
         try:
@@ -69,11 +69,11 @@ def downgrade():
 
     conn = op.get_bind()
     session = sa.orm.Session(bind=conn)
-    jsons = conn.execute('''
+    jsons = conn.execute(sa.text('''
         select resource_id, name, content
         from json_storage
         where resource_group = 'predictor' and name = 'json_ai'
-    ''').fetchall()
+    ''')).fetchall()
 
     for row in jsons:
         predicrtor_record = (

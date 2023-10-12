@@ -1,0 +1,111 @@
+---
+title: Navigating the MindsDB GUI
+sidebarTitle: MindsDB GUI Overview
+---
+
+MindsDB offers a user-friendly graphical interface that allows users to execute SQL commands, view their outputs, and easily navigate connected data sources, projects, and their contents.
+
+Let's explore the features and usage of the MindsDB editor.
+
+## Accessing the MindsDB GUI Editor
+
+One way to access the MindsDB editor is to create a [MindsDB Cloud account](https://cloud.mindsdb.com/). This option doesn't require any installation. Simply, by logging in to your MindsDB Cloud account, you can access all features of the editor.
+
+Alternatively, you can install MindsDB locally via pip or Docker, following the instructions available under the **Self-Hosted** subsection of the **Deployment Options** section. If you choose this options, you can access the editor via `127.0.0.1:47334` in your browser.
+
+<p align="center">
+  <img src="/assets/mindsdb_gui_editor/mindsdb_editor.png" />
+</p>
+
+## Exploring the MindsDB GUI Editor
+
+### Query Editor
+
+This is the primary component where users can input SQL commands and queries. It provides a code editor environment where users can write, edit, and execute SQL statements.
+
+It is located in the top center of the MindsDB GUI.
+
+<p align="center">
+  <img src="/assets/mindsdb_gui_editor/query_editor.png" />
+</p>
+
+You can open multiple query editor tabs by clicking the plus button next to the current tab, like this:
+
+<p align="center">
+  <img src="/assets/mindsdb_gui_editor/multiple_query_editor.png" />
+</p>
+
+### Results Viewer
+
+Once a query is executed, the results viewer displays the output of the query. It presents the results in a tabular format, showing rows and columns of data.
+
+It is located in the bottom center of the MindsDB GUI.
+
+<p align="center">
+  <img src="/assets/mindsdb_gui_editor/results_viewer.png" />
+</p>
+
+MindsDB supports additional features such as the following:
+
+1. The [Data Insights](/sql/data-insights) feature provides useful data visualization charts.
+2. The Export feature lets you export the query output as a CSV or Markdown file.
+
+### Object Explorer
+
+The object explorer provides an overview of the projects, models, views, connected data sources, and tables.
+
+<p align="center">
+  <img src="/assets/mindsdb_gui_editor/object_explorer.png" />
+</p>
+
+Users can navigate through the available objects by expanding the tree structure items. Upon hovering over the tables, you can query their content using the provided `SELECT` statement, as below.
+
+<p align="center">
+  <img src="/assets/mindsdb_gui_editor/object_explorer_query.png" />
+</p>
+
+### Model Progress Bar
+
+MindsDB provides a custom SQL statement to create and deploy models as virtual tables. Upon executing the [`CREATE MODEL`](/sql/create/model) statement, you can monitor the training progress at the bottom-left corner below the object explorer.
+
+<p align="center">
+  <img src="/assets/mindsdb_gui_editor/create_model_1.png" />
+</p>
+
+Once the model is ready, its status updates to complete.
+
+<p align="center">
+  <img src="/assets/mindsdb_gui_editor/create_model_2.png" />
+</p>
+
+### Add New Data Sources
+
+You can connect a data source to MindsDB by clicking the `Add` button and choosing `New Datasource`. It takes you to a page that lists all available data sources, including, databases, data warehouses, applications, and more. Here, you can search for a data source you want to connect and follow the instructions.
+
+For more information, visit the **Data Sources** section of the docs.
+
+### Upload Files
+
+You can upload a file to MindsDB by clicking the `Add` button and choosing `Upload File`. It takes you to a form where you can upload a file and givi it a name.
+
+For more information, visit [our docs here](/sql/create/file).
+
+### Upload Custom Models
+
+MindsDB offers a way to upload your custom model in the form of Python code and incorporate it into the MindsDB ecosystem. You can do that by clicking the `Add` button and choosing `Upload custom model`. Please note this feature is available for MindsDB Pro users.
+
+For more information, visit [our docs here](/custom-model/byom).
+
+### Learning Hub
+
+This is the best place to start exploring MindsDB. In the Learning Hub, you can find various tutorials and follow them by copying and pasting the code into the query editor and executing it.
+
+<p align="center">
+  <img src="/assets/mindsdb_gui_editor/learning_hub.png" />
+</p>
+
+The Learning Hub lists useful links, including documentation and customer support contact.
+
+<Tip>
+Here is [a video](https://www.loom.com/share/a8938acb6c6b47f98cb3225ede3d33b5) that showcases all features of the MindsDB GUI editor.
+</Tip>

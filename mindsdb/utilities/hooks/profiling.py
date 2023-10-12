@@ -14,6 +14,8 @@ def set_level(node, level, internal_id):
     internal_id["id"] += 1
     node["level"] = level
     node["value"] = node["stop_at"] - node["start_at"]
+    node["value_thread"] = node["stop_at_thread"] - node["start_at_thread"]
+    node["value_process"] = node["stop_at_process"] - node["start_at_process"]
     node["internal_id"] = internal_id["id"]
 
     accum = 0
@@ -33,14 +35,18 @@ def send_profiling_results(profiling_data: dict):
     time_start_at = profiling["tree"]["time_start_at"]
     del profiling["tree"]["time_start_at"]
 
-    connection = psycopg.connect(
-        host=MINDSDB_PROFILING_DB_HOST,
-        port=5432,
-        user=MINDSDB_PROFILING_DB_USER,
-        password=MINDSDB_PROFILING_DB_PASSWORD,
-        dbname="postgres",
-        connect_timeout=5
-    )
+    try:
+        connection = psycopg.connect(
+            host=MINDSDB_PROFILING_DB_HOST,
+            port=5432,
+            user=MINDSDB_PROFILING_DB_USER,
+            password=MINDSDB_PROFILING_DB_PASSWORD,
+            dbname="postgres",
+            connect_timeout=5
+        )
+    except Exception:
+        print('cant get acceess to profiling database')
+        return
     cur = connection.cursor()
     cur.execute("""
         insert into profiling

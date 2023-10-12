@@ -1,0 +1,50 @@
+---
+title: Vertica
+sidebarTitle: Vertica
+---
+
+This is the implementation of the Vertica data handler for MindsDB.
+
+The column-oriented [Vertica Analytics Platform](https://www.vertica.com/overview/) was designed to manage large, fast-growing volumes of data and with fast query performance for data warehouses and other query-intensive applications. The product claims to greatly improve query performance over traditional relational database systems, and to provide high availability and exabyte scalability on commodity enterprise servers. Vertica runs on multiple cloud computing systems as well as on Hadoop nodes. Vertica's Eon Mode separates compute from storage, using S3 object storage and dynamic allocation of compute notes.
+
+## Implementation
+
+This handler is implemented using `vertica-python`, a Python library that allows you to use Python code to run SQL commands on the Vertica database.
+
+The required arguments to establish a connection are as follows:
+
+* `user` is the username asscociated with the database.
+* `password` is the password to authenticate your access.
+* `host` is the host name or IP address of the server.
+* `port` is the port through which TCP/IP connection is to be made.
+* `database` is the database name to be connected.
+* `schema` is the schema name to get tables from.
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/vertica_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+In order to make use of this handler and connect to the Vertica database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE vertica_datasource
+WITH
+    engine = 'vertica',
+    parameters = {
+        "user": "dbadmin",
+        "password": "password",
+        "host": "127.0.0.1",
+        "port": 5433,
+        "schema_name": "public",
+        "database": "VMart"
+    };
+```
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM vertica_datasource.TEST;
+```

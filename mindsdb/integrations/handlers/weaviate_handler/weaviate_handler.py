@@ -67,7 +67,7 @@ class WeaviateDBHandler(VectorStoreHandler):
                 persistence_data_path=self._client_config.get("persistence_directory")
             )
             return weaviate.Client(embedded_options=self._embedded_options)
-        if self.client_config.get("weaviate_api_key"):
+        if self._client_config.get("weaviate_api_key"):
             return weaviate.Client(
                 url=self._client_config["weaviate_url"],
                 auth_client_secret=weaviate.AuthApiKey(

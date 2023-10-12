@@ -2,7 +2,6 @@ from collections import OrderedDict
 from datetime import datetime
 from typing import List, Optional
 
-import os
 import weaviate
 from weaviate.embedded import EmbeddedOptions
 import pandas as pd

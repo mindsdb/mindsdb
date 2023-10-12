@@ -13,12 +13,10 @@ from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import init_lexer_parsers
 from mindsdb.integrations.libs.ml_exec_base import process_cache
-from mindsdb.interfaces.database.integrations import integration_controller
 
 
 def start(verbose, no_studio, with_nlp):
     config = Config()
-    is_cloud = config.get('cloud', False)
 
     server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
     db.init()

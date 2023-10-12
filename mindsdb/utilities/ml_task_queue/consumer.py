@@ -1,6 +1,5 @@
 import os
 import time
-import pickle
 import signal
 import tempfile
 import threading
@@ -76,7 +75,7 @@ class MLTaskConsumer:
         self._listen_message_threads = []
 
         # region connect to redis
-        config = config.get('ml_task_queue', {})
+        config = Config().get('ml_task_queue', {})
         self.db = Database(
             host=config.get('host', 'localhost'),
             port=config.get('port', 6379),

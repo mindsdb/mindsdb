@@ -43,7 +43,11 @@ For more information about how these perameters map to Milvus API, look at Milvu
 
 ## Usage
 
-Before continuing, make sure that `pymilvus` version is same as your Milvus instance version.
+Before continuing, make sure that `pymilvus` version is same as your Milvus instance version. You can check and change the `requirements.txt` file in this directory to accomodate that. This integration is tested on version `2.3`
+
+### Setting up milvus using docker locally
+
+To set up docker locally, refer to this [link](https://milvus.io/docs/install_standalone-docker.md). You can deploy milvus as a cluster or as a standalone service.
 
 ### Creating connection
 

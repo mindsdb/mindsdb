@@ -172,7 +172,7 @@ class TestRAG(BaseExecutorTest):
         result_df = self.run_sql(
             """
             SELECT p.answer
-            FROM proj.test_rag_openai_qa_no_context as p
+            FROM proj.test_rag_openai_qa as p
             WHERE question='What is the best treatment for a cold?'
         """
         )

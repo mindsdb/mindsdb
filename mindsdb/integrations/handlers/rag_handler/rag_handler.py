@@ -86,7 +86,6 @@ class RAGHandler(BaseMLEngine):
                 )
         else:
             # Note this should only be run if run_embeddings is false or if no data is provided in query
-
             logger.info("Skipping embeddings and ingestion into Chroma VectorDB")
 
         export_args = args.dict(exclude={"llm_params"})

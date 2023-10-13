@@ -7,6 +7,7 @@ import magic
 import pandas
 import pandas as pd
 import pytest
+from unittest.mock import patch
 from pytest_lazyfixture import lazy_fixture
 
 from mindsdb.integrations.handlers.file_handler.file_handler import FileHandler
@@ -67,10 +68,10 @@ def assert_identified_as(data_format, file_path, is_identified):
 
 # Define a table to use as content for all of the file types
 test_file_content = [
-    ["col_one", "col_two", "col_three"],
-    [1, -1, 0.1],
-    [2, -2, 0.2],
-    [3, -3, 0.3],
+    ["col_one", "col_two", "col_three", "col_four"],
+    [1, -1, 0.1, "A"],
+    [2, -2, 0.2, "B"],
+    [3, -3, 0.3, "C"],
 ]
 
 
@@ -83,7 +84,7 @@ def temp_dir():
 def csv_file(temp_dir) -> str:
     file_path = os.path.join(temp_dir, "test_data.csv")
     df = pandas.DataFrame(test_file_content)
-    df.to_csv(file_path)
+    df.to_csv(file_path, index=False, header=False)
     return file_path
 
 
@@ -91,7 +92,8 @@ def csv_file(temp_dir) -> str:
 def xlsx_file(temp_dir) -> str:
     file_path = os.path.join(temp_dir, "test_data.xlsx")
     df = pandas.DataFrame(test_file_content)
-    df.to_excel(file_path)
+    df.to_excel(file_path, index=False, header=False)
+    print(file_path)
     return file_path
 
 
@@ -99,7 +101,7 @@ def xlsx_file(temp_dir) -> str:
 def json_file(temp_dir) -> str:
     file_path = os.path.join(temp_dir, "test_data.json")
     df = pandas.DataFrame(test_file_content)
-    df.to_json(file_path)
+    df.to_json(file_path, index=True, orient='table')
     return file_path
 
 
@@ -162,20 +164,55 @@ class TestIsItX:
             assert FileHandler.is_it_parquet(BytesIO(fh.read())) is result
 
 
-def test_get_file_path_with_csv(mocker, csv_file_path: str):
-    # Test when the input path is a URL
-    path = csv_file_path
-    mocker.patch.object(FileHandler, "_fetch_url", return_value=csv_file_path)
-    result = FileHandler._get_file_path(path)
-    assert result == csv_file_path
+def test_get_file_path_with_file_path():
+    file_path = "example.txt"
+    result = FileHandler._get_file_path(file_path)
+    assert result == file_path
 
 
-def test_handle_source_with_csv(csv_file_path: str):
-    df, col_map = FileHandler._handle_source(csv_file_path)
-    # Assert that df is a DataFrame
-    assert type(df) == pd.DataFrame
-    # Assert that col_map is a dictionary
-    assert type(col_map) == dict
+@patch('mindsdb.integrations.handlers.file_handler.file_handler.FileHandler._fetch_url')
+def test_get_file_path_with_url(mock_fetch_url):
+    mock_url = "http://example.com/file.txt"
+    expected_result = "http://example.com/file.txt"
+    mock_fetch_url.return_value = mock_url
+
+    result = FileHandler._get_file_path(mock_url)
+
+    assert result == expected_result
+    mock_fetch_url.assert_called_with(mock_url)
+
+class TestHandleSource:
+
+    def test_handle_source_csv(self, csv_file):
+        df, col_map = FileHandler._handle_source(csv_file)
+        assert isinstance(df, pd.DataFrame)
+        assert len(df) >= 0  
+        assert df.columns.tolist() == ["col_one", "col_two", "col_three", "col_four"]
+
+    def test_handle_source_xlsx(self, xlsx_file):
+        df, col_map = FileHandler._handle_source(xlsx_file)
+        assert isinstance(df, pd.DataFrame)
+        assert len(df) >= 0  
+        assert df.columns.tolist() == ["col_one", "col_two", "col_three", "col_four"]
+
+    def test_handle_source_json(self, json_file):
+        df, col_map = FileHandler._handle_source(json_file)
+        assert isinstance(df, pd.DataFrame)
+        assert len(df) >= 0  # Assuming the JSON file contains 2 records
+        assert df.columns.tolist() == ["col_one", "col_two", "col_three", "col_four"]
+
+    def test_handle_source_parquet(self, parquet_file):
+        df, col_map = FileHandler._handle_source(parquet_file)
+        assert isinstance(df, pd.DataFrame)
+        # Add assertions specific to the Parquet file format
+
+    # def test_handle_source_with_csv(csv_file: str):
+    #     with open(csv_file, "r") as df:
+    #         df, col_map = FileHandler._handle_source(csv_file)
+    #         # Assert that df is a DataFrame
+    #         assert type(df) == pd.DataFrame
+    #         # Assert that col_map is a dictionary
+    #         assert type(col_map) == dict
 
 
 def test_check_valid_dialect_coma(csv_file_path: str):

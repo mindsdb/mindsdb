@@ -121,7 +121,7 @@ class FileHandler(DatabaseHandler):
         # get file data io, format and dialect
         data, fmt, dialect = FileHandler._get_data_io(file_path)
         data.seek(0)  # make sure we are at 0 in file pointer
-
+        print(fmt)
         if custom_parser:
             header, file_data = custom_parser(data, fmt)
             df = pd.DataFrame(file_data, columns=header)
@@ -135,6 +135,7 @@ class FileHandler(DatabaseHandler):
         elif fmt in ["xlsx", "xls"]:
             data.seek(0)
             df = pd.read_excel(data)
+            print(df)
 
         elif fmt == "json":
             data.seek(0)

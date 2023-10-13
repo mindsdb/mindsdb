@@ -232,7 +232,6 @@ class XataHandler(VectorStoreHandler):
             FilterOperator.LESS_THAN_OR_EQUAL: "$le",
             FilterOperator.GREATER_THAN: "$gt",
             FilterOperator.GREATER_THAN_OR_EQUAL: "$gte",
-            FilterOperator.IN: "$any",
             FilterOperator.LIKE: "$pattern",
         }
         if operator not in mapping:
@@ -276,15 +275,6 @@ class XataHandler(VectorStoreHandler):
             if condition.column == TableField.SEARCH_VECTOR.value:
                 continue
             current_filter = original_filter = {}
-            # Special case NOT values: needs a nested dict
-            if condition.op == FilterOperator.NOT_LIKE or condition.op == FilterOperator.NOT_IN:
-                current_filter["$not"] = {}
-                current_filter = current_filter["$not"]
-                condition.op = FilterOperator.LIKE if condition.op == FilterOperator.NOT_LIKE else FilterOperator.IN
-            # Special case IN: needs a list value
-            if condition.op == FilterOperator.IN:
-                if not isinstance(condition.value, list):
-                    condition.value = [condition.value]
             # Special case LIKE: needs pattern translation
             if condition.op == FilterOperator.LIKE:
                 condition.value = condition.value.replace("%", "*").replace("_", "?")
@@ -300,6 +290,8 @@ class XataHandler(VectorStoreHandler):
 
     def select(self, table_name: str, columns: List[str] = None, conditions: List[FilterCondition] = None, offset: int = None, limit: int = None) -> HandlerResponse:
         """Run general query or a vector similarity search and return results."""
+        if not columns:
+            columns = [col["name"] for col in self.SCHEMA]
         # Generate filter conditions
         filters = self._translate_non_vector_conditions(conditions)
         # Check for search vector
@@ -307,7 +299,7 @@ class XataHandler(VectorStoreHandler):
             []
             if conditions is None
             else [
-                condition
+                condition.value
                 for condition in conditions
                 if condition.column == TableField.SEARCH_VECTOR.value
             ]
@@ -317,7 +309,7 @@ class XataHandler(VectorStoreHandler):
         else:
             search_vector = None
         # Search
-        results_df = None
+        results_df = pd.DataFrame(columns)
         if search_vector is not None:
             # Similarity
             try:
@@ -336,8 +328,9 @@ class XataHandler(VectorStoreHandler):
                     raise Exception(results["message"])
                 # Convert result
                 results_df = pd.DataFrame.from_records(results["records"])
-                results_df["xata"] = results_df["xata"].apply(lambda x: x["score"])
-                results_df.rename({"xata": TableField.DISTANCE.value}, axis=1, inplace=True)
+                if "xata" in results_df.columns:
+                    results_df["xata"] = results_df["xata"].apply(lambda x: x["score"])
+                    results_df.rename({"xata": TableField.DISTANCE.value}, axis=1, inplace=True)
             except Exception as e:
                 return Response(
                     resp_type=RESPONSE_TYPE.ERROR,
@@ -351,45 +344,47 @@ class XataHandler(VectorStoreHandler):
                 }
                 if filters:
                     params["filter"] = filters
-                if limit:
-                    params["size"] = limit
+                if limit or offset:
+                    params["page"] = {}
+                    if limit:
+                        params["page"]["size"] = limit
+                    if offset:
+                        params["page"]["offset"] = offset
                 results = self._client.data().query(table_name, params)
                 # Check for errors
                 if not results.is_success():
                     raise Exception(results["message"])
                 # Convert result
                 results_df = pd.DataFrame.from_records(results["records"])
-                results_df.drop(["xata"], axis=1, inplace=True)
+                if "xata" in results_df.columns:
+                    results_df.drop(["xata"], axis=1, inplace=True)
             except Exception as e:
                 return Response(
                     resp_type=RESPONSE_TYPE.ERROR,
                     error_message=f"Unable to run general SELECT query : {e}",
                 )
-        return results_df
+        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=results_df)
 
-
-
-
-
-
-
-
-
-    def delete(
-        self, table_name: str, conditions: List[FilterCondition] = None
-    ) -> HandlerResponse:
-        filters = self._translate_metadata_condition(conditions)
-        # get id filters
-        id_filters = [
-            condition.value
-            for condition in conditions
-            if condition.column == TableField.ID.value
-        ] or None
-
-        if filters is None and id_filters is None:
-            raise Exception("Delete query must have at least one condition!")
-        collection = self._client.get_collection(table_name)
-        collection.delete(ids=id_filters, where=filters)
+    def delete(self, table_name: str, conditions: List[FilterCondition] = None) -> HandlerResponse:
+        ids = []
+        for condition in conditions:
+            if condition.op == FilterOperator.EQUAL:
+                ids.append(condition.value)
+            else:
+                return Response(
+                    resp_type=RESPONSE_TYPE.ERROR,
+                    error_message="You can only delete using '=' operator ID one at a time!",
+                )
+        try:
+            for id in ids:
+                resp = self._client.records().delete(table_name, id)
+                if not resp.is_success():
+                    raise Exception(resp["message"])
+        except Exception as e:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Unable to run DELETE records: {e}",
+            )
         return Response(resp_type=RESPONSE_TYPE.OK)
 
 

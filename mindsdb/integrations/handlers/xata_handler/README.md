@@ -23,63 +23,91 @@ Optional arguments for vector similarity searches are:
 
 * `similarity_function`: similarity function to use for vector searches (default=cosineSimilarity)
 
+## Limitations
 
-
-
-
-
-
-
-
-
+- Performing queries on columns other than vector database specified columns is not supported
+    - You can use metadata column for general query filtering
+- Metadata filtering does not work on vector similarity search queries
 
 ## Usage
+
+### Create Database
 
 In order to make use of this handler and connect to a hosted Xata instance in MindsDB, the following syntax can be used:
 
 ```sql
-CREATE DATABASE xata_dev
-WITH ENGINE = "xata",
-PARAMETERS = {
-   "chroma_server_host": "localhost",
-   "chroma_server_http_port": 8000
-}
+CREATE DATABASE xata_test
+WITH
+    ENGINE = 'xata',
+    PARAMETERS = {{
+     "api_key": "...",
+     "db_url": "..."
+};
+
 ```
 
-Another option is to use in memory Xata instance, you can do so by using the following syntax:
+### Create Table
+
+You can insert data into a new table like so:
 
 ```sql
-CREATE DATABASE xata_dev
-WITH ENGINE = "xata",
-PARAMETERS = {
-   "persist_directory": <persist_directory>
-    }
+CREATE TABLE xata_test.testingtable (SELECT * FROM pg.df)
 ```
 
-You can insert data into a new collection like so
+The table will have default parameters as specified in `CREATE DATABASE` command
 
-```sql
-create table xata_dev.test_embeddings (
-SELECT embeddings,'{"source": "fda"}' as metadata FROM mysql_demo_db.test_embeddings
-);
-```
+### Select
 
 You can query a collection within your Xata as follows:
 
 ```sql
-SELECT * FROM xata_dev.test_embeddings;
+SELECT * FROM xata_test.testingtable
 ```
 
-filter by metadata
-
 ```sql
-SELECT * FROM xata_dev.test_embeddings
-where `metadata.source` = "fda";
+SELECT * FROM xata_test.testingtable
+WHERE testingtable.metadata.price > 10 AND testingtable.metadata.price <= 100
 ```
 
-search for similar embeddings
+```sql
+SELECT * FROM xata_test.testingtable
+WHERE content LIKE 'test%'
+```
+
+### Similarity search
+
+Search for similar embeddings by specifying search vector. Note that you cannot use metadata column with search vector.
 
 ```sql
-SELECT * FROM xata_dev.test_embeddings
-WHERE search_vector = (select embeddings from mysql_demo_db.test_embeddings limit 1);
+SELECT * FROM xata_test.testingtable
+WHERE search_vector = '[1.0, 2.0, 3.0]'
+```
+
+```sql
+SELECT * FROM xata_test.testingtable
+WHERE search_vector = '[1.0, 2.0, 3.0]'
+AND content LIKE 'test%'
+```
+
+### Insert
+
+You can insert into table in various ways:
+
+```sql
+INSERT INTO xata_test.testingtable (content,metadata,embeddings)
+VALUES ('this is a test', '{"test": "test"}', '[1.0, 2.0, 3.0]')
+```
+
+```sql
+INSERT INTO xata_test.testingtable (content,metadata,embeddings)
+SELECT content,metadata,embeddings FROM pg.df2
+```
+
+## Delete
+
+You can delete only using ID and = operator. Deleting non existing records does not have any effect.
+
+```sql
+DELETE FROM xata_test.testingtable
+WHERE id = 'id2'
 ```

@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from typing import List, Optional
 
+import time
 import pandas as pd
 import json
 import xata
@@ -33,7 +34,7 @@ class XataHandler(VectorStoreHandler):
             "api_key": self._connection_data.get("api_key"),
         }
         self._create_table_params = {
-            "dimension": self._connection_data.get("db_url", 8),
+            "dimension": self._connection_data.get("dimension", 8),
         }
         self._client = None
         self.is_connected = False
@@ -69,7 +70,9 @@ class XataHandler(VectorStoreHandler):
         # NOTE: no direct way to test this
         # try getting the user, if it fails, it means that we are not connected
         try:
-            self._client.users().get()
+            resp = self._client.users().get()
+            if not resp.is_success():
+                raise Exception(resp["message"])
             response_code.success = True
         except Exception as e:
             log.logger.error(f"Error connecting to Xata: {e}!")
@@ -84,8 +87,10 @@ class XataHandler(VectorStoreHandler):
     def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
         """Create a table with the given name in the Xata database."""
         try:
-            self._client.table().create(table_name)
-            self._client.table().set_schema(
+            resp = self._client.table().create(table_name)
+            if not resp.is_success():
+                raise Exception(f"Unable to create table {table_name}: {resp['message']}")
+            resp = self._client.table().set_schema(
                 table_name=table_name,
                 payload={
                     "columns": [
@@ -99,21 +104,25 @@ class XataHandler(VectorStoreHandler):
                     ]
                 }
             )
+            if not resp.is_success():
+                raise Exception(f"Unable to change schema of table {table_name}: {resp['message']}")
         except Exception as e:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Unable to create table '{table_name}': {e}",
+                error_message=f"{e}",
             )
         return Response(resp_type=RESPONSE_TYPE.OK)
 
     def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
         """Delete a table from the Xata database."""
         try:
-            self._client.table().delete(table_name)
+            resp = self._client.table().delete(table_name)
+            if not resp.is_success():
+                raise Exception(f"Unable to delete table: {resp['message']}")
         except Exception as e:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error deleting table '{table_name}': {e}",
+                error_message=f"{e}",
             )
         return Response(resp_type=RESPONSE_TYPE.OK)
 
@@ -139,10 +148,7 @@ class XataHandler(VectorStoreHandler):
                 columns=["TABLE_NAME"],
                 data=[table_data["name"] for table_data in self._client.branch().get_details()["schema"]["tables"]],
             )
-            return Response(
-                resp_type=RESPONSE_TYPE.TABLE,
-                data_frame=table_names
-            )
+            return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=table_names)
         except Exception as e:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
@@ -151,11 +157,14 @@ class XataHandler(VectorStoreHandler):
 
     def insert(self, table_name: str, data: pd.DataFrame, columns: List[str] = None) -> HandlerResponse:
         """ Insert data into the Xata database. """
-        # Preprocess data
+        if columns:
+            data = data[columns]
+        # Convert to records
         data = data.to_dict("records")
         # Convert metadata to json
-        if "metadata" in data.columns:
-            data["metadata"] = data["metadata"].apply(json.loads)
+        for row in data:
+            if "metadata" in row:
+                row["metadata"] = json.dumps(row["metadata"])
         if len(data) > 1:
             # Bulk processing
             try:
@@ -222,6 +231,7 @@ class XataHandler(VectorStoreHandler):
         offset: int = None,
         limit: int = None,
     ) -> HandlerResponse:
+        # TODO: normal and vector select
         collection = self._client.get_collection(table_name)
         filters = self._translate_metadata_condition(conditions)
         # check if embedding vector filter is present

@@ -53,6 +53,13 @@ FROM my_hackernews.hnstories
 LIMIT 5;
 ```
 
+OR
+
+```SQL
+SELECT *
+FROM my_hackernews.jobstories
+LIMIT 7;
+```
 
 Each Post has a unique ID. You can use this ID to fetch comments for a particular post.
 

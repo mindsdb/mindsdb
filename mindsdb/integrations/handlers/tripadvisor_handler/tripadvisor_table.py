@@ -350,7 +350,6 @@ class PhotosTable(APITable):
             params["max_results"] = query.limit.value
 
         if "locationId" not in params:
-            # search not works without searchQuery, use 'London'
             params["locationId"] = "23322232"
 
         result = self.handler.call_tripadvisor_photos_api(params=params)
@@ -402,7 +401,7 @@ class PhotosTable(APITable):
 
 class NearbyLocationTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
-        """Select data from the reviews table and return it as a pandas DataFrame.
+        """Select data from the nearby_location table and return it as a pandas DataFrame.
 
         Args:
             query (ast.Select): The SQL query to be executed.
@@ -433,7 +432,6 @@ class NearbyLocationTable(APITable):
             params["max_results"] = query.limit.value
 
         if "latLong" not in params:
-            # search not works without searchQuery, use 'London'
             params["latLong"] = "40.780825, -73.972781"
 
         result = self.handler.call_tripadvisor_nearby_location_api(params=params)
@@ -467,10 +465,10 @@ class NearbyLocationTable(APITable):
         return result
 
     def get_columns(self):
-        """Get the list of column names for the reviews table.
+        """Get the list of column names for the nearby_location table.
 
         Returns:
-            list: A list of column names for the reviews table.
+            list: A list of column names for the nearby_location table.
         """
         return [
             "location_id",

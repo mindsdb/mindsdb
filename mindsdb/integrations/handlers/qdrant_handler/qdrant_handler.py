@@ -51,6 +51,10 @@ class QdrantHandler(VectorStoreHandler):
 
         self.is_connected = False
 
+    def __del__(self):
+        if self.is_connected is True:
+            self.disconnect()
+
     def check_connection(self):
         """Check the connection to the Qdrant database."""
         response_code = StatusResponse(False)
@@ -69,6 +73,27 @@ class QdrantHandler(VectorStoreHandler):
                 self.is_connected = False
 
         return response_code
+
+    def get_tables(self) -> HandlerResponse:
+        """
+        Get the list of collections in the Qdrant instance.
+        """
+        collection_response = self._client.get_collections()
+        collections_name = pd.DataFrame(
+            columns=["table_name"],
+            data=[collection.name for collection in collection_response.collections],
+        )
+        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=collections_name)
+
+    def get_columns(self, table_name: str) -> HandlerResponse:
+        try:
+            _ = self._client.get_collection(table_name)
+        except ValueError:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Table {table_name} does not exist!",
+            )
+        return super().get_columns(table_name)
 
 
 connection_args = OrderedDict(

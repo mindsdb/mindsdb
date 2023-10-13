@@ -1,11 +1,143 @@
 import time
-from unittest.mock import patch
 import pandas as pd
 
+import pytest
+from unittest.mock import Mock, patch
 from mindsdb_sql import parse_sql
 
-
 from tests.unit.executor_test_base import BaseExecutorTest
+from mindsdb.integrations.handlers.vertex_handler.vertex_client import VertexClient
+
+path = "mindsdb.integrations.handlers.vertex_handler.vertex_client" 
+
+@pytest.fixture
+def vertex_client():
+    with patch(f"{path}.service_account.Credentials.from_service_account_file"), patch(
+        f"{path}.aiplatform.init"
+    ):
+        client = VertexClient("fake_path", "fake_project_id")
+    return client
+
+# Mocks
+def mock_datasets():
+    dataset_1 = Mock(display_name="Dataset1", name="ID1")
+    dataset_2 = Mock(display_name="Dataset2", name="ID2")
+
+    # Set concrete return values for attributes
+    dataset_1.display_name = "Dataset1"
+    dataset_1.name = "ID1"
+
+    dataset_2.display_name = "Dataset2"
+    dataset_2.name = "ID2"
+
+    return [dataset_1, dataset_2]
+
+
+def mock_endpoints():
+    endpoint_1 = Mock(display_name="Endpoint1", name="EndpointID1")
+    endpoint_2 = Mock(display_name="Endpoint2", name="EndpointID2")
+
+    # Set concrete return values for attributes
+    endpoint_1.display_name = "Endpoint1"
+    endpoint_1.name = "EndpointID1"
+
+    endpoint_2.display_name = "Endpoint2"
+    endpoint_2.name = "EndpointID2"
+
+    return [endpoint_1, endpoint_2]
+
+
+def mock_models():
+    model_1 = Mock(display_name="Model1", name="ModelID1")
+    model_2 = Mock(display_name="Model2", name="ModelID2")
+
+    # Set concrete return values for attributes
+    model_1.display_name = "Model1"
+    model_1.name = "ModelID1"
+
+    model_2.display_name = "Model2"
+    model_2.name = "ModelID2"
+
+    return [model_1, model_2]
+
+
+# Tests
+def test_print_datasets(vertex_client, capsys):
+    with patch(f"{path}.aiplatform.TabularDataset.list", return_value=mock_datasets()):
+        vertex_client.print_datasets()
+        captured = capsys.readouterr()
+        assert "Dataset1" in captured.out
+        assert "Dataset2" in captured.out
+
+
+def test_print_models(vertex_client, capsys):
+    with patch(f"{path}.aiplatform.Model.list", return_value=mock_models()):
+        vertex_client.print_models()
+        captured = capsys.readouterr()
+        assert "Model1" in captured.out
+        assert "Model2" in captured.out
+
+
+def test_print_endpoints(vertex_client, capsys):
+    with patch(f"{path}.aiplatform.Endpoint.list", return_value=mock_endpoints()):
+        vertex_client.print_endpoints()
+        captured = capsys.readouterr()
+        assert "Endpoint1" in captured.out
+        assert "Endpoint2" in captured.out
+
+
+def test_get_model_by_display_name(vertex_client):
+    with patch(f"{path}.aiplatform.Model.list", return_value=mock_models()):
+        model = vertex_client.get_model_by_display_name("Model1")
+        assert model.display_name == "Model1"
+        assert model.name == "ModelID1"
+
+
+def test_get_endpoint_by_display_name(vertex_client):
+    with patch(f"{path}.aiplatform.Endpoint.list", return_value=mock_endpoints()):
+        endpoint = vertex_client.get_endpoint_by_display_name("Endpoint1")
+        assert endpoint.display_name == "Endpoint1"
+        assert endpoint.name == "EndpointID1"
+
+
+def test_get_model_by_id(vertex_client):
+    with patch(f"{path}.aiplatform.Model", return_value=mock_models()[0]):
+        model = vertex_client.get_model_by_id("ModelID1")
+        assert model.display_name == "Model1"
+        assert model.name == "ModelID1"
+
+
+def test_deploy_model(vertex_client):
+    mock_model = mock_models()[0]
+    with patch.object(mock_model, "deploy", return_value=mock_endpoints()[0]):
+        endpoint = vertex_client.deploy_model(mock_model)
+        assert endpoint.display_name == "Endpoint1"
+        assert endpoint.name == "EndpointID1"
+
+
+def test_predict_from_csv(vertex_client, mocker):
+    mock_endpoint = mocker.MagicMock()
+    mock_endpoint.predict.return_value = "CSV Predictions"
+
+    mocker.patch(f"{path}.pd.read_csv", return_value=pd.DataFrame({"col1": ["data1", "data2"]}))
+    mocker.patch(f"{path}.VertexClient.get_endpoint_by_display_name", return_value=mock_endpoint)
+
+    predictions = vertex_client.predict_from_csv("Endpoint1", "path_to_csv")
+    assert predictions == "CSV Predictions"
+
+
+def test_predict_from_json(vertex_client, mocker):
+    mock_endpoint = mocker.MagicMock()
+    mock_endpoint.predict.return_value = "JSON Predictions"
+
+    mock_open = mocker.mock_open(read_data='{"col1": ["data1", "data2"]}')
+    mocker.patch("builtins.open", mock_open)
+
+    mocker.patch(f"{path}.json.load", return_value={"col1": ["data1", "data2"]})
+    mocker.patch(f"{path}.VertexClient.get_endpoint_by_display_name", return_value=mock_endpoint)
+
+    predictions = vertex_client.predict_from_json("Endpoint1", "path_to_json")
+    assert predictions == "JSON Predictions"
 
 
 class TestVertex(BaseExecutorTest):
@@ -72,3 +204,4 @@ class TestVertex(BaseExecutorTest):
         avg_c = pd.to_numeric(ret.c).mean()
         # value is around 1
         assert (avg_c > 0.9) and (avg_c < 1.1)
+"""

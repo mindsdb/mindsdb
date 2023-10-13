@@ -65,13 +65,17 @@ class VertexClient:
         endpoint = model.deploy()
         return endpoint
 
+    def predict_from_df(self, endpoint_display_name, df):
+        """Make a prediction from a Pandas dataframe"""
+        endpoint = self.get_endpoint_by_display_name(endpoint_display_name)
+        records = df.astype(str).to_dict(orient="records")  # list of dictionaries
+        prediction = endpoint.predict(instances=records)
+        return prediction
+
     def predict_from_csv(self, endpoint_display_name, csv_to_predict):
         """Make a prediction from a CSV file"""
         df = pd.read_csv(csv_to_predict)
-        records = df.astype(str).to_dict(orient="records")  # list of dictionaries
-        endpoint = self.get_endpoint_by_display_name(endpoint_display_name)
-        prediction = endpoint.predict(instances=records)
-        return prediction
+        return self.predict_from_df(endpoint_display_name, df)
 
     def predict_from_json(self, endpoint_display_name, json_to_predict):
         """Make a prediction from a JSON file"""

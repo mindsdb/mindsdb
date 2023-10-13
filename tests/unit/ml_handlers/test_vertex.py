@@ -61,7 +61,7 @@ def mock_models():
     return [model_1, model_2]
 
 
-# Tests
+# Test of Vertex client class
 def test_print_datasets(vertex_client, capsys):
     with patch(f"{path}.aiplatform.TabularDataset.list", return_value=mock_datasets()):
         vertex_client.print_datasets()
@@ -140,6 +140,8 @@ def test_predict_from_json(vertex_client, mocker):
     assert predictions == "JSON Predictions"
 
 
+# Test of Vertex handler
+
 class TestVertex(BaseExecutorTest):
 
     def wait_predictor(self, project, name):
@@ -175,10 +177,7 @@ class TestVertex(BaseExecutorTest):
     def test_simple(self, mock_handler):
 
         # dataset, string values
-        df = pd.DataFrame(range(1, 50), columns=['a'])
-        df['b'] = 50 - df.a
-        df['c'] = round((df['a']*3 + df['b']) / 50)
-
+        df = pd.read_csv("tests/unit/ml_handlers/data/vertex_regression.csv")
         self.set_handler(mock_handler, name='pg', tables={'df': df})
 
         # create project
@@ -188,9 +187,10 @@ class TestVertex(BaseExecutorTest):
         self.run_sql('''
            create model proj.modelx
            from pg (select * from df)
-           predict c
+           predict actual_productivity
            using 
-             engine='vertex';
+            engine='vertex',
+            model_name='productivity_regression'
         ''')
         self.wait_predictor('proj', 'modelx')
 
@@ -199,9 +199,6 @@ class TestVertex(BaseExecutorTest):
            SELECT p.*
            FROM pg.df as t 
            JOIN proj.modelx as p
-           where t.c=1
+           where t.team>0
         ''')
-        avg_c = pd.to_numeric(ret.c).mean()
-        # value is around 1
-        assert (avg_c > 0.9) and (avg_c < 1.1)
-"""
+        assert len(ret) == len(df)

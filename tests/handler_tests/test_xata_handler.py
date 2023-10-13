@@ -1,10 +1,6 @@
 import os
 import importlib
 from unittest.mock import patch
-import time
-import sys
-
-print(f"PATH: {sys.path}")
 
 import pandas as pd
 import pytest
@@ -14,12 +10,12 @@ from mindsdb.tests.unit.executor_test_base import BaseExecutorTest
 
 try:
     xata = importlib.import_module("xata")
-    XETA_INSTALLED = True
+    XATA_INSTALLED = True
 except ImportError:
-    XETA_INSTALLED = False
+    XATA_INSTALLED = False
 
 
-@pytest.mark.skipif(not XETA_INSTALLED, reason="xata is not installed")
+@pytest.mark.skipif(not XATA_INSTALLED, reason="xata is not installed")
 class TestXetaHandler(BaseExecutorTest):
 
     def run_sql(self, sql):
@@ -97,7 +93,7 @@ class TestXetaHandler(BaseExecutorTest):
         """
         self.run_sql(sql)
 
-    @pytest.mark.xfail(reason="upsert for vectordatabase is not implemented")
+    @pytest.mark.xfail(reason="update for vectordatabase is not implemented")
     def test_update(self):
         # update a table with a metadata filter
         sql = """
@@ -270,22 +266,98 @@ class TestXetaHandler(BaseExecutorTest):
             self.run_sql(sql)
         self.drop_table("testingtable")
 
-
-
-
-
-
-
-
-
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_select_from(self, postgres_handler_mock):
+    def test_general_select_queries(self, postgres_handler_mock):
         df = pd.DataFrame(
             {
-                "id": ["id1", "id2"],
-                "content": ["this is a test", "this is a test"],
-                "metadata": [{"test": "test"}, {"test": "test"}],
-                "embeddings": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]],
+                "id": ["id1", "id2", "id3", "id4", "id5", "id6"],
+                "content": ["test content", "test paragraph", "toast types", "", "tast misspelled", "hello"],
+                "metadata": [{"price": 10}, {"price": 100}, {"price": 30}, {"test": "test1"}, {"test": "test2"}, {"test": "test3"}],
+                "embeddings": [[1.0, 2.0, 3.0], [5.0, 2.0, 8.0], [3.0, 6.0, 3.0], [1.0, 2.0, 3.0], [3.0, 1.0, 8.0], [1.0, 3.0, 7.0],],
+            }
+        )
+        self.set_handler(postgres_handler_mock, "pg", tables={"testingtable": df})
+        # create a table
+        sql = """
+            CREATE TABLE xata_test.testingtable (SELECT * FROM pg.df)
+        """
+        self.drop_table("testingtable")
+        self.run_sql(sql)
+        # query a table without any filters
+        sql = """
+            SELECT * FROM xata_test.testingtable
+        """
+        assert self.run_sql(sql).shape[0] == 6
+        # query a table with limit
+        sql = """
+            SELECT * FROM xata_test.testingtable
+            LIMIT 2
+        """
+        assert self.run_sql(sql).shape[0] == 2
+        # query a table with id
+        sql = """
+            SELECT * FROM xata_test.testingtable
+            WHERE id = 'id1'
+        """
+        assert self.run_sql(sql).shape[0] == 1
+        # query a table with a metadata filter
+        sql = """
+            SELECT * FROM xata_test.testingtable
+            WHERE metadata.test = 'test1'
+        """
+        assert self.run_sql(sql).shape[0] == 1
+        # query a table with a metadata complex filter
+        sql = """
+            SELECT * FROM xata_test.testingtable
+            WHERE metadata.price > 10 AND metadata.price <= 100
+        """
+        assert self.run_sql(sql).shape[0] == 2
+        # query a table with a content filter
+        sql = """
+            SELECT * FROM xata_test.testingtable
+            WHERE content = 'test content'
+        """
+        assert self.run_sql(sql).shape[0] == 1
+        # query a table with a content filter
+        sql = """
+            SELECT * FROM xata_test.testingtable
+            WHERE content = 'test content'
+        """
+        assert self.run_sql(sql).shape[0] == 1
+        # query a table with like operator
+        sql = """
+            SELECT * FROM xata_test.testingtable
+            WHERE metadata.test LIKE 'test%'
+        """
+        assert self.run_sql(sql).shape[0] == 2
+        # query a table with not like operator
+        sql = """
+            SELECT * FROM xata_test.testingtable
+            WHERE metadata.test NOT LIKE 'test%'
+        """
+        assert self.run_sql(sql).shape[0] == 4
+        # query a table with in operator
+        sql = """
+            SELECT * FROM xata_test.testingtable
+            WHERE metadata.price IN (10, 30)
+        """
+        assert self.run_sql(sql).shape[0] == 2
+        # query a table with not like operator
+        sql = """
+            SELECT * FROM xata_test.testingtable
+            WHERE metadata.price NOT IN (10)
+        """
+        assert self.run_sql(sql).shape[0] == 5
+        self.drop_table("testingtable")
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_vector_search(self, postgres_handler_mock):
+        df = pd.DataFrame(
+            {
+                "id": ["id1", "id2", "id3", "id4", "id5", "id6"],
+                "content": ["test content", "test paragraph", "toast types", "", "tast misspelled", "hello"],
+                "metadata": [{"price": 10}, {"price": 100}, {"price": 30}, {"test": "test1"}, {"test": "test2"}, {"test": "test3"}],
+                "embeddings": [[1.0, 2.0, 3.0], [5.0, 2.0, 8.0], [3.0, 6.0, 3.0], [1.0, 2.0, 3.0], [3.0, 1.0, 8.0], [1.0, 3.0, 7.0],],
             }
         )
         self.set_handler(postgres_handler_mock, "pg", tables={"testingtable": df})
@@ -295,55 +367,36 @@ class TestXetaHandler(BaseExecutorTest):
                 SELECT * FROM pg.df
             )
         """
+        self.drop_table("testingtable")
         self.run_sql(sql)
-
-        # query a table without any filters
-        sql = """
-            SELECT * FROM xata_test.testingtable
-        """
-        self.run_sql(sql)
-
-        # query a table with id
-        sql = """
-            SELECT * FROM xata_test.testingtable
-            WHERE id = 'id1'
-        """
-        ret = self.run_sql(sql)
-        assert ret.shape[0] == 1
-
+        assert self.get_num_records("testingtable") == 6
         # query a table with a search vector, without limit
         sql = """
             SELECT * FROM xata_test.testingtable
             WHERE search_vector = '[1.0, 2.0, 3.0]'
         """
-        ret = self.run_sql(sql)
-        assert ret.shape[0] == 2
-
+        assert self.run_sql(sql).shape[0] == 2
         # query a table with a search vector, with limit
         sql = """
             SELECT * FROM xata_test.testingtable
             WHERE search_vector = '[1.0, 2.0, 3.0]'
             LIMIT 1
         """
-        ret = self.run_sql(sql)
-        assert ret.shape[0] == 1
-
-        # query a table with a metadata filter
-        sql = """
-            SELECT * FROM xata_test.testingtable
-            WHERE `metadata.test` = 'test'
-        """
-        ret = self.run_sql(sql)
-        assert ret.shape[0] == 2
-
+        assert self.run_sql(sql).shape[0] == 1
         # query a table with a metadata filter and a search vector
         sql = """
             SELECT * FROM xata_test.testingtable
-            WHERE `metadata.test` = 'test'
+            WHERE metadata.price < 200
             AND search_vector = '[1.0, 2.0, 3.0]'
         """
-        ret = self.run_sql(sql)
-        assert ret.shape[0] == 2
+        assert self.run_sql(sql).shape[0] == 1
+        self.drop_table("testingtable")
+
+
+
+
+
+
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_delete(self, postgres_handler_mock):

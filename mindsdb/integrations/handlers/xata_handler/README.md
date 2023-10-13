@@ -19,6 +19,10 @@ Optional arguments to create a table are:
 
 * `dimension`: default dimension of embeddings vector used to create table when using create (default=8)
 
+Optional arguments for vector similarity searches are:
+
+* `similarity_function`: similarity function to use for vector searches (default=cosineSimilarity)
+
 
 
 

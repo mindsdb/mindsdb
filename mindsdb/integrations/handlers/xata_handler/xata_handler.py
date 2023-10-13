@@ -1,7 +1,6 @@
 from collections import OrderedDict
 from typing import List, Optional
 
-import time
 import pandas as pd
 import json
 import xata
@@ -35,6 +34,9 @@ class XataHandler(VectorStoreHandler):
         }
         self._create_table_params = {
             "dimension": self._connection_data.get("dimension", 8),
+        }
+        self._select_params = {
+            "similarity_function": self._connection_data.get("similarity_function", "cosineSimilarity"),
         }
         self._client = None
         self.is_connected = False
@@ -216,26 +218,92 @@ class XataHandler(VectorStoreHandler):
                 )
         return Response(resp_type=RESPONSE_TYPE.OK)
 
+    def update(self, table_name: str, data: pd.DataFrame, columns: List[str] = None) -> HandlerResponse:
+        """Update data in the Xata database."""
+        # Not supported
+        return super().update(table_name, data, columns)
 
+    def _get_xata_operator(self, operator: FilterOperator) -> str:
+        """Translate SQL operator to oprator understood by Xata filter language."""
+        mapping = {
+            FilterOperator.EQUAL: "$is",
+            FilterOperator.NOT_EQUAL: "$isNot",
+            FilterOperator.LESS_THAN: "$lt",
+            FilterOperator.LESS_THAN_OR_EQUAL: "$le",
+            FilterOperator.GREATER_THAN: "$gt",
+            FilterOperator.GREATER_THAN_OR_EQUAL: "$gte",
+            FilterOperator.IN: "$any",
+            FilterOperator.LIKE: "$pattern",
+        }
+        if operator not in mapping:
+            raise Exception(f"Operator '{operator}' is not supported!")
+        return mapping[operator]
 
+    def _translate_non_vector_conditions(self, conditions: List[FilterCondition]) -> Optional[dict]:
+        """
+        Translate a list of FilterCondition objects a dict that can be used by Xata for filtering.
+        E.g.,
+        [
+            FilterCondition(
+                column="metadata.price",
+                op=FilterOperator.LESS_THAN,
+                value=100,
+            ),
+            FilterCondition(
+                column="metadata.price",
+                op=FilterOperator.GREATER_THAN,
+                value=10,
+            )
+        ]
+        -->
+        {
+            "metadata->price" {
+                "$gt": 10,
+                "$lt": 100
+            },
+        }
+        """
+        if not conditions:
+            return None
+        # Translate metadata columns
+        for condition in conditions:
+            if condition.column.startswith(TableField.METADATA.value):
+                condition.column = condition.column.replace(".", "->")
+        # Generate filters
+        filters = {}
+        for condition in conditions:
+            # Skip search vector condition
+            if condition.column == TableField.SEARCH_VECTOR.value:
+                continue
+            current_filter = original_filter = {}
+            # Special case NOT values: needs a nested dict
+            if condition.op == FilterOperator.NOT_LIKE or condition.op == FilterOperator.NOT_IN:
+                current_filter["$not"] = {}
+                current_filter = current_filter["$not"]
+                condition.op = FilterOperator.LIKE if condition.op == FilterOperator.NOT_LIKE else FilterOperator.IN
+            # Special case IN: needs a list value
+            if condition.op == FilterOperator.IN:
+                if not isinstance(condition.value, list):
+                    condition.value = [condition.value]
+            # Special case LIKE: needs pattern translation
+            if condition.op == FilterOperator.LIKE:
+                condition.value = condition.value.replace("%", "*").replace("_", "?")
+            # Generate substatment
+            current_filter[condition.column] = {self._get_xata_operator(condition.op): condition.value}
+            # Check for conflicting and insert
+            for key in original_filter:
+                if key in filters:
+                    filters[key] = {**filters[key], **original_filter[key]}
+                else:
+                    filters = {**filters, **original_filter}
+        return filters if filters else None
 
-
-
-
-
-    def select(
-        self,
-        table_name: str,
-        columns: List[str] = None,
-        conditions: List[FilterCondition] = None,
-        offset: int = None,
-        limit: int = None,
-    ) -> HandlerResponse:
-        # TODO: normal and vector select
-        collection = self._client.get_collection(table_name)
-        filters = self._translate_metadata_condition(conditions)
-        # check if embedding vector filter is present
-        vector_filter = (
+    def select(self, table_name: str, columns: List[str] = None, conditions: List[FilterCondition] = None, offset: int = None, limit: int = None) -> HandlerResponse:
+        """Run general query or a vector similarity search and return results."""
+        # Generate filter conditions
+        filters = self._translate_non_vector_conditions(conditions)
+        # Check for search vector
+        search_vector = (
             []
             if conditions is None
             else [
@@ -244,76 +312,68 @@ class XataHandler(VectorStoreHandler):
                 if condition.column == TableField.SEARCH_VECTOR.value
             ]
         )
-        if len(vector_filter) > 0:
-            vector_filter = vector_filter[0]
+        if len(search_vector) > 0:
+            search_vector = search_vector[0]
         else:
-            vector_filter = None
-        id_filters = None
-        if conditions is not None:
-            id_filters = [
-                condition.value
-                for condition in conditions
-                if condition.column == TableField.ID.value
-            ] or None
-
-        if vector_filter is not None:
-            # similarity search
-            query_payload = {
-                "where": filters,
-                "query_embeddings": vector_filter.value
-                if vector_filter is not None
-                else None,
-                "include": ["metadatas", "documents", "distances"],
-            }
-            if limit is not None:
-                query_payload["n_results"] = limit
-
-            result = collection.query(**query_payload)
-            ids = result["ids"][0]
-            documents = result["documents"][0]
-            metadatas = result["metadatas"][0]
-            distances = result["distances"][0]
+            search_vector = None
+        # Search
+        results_df = None
+        if search_vector is not None:
+            # Similarity
+            try:
+                params = {
+                    "queryVector": search_vector,
+                    "column": TableField.EMBEDDINGS.value,
+                    "similarityFunction": self._select_params["similarity_function"]
+                }
+                if filters:
+                    params["filter"] = filters
+                if limit:
+                    params["size"] = limit
+                results = self._client.data().vector_search(table_name, params)
+                # Check for errors
+                if not results.is_success():
+                    raise Exception(results["message"])
+                # Convert result
+                results_df = pd.DataFrame.from_records(results["records"])
+                results_df["xata"] = results_df["xata"].apply(lambda x: x["score"])
+                results_df.rename({"xata": TableField.DISTANCE.value}, axis=1, inplace=True)
+            except Exception as e:
+                return Response(
+                    resp_type=RESPONSE_TYPE.ERROR,
+                    error_message=f"Unable to run similarity search: {e}",
+                )
         else:
-            # general get query
-            result = collection.get(
-                ids=id_filters,
-                where=filters,
-                limit=limit,
-                offset=offset,
-            )
-            ids = result["ids"]
-            documents = result["documents"]
-            metadatas = result["metadatas"]
-            distances = None
+            # General get query
+            try:
+                params = {
+                    "columns": columns if columns else [],
+                }
+                if filters:
+                    params["filter"] = filters
+                if limit:
+                    params["size"] = limit
+                results = self._client.data().query(table_name, params)
+                # Check for errors
+                if not results.is_success():
+                    raise Exception(results["message"])
+                # Convert result
+                results_df = pd.DataFrame.from_records(results["records"])
+                results_df.drop(["xata"], axis=1, inplace=True)
+            except Exception as e:
+                return Response(
+                    resp_type=RESPONSE_TYPE.ERROR,
+                    error_message=f"Unable to run general SELECT query : {e}",
+                )
+        return results_df
 
-        # project based on columns
-        payload = {
-            TableField.ID.value: ids,
-            TableField.CONTENT.value: documents,
-            TableField.METADATA.value: metadatas,
-        }
 
-        if columns is not None:
-            payload = {
-                column: payload[column]
-                for column in columns
-                if column != TableField.EMBEDDINGS.value
-            }
 
-        # always include distance
-        if distances is not None:
-            payload[TableField.DISTANCE.value] = distances
-        result_df = pd.DataFrame(payload)
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=result_df)
 
-    def update(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
-        """
-        Update data in the Xata database.
-        TODO: not implemented yet
-        """
-        return super().update(table_name, data, columns)
+
+
+
+
 
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
@@ -349,10 +409,16 @@ connection_args = OrderedDict(
         "description": "default dimension of embeddings vector used to create table when using create (default=8)",
         "required": False,
     },
+    similarity_function={
+        "type": ARG_TYPE.STR,
+        "description": "similarity function to use for vector searches (default=cosineSimilarity)",
+        "required": False,
+    }
 )
 
 connection_args_example = OrderedDict(
     db_url="https://...",
     api_key="abc_def...",
-    dimension=8
+    dimension=8,
+    similarity_function="l1"
 )

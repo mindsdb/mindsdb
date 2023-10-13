@@ -5,6 +5,8 @@ from functools import reduce
 from textwrap import dedent
 
 import pandas as pd
+
+from mindsdb.interfaces.query_context.context_controller import query_context_controller
 from mindsdb_sql.parser.dialects.mindsdb import (
     CreateDatabase,
     RetrainPredictor,
@@ -1170,9 +1172,13 @@ class ExecuteCommands:
             # check create view sql
             query.limit = Constant(1)
 
-            sqlquery = SQLQuery(query, session=self.session)
-            if sqlquery.fetch()["success"] is not True:
-                raise SqlApiException("Wrong view query")
+            query_context_controller.set_context(query_context_controller.IGNORE_CONTEXT)
+            try:
+                sqlquery = SQLQuery(query, session=self.session)
+                if sqlquery.fetch()["success"] is not True:
+                    raise SqlApiException("Wrong view query")
+            finally:
+                query_context_controller.release_context(query_context_controller.IGNORE_CONTEXT)
 
         project = self.session.database_controller.get_project(project_name)
         project.create_view(view_name, query=query_str)

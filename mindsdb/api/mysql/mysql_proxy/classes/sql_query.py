@@ -64,7 +64,6 @@ from mindsdb_sql.exceptions import PlanningException
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner import query_planner
 from mindsdb_sql.planner.utils import query_traversal
-from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.interfaces.model.functions import (
@@ -78,6 +77,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErLogicError,
     ErSqlWrongArguments
 )
+from mindsdb.interfaces.query_context.context_controller import query_context_controller
 from mindsdb.utilities.cache import get_cache, json_checksum
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark
@@ -570,15 +570,15 @@ class SQLQuery():
 
             query_traversal(query, fill_params)
 
+            query, context_callback = query_context_controller.handle_db_context_vars(query, dn, self.session)
+
             data, columns_info = dn.query(
                 query=query,
                 session=self.session
             )
 
-        # if this is query: execute it
-        if isinstance(data, ASTNode):
-            subquery = SQLQuery(data, session=self.session)
-            return subquery.fetched_data
+            if context_callback:
+                context_callback(data, columns_info)
 
         result = ResultSet()
         for column in columns_info:

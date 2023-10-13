@@ -17,3 +17,5 @@ Email handler for Outlook - Test Passed: https://github.com/maulanaakbardj/minds
 </br>
 QuestDB ML Integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/QuestDB/Testing.md
 </br>
+Writer.ai Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Writerai-Handler/Writer_QA.md
+</br>

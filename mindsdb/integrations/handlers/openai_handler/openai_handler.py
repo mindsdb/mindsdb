@@ -19,12 +19,9 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff, \
     truncate_msgs_for_token_limit, get_available_models
-from mindsdb.integrations.handlers.openai_handler.models import CHAT_MODELS, FINETUNING_LEGACY_MODELS
+from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS, FINETUNING_LEGACY_MODELS, ALL_MODELS, OPENAI_API_BASE
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.libs.llm_utils import get_completed_prompts
-
-CHAT_MODELS = ('gpt-3.5-turbo', 'gpt-3.5-turbo-16k', 'gpt-4', 'gpt-4-32k')
-OPENAI_API_BASE = 'https://api.openai.com/v1'
 
 
 class OpenAIHandler(BaseMLEngine):
@@ -39,6 +36,7 @@ class OpenAIHandler(BaseMLEngine):
         self.rate_limit = 60  # requests per minute
         self.max_batch_size = 20
         self.default_max_tokens = 100
+        self.all_models = ALL_MODELS
         self.chat_completion_models = CHAT_MODELS
         self.supported_ft_models = FINETUNING_LEGACY_MODELS  # base models compatible with finetuning  # TODO #7387: transition to new endpoint before 4/1/24 # noqa
 
@@ -110,7 +108,7 @@ class OpenAIHandler(BaseMLEngine):
         args['target'] = target
         api_key = get_api_key('openai', args, self.engine_storage)
         ft_suffix = self.engine_storage.json_get('ft-suffix')['ft-suffix']
-        available_models = get_available_models(api_key, ft_suffix)
+        available_models = get_available_models(api_key, self.all_models, ft_suffix)
 
         if not args.get('model_name'):
             args['model_name'] = self.default_model
@@ -201,6 +199,7 @@ class OpenAIHandler(BaseMLEngine):
                 'best_of': pred_args.get('best_of', None),
                 'logit_bias': pred_args.get('logit_bias', None),
                 'user': pred_args.get('user', None),
+                'api_base': pred_args.get('api_base', args.get('api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)))  # noqa
             }
 
             if args.get('mode', self.default_mode) != 'default' and model_name not in self.chat_completion_models:
@@ -519,6 +518,7 @@ class OpenAIHandler(BaseMLEngine):
 
         Caveats: 
           - As base fine-tuning models, OpenAI only supports the original GPT ones: `ada`, `babbage`, `curie`, `davinci`. This means if you fine-tune successively more than once, any fine-tuning other than the most recent one is lost.
+          - A bunch of helper methods exist to be overridden in other handlers that follow the OpenAI API, e.g. Anyscale
         """  # noqa
 
         args = args if args else {}
@@ -526,9 +526,7 @@ class OpenAIHandler(BaseMLEngine):
         prompt_col = using_args.get('prompt_column', 'prompt')
         completion_col = using_args.get('completion_column', 'completion')
 
-        for col in [prompt_col, completion_col]:
-            if col not in set(df.columns):
-                raise Exception(f"To fine-tune this OpenAI model, please format your select data query to have a `{prompt_col}` column and a `{completion_col}` column first.")  # noqa
+        self._check_ft_cols(df, [prompt_col, completion_col])
 
         args = {**using_args, **args}
         prev_model_name = self.base_model_storage.json_get('args').get('model_name', '')
@@ -537,61 +535,43 @@ class OpenAIHandler(BaseMLEngine):
             raise Exception(f"This model cannot be finetuned. Supported base models are {self.supported_ft_models}")
 
         openai.api_key = get_api_key('openai', args, self.engine_storage)
+        openai.api_base = args.get('api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
         ft_suffix = self.engine_storage.json_get('ft-suffix')['ft-suffix']
         finetune_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
         temp_storage_path = tempfile.mkdtemp()
         temp_file_name = f"ft_{finetune_time}"
         temp_model_storage_path = f"{temp_storage_path}/{temp_file_name}.jsonl"
-        df.to_json(temp_model_storage_path, orient='records', lines=True)
 
-        # TODO avoid subprocess usage once OpenAI enables non-CLI access
-        subprocess.run(
-            [
-                "openai", "tools", "fine_tunes.prepare_data",
-                "-f", temp_model_storage_path,                  # from file
-                '-q'                                            # quiet mode (accepts all suggestions)
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            encoding="utf-8",
-        )
+        file_names = self._prepare_ft_jsonl(df, temp_storage_path, temp_file_name, temp_model_storage_path)
 
-        file_names = {'original': f'{temp_file_name}.jsonl',
-                      'base': f'{temp_file_name}_prepared.jsonl',
-                      'train': f'{temp_file_name}_prepared_train.jsonl',
-                      'val': f'{temp_file_name}_prepared_valid.jsonl'}
         jsons = {k: None for k in file_names.keys()}
         for split, file_name in file_names.items():
             if os.path.isfile(os.path.join(temp_storage_path, file_name)):
                 jsons[split] = openai.File.create(
                     file=open(f"{temp_storage_path}/{file_name}", "rb"),
+                    # api_base=openai.api_base,  # TODO: rm
                     purpose='fine-tune')
 
-        train_file_id = jsons['train'].id if isinstance(jsons['train'], openai.File) else jsons['base'].id
-        val_file_id = jsons['val'].id if isinstance(jsons['val'], openai.File) else None
+        if type(jsons['train']) in (openai.File, openai.openai_object.OpenAIObject):
+            train_file_id = jsons['train'].id
+        else:
+            train_file_id = jsons['base'].id
 
-        def _get_model_type(model_name: str):
-            for model_type in ['ada', 'curie', 'babbage', 'davinci']:
-                if model_type in model_name.lower():
-                    return model_type
-            return 'ada'
+        if type(jsons['val']) in (openai.File, openai.openai_object.OpenAIObject):
+            val_file_id = jsons['val'].id
+        else:
+            val_file_id = None
 
         # `None` values are internally imputed by OpenAI to `null` or default values
         ft_params = {
             'training_file': train_file_id,
             'validation_file': val_file_id,
-            'model': _get_model_type(prev_model_name),
+            'model': self._get_ft_model_type(prev_model_name),
             'suffix': f'{ft_suffix}',
-            'n_epochs': using_args.get('n_epochs', None),
-            'batch_size': using_args.get('batch_size', None),
-            'learning_rate_multiplier': using_args.get('learning_rate_multiplier', None),
-            'prompt_loss_weight': using_args.get('prompt_loss_weight', None),
-            'compute_classification_metrics': using_args.get('compute_classification_metrics', None),
-            'classification_n_classes': using_args.get('classification_n_classes', None),
-            'classification_positive_class': using_args.get('classification_positive_class', None),
-            'classification_betas': using_args.get('classification_betas', None),
+            # 'api_base': api_base,
         }
+        ft_params = self._add_extra_ft_params(ft_params, using_args)
 
         start_time = datetime.datetime.now()
         ft_result = openai.FineTune.create(**{k: v for k, v in ft_params.items() if v is not None})
@@ -633,3 +613,52 @@ class OpenAIHandler(BaseMLEngine):
 
         self.model_storage.json_set('args', args)
         shutil.rmtree(temp_storage_path)
+
+    @staticmethod
+    def _check_ft_cols(df, cols):
+        prompt_col, completion_col = cols
+        for col in [prompt_col, completion_col]:
+            if col not in set(df.columns):
+                raise Exception(f"To fine-tune this OpenAI model, please format your select data query to have a `{prompt_col}` column and a `{completion_col}` column first.")  # noqa
+
+    def _prepare_ft_jsonl(self, df, _, temp_filename, temp_model_path):
+        df.to_json(temp_model_path, orient='records', lines=True)
+
+        # TODO avoid subprocess usage once OpenAI enables non-CLI access
+        subprocess.run(
+            [
+                "openai", "tools", "fine_tunes.prepare_data",
+                "-f", temp_model_path,  # from file
+                '-q'  # quiet mode (accepts all suggestions)
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
+        )
+
+        file_names = {'original': f'{temp_filename}.jsonl',
+                      'base': f'{temp_filename}_prepared.jsonl',
+                      'train': f'{temp_filename}_prepared_train.jsonl',
+                      'val': f'{temp_filename}_prepared_valid.jsonl'}
+        return file_names
+
+    @staticmethod
+    def _get_ft_model_type(model_name: str):
+        for model_type in ['ada', 'curie', 'babbage', 'davinci']:
+            if model_type in model_name.lower():
+                return model_type
+        return 'ada'
+
+    @staticmethod
+    def _add_extra_ft_params(ft_params, using_args):
+        extra_params = {
+            'n_epochs': using_args.get('n_epochs', None),
+            'batch_size': using_args.get('batch_size', None),
+            'learning_rate_multiplier': using_args.get('learning_rate_multiplier', None),
+            'prompt_loss_weight': using_args.get('prompt_loss_weight', None),
+            'compute_classification_metrics': using_args.get('compute_classification_metrics', None),
+            'classification_n_classes': using_args.get('classification_n_classes', None),
+            'classification_positive_class': using_args.get('classification_positive_class', None),
+            'classification_betas': using_args.get('classification_betas', None),
+        }
+        return {**ft_params, **extra_params}

@@ -1,7 +1,7 @@
 requests>=2.28.1
 charset-normalizer>=2.1.1
 protobuf<3.21.0 # for lightwood
-langchain==0.0.312 
+langchain==0.0.267
 SQLAlchemy
 duckdb==0.7.1
 chromadb==0.3.25
@@ -13,5 +13,3 @@ datasets>=2.14.4
 nltk>=3.8.1
 rouge-score>=0.1.2
 dill==0.3.6 #for lightwood
-writerai==0.30.1
-

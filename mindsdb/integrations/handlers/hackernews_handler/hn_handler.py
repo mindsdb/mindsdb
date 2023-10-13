@@ -5,7 +5,7 @@ from mindsdb.utilities.config import Config
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse, HandlerResponse as Response, RESPONSE_TYPE
-from .hn_table import StoriesTable, CommentsTable , HNStoriesTable ,JobStoriesTable
+from .hn_table import StoriesTable, CommentsTable , HNStoriesTable ,JobStoriesTable, ShowStoriesTable
 
 class HackerNewsHandler(APIHandler):
     """
@@ -25,6 +25,9 @@ class HackerNewsHandler(APIHandler):
 
         jobstories = JobStoriesTable(self)
         self._register_table('jobstories',jobstories)
+
+        showstories = ShowStoriesTable(self)
+        self._register_table('showstories', showstories)
 
         comments = CommentsTable(self)
         self._register_table('comments', comments)
@@ -85,6 +88,17 @@ class HackerNewsHandler(APIHandler):
                     story_data = response.json()
                     stories_data.append(story_data)
                 df = pd.DataFrame(stories_data, columns=['id', 'time', 'title', 'url', 'score', 'type'])
+            elif method_name == 'show_hn_stories':
+                url = f'{self.base_url}/showstories.json'
+                response = requests.get(url)
+                data = response.json()
+                stories_data = []
+                for story_id in data:
+                    url = f'{self.base_url}/item/{story_id}.json'
+                    response = requests.get(url)
+                    story_data = response.json()
+                    stories_data.append(story_data)
+                df = pd.DataFrame(stories_data, columns=['id', 'time', 'title', 'text', 'score', 'descendants'])
             elif method_name == 'get_comments':
                 item_id = params.get('item_id')
                 url = f'{self.base_url}/item/{item_id}.json'

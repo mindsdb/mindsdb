@@ -61,6 +61,14 @@ FROM my_hackernews.jobstories
 LIMIT 7;
 ```
 
+OR
+
+```sql
+SELECT *
+FROM my_hackernews.showstories
+LIMIT 5;
+```
+
 Each Post has a unique ID. You can use this ID to fetch comments for a particular post.
 
 ```sql

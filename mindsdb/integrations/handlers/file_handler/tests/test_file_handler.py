@@ -2,69 +2,18 @@ import io
 import os
 import tempfile
 from io import BytesIO, StringIO
-
-import magic
-import pandas
-import pandas as pd
-import pytest
 from unittest.mock import patch
+
+import pandas
+import pytest
+import responses
+from mindsdb_sql.parser.ast.drop import DropTables
+from mindsdb_sql.parser.ast.select import Identifier
 from pytest_lazyfixture import lazy_fixture
 
 from mindsdb.integrations.handlers.file_handler.file_handler import FileHandler
-
-# def native_query(self, query: Any) -> HandlerResponse:
-#     """Receive raw query and act upon it somehow.
-#     Args:
-#         query (Any): query in native format (str for sql databases,
-#             dict for mongo, etc)
-#     Returns:
-#         HandlerResponse
-#     """
-# def get_tables(self) -> HandlerResponse:
-#     """ Return list of entities
-#     Return list of entities that will be accesible as tables.
-#     Returns:
-#         HandlerResponse: shoud have same columns as information_schema.tables
-#             (https://dev.mysql.com/doc/refman/8.0/en/information-schema-tables-table.html)
-#             Column 'TABLE_NAME' is mandatory, other is optional.
-#     """
-
-# def get_columns(self, table_name: str) -> HandlerResponse:
-#     """ Returns a list of entity columns
-#     Args:
-#         table_name (str): name of one of tables returned by self.get_tables()
-#     Returns:
-#         HandlerResponse: shoud have same columns as information_schema.columns
-#             (https://dev.mysql.com/doc/refman/8.0/en/information-schema-columns-table.html)
-#             Column 'COLUMN_NAME' is mandatory, other is optional. Hightly
-#             recomended to define also 'DATA_TYPE': it should be one of
-#             python data types (by default it str).
-#     """
-
-
-def check_file_format(file_path, expected_format, checker_function):
-    with open(file_path, "rb") as file:
-        file_data = file.read()
-
-    data_io = StringIO(file_data.decode("utf-8"))
-    is_expected_format = checker_function(data_io)
-
-    return is_expected_format
-
-
-def read_csv_file(csv_file_path):
-    with open(csv_file_path, "rb") as csv_file:
-        csv_data = csv_file.read()
-    return csv_data
-
-
-def assert_not_identified_as(data_format, file_path, is_identified):
-    assert not is_identified, f"{file_path} should not be identified as {data_format}"
-
-
-def assert_identified_as(data_format, file_path, is_identified):
-    assert is_identified, f"{file_path} should be identified as {data_format}"
-
+from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse
+from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 
 # Define a table to use as content for all of the file types
 test_file_content = [
@@ -73,6 +22,28 @@ test_file_content = [
     [2, -2, 0.2, "B"],
     [3, -3, 0.3, "C"],
 ]
+
+test_dataframe = pandas.DataFrame(test_file_content[1:], columns=test_file_content[0])
+
+file_records = [("one", 1, test_file_content[0]), ("two", 2, test_file_content[0])]
+
+
+class MockFileController:
+    def get_files(self):
+        return [
+            {
+                "name": record[0],
+                "row_count": record[1],
+                "columns": record[2],
+            }
+            for record in file_records
+        ]
+
+    def get_file_meta(self, *args, **kwargs):
+        return self.get_files()[0]
+
+    def delete_file(self, name):
+        return True
 
 
 @pytest.fixture()
@@ -83,16 +54,14 @@ def temp_dir():
 @pytest.fixture
 def csv_file(temp_dir) -> str:
     file_path = os.path.join(temp_dir, "test_data.csv")
-    df = pandas.DataFrame(test_file_content)
-    df.to_csv(file_path, index=False, header=False)
+    test_dataframe.to_csv(file_path, index=False)
     return file_path
 
 
 @pytest.fixture
 def xlsx_file(temp_dir) -> str:
     file_path = os.path.join(temp_dir, "test_data.xlsx")
-    df = pandas.DataFrame(test_file_content)
-    df.to_excel(file_path, index=False, header=False)
+    test_dataframe.to_excel(file_path, index=False)
     print(file_path)
     return file_path
 
@@ -100,16 +69,17 @@ def xlsx_file(temp_dir) -> str:
 @pytest.fixture
 def json_file(temp_dir) -> str:
     file_path = os.path.join(temp_dir, "test_data.json")
-    df = pandas.DataFrame(test_file_content)
-    df.to_json(file_path, index=True, orient='table')
+    test_dataframe.to_json(file_path)
+    print(file_path)
     return file_path
 
 
 @pytest.fixture
 def parquet_file(temp_dir) -> str:
     file_path = os.path.join(temp_dir, "test_data.parquet")
-    df = pandas.DataFrame(test_file_content)
-    df = df.astype(str)
+    df = pandas.DataFrame(test_file_content[1:], columns=test_file_content[0]).astype(
+        str
+    )
     df.to_parquet(file_path)
     return file_path
 
@@ -170,7 +140,7 @@ def test_get_file_path_with_file_path():
     assert result == file_path
 
 
-@patch('mindsdb.integrations.handlers.file_handler.file_handler.FileHandler._fetch_url')
+@patch("mindsdb.integrations.handlers.file_handler.file_handler.FileHandler._fetch_url")
 def test_get_file_path_with_url(mock_fetch_url):
     mock_url = "http://example.com/file.txt"
     expected_result = "http://example.com/file.txt"
@@ -181,42 +151,36 @@ def test_get_file_path_with_url(mock_fetch_url):
     assert result == expected_result
     mock_fetch_url.assert_called_with(mock_url)
 
-class TestHandleSource:
 
+class TestHandleSource:
     def test_handle_source_csv(self, csv_file):
         df, col_map = FileHandler._handle_source(csv_file)
-        assert isinstance(df, pd.DataFrame)
-        assert len(df) >= 0  
+        assert isinstance(df, pandas.DataFrame)
+        assert len(df) >= 0
         assert df.columns.tolist() == ["col_one", "col_two", "col_three", "col_four"]
 
     def test_handle_source_xlsx(self, xlsx_file):
         df, col_map = FileHandler._handle_source(xlsx_file)
-        assert isinstance(df, pd.DataFrame)
-        assert len(df) >= 0  
+        assert isinstance(df, pandas.DataFrame)
+        assert len(df) >= 0
         assert df.columns.tolist() == ["col_one", "col_two", "col_three", "col_four"]
 
     def test_handle_source_json(self, json_file):
         df, col_map = FileHandler._handle_source(json_file)
-        assert isinstance(df, pd.DataFrame)
+        assert isinstance(df, pandas.DataFrame)
         assert len(df) >= 0  # Assuming the JSON file contains 2 records
         assert df.columns.tolist() == ["col_one", "col_two", "col_three", "col_four"]
 
+    # TODO: not finished
     def test_handle_source_parquet(self, parquet_file):
         df, col_map = FileHandler._handle_source(parquet_file)
-        assert isinstance(df, pd.DataFrame)
+        assert isinstance(df, pandas.DataFrame)
         # Add assertions specific to the Parquet file format
-
-    # def test_handle_source_with_csv(csv_file: str):
-    #     with open(csv_file, "r") as df:
-    #         df, col_map = FileHandler._handle_source(csv_file)
-    #         # Assert that df is a DataFrame
-    #         assert type(df) == pd.DataFrame
-    #         # Assert that col_map is a dictionary
-    #         assert type(col_map) == dict
 
 
 def test_check_valid_dialect_coma(csv_file_path: str):
-    csv_data = read_csv_file(csv_file_path)
+    with open(csv_file_path, "rb") as csv_file:
+        csv_data = csv_file.read()
     # Create a file-like object from the bytes data
     csv_data_filelike = io.BytesIO(csv_data)
     dialect = FileHandler._get_csv_dialect(csv_data_filelike)
@@ -229,33 +193,92 @@ def test_get_data_io_csv(csv_file_path: str):
     assert dialect is not None
 
 
-def test_query():  # (self, query: ASTNode) -> Response:
+def test_query_drop(monkeypatch):
+    def mock_delete():
+        return True
+
+    monkeypatch.setattr(MockFileController, "delete_file", mock_delete)
+    file_controller = MockFileController()
+    file_handler = FileHandler(file_controller=MockFileController())
+    response = file_handler.query(DropTables([Identifier(parts=["one"])]))
+
+    assert response.type == RESPONSE_TYPE.OK
+
+
+def test_query_drop_bad_delete(monkeypatch):
+    def mock_delete():
+        return False
+
+    monkeypatch.setattr(MockFileController, "delete_file", mock_delete)
+    file_controller = MockFileController()
+    file_handler = FileHandler(file_controller=MockFileController())
+    response = file_handler.query(DropTables([Identifier(parts=["one"])]))
+
+    assert response.type == RESPONSE_TYPE.ERROR
+
+
+# TODO
+def test_query_drop_bad_table():
     pass
 
 
-def test_native_query():  # (self, query: str) -> Response:
+def test_query_select():
     pass
 
 
-def test_handle_source():  # (file_path, clean_rows=True, custom_parser=None):
+def test_query_bad_type():  # a query that's not drop or select
     pass
 
 
-def test_get_data_io():  # (file_path):
-    pass
+@responses.activate
+def test_fetch_url():
+    file_content = "Fake File Content 1234567890"
+    file_url = "https://test.fake/robots.txt"
+    responses.add(
+        responses.GET, file_url, body=file_content, status=200
+    )  # mock the response
+
+    file_path = FileHandler._fetch_url(file_url)
+    with open(file_path, "r") as fh:
+        saved_file_content = fh.read()
+
+    assert saved_file_content == file_content
 
 
-def test_get_file_path():  # (path) -> str:
-    pass
+@responses.activate
+def test_fetch_url_raises():
+    responses.add(responses.GET, "https://google.com", status=404)
+
+    with pytest.raises(Exception):
+        FileHandler._fetch_url("obvious_broken_url")
+    with pytest.raises(Exception):
+        FileHandler._fetch_url("https://google.com")  # will get 404 response
 
 
-def test_fetch_url():  # (url: str) -> str:
-    pass
+def test_get_tables():
+    file_handler = FileHandler(file_controller=MockFileController())
+    response = file_handler.get_tables()
+
+    assert response.type == RESPONSE_TYPE.TABLE
+
+    expected_df = pandas.DataFrame(
+        [
+            {"TABLE_NAME": x[0], "TABLE_ROWS": x[1], "TABLE_TYPE": "BASE TABLE"}
+            for x in file_records
+        ]
+    )
+
+    assert response.data_frame.equals(expected_df)
 
 
-def test_get_tables():  # (self) -> Response:
-    pass
+def test_get_columns():
+    file_handler = FileHandler(file_controller=MockFileController())
+    response = file_handler.get_columns("mock")
 
+    assert response.type == RESPONSE_TYPE.TABLE
 
-def test_get_columns():  # (self, table_name) -> Response:
-    pass
+    expected_df = pandas.DataFrame(
+        [{"Field": x, "Type": "str"} for x in file_records[0][2]]
+    )
+
+    assert response.data_frame.equals(expected_df)

@@ -36,7 +36,7 @@ class TestQdrantHandler(BaseExecutorTest):
             CREATE DATABASE qdrant_test
             WITH ENGINE = "qdrant",
             PARAMETERS = {{
-                "persist_directory" : "{tmp_directory}"
+                "location" : ":memory:"
             }}
         """
         )

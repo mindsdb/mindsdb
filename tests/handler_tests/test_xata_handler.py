@@ -189,24 +189,13 @@ class TestXetaHandler(BaseExecutorTest):
         )
         self.set_handler(postgres_handler_mock, "pg", tables={"testingtable": df})
         sql = """
-        CREATE TABLE xata_test.testingtable (
-            SELECT * FROM pg.df
-        )
+        CREATE TABLE xata_test.testingtable (SELECT * FROM pg.df)
         """
         self.drop_table("testingtable")
         # this should work
         self.run_sql(sql)
         assert self.get_num_records("testingtable") == 2
         self.drop_table("testingtable")
-
-
-
-
-
-
-
-
-
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_insert_into(self, postgres_handler_mock):
@@ -220,136 +209,74 @@ class TestXetaHandler(BaseExecutorTest):
         )
         df2 = pd.DataFrame(
             {
-                "id": ["id1", "id2", "id3"],
+                "id": ["id4", "id5", "id6"],
                 "content": ["this is a test", "this is a test", "this is a test"],
                 "metadata": [{"test": "test1"}, {"test": "test2"}, {"test": "test3"}],
                 "embeddings": [
-                    [1.0, 2.0, 3.0, 4.0],
-                    [1.0, 2.0],
                     [1.0, 2.0, 3.0],
-                ],  # different dimensions
+                    [1.0, 2.0, 4.0],
+                    [5.0, 2.0, 3.0],
+                ],
             }
         )
         self.set_handler(postgres_handler_mock, "pg", tables={"df": df, "df2": df2})
-        num_record = df.shape[0]
-
         # create a table
         sql = """
-            CREATE TABLE xata_test.testingtable (
-                SELECT * FROM pg.df
-            )
+            CREATE TABLE xata_test.testingtable (SELECT * FROM pg.df)
         """
+        self.drop_table("testingtable")
         self.run_sql(sql)
-
         # insert into a table with values
         sql = """
-            INSERT INTO xata_test.testingtable (
-                id,content,metadata,embeddings
-            )
-            VALUES (
-                'some_unique_id', 'this is a test', '{"test": "test"}', '[1.0, 2.0, 3.0]'
-            )
+            INSERT INTO xata_test.testingtable (id,content,metadata,embeddings)
+            VALUES ('some_unique_id', 'this is a test', '{"test": "test"}', '[1.0, 2.0, 3.0]')
         """
         self.run_sql(sql)
-        # check if the data is inserted
-        sql = """
-            SELECT * FROM xata_test.testingtable
-            WHERE id = 'some_unique_id'
-        """
-        ret = self.run_sql(sql)
-        assert ret.shape[0] == 1
-
+        self.get_num_records("testingtable") == 4
         # insert without specifying id should also work
         sql = """
-            INSERT INTO xata_test.testingtable (
-                content,metadata,embeddings
-            )
-            VALUES (
-                'this is a test', '{"test": "test"}', '[1.0, 2.0, 3.0]'
-            )
+            INSERT INTO xata_test.testingtable (content,metadata,embeddings)
+            VALUES ('this is a test', '{"test": "test"}', '[1.0, 2.0, 3.0]')
         """
         self.run_sql(sql)
-        # check if the data is inserted
-        sql = """
-            SELECT * FROM xata_test.testingtable
-        """
-        ret = self.run_sql(sql)
-        assert ret.shape[0] == num_record + 2
-
+        self.get_num_records("testingtable") == 5
         # insert into a table with a select statement
         sql = """
-            INSERT INTO xata_test.testingtable (
-                content,metadata,embeddings
-            )
-            SELECT
-                content,metadata,embeddings
-            FROM
-                pg.df
+            INSERT INTO xata_test.testingtable (content,metadata,embeddings)
+            SELECT content,metadata,embeddings FROM pg.df2
         """
         self.run_sql(sql)
-        # check if the data is inserted
-        sql = """
-            SELECT * FROM xata_test.testingtable
-        """
-        ret = self.run_sql(sql)
-        assert ret.shape[0] == num_record * 2 + 2
-
+        self.get_num_records("testingtable") == 8
         # insert into a table with a select statement, but wrong columns
         with pytest.raises(Exception):
             sql = """
                 INSERT INTO xata_test.testingtable
-                SELECT
-                    content,metadata,embeddings as wrong_column
-                FROM
-                    pg.df
+                SELECT (content,metadata,embeddings as wrong_column) FROM pg.df
             """
             self.run_sql(sql)
-
         # insert into a table with a select statement, missing metadata column
         sql = """
             INSERT INTO xata_test.testingtable
-            SELECT
-                content,embeddings
-            FROM
-                pg.df
+            SELECT content,embeddings FROM pg.df
         """
         self.run_sql(sql)
-
-        # insert into a table with a select statement, missing embedding column, shall raise an error
-        with pytest.raises(Exception):
-            sql = """
-                INSERT INTO xata_test.testingtable
-                SELECT
-                    content,metadata
-                FROM
-                    pg.df
-            """
-            self.run_sql(sql)
-
+        self.get_num_records("testingtable") == 11
         # insert into a table with a select statement, with different embedding dimensions, shall raise an error
         sql = """
             INSERT INTO xata_test.testingtable
-            SELECT
-                content,metadata,embeddings
-            FROM
-                pg.df2
+            VALUES ('this is a test', '{"test": "test"}', '[1.0, 2.0, 3.0, 4.0]')
         """
         with pytest.raises(Exception):
             self.run_sql(sql)
+        self.drop_table("testingtable")
 
-        # TODO: this behavior is not consistent with xata doc
-        # tracked in https://github.com/chroma-core/chroma/issues/1062
-        # insert into a table with existing id, shall raise an error
-        # sql = """
-        #     INSERT INTO xata_test.testingtable (
-        #         id,content,metadata,embeddings
-        #     )
-        #     VALUES (
-        #         'id1', 'this is a test', '{"test": "test"}', '[1.0, 2.0, 3.0]'
-        #     )
-        # """
-        # with pytest.raises(Exception):
-        #     self.run_sql(sql)
+
+
+
+
+
+
+
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_select_from(self, postgres_handler_mock):

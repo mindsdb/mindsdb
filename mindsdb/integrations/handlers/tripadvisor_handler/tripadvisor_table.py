@@ -399,6 +399,7 @@ class PhotosTable(APITable):
             "user",
         ]
 
+
 class NearbyLocationTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Select data from the nearby_location table and return it as a pandas DataFrame.

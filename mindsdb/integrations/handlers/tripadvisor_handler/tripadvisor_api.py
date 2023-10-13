@@ -142,6 +142,7 @@ class TripAdvisorAPI:
         )
 
         response = self.getResponse(url)
+
         return response
     
     def location_photos(self, url: str, locationId: str, language: str = "en") -> Response:
@@ -158,6 +159,7 @@ class TripAdvisorAPI:
         '''
         url = url + "{locationId}/photos?language={language}&key={api_key}".format(locationId=locationId, language=language, api_key=self.api_key)
         response = self.getResponse(url)
+        
         return response
     
     def location_nearby_search(self, url: str, params_dict: dict, language: str = "en") -> Response:

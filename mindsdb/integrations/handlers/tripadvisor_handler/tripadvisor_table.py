@@ -15,7 +15,7 @@ class SearchLocationTable(APITable):
             pandas.DataFrame: A pandas DataFrame containing the selected data.
         """
 
-        tripAdvisor = self.handler.connect()
+        self.handler.connect()
 
         conditions = extract_comparison_conditions(query.where)
 
@@ -36,7 +36,7 @@ class SearchLocationTable(APITable):
         filters = []
         for op, arg1, arg2 in conditions:
             if op == "or":
-                raise NotImplementedError(f"OR is not supported")
+                raise NotImplementedError("OR is not supported")
             elif op == "=" and arg1 in allowed_keys:
                 params[arg1] = arg2
             elif op != "=":
@@ -119,7 +119,7 @@ class LocationDetailsTable(APITable):
             pandas.DataFrame: A pandas DataFrame containing the selected data.
         """
 
-        tripAdvisor = self.handler.connect()
+        self.handler.connect()
 
         conditions = extract_comparison_conditions(query.where)
 
@@ -129,7 +129,7 @@ class LocationDetailsTable(APITable):
         filters = []
         for op, arg1, arg2 in conditions:
             if op == "or":
-                raise NotImplementedError(f"OR is not supported")
+                raise NotImplementedError("OR is not supported")
             elif op == "=" and arg1 in allowed_keys:
                 params[arg1] = arg2
             elif op != "=":
@@ -236,7 +236,7 @@ class ReviewsTable(APITable):
             pandas.DataFrame: A pandas DataFrame containing the selected data.
         """
 
-        tripAdvisor = self.handler.connect()
+        self.handler.connect()
 
         conditions = extract_comparison_conditions(query.where)
 
@@ -246,7 +246,7 @@ class ReviewsTable(APITable):
         filters = []
         for op, arg1, arg2 in conditions:
             if op == "or":
-                raise NotImplementedError(f"OR is not supported")
+                raise NotImplementedError("OR is not supported")
             elif op == "=" and arg1 in allowed_keys:
                 params[arg1] = arg2
             elif op != "=":

@@ -54,10 +54,10 @@ class TripAdvisorAPI:
         Processing the query and adding parameters to the URL
         """
         for idx, (queryParam, value) in enumerate(params_dict.items()):
-            if value != None or value != "":
+            if value is not None or value != "":
                 if value != "" and any(
-                    next_value != "" or value != None
-                    for next_value in list(params_dict.values())[idx + 1 :]
+                    next_value != "" or value is not None
+                    for next_value in list(params_dict.values())[idx + 1:]
                 ):
                     url += "{queryParam}={value}&".format(
                         queryParam=queryParam, value=value

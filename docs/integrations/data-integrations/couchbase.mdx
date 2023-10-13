@@ -19,6 +19,11 @@ The required arguments to establish a connection are as follows:
 * `scope`:  scopes are a level of data organization within a bucket. If ommited, will default to `_default`
 
 <Tip>
+If you are using Couchbase Capella, the `host` should be the connection string for the cluster. When you navigate to your cluster, the connection string can be found under the Connect tab.
+It will also be required to whitelist the machine(s) that will be running MindsDB and database credentials will need to be created for the user. These steps can also be taken under the Connect tab.
+</Tip>
+
+<Tip>
 If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/couchbase_handler) and run this command: `pip install -r requirements.txt`.
 </Tip>
 

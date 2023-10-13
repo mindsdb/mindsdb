@@ -70,6 +70,24 @@ def create_process_mark(folder="learn"):
     return mark
 
 
+def set_process_mark(folder: str, mark: str) -> None:
+    """ touch new file which will be process mark
+
+        Args:
+            folder (str): where create the file
+            mark (str): file name
+
+        Returns:
+            str: process mark
+    """
+    if os.name != "posix":
+        return
+    p = Path(tempfile.gettempdir()).joinpath(f"mindsdb/processes/{folder}/")
+    p.mkdir(parents=True, exist_ok=True)
+    p.joinpath(f"{os.getpid()}-{threading.get_native_id()}-{mark}").touch()
+    return mark
+
+
 def delete_process_mark(folder: str = "learn", mark: Optional[str] = None):
     if mark is None:
         mark = _get_process_mark_id()

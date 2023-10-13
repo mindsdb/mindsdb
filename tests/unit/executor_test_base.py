@@ -118,6 +118,9 @@ class BaseUnitTest:
             name="langchain_embedding", data={}, engine="langchain_embedding"
         )
         db.session.add(r)
+        r = db.Integration(name="rag", data={}, engine="rag")
+        db.session.add(r)
+
         # Lightwood should always be last (else tests break, why?)
         r = db.Integration(name="lightwood", data={}, engine="lightwood")
         db.session.add(r)

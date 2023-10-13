@@ -1,6 +1,7 @@
 import shopify
+import requests
 
-from mindsdb.integrations.handlers.shopify_handler.shopify_tables import ProductsTable, CustomersTable, OrdersTable, InventoryLevelTable, LocationTable
+from mindsdb.integrations.handlers.shopify_handler.shopify_tables import ProductsTable, CustomersTable, OrdersTable, InventoryLevelTable, LocationTable, CustomerReviews, CarrierServiceTable, ShippingZoneTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -48,6 +49,15 @@ class ShopifyHandler(APIHandler):
         location_data = LocationTable(self)
         self._register_table("locations", location_data)
 
+        customer_reviews_data = CustomerReviews(self)
+        self._register_table("customer_reviews", customer_reviews_data)
+
+        carrier_service_data = CarrierServiceTable(self)
+        self._register_table("carrier_service", carrier_service_data)
+
+        shipping_zone_data = ShippingZoneTable(self)
+        self._register_table("shipping_zone", shipping_zone_data)
+
     def connect(self):
         """
         Set up the connection required by the handler.
@@ -60,6 +70,9 @@ class ShopifyHandler(APIHandler):
             return self.connection
 
         api_session = shopify.Session(self.connection_data['shop_url'], '2021-10', self.connection_data['access_token'])
+
+        self.yotpo_app_key = self.connection_data['yotpo_app_key'] if 'yotpo_app_key' in self.connection_data else None
+        self.yotpo_access_token = self.connection_data['yotpo_access_token'] if 'yotpo_access_token' in self.connection_data else None
 
         self.connection = api_session
 
@@ -84,6 +97,17 @@ class ShopifyHandler(APIHandler):
         except Exception as e:
             log.logger.error(f'Error connecting to Shopify!')
             response.error_message = str(e)
+
+        if self.yotpo_app_key is not None and self.yotpo_access_token is not None:
+            url = f"https://api.yotpo.com/v1/apps/{self.yotpo_app_key}/reviews?count=1&utoken={self.yotpo_access_token}"
+            headers = {
+                "accept": "application/json",
+                "Content-Type": "application/json"
+            }
+            if requests.get(url, headers=headers).status_code == 200:
+                response.success = True
+            else:
+                response.success = False
 
         self.is_connected = response.success
 

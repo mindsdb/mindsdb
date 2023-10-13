@@ -56,13 +56,6 @@ Read about creating a GitHub API key [here](https://docs.github.com/en/github/au
     - [x] Support ORDER BY
     - [x] Support column selection
 
-## TODO
-
-- [ ] GitHub Commits Table for a given Repository
-- [ ] GitHub Releases Table for a given Repository
-- [ ] GitHub Contributors Table for a given Repository
-- [ ] GitHub Branches Table for a given Repository
-
 ## Example Usage
 
 The first step is to create a database with the new `github` engine. The `api_key` parameter is optional,
@@ -83,6 +76,14 @@ Use the established connection to query your database:
 SELECT * FROM mindsdb_github.issues
 ~~~~
 
+~~~~sql
+SELECT * FROM mindsdb_github.branches
+~~~~
+
+~~~~sql
+SELECT * FROM mindsdb_github.contributors
+~~~~
+
 Run more advanced queries:
 
 ~~~~sql
@@ -100,3 +101,5 @@ SELECT number, state, title, creator, head, commits
   ORDER BY long_running DESC, commits DESC
   LIMIT 10
 ~~~~
+
+

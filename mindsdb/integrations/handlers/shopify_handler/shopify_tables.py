@@ -57,6 +57,32 @@ class ProductsTable(APITable):
 
         return products_df
     
+    def insert(self, query: ast.Insert) -> None:
+        """Inserts data into the Shopify "POST /products" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Insert
+           Given SQL INSERT query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        insert_statement_parser = INSERTQueryParser(
+            query,
+            supported_columns=['title', 'body_html', 'vendor', 'product_type', 'tags', 'status'],
+            mandatory_columns=['title' ],
+            all_mandatory=False
+        )
+        product_data = insert_statement_parser.parse_query()
+        self.create_products(product_data)
+    
     def delete(self, query: ast.Delete) -> None:
         """
         Deletes data from the Shopify "DELETE /products" API endpoint.
@@ -107,6 +133,18 @@ class ProductsTable(APITable):
             product = shopify.Product.find(product_id)
             product.destroy()
             logger.info(f'Product {product_id} deleted')
+
+
+    def create_products(self, product_data: List[Dict[Text, Any]]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for product in product_data:
+            created_product = shopify.Product.create(product)
+            if 'id' not in created_product.to_dict():
+                raise Exception('Product creation failed')
+            else:
+                logger.info(f'Product {created_product.to_dict()["id"]} created')
 
 
 class CustomersTable(APITable):
@@ -478,3 +516,114 @@ class CustomerReviews(APITable):
         json_response = requests.get(url, headers=headers).json()
         return [review for review in json_response['reviews']] if 'reviews' in json_response else []
 
+class CarrierServiceTable(APITable):
+    """The Shopify carrier service Table implementation. Example carrier services like usps, dhl etc."""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Pulls data from the Shopify "GET /carrier_services" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+
+            Shopify Carrier service info
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'carrier_service',
+            self.get_columns()
+        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        carrier_service_df = pd.json_normalize(self.get_carrier_service())
+
+        select_statement_executor = SELECTQueryExecutor(
+            carrier_service_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+        
+        carrier_service_df = select_statement_executor.execute_query()
+
+        return carrier_service_df
+
+    def get_columns(self) -> List[Text]:
+        return ["id", "name", "active", "service_discovery", "carrier_service_type", "admin_graphql_api_id"]
+
+    def get_carrier_service(self) -> List[Dict]:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+        services = shopify.CarrierService.find()
+        return [service.to_dict() for service in services]
+
+
+class ShippingZoneTable(APITable):
+    """The Shopify shipping zone Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Pulls data from the Shopify "GET /shipping_zone" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+
+            Shopify Shipping Zone info
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'shipping_zone',
+            self.get_columns()
+        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        shipping_zone_df = pd.json_normalize(self.get_shipping_zone(), record_path="countries", meta=["id", "name"], record_prefix="countries_")
+
+
+        select_statement_executor = SELECTQueryExecutor(
+            shipping_zone_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions,
+            result_limit
+        )
+        
+        shipping_zone_df = select_statement_executor.execute_query()
+
+        return shipping_zone_df
+
+    def get_columns(self) -> List[Text]:
+        return ['countries_id', 'countries_name', 'countries_tax', 'countries_code', 'countries_tax_name', 'countries_shipping_zone_id', 'countries_provinces', 'id', 'name']
+
+    def clean_response(self, res):
+        temp = {}
+        temp["id"] = res["id"]
+        temp["name"] = res["name"]
+        temp["countries"] = res["countries"]
+        return temp
+
+    def get_shipping_zone(self) -> List[Dict]:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+        zones = shopify.ShippingZone.find()
+        return [self.clean_response(zone.to_dict()) for zone in zones]

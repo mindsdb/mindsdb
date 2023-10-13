@@ -70,6 +70,24 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+- [x] Shopify Inventory Level Table for a given Store
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
+- [x] Shopify Carrier Service Table for a given Store
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
+- [x] Shopify Shipping Zone Table for a given Store
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
 
 ## TODO
 
@@ -100,6 +118,14 @@ Use the established connection to query your database:
 
 ~~~~sql
 SELECT * FROM shopify_datasource.products
+~~~~
+
+~~~~sql
+SELECT * FROM shopify_datasource.carrier_service;
+~~~~
+
+~~~~sql
+SELECT * FROM shopify_datasource.shipping_zone;
 ~~~~
 
 Run more advanced SELECT queries:

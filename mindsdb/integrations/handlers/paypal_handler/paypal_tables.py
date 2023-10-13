@@ -52,3 +52,59 @@ class PaymentsTable(APITable):
         connection = self.handler.connect()
         payments = paypalrestsdk.Payment.all(kwargs, api=connection)
         return [payment.to_dict() for payment in payments['payments']]
+
+
+import paypalrestsdk
+import pandas as pd
+from typing import Text, List, Dict
+
+from mindsdb_sql.parser import ast
+from mindsdb.integrations.libs.api_handler import APITable
+
+from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
+
+
+class OrdersTable(APITable):
+
+  def select(self, query: ast.Select) -> pd.DataFrame:
+    """
+    Pulls PayPal Orders data.
+    Parameters
+    ----------
+    query : ast.Select
+      Given SQL SELECT query
+    Returns
+    -------
+    pd.DataFrame
+      PayPal Orders matching the query
+    Raises
+    ------
+    ValueError
+      If the query contains an unsupported condition
+    """
+
+    select_statement_parser = SELECTQueryParser(
+      query,
+      'orders',
+      self.get_columns()
+    )
+    selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+    orders_df = pd.json_normalize(self.get_orders(count=result_limit))
+    select_statement_executor = SELECTQueryExecutor(
+      orders_df,
+      selected_columns,
+      where_conditions,
+      order_by_conditions
+    )
+    orders_df = select_statement_executor.execute_query()
+
+    return orders_df
+
+  def get_columns(self) -> List[Text]:
+    return pd.json_normalize(self.get_orders(count=1)).columns.tolist()
+
+  def get_orders(self, **kwargs) -> List[Dict]:
+    connection = self.handler.connect()
+    orders = paypalrestsdk.Order.all(kwargs, api=connection)
+    return [order.to_dict() for order in orders['orders']]

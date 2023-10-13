@@ -74,6 +74,19 @@ class QdrantHandler(VectorStoreHandler):
 
         return response_code
 
+    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
+        """
+        Delete a collection from the Qdrant Instance.
+        """
+        result = self._client.delete_collection(table_name)
+        if result is True or if_exists is True:
+            return Response(resp_type=RESPONSE_TYPE.OK)
+        else:
+            return Response(
+                resp_type=RESPONSE_TYPE.ERROR,
+                error_message=f"Table {table_name} does not exist!",
+            )
+
     def get_tables(self) -> HandlerResponse:
         """
         Get the list of collections in the Qdrant instance.

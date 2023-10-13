@@ -1,41 +1,32 @@
-import re
-import os
-import datetime as dt
-import ast
-import time
-from collections import defaultdict
-import pytz
-import io
-import requests
-
-import pandas as pd
-import shareplum
-
-from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
-
-from mindsdb_sql.parser import ast
-
-from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from mindsdb.integrations.utilities.date_utils import parse_utc_date
-
-from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-    RESPONSE_TYPE
-)
-from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
-import json
+
+from mindsdb.integrations.handlers.sharepoint_handler.sharepoint_api import (
+    SharepointAPI,
+)
+from mindsdb.integrations.handlers.sharepoint_handler.sharepoint_tables import (
+    ListsTable,
+    SitesTable,
+    SharepointColumnsTable,
+    ListItemsTable,
+)
+from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
+from mindsdb.utilities import log
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+
+from mindsdb.utilities.log import get_log
+from collections import OrderedDict
+
+
+logger = get_log("integrations.github_handler")
 
 
 class SharepointHandler(APIHandler):
     """
-    The Stripe handler implementation.
+    The Sharepoint handler implementation.
     """
 
-    name = 'sharepoint'
+    name = "sharepoint"
 
     def __init__(self, name: str, **kwargs):
         """
@@ -50,17 +41,31 @@ class SharepointHandler(APIHandler):
         self.connection_data = connection_data
         self.kwargs = kwargs
 
+        if not (
+            self.connection_data["clientId"]
+            and (
+                self.connection_data["tenantId"]
+                and self.connection_data["clientSecret"]
+            )
+        ):
+            raise Exception(
+                "client params and tenant id is required for Sharepoint connection!"
+            )
+
         self.connection = None
         self.is_connected = False
-
+        self._client = None
         lists_data = ListsTable(self)
-        self._register_table("lists", listss_data)
+        self._register_table("lists", lists_data)
 
-        products_data = ProductsTable(self)
-        self._register_table("products", products_data)
+        sites_data = SitesTable(self)
+        self._register_table("sites", sites_data)
 
-        payment_intents_data = PaymentIntentsTable(self)
-        self._register_table("payment_intents", payment_intents_data)
+        sharepoint_columns_data = SharepointColumnsTable(self)
+        self._register_table("sharepointColumns", sharepoint_columns_data)
+
+        list_items_data = ListItemsTable(self)
+        self._register_table("listItems", list_items_data)
 
     def connect(self):
         """
@@ -72,9 +77,12 @@ class SharepointHandler(APIHandler):
         """
         if self.is_connected is True:
             return self.connection
-        client_creds = self.connection_data['client_id'], self.connection_data['client_secret'])
-        ctx = ClientContext(self.connection_data['url']).with_credentials(client_creds)
-        self.connection = ctx
+        self.connection = SharepointAPI(
+            tenant_id=self.connection_data["tenantId"],
+            client_id=self.connection_data["clientId"],
+            client_secret=self.connection_data["clientSecret"],
+        )
+        self.connection.get_bearer_token()
         self.is_connected = True
 
         return self.connection
@@ -89,10 +97,10 @@ class SharepointHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            ctx = self.connect()
+            _ = self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Sharepoint!')
+            log.logger.error(f"Error connecting to Sharepoint!")
             response.error_message = str(e)
 
         self.is_connected = response.success
@@ -112,3 +120,31 @@ class SharepointHandler(APIHandler):
         """
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
+
+
+connection_args = OrderedDict(
+    clientId={
+        "type": ARG_TYPE.STR,
+        "description": "Client Id of the App",
+        "required": True,
+        "label": "Client ID",
+    },
+    clientSecret={
+        "type": ARG_TYPE.PWD,
+        "description": "Client Secret of the App",
+        "required": True,
+        "label": "Client Secret",
+    },
+    tenantId={
+        "type": ARG_TYPE.STR,
+        "description": "Tenant Id of the tenant of the App",
+        "required": True,
+        "label": "Tenant ID",
+    },
+)
+
+connection_args_example = OrderedDict(
+    clientId="xxxx-xxxx-xxxx-xxxx",
+    clientSecret="<secret>",
+    tenantId="xxxx-xxxx-xxxx-xxxx",
+)

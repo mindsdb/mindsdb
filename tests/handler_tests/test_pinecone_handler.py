@@ -140,7 +140,6 @@ class TestPineconeHandler(BaseExecutorTest):
             }
         )
         self.set_handler(postgres_handler_mock, "pg", tables={"df": df, "df2": df2})
-        num_record = df.shape[0]
 
         sql = """
             CREATE TABLE pinecone_test.testtable (

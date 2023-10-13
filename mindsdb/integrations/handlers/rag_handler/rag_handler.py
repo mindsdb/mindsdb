@@ -66,7 +66,7 @@ class RAGHandler(BaseMLEngine):
         )
 
         if args.run_embeddings and df is not None:
-            if "context_columns" not in args and not df.empty:
+            if "context_columns" not in args:
 
                 # if no context columns provided, use all columns in df
                 logger.info("No context columns provided, using all columns in df")
@@ -77,11 +77,15 @@ class RAGHandler(BaseMLEngine):
                     f"No embeddings model provided in query, using default model: {DEFAULT_EMBEDDINGS_MODEL}"
                 )
 
-            ingestor = Ingestor(args=args, df=df)
-            ingestor.embeddings_to_vectordb()
-
+            if not df.empty:
+                ingestor = Ingestor(args=args, df=df)
+                ingestor.embeddings_to_vectordb()
+            else:
+                logger.info(
+                    "Input data provided is empty, skipping embeddings and ingestion"
+                )
         else:
-            # Note this should only be run if run_embeddings is false
+            # Note this should only be run if run_embeddings is false or if no data is provided in query
 
             logger.info("Skipping embeddings and ingestion into Chroma VectorDB")
 

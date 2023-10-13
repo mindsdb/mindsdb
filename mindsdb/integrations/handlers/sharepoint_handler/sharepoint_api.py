@@ -1,7 +1,7 @@
 import requests
 from datetime import datetime, timezone
 from typing import Text, List, Dict, Any
-
+import json
 from requests import Response
 
 
@@ -27,10 +27,7 @@ class SharepointAPI:
             "resource": "https://graph.microsoft.com",
         }
         files = []
-        headers = {
-            "Cookie": "fpc=Ajxxw0Xf-Z1Aq1j2Kvw_bxdNzkviAQAAAITkudwOAAAA; stsservicecookie=estsfd; "
-            "x-ms-gateway-slice=estsfd "
-        }
+        headers = {}
 
         response = self.getresponse(
             request_type="POST", url=url, headers=headers, payload=payload, files=files
@@ -77,7 +74,10 @@ class SharepointAPI:
         url = "https://graph.microsoft.com/v1.0/sites?search=*"
 
         payload = {}
-        headers = {"Authorization": f"Bearer {self.bearer_token}"}
+        headers = {
+            "Authorization": f"Bearer {self.bearer_token}",
+            "Content-Type": "application/json",
+        }
 
         response = self.getresponse(
             request_type="GET", url=url, headers=headers, payload=payload, files=[]
@@ -93,7 +93,10 @@ class SharepointAPI:
     ) -> List[Dict[Text, Any]]:
         url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists"
         payload = {}
-        headers = {"Authorization": f"Bearer {self.bearer_token}"}
+        headers = {
+            "Authorization": f"Bearer {self.bearer_token}",
+            "Content-Type": "application/json",
+        }
 
         response = self.getresponse(
             request_type="GET", url=url, headers=headers, payload=payload, files=[]
@@ -122,7 +125,10 @@ class SharepointAPI:
     def delete_a_list(self, site_id: str, list_id: str) -> None:
         url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}"
         payload = {}
-        headers = {"Authorization": f"Bearer {self.bearer_token}"}
+        headers = {
+            "Authorization": f"Bearer {self.bearer_token}",
+            "Content-Type": "application/json",
+        }
         self.getresponse(
             request_type="DELETE", url=url, headers=headers, payload=payload, files=[]
         )
@@ -140,20 +146,24 @@ class SharepointAPI:
     def update_a_list(
         self, site_id: str, list_id: str, values_to_update: Dict[Text, Any]
     ) -> None:
-        url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}"
+        url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/"
         payload = values_to_update
-        headers = {"Authorization": f"Bearer {self.bearer_token}"}
+        payload = json.dumps(payload, indent=2)
+        headers = {
+            "Authorization": f"Bearer {self.bearer_token}",
+            "Content-Type": "application/json",
+        }
         self.getresponse(
-            request_type="POST", url=url, headers=headers, payload=payload, files=[]
+            request_type="PATCH", url=url, headers=headers, payload=payload, files=[]
         )
 
     def create_lists(self, data: List[Dict[Text, Any]]) -> None:
         for entry in data:
             self.create_a_list(
                 site_id=entry["siteId"],
-                column=entry["column"],
+                column=entry.get("column"),
                 display_name=entry["displayName"],
-                list_template=entry.get("list"),
+                list_template=entry["list"],
             )
 
     def create_a_list(
@@ -166,7 +176,11 @@ class SharepointAPI:
             payload["column"] = column
         payload["displayName"] = display_name
         payload["list"] = eval(list_template)
-        headers = {"Authorization": f"Bearer {self.bearer_token}"}
+        payload = json.dumps(payload, indent=2)
+        headers = {
+            "Authorization": f"Bearer {self.bearer_token}",
+            "Content-Type": "application/json",
+        }
         self.getresponse(
             request_type="POST", url=url, headers=headers, payload=payload, files=[]
         )
@@ -176,7 +190,10 @@ class SharepointAPI:
     ) -> List[Dict[Text, Any]]:
         url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/columns/"
         payload = {}
-        headers = {"Authorization": f"Bearer {self.bearer_token}"}
+        headers = {
+            "Authorization": f"Bearer {self.bearer_token}",
+            "Content-Type": "application/json",
+        }
 
         response = self.getresponse(
             request_type="GET", url=url, headers=headers, payload=payload, files=[]
@@ -217,9 +234,13 @@ class SharepointAPI:
     ):
         url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/columns/{column_id}"
         payload = values_to_update
-        headers = {"Authorization": f"Bearer {self.bearer_token}"}
+        payload = json.dumps(payload, indent=2)
+        headers = {
+            "Authorization": f"Bearer {self.bearer_token}",
+            "Content-Type": "application/json",
+        }
         self.getresponse(
-            request_type="POST", url=url, headers=headers, payload=payload, files=[]
+            request_type="PATCH", url=url, headers=headers, payload=payload, files=[]
         )
 
     def delete_sharepoint_columns(self, column_dict: List[Dict[Text, Any]]) -> None:
@@ -231,7 +252,10 @@ class SharepointAPI:
     def delete_a_sharepoint_columns(self, site_id: str, column_id: str) -> None:
         url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{column_id}"
         payload = {}
-        headers = {"Authorization": f"Bearer {self.bearer_token}"}
+        headers = {
+            "Authorization": f"Bearer {self.bearer_token}",
+            "Content-Type": "application/json",
+        }
         self.getresponse(
             request_type="DELETE", url=url, headers=headers, payload=payload, files=[]
         )
@@ -268,7 +292,11 @@ class SharepointAPI:
             payload["hidden"] = hidden
         if indexed is not None:
             payload["indexed"] = indexed
-        headers = {"Authorization": f"Bearer {self.bearer_token}"}
+        payload = json.dumps(payload, indent=2)
+        headers = {
+            "Authorization": f"Bearer {self.bearer_token}",
+            "Content-Type": "application/json",
+        }
         self.getresponse(
             request_type="POST", url=url, headers=headers, payload=payload, files=[]
         )
@@ -278,7 +306,10 @@ class SharepointAPI:
     ) -> List[Dict[Text, Any]]:
         url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items/"
         payload = {}
-        headers = {"Authorization": f"Bearer {self.bearer_token}"}
+        headers = {
+            "Authorization": f"Bearer {self.bearer_token}",
+            "Content-Type": "application/json",
+        }
 
         response = self.getresponse(
             request_type="GET", url=url, headers=headers, payload=payload, files=[]
@@ -326,9 +357,13 @@ class SharepointAPI:
     ):
         url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items/{item_id}"
         payload = values_to_update
-        headers = {"Authorization": f"Bearer {self.bearer_token}"}
+        payload = json.dumps(payload, indent=2)
+        headers = {
+            "Authorization": f"Bearer {self.bearer_token}",
+            "Content-Type": "application/json",
+        }
         self.getresponse(
-            request_type="POST", url=url, headers=headers, payload=payload, files=[]
+            request_type="PATCH", url=url, headers=headers, payload=payload, files=[]
         )
 
     def delete_items(self, item_dict: List[Dict[Text, Any]]) -> None:
@@ -342,7 +377,10 @@ class SharepointAPI:
     def delete_an_item(self, site_id: str, list_id: str, item_id: str) -> None:
         url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items/{item_id}"
         payload = {}
-        headers = {"Authorization": f"Bearer {self.bearer_token}"}
+        headers = {
+            "Authorization": f"Bearer {self.bearer_token}",
+            "Content-Type": "application/json",
+        }
         self.getresponse(
             request_type="DELETE", url=url, headers=headers, payload=payload, files=[]
         )
@@ -360,7 +398,11 @@ class SharepointAPI:
         payload = {}
         if fields:
             payload["fields"] = eval(fields)
-        headers = {"Authorization": f"Bearer {self.bearer_token}"}
+        payload = json.dumps(payload, indent=2)
+        headers = {
+            "Authorization": f"Bearer {self.bearer_token}",
+            "Content-Type": "application/json",
+        }
         self.getresponse(
             request_type="POST", url=url, headers=headers, payload=payload, files=[]
         )

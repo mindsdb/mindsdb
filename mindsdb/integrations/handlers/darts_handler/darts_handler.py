@@ -1,56 +1,71 @@
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb.integrations.libs.base import MachineLearningHandler
-from mindsdb.utilities import log
-
-import darts
+import pandas as pd
+from typing import Optional, Dict
 from darts import TimeSeries
 from darts.models import ARIMA
-from darts.dataprocessing.transformers import Scaler
+from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.integrations.libs.response import HandlerResponse
 
-class DartsHandler(MachineLearningHandler):
+class DartsModel(BaseMLEngine):
+    
+    name = "dartsmodel"
 
-    name = 'darts'
+    def _init_(self, model_storage, engine_storage) -> None:
+        super()._init_(model_storage, engine_storage)
 
-    def __init__(self, name: str, connection_data: dict, **kwargs):
-        super().__init__(name)
-        self.connection_data = connection_data
-        self.model = None
+    def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        """
+        Train an ARIMA model and save it for later usage.
 
-    def train(self, data):
-        try:
-            # Assuming data is in the format: [timestamp, value]
-            time_series = TimeSeries.from_dataframe(data, time_col=0, value_col=1)
+        Args:
+            target (str): Name of the target column.
+            df (pd.DataFrame): Input DataFrame containing the time series data.
+            args (Dict): Additional arguments (if needed).
+        """
+        # Ensure df contains a datetime index
+        df.set_index('timestamp', inplace=True)
 
-            # Preprocess data (you can add more preprocessing steps)
-            scaler = Scaler()
-            time_series = scaler.fit_transform(time_series)
+        # Convert DataFrame to Darts TimeSeries
+        time_series = TimeSeries.from_dataframe(df, time_col='timestamp', value_cols=[target])
 
-            # Initialize and fit an ARIMA model (you can use other Darts models)
-            self.model = ARIMA()
+        # Create and train ARIMA model
+        arima_model = ARIMA(order=(1, 1, 1))  # Can adjust the order as needed
+        arima_model.fit(time_series)
 
-            self.model.fit(time_series)
+        # Save the trained model to model_storage
+        self.model_storage.save_model('arima_model', arima_model)
 
-            log.logger.info("Darts model trained successfully")
+    def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> HandlerResponse:
+        """
+        Make predictions using the trained ARIMA model.
 
-        except Exception as e:
-            log.logger.error(f"Error training Darts model: {str(e)}")
+        Args:
+            df (pd.DataFrame): Input DataFrame containing the time series data for prediction.
+            args (Dict): Additional arguments (if needed).
 
-    def forecast(self, num_forecast_points):
-        try:
-            if self.model is not None:
-                forecast = self.model.predict(num_forecast_points)
-                # Extract forecasted values
-                forecast_values = forecast.values()
+        Returns:
+            HandlerResponse: Predicted values in a DataFrame.
+        """
+        # Ensure df contains a datetime index
+        df.set_index('timestamp', inplace=True)
 
-                # Assuming forecast is a list of forecasted values
-                return forecast_values
-            else:
-                log.logger.error("Darts model has not been trained")
-                return []
+        # Load the trained ARIMA model from model_storage
+        arima_model = self.model_storage.load_model('arima_model')
 
-        except Exception as e:
-            log.logger.error(f"Error forecasting with Darts model: {str(e)}")
+        # Convert DataFrame to Darts TimeSeries
+        time_series = TimeSeries.from_dataframe(df, time_col='timestamp')
 
-    def evaluate(self, data):
-        # Implement evaluation logic here if needed
+        # Make predictions
+        predictions = arima_model.predict(len(df))
+
+        # Convert predictions to a DataFrame
+        prediction_df = predictions.pd_dataframe()
+
+        # Rename the prediction column to match the target column
+        prediction_df = prediction_df.rename(columns={'0': 'target'})
+
+        return HandlerResponse(data=prediction_df)
+
+    # You can optionally implement update, describe, and create_engine methods based on your requirements
+
+    def close(self):
         pass

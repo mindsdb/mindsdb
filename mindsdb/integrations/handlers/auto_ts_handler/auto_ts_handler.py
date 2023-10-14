@@ -2,6 +2,7 @@ import pandas as pd
 from auto_ts import auto_timeseries as ATS
 from typing import Optional
 import dill
+import dataprep_ml
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 
@@ -50,31 +51,14 @@ class Auto_ts_Handler(BaseMLEngine):
         """
         args = args['using']
 
-        score_type = 'rmse'
-        non_seasonal_pdq = (3, 1, 3)
-        time_interval = 'M'
-        seasonality = False
-        model_type = 'best'
-        cv = 5
-        sep = ','
-        seasonal_period=None
-
-        if 'time_interval' in args:
-            time_interval = args['time_interval']
-        if 'score_type' in args:
-            score_type = args['score_type']
-        if 'non_seasonal_pdq' in args:
-            non_seasonal_pdq = args['non_seasonal_pdq']
-        if 'seasonal_period' in args:
-            seasonal_period = int(args['seasonal_period'])
-        if 'seasonality' in args:
-            seasonality = args['seasonality']
-        if 'model_type' in args:
-            model_type = args['model_type']
-        if 'cv' in args:
-            cv = int(args['cv'])
-        if 'sep' in args:
-            sep = args['sep']
+        score_type = args.get('score_type', 'rmse')
+        non_seasonal_pdq = args.get('non_seasonal_pdq', (3, 1, 3))
+        time_interval = args.get('time_interval', 'M')
+        seasonality = args.get('seasonality', False)
+        model_type = args.get('model_type', 'best')
+        cv = int(args.get('cv', 5))
+        sep = args.get('sep', ',')
+        seasonal_period = int(args.get('seasonal_period', None))
 
         model = ATS(score_type=score_type,
                     time_interval=time_interval,
@@ -88,12 +72,15 @@ class Auto_ts_Handler(BaseMLEngine):
         ts_column = args['ts_column']
         target = args['target']
 
+        #Drop rows with null values
+        df  = df.dropna()
         model.fit(traindata=df,
                   target=target,
                   ts_column=ts_column,
                   cv=cv,
                   sep=sep
                 )
+
         self.model_storage.json_set('args', args)
         self.model_storage.file_set('model', dill.dumps(model))
 

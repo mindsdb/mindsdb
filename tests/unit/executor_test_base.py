@@ -120,8 +120,6 @@ class BaseUnitTest:
             name="langchain_embedding", data={}, engine="langchain_embedding"
         )
         db.session.add(r)
-        r = db.Integration(name="auto_ts", data={}, engine="auto_ts")
-        db.session.add(r)
         r = db.Integration(name="rag", data={}, engine="rag")
         db.session.add(r)
 

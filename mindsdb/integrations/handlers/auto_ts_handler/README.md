@@ -14,12 +14,11 @@ This integration is useful for time series data. It will automatically select th
 libraries like Statsmodels ARIMA, Seasonal ARIMA, Prophet and Scikit-Learn ML.
 
 The ideal use case is a very large dataset with many predictive features, where the user doesn't have strong priors about how these features may affect the target variable.
-
-Do not use this integration with dataset which is raw and isn't preprocessed, [tips](https://github.com/AutoViML/Auto_TS#tips)
-Also as it is Auto ML model accuracy is not guaranteed, and it reaches **rmse near to 40-50** for some datasets.
+Also as it is Auto ML model accuracy is not guaranteed.
 
 ### Are models created with this integration fast and scalable, in general?
 The model training time is fast and scalable as it uses best Time Series libraries like Statsmodels ARIMA, Seasonal ARIMA, Prophet and Scikit-Learn ML.
+As Auto_ts uses doesn't use neural networks, it is not prone to overfitting and take less time to train.
 
 
 ### What are the recommended system specifications for models created with this framework?

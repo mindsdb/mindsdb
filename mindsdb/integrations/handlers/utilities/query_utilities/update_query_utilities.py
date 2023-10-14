@@ -90,16 +90,3 @@ class UPDATEQueryExecutor(BaseQueryExecutor):
                 raise ValueError("The column name should be a string")
             
             self.df[column] = value
-
-    def execute_where_clause(self) -> None:
-        """
-        Execute the where clause of the query.
-        """
-        if len(self.where_conditions) > 0:
-            for condition in self.where_conditions:
-                column = condition[1]
-                operator = '==' if condition[0] == '=' else condition[0]
-                value = f"'{condition[2]}'" if type(condition[2]) == str else condition[2]
-
-                query = f"{column} {operator} {value}"
-                self.df.query(query, inplace=True)

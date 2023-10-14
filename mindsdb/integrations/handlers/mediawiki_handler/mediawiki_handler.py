@@ -88,7 +88,12 @@ class MediaWikiHandler(APIHandler):
 
         try:
             self.connect()
+            if self.username and self.password:
+                self.login(self.username, self.password)
             response.success = True
+        except LoginFailedException as e:
+            log.logger.error("login Failed")
+            response.error_message = str(e)
         except Exception as e:
             log.logger.error("Error connecting to MediaWiki!")
             response.error_message = str(e)

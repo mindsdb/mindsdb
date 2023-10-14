@@ -99,6 +99,8 @@ jobs:
 
           env PYTHONPATH=./ pytest tests/unit/test_cache.py
 
+          pytest -vx tests/integration_tests/flows/test_ml_task_queue.py
+
           # MySQL API
           echo -e "\n===============test MySQL API===============\n"
           pytest -vx tests/integration_tests/flows/test_mysql_api.py

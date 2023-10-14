@@ -1,17 +1,16 @@
 from collections import OrderedDict
-from typing import List, Optional
+from typing import List
 
-from qdrant_client import QdrantClient
+from qdrant_client import QdrantClient, models
 import pandas as pd
 
+from mindsdb.integrations.libs.response import HandlerResponse
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
-from mindsdb.integrations.libs.response import HandlerResponse
 from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.integrations.libs.vectordatabase_handler import (
     FilterCondition,
-    FilterOperator,
     TableField,
     VectorStoreHandler,
 )
@@ -25,11 +24,13 @@ class QdrantHandler(VectorStoreHandler):
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
-        self.connect(**kwargs.get("connection_data"))
+        connection_data = kwargs.get("connection_data").copy()
+        self.collection_config = connection_data.pop("collection_config")
+        self.connect(**connection_data)
 
     def connect(self, **kwargs):
         """Connect to a Qdrant instance."""
-        if self.is_connected is True:
+        if self.is_connected:
             return self._client
 
         try:
@@ -37,39 +38,30 @@ class QdrantHandler(VectorStoreHandler):
             self.is_connected = True
             return self._client
         except Exception as e:
-            log.logger.error(f"Error connecting to a Qdrant instance, {e}!")
+            log.logger.error(f"Error instantiating a Qdrant client: {e}")
             self.is_connected = False
 
     def disconnect(self):
         """Close the database connection."""
-
-        if self.is_connected is False:
-            return
-
-        self._client.close()
-        self._client = None
-
+        if self.is_connected:
+            self._client.close()
+            self._client = None
         self.is_connected = False
-
-    def __del__(self):
-        if self.is_connected is True:
-            self.disconnect()
 
     def check_connection(self):
         """Check the connection to the Qdrant database."""
-        response_code = StatusResponse(False)
-        need_to_close = self.is_connected is False
+        need_to_close = not self.is_connected
 
         try:
             self._client.get_locks()
-            response_code.success = True
+            response_code = StatusResponse(True)
         except Exception as e:
-            log.logger.error(f"Error connecting to a Qdrant instance , {e}!")
-            response_code.error_message = str(e)
+            log.logger.error(f"Error connecting to a Qdrant instance: {e}")
+            response_code = StatusResponse(False, error_message=str(e))
         finally:
-            if response_code.success is True and need_to_close:
+            if response_code.success and need_to_close:
                 self.disconnect()
-            if response_code.success is False and self.is_connected is True:
+            if not response_code.success and self.is_connected:
                 self.is_connected = False
 
         return response_code
@@ -79,7 +71,7 @@ class QdrantHandler(VectorStoreHandler):
         Delete a collection from the Qdrant Instance.
         """
         result = self._client.delete_collection(table_name)
-        if result is True or if_exists is True:
+        if result or if_exists:
             return Response(resp_type=RESPONSE_TYPE.OK)
         else:
             return Response(
@@ -108,6 +100,60 @@ class QdrantHandler(VectorStoreHandler):
             )
         return super().get_columns(table_name)
 
+    def insert(
+        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
+    ) -> HandlerResponse:
+        """
+        Insert data into the Qdrant instance.
+        """
+
+        # drop columns with all None values
+        data.dropna(axis=1, inplace=True)
+
+        data = data.to_dict(orient="list")
+
+        payloads = []
+        for (document, metadata) in zip(data[TableField.CONTENT.value], data[TableField.METADATA.value]):
+            payloads.append({
+                document: document,
+                **metadata
+            })
+
+        # convert ids to int if numeric else leave as is if string(UUID)
+        ids = [int(id) if str(id).isdigit() else id for id in data[TableField.ID.value]]
+        self._client.upsert(table_name, points=models.Batch(
+            ids=ids,
+            vectors=data[TableField.EMBEDDINGS.value],
+            payloads=payloads
+        ))
+
+        return Response(resp_type=RESPONSE_TYPE.OK)
+
+    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
+        """
+        Create a collection with the given name in the Qdrant database.
+        """
+        try:
+            self._client.create_collection(table_name, self.collection_config)
+        except ValueError:
+            if not if_not_exists:
+                return Response(
+                    resp_type=RESPONSE_TYPE.ERROR,
+                    error_message=f"Table {table_name} already exists!",
+                )
+
+        return Response(resp_type=RESPONSE_TYPE.OK)
+
+    def select(
+        self,
+        table_name: str,
+        columns: List[str] = None,
+        conditions: List[FilterCondition] = None,
+        offset: int = None,
+        limit: int = None,
+    ) -> HandlerResponse:
+        pass
+
 
 connection_args = OrderedDict(
     location={
@@ -117,7 +163,7 @@ connection_args = OrderedDict(
     },
     url={
         "type": ARG_TYPE.STR,
-        "description": "URL of Qdrant service. either host or a string of type [scheme]<host><[port][prefix]. Ex: http://localhost:6333/service/v1",
+        "description": "URL of Qdrant service. Either host or a string of type [scheme]<host><[port][prefix]. Ex: http://localhost:6333/service/v1",
     },
     host={
         "type": ARG_TYPE.STR,
@@ -164,8 +210,17 @@ connection_args = OrderedDict(
         "description": "Persistence path for a local Qdrant instance(:memory:).",
         "required": False,
     },
+    collection_config={
+        "type": ARG_TYPE.DICT,
+        "description": "Collection creation configuration. See https://qdrant.github.io/qdrant/redoc/index.html#tag/collections/operation/create_collection",
+        "required": True,
+    },
 )
 
-connection_args_example = OrderedDict(
-    location=":memory:",
-)
+connection_args_example = {
+    "location": ":memory:",
+    "collection_config": {
+        "size": 386,
+        "distance": "Cosine"
+    }
+}

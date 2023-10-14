@@ -1,35 +1,18 @@
+import stripe
 import pandas as pd
 from typing import Text, List, Dict
-
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
-
 from mindsdb.integrations.handlers.utilities.query_utilities.select_query_utilities import SELECTQueryParser, SELECTQueryExecutor
 
+class YourAPIHandler:
+    def connect(self):
+        pass
 
 class CustomersTable(APITable):
     """The Stripe Customers Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
-        """
-        Pulls Stripe Customer data.
-
-        Parameters
-        ----------
-        query : ast.Select
-           Given SQL SELECT query
-
-        Returns
-        -------
-        pd.DataFrame
-            Stripe Customers matching the query
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-
         select_statement_parser = SELECTQueryParser(
             query,
             'customers',
@@ -52,7 +35,7 @@ class CustomersTable(APITable):
         return pd.json_normalize(self.get_customers(limit=1)).columns.tolist()
 
     def get_customers(self, **kwargs) -> List[Dict]:
-        stripe = self.handler.connect()
+        stripe.api_key = 'stripe_api_key'
         customers = stripe.Customer.list(**kwargs)
         return [customer.to_dict() for customer in customers]
 
@@ -61,25 +44,6 @@ class ProductsTable(APITable):
     """The Stripe Products Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
-        """
-        Pulls Stripe Product data.
-
-        Parameters
-        ----------
-        query : ast.Select
-           Given SQL SELECT query
-
-        Returns
-        -------
-        pd.DataFrame
-            Stripe Products matching the query
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-
         select_statement_parser = SELECTQueryParser(
             query,
             'products',
@@ -102,7 +66,7 @@ class ProductsTable(APITable):
         return pd.json_normalize(self.get_products(limit=1)).columns.tolist()
 
     def get_products(self, **kwargs) -> List[Dict]:
-        stripe = self.handler.connect()
+        stripe.api_key = 'stripe_api_key'
         products = stripe.Product.list(**kwargs)
         return [product.to_dict() for product in products]
 
@@ -111,25 +75,6 @@ class PaymentIntentsTable(APITable):
     """The Stripe Payment Intents Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
-        """
-        Pulls Stripe Payment Intents data.
-
-        Parameters
-        ----------
-        query : ast.Select
-           Given SQL SELECT query
-
-        Returns
-        -------
-        pd.DataFrame
-            Stripe Payment Intents matching the query
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-
         select_statement_parser = SELECTQueryParser(
             query,
             'payment_intents',
@@ -152,6 +97,7 @@ class PaymentIntentsTable(APITable):
         return pd.json_normalize(self.get_payment_intents(limit=1)).columns.tolist()
 
     def get_payment_intents(self, **kwargs) -> List[Dict]:
-        stripe = self.handler.connect()
+        stripe.api_key = 'stripe_api_key'
         payment_intents = stripe.PaymentIntent.list(**kwargs)
         return [payment_intent.to_dict() for payment_intent in payment_intents]
+

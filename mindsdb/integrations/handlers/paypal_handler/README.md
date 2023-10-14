@@ -44,10 +44,16 @@ The PayPal handler is initialized with the following parameters:
     - [x] Support ORDER BY
     - [x] Support column selection
 
+- [x] PayPal Invoices Table for a given account
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
+
 ## TODO
 
 - [ ] Support INSERT, UPDATE and DELETE for the Payments table
-- [ ] PayPal Invoices table
 - [ ] PayPal Orders table
 - [ ] PayPal Payouts table
 - [ ] PayPal Subscriptions table
@@ -69,16 +75,41 @@ PARAMETERS = {
 
 Use the established connection to query your database:
 
+Query Payments_table: 
 ~~~~sql
 SELECT * FROM paypal_datasource.payments
 ~~~~
 
+Query Invoices_table: 
+~~~~sql
+SELECT * FROM paypal_datasource.invoices
+~~~~
+
 Run more advanced queries:
 
+`Payments_table` 
 ~~~~sql
 SELECT  intent, cart
 FROM paypal_datasource.payments
 WHERE state = 'approved'
 ORDER BY id
 LIMIT 5
+~~~~
+
+`Invoices_table`
+
+Query Invoices with specific columns:
+
+~~~~sql
+SELECT invoice_number, total_amount, status FROM paypal_datasource.invoices
+~~~~
+
+Query Invoices with conditions and ordering:
+
+~~~~sql
+SELECT invoice_number, total_amount
+FROM paypal_datasource.invoices
+WHERE status = 'PAID'
+ORDER BY total_amount DESC
+LIMIT 10
 ~~~~

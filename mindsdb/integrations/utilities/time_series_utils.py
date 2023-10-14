@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from pandas.tseries.frequencies import to_offset
 from sklearn.metrics import r2_score
 from hierarchicalforecast.core import HierarchicalReconciliation
 from hierarchicalforecast.methods import BottomUp
@@ -22,6 +23,20 @@ def transform_to_nixtla_df(df, settings_dict, exog_vars=[]):
     they must be numeric.
     """
     nixtla_df = df.copy()
+
+    # Resample every group
+    freq = settings_dict['frequency']
+    resampled_df = pd.DataFrame(columns=nixtla_df.columns)
+    if settings_dict["group_by"] and settings_dict["group_by"] != ['__group_by']:
+        for group, groupdf in nixtla_df.groupby(by=settings_dict["group_by"]):
+            groupdf.index = pd.to_datetime(groupdf.pop(settings_dict["order_by"]))
+            resampled_groupdf = pd.DataFrame(groupdf[settings_dict['target']].resample(freq).mean())
+            for k, v in zip(settings_dict["group_by"], group):
+                resampled_groupdf[k] = v
+            resampled_groupdf = resampled_groupdf.reset_index()
+            resampled_df = pd.concat([resampled_df, resampled_groupdf])
+        nixtla_df = resampled_df
+
     # Transform group columns into single unique_id column
     if len(settings_dict["group_by"]) > 1:
         for col in settings_dict["group_by"]:
@@ -31,14 +46,14 @@ def transform_to_nixtla_df(df, settings_dict, exog_vars=[]):
     else:
         group_col = settings_dict["group_by"][0]
 
-    if group_col not in df.columns:
-        # add to dataframe
-        nixtla_df[group_col] = '1'
-
     # Rename columns to statsforecast names
     nixtla_df = nixtla_df.rename(
         {settings_dict["target"]: "y", settings_dict["order_by"]: "ds", group_col: "unique_id"}, axis=1
     )
+
+    if "unique_id" not in nixtla_df.columns:
+        # add to dataframe as it is expected by statsforecast
+        nixtla_df["unique_id"] = '1'
 
     columns_to_keep = ["unique_id", "ds", "y"] + exog_vars
     nixtla_df["ds"] = pd.to_datetime(nixtla_df["ds"])
@@ -64,10 +79,12 @@ def get_results_from_nixtla_df(nixtla_df, model_args):
 
 def infer_frequency(df, time_column, default=DEFAULT_FREQUENCY):
     try:  # infer frequency from time column
-        date_series = pd.to_datetime(df[time_column]).unique()
-        if isinstance(date_series, np.ndarray):
-            date_series.sort()
-        inferred_freq = pd.infer_freq(date_series)
+        date_series = pd.to_datetime(df.sort_values(by=time_column)[time_column]).unique()
+        inferred_freq = pd.infer_freq(date_series)  # call this first to get e.g. months & other irregular periods right
+        if inferred_freq is None:
+            values, counts = np.unique(np.diff(date_series), return_counts=True)
+            delta = values[np.argmax(counts)]
+            inferred_freq = to_offset(pd.to_timedelta(delta)).freqstr
     except TypeError:
         inferred_freq = default
     return inferred_freq if inferred_freq is not None else default

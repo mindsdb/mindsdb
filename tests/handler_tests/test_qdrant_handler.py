@@ -303,3 +303,88 @@ class TestQdrantHandler(BaseExecutorTest):
         """
         ret = self.run_sql(sql)
         assert ret.shape[0] == 2
+
+    @pytest.mark.xfail(reason="upsert for vectordatabase is not implemented")
+    def test_update(self):
+        # update a table with a metadata filter
+        sql = """
+            UPDATE qtest.test_table_5
+            SET `metadata.test` = 'test2'
+            WHERE `metadata.test` = 'test'
+        """
+        self.run_sql(sql)
+        # check if the data is updated
+        sql = """
+            SELECT * FROM qtest.test_table_5
+            WHERE `metadata.test` = 'test2'
+        """
+        ret = self.run_sql(sql)
+        assert ret.shape[0] == 2
+
+        # update the embeddings
+        sql = """
+            UPDATE qtest.test_table_5
+            SET embedding = [3.0, 2.0, 1.0]
+            WHERE `metadata.test` = 'test2'
+        """
+        self.run_sql(sql)
+        # check if the data is updated
+        sql = """
+            SELECT * FROM qtest.test_table_5
+            WHERE `metadata.test` = 'test2'
+        """
+        ret = self.run_sql(sql)
+        assert ret.shape[0] == 2
+        assert ret.embedding[0] == [3.0, 2.0, 1.0]
+
+        # update multiple columns
+        sql = """
+            UPDATE qtest.test_table_5
+            SET `metadata.test` = 'test3',
+                embedding = [1.0, 2.0, 3.0]
+                content = 'this is a test'
+            WHERE `metadata.test` = 'test2'
+        """
+        self.run_sql(sql)
+        # check if the data is updated
+        sql = """
+            SELECT * FROM qtest.test_table_5
+            WHERE `metadata.test` = 'test3'
+        """
+        ret = self.run_sql(sql)
+        assert ret.shape[0] == 2
+        assert ret.embedding[0] == [1.0, 2.0, 3.0]
+        assert ret.content[0] == "this is a test"
+
+        # update a table with a search vector filter is not allowed
+        sql = """
+            UPDATE qtest.test_table_5
+            SET `metadata.test = 'test2'
+            WHERE search_vector = [1.0, 2.0, 3.0]
+        """
+        with pytest.raises(Exception):
+            self.run_sql(sql)
+
+        # update a table without any filters is allowed
+        sql = """
+            UPDATE qtest.test_table_5
+            SET metadata.test = 'test3'
+        """
+        self.run_sql(sql)
+        # check if the data is updated
+        sql = """
+            SELECT * FROM qtest.test_table_5
+            WHERE `metadata.test` = 'test3'
+        """
+        ret = self.run_sql(sql)
+        assert ret.shape[0] == 2
+
+        # update a table with a search vector filter and a metadata filter is not allowed
+        sql = """
+            UPDATE qtest.test_table_5
+            SET metadata.test = 'test3'
+            WHERE metadata.test = 'test2'
+            AND search_vector = [1.0, 2.0, 3.0]
+        """
+        with pytest.raises(Exception):
+            self.run_sql(sql)

@@ -287,6 +287,15 @@ class QdrantHandler(VectorStoreHandler):
 
         return pd.DataFrame(payload)
 
+    def update(
+        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
+    ) -> HandlerResponse:
+        """
+        Update data in the Qdrant database.
+        TODO: Update for vector DBs has not been implemented
+        """
+        return super().update(table_name, data, columns)
+
 
 connection_args = OrderedDict(
     location={

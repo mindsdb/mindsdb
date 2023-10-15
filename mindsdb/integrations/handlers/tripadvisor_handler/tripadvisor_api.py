@@ -144,7 +144,7 @@ class TripAdvisorAPI:
         return response
 
     def location_photos(self, url: str, locationId: str, language: str = "en") -> Response:
-        '''
+        """
         The Location Photos request returns up to 5 high-quality photos for a specific location. Please note that the limits are different for the beta subscribers.
         You need to upgrade to get the higher limits mentioned here. The photos are ordered by recency.
 
@@ -154,13 +154,13 @@ class TripAdvisorAPI:
 
         Returns:
             response: Response object with response data as application/json
-        '''
+        """
         url = url + "{locationId}/photos?language={language}&key={api_key}".format(locationId=locationId, language=language, api_key=self.api_key)
         response = self.getResponse(url)
         return response
 
     def location_nearby_search(self, url: str, params_dict: dict, language: str = "en") -> Response:
-        '''
+        """
         The Nearby Location Search request returns up to 10 locations found near the given latitude/longtitude.
         You can use category ("hotels", "attractions", "restaurants", "geos"), phone number, address to search with more accuracy.
 
@@ -175,7 +175,7 @@ class TripAdvisorAPI:
 
         Returns:
             response: Response object with response data as application/json
-        '''
+        """
 
         url = url + "nearby_search?language={language}&key={api_key}&".format(
             api_key=self.api_key, language=language
@@ -205,7 +205,7 @@ class TripAdvisorAPI:
         elif apiCall == TripAdvisorAPICall.REVIEWS:
             response = self.location_reviews(url, params_dict["locationId"])
             return response.json()["data"]
-        
+
         elif apiCall == TripAdvisorAPICall.PHOTOS:
             response = self.location_photos(url, params_dict["locationId"])
             return response.json()["data"]

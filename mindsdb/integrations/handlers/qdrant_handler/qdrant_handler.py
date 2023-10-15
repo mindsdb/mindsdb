@@ -175,7 +175,8 @@ class QdrantHandler(VectorStoreHandler):
         if id_filters:
             results = self._client.retrieve(table_name, ids=id_filters)
         elif vector_filter:
-            results = self._client.search(table_name, query_vector=vector_filter, limit=limit, offset=offset)
+            # Perform a similarity search with the first vector filter
+            results = self._client.search(table_name, query_vector=vector_filter[0], limit=limit, offset=offset)
         elif query_filters:
             raise NotImplementedError("Query scroll is not implemented yet")
 

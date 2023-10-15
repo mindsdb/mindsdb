@@ -4,7 +4,6 @@ import pandas as pd
 import mysql.connector
 
 from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.utilities import log
@@ -24,9 +23,8 @@ class ApacheDorisHandler(DatabaseHandler):
 
     def __init__(self, name, **kwargs):
         super().__init__(name)
-        self.mysql_url = None
         self.parser = parse_sql
-        self.dialect = 'mysql'
+        self.dialect = 'doris'
         self.connection_data = kwargs.get('connection_data', {})
         self.connection = None
         self.is_connected = False
@@ -117,9 +115,9 @@ class ApacheDorisHandler(DatabaseHandler):
         return response
 
     def query(self, query: ASTNode) -> Response:
-        renderer = SqlalchemyRender('mysql')
-        query_str = renderer.get_string(query, with_failback=True)
-        return self.native_query(query_str)
+        if isinstance(query, ASTNode):
+            query = self.native_query(query.to_string())
+        return self.native_query(query)
 
     def get_tables(self) -> Response:
         sql = """

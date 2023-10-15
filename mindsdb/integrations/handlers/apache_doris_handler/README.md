@@ -46,7 +46,7 @@ WITH
 
 ### Queries
 
-You can use this established connection to query your table just like you would a normal MySQL server. There might be a few caveats in syntax which you can see in Apache Doris' [documentation](https://doris.apache.org/docs/dev/get-starting/what-is-apache-doris).
+You can use this established connection to query your table just like you would a normal MySQL server.
 
 ```sql
 SELECT * FROM mysql_datasource.example_table;

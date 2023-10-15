@@ -1,37 +1,37 @@
 # Welcome to the MindsDB Manual QA Testing for Hive Handler
 
-> **Please submit your PR in the following format after the underline below `Results` section. Don't forget to add an underline after adding your changes i.e., at the end of your `Results` section.**
-
-## Testing Hive Handler with [Dataset Name](URL to the Dataset)
+## Testing Hive Handler
 
 **1. Testing CREATE DATABASE**
 
 ```
-COMMAND THAT YOU RAN TO CREATE DATABASE.
+CREATE DATABASE hive_datasource
+WITH
+  engine = 'hive',
+  parameters = {
+    "user": "hive",
+    "password": "password",
+    "host": "127.0.0.1",
+    "port": "10000",
+    "database": "default"
+  };
 ```
 
-![CREATE_DATABASE](Image URL of the screenshot)
+[![hive-create-database.png](https://i.postimg.cc/jjdcbSYh/hive-create-database.png)](https://postimg.cc/WdCgmj3D)
 
-**2. Testing CREATE PREDICTOR**
 
-```
-COMMAND THAT YOU RAN TO CREATE PREDICTOR.
-```
-
-![CREATE_PREDICTOR](Image URL of the screenshot)
-
-**3. Testing SELECT FROM PREDICTOR**
+**3. Testing SELECT FROM Database**
 
 ```
-COMMAND THAT YOU RAN TO DO A SELECT FROM.
+SELECT * FROM hive_datasource.employees;
 ```
 
-![SELECT_FROM](Image URL of the screenshot)
+[![select-from-hive.png](https://i.postimg.cc/rpXTn76c/select-from-hive.png)](https://postimg.cc/WdnxtWbf)
 
 ### Results
 
 Drop a remark based on your observation.
-- [ ] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
+- [x] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
 - [ ] There's a Bug 🪲 [Issue Title](URL To the Issue you created) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
 
 ---

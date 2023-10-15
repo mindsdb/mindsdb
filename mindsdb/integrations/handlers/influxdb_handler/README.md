@@ -18,7 +18,7 @@ The required arguments to establish a connection are,
 * `influxdb_table_name`: Table name of the influxdb cloud instance
 
 ## Usage
-In order to make use of this handler and connect to an Jira in MindsDB, the following syntax can be used,
+In order to make use of this handler and connect to a Jira in MindsDB, the following syntax can be used,
 ~~~~sql
 CREATE DATABASE influxdb_source
 WITH

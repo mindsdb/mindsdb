@@ -226,3 +226,14 @@ class TestQdrantHandler(BaseExecutorTest):
         """
         with pytest.raises(Exception):
             self.run_sql(sql)
+
+        # insert into a table with existing id overwrites the existing record
+        sql = """
+            INSERT INTO qtest.test_table_3 (
+                id,content,metadata,embeddings
+            )
+            VALUES (
+                4, 'this is a test', '{"test": "test"}', '[1.0, 2.0, 3.0]'
+            )
+        """
+        self.run_sql(sql)

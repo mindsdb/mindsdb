@@ -244,7 +244,7 @@ class TestQdrantHandler(BaseExecutorTest):
             {
                 "id": [32, 33],
                 "content": ["this is a test", "this is a test"],
-                "metadata": [{"test": "test"}, {"test": "test"}],
+                "metadata": [{"test": "Info"}, {"test": "Info"}],
                 "embeddings": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]],
             }
         )
@@ -287,3 +287,19 @@ class TestQdrantHandler(BaseExecutorTest):
         """
         ret = self.run_sql(sql)
         assert ret.shape[0] == 1
+
+        # query a table with a metadata filter
+        sql = """
+            SELECT * FROM qtest.test_table_4
+            WHERE `metadata.test` = 'Info';
+        """
+        ret = self.run_sql(sql)
+        assert ret.shape[0] == 2
+
+        sql = """
+            SELECT * FROM qtest.test_table_4
+            WHERE `metadata.test` = 'Info'
+            AND search_vector = '[1.0, 2.0, 3.0]'
+        """
+        ret = self.run_sql(sql)
+        assert ret.shape[0] == 2

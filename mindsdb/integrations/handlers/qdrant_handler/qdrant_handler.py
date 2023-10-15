@@ -152,23 +152,25 @@ class QdrantHandler(VectorStoreHandler):
 
         return Response(resp_type=RESPONSE_TYPE.OK)
 
-    def _get_qdrant_filter(self, operator: FilterOperator, value: Any) -> str:
-        mapping = {
-            FilterOperator.EQUAL: {"match": models.MatchValue(value=value)},
-            # "except" being a keyword in Python, we need to use a workaround
-            FilterOperator.NOT_EQUAL: {"match": models.MatchExcept(**{"except": [value]})},
-            FilterOperator.LESS_THAN: {"range": models.Range(lt=value)},
-            FilterOperator.LESS_THAN_OR_EQUAL: {"range": models.Range(lte=value)},
-            FilterOperator.GREATER_THAN: {"range": models.Range(gt=value)},
-            FilterOperator.GREATER_THAN_OR_EQUAL: {"range": models.Range(gte=value)},
-        }
+    def _get_qdrant_filter(self, operator: FilterOperator, value: Any) -> dict:
+        match operator:
+            case FilterOperator.EQUAL:
+                return {"match": models.MatchValue(value=value)}
+            case FilterOperator.NOT_EQUAL:
+                # "except" is a reserved keyword in Python, so we use a workaround
+                return {"match": models.MatchExcept(**{"except": [value]})}
+            case FilterOperator.LESS_THAN:
+                return {"range": models.Range(lt=value)}
+            case FilterOperator.LESS_THAN_OR_EQUAL:
+                return {"range": models.Range(lte=value)}
+            case FilterOperator.GREATER_THAN:
+                return {"range": models.Range(gt=value)}
+            case FilterOperator.GREATER_THAN_OR_EQUAL:
+                return {"range": models.Range(gte=value)}
+            case _:
+                raise Exception(f"Operator {operator} is not supported by Qdrant!")
 
-        if operator not in mapping:
-            raise Exception(f"Operator {operator} is not supported by Qdrant!")
-
-        return mapping[operator]
-
-    def _translate_metadata_condition(
+    def _translate_filter_conditions(
         self, conditions: List[FilterCondition]
     ) -> Optional[dict]:
         """
@@ -239,15 +241,15 @@ class QdrantHandler(VectorStoreHandler):
         # Filter conditions
         vector_filter = [condition.value for condition in conditions if condition.column == TableField.SEARCH_VECTOR.value]
         id_filters = [condition.value for condition in conditions if condition.column == TableField.ID.value]
-        query_filters = []
+        query_filters = self._translate_filter_conditions(conditions)
 
         if id_filters:
             results = self._client.retrieve(table_name, ids=id_filters)
         elif vector_filter:
             # Perform a similarity search with the first vector filter
-            results = self._client.search(table_name, query_vector=vector_filter[0], limit=limit, offset=offset)
+            results = self._client.search(table_name, query_vector=vector_filter[0], query_filter=query_filters or None, limit=limit, offset=offset)
         elif query_filters:
-            raise NotImplementedError("Query scroll is not implemented yet")
+            results = self._client.scroll(table_name, scroll_filter=query_filters, limit=limit, offset=offset)[0]
 
         # Process results
         payload = self._process_select_results(results, columns)

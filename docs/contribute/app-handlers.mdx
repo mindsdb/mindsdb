@@ -89,18 +89,6 @@ Here is a step-by-step guide:
         self._tables = {}
     ```
 
-* Implementing the [`_register_table()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/api_handler.py#L164) method:
-
-    The `_register_table()` method registers the data resource in memory.
-
-    ```python
-    def _register_table(self, table_name: str, table_class: Any):
-        """
-        Register the data resource. For e.g if you are using Twitter API it registers the `tweets` resource from `/api/v2/tweets`.
-        """
-        self._tables[table_name] = table_class
-    ```
-
 * Implementing the [`connect()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L23) method:
 
     The `connect()` method sets up the connection.
@@ -144,7 +132,7 @@ Here is a step-by-step guide:
 
 * Implementing the `call_application_api()` method:
 
-    This method makes the API calls.
+    This method makes the API calls. It is **not mandatory** to implement this method, but it can help make the code more reliable and readable.
 
     ```py
     def call_application_api(self, method_name:str = None, params:dict = None) -> DataFrame:
@@ -202,7 +190,7 @@ connection_args_example = OrderedDict(
 
 ### Exporting All Required Variables
 
-This is what should be exported in the `__init__.py` file:
+The following should be exported in the `__init__.py` file of the handler:
 
 - The `Handler` class.
 - The `version` of the handler.
@@ -215,27 +203,58 @@ This is what should be exported in the `__init__.py` file:
 - The `connection_args_example` dictionary with an example of the connection arguments.
 - The `import_error` message that is used if the import of the `Handler` class fails.
 
-Let's look at an example of the `__init__.py` file.
+A few of these variables are defined in another file called `__about__.py`. This file is imported in the `__init__.py` file.
+
+Here is an example of the `__init__.py` file for the [GitHub handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/github_handler).
 
 ```py
-...
-title = 'Twitter'
-version = 0.1
-description = 'Twitter API integration'
-name = 'twitter'
+from mindsdb.integrations.libs.const import HANDLER_TYPE
+
+from .__about__ import __version__ as version, __description__ as description
+
+try:
+    from .github_handler import (
+        GithubHandler as Handler,
+        connection_args_example,
+        connection_args,
+    )
+
+    import_error = None
+except Exception as e:
+    Handler = None
+    import_error = e
+
+title = "GitHub"
+name = "github"
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.png'
+icon_path = "icon.svg"
 
 __all__ = [
-    'Handler', 'version', 'name', 'type', 'title',
-    'description', 'connection_args_example', 'icon_path'
+    "Handler", "version", "name", "type", "title", "description",
+    "import_error", "icon_path", "connection_args_example", "connection_args",
 ]
+```
+
+The `__about__.py` file for the same [GitHub handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/github_handler) contains the following variables:
+
+```py
+__title__ = "MindsDB GitHub handler"
+__package_name__ = "mindsdb_github_handler"
+__version__ = "0.0.1"
+__description__ = "MindsDB handler for GitHub"
+__author__ = "Artem Veremey"
+__github__ = "https://github.com/mindsdb/mindsdb"
+__pypi__ = "https://pypi.org/project/mindsdb/"
+__license__ = "GPL-3.0"
+__copyright__ = "Copyright 2023 - mindsdb"
+
 ```
 
 ## Check out our Application Handlers!
 
 To see some integration handlers that are currently in use, we encourage you to check out the following handlers inside the MindsDB repository:
 
-* [TwitterHandler](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/twitter_handler/twitter_handler.py#L145)
+* [GitHub handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/github_handler) 
+* [TwitterHandler](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/twitter_handler)
 
 And here are [all the handlers available in the MindsDB repository](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers).

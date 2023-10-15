@@ -1,5 +1,6 @@
 from collections import OrderedDict
-from typing import List
+from typing import List, Optional
+from itertools import zip_longest
 
 from qdrant_client import QdrantClient, models
 import pandas as pd
@@ -106,18 +107,24 @@ class QdrantHandler(VectorStoreHandler):
         """
         Insert data into the Qdrant instance.
         """
-
-        # drop columns with all None values
-        data.dropna(axis=1, inplace=True)
+        assert len(data[TableField.ID.value]) == len(data[TableField.EMBEDDINGS.value]), "Number of ids and embeddings must be equal"
 
         data = data.to_dict(orient="list")
-
         payloads = []
-        for (document, metadata) in zip(data[TableField.CONTENT.value], data[TableField.METADATA.value]):
-            payloads.append({
-                document: document,
-                **metadata
-            })
+        content_list = data[TableField.CONTENT.value]
+        metadata_list = data[TableField.METADATA.value]
+
+        for document, metadata in zip_longest(content_list, metadata_list, fillvalue=None):
+            payload = {}
+
+            if document is not None:
+                payload["document"] = document
+
+            if metadata is not None:
+                payload = {**payload, **metadata}
+
+            if payload:
+                payloads.append(payload)
 
         # convert ids to int if numeric else leave as is if string(UUID)
         ids = [int(id) if str(id).isdigit() else id for id in data[TableField.ID.value]]
@@ -144,15 +151,69 @@ class QdrantHandler(VectorStoreHandler):
 
         return Response(resp_type=RESPONSE_TYPE.OK)
 
-    def select(
-        self,
-        table_name: str,
-        columns: List[str] = None,
-        conditions: List[FilterCondition] = None,
-        offset: int = None,
-        limit: int = None,
-    ) -> HandlerResponse:
-        pass
+    def select(self, table_name: str, columns: Optional[List[str]] = None, conditions: Optional[List[FilterCondition]] = None, offset: int = 0, limit: int = 10,) -> HandlerResponse:
+
+        # Constants and defaults
+        DEFAULT_OFFSET = 0
+        DEFAULT_LIMIT = 10
+
+        # Validate and set offset and limit as None is passed if not set in the query
+        offset = offset if offset is not None else DEFAULT_OFFSET
+        limit = limit if limit is not None else DEFAULT_LIMIT
+
+        # Full scroll if no where conditions are specified
+        if not conditions:
+            results = self._client.scroll(table_name, limit=limit, offset=offset)
+            payload = self._process_select_results(results[0], columns)
+            return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=payload)
+
+        # Filter conditions
+        vector_filter = [condition.value for condition in conditions if condition.column == TableField.SEARCH_VECTOR.value]
+        id_filters = [condition.value for condition in conditions if condition.column == TableField.ID.value]
+        query_filters = []
+
+        if id_filters:
+            results = self._client.retrieve(table_name, ids=id_filters)
+        elif vector_filter:
+            results = self._client.search(table_name, query_vector=vector_filter, limit=limit, offset=offset)
+        elif query_filters:
+            raise NotImplementedError("Query scroll is not implemented yet")
+
+        # Process results
+        payload = self._process_select_results(results, columns)
+        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=payload)
+
+    def _process_select_results(self, results, columns):
+        ids, documents, metadata, distances = [], [], [], []
+
+        for result in results:
+            ids.append(result.id)
+            documents.append(result.payload["document"])
+            metadata.append({k: v for k, v in result.payload.items() if k != "document"})
+
+            # Score is only available for similarity search results
+            if "score" in result:
+                distances.append(result.score)
+
+        payload = {
+            TableField.ID.value: ids,
+            TableField.CONTENT.value: documents,
+            TableField.METADATA.value: metadata,
+        }
+
+        # Filter result columns
+        if columns:
+            payload = {
+                column: payload[column]
+                for column in columns
+                if column != TableField.EMBEDDINGS.value and column in payload
+            }
+
+        # If the distance list is empty, don't add it to the result
+        if distances:
+            payload[TableField.DISTANCE.value] = distances
+
+        return pd.DataFrame(payload)
 
 
 connection_args = OrderedDict(

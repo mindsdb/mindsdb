@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import List, Optional
+from typing import Any, List, Optional
 from itertools import zip_longest
 
 from qdrant_client import QdrantClient, models
@@ -12,6 +12,7 @@ from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.integrations.libs.vectordatabase_handler import (
     FilterCondition,
+    FilterOperator,
     TableField,
     VectorStoreHandler,
 )
@@ -143,13 +144,81 @@ class QdrantHandler(VectorStoreHandler):
         try:
             self._client.create_collection(table_name, self.collection_config)
         except ValueError:
-            if not if_not_exists:
+            if if_not_exists is False:
                 return Response(
                     resp_type=RESPONSE_TYPE.ERROR,
                     error_message=f"Table {table_name} already exists!",
                 )
 
         return Response(resp_type=RESPONSE_TYPE.OK)
+
+    def _get_qdrant_filter(self, operator: FilterOperator, value: Any) -> str:
+        mapping = {
+            FilterOperator.EQUAL: {"match": models.MatchValue(value=value)},
+            # "except" being a keyword in Python, we need to use a workaround
+            FilterOperator.NOT_EQUAL: {"match": models.MatchExcept(**{"except": [value]})},
+            FilterOperator.LESS_THAN: {"range": models.Range(lt=value)},
+            FilterOperator.LESS_THAN_OR_EQUAL: {"range": models.Range(lte=value)},
+            FilterOperator.GREATER_THAN: {"range": models.Range(gt=value)},
+            FilterOperator.GREATER_THAN_OR_EQUAL: {"range": models.Range(gte=value)},
+        }
+
+        if operator not in mapping:
+            raise Exception(f"Operator {operator} is not supported by Qdrant!")
+
+        return mapping[operator]
+
+    def _translate_metadata_condition(
+        self, conditions: List[FilterCondition]
+    ) -> Optional[dict]:
+        """
+        Translate a list of FilterCondition objects a dict that can be used by Qdrant.
+        E.g.,
+        [
+            FilterCondition(
+                column="metadata.created_at",
+                op=FilterOperator.LESS_THAN,
+                value=7132423,
+            ),
+            FilterCondition(
+                column="metadata.created_at",
+                op=FilterOperator.GREATER_THAN,
+                value=2323432,
+            )
+        ]
+        -->
+        models.Filter(
+        must=[
+            models.FieldCondition(
+                key="created_at",
+                match=models.Range(lt=7132423),
+            ),
+            models.FieldCondition(
+                key="created_at",
+                match=models.Range(gt=2323432),
+            ),
+          ]
+        )
+        """
+        # we ignore all non-metadata conditions
+        if conditions is None:
+            return None
+        filter_conditions = [
+            condition
+            for condition in conditions
+            if condition.column.startswith(TableField.METADATA.value)
+        ]
+        if len(filter_conditions) == 0:
+            return None
+
+        qdrant_filters = []
+        for condition in filter_conditions:
+            payload_key = condition.column.split(".")[-1]
+            qdrant_filters.append(
+                models.FieldCondition(key=payload_key, **self._get_qdrant_filter(condition.op, condition.value))
+            )
+
+        return models.Filter(must=qdrant_filters)
 
     def select(self, table_name: str, columns: Optional[List[str]] = None, conditions: Optional[List[FilterCondition]] = None, offset: int = 0, limit: int = 10,) -> HandlerResponse:
 

@@ -237,3 +237,53 @@ class TestQdrantHandler(BaseExecutorTest):
             )
         """
         self.run_sql(sql)
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_select_from(self, postgres_handler_mock):
+        df = pd.DataFrame(
+            {
+                "id": [32, 33],
+                "content": ["this is a test", "this is a test"],
+                "metadata": [{"test": "test"}, {"test": "test"}],
+                "embeddings": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]],
+            }
+        )
+        self.set_handler(postgres_handler_mock, "pg", tables={"test_table": df})
+        # create a table
+        sql = """
+            CREATE TABLE qtest.test_table_4 (
+                SELECT * FROM pg.df
+            )
+        """
+        self.run_sql(sql)
+
+        # query a table without any filters
+        sql = """
+            SELECT * FROM qtest.test_table_4
+        """
+        self.run_sql(sql)
+
+        # query a table with id
+        sql = """
+            SELECT * FROM qtest.test_table_4
+            WHERE id = 32
+        """
+        ret = self.run_sql(sql)
+        assert ret.shape[0] == 1
+
+        # query a table with a search vector, without limit
+        sql = """
+            SELECT * FROM qtest.test_table_4
+            WHERE search_vector = '[1.0, 2.0, 3.0]'
+        """
+        ret = self.run_sql(sql)
+        assert ret.shape[0] == 2
+
+        # query a table with a search vector, with limit
+        sql = """
+            SELECT * FROM qtest.test_table_4
+            WHERE search_vector = '[1.0, 2.0, 3.0]'
+            LIMIT 1
+        """
+        ret = self.run_sql(sql)
+        assert ret.shape[0] == 1

@@ -126,7 +126,6 @@ class TripAdvisorHandler(APIHandler):
                 "longitude": loc.get("address_obj").get("longitude"),
             }
             result.append(data)
-
         result = pd.DataFrame(result)
         return result
 
@@ -223,7 +222,6 @@ class TripAdvisorHandler(APIHandler):
                 "subratings": str(loc.get("subratings")),
             }
             result.append(data)
-
         result = pd.DataFrame(result)
         return result
     
@@ -249,7 +247,6 @@ class TripAdvisorHandler(APIHandler):
                 "user": str(loc.get("user")),
             }
             result.append(data)
-
         result = pd.DataFrame(result)
         return result
     
@@ -275,6 +272,5 @@ class TripAdvisorHandler(APIHandler):
                 "address_obj": str(loc.get("address_obj")),
             }
             result.append(data)
-
         result = pd.DataFrame(result)
         return result

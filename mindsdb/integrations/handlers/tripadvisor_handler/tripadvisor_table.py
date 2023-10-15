@@ -327,9 +327,6 @@ class PhotosTable(APITable):
         Returns:
             pandas.DataFrame: A pandas DataFrame containing the selected data.
         """
-
-        tripAdvisor = self.handler.connect()
-
         conditions = extract_comparison_conditions(query.where)
 
         allowed_keys = set(["locationId", "language"])

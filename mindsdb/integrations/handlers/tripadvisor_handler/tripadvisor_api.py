@@ -158,7 +158,7 @@ class TripAdvisorAPI:
         url = url + "{locationId}/photos?language={language}&key={api_key}".format(locationId=locationId, language=language, api_key=self.api_key)
         response = self.getResponse(url)
         return response
-    
+
     def location_nearby_search(self, url: str, params_dict: dict, language: str = "en") -> Response:
         '''
         The Nearby Location Search request returns up to 10 locations found near the given latitude/longtitude.

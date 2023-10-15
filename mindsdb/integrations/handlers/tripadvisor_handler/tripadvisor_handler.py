@@ -224,7 +224,7 @@ class TripAdvisorHandler(APIHandler):
             result.append(data)
         result = pd.DataFrame(result)
         return result
-    
+
     def call_tripadvisor_photos_api(
         self, method_name: str = None, params: dict = None
     ) -> pd.DataFrame:
@@ -249,7 +249,7 @@ class TripAdvisorHandler(APIHandler):
             result.append(data)
         result = pd.DataFrame(result)
         return result
-    
+
     def call_tripadvisor_nearby_location_api(
         self, method_name: str = None, params: dict = None
     ) -> pd.DataFrame:

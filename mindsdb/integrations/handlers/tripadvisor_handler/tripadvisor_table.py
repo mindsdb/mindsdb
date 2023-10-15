@@ -327,6 +327,7 @@ class PhotosTable(APITable):
         Returns:
             pandas.DataFrame: A pandas DataFrame containing the selected data.
         """
+
         conditions = extract_comparison_conditions(query.where)
 
         allowed_keys = set(["locationId", "language"])
@@ -335,7 +336,7 @@ class PhotosTable(APITable):
         filters = []
         for op, arg1, arg2 in conditions:
             if op == "or":
-                raise NotImplementedError(f"OR is not supported")
+                raise NotImplementedError("OR is not supported")
             elif op == "=" and arg1 in allowed_keys:
                 params[arg1] = arg2
             elif op != "=":
@@ -408,8 +409,6 @@ class NearbyLocationTable(APITable):
             pandas.DataFrame: A pandas DataFrame containing the selected data.
         """
 
-        tripAdvisor = self.handler.connect()
-
         conditions = extract_comparison_conditions(query.where)
 
         allowed_keys = set(["latLong", "language", "category", "phone", "address", "radius", "radiusUnit"])
@@ -418,7 +417,7 @@ class NearbyLocationTable(APITable):
         filters = []
         for op, arg1, arg2 in conditions:
             if op == "or":
-                raise NotImplementedError(f"OR is not supported")
+                raise NotImplementedError("OR is not supported")
             elif op == "=" and arg1 in allowed_keys:
                 params[arg1] = arg2
             elif op != "=":

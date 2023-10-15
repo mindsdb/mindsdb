@@ -13,6 +13,7 @@ This handler was implemented using notion-client library, a simple and easy to u
 The required arguments to establish a connection are,
 * `api_token`: API key for acessing the Notion instance.
 
+NOTE: To access any database or page, the `api_token` must be added as it's connection. To add that as a connection, navigate to the page/database settings and add connection and enter the name of the api token integration.
 
 ## Usage
 In order to make use of this handler and connect to an Notion in MindsDB, the following syntax can be used,

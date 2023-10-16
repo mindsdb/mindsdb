@@ -116,7 +116,7 @@ class MLTaskConsumer:
         """ Sleep in thread untill there are free resources. Checks:
             - avg CPU usage is less than 60%
             - current CPU usage is less than 60%
-            - current tasks count is less than (N CPU cores) / 2
+            - current tasks count is less than (N CPU cores) / 8
         """
         config = Config()
         is_cloud = config.get('cloud', False)
@@ -126,7 +126,7 @@ class MLTaskConsumer:
                 time.sleep(1)
             if is_cloud and processes_dir.is_dir():
                 clean_unlinked_process_marks()
-                while (len(list(processes_dir.iterdir())) * 2) >= os.cpu_count():
+                while (len(list(processes_dir.iterdir())) * 8) >= os.cpu_count():
                     time.sleep(1)
                     clean_unlinked_process_marks()
             if (self.get_avg_cpu_usage() > 60 or max(self.cpu_stat[-3:]) > 60) is False:
@@ -150,6 +150,7 @@ class MLTaskConsumer:
             message_id = message[0].decode()
             message_content = message[1]
             self.consumer_group.streams[TASKS_STREAM_NAME].ack(message_id)
+            self.consumer_group.streams[TASKS_STREAM_NAME].delete(message_id)
 
             payload = from_bytes(message_content[b'payload'])
             task_type = ML_TASK_TYPE(message_content[b'task_type'])

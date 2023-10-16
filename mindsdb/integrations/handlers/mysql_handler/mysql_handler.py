@@ -4,7 +4,6 @@ import pandas as pd
 import mysql.connector
 from urllib.parse import urlparse
 from sqlalchemy import create_engine
-from werkzeug.exceptions import HTTPException, BadRequest
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -55,7 +54,8 @@ class MySQLHandler(DatabaseHandler):
         - conection_data is the dictionary parsed from the JSON payload
 
         Exceptions thrown:
-        - BadRequest if data validation rules fail.
+        - ValueError if data validation rules fail with a description as the sole
+        argument
 
         Returns a dictionary with the relevant config info:
         - host
@@ -68,29 +68,24 @@ class MySQLHandler(DatabaseHandler):
         if url:
             urlfields = urlparse(url)
             if urlfields.scheme != 'mysql':
-                raise BadRequest(
-                      description = "If using a URL to connect to MySQL, the URL needs to start with 'mysql://'"
-                      status      = 400
+                raise ValueError(
+                      "If using a URL to connect to MySQL, the URL needs to start with 'mysql://'"
                 )
             if urlfields.username and self.connection_data.get('user'):
-                raise BadRequest(
-                      description = "Cannot specify a user in both the URL and elsewhere"
-                      status      = 400
+                raise ValueError(
+                      "Cannot specify a user in both the URL and elsewhere"
                 )
             if urlfields.username and self.connection_data.get('password'):
-                raise BadRequest(
-                      description = "Cannot specify a password in both the URL and elsewhere"
-                      status      = 400
+                raise ValueError(
+                      "Cannot specify a password in both the URL and elsewhere"
                 )
             if not urlfields.host:
-                raise BadRequest(
-                      description = "Connection URL does not include hostname"
-                      status      = 400
+                raise ValueError(
+                      "Connection URL does not include hostname"
                 )
             if not urlfields.path:
-                raise BadRequest(
-                      description = "Connection URL does not include database"
-                      status      = 400
+                raise ValueError(
+                      "Connection URL does not include database"
                 )
             config = {
                 'host'    : urlfields.host,
@@ -110,23 +105,14 @@ class MySQLHandler(DatabaseHandler):
             }
 
             if not config.get('host'):
-                raise BadRequest(
-                        description = "Must supply a host",
-                        status = 400
-                )
+                raise ValueError("Must supply a host")
             if not config.get('database'):
-                raise BadRequest(
-                        description = "Must supply a database name",
-                        status = 400
-                )
+                raise ValueError("Must supply a database name")
 
         if not config.get('user'):
-            raise BadRequest(description = 'Must supply a user', status = 400)
+            raise ValueError('Must supply a user')
         if not config.get('password'):
-            raise BadRequest(
-                    description = 'Must supply a password for connections',
-                    status = 400
-            )
+            raise ValueError('Must supply a password for connections')
         return config
 
     def connect(self):

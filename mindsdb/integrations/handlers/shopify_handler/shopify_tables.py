@@ -317,6 +317,15 @@ class CustomersTable(APITable):
             customer.save()
             logger.info(f'Customer {customer_id} updated')
 
+    def __init__(self, handler: ShopifyHandler):
+        self.handler = handler
+    def delete_customers(self, customer_ids: List[int]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+        for customer_id in customer_ids:
+            customer = shopify.Customer.find(customer_id)
+            customer.delete()
+            logger.info(f'Customer {customer_id} deleted')
 
 class OrdersTable(APITable):
     """The Shopify Orders Table implementation"""

@@ -1,8 +1,5 @@
-import requests
 from datetime import datetime, timezone
 from typing import Text, List, Dict, Any
-import json
-from requests import Response
 
 from mindsdb.integrations.handlers.sharepoint_handler.utils import (
     bearer_token_request,

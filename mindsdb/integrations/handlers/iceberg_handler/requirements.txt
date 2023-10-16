@@ -1,0 +1,2 @@
+pyiceberg[s3fs,hive]
+psycopg2

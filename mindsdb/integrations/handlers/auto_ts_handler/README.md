@@ -11,10 +11,10 @@ Call this handler with
 
 ### Why is this integration useful? What does the ideal predictive use case for this integration look like? When would you definitely not use this integration?
 This integration is useful for time series data. It will automatically select the best model which gives best score specified. And it integrations with best Time Series 
-libraries like Statsmodels ARIMA, Seasonal ARIMA, Prophet and Scikit-Learn ML.
+libraries like Statsmodels ARIMA, Seasonal ARIMA, Prophet and Scikit-Learn.
 
-The ideal use case is a very large dataset with many predictive features, where the user doesn't have strong priors about how these features may affect the target variable.
-Also as it is Auto ML model accuracy is not guaranteed.
+If there is more than one target variable in your data set, just specify only one for now, and if you know the time interval that is in your data, you can specify it.
+Otherwise it auto-ts will try to infer the time interval on its own
 
 ### Are models created with this integration fast and scalable, in general?
 The model training time is fast and scalable as it uses best Time Series libraries like Statsmodels ARIMA, Seasonal ARIMA, Prophet and Scikit-Learn ML.

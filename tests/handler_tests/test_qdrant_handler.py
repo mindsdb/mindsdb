@@ -388,3 +388,66 @@ class TestQdrantHandler(BaseExecutorTest):
         """
         with pytest.raises(Exception):
             self.run_sql(sql)
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_delete(self, postgres_handler_mock):
+        df = pd.DataFrame(
+            {
+                "id": [1, 2],
+                "content": ["this is a test", "this is a test"],
+                "metadata": [{"test": "test1"}, {"test": "test2"}],
+                "embeddings": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]],
+            }
+        )
+        self.set_handler(postgres_handler_mock, "pg", tables={"test_table": df})
+
+        # create a table
+        sql = """
+            CREATE TABLE qtest.test_table_6 (
+                SELECT * FROM pg.df
+            )
+        """
+        self.run_sql(sql)
+
+        # delete from a table with a metadata filter
+        sql = """
+            DELETE FROM qtest.test_table_6
+            WHERE `metadata.test` = 'test1'
+        """
+        self.run_sql(sql)
+        # check if the data is deleted
+        sql = """
+            SELECT * FROM qtest.test_table_6
+            WHERE `metadata.test` = 'test2'
+        """
+        ret = self.run_sql(sql)
+        assert ret.shape[0] == 1
+
+        # delete by id
+        sql = """
+            DELETE FROM qtest.test_table_6
+            WHERE id = 2
+        """
+        self.run_sql(sql)
+        # check if the data is deleted
+        sql = """
+            SELECT * FROM qtest.test_table_6
+            WHERE id = 2
+        """
+        ret = self.run_sql(sql)
+        assert ret.shape[0] == 0
+
+        # delete from a table with a search vector filter is not allowed
+        sql = """
+            DELETE FROM qtest.test_table_6
+            WHERE search_vector = [1.0, 2.0, 3.0]
+        """
+        with pytest.raises(Exception):
+            self.run_sql(sql)
+
+        # delete from a table without any filters is not allowed
+        sql = """
+            DELETE FROM qtest.test_table_6
+        """
+        with pytest.raises(Exception):
+            self.run_sql(sql)

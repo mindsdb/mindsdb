@@ -220,7 +220,16 @@ class QdrantHandler(VectorStoreHandler):
                 models.FieldCondition(key=payload_key, **self._get_qdrant_filter(condition.op, condition.value))
             )
 
-        return models.Filter(must=qdrant_filters)
+        return models.Filter(must=qdrant_filters) if qdrant_filters else None
+
+    def update(
+        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
+    ) -> HandlerResponse:
+        """
+        Update data in the Qdrant database.
+        TODO: Update for vector DBs has not been implemented
+        """
+        return super().update(table_name, data, columns)
 
     def select(self, table_name: str, columns: Optional[List[str]] = None, conditions: Optional[List[FilterCondition]] = None, offset: int = 0, limit: int = 10,) -> HandlerResponse:
 
@@ -287,14 +296,26 @@ class QdrantHandler(VectorStoreHandler):
 
         return pd.DataFrame(payload)
 
-    def update(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
+    def delete(
+        self, table_name: str, conditions: List[FilterCondition] = None
     ) -> HandlerResponse:
-        """
-        Update data in the Qdrant database.
-        TODO: Update for vector DBs has not been implemented
-        """
-        return super().update(table_name, data, columns)
+        filters = self._translate_filter_conditions(conditions)
+        # get id filters
+        ids = [
+            condition.value
+            for condition in conditions
+            if condition.column == TableField.ID.value
+        ] or None
+
+        if filters is None and ids is None:
+            raise Exception("Delete query must have at least one condition!")
+
+        if ids:
+            self._client.delete(table_name, points_selector=models.PointIdsList(points=ids))
+
+        if filters:
+            self._client.delete(table_name, points_selector=models.FilterSelector(filter=filters))
+        return Response(resp_type=RESPONSE_TYPE.OK)
 
 
 connection_args = OrderedDict(

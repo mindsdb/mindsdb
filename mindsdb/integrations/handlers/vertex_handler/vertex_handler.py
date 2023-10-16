@@ -40,7 +40,9 @@ class VertexHandler(BaseMLEngine):
 
     def predict(self, df, args={}):
         """Predict using the deployed model by calling the endpoint."""
+        if "__mindsdb_row_id" in df.columns:
+            df.drop("__mindsdb_row_id", axis=1, inplace=True)
         predict_args = self.model_storage.json_get("predict_args")
         vertex = VertexClient(PATH_TO_SERVICE_ACCOUNT_JSON, PROJECT_ID)
         results = vertex.predict_from_df(predict_args["endpoint_name"], df)
-        return pd.DataFrame(results.predictions)
+        return pd.DataFrame(results.predictions, columns=["prediction"])

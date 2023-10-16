@@ -65,11 +65,16 @@ class VertexClient:
         endpoint = model.deploy()
         return endpoint
 
-    def predict_from_df(self, endpoint_display_name, df):
+    def predict_from_df(self, endpoint_display_name, df, custom_model=True):
         """Make a prediction from a Pandas dataframe"""
         endpoint = self.get_endpoint_by_display_name(endpoint_display_name)
-        records = df.astype(str).to_dict(orient="records")  # list of dictionaries
+        if custom_model:
+            records = df.values.tolist()
+        else:
+            records = df.astype(str).to_dict(orient="records")  # list of dictionaries
         prediction = endpoint.predict(instances=records)
+        with open("hi.txt", "w") as f:
+            f.write(str(prediction))
         return prediction
 
     def predict_from_csv(self, endpoint_display_name, csv_to_predict):

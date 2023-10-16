@@ -169,7 +169,7 @@ class TestVertex(BaseExecutorTest):
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_simple(self, mock_handler):
         # dataset, string values
-        df = pd.read_csv("tests/unit/ml_handlers/data/vertex_regression.csv")
+        df = pd.read_csv("tests/unit/ml_handlers/data/vertex_anomaly_detection.csv")
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         # create project
@@ -180,10 +180,10 @@ class TestVertex(BaseExecutorTest):
             """
            create model proj.modelx
            from pg (select * from df)
-           predict actual_productivity
+           predict cut
            using
             engine='vertex',
-            model_name='productivity_regression'
+            model_name='diamonds_anomoly_detection'
         """
         )
         self.wait_predictor("proj", "modelx")

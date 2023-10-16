@@ -91,7 +91,7 @@ class SitesTable(APITable):
         return pd.json_normalize(self.get_sites(limit=1)).columns.tolist()
 
     def get_sites(self, **kwargs) -> List[Dict]:
-        if not self.handler.check_connection():
+        if not self.handler.connection.check_connection():
             client = self.handler.connect()
         else:
             client = self.handler.connection
@@ -99,7 +99,7 @@ class SitesTable(APITable):
         return site_data
 
     def update_sites(self, site_ids: list[dict], values_to_update: dict) -> None:
-        if not self.handler.check_connection():
+        if not self.handler.connection.check_connection():
             client = self.handler.connect()
         else:
             client = self.handler.connection
@@ -229,7 +229,7 @@ class ListsTable(APITable):
         self.delete_lists(list_ids)
 
     def get_lists(self, **kwargs) -> List[Dict]:
-        if not self.handler.check_connection():
+        if not self.handler.connection.check_connection():
             client = self.handler.connect()
         else:
             client = self.handler.connection
@@ -237,21 +237,21 @@ class ListsTable(APITable):
         return lists_data
 
     def delete_lists(self, list_ids: list[dict]) -> None:
-        if not self.handler.check_connection():
+        if not self.handler.connection.check_connection():
             client = self.handler.connect()
         else:
             client = self.handler.connection
         client.delete_lists(list_ids)
 
     def update_lists(self, list_ids: list[dict], values_to_update: dict) -> None:
-        if not self.handler.check_connection():
+        if not self.handler.connection.check_connection():
             client = self.handler.connect()
         else:
             client = self.handler.connection
         client.update_lists(list_ids, values_to_update)
 
     def create_lists(self, lists_data: List[Dict[Text, Any]]) -> None:
-        if not self.handler.check_connection():
+        if not self.handler.connection.check_connection():
             client = self.handler.connect()
         else:
             client = self.handler.connection
@@ -261,7 +261,7 @@ class ListsTable(APITable):
         return pd.json_normalize(self.get_lists(limit=1)).columns.tolist()
 
 
-class SharepointColumnsTable(APITable):
+class SiteColumnsTable(APITable):
     def insert(self, query: ast.Insert) -> None:
         """Inserts data into the Sharepoint "POST /columns" API endpoint.
 
@@ -292,8 +292,8 @@ class SharepointColumnsTable(APITable):
             mandatory_columns=["name", "siteId"],
             all_mandatory=False,
         )
-        sharepoint_columns_data = insert_statement_parser.parse_query()
-        self.create_sharepoint_columns(sharepoint_columns_data)
+        site_columns_data = insert_statement_parser.parse_query()
+        self.create_site_columns(site_columns_data)
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """
@@ -315,7 +315,7 @@ class SharepointColumnsTable(APITable):
             If the query contains an unsupported condition
         """
         select_statement_parser = SELECTQueryParser(
-            query, "sharepointColumns", self.get_columns()
+            query, "siteColumns", self.get_columns()
         )
         (
             selected_columns,
@@ -324,18 +324,18 @@ class SharepointColumnsTable(APITable):
             result_limit,
         ) = select_statement_parser.parse_query()
 
-        sharepoint_columns_df = pd.json_normalize(
-            self.get_sharepoint_columns(limit=result_limit)
+        site_columns_df = pd.json_normalize(
+            self.get_site_columns(limit=result_limit)
         )
         select_statement_executor = SELECTQueryExecutor(
-            sharepoint_columns_df,
+            site_columns_df,
             selected_columns,
             where_conditions,
             order_by_conditions,
         )
-        sharepoint_columns_df = select_statement_executor.execute_query()
+        site_columns_df = select_statement_executor.execute_query()
 
-        return sharepoint_columns_df
+        return site_columns_df
 
     def update(self, query: ast.Update) -> None:
         """Updates data in the Sharepoint "PUT /columns" API endpoint.
@@ -357,19 +357,19 @@ class SharepointColumnsTable(APITable):
         update_statement_parser = UPDATEQueryParser(query)
         values_to_update, where_conditions = update_statement_parser.parse_query()
 
-        sharepoint_columns_df = pd.json_normalize(self.get_sharepoint_columns())
+        site_columns_df = pd.json_normalize(self.get_site_columns())
 
         update_query_executor = UPDATEQueryExecutor(
-            sharepoint_columns_df, where_conditions
+            site_columns_df, where_conditions
         )
 
-        sharepoint_columns_df = update_query_executor.execute_query()
+        site_columns_df = update_query_executor.execute_query()
 
-        sharepoint_columns_ids = sharepoint_columns_df[["id", "siteId"]].to_dict(
+        site_columns_ids = site_columns_df[["id", "siteId"]].to_dict(
             orient="records"
         )
 
-        self.update_sharepoint_columns(sharepoint_columns_ids, values_to_update)
+        self.update_site_columns(site_columns_ids, values_to_update)
 
     def delete(self, query: ast.Delete) -> None:
         """
@@ -392,54 +392,54 @@ class SharepointColumnsTable(APITable):
         delete_statement_parser = DELETEQueryParser(query)
         where_conditions = delete_statement_parser.parse_query()
 
-        sharepoint_columns_df = pd.json_normalize(self.get_sharepoint_columns())
+        site_columns_df = pd.json_normalize(self.get_site_columns())
 
         delete_query_executor = DELETEQueryExecutor(
-            sharepoint_columns_df, where_conditions
+            site_columns_df, where_conditions
         )
 
-        sharepoint_columns_df = delete_query_executor.execute_query()
+        site_columns_df = delete_query_executor.execute_query()
 
-        sharepoint_columns_ids = sharepoint_columns_df[["id", "siteId"]].to_dict(
+        site_columns_ids = site_columns_df[["id", "siteId"]].to_dict(
             orient="records"
         )
-        self.delete_sharepoint_columns(sharepoint_columns_ids)
+        self.delete_site_columns(site_columns_ids)
 
-    def get_sharepoint_columns(self, **kwargs) -> List[Dict]:
-        if not self.handler.check_connection():
+    def get_site_columns(self, **kwargs) -> List[Dict]:
+        if not self.handler.connection.check_connection():
             client = self.handler.connect()
         else:
             client = self.handler.connection
-        sharepoint_columns_data = client.get_all_sharepoint_columns(**kwargs)
-        return sharepoint_columns_data
+        site_columns_data = client.get_all_site_columns(**kwargs)
+        return site_columns_data
 
-    def delete_sharepoint_columns(self, sharepoint_column_ids: list[dict]) -> None:
-        if not self.handler.check_connection():
+    def delete_site_columns(self, sharepoint_column_ids: list[dict]) -> None:
+        if not self.handler.connection.check_connection():
             client = self.handler.connect()
         else:
             client = self.handler.connection
-        client.delete_sharepoint_columns(sharepoint_column_ids)
+        client.delete_site_columns(sharepoint_column_ids)
 
-    def update_sharepoint_columns(
+    def update_site_columns(
         self, sharepoint_column_ids: list[dict], values_to_update: dict
     ) -> None:
-        if not self.handler.check_connection():
+        if not self.handler.connection.check_connection():
             client = self.handler.connect()
         else:
             client = self.handler.connection
-        client.update_sharepoint_columns(sharepoint_column_ids, values_to_update)
+        client.update_site_columns(sharepoint_column_ids, values_to_update)
 
-    def create_sharepoint_columns(
+    def create_site_columns(
         self, sharepoint_column_data: List[Dict[Text, Any]]
     ) -> None:
-        if not self.handler.check_connection():
+        if not self.handler.connection.check_connection():
             client = self.handler.connect()
         else:
             client = self.handler.connection
-        client.create_sharepoint_columns(data=sharepoint_column_data)
+        client.create_site_columns(data=sharepoint_column_data)
 
     def get_columns(self) -> List[Text]:
-        return pd.json_normalize(self.get_sharepoint_columns(limit=1)).columns.tolist()
+        return pd.json_normalize(self.get_site_columns(limit=1)).columns.tolist()
 
 
 class ListItemsTable(APITable):
@@ -571,7 +571,7 @@ class ListItemsTable(APITable):
         self.delete_list_items(list_items_ids)
 
     def get_list_items(self, **kwargs) -> List[Dict]:
-        if not self.handler.check_connection():
+        if not self.handler.connection.check_connection():
             client = self.handler.connect()
         else:
             client = self.handler.connection
@@ -579,7 +579,7 @@ class ListItemsTable(APITable):
         return list_items_data
 
     def delete_list_items(self, list_item_ids: list[dict]) -> None:
-        if not self.handler.check_connection():
+        if not self.handler.connnection.check_connection():
             client = self.handler.connect()
         else:
             client = self.handler.connection
@@ -588,14 +588,14 @@ class ListItemsTable(APITable):
     def update_list_items(
         self, list_items_ids: list[dict], values_to_update: dict
     ) -> None:
-        if not self.handler.check_connection():
+        if not self.handler.connection.check_connection():
             client = self.handler.connect()
         else:
             client = self.handler.connection
         client.update_items(item_dict=list_items_ids, values_to_update=values_to_update)
 
     def create_list_items(self, list_items_data: List[Dict[Text, Any]]) -> None:
-        if not self.handler.check_connection():
+        if not self.handler.connection.check_connection():
             client = self.handler.connect()
         else:
             client = self.handler.connection

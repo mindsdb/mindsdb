@@ -6,8 +6,7 @@ from mindsdb.integrations.handlers.sharepoint_handler.sharepoint_api import (
 from mindsdb.integrations.handlers.sharepoint_handler.sharepoint_tables import (
     ListsTable,
     SitesTable,
-    SharepointColumnsTable,
-    ListItemsTable,
+    ListItemsTable, SiteColumnsTable,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
@@ -61,8 +60,8 @@ class SharepointHandler(APIHandler):
         sites_data = SitesTable(self)
         self._register_table("sites", sites_data)
 
-        sharepoint_columns_data = SharepointColumnsTable(self)
-        self._register_table("sharepointColumns", sharepoint_columns_data)
+        site_columns_data = SiteColumnsTable(self)
+        self._register_table("siteColumns", site_columns_data)
 
         list_items_data = ListItemsTable(self)
         self._register_table("listItems", list_items_data)

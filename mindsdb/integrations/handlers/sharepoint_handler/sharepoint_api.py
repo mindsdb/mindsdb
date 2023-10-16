@@ -255,7 +255,7 @@ class SharepointAPI:
         payload["list"] = eval(list_template)
         create_an_entity(url=url, payload=payload, bearer_token=self.bearer_token)
 
-    def get_sharepoint_columns_by_site(
+    def get_site_columns_by_site(
         self, site_id: str, limit: int = None
     ) -> List[Dict[Text, Any]]:
         """
@@ -273,7 +273,7 @@ class SharepointAPI:
             response = response[:limit]
         return response
 
-    def get_all_sharepoint_columns(self, limit: int = None) -> List[Dict[Text, Any]]:
+    def get_all_site_columns(self, limit: int = None) -> List[Dict[Text, Any]]:
         """
         Gets all the columns' information associated with the account
 
@@ -283,19 +283,19 @@ class SharepointAPI:
         response: returns metadata information regarding all the columns that have been made using that account
         """
         sites = self.get_all_sites()
-        sharepoint_columns = []
+        site_columns = []
         for site in sites:
-            for sharepoint_column_dict in self.get_sharepoint_columns_by_site(
+            for sharepoint_column_dict in self.get_site_columns_by_site(
                 site_id=site["id"].split(",")[1]
             ):
                 sharepoint_column_dict["siteName"] = site["name"]
                 sharepoint_column_dict["siteId"] = site["id"].split(",")[1]
-                sharepoint_columns.append(sharepoint_column_dict)
+                site_columns.append(sharepoint_column_dict)
         if limit:
-            sharepoint_columns = sharepoint_columns[:limit]
-        return sharepoint_columns
+            site_columns = site_columns[:limit]
+        return site_columns
 
-    def update_sharepoint_columns(
+    def update_site_columns(
         self,
         sharepoint_column_dict: List[Dict[Text, Text]],
         values_to_update: Dict[Text, Any],
@@ -336,7 +336,7 @@ class SharepointAPI:
             url=url, values_to_update=values_to_update, bearer_token=self.bearer_token
         )
 
-    def delete_sharepoint_columns(self, column_dict: List[Dict[Text, Any]]) -> None:
+    def delete_site_columns(self, column_dict: List[Dict[Text, Any]]) -> None:
         """
         Deletes columns for the given site ID and column ID
 
@@ -347,11 +347,11 @@ class SharepointAPI:
         None
         """
         for column_entry in column_dict:
-            self.delete_a_sharepoint_columns(
+            self.delete_a_site_columns(
                 site_id=column_entry["siteId"], column_id=column_entry["id"]
             )
 
-    def delete_a_sharepoint_columns(self, site_id: str, column_id: str) -> None:
+    def delete_a_site_columns(self, site_id: str, column_id: str) -> None:
         """
         Deletes a column, given its column ID and its site ID
 
@@ -364,7 +364,7 @@ class SharepointAPI:
         url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/columns/{column_id}"
         delete_an_entity(url=url, bearer_token=self.bearer_token)
 
-    def create_sharepoint_columns(self, data: List[Dict[Text, Any]]) -> None:
+    def create_site_columns(self, data: List[Dict[Text, Any]]) -> None:
         """
         Creates columns with the information provided in the data parameter
         calls create_a_sharepoint_column for each entry of column metadata dictionary

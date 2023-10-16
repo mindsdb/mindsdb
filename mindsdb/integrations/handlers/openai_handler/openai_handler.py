@@ -39,6 +39,7 @@ class OpenAIHandler(BaseMLEngine):
         self.all_models = ALL_MODELS
         self.chat_completion_models = CHAT_MODELS
         self.supported_ft_models = FINETUNING_LEGACY_MODELS  # base models compatible with finetuning  # TODO #7387: transition to new endpoint before 4/1/24 # noqa
+        self.ft_cls = openai.FineTune
 
         # user suffix for finetunes, set once
         try:
@@ -574,40 +575,31 @@ class OpenAIHandler(BaseMLEngine):
         ft_params = self._add_extra_ft_params(ft_params, using_args)
 
         start_time = datetime.datetime.now()
-        ft_result = openai.FineTune.create(**{k: v for k, v in ft_params.items() if v is not None})
 
-        @retry_with_exponential_backoff(
-            hour_budget=args.get('hour_budget', 8),
-            errors=(openai.error.RateLimitError, openai.error.OpenAIError))
-        def _check_ft_status(model_id):
-            ft_retrieved = openai.FineTune.retrieve(id=model_id)
-            if ft_retrieved['status'] in ('succeeded', 'failed'):
-                return ft_retrieved
-            else:
-                raise openai.error.OpenAIError('Fine-tuning still pending!')
-
-        ft_stats = _check_ft_status(ft_result.id)
+        ft_stats, result_file_id = self._ft_call(ft_params, args.get('hour_budget', 8))
         ft_model_name = ft_stats['fine_tuned_model']
-
-        if ft_stats['status'] != 'succeeded':
-            raise Exception(f"Fine-tuning did not complete successfully (status: {ft_stats['status']}). Error message: {ft_stats['events'][-1]['message']}")  # noqa
 
         end_time = datetime.datetime.now()
         runtime = end_time - start_time
-
-        result_file_id = openai.FineTune.retrieve(id=ft_result.id)['result_files'][0].id
         name_extension = openai.File.retrieve(id=result_file_id).filename
         result_path = f'{temp_storage_path}/ft_{finetune_time}_result_{name_extension}'
         with open(result_path, 'wb') as f:
             f.write(openai.File.download(id=result_file_id))
 
-        train_stats = pd.read_csv(result_path)
-        if 'validation_token_accuracy' in train_stats.columns:
-            train_stats = train_stats[train_stats['validation_token_accuracy'].notnull()]
+        if '.csv' in name_extension:
+            # legacy endpoint
+            train_stats = pd.read_csv(result_path)
+            if 'validation_token_accuracy' in train_stats.columns:
+                train_stats = train_stats[train_stats['validation_token_accuracy'].notnull()]
+            args['ft_api_info'] = ft_stats.to_dict_recursive()
+            args['ft_result_stats'] = train_stats.to_dict()
+
+        elif '.json' in name_extension:
+            train_stats = pd.read_json(path_or_buf=result_path, lines=True)  # new endpoint
+            args['ft_api_info'] = train_stats
+            args['ft_result_stats'] = train_stats.to_dict()
 
         args['model_name'] = ft_model_name
-        args['ft_api_info'] = ft_stats.to_dict_recursive()
-        args['ft_result_stats'] = train_stats.to_dict()
         args['runtime'] = runtime.total_seconds()
         args['mode'] = self.base_model_storage.json_get('args').get('mode', self.default_mode)
 
@@ -662,3 +654,33 @@ class OpenAIHandler(BaseMLEngine):
             'classification_betas': using_args.get('classification_betas', None),
         }
         return {**ft_params, **extra_params}
+
+    def _ft_call(self, ft_params, hour_budget):
+        """
+            Separate method to account for both legacy and new endpoints.
+            Currently, `OpenAIHandler` uses the legacy endpoint.
+            Others, like `AnyscaleEndpointsHandler`, use the new endpoint.
+        """
+        ft_result = self.ft_cls.create(**{k: v for k, v in ft_params.items() if v is not None})
+
+        @retry_with_exponential_backoff(
+            hour_budget=hour_budget,
+            errors=(openai.error.RateLimitError, openai.error.OpenAIError))
+        def _check_ft_status(model_id):
+            ft_retrieved = self.ft_cls.retrieve(id=model_id)
+            if ft_retrieved['status'] in ('succeeded', 'failed', 'cancelled'):
+                return ft_retrieved
+            else:
+                raise openai.error.OpenAIError('Fine-tuning still pending!')
+
+        ft_stats = _check_ft_status(ft_result.id)
+
+        if ft_stats['status'] != 'succeeded':
+            raise Exception(
+                f"Fine-tuning did not complete successfully (status: {ft_stats['status']}). Error message: {ft_stats['events'][-1]['message']}")  # noqa
+
+        result_file_id = self.ft_cls.retrieve(id=ft_result.id)['result_files'][0]
+        if hasattr(result_file_id, 'id'):
+            result_file_id = result_file_id.id  # legacy endpoint
+
+        return ft_stats, result_file_id

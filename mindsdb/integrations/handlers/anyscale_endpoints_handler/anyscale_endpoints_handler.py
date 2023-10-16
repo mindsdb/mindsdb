@@ -1,11 +1,13 @@
 import os
 import json
+import openai
 import contextlib
 from typing import Optional, Dict
 
 import pandas as pd
 
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
+from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff
 from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE
 
 
@@ -33,6 +35,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         self.rate_limit = 25  # requests per minute
         self.max_batch_size = 20
         self.default_max_tokens = 100
+        self.ft_cls = openai.FineTuningJob  # non-legacy finetuning endpoint
 
     @staticmethod
     @contextlib.contextmanager
@@ -120,13 +123,15 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     @staticmethod
     def _add_extra_ft_params(ft_params, using_args):
-        extra_params = {
-            'hyperparameters': {
-                'n_epochs': using_args.get('n_epochs', None),
-                'context_length': using_args.get('context_length', None),
-            }
-        }
-        return {**ft_params, **extra_params}
+        hyperparameters = {}
+        # we populate separately because keys with `None` break the API
+        for key in ('n_epochs', 'context_length'):
+            if using_args.get(key, None):
+                hyperparameters[key] = using_args[key]
+        if hyperparameters:
+            return {**ft_params, **{'hyperparameters': hyperparameters}}
+        else:
+            return ft_params
 
     @staticmethod
     def _validate_jsonl(jsonl_path):

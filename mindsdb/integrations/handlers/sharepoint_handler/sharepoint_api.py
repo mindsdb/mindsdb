@@ -285,40 +285,40 @@ class SharepointAPI:
         sites = self.get_all_sites()
         site_columns = []
         for site in sites:
-            for sharepoint_column_dict in self.get_site_columns_by_site(
+            for site_column_dict in self.get_site_columns_by_site(
                 site_id=site["id"].split(",")[1]
             ):
-                sharepoint_column_dict["siteName"] = site["name"]
-                sharepoint_column_dict["siteId"] = site["id"].split(",")[1]
-                site_columns.append(sharepoint_column_dict)
+                site_column_dict["siteName"] = site["name"]
+                site_column_dict["siteId"] = site["id"].split(",")[1]
+                site_columns.append(site_column_dict)
         if limit:
             site_columns = site_columns[:limit]
         return site_columns
 
     def update_site_columns(
         self,
-        sharepoint_column_dict: List[Dict[Text, Text]],
+        site_column_dict: List[Dict[Text, Text]],
         values_to_update: Dict[Text, Any],
     ) -> None:
         """
-        Updates the given columns (sharepoint_column_dict) with the provided values (values_to_update)
-        Calls the function update_a_sharepoint_column for every column
+        Updates the given columns (site_column_dict) with the provided values (values_to_update)
+        Calls the function update_a_site_column for every column
 
-        sharepoint_column_dict: A dictionary containing ids of the column which are to be updated and
+        site_column_dict: A dictionary containing ids of the column which are to be updated and
         also their site IDs
         values_to_update: a dictionary which will be used to update the fields of the columns
 
         Returns
         None
         """
-        for sharepoint_column_entry in sharepoint_column_dict:
-            self.update_a_sharepoint_column(
-                site_id=sharepoint_column_entry["siteId"],
-                column_id=sharepoint_column_entry["id"],
+        for site_column_entry in site_column_dict:
+            self.update_a_site_column(
+                site_id=site_column_entry["siteId"],
+                column_id=site_column_entry["id"],
                 values_to_update=values_to_update,
             )
 
-    def update_a_sharepoint_column(
+    def update_a_site_column(
         self, site_id: str, column_id: str, values_to_update: Dict[Text, Any]
     ):
         """
@@ -367,7 +367,7 @@ class SharepointAPI:
     def create_site_columns(self, data: List[Dict[Text, Any]]) -> None:
         """
         Creates columns with the information provided in the data parameter
-        calls create_a_sharepoint_column for each entry of column metadata dictionary
+        calls create_a_site_column for each entry of column metadata dictionary
 
         data: parameter which contains information such as the site IDs where the columns would be created
         and their metadata information which will be used to create them
@@ -376,7 +376,7 @@ class SharepointAPI:
         None
         """
         for entry in data:
-            self.create_a_sharepoint_column(
+            self.create_a_site_column(
                 site_id=entry["siteId"],
                 enforce_unique_values=entry.get("enforceUniqueValues"),
                 hidden=entry.get("hidden"),
@@ -385,7 +385,7 @@ class SharepointAPI:
                 text=entry.get("text"),
             )
 
-    def create_a_sharepoint_column(
+    def create_a_site_column(
         self,
         site_id: str,
         enforce_unique_values: bool,

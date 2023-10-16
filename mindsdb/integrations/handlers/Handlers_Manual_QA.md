@@ -19,5 +19,7 @@ QuestDB ML Integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Te
 </br>
 Writer.ai Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Writerai-Handler/Writer_QA.md
 </br>
+Cohere Handler Test passed: https://github.com/hridaya423/HacktoberfestMindsDBTesting/blob/master/Cohere_ML._QA.md
+</br>
 Apache Pinot data integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/PinotDB/Apache_Pinot_QA.md
 </br>

@@ -6,4 +6,3 @@ __uri__ = "https://github.com/mindsdb/mindsdb"
 __author__ = "Craig Carlos"
 __email__ = 'craigcarlos95@gmail.com'
 __license__ = "MIT License"
-

@@ -434,7 +434,7 @@ class SharepointAPI:
         Returns
         response: metadata information/ fields corresponding to list-items of the site
         """
-        url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items/"
+        url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items?expand=fields&select=*"
         response = get_an_entity(url=url, bearer_token=self.bearer_token)
         if limit:
             response = response[:limit]

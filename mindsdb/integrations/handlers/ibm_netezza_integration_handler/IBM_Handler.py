@@ -13,6 +13,8 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from some_module import AccessDialect
+
 
 class IBMNetezzaHandler(DatabaseHandler):
     """

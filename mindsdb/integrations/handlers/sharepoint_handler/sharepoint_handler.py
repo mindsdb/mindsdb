@@ -97,8 +97,7 @@ class SharepointHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            _ = self.connect()
-            response.success = True
+            response.success = self.connection.check_connection()
         except Exception as e:
             log.logger.error("Error connecting to Sharepoint! " + str(e))
             response.error_message = str(e)

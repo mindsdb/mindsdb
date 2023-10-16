@@ -41,7 +41,7 @@ class SitesTable(APITable):
         ValueError
             If the query contains an unsupported condition
         """
-        select_statement_parser = SELECTQueryParser(query, "tables", self.get_columns())
+        select_statement_parser = SELECTQueryParser(query, "sites", self.get_columns())
         (
             selected_columns,
             where_conditions,
@@ -57,6 +57,37 @@ class SitesTable(APITable):
 
         return sites_df
 
+    def update(self, query: ast.Update) -> None:
+        """Updates data in the Sharepoint "PUT /lists" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Update
+           Given SQL UPDATE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        update_statement_parser = UPDATEQueryParser(query)
+        values_to_update, where_conditions = update_statement_parser.parse_query()
+
+        sites_df = pd.json_normalize(self.get_sites())
+
+        update_query_executor = UPDATEQueryExecutor(sites_df, where_conditions)
+
+        sites_df = update_query_executor.execute_query()
+
+        sites_ids = sites_df[["siteId"]].to_dict(orient="records")
+
+        self.update_sites(sites_ids, values_to_update)
+
+
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_sites(limit=1)).columns.tolist()
 
@@ -67,6 +98,13 @@ class SitesTable(APITable):
             client = self.handler.connection
         site_data = client.get_all_sites(**kwargs)
         return site_data
+
+    def update_lists(self, site_ids: list[dict], values_to_update: dict) -> None:
+        if not self.handler.check_connection():
+            client = self.handler.connect()
+        else:
+            client = self.handler.connection
+        client.update_sites(site_ids, values_to_update)
 
 
 class ListsTable(APITable):

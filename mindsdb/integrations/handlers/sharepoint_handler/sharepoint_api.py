@@ -88,6 +88,30 @@ class SharepointAPI:
 
         return response
 
+    def update_sites(
+        self, site_dict: List[Dict[Text, Text]], values_to_update: Dict[Text, Any]
+    ) -> None:
+        for site_entry in site_dict:
+            self.update_a_site(
+                site_id=site_entry["siteId"],
+                values_to_update=values_to_update,
+            )
+
+    def update_a_site(
+        self, site_id: str, values_to_update: Dict[Text, Any]
+    ) -> None:
+        url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/"
+        payload = values_to_update
+        payload = json.dumps(payload, indent=2)
+        headers = {
+            "Authorization": f"Bearer {self.bearer_token}",
+            "Content-Type": "application/json",
+        }
+        self.getresponse(
+            request_type="PATCH", url=url, headers=headers, payload=payload, files=[]
+        )
+
+
     def get_lists_by_site(
         self, site_id: str, limit: int = None
     ) -> List[Dict[Text, Any]]:

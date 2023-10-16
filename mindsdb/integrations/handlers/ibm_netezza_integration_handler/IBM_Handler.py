@@ -93,7 +93,7 @@ class IBMNetezzaHandler(DatabaseHandler):
             log.logger.error(f'Error connecting to IBM Netezza: {str(e)}')
             response.error_message = str(e)
         finally:
-            if response.success and need_to close:
+            if response.success and need_to_close:
                 self.disconnect()
             if not response.success and self.is_connected:
                 self.is_connected = False

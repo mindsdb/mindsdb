@@ -87,7 +87,6 @@ class SitesTable(APITable):
 
         self.update_sites(sites_ids, values_to_update)
 
-
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_sites(limit=1)).columns.tolist()
 

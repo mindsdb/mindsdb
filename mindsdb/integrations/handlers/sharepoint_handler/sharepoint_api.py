@@ -97,9 +97,7 @@ class SharepointAPI:
                 values_to_update=values_to_update,
             )
 
-    def update_a_site(
-        self, site_id: str, values_to_update: Dict[Text, Any]
-    ) -> None:
+    def update_a_site(self, site_id: str, values_to_update: Dict[Text, Any]) -> None:
         url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/"
         payload = values_to_update
         payload = json.dumps(payload, indent=2)
@@ -110,7 +108,6 @@ class SharepointAPI:
         self.getresponse(
             request_type="PATCH", url=url, headers=headers, payload=payload, files=[]
         )
-
 
     def get_lists_by_site(
         self, site_id: str, limit: int = None

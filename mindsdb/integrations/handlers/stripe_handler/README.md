@@ -82,6 +82,7 @@ PARAMETERS = {
 
 Use the established connection to query your database:
 
+### Querying the Customer Data
 ~~~~sql
 SELECT * FROM stripe_datasource.customers
 ~~~~
@@ -91,6 +92,21 @@ Run more advanced queries:
 ~~~~sql
 SELECT  name, email
 FROM stripe_datasource.customers
+WHERE currency = 'inr'
+ORDER BY name
+LIMIT 5
+~~~~
+
+### Querying the Refund data
+~~~~sql
+SELECT * FROM stripe_datasource.refunds
+~~~~
+
+Run more advanced queries:
+
+~~~~sql
+SELECT  name, email
+FROM stripe_datasource.refunds
 WHERE currency = 'inr'
 ORDER BY name
 LIMIT 5

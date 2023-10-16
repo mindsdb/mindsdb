@@ -23,3 +23,5 @@ Cohere Handler Test passed: https://github.com/hridaya423/HacktoberfestMindsDBTe
 </br>
 Apache Pinot data integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/PinotDB/Apache_Pinot_QA.md
 </br>
+Microsoft Teams Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/MsTeams/Microsoft_Teams_QA.md
+</br>

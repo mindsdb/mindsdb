@@ -152,45 +152,63 @@ def test_get_file_path_with_url(mock_fetch_url):
     mock_fetch_url.assert_called_with(mock_url)
 
 
-class TestHandleSource:
-    def test_handle_source_csv(self, csv_file):
-        df, col_map = FileHandler._handle_source(csv_file)
-        assert isinstance(df, pandas.DataFrame)
-        assert len(df) >= 0
-        assert df.columns.tolist() == ["col_one", "col_two", "col_three", "col_four"]
-
-    def test_handle_source_xlsx(self, xlsx_file):
-        df, col_map = FileHandler._handle_source(xlsx_file)
-        assert isinstance(df, pandas.DataFrame)
-        assert len(df) >= 0
-        assert df.columns.tolist() == ["col_one", "col_two", "col_three", "col_four"]
-
-    def test_handle_source_json(self, json_file):
-        df, col_map = FileHandler._handle_source(json_file)
-        assert isinstance(df, pandas.DataFrame)
-        assert len(df) >= 0  # Assuming the JSON file contains 2 records
-        assert df.columns.tolist() == ["col_one", "col_two", "col_three", "col_four"]
-
-    # TODO: not finished
-    def test_handle_source_parquet(self, parquet_file):
-        df, col_map = FileHandler._handle_source(parquet_file)
-        assert isinstance(df, pandas.DataFrame)
-        # Add assertions specific to the Parquet file format
+@pytest.mark.parametrize(
+    "file_path",
+    [
+        lazy_fixture("csv_file"),
+        lazy_fixture("xlsx_file"),
+        lazy_fixture("json_file"),
+        lazy_fixture("parquet_file"),
+    ],
+)
+def test_handle_source(file_path):
+    df, col_map = FileHandler._handle_source(file_path)
+    assert isinstance(df, pandas.DataFrame)
+    assert len(df) >= 0
+    assert df.columns.tolist() == test_file_content[0]
 
 
-def test_check_valid_dialect_coma(csv_file_path: str):
-    with open(csv_file_path, "rb") as csv_file:
-        csv_data = csv_file.read()
-    # Create a file-like object from the bytes data
-    csv_data_filelike = io.BytesIO(csv_data)
-    dialect = FileHandler._get_csv_dialect(csv_data_filelike)
-    assert dialect.delimiter == ","
+@pytest.mark.parametrize(
+    "csv_string,delimiter",
+    [
+        (StringIO("example,csv,file"), ","),
+        (StringIO("example;csv;file"), ";"),
+        (StringIO("example\tcsv\tfile"), "\t"),
+    ],
+)
+def test_check_valid_dialects(csv_string, delimiter):
+    dialect = FileHandler._get_csv_dialect(csv_string)
+    assert dialect.delimiter == delimiter
 
 
-def test_get_data_io_csv(csv_file_path: str):
-    data_io, file_format, dialect = FileHandler._get_data_io(csv_file_path)
-    assert file_format == "csv"
-    assert dialect is not None
+def test_check_invalid_dialects():
+    with pytest.raises(Exception):
+        FileHandler._get_csv_dialect("example csv file")
+    with pytest.raises(Exception):
+        FileHandler._get_csv_dialect("example\ncsv\nfile")
+    with pytest.raises(Exception):
+        FileHandler._get_csv_dialect("example|csv|file")
+
+
+@pytest.mark.parametrize(
+    "file_path,expected_file_type,expected_delimiter,expected_data_type",
+    [
+        (lazy_fixture("csv_file"), "csv", ",", StringIO),
+        (lazy_fixture("xlsx_file"), "xlsx", None, BytesIO),
+        (lazy_fixture("json_file"), "json", None, StringIO),
+        (lazy_fixture("parquet_file"), "parquet", None, BytesIO),
+    ],
+)
+def test_get_data_io_csv(
+    file_path, expected_file_type, expected_delimiter, expected_data_type
+):
+    data_io, file_type, file_dialect = FileHandler._get_data_io(file_path)
+    assert file_type == expected_file_type
+    assert type(data_io) == expected_data_type
+    if expected_delimiter is None:
+        assert file_dialect is None
+    else:
+        assert file_dialect.delimiter == expected_delimiter
 
 
 def test_query_drop(monkeypatch):

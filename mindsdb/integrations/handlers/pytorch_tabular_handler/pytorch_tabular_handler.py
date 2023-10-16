@@ -39,12 +39,19 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
         train_data = df
+        args = args["using"]
         categorical_columns = args.get('categorical_cols', None)
-        if categorical_columns is not None:
-            categorical_columns = ast.literal_eval(categorical_columns)
         continuous_columns = args.get('continuous_cols', None)
-        if continuous_columns is not None:
+
+        # If string, convert to list
+        # TODO: Automate this using mindsdb.type_infer
+        if categorical_columns is not None and isinstance(categorical_columns, str):
+            categorical_columns = ast.literal_eval(categorical_columns)
+        if continuous_columns is not None and isinstance(continuous_columns, str):
             continuous_columns = ast.literal_eval(continuous_columns)
+
+        print(categorical_columns)
+        print(continuous_columns)
         dropout = float(args.get('drop_out', 0.0))
         epochs = int(args.get('epochs', 3))
         batch_size = args.get('batch_size', 32)
@@ -85,10 +92,10 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
 
         # Save the trained model
         self.model_storage.json_set('args', args)
-        self.model_storage.file_set('model.pt', dill.dumps(tabular_model))
+        self.model_storage.file_set('model', dill.dumps(tabular_model))
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
-        tabular_model = torch.load(self.model_storage.file_get('model'))
+        tabular_model = dill.load(self.model_storage.file_get('model'))
         predictions = tabular_model.predict(df)
         return predictions
 

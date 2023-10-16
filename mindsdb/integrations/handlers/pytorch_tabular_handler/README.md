@@ -28,7 +28,7 @@ Currently the handler is able to handle all the parameters available [here](http
 ```
 CREATE MODEL mindsdb.housing_tabular
 FROM files (
-SELECT FROM California Housing
+SELECT FROM California_Housing
 )
 PREDICT median_house_value
 USING
@@ -36,10 +36,10 @@ USING
     target = 'medain_house_value',
     initialization = 'xavier',
     task='regression',
-    continuous_cols='["longitude", "latitude", "housing_median_age", "total_rooms", "total_bedrooms", "population", "households", "median income"]
-    categorical_cols = "["ocean_proximity"]",
-    epochs = '5',
-    batch_size = '32'
+    continuous_cols=["longitude", "latitude", "housing_median_age", "total_rooms", "total_bedrooms", "population", "households", "median income"],
+    categorical_cols = ["ocean_proximity"],
+    epochs = 5,
+    batch_size = 32
 ```
 
 # Does this integration offer model explainability or insights via the DESCRIBE syntax?
@@ -57,7 +57,7 @@ In the below example we use the famous California Housing dataset to predict the
 ```
 CREATE MODEL mindsdb.housing_tabular
 FROM files (
-SELECT FROM California Housing
+SELECT FROM California_Housing
 )
 PREDICT median_house_value
 USING
@@ -65,10 +65,10 @@ USING
     target = 'medain_house_value',
     initialization = 'xavier',
     task='regression',
-    continuous_cols='["longitude", "latitude", "housing_median_age", "total_rooms", "total_bedrooms", "population", "households", "median income"]
-    categorical_cols = "["ocean_proximity"]",
-    epochs = '5',
-    batch_size = '32'
+    continuous_cols=["longitude", "latitude", "housing_median_age", "total_rooms", "total_bedrooms", "population", "households", "median income"],
+    categorical_cols = ["ocean_proximity"],
+    epochs = 5,
+    batch_size = 32cd 
 ```
 
 Get predictions from the handler

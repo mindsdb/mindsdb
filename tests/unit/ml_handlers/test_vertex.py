@@ -181,7 +181,7 @@ class TestVertex(BaseExecutorTest):
            create model proj.modelx
            from pg (select * from df)
            predict actual_productivity
-           using 
+           using
             engine='vertex',
             model_name='productivity_regression'
         """
@@ -192,7 +192,7 @@ class TestVertex(BaseExecutorTest):
         ret = self.run_sql(
             """
            SELECT p.*
-           FROM pg.df as t 
+           FROM pg.df as t
            JOIN proj.modelx as p
         """
         )

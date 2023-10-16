@@ -14,7 +14,7 @@ except ImportError:
     QDRANT_INSTALLED = False
 
 
-# @pytest.mark.skipif(not QDRANT_INSTALLED, reason="qdrant handler is not installed")
+@pytest.mark.skipif(not QDRANT_INSTALLED, reason="qdrant handler is not installed")
 class TestQdrantHandler(BaseExecutorTest):
     def run_sql(self, sql):
         ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))

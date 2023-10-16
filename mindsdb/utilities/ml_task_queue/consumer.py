@@ -150,6 +150,7 @@ class MLTaskConsumer:
             message_id = message[0].decode()
             message_content = message[1]
             self.consumer_group.streams[TASKS_STREAM_NAME].ack(message_id)
+            self.consumer_group.streams[TASKS_STREAM_NAME].delete(message_id)
 
             payload = from_bytes(message_content[b'payload'])
             task_type = ML_TASK_TYPE(message_content[b'task_type'])

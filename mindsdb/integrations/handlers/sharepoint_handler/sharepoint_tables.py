@@ -98,7 +98,7 @@ class SitesTable(APITable):
         site_data = client.get_all_sites(**kwargs)
         return site_data
 
-    def update_lists(self, site_ids: list[dict], values_to_update: dict) -> None:
+    def update_sites(self, site_ids: list[dict], values_to_update: dict) -> None:
         if not self.handler.check_connection():
             client = self.handler.connect()
         else:

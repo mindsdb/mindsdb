@@ -205,7 +205,7 @@ class NPMOptionalDependenciesTable(CustomAPITable):
             ["optionalDependencies"]
         )
         records = [{"optional_dependency": d, "version": v} for d, v in metadata["optionalDependencies"].items()]
-        df = pd.DataFrame.from_records(records)
+        df =  pd.DataFrame.from_records(records)
         return self.apply_query_params(df, query)
 
 

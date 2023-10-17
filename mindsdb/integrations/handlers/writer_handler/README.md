@@ -50,7 +50,7 @@ Supported query parameters for USING syntax are as follows:
 - `max_tokens` - this is the maximum number of tokens that generated output will be, the default is 1024
 - `temperature` - this is the temperature that is used to generate the output, the default is 0.0
 - `top_p` - this is the top p that is used to generate the output, the default is 1
-- `stop` - used to stop generating tokens after these are generated, the default is an empty list
+- `stop` - Sequences when completion generation will stop, the default is an empty list
 - `best_of` - this is the number of best of that are used to generate the output, the default is 5
 - `verbose` - this is a boolean that determines if the output is verbose, the default is False
 

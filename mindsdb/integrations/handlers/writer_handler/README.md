@@ -64,7 +64,7 @@ Supported query parameters for USING syntax are as follows:
 - `n_rows_evaluation` - this is the number of rows that are used to evaluate the model, the default is None, which means all rows are used
 - `retriever_match_threshold` - this is the threshold that is used to determine if the retriever has found a match, the default is 0.7
 - `generator_match_threshold` - this is the threshold that is used to determine if the generator has found a match, the default is 0.8
-- `evaluate_dataset` - this is the dataset that is used to evaluate the model, the default is None, which means the model is not evaluated
+- `evaluate_dataset` - this is the dataset that is used to evaluate the model, the default is 'squad_v2_val_100_sample'
 - `run_embeddings` - this is a boolean that determines if the embeddings are run, the default is True
 - `external_index_name` - this is the name of the external index that is used to store the embeddings, the default is None, which means a new index is created
 - `top_k` - this is the number of results that are returned from the retriever, the default is 4

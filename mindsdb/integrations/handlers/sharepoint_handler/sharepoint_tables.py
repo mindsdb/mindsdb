@@ -91,7 +91,7 @@ class SitesTable(APITable):
         return pd.json_normalize(self.get_sites(limit=1)).columns.tolist()
 
     def get_sites(self, **kwargs) -> List[Dict]:
-        if not self.handler.connection.check_connection():
+        if not self.handler.connection.check_bearer_token_validity():
             client = self.handler.connect()
         else:
             client = self.handler.connection
@@ -99,7 +99,7 @@ class SitesTable(APITable):
         return site_data
 
     def update_sites(self, site_ids: list[dict], values_to_update: dict) -> None:
-        if not self.handler.connection.check_connection():
+        if not self.handler.connection.check_bearer_token_validity():
             client = self.handler.connect()
         else:
             client = self.handler.connection
@@ -229,7 +229,7 @@ class ListsTable(APITable):
         self.delete_lists(list_ids)
 
     def get_lists(self, **kwargs) -> List[Dict]:
-        if not self.handler.connection.check_connection():
+        if not self.handler.connection.check_bearer_token_validity():
             client = self.handler.connect()
         else:
             client = self.handler.connection
@@ -237,21 +237,21 @@ class ListsTable(APITable):
         return lists_data
 
     def delete_lists(self, list_ids: list[dict]) -> None:
-        if not self.handler.connection.check_connection():
+        if not self.handler.connection.check_bearer_token_validity():
             client = self.handler.connect()
         else:
             client = self.handler.connection
         client.delete_lists(list_ids)
 
     def update_lists(self, list_ids: list[dict], values_to_update: dict) -> None:
-        if not self.handler.connection.check_connection():
+        if not self.handler.connection.check_bearer_token_validity():
             client = self.handler.connect()
         else:
             client = self.handler.connection
         client.update_lists(list_ids, values_to_update)
 
     def create_lists(self, lists_data: List[Dict[Text, Any]]) -> None:
-        if not self.handler.connection.check_connection():
+        if not self.handler.connection.check_bearer_token_validity():
             client = self.handler.connect()
         else:
             client = self.handler.connection
@@ -406,7 +406,7 @@ class SiteColumnsTable(APITable):
         self.delete_site_columns(site_columns_ids)
 
     def get_site_columns(self, **kwargs) -> List[Dict]:
-        if not self.handler.connection.check_connection():
+        if not self.handler.connection.check_bearer_token_validity():
             client = self.handler.connect()
         else:
             client = self.handler.connection
@@ -414,7 +414,7 @@ class SiteColumnsTable(APITable):
         return site_columns_data
 
     def delete_site_columns(self, sharepoint_column_ids: list[dict]) -> None:
-        if not self.handler.connection.check_connection():
+        if not self.handler.connection.check_bearer_token_validity():
             client = self.handler.connect()
         else:
             client = self.handler.connection
@@ -423,7 +423,7 @@ class SiteColumnsTable(APITable):
     def update_site_columns(
         self, sharepoint_column_ids: list[dict], values_to_update: dict
     ) -> None:
-        if not self.handler.connection.check_connection():
+        if not self.handler.connection.check_bearer_token_validity():
             client = self.handler.connect()
         else:
             client = self.handler.connection
@@ -432,7 +432,7 @@ class SiteColumnsTable(APITable):
     def create_site_columns(
         self, sharepoint_column_data: List[Dict[Text, Any]]
     ) -> None:
-        if not self.handler.connection.check_connection():
+        if not self.handler.connection.check_bearer_token_validity():
             client = self.handler.connect()
         else:
             client = self.handler.connection
@@ -571,7 +571,7 @@ class ListItemsTable(APITable):
         self.delete_list_items(list_items_ids)
 
     def get_list_items(self, **kwargs) -> List[Dict]:
-        if not self.handler.connection.check_connection():
+        if not self.handler.connection.check_bearer_token_validity():
             client = self.handler.connect()
         else:
             client = self.handler.connection
@@ -588,14 +588,14 @@ class ListItemsTable(APITable):
     def update_list_items(
         self, list_items_ids: list[dict], values_to_update: dict
     ) -> None:
-        if not self.handler.connection.check_connection():
+        if not self.handler.connection.check_bearer_token_validity():
             client = self.handler.connect()
         else:
             client = self.handler.connection
         client.update_items(item_dict=list_items_ids, values_to_update=values_to_update)
 
     def create_list_items(self, list_items_data: List[Dict[Text, Any]]) -> None:
-        if not self.handler.connection.check_connection():
+        if not self.handler.connection.check_bearer_token_validity():
             client = self.handler.connect()
         else:
             client = self.handler.connection

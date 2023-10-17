@@ -37,7 +37,7 @@ class SharepointAPI:
         self.expiration_time = int(response["expires_on"])
         self.is_connected = True
 
-    def check_connection(self) -> bool:
+    def check_bearer_token_validity(self) -> bool:
         """
         Provides information whether a valid bearer token is available or not. Returns true if available
         otherwise false

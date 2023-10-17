@@ -357,6 +357,36 @@ class OrdersTable(APITable):
 
         return orders_df
 
+    def update(self, query: ast.Update) -> None:
+        """Updates data in the Shopify "PUT /orders" API endpoint.
+        
+        Parameters
+        ----------
+        query : ast.Update
+           Given SQL UPDATE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        update_statement_parser = UPDATEQueryParser(query)
+        values_to_update, where_conditions = update_statement_parser.parse_query()
+
+        orders_df = pd.json_normalize(self.get_orders())
+        update_query_executor = UPDATEQueryExecutor(
+            orders_df,
+            where_conditions
+        )
+
+        orders_df = update_query_executor.execute_query()
+        order_ids = orders_df['id'].tolist()
+        self.update_products(order_ids, values_to_update)
+
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_orders(limit=1)).columns.tolist()
 

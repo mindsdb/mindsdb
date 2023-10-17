@@ -1,0 +1,1 @@
+pinecone-client

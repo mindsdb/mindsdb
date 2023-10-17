@@ -84,7 +84,7 @@ class InvoicesTable(APITable):
         return [invoice.to_dict() for invoice in invoices['invoices']]
 
 #The task is to extend this implementation to include the Subscriptions table.
-class SubscriptionTable(APITable):
+class SubscriptionsTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         select_statement_parser = SELECTQueryParser(
             query,

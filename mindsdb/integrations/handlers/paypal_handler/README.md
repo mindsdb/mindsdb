@@ -93,7 +93,7 @@ SELECT * FROM paypal_datasource.invoices
 
 Query Subscriptions_table:
 ~~~~sql
-SELECT * FROM paypal_datasource.subscription
+SELECT * FROM paypal_datasource.subscriptions
 ~~~~
 
 Run more advanced queries:
@@ -129,14 +129,14 @@ LIMIT 10
 Query Subscriptions with specific columns:
 
 ~~~~sql
-SELECT id, name FROM paypal_datasource.subscription
+SELECT id, name FROM paypal_datasource.subscriptions
 ~~~~
 
 Query Subscriptions with conditions and ordering:
 
 ~~~~sql
 SELECT id , state, name 
-FROM paypal_datasource.subscription 
+FROM paypal_datasource.subscriptions 
 WHERE state ="CREATED" 
 LIMIT 5
 ~~~~

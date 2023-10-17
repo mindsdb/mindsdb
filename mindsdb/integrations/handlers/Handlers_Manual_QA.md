@@ -25,3 +25,5 @@ Apache Pinot data integration Test Passed: https://github.com/maulanaakbardj/min
 </br>
 Microsoft Teams Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/MsTeams/Microsoft_Teams_QA.md
 </br>
+Google Big Query Integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/BigQuery/GoogleBigQuery_QA.md
+</br>

@@ -202,7 +202,7 @@ class WriterHandlerParameters(BaseModel):
     n_rows_evaluation: int = None  # if None, evaluate on all rows
     retriever_match_threshold: float = 0.7
     generator_match_threshold: float = 0.8
-    evaluate_dataset: Union[List[dict], str] = None
+    evaluate_dataset: Union[List[dict], str] = "squad_v2_val_100_sample"
     run_embeddings: bool = True
     external_index_name: str = None
     top_k: int = 4

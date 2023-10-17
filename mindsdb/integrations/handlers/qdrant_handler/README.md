@@ -76,3 +76,8 @@ WHERE `metadata.source` = 'bbc';
 ```sql
  DROP TABLE qdrant_test.test_table;
 ```
+
+## NOTICE
+Qdrant provides support for payload indexing to enhance retrieval efficiency with filters. Please note that this feature currently cannot be configured via MindsDB and must be set up separately if needed.
+
+For detailed information on payload indexing, you can refer to the documentation available [here](https://qdrant.tech/documentation/concepts/indexing/#payload-index).

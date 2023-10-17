@@ -65,6 +65,7 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+  - [x] Support UPDATE
 - [x] Shopify Customer Reviews Table for a given Store
   - [x] Support SELECT
     - [x] Support LIMIT

@@ -1,5 +1,7 @@
 <div align="center">
-  <img height="100" width="450" style="display: inline-block;" src="https://github.com/qdrant/qdrant/raw/master/docs/logo.svg" alt="Qdrant">
+  <a href="https://qdrant.tech/">
+    <img height="100" width="450" style="display: inline-block;" src="https://github.com/qdrant/qdrant/raw/master/docs/logo.svg" alt="Qdrant">
+  </a>
   <h1><a href="https://qdrant.tech/">qdrant.tech</a> handler for MindsDB<h1>
 </div>
 
@@ -33,7 +35,7 @@ The available arguments for instantiating Qdrant can be found [here](https://git
 - By default, UUIDs are set as collection IDs. You can provide your own IDs under the `ids` column.
 ```sql
 CREATE TABLE qdrant_test.test_table (
-   SELECT embeddings,'{"source": "fda"}' as metadata FROM mysql_demo_db.test_embeddings
+   SELECT embeddings,'{"source": "bbc"}' as metadata FROM mysql_demo_db.test_embeddings
 );
 ```
 

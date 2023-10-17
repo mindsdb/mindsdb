@@ -78,6 +78,6 @@ WHERE `metadata.source` = 'bbc';
 ```
 
 ## NOTICE
-Qdrant provides support for payload indexing to enhance retrieval efficiency with filters. Please note that this feature currently cannot be configured via MindsDB and must be set up separately if needed.
+Qdrant supports payload indexing that vastly improves retrieval efficiency with filters and is highly recommended. Please note that this feature currently cannot be configured via MindsDB and must be set up separately if needed.
 
 For detailed information on payload indexing, you can refer to the documentation available [here](https://qdrant.tech/documentation/concepts/indexing/#payload-index).

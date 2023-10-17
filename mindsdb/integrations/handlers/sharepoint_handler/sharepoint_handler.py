@@ -6,7 +6,8 @@ from mindsdb.integrations.handlers.sharepoint_handler.sharepoint_api import (
 from mindsdb.integrations.handlers.sharepoint_handler.sharepoint_tables import (
     ListsTable,
     SitesTable,
-    ListItemsTable, SiteColumnsTable,
+    ListItemsTable,
+    SiteColumnsTable,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
@@ -84,8 +85,6 @@ class SharepointHandler(APIHandler):
         self.connection.get_bearer_token()
         self.is_connected = True
 
-        return self.connection
-
     def check_connection(self) -> StatusResponse:
         """
         Check connection to the handler.
@@ -96,7 +95,7 @@ class SharepointHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            _ = self.connect()
+            self.connect()
             response.success = self.connection.check_bearer_token_validity()
         except Exception as e:
             log.logger.error("Error connecting to Sharepoint! " + str(e))

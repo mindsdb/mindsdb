@@ -92,17 +92,15 @@ class SitesTable(APITable):
 
     def get_sites(self, **kwargs) -> List[Dict]:
         if not self.handler.connection.check_bearer_token_validity():
-            client = self.handler.connect()
-        else:
-            client = self.handler.connection
+            self.handler.connect()
+        client = self.handler.connection
         site_data = client.get_all_sites(**kwargs)
         return site_data
 
     def update_sites(self, site_ids: list[dict], values_to_update: dict) -> None:
         if not self.handler.connection.check_bearer_token_validity():
-            client = self.handler.connect()
-        else:
-            client = self.handler.connection
+            self.handler.connect()
+        client = self.handler.connection
         client.update_sites(site_ids, values_to_update)
 
 
@@ -230,31 +228,27 @@ class ListsTable(APITable):
 
     def get_lists(self, **kwargs) -> List[Dict]:
         if not self.handler.connection.check_bearer_token_validity():
-            client = self.handler.connect()
-        else:
-            client = self.handler.connection
+            self.handler.connect()
+        client = self.handler.connection
         lists_data = client.get_all_lists(**kwargs)
         return lists_data
 
     def delete_lists(self, list_ids: list[dict]) -> None:
         if not self.handler.connection.check_bearer_token_validity():
-            client = self.handler.connect()
-        else:
-            client = self.handler.connection
+            self.handler.connect()
+        client = self.handler.connection
         client.delete_lists(list_ids)
 
     def update_lists(self, list_ids: list[dict], values_to_update: dict) -> None:
         if not self.handler.connection.check_bearer_token_validity():
-            client = self.handler.connect()
-        else:
-            client = self.handler.connection
+            self.handler.connect()
+        client = self.handler.connection
         client.update_lists(list_ids, values_to_update)
 
     def create_lists(self, lists_data: List[Dict[Text, Any]]) -> None:
         if not self.handler.connection.check_bearer_token_validity():
-            client = self.handler.connect()
-        else:
-            client = self.handler.connection
+            self.handler.connect()
+        client = self.handler.connection
         client.create_lists(data=lists_data)
 
     def get_columns(self) -> List[Text]:
@@ -324,9 +318,7 @@ class SiteColumnsTable(APITable):
             result_limit,
         ) = select_statement_parser.parse_query()
 
-        site_columns_df = pd.json_normalize(
-            self.get_site_columns(limit=result_limit)
-        )
+        site_columns_df = pd.json_normalize(self.get_site_columns(limit=result_limit))
         select_statement_executor = SELECTQueryExecutor(
             site_columns_df,
             selected_columns,
@@ -359,15 +351,11 @@ class SiteColumnsTable(APITable):
 
         site_columns_df = pd.json_normalize(self.get_site_columns())
 
-        update_query_executor = UPDATEQueryExecutor(
-            site_columns_df, where_conditions
-        )
+        update_query_executor = UPDATEQueryExecutor(site_columns_df, where_conditions)
 
         site_columns_df = update_query_executor.execute_query()
 
-        site_columns_ids = site_columns_df[["id", "siteId"]].to_dict(
-            orient="records"
-        )
+        site_columns_ids = site_columns_df[["id", "siteId"]].to_dict(orient="records")
 
         self.update_site_columns(site_columns_ids, values_to_update)
 
@@ -394,48 +382,40 @@ class SiteColumnsTable(APITable):
 
         site_columns_df = pd.json_normalize(self.get_site_columns())
 
-        delete_query_executor = DELETEQueryExecutor(
-            site_columns_df, where_conditions
-        )
+        delete_query_executor = DELETEQueryExecutor(site_columns_df, where_conditions)
 
         site_columns_df = delete_query_executor.execute_query()
 
-        site_columns_ids = site_columns_df[["id", "siteId"]].to_dict(
-            orient="records"
-        )
+        site_columns_ids = site_columns_df[["id", "siteId"]].to_dict(orient="records")
         self.delete_site_columns(site_columns_ids)
 
     def get_site_columns(self, **kwargs) -> List[Dict]:
         if not self.handler.connection.check_bearer_token_validity():
-            client = self.handler.connect()
-        else:
-            client = self.handler.connection
+            self.handler.connect()
+        client = self.handler.connection
         site_columns_data = client.get_all_site_columns(**kwargs)
         return site_columns_data
 
     def delete_site_columns(self, sharepoint_column_ids: list[dict]) -> None:
         if not self.handler.connection.check_bearer_token_validity():
-            client = self.handler.connect()
-        else:
-            client = self.handler.connection
+            self.handler.connect()
+        client = self.handler.connection
         client.delete_site_columns(sharepoint_column_ids)
 
     def update_site_columns(
         self, sharepoint_column_ids: list[dict], values_to_update: dict
     ) -> None:
         if not self.handler.connection.check_bearer_token_validity():
-            client = self.handler.connect()
-        else:
-            client = self.handler.connection
+            self.handler.connect()
+        client = self.handler.connection
         client.update_site_columns(sharepoint_column_ids, values_to_update)
 
     def create_site_columns(
         self, sharepoint_column_data: List[Dict[Text, Any]]
     ) -> None:
         if not self.handler.connection.check_bearer_token_validity():
-            client = self.handler.connect()
-        else:
-            client = self.handler.connection
+            self.handler.connect()
+        client = self.handler.connection
         client.create_site_columns(data=sharepoint_column_data)
 
     def get_columns(self) -> List[Text]:
@@ -572,33 +552,29 @@ class ListItemsTable(APITable):
 
     def get_list_items(self, **kwargs) -> List[Dict]:
         if not self.handler.connection.check_bearer_token_validity():
-            client = self.handler.connect()
-        else:
-            client = self.handler.connection
+            self.handler.connect()
+        client = self.handler.connection
         list_items_data = client.get_all_items(**kwargs)
         return list_items_data
 
     def delete_list_items(self, list_item_ids: list[dict]) -> None:
         if not self.handler.connnection.check_connection():
-            client = self.handler.connect()
-        else:
-            client = self.handler.connection
+            self.handler.connect()
+        client = self.handler.connection
         client.delete_items(list_item_ids)
 
     def update_list_items(
         self, list_items_ids: list[dict], values_to_update: dict
     ) -> None:
         if not self.handler.connection.check_bearer_token_validity():
-            client = self.handler.connect()
-        else:
-            client = self.handler.connection
+            self.handler.connect()
+        client = self.handler.connection
         client.update_items(item_dict=list_items_ids, values_to_update=values_to_update)
 
     def create_list_items(self, list_items_data: List[Dict[Text, Any]]) -> None:
         if not self.handler.connection.check_bearer_token_validity():
-            client = self.handler.connect()
-        else:
-            client = self.handler.connection
+            self.handler.connect()
+        client = self.handler.connection
         client.create_items(data=list_items_data)
 
     def get_columns(self) -> List[Text]:

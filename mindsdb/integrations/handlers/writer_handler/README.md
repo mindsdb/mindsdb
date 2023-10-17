@@ -40,21 +40,21 @@ The other parameters have default values
 
 Supported query parameters for USING syntax are as follows:
 
-[For the Writer LLM API]
+## For the Writer LLM API
 
 - `prompt_template` - this is the template that is used to generate the prompt
 - `writer_api_key` - this is the API key that is used to authenticate with the Writer LLM API
 - `writer_org_id` - this is the organization ID that is used to authenticate with the Writer LLM API
 - `base_url` - this is the base URL that is used to authenticate with the Writer LLM API, optional, if not provided uses org_id and model_id
 - `model_id` - this is the model ID that is used to authenticate with the Writer LLM API
-- `max_tokens` - this is the maximum number of tokens that are used to generate the output, the default is 1024
+- `max_tokens` - this is the maximum number of tokens that generated output will be, the default is 1024
 - `temperature` - this is the temperature that is used to generate the output, the default is 0.0
 - `top_p` - this is the top p that is used to generate the output, the default is 1
-- `stop` - this is a list of stop words that are used to generate the output, the default is an empty list
+- `stop` - used to stop generating tokens after these are generated, the default is an empty list
 - `best_of` - this is the number of best of that are used to generate the output, the default is 5
 - `verbose` - this is a boolean that determines if the output is verbose, the default is False
 
-[For the Vector Store and Embeddings Model]
+## For the Vector Store and Embeddings Model
 
 - `chunk_size` - this is the number of rows that are ingested at a time, the default is 500
 - `chunk_overlap` - this is the number of rows that are overlapped between chunks, the default is 50

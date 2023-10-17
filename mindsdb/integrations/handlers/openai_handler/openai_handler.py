@@ -38,7 +38,7 @@ class OpenAIHandler(BaseMLEngine):
         self.default_max_tokens = 100
         self.all_models = ALL_MODELS
         self.chat_completion_models = CHAT_MODELS
-        self.supported_ft_models = FINETUNING_LEGACY_MODELS  # base models compatible with finetuning  # TODO #7387: transition to new endpoint before 4/1/24 # noqa
+        self.supported_ft_models = FINETUNING_LEGACY_MODELS  # base models compatible with finetuning  # TODO #7387: transition to new endpoint before 4/1/24. Useful reference: Anyscale handler. # noqa
         self.ft_cls = openai.FineTune
 
         # user suffix for finetunes, set once
@@ -596,8 +596,7 @@ class OpenAIHandler(BaseMLEngine):
 
         elif '.json' in name_extension:
             train_stats = pd.read_json(path_or_buf=result_path, lines=True)  # new endpoint
-            args['ft_api_info'] = train_stats
-            args['ft_result_stats'] = train_stats.to_dict()
+            args['ft_api_info'] = args['ft_result_stats'] = train_stats.to_dict()
 
         args['model_name'] = ft_model_name
         args['runtime'] = runtime.total_seconds()

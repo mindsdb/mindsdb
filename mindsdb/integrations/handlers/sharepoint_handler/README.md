@@ -12,6 +12,7 @@ Sharepoint handler for MindsDB provides interfaces to connect to Sharepoint via 
   - [Sharepoint Handler Implementation](#sharepoint-handler-implementation)
   - [Sharepoint Handler Initialization](#sharepoint-handler-initialization)
   - [Implemented Features](#implemented-features)
+  - [Some useful definitions] (#some-useful-definitions)
   - [TODO](#todo)
   - [Example Usage](#example-usage)
 
@@ -48,9 +49,23 @@ The Sharepoint handler is initialized with the following parameters:
 - Fetch lists associated with the account and ability to create more lists, update fields associated with lists and deletion of lists
 - Fetch site columns associated with the account and ability to create more site columns, update fields associated with site columns and deletion of site columns
 - Fetch list items associated with the account and ability to create more list items, update fields associated with list items and deletion of list items
-  
-  
-Difference between site column and list columns
+
+
+## Some useful definitions
+
+### Sites:
+SharePoint-sites are essentially containers for information. The way you store and organize things in SharePoint is by Sites.
+
+### Lists:
+A list is a collection of data that you can share with your team members and people who you've provided access to. You'll find a number of ready-to-use list templates to provide a good starting point for organizing list items.
+
+### Site columns
+A column represents an attribute, or piece of metadata, that the user wants to manage for the items in the list or content type to which they added the column. Users can add columns to list, library and sites and even reference them in content types.
+
+### List items
+A SharePoint list can be considered as a collection of items. The list items can be a variety of things, such as contacts, calendars, announcements, and issues-tracking.
+
+### Difference between site column and list columns
 The main difference between site column and list columns is the scope of use.
 That is a list column will only be available to that particular list/library, and not outside that boundary. 
 If you wish to use that column outside of that list/library, you will have to recreate it at the new location.

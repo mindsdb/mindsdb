@@ -114,6 +114,8 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="openai", data={}, engine="openai")
         db.session.add(r)
+        r = db.Integration(name="anyscale_endpoints", data={}, engine="anyscale_endpoints")
+        db.session.add(r)
         r = db.Integration(
             name="langchain_embedding", data={}, engine="langchain_embedding"
         )

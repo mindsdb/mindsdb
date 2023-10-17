@@ -10,6 +10,7 @@ from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHa
 from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE
 
 
+# TODO: retrieve these from API once possible
 CHAT_MODELS = (
     'meta-llama/Llama-2-7b-chat-hf',
     'meta-llama/Llama-2-13b-chat-hf',

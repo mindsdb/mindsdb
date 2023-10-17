@@ -95,8 +95,8 @@ class OrdersTable(APITable):
         )
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        # order_id = '7SP60397AN682533Y'
-        order_id = None
+        order_id = '7SP60397AN682533Y'
+        # order_id = None
 
         for condition in where_conditions:
             if condition.column.name == 'order_id':
@@ -122,22 +122,15 @@ class OrdersTable(APITable):
     def get_columns(self,order_id) -> List[Text]:
         return pd.json_normalize(self.get_orders(order_id)).columns.tolist()
 
-    def get_orders(self, order_id, **kwargs) -> List[Dict]:
-       headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer A21AAIUR5R-kPcdVNm6D6zNxxFlSFaE2smdAEZhGFAAsq92VGjrHYBjvZyMh4dzDklXjpDj3rL7vvDRmf5S4fHXcyK0PDwaVg',
-    }
-
-       response = requests.get(f'https://api-m.sandbox.paypal.com/v2/checkout/orders/{order_id}', headers=headers)
-
+    def get_orders(self, order_id) -> List[Dict]:
+       self.handler.connect()
+       response = requests.get(f'{self.handler.BASE_URL}{order_id}', headers=self.handler.HEADERS)
+       
        if response.status_code == 200:
         data = response.json()
-        print(data)
         return data
-       else:
-        print(f"Request failed with status code: {response.status_code}")
-        print(f"Response content: {response.text}")
-        return []
+       else :
+        return 
 
 
 

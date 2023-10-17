@@ -106,9 +106,9 @@ class StatusRoute(Resource):
             'mindsdb_version': fields.String(description='Current version of mindsdb'),
             'auth': fields.Nested(
                 ns_conf.model('response_status_auth', {
-                    'confirmed': fields.Boolean(description='is current user autentificated'),
-                    'required': fields.Boolean(description='is autentificated required'),
-                    'provider': fields.Boolean(description='current autentification provider: local of 3d-party')
+                    'confirmed': fields.Boolean(description='is current user authenticated'),
+                    'required': fields.Boolean(description='is authenticated required'),
+                    'provider': fields.Boolean(description='current authenticated provider: local of 3d-party')
                 })
             )
         })

@@ -223,7 +223,14 @@ class FileHandler(DatabaseHandler):
         data_str.seek(0)
         try:
             csv.Sniffer().sniff(sample)
-            return True
+            # Avoid a false-positive for json files
+            try:
+                json.loads(data_str.read())
+                data_str.seek(0)
+                return False
+            except json.decoder.JSONDecodeError:
+                data_str.seek(0)
+                return True
         except Exception:
             return False
 

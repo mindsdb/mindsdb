@@ -32,7 +32,7 @@ To connect `MongoDB` with `MindsDB`:
 > - [MongoDB Compass](https://docs.mindsdb.com/connect/mongo-compass)
 > - [MongoDB Shell](https://docs.mindsdb.com/connect/mongo-shell)
 
-After you connect `MongoDB` with `MindsDB`, you need to add the dataset using `inserOne` statement.
+After you connect `MongoDB` with `MindsDB`, you need to add the dataset using `insertOne` statement.
 
 ```
 test> use mindsdb

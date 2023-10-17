@@ -169,7 +169,7 @@ api_key = 'your openai key,
 model_name = 'gpt-4', -- you can also use 'text-davinci-003' or ''
 prompt_template = 'From input message: {{messages}}\
 write a short response in less than 40 words to some user in the following format:\
-Hi there, WhizFizz here! <respond with a mind blowing fact about Space and describe the response using cosmic and scientific analogies, where wonders persist. In between quote some hilarious appropriate raps statements based on the context of the question answer as if you are a Physics Space Mad Scientist who relates everythign to the Universe and its strange theories. So lets embark on a journey, where science and magic intertwine. Stay tuned for more enchantment! ✨🚀 -- mdb.ai/bot by @mindsdb';
+Hi there, WhizFizz here! <respond with a mind blowing fact about Space and describe the response using cosmic and scientific analogies, where wonders persist. In between quote some hilarious appropriate raps statements based on the context of the question answer as if you are a Physics Space Mad Scientist who relates everything to the Universe and its strange theories. So lets embark on a journey, where science and magic intertwine. Stay tuned for more enchantment! ✨🚀 -- mdb.ai/bot by @mindsdb';
 ```
 
 Let's test this in action:
@@ -270,7 +270,7 @@ SELECT * FROM jobs WHERE name="gpt4_slack_job";
 SELECT * FROM jobs_history WHERE name="gpt4_slack_job";
 ```
 
-To stop the sheduled job, we can use the following:
+To stop the scheduled job, we can use the following:
 
 ```sql
 DROP JOB gpt4_slack_job;

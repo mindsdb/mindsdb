@@ -70,3 +70,7 @@ Use the established connection to query your database:
 ~~~~sql
 SELECT * FROM mindsdb_dockerhub.repo_images_summary WHERE namespace="docker" AND repository="trusted-registry-nginx";
 ~~~~
+
+~~~~sql
+SELECT * FROM mindsdb_dockerhub.repo_images WHERE namespace="docker" AND repository="trusted-registry-nginx";
+~~~~

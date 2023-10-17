@@ -12,7 +12,7 @@ Sharepoint handler for MindsDB provides interfaces to connect to Sharepoint via 
   - [Sharepoint Handler Implementation](#sharepoint-handler-implementation)
   - [Sharepoint Handler Initialization](#sharepoint-handler-initialization)
   - [Implemented Features](#implemented-features)
-  - [Some useful definitions] (#some-useful-definitions)
+  - [Some useful definitions](#some-useful-definitions)
   - [TODO](#todo)
   - [Example Usage](#example-usage)
 
@@ -97,12 +97,4 @@ Example shows how to fetch all the lists associated with the account:
 ```sql
 SELECT *
 FROM sharepoint_test.lists
-```
-
-Example shows how to delete list-item
-```sql
-DELETE FROM sharepoint_test.
-WHERE (id='<list-id>')
-AND (siteId='<GUID of site>')
-AND (listId='<GUID of list>")
 ```

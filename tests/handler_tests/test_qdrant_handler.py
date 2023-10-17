@@ -131,7 +131,7 @@ class TestQdrantHandler(BaseExecutorTest):
             )
         """
         self.run_sql(sql)
-       # check if the data is inserted
+        # check if the data is inserted
         sql = """
             SELECT * FROM qtest.test_table_3
             WHERE id = 4 AND search_vector = '[1.0, 2.0, 3.0]' AND search_vector= '[1.0, 2.0, 4.0]'

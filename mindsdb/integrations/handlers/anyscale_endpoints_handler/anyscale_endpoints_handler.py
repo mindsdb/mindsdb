@@ -7,7 +7,6 @@ from typing import Optional, Dict
 import pandas as pd
 
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
-from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff
 from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE
 
 
@@ -101,8 +100,8 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             chat.append(event)
         chats.append({'messages': chat})
         series = pd.Series(chats)
-        train = series.iloc[:int(len(series)*(1-test_size))]
-        val = series.iloc[-int(len(series)*test_size)-1:]
+        train = series.iloc[:int(len(series) * (1 - test_size))]
+        val = series.iloc[-int(len(series) * test_size) - 1:]
 
         # 2. write as jsonl
         file_names = {

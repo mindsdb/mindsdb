@@ -385,7 +385,18 @@ class OrdersTable(APITable):
 
         orders_df = update_query_executor.execute_query()
         order_ids = orders_df['id'].tolist()
-        self.update_products(order_ids, values_to_update)
+        self.update_orders(order_ids, values_to_update)
+
+    def update_orders(self, order_ids: List[int], values_to_update: List[Dict[Text, Any]]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for order_id in order_ids:
+            order = shopify.Order.find(order_id)
+            for key, value in values_to_update.items():
+                setattr(order, key, value)
+            order.save()
+            logger.info(f'Order {order_id} updated')
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_orders(limit=1)).columns.tolist()

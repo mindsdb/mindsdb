@@ -667,3 +667,56 @@ class ShippingZoneTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         zones = shopify.ShippingZone.find()
         return [self.clean_response(zone.to_dict()) for zone in zones]
+
+class SalesChannelTable(APITable):
+    """The Shopify Sales Channel Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Pulls data from the Shopify "GET /publication API endpoint, as Channel API endpoint is deprecated
+        
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+            Shopify Products matching the query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'sales_channel',
+            self.get_columns()
+        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        sales_channel_df = pd.json_normalize(self.get_sales_channel(limit=result_limit))
+
+        select_statement_executor = SELECTQueryExecutor(
+            sales_channel_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions,
+            result_limit
+        )
+        sales_channel_df = select_statement_executor.execute_query()
+        return sales_channel_df
+
+
+    def get_columns(self) -> List[Text]:
+        return pd.json_normalize(self.get_sales_channel(limit=1)).columns.tolist()
+    
+
+    def get_sales_channel(self, **kwargs) -> List[Dict]:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+        sales_channels = shopify.Publication.find(**kwargs)
+        return  [sales_channel.to_dict() for  sales_channel in sales_channels]

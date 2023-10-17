@@ -50,13 +50,20 @@ The PayPal handler is initialized with the following parameters:
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+  
+- [x] PayPal Subscriptions table 
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
+
 
 ## TODO
 
 - [ ] Support INSERT, UPDATE and DELETE for the Payments table
 - [ ] PayPal Orders table
 - [ ] PayPal Payouts table
-- [ ] PayPal Subscriptions table
 - [ ] Many more
 
 ## Example Usage
@@ -68,8 +75,7 @@ CREATE DATABASE paypal_datasource
 WITH ENGINE = 'paypal',
 PARAMETERS = {
   "mode": "sandbox",
-  "client_id": "EBWKjlELKMYqRNQ6sYvFo64FtaRLRR5BdHEESmha49TM",
-  "client_secret": "EO422dn3gQLgDbuwqTjzrFgFtaRLRR5BdHEESmha49TM"
+  "client_id": "AUv8rrc_P-EbP2E0mpb49BV7rFt3Usr-vdUZO8VGOnjRehGHBXkSzchr37SYF2GNdQFYSp72jh5QUhzG","client_secret":"EMnAWe06ioGtouJs7gLYT9chK9-2jJ--7MKRXpI8FesmY_2Kp-d_7aCqff7M9moEJBvuXoBO4clKtY0v"
 };
 ~~~~
 
@@ -83,6 +89,11 @@ SELECT * FROM paypal_datasource.payments
 Query Invoices_table: 
 ~~~~sql
 SELECT * FROM paypal_datasource.invoices
+~~~~
+
+Query Subscriptions_table:
+~~~~sql
+SELECT * FROM paypal_datasource.subscription
 ~~~~
 
 Run more advanced queries:
@@ -113,3 +124,20 @@ WHERE status = 'PAID'
 ORDER BY total_amount DESC
 LIMIT 10
 ~~~~
+
+`Subscriptions_table`
+Query Subscriptions with specific columns:
+
+~~~~sql
+SELECT id, name FROM paypal_datasource.subscription
+~~~~
+
+Query Subscriptions with conditions and ordering:
+
+~~~~sql
+SELECT id , state, name 
+FROM paypal_datasource.subscription 
+WHERE state ="CREATED" 
+LIMIT 5
+~~~~
+

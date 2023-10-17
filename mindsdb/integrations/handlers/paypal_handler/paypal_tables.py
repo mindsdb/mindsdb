@@ -104,7 +104,7 @@ class SubscriptionTable(APITable):
         return subscriptions_df
 
     def get_columns(self) -> List[Text]:
-        return pd.json_normalize(self.get_subscriptions(count=1)).columns.tolist()
+        return pd.json_normalize(self.get_subscriptions(count = 1)).columns.tolist()
 
     def get_subscriptions(self, **kwargs) -> List[Dict]:
         connection = self.handler.connect()

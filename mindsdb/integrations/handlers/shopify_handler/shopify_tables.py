@@ -116,6 +116,36 @@ class ProductsTable(APITable):
         product_ids = products_df['id'].tolist()
         self.delete_products(product_ids)
 
+    def update(self, query: ast.Update) -> None:
+        """Updates data from the Shopify "PUT /products" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Update
+           Given SQL UPDATE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        update_statement_parser = UPDATEQueryParser(query)
+        values_to_update, where_conditions = update_statement_parser.parse_query()
+
+        products_df = pd.json_normalize(self.get_products())
+        update_query_executor = UPDATEQueryExecutor(
+            products_df,
+            where_conditions
+        )
+
+        products_df = update_query_executor.execute_query()
+        product_ids = products_df['id'].tolist()
+        self.update_products(product_ids, values_to_update)
+
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_products(limit=1)).columns.tolist()
 
@@ -124,7 +154,18 @@ class ProductsTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         products = shopify.Product.find(**kwargs)
         return [product.to_dict() for product in products]
-    
+
+    def update_products(self, product_ids: List[int], values_to_update: Dict[Text, Any]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for product_id in product_ids:
+            product = shopify.Product.find(product_id)
+            for key, value in values_to_update.items():
+                setattr(product, key, value)
+            product.save()
+            logger.info(f'Product {product_id} updated')
+
     def delete_products(self, product_ids: List[int]) -> None:
         api_session = self.handler.connect()
         shopify.ShopifyResource.activate_session(api_session)
@@ -133,7 +174,6 @@ class ProductsTable(APITable):
             product = shopify.Product.find(product_id)
             product.destroy()
             logger.info(f'Product {product_id} deleted')
-
 
     def create_products(self, product_data: List[Dict[Text, Any]]) -> None:
         api_session = self.handler.connect()

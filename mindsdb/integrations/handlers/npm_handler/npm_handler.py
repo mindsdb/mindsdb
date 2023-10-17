@@ -8,15 +8,14 @@ from mindsdb.integrations.handlers.npm_handler.npm_tables import (
     NPMDependenciesTable,
     NPMDevDependenciesTable,
     NPMOptionalDependenciesTable,
-    NPMContributorsTable,
     NPMGithubStatsTable,
-    NPMCIStatus,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 
 
 class NPMHandler(APIHandler):
+
     def __init__(self, name: str, **kwargs) -> None:
         super().__init__(name)
         self.connection = None
@@ -28,9 +27,7 @@ class NPMHandler(APIHandler):
             NPMDependenciesTable,
             NPMDevDependenciesTable,
             NPMOptionalDependenciesTable,
-            NPMContributorsTable,
             NPMGithubStatsTable,
-            NPMCIStatus,
         ]
         for Table in _tables:
             self._register_table(Table.name, Table(self))
@@ -38,11 +35,10 @@ class NPMHandler(APIHandler):
     def check_connection(self) -> StatusResponse:
         """Check if connected"""
         response = StatusResponse(False)
-        checking = NPM.is_connected()
-        if checking["status"]:
+        if NPM.is_connected():
             response.success = True
         else:
-            response.error_message = checking["message"]
+            response.success = False
         self.is_connected = True
         return response
 

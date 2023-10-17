@@ -51,7 +51,7 @@ The PayPal handler is initialized with the following parameters:
     - [x] Support ORDER BY
     - [x] Support column selection
   
-- [x] PayPal Subscriptions table 
+- [x] PayPal Subscriptions table for a given account 
   - [x] Support SELECT
     - [x] Support LIMIT
     - [x] Support WHERE

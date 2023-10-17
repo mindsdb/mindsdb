@@ -1,4 +1,3 @@
-import importlib
 from unittest.mock import patch
 
 import pytest
@@ -7,14 +6,7 @@ from mindsdb_sql import parse_sql
 
 from unit.executor_test_base import BaseExecutorTest
 
-try:
-    importlib.import_module("qdrant")
-    QDRANT_INSTALLED = True
-except ImportError:
-    QDRANT_INSTALLED = False
 
-
-@pytest.mark.skipif(not QDRANT_INSTALLED, reason="qdrant handler is not installed")
 class TestQdrantHandler(BaseExecutorTest):
     def run_sql(self, sql):
         ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))

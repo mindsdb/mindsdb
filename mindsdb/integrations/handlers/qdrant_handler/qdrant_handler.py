@@ -20,18 +20,24 @@ from mindsdb.utilities import log
 
 
 class QdrantHandler(VectorStoreHandler):
-    """This handler handles connection and execution of the Qdrant statements."""
+    """Handles connection and execution of the Qdrant statements."""
 
     name = "qdrant"
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
         connection_data = kwargs.get("connection_data").copy()
+        # Qdrant offers several configuration and optmization options at the time of collection creation
+        # Since the create table statement doesn't have a way to pass these options
+        # We are requiring the user to pass these options in the connection_data
+        # These options are documented here. https://qdrant.github.io/qdrant/redoc/index.html#tag/collections/operation/create_collection
         self.collection_config = connection_data.pop("collection_config")
         self.connect(**connection_data)
 
     def connect(self, **kwargs):
-        """Connect to a Qdrant instance."""
+        """Connect to a Qdrant instance.
+        A Qdrant client can be instantiated with a REST, GRPC interface or in-memory for testing.
+        To use the in-memory instance, specify the location argument as ':memory:'."""
         if self.is_connected:
             return self._client
 
@@ -50,11 +56,17 @@ class QdrantHandler(VectorStoreHandler):
             self._client = None
         self.is_connected = False
 
-    def check_connection(self):
-        """Check the connection to the Qdrant database."""
+    def check_connection(self) -> StatusResponse:
+        """Check the connection to the Qdrant database.
+
+        Returns:
+            StatusResponse: Indicates if the connection is alive
+        """
         need_to_close = not self.is_connected
 
         try:
+            # Using a trivial operation to get the connection status
+            # As there isn't a universal ping method for the REST, GRPC and in-memory interface
             self._client.get_locks()
             response_code = StatusResponse(True)
         except Exception as e:
@@ -69,8 +81,14 @@ class QdrantHandler(VectorStoreHandler):
         return response_code
 
     def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
-        """
-        Delete a collection from the Qdrant Instance.
+        """Delete a collection from the Qdrant Instance.
+
+        Args:
+            table_name (str): The name of the collection to be dropped
+            if_exists (bool, optional): Throws an error if this value is set to false and the collection doesn't exist. Defaults to True.
+
+        Returns:
+            HandlerResponse: _description_
         """
         result = self._client.delete_collection(table_name)
         if result or if_exists:
@@ -82,8 +100,10 @@ class QdrantHandler(VectorStoreHandler):
             )
 
     def get_tables(self) -> HandlerResponse:
-        """
-        Get the list of collections in the Qdrant instance.
+        """Get the list of collections in the Qdrant instance.
+
+        Returns:
+            HandlerResponse: The common query handler response with a list of table names
         """
         collection_response = self._client.get_collections()
         collections_name = pd.DataFrame(
@@ -105,11 +125,20 @@ class QdrantHandler(VectorStoreHandler):
     def insert(
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None
     ) -> HandlerResponse:
-        """
-        Insert data into the Qdrant instance.
+        """Handler for the insert query
+
+        Args:
+            table_name (str): The name of the table to be inserted into
+            data (pd.DataFrame): The data to be inserted
+            columns (List[str], optional): Columns to be inserted into. Unused as the values are derived from the "data" argument. Defaults to None.
+
+        Returns:
+            HandlerResponse: The common query handler response
         """
         assert len(data[TableField.ID.value]) == len(data[TableField.EMBEDDINGS.value]), "Number of ids and embeddings must be equal"
 
+        # Qdrant doesn't have a distinction between documents and metadata
+        # Any data that is to be stored should be placed in the "payload" field
         data = data.to_dict(orient="list")
         payloads = []
         content_list = data[TableField.CONTENT.value]
@@ -118,16 +147,19 @@ class QdrantHandler(VectorStoreHandler):
         for document, metadata in zip_longest(content_list, metadata_list, fillvalue=None):
             payload = {}
 
+            # Insert the document with a "document" key in the payload
             if document is not None:
                 payload["document"] = document
 
+            # Unpack all the metadata fields into the payload
             if metadata is not None:
                 payload = {**payload, **metadata}
 
             if payload:
                 payloads.append(payload)
 
-        # convert ids to int if numeric else leave as is if string(UUID)
+        # IDs can be either integers or strings(UUIDs)
+        # The following step ensures proper type of numberic values
         ids = [int(id) if str(id).isdigit() else id for id in data[TableField.ID.value]]
         self._client.upsert(table_name, points=models.Batch(
             ids=ids,
@@ -138,10 +170,17 @@ class QdrantHandler(VectorStoreHandler):
         return Response(resp_type=RESPONSE_TYPE.OK)
 
     def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
-        """
-        Create a collection with the given name in the Qdrant database.
+        """Create a collection with the given name in the Qdrant database.
+
+        Args:
+            table_name (str): Name of the table(Collection) to be created
+            if_not_exists (bool, optional): Throws an error if this value is set to false and the collection already exists. Defaults to True.
+
+        Returns:
+            HandlerResponse: The common query handler response
         """
         try:
+            # Create a collection with the collection name and collection_config set during __init__
             self._client.create_collection(table_name, self.collection_config)
         except ValueError:
             if if_not_exists is False:
@@ -153,6 +192,21 @@ class QdrantHandler(VectorStoreHandler):
         return Response(resp_type=RESPONSE_TYPE.OK)
 
     def _get_qdrant_filter(self, operator: FilterOperator, value: Any) -> dict:
+        """ Map the filter operator to the Qdrant filter
+            We use a match and not a dict so as to conditionally construct values
+            With a dict, all the values the values will be constructed
+            Generating models.Range() with a str type value fails
+
+        Args:
+            operator (FilterOperator): FilterOperator specified in the query. Eg >=, <=, =
+            value (Any): Value specified in the query
+
+        Raises:
+            Exception: If an unsupported operator is specified
+
+        Returns:
+            dict: A dict of Qdrant filtering clauses
+        """
         match operator:
             case FilterOperator.EQUAL:
                 return {"match": models.MatchValue(value=value)}
@@ -175,6 +229,7 @@ class QdrantHandler(VectorStoreHandler):
     ) -> Optional[dict]:
         """
         Translate a list of FilterCondition objects a dict that can be used by Qdrant.
+        Filtering clause docs can be found here: https://qdrant.tech/documentation/concepts/filtering/
         E.g.,
         [
             FilterCondition(
@@ -202,7 +257,7 @@ class QdrantHandler(VectorStoreHandler):
           ]
         )
         """
-        # we ignore all non-metadata conditions
+        # We ignore all non-metadata conditions
         if conditions is None:
             return None
         filter_conditions = [
@@ -227,19 +282,29 @@ class QdrantHandler(VectorStoreHandler):
     ) -> HandlerResponse:
         """
         Update data in the Qdrant database.
-        TODO: Update for vector DBs has not been implemented
+        TODO: Update for vector DBs has not been implemented.
+        Ref: https://github.com/mindsdb/mindsdb/blob/a870ba93b0afee234e48c0268489a94a6e6fd5f7/mindsdb/integrations/libs/vectordatabase_handler.py#L273-L277
         """
         return super().update(table_name, data, columns)
 
     def select(self, table_name: str, columns: Optional[List[str]] = None, conditions: Optional[List[FilterCondition]] = None, offset: int = 0, limit: int = 10,) -> HandlerResponse:
+        """Select query handler
+           Eg: SELECT * FROM qdrant.test_table
 
-        # Constants and defaults
-        DEFAULT_OFFSET = 0
-        DEFAULT_LIMIT = 10
+        Args:
+            table_name (str): The name of the table to be queried
+            columns (Optional[List[str]], optional): List of column names specified in the query. Defaults to None.
+            conditions (Optional[List[FilterCondition]], optional): List of "where" conditionals. Defaults to None.
+            offset (int, optional): Offset the results by the provided value. Defaults to 0.
+            limit (int, optional): Number of results to return. Defaults to 10.
+
+        Returns:
+            HandlerResponse: The common query handler response
+        """
 
         # Validate and set offset and limit as None is passed if not set in the query
-        offset = offset if offset is not None else DEFAULT_OFFSET
-        limit = limit if limit is not None else DEFAULT_LIMIT
+        offset = offset if offset is not None else 0
+        limit = limit if limit is not None else 10
 
         # Full scroll if no where conditions are specified
         if not conditions:
@@ -252,8 +317,10 @@ class QdrantHandler(VectorStoreHandler):
         id_filters = [condition.value for condition in conditions if condition.column == TableField.ID.value]
         query_filters = self._translate_filter_conditions(conditions)
 
+        # Prefer returning results by IDs first
         if id_filters:
             results = self._client.retrieve(table_name, ids=id_filters)
+        # Followed by the search_vector value
         elif vector_filter:
             # Perform a similarity search with the first vector filter
             results = self._client.search(table_name, query_vector=vector_filter[0], query_filter=query_filters or None, limit=limit, offset=offset)
@@ -264,11 +331,21 @@ class QdrantHandler(VectorStoreHandler):
         payload = self._process_select_results(results, columns)
         return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=payload)
 
-    def _process_select_results(self, results, columns):
+    def _process_select_results(self, results=None, columns=None):
+        """Private method to process the results of a select query
+
+        Args:
+            results: A List[Records] or List[ScoredPoint]. Defaults to None
+            columns: List of column names specified in the query. Defaults to None
+
+        Returns:
+            Dataframe: A processed pandas dataframe
+        """
         ids, documents, metadata, distances = [], [], [], []
 
         for result in results:
             ids.append(result.id)
+            # The documents and metadata are stored as a dict in the payload
             documents.append(result.payload["document"])
             metadata.append({k: v for k, v in result.payload.items() if k != "document"})
 
@@ -299,8 +376,20 @@ class QdrantHandler(VectorStoreHandler):
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
     ) -> HandlerResponse:
+        """Delete query handler
+
+        Args:
+            table_name (str): List of column names specified in the query. Defaults to None.
+            conditions (List[FilterCondition], optional): List of "where" conditionals. Defaults to None.
+
+        Raises:
+            Exception: If no conditions are specified
+
+        Returns:
+            HandlerResponse: The common query handler response
+        """
         filters = self._translate_filter_conditions(conditions)
-        # get id filters
+        # Get id filters
         ids = [
             condition.value
             for condition in conditions

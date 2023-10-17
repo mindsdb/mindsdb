@@ -207,22 +207,20 @@ class QdrantHandler(VectorStoreHandler):
         Returns:
             dict: A dict of Qdrant filtering clauses
         """
-        match operator:
-            case FilterOperator.EQUAL:
-                return {"match": models.MatchValue(value=value)}
-            case FilterOperator.NOT_EQUAL:
-                # "except" is a reserved keyword in Python, so we use a workaround
-                return {"match": models.MatchExcept(**{"except": [value]})}
-            case FilterOperator.LESS_THAN:
-                return {"range": models.Range(lt=value)}
-            case FilterOperator.LESS_THAN_OR_EQUAL:
-                return {"range": models.Range(lte=value)}
-            case FilterOperator.GREATER_THAN:
-                return {"range": models.Range(gt=value)}
-            case FilterOperator.GREATER_THAN_OR_EQUAL:
-                return {"range": models.Range(gte=value)}
-            case _:
-                raise Exception(f"Operator {operator} is not supported by Qdrant!")
+        if operator == FilterOperator.EQUAL:
+            return {"match": models.MatchValue(value=value)}
+        elif operator == FilterOperator.NOT_EQUAL:
+            return {"match": models.MatchExcept(**{"except": [value]})}
+        elif operator == FilterOperator.LESS_THAN:
+            return {"range": models.Range(lt=value)}
+        elif operator == FilterOperator.LESS_THAN_OR_EQUAL:
+            return {"range": models.Range(lte=value)}
+        elif operator == FilterOperator.GREATER_THAN:
+            return {"range": models.Range(gt=value)}
+        elif operator == FilterOperator.GREATER_THAN_OR_EQUAL:
+            return {"range": models.Range(gte=value)}
+        else:
+            raise Exception(f"Operator {operator} is not supported by Qdrant!")
 
     def _translate_filter_conditions(
         self, conditions: List[FilterCondition]

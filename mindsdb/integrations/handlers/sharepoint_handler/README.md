@@ -68,7 +68,7 @@ A SharePoint list can be considered as a collection of items. The list items can
 ### Difference between site column and list columns
 The main difference between site column and list columns is the scope of use.
 That is a list column will only be available to that particular list/library, and not outside that boundary. 
-If you wish to use that column outside of that list/library, you will have to recreate it at the new location.
+If you wish to use that column outside that list/library, you will have to recreate it at the new location.
 
 Site columns on the other hand, are created at the site level, and available to reuse from the site they're created in (as the starting point).
 

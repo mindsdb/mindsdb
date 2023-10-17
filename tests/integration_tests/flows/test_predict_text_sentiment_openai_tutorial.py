@@ -14,65 +14,62 @@ OVERRIDE_CONFIG = {
 }
 # used by (required for) mindsdb_app fixture in conftest
 API_LIST = ["http", ]
-OPEN_AI_API_KEY = os.environ.get("OPEN_AI_API_KEY")
-
-# make openai handler to use api key
-os.environ["OPENAI_API_KEY"] = OPEN_AI_API_KEY
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 
 class QueryStorage:
     create_db = """
-CREATE DATABASE mysql_demo_db
-WITH ENGINE = "mysql",
-PARAMETERS = {
-    "user": "user",
-    "password": "MindsDBUser123!",
-    "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
-    "port": "3306",
-    "database": "public"
-    };
-"""
+                    CREATE DATABASE mysql_demo_db
+                    WITH ENGINE = "mysql",
+                    PARAMETERS = {
+                        "user": "user",
+                        "password": "MindsDBUser123!",
+                        "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
+                        "port": "3306",
+                        "database": "public"
+                        };
+                    """
 
     check_db_created = """
-SELECT *
-FROM mysql_demo_db.amazon_reviews LIMIT 3;
-"""
+                        SELECT *
+                        FROM mysql_demo_db.amazon_reviews LIMIT 3;
+                        """
 
     create_engine = """
-CREATE ML_ENGINE openai2
- FROM openai USING api_key='%s';
-    """
+                    CREATE ML_ENGINE openai2
+                    FROM openai USING api_key='%s';
+                        """
 
     create_model = """
-CREATE MODEL sentiment_classifier_gpt3
-PREDICT sentiment
-USING
-engine = 'openai',
-prompt_template = 'describe the sentiment of the reviews
-strictly as "positive", "neutral", or "negative".
-"I love the product":positive
-"It is a scam":negative
-"{{review}}.":',
-api_key = '%s';
-"""
+                    CREATE MODEL sentiment_classifier_gpt3
+                    PREDICT sentiment
+                    USING
+                    engine = 'openai',
+                    prompt_template = 'describe the sentiment of the reviews
+                    strictly as "positive", "neutral", or "negative".
+                    "I love the product":positive
+                    "It is a scam":negative
+                    "{{review}}.":',
+                    api_key = '%s';
+                    """
 
     check_status = """
-SELECT * FROM models
-WHERE name = 'sentiment_classifier_gpt3';
-"""
+                SELECT * FROM models
+                WHERE name = 'sentiment_classifier_gpt3';
+                """
 
     prediction = """
-SELECT review, sentiment
-FROM sentiment_classifier_gpt3
-WHERE review = 'It is ok.';
-"""
+                SELECT review, sentiment
+                FROM sentiment_classifier_gpt3
+                WHERE review = 'It is ok.';
+                """
 
     bulk_prediction = """
-SELECT input.review, output.sentiment
-FROM mysql_demo_db.amazon_reviews AS input
-JOIN sentiment_classifier_gpt3 AS output
-LIMIT 5;
-"""
+                    SELECT input.review, output.sentiment
+                    FROM mysql_demo_db.amazon_reviews AS input
+                    JOIN sentiment_classifier_gpt3 AS output
+                    LIMIT 5;
+                    """
 
 
 @pytest.mark.usefixtures("mindsdb_app")
@@ -96,11 +93,11 @@ class TestPredictTextSentimentOpenAI(HTTPHelperMixin):
         assert len(resp['data']) >= 3
 
     def test_create_engine(self):
-        sql = QueryStorage.create_engine % OPEN_AI_API_KEY
+        sql = QueryStorage.create_engine % OPENAI_API_KEY
         self.sql_via_http(sql, RESPONSE_TYPE.OK)
 
     def test_create_model(self):
-        sql = QueryStorage.create_model % OPEN_AI_API_KEY
+        sql = QueryStorage.create_model % OPENAI_API_KEY
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
 
         assert len(resp['data']) == 1

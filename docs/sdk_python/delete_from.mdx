@@ -5,12 +5,12 @@ sidebarTitle: Delete From a Table
 
 ## Description
 
-The `query()` function is executed on a data source connected to MindsDB and saved into a variable. It deletes rows from a table.
+The `delete()` function is executed on a table from a data source connected to MindsDB. It deletes rows from a table.
 
 ## Syntax
 
 Here is the syntax:
 
 ```sql
-my_data_source.query('DELETE FROM datasource_name.table_name WHERE …')
+data_source.tables.table_name.delete(key=values, ...)
 ```

@@ -53,3 +53,4 @@ xgboost
 
 # Docs
 node_modules
+/tests/__init__.py

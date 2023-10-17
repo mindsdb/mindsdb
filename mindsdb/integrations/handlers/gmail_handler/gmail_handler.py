@@ -1,6 +1,5 @@
 import json
 from shutil import copyfile
-import datetime as dt
 from collections import OrderedDict
 
 import requests
@@ -33,25 +32,13 @@ from email.message import EmailMessage
 
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 
+from .utils import AuthException, google_auth_flow, save_creds_to_file
+
 DEFAULT_SCOPES = ['https://www.googleapis.com/auth/gmail.compose',
                   'https://www.googleapis.com/auth/gmail.readonly',
                   'https://www.googleapis.com/auth/gmail.modify']
 
 
-def credentials_to_dict(credentials):
-  return {'token': credentials.token,
-          'refresh_token': credentials.refresh_token,
-          'token_uri': credentials.token_uri,
-          'client_id': credentials.client_id,
-          'client_secret': credentials.client_secret,
-          'scopes': credentials.scopes,
-          'expiry': dt.datetime.strftime(credentials.expiry, '%Y-%m-%dT%H:%M:%S')}
-
-class AuthException(Exception):
-    def __init__(self, message, auth_url=None):
-        super().__init__(message)
-
-        self.auth_url = auth_url
 
 
 class EmailsTable(APITable):
@@ -362,28 +349,10 @@ class GmailHandler(APIHandler):
             else:
                 raise ValueError('No valid Gmail Credentials filepath or S3 url found.')
 
-            # initialise flow
-            flow = Flow.from_client_secrets_file(secret_file, self.scopes)
+            creds = google_auth_flow(secret_file, self.scopes, self.connection_args.get('code'))
 
-            # get host url from flask
-            from flask import request
-            flow.redirect_uri = request.headers['ORIGIN'] + '/verify-auth'
-
-            if self.connection_args.get('code'):
-                flow.fetch_token(code=self.connection_args['code'])
-                creds = flow.credentials
-
-                # Save the credentials for the next run
-                with open(creds_file, 'w') as token:
-                    data = credentials_to_dict(creds)
-                    token.write(json.dumps(data))
-
-                # save to storage
-                self.handler_storage.folder_sync('config')
-
-            else:
-                auth_url = flow.authorization_url()[0]
-                raise AuthException(f'Authorisation required. Please follow the url: {auth_url}', auth_url=auth_url)
+            save_creds_to_file(creds, creds_file)
+            self.handler_storage.folder_sync('config')
 
         return build('gmail', 'v1', credentials=creds)
 
@@ -610,7 +579,7 @@ connection_args = OrderedDict(
     },
     credentials={
         'type': ARG_TYPE.PATH,
-        'description': 'Upload Service Account Keys',
+        'description': 'Service Account Keys',
         'label': 'Upload Service Account Keys',
     },
 )

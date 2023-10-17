@@ -29,11 +29,13 @@ The first step is to create a database with the new `confluence` engine.
 
 ~~~~sql
 CREATE DATABASE mindsdb_confluence
-WITH ENGINE = 'confluence',
-PARAMETERS = {
-  "url": "https://wiki.onap.org/",
-  "confluence_api_token": "MDk5NzgyNzY1Mzc3OlP5jEKnCL/z1+jIyEfIVIwERbJF"  
-};
+WITH
+    ENGINE = 'confluence',
+    PARAMETERS = {
+    "url": "https://marios.atlassian.net/",
+    "username": "your_username",
+    "password":"access_token" 
+    };
 ~~~~
 
 Use the established connection to query your database:

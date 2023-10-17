@@ -1,7 +1,6 @@
 from copy import deepcopy
 
 from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
     Identifier,
@@ -12,6 +11,7 @@ from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.interfaces.query_context.context_controller import query_context_controller
 
 
 class ProjectDataNode(DataNode):
@@ -88,19 +88,22 @@ class ProjectDataNode(DataNode):
         # endregion
 
         # region query to views
-        view_query_ast = self.project.query_view(query)
+        view_meta = self.project.query_view(query)
 
-        renderer = SqlalchemyRender('mysql')
-        query_str = renderer.get_string(view_query_ast, with_failback=True)
+        query_context_controller.set_context('view', view_meta['id'])
 
-        sqlquery = SQLQuery(
-            query_str,
-            session=session
-        )
+        try:
+            sqlquery = SQLQuery(
+                view_meta['query_ast'],
+                session=session
+            )
+            result = sqlquery.fetch(view='dataframe')
 
-        result = sqlquery.fetch(view='dataframe')
+        finally:
+            query_context_controller.release_context('view', view_meta['id'])
+
         if result['success'] is False:
-            raise Exception(f'Cant execute view query: {query_str}')
+            raise Exception(f"Cant execute view query: {view_meta['query_ast']}")
         df = result['result']
 
         df = query_df(df, query)

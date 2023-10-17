@@ -165,6 +165,9 @@ class FileLock:
                 relative_path (Path): path to resource directory relative to storage root
                 mode (str): lock for read (r) or write (w)
         """
+        if os.name != 'posix':
+            return
+
         self._local_path = FileLock.lock_folder_path(relative_path)
         self._lock_file_name = DIR_LOCK_FILE_NAME
         self._lock_file_path = self._local_path / self._lock_file_name

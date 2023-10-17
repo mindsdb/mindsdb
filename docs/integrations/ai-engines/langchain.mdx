@@ -3,30 +3,61 @@ title: LangChain
 sidebarTitle: LangChain
 ---
 
-LangChain is a machine learning framework for developing applications powered by large language models (LLMs).
+In this section, we present how to integrate LangChain with MindsDB.
 
-## How to Bring LangChain Models to MindsDB
+[LangChain](https://www.langchain.com/) allows users to connect multiple large language models in a logical way using chains, leveraging the strengths of each model and expanding the capabilities of language processing systems. It also enables the usage of mechanisms like memories and output parsers, which can improve the robustness of LLM-based applications. By employing chains, memories, and output parsers, LangChain empowers users to create, among other things, so-called “agents” that emerge out of forcing LLMs into a structured loop to achieve reasoning. These agents can understand and interact with data, making communication with data more efficient and intuitive.
 
-We use the [`CREATE MODEL`](/sql/create/model) statement to bring LangChain models to MindsDB.
+Read on to find out how to use LangChain with MinsdDB.
+
+## Setup
+
+MindsDB provides the [LangChain handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/langchain_handler) that enables you to use LangChain within MindsDB.
+
+### AI Engine
+
+Before creating a model, it is required to create an AI engine based on the provided handler.
+
+<Tip>
+If you installed MindsDB locally, make sure to install all LangChain dependencies from the [requirements.txt](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/langchain_handler/requirements.txt) file.
+</Tip>
+
+You can create a LangChain engine using this command:
 
 ```sql
-CREATE MODEL tool_based_agent
-PREDICT completion
+CREATE ML_ENGINE langchain_engine
+FROM langchain;
+```
+
+The name of the engine (here, `langchain_engine`) should be used as a value for the `engine` parameter in the `USING` clause of the `CREATE MODEL` statement.
+
+### AI Model
+
+The [`CREATE MODEL`](/sql/create/model) statement is used to create, train, and deploy models within MindsDB.
+
+```sql
+CREATE MODEL model_name
+PREDICT column_to_be_predicted
 USING
-    engine = 'langchain',
-    prompt_template = 'Answer the users input in a helpful way: {{input}}';
+    engine = 'langchain_engine',
+    model_name = 'anthropic-or-openai-model'
+    anthropic_api_key = 'if-anthropic-model-is-used',
+    openai_api_key = 'if-openai-model-is-used',
+    serper_api_key = 'if-serper-dev-search-is-used',
+    prompt_template = 'message to the model that may include some {{input}} columns as variables',
+    ...;
 ```
 
 <Tip>
-Before using the LangChain engine, you need to create it based on the handler available in MindsDB:
-
-```sql
-CREATE ML_ENGINE langchain
-FROM langchain;
-```
+The available models include OpenAI models, like `gpt-3` or `gpt-4`, and Anthropic models, like `claude`. Please note that you need to provide an API key for the model you choose.
 </Tip>
 
-Here, we create the `tool_based_agent` model using the LangChain engine, as defined in the `engine` parameter. This model answers users' questions in a helpful way, as defined in the `prompt_template` parameter, which specifies `input` as the input column when calling the model. `Agents` and `Tools` are some of the main abstractions that LangChain offers. You can read more about them in the LangChain documentation ([[1]](https://python.langchain.com/en/latest/modules/agents/getting_started.html), [[2]](https://python.langchain.com/en/latest/modules/agents/tools.html)).
+Currently, this integration supports exposing OpenAI and Anthrophic LLMs with normal text completion support. They are then wrapped in a zero shot react description agent that offers a few third party tools out of the box, with support for additional ones (like Serper) if an API key is provided. Ongoing memory is also provided.
+
+You can provide other parameters specific for OpenAI and Anthropic models, such as `temperature` or `max_tokens`.
+
+<Tip>
+`Agents` and `Tools` are some of the main abstractions that LangChain offers. You can read more about them in the LangChain documentation ([[1]](https://python.langchain.com/en/latest/modules/agents/getting_started.html), [[2]](https://python.langchain.com/en/latest/modules/agents/tools.html)).
+</Tip>
 
 There are three different tools utilized by this agent:
 
@@ -36,7 +67,21 @@ There are three different tools utilized by this agent:
 
 Each tool exposes the internal MindsDB executor in a different way to perform its tasks, effectively enabling the agent model to read from (and potentially write to) data sources or models available in the active MindsDB project.
 
-### Example 1: Describing Connected Data Sources
+## Examples
+
+Let's create the model that will be used by the following use cases.
+
+```sql
+CREATE MODEL tool_based_agent
+PREDICT completion
+USING
+    engine = 'langchain',
+    prompt_template = 'Answer the users input in a helpful way: {{input}}';
+```
+
+Here, we create the `tool_based_agent` model using the LangChain engine, as defined in the `engine` parameter. This model answers users' questions in a helpful way, as defined in the `prompt_template` parameter, which specifies `input` as the input column when calling the model.
+
+### Describing Connected Data Sources
 
 We can ask questions about data sources connected to MindsDB.
 
@@ -66,7 +111,7 @@ To get information about the `mysql_demo_db.house_sales` table, the agent uses t
 The Write tool only comes into play when writing to other data sources. By default, the agent is able to write an answer back to the user (through standard output), like in this case.
 </Note>
 
-### Example 2: Analyzing Data
+### Analyzing Data
 
 We can ask questions to analyze the available data.
 
@@ -100,7 +145,7 @@ WHERE neighborhood = 'downtown';
 
 This query returns the value of 1.6, which is then used to write an answer.
 
-### Example 3: Retrieving Data
+### Retrieving Data
 
 We can ask the model to retrieve specific data.
 
@@ -145,7 +190,7 @@ On execution, the model gets this output:
 
 Consequently, it takes the query output and writes an answer.
 
-### Example 4: Inserting Data
+### Inserting Data
 
 We can ask the model to insert data into a table, assuming we have sufficient privileges on that database.
 

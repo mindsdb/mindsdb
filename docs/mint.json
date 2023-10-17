@@ -142,7 +142,8 @@
     {"source": "/custom-model/mlflow","destination": "/integrations/ai-engines/mlflow"},
     {"source": "/ml-engines/automl/lightwood","destination": "/integrations/ai-engines/lightwood"},
     {"source": "/nixtla/statsforecast","destination": "/integrations/ai-engines/statsforecast"},
-    {"source": "/nixtla/house-sales-statsforecast","destination": "/sql/tutorials/house-sales-statsforecast"}
+    {"source": "/nixtla/house-sales-statsforecast","destination": "/sql/tutorials/house-sales-statsforecast"},
+    {"source": "/mongo/stats","destination": "/mongo/models/describe"}
   ],
   "navigation": [
     {
@@ -778,8 +779,10 @@
             "integrations/app-integrations/hackernews",
             "integrations/app-integrations/mediawiki",
             "integrations/app-integrations/microsoft-teams",
+            "integrations/app-integrations/newsapi",
             "integrations/app-integrations/plaid",
             "integrations/app-integrations/reddit",
+            "integrations/app-integrations/sendinblue",
             "integrations/app-integrations/shopify",
             "integrations/app-integrations/slack",
             "integrations/app-integrations/stripe",

@@ -64,6 +64,8 @@ https://support.microsoft.com/en-us/office/introduction-to-lists-0a1c3ace-def0-4
 ### Site columns
 A Site Column is a template of a configured column. By creating a Site Column, you can reuse it anywhere else in the site and not have to manually rebuild its configuration at each reuse.
 
+When creating a new column in a list or library, you have a choice to either "Create column" or "Add from existing site columns". Selecting the latter will add a replica of the Site Column to the location you are working.
+
 https://learn.microsoft.com/en-us/microsoft-365/community/what-is-site-column
 
 ### List items

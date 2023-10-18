@@ -51,6 +51,7 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+  - [x] Support UPDATE
 - [x] Shopify Customers Table for a given Store
   - [x] Support SELECT
     - [x] Support LIMIT
@@ -88,6 +89,12 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+- [x] Shopify Sales Channel for a given Store
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
 
 ## TODO
 
@@ -96,7 +103,6 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
 - [ ] Shopify Payments table
 - [ ] Shopify Inventory table
 - [ ] Shopify Discounts table
-- [ ] Shopify Sales Channels table
 - [ ] Many more
 
 ## Example Usage

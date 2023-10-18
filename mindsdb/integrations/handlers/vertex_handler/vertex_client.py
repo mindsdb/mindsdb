@@ -3,9 +3,6 @@ from google.oauth2 import service_account
 import pandas as pd
 import json
 
-PROJECT_ID = "mindsdb-401709"  # You'll need to first create a project in the console and enable vertex AI
-PATH_TO_SERVICE_ACCOUNT_JSON = "service_key.json"  # Then you can generate this key in the console for the project
-
 
 class VertexClient:
     """A class to interact with Vertex AI"""

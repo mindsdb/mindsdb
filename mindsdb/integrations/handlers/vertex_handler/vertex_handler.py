@@ -36,6 +36,8 @@ class VertexHandler(BaseMLEngine):
         predict_args = {}
         predict_args["endpoint_name"] = endpoint_name
         predict_args["custom_model"] = custom_model
+        predict_args["service_key_path"] = service_key_path
+        predict_args["project_id"] = project_id
         self.model_storage.json_set("predict_args", predict_args)
 
     def predict(self, df, args={}):
@@ -43,7 +45,7 @@ class VertexHandler(BaseMLEngine):
         if "__mindsdb_row_id" in df.columns:
             df.drop("__mindsdb_row_id", axis=1, inplace=True)
         predict_args = self.model_storage.json_get("predict_args")
-        vertex = VertexClient(PATH_TO_SERVICE_ACCOUNT_JSON, PROJECT_ID)
+        vertex = VertexClient(predict_args["service_key_path"], predict_args["project_id"])
         results = vertex.predict_from_df(predict_args["endpoint_name"], df, custom_model=predict_args["custom_model"])
         if predict_args["custom_model"]:
             return pd.DataFrame(results.predictions, columns=["prediction"])

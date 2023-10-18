@@ -44,13 +44,26 @@ The PayPal handler is initialized with the following parameters:
     - [x] Support ORDER BY
     - [x] Support column selection
 
+- [x] PayPal Invoices Table for a given account
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
+  
+- [x] PayPal Subscriptions table for a given account 
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
+
+
 ## TODO
 
 - [ ] Support INSERT, UPDATE and DELETE for the Payments table
-- [ ] PayPal Invoices table
 - [ ] PayPal Orders table
 - [ ] PayPal Payouts table
-- [ ] PayPal Subscriptions table
 - [ ] Many more
 
 ## Example Usage
@@ -59,7 +72,7 @@ The first step is to create a database with the new `paypal` engine by passing i
 
 ~~~~sql
 CREATE DATABASE paypal_datasource
-WITH ENGINE = 'stripe',
+WITH ENGINE = 'paypal',
 PARAMETERS = {
   "mode": "sandbox",
   "client_id": "EBWKjlELKMYqRNQ6sYvFo64FtaRLRR5BdHEESmha49TM",
@@ -69,12 +82,24 @@ PARAMETERS = {
 
 Use the established connection to query your database:
 
+Query Payments_table: 
 ~~~~sql
 SELECT * FROM paypal_datasource.payments
 ~~~~
 
+Query Invoices_table: 
+~~~~sql
+SELECT * FROM paypal_datasource.invoices
+~~~~
+
+Query Subscriptions_table:
+~~~~sql
+SELECT * FROM paypal_datasource.subscriptions
+~~~~
+
 Run more advanced queries:
 
+`Payments_table` 
 ~~~~sql
 SELECT  intent, cart
 FROM paypal_datasource.payments
@@ -82,3 +107,38 @@ WHERE state = 'approved'
 ORDER BY id
 LIMIT 5
 ~~~~
+
+`Invoices_table`
+
+Query Invoices with specific columns:
+
+~~~~sql
+SELECT invoice_number, total_amount, status FROM paypal_datasource.invoices
+~~~~
+
+Query Invoices with conditions and ordering:
+
+~~~~sql
+SELECT invoice_number, total_amount
+FROM paypal_datasource.invoices
+WHERE status = 'PAID'
+ORDER BY total_amount DESC
+LIMIT 10
+~~~~
+
+`Subscriptions_table`
+Query Subscriptions with specific columns:
+
+~~~~sql
+SELECT id, name FROM paypal_datasource.subscriptions
+~~~~
+
+Query Subscriptions with conditions and ordering:
+
+~~~~sql
+SELECT id , state, name 
+FROM paypal_datasource.subscriptions 
+WHERE state ="CREATED" 
+LIMIT 5
+~~~~
+

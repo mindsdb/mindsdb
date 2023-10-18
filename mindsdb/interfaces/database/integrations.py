@@ -501,15 +501,16 @@ class IntegrationController:
 
         HandlerClass = self.handler_modules[integration_engine].Handler
 
-        if isinstance(HandlerClass, type) and issubclass(HandlerClass, BaseMLEngine):
-            handler_ars['handler_class'] = HandlerClass
-            handler_ars['execution_method'] = getattr(self.handler_modules[integration_engine], 'execution_method', None)
-            handler_ars['integration_engine'] = integration_engine
-            logger.info("%s.get_handler: create a ML client, params - %s", self.__class__.__name__, handler_ars)
-            handler = BaseMLEngineExec(**handler_ars)
-            # handler = MLClient(**handler_ars)
+        if integration_meta.get('type') == HANDLER_TYPE.ML:
+            ml_handler_args = {
+                'name': handler_ars['name'],
+                'integration_id': handler_ars['integration_id'],
+                'integration_engine': integration_engine,
+                'handler_class': HandlerClass
+            }
+            logger.info("%s.get_handler: create a ML client, params - %s", self.__class__.__name__, ml_handler_args)
+            handler = BaseMLEngineExec(**ml_handler_args)
         else:
-
             logger.info("%s.get_handler: create a client to db service of %s type, args - %s", self.__class__.__name__, integration_engine, handler_ars)
             handler = HandlerClass(**handler_ars)
             # handler = DBClient(integration_engine, HandlerClass, **handler_ars)

@@ -62,11 +62,11 @@ class RAGHandler(BaseMLEngine):
 
         # create folder for vector store to persist embeddings or load from existing folder
         args.vector_store_storage_path = self.engine_storage.folder_get(
-            args.vector_store_folder_name, update=True if args.run_embeddings else False
+            args.vector_store_folder_name
         )
 
-        if args.run_embeddings:
-            if "context_columns" not in args and df:
+        if args.run_embeddings and df is not None:
+            if "context_columns" not in args:
 
                 # if no context columns provided, use all columns in df
                 logger.info("No context columns provided, using all columns in df")
@@ -77,12 +77,15 @@ class RAGHandler(BaseMLEngine):
                     f"No embeddings model provided in query, using default model: {DEFAULT_EMBEDDINGS_MODEL}"
                 )
 
-            ingestor = Ingestor(args=args, df=df)
-            ingestor.embeddings_to_vectordb()
-
+            if not df.empty:
+                ingestor = Ingestor(args=args, df=df)
+                ingestor.embeddings_to_vectordb()
+            else:
+                logger.info(
+                    "Input data provided is empty, skipping embeddings and ingestion"
+                )
         else:
-            # Note this should only be run if run_embeddings is false
-
+            # Note this should only be run if run_embeddings is false or if no data is provided in query
             logger.info("Skipping embeddings and ingestion into Chroma VectorDB")
 
         export_args = args.dict(exclude={"llm_params"})
@@ -123,7 +126,7 @@ class RAGHandler(BaseMLEngine):
         args = RAGHandlerParameters(**input_args)
 
         args.vector_store_storage_path = self.engine_storage.folder_get(
-            args.vector_store_folder_name, update=False
+            args.vector_store_folder_name
         )
 
         # get question answering results

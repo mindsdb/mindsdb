@@ -52,3 +52,33 @@ class PaymentsTable(APITable):
         connection = self.handler.connect()
         payments = paypalrestsdk.Payment.all(kwargs, api=connection)
         return [payment.to_dict() for payment in payments['payments']]
+
+
+class InvoicesTable(APITable):
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'invoices',
+            self.get_columns()
+        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        invoices_df = pd.json_normalize(self.get_invoices(count=result_limit))
+        select_statement_executor = SELECTQueryExecutor(
+            invoices_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+        invoices_df = select_statement_executor.execute_query()
+
+        return invoices_df
+
+    def get_columns(self) -> List[Text]:
+        return pd.json_normalize(self.get_invoices(count=1)).columns.tolist()
+
+    def get_invoices(self, **kwargs) -> List[Dict]:
+        connection = self.handler.connect()
+        invoices = paypalrestsdk.Invoice.all(kwargs, api=connection)
+        return [invoice.to_dict() for invoice in invoices['invoices']]

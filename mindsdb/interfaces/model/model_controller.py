@@ -117,13 +117,9 @@ class ModelController():
 
         ml_handler_base = session.integration_controller.get_handler(integration_record.name)
 
-        ml_handler = ml_handler_base._get_ml_handler(model_record.id)
-        if not hasattr(ml_handler, 'describe'):
-            raise Exception("ML handler doesn't support description")
-
+        ml_handler = ml_handler_base.get_ml_handler(model_record.id)
 
         if attribute is None:
-            # show model record
             model_info = self.get_model_info(model_record)
 
             try:
@@ -139,7 +135,7 @@ class ModelController():
                     # first cell already has a list
                     attributes = attributes[0]
 
-            model_info.insert(0, 'tables', [attributes])
+            model_info.insert(0, 'TABLES', [attributes])
             return model_info
         else:
             return ml_handler.describe(attribute)
@@ -255,7 +251,7 @@ class ModelController():
                 }
         return data_integration_ref, fetch_data_query
 
-    def prepare_create_statement(self, statement, database_controller, handler_controller):
+    def prepare_create_statement(self, statement, database_controller):
         # extract data from Create model or Retrain statement and prepare it for using in crate and retrain functions
         project_name = statement.name.parts[0].lower()
         model_name = statement.name.parts[1].lower()
@@ -305,9 +301,7 @@ class ModelController():
         )
 
     def create_model(self, statement, ml_handler):
-        params = self.prepare_create_statement(statement,
-                                               ml_handler.database_controller,
-                                               ml_handler.handler_controller)
+        params = self.prepare_create_statement(statement, ml_handler.database_controller)
 
         existing_projects_meta = ml_handler.database_controller.get_dict(filter_type='project')
         if params['project_name'] not in existing_projects_meta:
@@ -330,9 +324,7 @@ class ModelController():
             if set_active in ('0', 0, None):
                 set_active = False
 
-        params = self.prepare_create_statement(statement,
-                                               ml_handler.database_controller,
-                                               ml_handler.handler_controller)
+        params = self.prepare_create_statement(statement, ml_handler.database_controller)
 
         base_predictor_record = get_model_record(
             name=params['model_name'],
@@ -421,7 +413,7 @@ class ModelController():
 
         ml_handler_base = session.integration_controller.get_handler(integration_record.name)
 
-        ml_handler = ml_handler_base._get_ml_handler(model_record.id)
+        ml_handler = ml_handler_base.get_ml_handler(model_record.id)
         if not hasattr(ml_handler, 'update'):
             raise Exception("ML handler doesn't updating")
 

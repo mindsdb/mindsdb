@@ -27,7 +27,7 @@ PARAMETERS = {
     }
 }
 ```
-The available arguments for instantiating Qdrant can be found [here](https://github.com/Anush008/mindsdb/blob/d3a1f861a481de09ba70796f84890fe1ed03d74c/mindsdb/integrations/handlers/qdrant_handler/qdrant_handler.py#L410-L478).
+The available arguments for instantiating Qdrant can be found [here](https://github.com/mindsdb/mindsdb/blob/23a509cb26bacae9cc22475497b8644e3f3e23c3/mindsdb/integrations/handlers/qdrant_handler/qdrant_handler.py#L408-L468).
 
 ## Creating a new table
 

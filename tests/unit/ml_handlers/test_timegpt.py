@@ -13,7 +13,6 @@ class TestTimeGPT(BaseExecutorTest):
     @staticmethod
     def get_api_key():
         """Retrieve TimeGPT API key from environment variables"""
-        print(os.environ.get("TIMEGPT_API_KEY")[:3])  # rm
         return os.environ.get("TIMEGPT_API_KEY")
 
     def wait_predictor(self, project, name):
@@ -38,34 +37,22 @@ class TestTimeGPT(BaseExecutorTest):
             columns = [col.alias if col.alias is not None else col.name for col in ret.columns]
             return pd.DataFrame(ret.data, columns=columns)
 
-    def test_missing_required_keys(self):
-        # create project
+    def test_no_timeseries_query(self):
         self.run_sql("create database proj")
         self.run_sql(f"""create ml_engine timegpt from timegpt using api_key='{self.get_api_key()}';""")
-        # with pytest.raises(Exception):
         self.run_sql(
-            """
-              create model proj.test_timegpt_missing_required_keys
-              predict answer
-              using
-                engine='timegpt';
-           """
+            f"""
+            create model proj.test_timegpt_unknown_arguments
+            predict expenditure -- as we don't pass any time series arguments, model should fail to create
+            using
+                engine='timegpt',
+                wrong_argument_name='any value';
+        """
         )
+        with pytest.raises(Exception) as e:
+            self.wait_predictor("proj", "test_timegpt_unknown_arguments")
 
-    def test_unknown_arguments(self):
-        self.run_sql("create database proj")
-        self.run_sql(f"""create ml_engine timegpt from timegpt using api_key='{self.get_api_key()}';""")
-        with pytest.raises(Exception):
-            self.run_sql(
-                f"""
-                create model proj.test_timegpt_unknown_arguments
-                predict answer
-                using
-                    engine='timegpt',
-                    api_key='{self.get_api_key()}',
-                    evidently_wrong_argument='wrong value';  --- this is a wrong argument name
-            """
-            )
+        assert "KeyError: 'is_timeseries'" in str(e.value.args[1])
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_forecast_group(self, mock_handler):
@@ -74,30 +61,31 @@ class TestTimeGPT(BaseExecutorTest):
         df = pd.read_csv('tests/unit/ml_handlers/data/house_sales.csv')
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
-        self.run_sql(f"""create ml_engine timegpt from timegpt using api_key='{self.get_api_key()}';""")
+        window = 128
+        horizon = 8
 
+        self.run_sql(f"""create ml_engine timegpt from timegpt using api_key='{self.get_api_key()}';""")
         self.run_sql(
             f"""
            create model proj.test_timegpt_forecast
            predict ma
            order by saledate
            group by type, bedrooms
-           window 128
-           horizon 5
+           window {window}
+           horizon {horizon}
            using
-             engine='timegpt',
-             api_key='{self.get_api_key()}';
+             engine='timegpt';
         """
         )
         self.wait_predictor("proj", "test_timegpt_forecast")
 
-        self.run_sql(
+        ret = self.run_sql(
             """
-            SELECT p.ma
+            SELECT p.*
             FROM proj.test_timegpt_forecast as p
             JOIN pg.df as t
-            WHERE p.saledate > LATEST;
+            WHERE p.saledate > LATEST
+            AND t.type = 'house' AND t.bedrooms = 2;
         """
         )
-
-        # asserts
+        assert ret.shape[0] == horizon

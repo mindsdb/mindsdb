@@ -133,9 +133,10 @@ jobs:
       shell: bash
       env:
         CHECK_FOR_UPDATES: False
-        OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+        OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
+        TIMEGPT_API_KEY: ${{secrets.TIME_GPT_API_KEY}}
 
   deploy_to_pypi:
     runs-on: ubuntu-latest

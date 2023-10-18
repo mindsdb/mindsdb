@@ -13,7 +13,7 @@ class TestTimeGPT(BaseExecutorTest):
     @staticmethod
     def get_api_key():
         """Retrieve TimeGPT API key from environment variables"""
-        return os.environ.get("TIME_GPT_API_KEY") or os.environ.get("TIMEGPT_API_KEY")
+        return os.environ.get("TIME_GPT_API_KEY")
 
     def wait_predictor(self, project, name):
         # wait

@@ -9,7 +9,7 @@ from mindsdb.integrations.handlers.anyscale_endpoints_handler.anyscale_endpoints
 from ..executor_test_base import BaseExecutorTest
 
 
-@pytest.mark.skipif(os.environ.get('ANYSCALE_ENDPOINTS_API_KEY') is None, reason='Missing API key!')
+# @pytest.mark.skipif(os.environ.get('ANYSCALE_ENDPOINTS_API_KEY') is None, reason='Missing API key!')
 class TestAnyscaleEndpoints(BaseExecutorTest):
     """
         Test class for Anyscale Endpoints Integration Testing.

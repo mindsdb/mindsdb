@@ -286,6 +286,40 @@ class CustomersTable(APITable):
 
         self.update_customers(customer_ids, values_to_update)
 
+    def delete(self, query: ast.Delete) -> None:
+        """Deletes data from the Shopify "DELETE /customers" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Insert
+           Given SQL DELETE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+
+        delete_statement_parser = DELETEQueryParser(query)
+        where_conditions = delete_statement_parser.parse_query()
+
+        customers_df = pd.json_normalize(self.get_customers())
+
+        delete_query_executor = DELETEQueryExecutor(
+            customers_df,
+            where_conditions
+        )
+
+        customers_df = delete_query_executor.execute_query()
+
+        customer_ids = customers_df['id'].tolist()
+        self.delete_customers(customer_ids)
+
+
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_customers(limit=1)).columns.tolist()
 
@@ -316,6 +350,16 @@ class CustomersTable(APITable):
                 setattr(customer, key, value)
             customer.save()
             logger.info(f'Customer {customer_id} updated')
+
+    def delete_customers(self, customer_ids: List[int]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for customer_id in customer_ids:
+            customer = shopify.Customer.find(customer_id)
+            customer.destroy()
+            logger.info(f'Customer {customer_id} deleted')
+
 
 
 class OrdersTable(APITable):

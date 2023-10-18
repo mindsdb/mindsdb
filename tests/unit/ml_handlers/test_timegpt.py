@@ -41,7 +41,7 @@ class TestTimeGPT(BaseExecutorTest):
         self.run_sql("create database proj")
         self.run_sql(f"""create ml_engine timegpt from timegpt using api_key='{self.get_api_key()}';""")
         self.run_sql(
-            f"""
+            """
             create model proj.test_timegpt_unknown_arguments
             predict expenditure -- as we don't pass any time series arguments, model should fail to create
             using

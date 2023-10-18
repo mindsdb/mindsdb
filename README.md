@@ -92,7 +92,7 @@ docker pull mindsdb/mindsdb
 4. **Fine-Tune Models:** Experiment and [Fine-Tune](https://docs.mindsdb.com/sql/api/finetune) to achieve optimal results.
 5. **Automate Workflows:** Streamline operations with [JOBS](https://docs.mindsdb.com/sql/create/jobs).
 
-Follow the [quickstart guide](https://docs.mindsdb.com/quickstart?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) with sample data to get on-boarded as fast as possible.
+Follow the [quickstart guide](https://docs.mindsdb.com/quickstart?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) with sample data to get on board as fast as possible.
 
 
 ## Data Integrations <a name="DatabaseIntegrations"></a>
@@ -113,11 +113,11 @@ If you found a bug, please submit an [issue on GitHub](https://github.com/mindsd
 
 To get community support, you can:
 
-* Post a question at MindsDB [Slack community](https://mindsdb.com/joincommunity).
+* Post a question in MindsDB [Slack community](https://mindsdb.com/joincommunity).
 * Ask for help at our [GitHub Discussions](https://github.com/mindsdb/mindsdb/discussions).
 * Ask a question at [Stackoverflow](https://stackoverflow.com/questions/tagged/mindsdb) with a MindsDB tag.
 
-If you need commercial support, please [contact](https://mindsdb.com/contact/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) MindsDB team.
+If you need commercial support, please [contact](https://mindsdb.com/contact/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) the MindsDB team.
 
 ## Contributing <a name="Contributing"></a>
 

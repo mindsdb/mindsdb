@@ -365,7 +365,27 @@ class OrdersTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         orders = shopify.Order.find(**kwargs)
         return [order.to_dict() for order in orders]
+    def delete(self, query: ast.Delete) -> None:
+        
+        delete_statement_parser = DELETEQueryParser(query)
+        where_conditions = delete_statement_parser.parse_query()
 
+        orders_df = pd.json_normalize(self.get_orders())
+
+        delete_query_executor = DELETEQueryExecutor(
+           orders_df,
+            where_conditions
+        )
+
+        orders_df = delete_query_executor.execute_query()
+
+        orders_ids = orders_df['id'].tolist()
+        self.delete_orders(orders_ids)
+
+    
+    
+
+    
 class InventoryLevelTable(APITable):
     """The Shopify Inventory Table implementation"""
 

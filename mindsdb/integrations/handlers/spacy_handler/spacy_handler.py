@@ -3,6 +3,7 @@ import pandas as pd
 from mindsdb.integrations.libs.base import BaseMLEngine
 from typing import Optional
 
+
 class SpacyHandler(BaseMLEngine):
     """
     Integration with the spaCy NLP library.

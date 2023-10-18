@@ -47,4 +47,7 @@ class VertexHandler(BaseMLEngine):
         predict_args = self.model_storage.json_get("predict_args")
         vertex = VertexClient(PATH_TO_SERVICE_ACCOUNT_JSON, PROJECT_ID)
         results = vertex.predict_from_df(predict_args["endpoint_name"], df, custom_model=predict_args["custom_model"])
-        return pd.DataFrame(results.predictions, columns=["prediction"])
+        if predict_args["custom_model"]:
+            return pd.DataFrame(results.predictions, columns=["prediction"])
+        else:
+            return pd.DataFrame(results.predictions)

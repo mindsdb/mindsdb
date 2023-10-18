@@ -1,6 +1,5 @@
 from pathlib import Path
 import json
-import time
 
 import requests
 import pandas as pd
@@ -8,11 +7,13 @@ import pytest
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from .conftest import make_test_csv
+from .http_test_helpers import HTTPHelperMixin
 
 
 # used by mindsdb_app fixture in conftest
 OVERRIDE_CONFIG = {
-    'integrations': {},
+    'tasks': {'disable': True},
+    'jobs': {'disable': True}
 }
 # used by (required for) mindsdb_app fixture in conftest
 API_LIST = ["http"]
@@ -23,7 +24,7 @@ USE_GUI = True
 
 
 @pytest.mark.usefixtures('mindsdb_app', 'postgres_db', 'mysql_db', 'maria_db')
-class TestHTTP:
+class TestHTTP(HTTPHelperMixin):
     @staticmethod
     def get_files_list():
         response = requests.request('GET', f'{HTTP_API_ROOT}/files/')
@@ -35,53 +36,6 @@ class TestHTTP:
     @classmethod
     def setup_class(cls):
         cls._sql_via_http_context = {}
-
-    def sql_via_http(self, request: str, expected_resp_type: str = None, context: dict = None) -> dict:
-        if context is None:
-            context = self._sql_via_http_context
-        payload = {
-            'query': request,
-            'context': context
-        }
-        response = self.api_request('post', '/sql/query', payload)
-
-        assert response.status_code == 200, f"sql/query is not accessible - {response.text}"
-        response = response.json()
-        assert response.get('type') == (expected_resp_type or [RESPONSE_TYPE.OK, RESPONSE_TYPE.TABLE, RESPONSE_TYPE.ERROR])
-        assert isinstance(response.get('context'), dict)
-        if response['type'] == 'table':
-            assert isinstance(response.get('data'), list)
-            assert isinstance(response.get('column_names'), list)
-        elif response['type'] == 'error':
-            assert isinstance(response.get('error_code'), int)
-            assert isinstance(response.get('error_message'), str)
-        self._sql_via_http_context = response['context']
-        return response
-
-    def api_request(self, method, url, payload=None, headers=None):
-        method = method.lower()
-
-        fnc = getattr(requests, method)
-
-        url = f'{HTTP_API_ROOT}/{url.lstrip("/")}'
-        response = fnc(url, json=payload, headers=headers)
-
-        return response
-
-    def await_predictor(self, predictor_name, timeout=60):
-        start = time.time()
-        status = None
-        while (time.time() - start) < timeout:
-            resp = self.sql_via_http('show models', RESPONSE_TYPE.TABLE)
-            name_index = [x.lower() for x in resp['column_names']].index('name')
-            status_index = [x.lower() for x in resp['column_names']].index('status')
-            for row in resp['data']:
-                if row[name_index] == predictor_name:
-                    status = row[status_index]
-            if status in ['complete', 'error']:
-                break
-            time.sleep(1)
-        return status
 
     def show_databases(self):
         resp = self.sql_via_http('show databases', RESPONSE_TYPE.TABLE)
@@ -452,7 +406,7 @@ class TestHTTP:
             from files (select sqft, location, rental_price from test_file limit 30)
             predict rental_price
         ''', RESPONSE_TYPE.TABLE)
-        status = self.await_predictor('p_test_1', timeout=120)
+        status = self.await_model('p_test_1', timeout=120)
         assert status == 'complete'
 
         resp = self.sql_via_http('''

@@ -6,7 +6,7 @@ requests==2.28.0
 openai>=0.27.0
 pydantic>=1.10.8
 sentence_transformers==2.2.2
-markupsafe == 2.0.1
+markupsafe==2.0.1
 faiss-cpu>=1.7.4 #todo check support for 'faiss-gpu'
 datasets>=2.14.4
 nltk>=3.8.1

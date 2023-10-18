@@ -27,7 +27,7 @@ PLAID_ENV = {
 
 
 class PlaidHandler(APIHandler):
-    '''A class for handling connections and interactions with the Twitter API.
+    '''A class for handling connections and interactions with the Plaid API.
 
     Attributes:
         plaid_env (str): Enviroment used by user [ 'sandbox'(default) OR 'development' OR 'production' ].

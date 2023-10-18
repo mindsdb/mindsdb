@@ -11,6 +11,10 @@ from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb.integrations.utilities.sql_utils import conditions_to_filter
 
 
+def rename_key(d, new_key, old_key):
+    d[new_key] = d.pop(old_key)
+
+
 class CustomAPITable(APITable):
 
     def __init__(self, handler: APIHandler):
@@ -70,28 +74,24 @@ class NPMMetadataTable(CustomAPITable):
             ["collected", "metadata"],
             ["name", "scope", "version", "description", "author", "publisher", "repository", "license", "releases"]
         )
-        metadata["author_name"] = metadata["author"].get("name")
-        metadata["author_email"] = metadata["author"].get("email")
-        del metadata["author"]
-        metadata["publisher_username"] = metadata["publisher"].get("username")
-        metadata["publisher_email"] = metadata["publisher"].get("email")
-        del metadata["publisher"]
-        metadata["repository"] = metadata["repository"].get("url")
-        metadata["num_releases"] = sum([x["count"] for x in metadata["releases"]])
-        del metadata["releases"]
+        metadata["author_email"] = metadata["author"].get("email", "")
+        metadata["author"] = metadata["author"].get("name", "")
+        rename_key(metadata, "author_name", "author")
+        metadata["publisher_email"] = metadata["publisher"].get("email", "")
+        metadata["publisher"] = metadata["publisher"].get("username", "")
+        rename_key(metadata, "publisher_username", "publisher")
+        metadata["repository"] = metadata["repository"].get("url", "")
+        metadata["releases"] = sum([x.get("count", 0) for x in metadata.get("releases", [0])])
+        rename_key(metadata, "num_releases", "releases")
         npm_data = connection.get_cols_in(
             ["collected", "npm"],
             ["downloads", "starsCount"]
         )
-        npm_data["num_downloads"] = sum([x["count"] for x in npm_data["downloads"]])
-        del npm_data["downloads"]
-        npm_data["num_stars"] = npm_data["starsCount"]
-        del npm_data["starsCount"]
-        score = connection.get_cols_in(
-            ["score"],
-            ["final"]
-        )
-        df = pd.DataFrame.from_records([{**metadata, **npm_data, "score": score["final"]}])
+        npm_data["downloads"] = sum([x.get("count", 0) for x in npm_data.get("downloads", [0])])
+        rename_key(npm_data, "num_downloads", "downloads")
+        rename_key(npm_data, "num_stars", "starsCount")
+        score = connection.get_cols_in(["score"], ["final"])["final"]
+        df = pd.DataFrame.from_records([{**metadata, **npm_data, "score": score}])
         return self.apply_query_params(df, query)
 
 
@@ -113,7 +113,7 @@ class NPMMaintainersTable(CustomAPITable):
             ["collected", "metadata"],
             ["maintainers"]
         )
-        records = [{col: x[col] for col in self.columns} for x in metadata.get("maintainers", [])]
+        records = [{col: x[col] for col in self.columns} for x in metadata["maintainers"]] if metadata.get("maintainers") else [{}]
         df = pd.DataFrame.from_records(records)
         return self.apply_query_params(df, query)
 
@@ -135,7 +135,7 @@ class NPMKeywordsTable(CustomAPITable):
             ["collected", "metadata"],
             ["keywords"]
         )
-        records = [{"keyword": keyword} for keyword in metadata["keywords"]]
+        records = [{"keyword": keyword} for keyword in metadata["keywords"]] if metadata.get("keywords") else [{}]
         df = pd.DataFrame.from_records(records)
         return self.apply_query_params(df, query)
 
@@ -158,7 +158,7 @@ class NPMDependenciesTable(CustomAPITable):
             ["collected", "metadata"],
             ["dependencies"]
         )
-        records = [{"dependency": d, "version": v} for d, v in metadata["dependencies"].items()]
+        records = [{"dependency": d, "version": v} for d, v in metadata["dependencies"].items()] if metadata.get("dependencies") else [{}]
         df = pd.DataFrame.from_records(records)
         return self.apply_query_params(df, query)
 
@@ -181,7 +181,7 @@ class NPMDevDependenciesTable(CustomAPITable):
             ["collected", "metadata"],
             ["devDependencies"]
         )
-        records = [{"dev_dependency": d, "version": v} for d, v in metadata["devDependencies"].items()]
+        records = [{"dev_dependency": d, "version": v} for d, v in metadata["devDependencies"].items()] if metadata.get("devDependencies") else [{}]
         df = pd.DataFrame.from_records(records)
         return self.apply_query_params(df, query)
 
@@ -204,7 +204,7 @@ class NPMOptionalDependenciesTable(CustomAPITable):
             ["collected", "metadata"],
             ["optionalDependencies"]
         )
-        records = [{"optional_dependency": d, "version": v} for d, v in metadata["optionalDependencies"].items()]
+        records = [{"optional_dependency": d, "version": v} for d, v in metadata["optionalDependencies"].items()] if metadata.get("optionalDependencies") else [{}]
         df = pd.DataFrame.from_records(records)
         return self.apply_query_params(df, query)
 
@@ -231,14 +231,11 @@ class NPMGithubStatsTable(CustomAPITable):
             ["collected", "github"],
             ["homepage", "starsCount", "forksCount", "subscribersCount", "issues"]
         )
-        github_data["num_stars"] = github_data["starsCount"]
-        del github_data["starsCount"]
-        github_data["num_forks"] = github_data["forksCount"]
-        del github_data["forksCount"]
-        github_data["num_subscribers"] = github_data["subscribersCount"]
-        del github_data["subscribersCount"]
+        rename_key(github_data, "num_stars", "starsCount")
+        rename_key(github_data, "num_forks", "forksCount")
+        rename_key(github_data, "num_subscribers", "subscribersCount")
         github_data["num_issues"] = github_data["issues"].get("count", 0)
-        github_data["num_open_issues"] = github_data["issues"].get("openCount", 0)
-        del github_data["issues"]
+        github_data["issues"] = github_data["issues"].get("openCount", 0)
+        rename_key(github_data, "num_open_issues", "issues")
         df = pd.DataFrame.from_records([github_data])
         return self.apply_query_params(df, query)

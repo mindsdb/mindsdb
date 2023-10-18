@@ -59,11 +59,17 @@ SharePoint-sites are essentially containers for information. The way you store a
 ### Lists:
 A list is a collection of data that you can share with your team members and people who you've provided access to. You'll find a number of ready-to-use list templates to provide a good starting point for organizing list items.
 
+https://support.microsoft.com/en-us/office/introduction-to-lists-0a1c3ace-def0-44af-b225-cfa8d92c52d7
+
 ### Site columns
-A column represents an attribute, or piece of metadata, that the user wants to manage for the items in the list or content type to which they added the column. Users can add columns to list, library and sites and even reference them in content types.
+A Site Column is a template of a configured column. By creating a Site Column, you can reuse it anywhere else in the site and not have to manually rebuild its configuration at each reuse.
+
+https://learn.microsoft.com/en-us/microsoft-365/community/what-is-site-column
 
 ### List items
 A SharePoint list can be considered as a collection of items. The list items can be a variety of things, such as contacts, calendars, announcements, and issues-tracking.
+
+https://support.microsoft.com/en-us/office/introduction-to-lists-0a1c3ace-def0-44af-b225-cfa8d92c52d7
 
 ### Difference between site column and list columns
 The main difference between site column and list columns is the scope of use.
@@ -71,6 +77,8 @@ That is a list column will only be available to that particular list/library, an
 If you wish to use that column outside that list/library, you will have to recreate it at the new location.
 
 Site columns on the other hand, are created at the site level, and available to reuse from the site they're created in (as the starting point).
+
+https://learn.microsoft.com/en-us/microsoft-365/community/list-column-or-site-column-which-one-to-choose
 
 ## TODO
 

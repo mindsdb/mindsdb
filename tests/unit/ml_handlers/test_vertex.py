@@ -234,7 +234,7 @@ class TestVertex(BaseExecutorTest):
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_classification_model(self, mock_handler):
         # dataset, string values
-        df = pd.read_json("tests/unit/ml_handlers/data/vertex_classification.json")
+        df = pd.read_csv("tests/unit/ml_handlers/data/vertex_classification.csv")
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         # create project

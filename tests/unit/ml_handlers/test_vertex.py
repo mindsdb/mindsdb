@@ -168,12 +168,10 @@ class TestVertex(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_anomaly_detection_model(self, mock_handler):
-        # dataset, string values
-        df = pd.read_csv("tests/unit/ml_handlers/data/vertex_anomaly_detection.csv")
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
-
         # create project
         self.run_sql("create database proj")
+        df = pd.read_csv("tests/unit/ml_handlers/data/vertex_anomaly_detection.csv")
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         # create predictor
         self.run_sql(
@@ -184,7 +182,9 @@ class TestVertex(BaseExecutorTest):
            using
             engine='vertex',
             model_name='diamonds_anomaly_detection',
-            custom_model='True'
+            custom_model='True',
+            project_id = 'mindsdb-401709',
+            service_key_path='tests/unit/ml_handlers/data/vertex_service_key.json'
         """
         )
         self.wait_predictor("proj", "modelx")
@@ -201,12 +201,10 @@ class TestVertex(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_regression_model(self, mock_handler):
-        # dataset, string values
+        # create database
+        self.run_sql("create database proj")
         df = pd.read_csv("tests/unit/ml_handlers/data/vertex_regression.csv")
         self.set_handler(mock_handler, name="pg", tables={"df": df})
-
-        # create project
-        self.run_sql("create database proj")
 
         # create predictor
         self.run_sql(
@@ -216,7 +214,9 @@ class TestVertex(BaseExecutorTest):
            predict actual_productivity
            using
             engine='vertex',
-            model_name='productivity_regression'
+            model_name='productivity_regression',
+            project_id = 'mindsdb-401709',
+            service_key_path='tests/unit/ml_handlers/data/vertex_service_key.json'
         """
         )
         self.wait_predictor("proj", "modelx")
@@ -248,7 +248,9 @@ class TestVertex(BaseExecutorTest):
            predict Class
            using
             engine='vertex',
-            model_name='fraud_detection'
+            model_name='fraud_detection',
+            project_id = 'mindsdb-401709',
+            service_key_path='tests/unit/ml_handlers/data/vertex_service_key.json'
         """
         )
         self.wait_predictor("proj", "modelx")

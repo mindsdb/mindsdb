@@ -180,3 +180,10 @@ WHERE score=5
 ORDER BY id
 LIMIT 5
 ~~~~
+
+For `customers` table, DELETE is supported too. You can delete the customers as follows:
+
+~~~~sql
+DELETE FROM shopify_datasource.customers
+WHERE verified_email = false;
+~~~~

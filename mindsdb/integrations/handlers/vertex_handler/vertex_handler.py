@@ -1,9 +1,5 @@
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.integrations.handlers.vertex_handler.vertex_client import (
-    VertexClient,
-    PATH_TO_SERVICE_ACCOUNT_JSON,
-    PROJECT_ID,
-)
+from mindsdb.integrations.handlers.vertex_handler.vertex_client import VertexClient
 import pandas as pd
 
 

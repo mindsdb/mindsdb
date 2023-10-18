@@ -38,27 +38,22 @@ class FaunaDBHandler(DatabaseHandler):
             "fauna_endpoint": self._connection_data.get("fauna_endpoint"),
         }
 
+        scheme, domain, port, endpoint = (
+            self._client_config["fauna_scheme"],
+            self._client_config["fauna_domain"],
+            self._client_config["fauna_port"],
+            self._client_config["fauna_endpoint"],
+        )
+
         # should have the secret
         if (self._client_config["fauna_secret"]) is None:
             raise Exception("FaunaDB secret is required for FaunaDB connection!")
         # either scheme + domain + port or endpoint is required
         # but not both
-        if self._client_config["fauna_endpoint"] is None and not (
-            self._client_config["fauna_scheme"]
-            and self._client_config["fauna_domain"]
-            and self._client_config["fauna_port"]
-        ):
-            raise Exception(
-                "Either scheme + domain + port or endpoint is required for FaunaDB connection!"
-            )
-        elif self._client_config["fauna_endpoint"] is not None and (
-            self._client_config["fauna_scheme"]
-            and self._client_config["fauna_domain"]
-            and self._client_config["fauna_port"]
-        ):
-            raise Exception(
-                "Either scheme + domain + port or endpoint is required for FaunaDB connection, but not both!"
-            )
+        if not endpoint and not (scheme and domain and port):
+            raise Exception("Either scheme + domain + port or endpoint is required for FaunaDB connection!")
+        elif endpoint and (scheme or domain or port):
+            raise Exception("Either scheme + domain + port or endpoint is required for FaunaDB connection, but not both!")
 
         self._client = None
         self.is_connected = False

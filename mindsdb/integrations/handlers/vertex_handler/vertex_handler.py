@@ -21,6 +21,7 @@ class VertexHandler(BaseMLEngine):
         The runtime for this is long, it took 15 minutes for a small model.
         """
         model_name = args["using"]["model_name"]
+        custom_model = False if "custom_model" not in args["using"] else args["using"]["custom_model"]
         vertex = VertexClient(PATH_TO_SERVICE_ACCOUNT_JSON, PROJECT_ID)
         model = vertex.get_model_by_display_name(model_name)
         if not model:
@@ -36,6 +37,7 @@ class VertexHandler(BaseMLEngine):
             print("Endpoint deployed")
         predict_args = {}
         predict_args["endpoint_name"] = endpoint_name
+        predict_args["custom_model"] = custom_model
         self.model_storage.json_set("predict_args", predict_args)
 
     def predict(self, df, args={}):
@@ -44,5 +46,5 @@ class VertexHandler(BaseMLEngine):
             df.drop("__mindsdb_row_id", axis=1, inplace=True)
         predict_args = self.model_storage.json_get("predict_args")
         vertex = VertexClient(PATH_TO_SERVICE_ACCOUNT_JSON, PROJECT_ID)
-        results = vertex.predict_from_df(predict_args["endpoint_name"], df)
+        results = vertex.predict_from_df(predict_args["endpoint_name"], df, custom_model=predict_args["custom_model"])
         return pd.DataFrame(results.predictions, columns=["prediction"])

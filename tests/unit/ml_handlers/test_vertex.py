@@ -167,7 +167,7 @@ class TestVertex(BaseExecutorTest):
             return pd.DataFrame(ret.data, columns=columns)
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_simple(self, mock_handler):
+    def test_anomaly_detection_model(self, mock_handler):
         # dataset, string values
         df = pd.read_csv("tests/unit/ml_handlers/data/vertex_anomaly_detection.csv")
         self.set_handler(mock_handler, name="pg", tables={"df": df})
@@ -183,7 +183,72 @@ class TestVertex(BaseExecutorTest):
            predict cut
            using
             engine='vertex',
-            model_name='diamonds_anomoly_detection'
+            model_name='diamonds_anomaly_detection',
+            custom_model='True'
+        """
+        )
+        self.wait_predictor("proj", "modelx")
+
+        # run predict
+        ret = self.run_sql(
+            """
+           SELECT p.*
+           FROM pg.df as t
+           JOIN proj.modelx as p
+        """
+        )
+        assert len(ret) == len(df)
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_regression_model(self, mock_handler):
+        # dataset, string values
+        df = pd.read_csv("tests/unit/ml_handlers/data/vertex_regression.csv")
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
+
+        # create project
+        self.run_sql("create database proj")
+
+        # create predictor
+        self.run_sql(
+            """
+           create model proj.modelx
+           from pg (select * from df)
+           predict actual_productivity
+           using
+            engine='vertex',
+            model_name='productivity_regression'
+        """
+        )
+        self.wait_predictor("proj", "modelx")
+
+        # run predict
+        ret = self.run_sql(
+            """
+           SELECT p.*
+           FROM pg.df as t
+           JOIN proj.modelx as p
+        """
+        )
+        assert len(ret) == len(df)
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_classification_model(self, mock_handler):
+        # dataset, string values
+        df = pd.read_json("tests/unit/ml_handlers/data/vertex_classification.json")
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
+
+        # create project
+        self.run_sql("create database proj")
+
+        # create predictor
+        self.run_sql(
+            """
+           create model proj.modelx
+           from pg (select * from df)
+           predict Class
+           using
+            engine='vertex',
+            model_name='fraud_detection'
         """
         )
         self.wait_predictor("proj", "modelx")

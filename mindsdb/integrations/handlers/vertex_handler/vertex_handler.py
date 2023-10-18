@@ -21,8 +21,10 @@ class VertexHandler(BaseMLEngine):
         The runtime for this is long, it took 15 minutes for a small model.
         """
         model_name = args["using"]["model_name"]
+        service_key_path = args["using"]["service_key_path"]
+        project_id = args["using"]["project_id"]
         custom_model = False if "custom_model" not in args["using"] else args["using"]["custom_model"]
-        vertex = VertexClient(PATH_TO_SERVICE_ACCOUNT_JSON, PROJECT_ID)
+        vertex = VertexClient(service_key_path, project_id)
         model = vertex.get_model_by_display_name(model_name)
         if not model:
             print("Model not found")

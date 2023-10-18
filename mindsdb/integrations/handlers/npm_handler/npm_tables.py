@@ -81,6 +81,7 @@ class NPMMetadataTable(CustomAPITable):
         metadata["publisher"] = metadata["publisher"].get("username", "")
         rename_key(metadata, "publisher_username", "publisher")
         metadata["repository"] = metadata["repository"].get("url", "")
+        rename_key(metadata, "repository_url", "repository")
         metadata["releases"] = sum([x.get("count", 0) for x in metadata.get("releases", [0])])
         rename_key(metadata, "num_releases", "releases")
         npm_data = connection.get_cols_in(

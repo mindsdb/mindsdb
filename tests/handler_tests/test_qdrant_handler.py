@@ -4,7 +4,7 @@ import pytest
 import pandas as pd
 from mindsdb_sql import parse_sql
 
-from unit.executor_test_base import BaseExecutorTest
+from tests.unit.executor_test_base import BaseExecutorTest
 
 
 class TestQdrantHandler(BaseExecutorTest):

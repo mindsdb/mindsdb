@@ -7,6 +7,9 @@ import requests
 
 
 class StoriesTable(APITable):
+    json_endpoint = "topstories.json"
+    columns = ['id', 'time', 'title', 'url', 'score', 'descendants']
+
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Select data from the stories table and return it as a pandas DataFrame.
         Args:
@@ -21,24 +24,7 @@ class StoriesTable(APITable):
         if query.limit is not None:
             limit = query.limit.value
 
-        # Call the Hacker News API to get the top stories
-        url = f'{hn_handler.base_url}/topstories.json'
-        response = requests.get(url)
-        data = response.json()
-
-        # Fetch the details of the top stories, up to the specified limit
-        stories_data = []
-        for story_id in data[:limit]:
-            url = f'{hn_handler.base_url}/item/{story_id}.json'
-            response = requests.get(url)
-            story_data = response.json()
-            stories_data.append(story_data)
-
-        # Create a DataFrame from the fetched data
-        df = pd.DataFrame(
-            stories_data, 
-            columns=['id', 'time', 'title', 'url', 'score', 'descendants']
-            )
+        df = hn_handler.get_df_from_class(self, limit)
 
         # Apply any WHERE clauses in the SQL query to the DataFrame
         conditions = extract_comparison_conditions(query.where)
@@ -60,7 +46,7 @@ class StoriesTable(APITable):
         Returns:
             list: A list of column names for the stories table.
         """
-        return ['id', 'time', 'title', 'url', 'score', 'descendants']
+        return self.columns
 
     def filter_columns(self, df, query):
         """Filter the columns in the DataFrame according to the SQL query.
@@ -77,6 +63,19 @@ class StoriesTable(APITable):
                 columns.append(target.value)
         df = df[columns]
         return df
+    
+class HNStoriesTable(StoriesTable):
+    json_endpoint = "askstories.json"
+    columns = ['id', 'time', 'title', 'text', 'score', 'descendants']
+
+class JobStoriesTable(StoriesTable):
+    json_endpoint = "jobstories.json"
+    columns = ['id', 'time', 'title', 'url', 'score', 'type']
+    
+
+class ShowStoriesTable(StoriesTable):
+    json_endpoint = "showstories.json"
+    columns = ['id', 'time', 'title', 'text', 'score', 'descendants']
 
 
 class CommentsTable(APITable):

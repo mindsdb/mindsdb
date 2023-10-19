@@ -57,6 +57,30 @@ WHERE locationId = '99288';
 
 The details of this API reference can be found here: https://tripadvisor-content-api.readme.io/reference/getlocationreviews
 
+## Location Photos API reference
+
+The Location Reviews request returns up to 5 of the most recent reviews for a specific location.
+
+```
+SELECT *
+FROM my_tripadvisor.photosTable
+WHERE location_id = '99288';
+```
+
+The details of this API reference can be found here: https://tripadvisor-content-api.readme.io/reference/getlocationphotos
+
+## Location Nearby API reference
+
+The Location Reviews request returns up to 5 of the most recent reviews for a specific location.
+
+```
+SELECT *
+FROM my_tripadvisor.nearbyLocationTable
+WHERE latLong = '40.780825, -73.972781';
+```
+
+The details of this API reference can be found here: https://tripadvisor-content-api.readme.io/reference/searchfornearbylocations
+
 # Use Case: Sentiment Analysis of Reviews from TripAdvisor with OpenAI
 
 ## Search Hotels in New York and Choose one

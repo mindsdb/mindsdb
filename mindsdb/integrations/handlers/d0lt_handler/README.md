@@ -14,11 +14,11 @@ This handler was implemented using the `mysql-connector`, a Python library that 
 
 The required arguments to establish a connection are,
 
-- `user`: username associated with database
-- `password`: password to authenticate your access
-- `host`: host to server IP Address or hostname
-- `port`: port through which TCPIP connection is to be made
-- `database`: Database name to be connected
+* `user`: username associated with database
+* `password`: password to authenticate your access
+* `host`: host to server IP Address or hostname
+* `port`: port through which TCPIP connection is to be made
+* `database`: Database name to be connected
 
 ## Usage
 

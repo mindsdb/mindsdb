@@ -12,12 +12,12 @@ This handler was implemented using the `vertica-python`, a Python library that a
 
 The required arguments to establish a connection are,
 
-- `user`: username associated with database
-- `password`: password to authenticate your access
-- `host`: host to server IP Address or hostname
-- `port`: port through which TCPIP connection is to be made
-- `database`: Database name to be connected
-- `schema`: schema name to get tables
+* `user`: username associated with database
+* `password`: password to authenticate your access
+* `host`: host to server IP Address or hostname
+* `port`: port through which TCPIP connection is to be made
+* `database`: Database name to be connected
+* `schema`: schema name to get tables 
 
 ## Usage
 

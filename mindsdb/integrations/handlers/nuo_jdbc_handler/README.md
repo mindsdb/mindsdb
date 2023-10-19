@@ -13,19 +13,19 @@ This handler was implemented using the JDBC driver provided by NuoDB. To establi
 
 The required arguments to establish a connection are,
 
-- `host`: host to server IP Address or hostname
-- `port`: port through which TCPIP connection is to be made
-- `database`: Database name to be connected
-- `user`: The username to authenticate with the NuoDB server.
-- `password`: The password to authenticate the user with the NuoDB server.
-- `is_direct`: This argument indicates whether a direct connection to the TE is to be attempted.
+* `host`: host to server IP Address or hostname
+* `port`: port through which TCPIP connection is to be made
+* `database`: Database name to be connected
+* `user`: The username to authenticate with the NuoDB server.
+* `password`: The password to authenticate the user with the NuoDB server.
+* `is_direct`: This argument indicates whether a direct connection to the TE is to be attempted. 
 
-Other optional arguments are,
+Other optional arguments are, 
+* `schema`: The schema name to use when connecting with the NuoDB.
+* `jar_location`: The location of the jar files which contain the JDBC class. This need not be specified if the required classes are already added to the CLASSPATH variable.
+* `driver_args`: The extra arguments which can be specified to the driver. Specify this in the format: "arg1=value1,arg2=value2. 
+More information on the supported parameters can be found at: https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/reference-information/connection-properties/
 
-- `schema`: The schema name to use when connecting with the NuoDB.
-- `jar_location`: The location of the jar files which contain the JDBC class. This need not be specified if the required classes are already added to the CLASSPATH variable.
-- `driver_args`: The extra arguments which can be specified to the driver. Specify this in the format: "arg1=value1,arg2=value2.
-  More information on the supported parameters can be found at: https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/reference-information/connection-properties/
 
 ## Usage
 

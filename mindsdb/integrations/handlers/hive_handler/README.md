@@ -12,12 +12,12 @@ This handler was implemented using the `pyHive`, a Python library that allows yo
 
 The required arguments to establish a connection are,
 
-- `user`: username associated with database
-- `password`: password to authenticate your access
-- `host`: host to server IP Address or hostname
-- `port`: port through which TCPIP connection is to be made
-- `database`: Database name to be connected
-- `auth`: Defaults to CUSTOM in case not provided. Check for other options in [https://pypi.org/project/PyHive/](https://pypi.org/project/PyHive/)
+* `user`: username associated with database
+* `password`: password to authenticate your access
+* `host`: host to server IP Address or hostname
+* `port`: port through which TCPIP connection is to be made
+* `database`: Database name to be connected
+* `auth`: Defaults to CUSTOM in case not provided. Check for other options in [https://pypi.org/project/PyHive/](https://pypi.org/project/PyHive/)
 
 ## Usage
 

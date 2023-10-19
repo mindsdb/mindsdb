@@ -14,15 +14,15 @@ This handler was implemented using the `PyMySQL`, a Python library that allows y
 
 The required arguments to establish a connection are,
 
-- `user`: username associated with database
-- `password`: password to authenticate your access
-- `host`: host to server IP Address or hostname
-- `port`: port through which TCPIP connection is to be made
-- `database`: Database name to be connected
-- `ssl`: If you want to enable SSL Security **(Boolean)**
-- `ssl_ca`: Path or URL of the Certificate Authority (CA) certificate file
-- `ssl_cert`: Path name or URL of the server public key certificate file
-- `ssl_key`: The path name or URL of the server private key file
+* `user`: username associated with database
+* `password`: password to authenticate your access
+* `host`: host to server IP Address or hostname
+* `port`: port through which TCPIP connection is to be made
+* `database`: Database name to be connected
+* `ssl`: If you want to enable SSL Security **(Boolean)**
+* `ssl_ca`: Path or URL of the Certificate Authority (CA) certificate file
+* `ssl_cert`: Path name or URL of the server public key certificate file
+* `ssl_key`: The path name or URL of the server's private key file
 
 ## Usage
 

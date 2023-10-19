@@ -104,7 +104,7 @@ WHERE search_vector = '[3.0, 1.0, 2.0, 4.5]'
 LIMIT 10;
 ```
 
-If you omit the `search_vector`, this becomes a basic search and `LIMIT` or `search_default_limit` amount of entires in collection are returned
+If you omit the `search_vector`, this becomes a basic search and `LIMIT` or `search_default_limit` amount of entries in collection are returned
 
 ```sql
 SELECT * from milvus_datasource.test

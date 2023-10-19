@@ -243,7 +243,6 @@ class TestKnowledgeBase(BaseExecutorTest):
         df = self.run_sql(sql)
         assert df.shape[0] == 1
 
-    @pytest.mark.skip(reason="Not implemented")
     def insert_into_kb(self):
         # create the knowledge base
         sql = f"""

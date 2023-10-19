@@ -165,11 +165,11 @@ class TestKnowledgeBase(BaseExecutorTest):
             MODEL = {self.embedding_model_name}
         """
 
-        # self.run_sql(sql)
-        #
-        # # verify the knowledge base is created
-        # kb_obj = self.db.session.query(KnowledgeBase).filter_by(name="test_kb5").first()
-        # assert kb_obj is not None
+        self.run_sql(sql)
+
+        # verify the knowledge base is created
+        kb_obj = self.db.session.query(KnowledgeBase).filter_by(name="test_kb5").first()
+        assert kb_obj is not None
 
     def test_drop_kb(self):
         # create a knowledge base

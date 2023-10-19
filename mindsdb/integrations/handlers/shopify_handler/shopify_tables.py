@@ -764,3 +764,170 @@ class SalesChannelTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         sales_channels = shopify.Publication.find(**kwargs)
         return  [sales_channel.to_dict() for  sales_channel in sales_channels]
+class DiscountsTable(APITable):
+    """The Shopify Discounts Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Retrieve discounts from the Shopify Discounts API.
+
+        Parameters
+        ----------
+        query : ast.Select
+            Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+            Shopify Discounts matching the query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'discounts',
+            self.get_columns()
+        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        discounts_df = pd.json_normalize(self.get_discounts(limit=result_limit))
+
+        select_statement_executor = SELECTQueryExecutor(
+            discounts_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+        discounts_df = select_statement_executor.execute_query()
+
+        return discounts_df
+
+    def insert(self, query: ast.Insert) -> None:
+        """Inserts data into the Shopify Discounts API.
+
+        Parameters
+        ----------
+        query : ast.Insert
+            Given SQL INSERT query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        insert_statement_parser = INSERTQueryParser(
+            query,
+            supported_columns=['code', 'amount', 'starts_at', 'ends_at'],
+            mandatory_columns=['code', 'amount'],
+            all_mandatory=False
+        )
+        discount_data = insert_statement_parser.parse_query()
+        self.create_discounts(discount_data)
+
+    def delete(self, query: ast.Delete) -> None:
+        """Deletes data from the Shopify Discounts API.
+
+        Parameters
+        ----------
+        query : ast.Delete
+            Given SQL DELETE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        delete_statement_parser = DELETEQueryParser(query)
+        where_conditions = delete_statement_parser.parse_query()
+
+        discounts_df = pd.json_normalize(self.get_discounts())
+
+        delete_query_executor = DELETEQueryExecutor(
+            discounts_df,
+            where_conditions
+        )
+
+        discounts_df = delete_query_executor.execute_query()
+
+        discount_ids = discounts_df['id'].tolist()
+        self.delete_discounts(discount_ids)
+
+    def update(self, query: ast.Update) -> None:
+        """Updates data in the Shopify Discounts API.
+
+        Parameters
+        ----------
+        query : ast.Update
+            Given SQL UPDATE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        update_statement_parser = UPDATEQueryParser(query)
+        values_to_update, where_conditions = update_statement_parser.parse_query()
+
+        discounts_df = pd.json_normalize(self.get_discounts())
+        update_query_executor = UPDATEQueryExecutor(
+            discounts_df,
+            where_conditions
+        )
+
+        discounts_df = update_query_executor.execute_query()
+        discount_ids = discounts_df['id'].tolist()
+        self.update_discounts(discount_ids, values_to_update)
+
+    def get_columns(self) -> List[Text]:
+        return pd.json_normalize(self.get_discounts(limit=1)).columns.tolist()
+
+    def get_discounts(self, **kwargs) -> List[Dict]:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+        discounts = shopify.Discount.find(**kwargs)
+        return [discount.to_dict() for discount in discounts]
+
+    def update_discounts(self, discount_ids: List[int], values_to_update: Dict[Text, Any]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for discount_id in discount_ids:
+            discount = shopify.Discount.find(discount_id)
+            for key, value in values_to_update.items():
+                setattr(discount, key, value)
+            discount.save()
+            logger.info(f'Discount {discount_id} updated')
+
+    def delete_discounts(self, discount_ids: List[int]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for discount_id in discount_ids:
+            discount = shopify.Discount.find(discount_id)
+            discount.destroy()
+            logger.info(f'Discount {discount_id} deleted')
+
+    def create_discounts(self, discount_data: List[Dict[Text, Any]]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for discount in discount_data:
+            created_discount = shopify.Discount.create(discount)
+            if 'id' not in created_discount.to_dict():
+                raise Exception('Discount creation failed')
+            else:
+                logger.info(f'Discount {created_discount.to_dict()["id"]} created')

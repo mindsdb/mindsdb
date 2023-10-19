@@ -1,7 +1,7 @@
 import shopify
 import requests
 
-from mindsdb.integrations.handlers.shopify_handler.shopify_tables import ProductsTable, CustomersTable, OrdersTable, InventoryLevelTable, LocationTable, CustomerReviews, CarrierServiceTable, ShippingZoneTable, SalesChannelTable
+from mindsdb.integrations.handlers.shopify_handler.shopify_tables import ProductsTable, CustomersTable, OrdersTable, InventoryLevelTable, LocationTable, CustomerReviews, CarrierServiceTable, ShippingZoneTable, SalesChannelTable, DiscountsTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

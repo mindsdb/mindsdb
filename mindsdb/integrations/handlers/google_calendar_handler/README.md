@@ -1,7 +1,7 @@
 # Google Calendar API Integration
 
 This handler integrates with the [Google Calendar API](https://developers.google.com/calendar/api/guides/overview)
-to make evnet data available to use for model training and predictions.
+to make event data available to use for model training and predictions.
 
 ## Example: Automate your Calendar
 

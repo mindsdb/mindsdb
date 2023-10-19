@@ -84,7 +84,6 @@ class InvoicesTable(APITable):
         invoices = paypalrestsdk.Invoice.all(kwargs, api=connection)
         return [invoice.to_dict() for invoice in invoices['invoices']]
 
-
 class OrdersTable(APITable):
 
     def select(self, query: ast.Select) -> pd.DataFrame:
@@ -111,6 +110,19 @@ class OrdersTable(APITable):
         orders_df = pd.json_normalize(self.get_orders(count=result_limit,order_id=order_id))
         select_statement_executor = SELECTQueryExecutor(
             orders_df,
+#The task is to extend this implementation to include the Subscriptions table.
+class SubscriptionsTable(APITable):
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'subscriptions',
+            self.get_columns()
+        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        subscriptions_df = pd.json_normalize(self.get_subscriptions(count=result_limit))
+        select_statement_executor = SELECTQueryExecutor(
+            subscriptions_df,
             selected_columns,
             where_conditions,
             order_by_conditions
@@ -131,6 +143,16 @@ class OrdersTable(APITable):
         return data
        else :
         return 
+        subscriptions_df = select_statement_executor.execute_query()
+        return subscriptions_df
+
+    def get_columns(self) -> List[Text]:
+        return pd.json_normalize(self.get_subscriptions(count = 1)).columns.tolist()
+
+    def get_subscriptions(self, **kwargs) -> List[Dict]:
+        connection = self.handler.connect()
+        subscriptions = paypalrestsdk.BillingPlan.all(kwargs, api=connection)
+        return [subscription.to_dict() for subscription in subscriptions['plans']]
 
 
 

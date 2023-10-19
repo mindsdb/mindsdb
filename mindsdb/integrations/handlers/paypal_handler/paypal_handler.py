@@ -2,9 +2,10 @@ import paypalrestsdk
 import requests
 
 from mindsdb.integrations.handlers.paypal_handler.paypal_tables import InvoicesTable, PaymentsTable, OrdersTable
+from mindsdb.integrations.handlers.paypal_handler.paypal_tables import InvoicesTable, PaymentsTable, SubscriptionsTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
+  HandlerStatusResponse as StatusResponse,
 )
 
 from mindsdb.utilities import log
@@ -47,6 +48,8 @@ class PayPalHandler(APIHandler):
         orders_data = OrdersTable(self)
         self._register_table("orders", orders_data);
 
+        subscriptions_data = SubscriptionsTable(self)
+        self._register_table("subscriptions", subscriptions_data);
 
     def connect(self):
         """
@@ -116,3 +119,7 @@ class PayPalHandler(APIHandler):
         """
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
+    
+
+
+

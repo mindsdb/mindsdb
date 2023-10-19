@@ -105,10 +105,8 @@ services:
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       MINDSDB_DB_CON: "postgresql://postgres:postgres@db:15432/mindsdb"
       REGISTRY_URL: "http://handler_discovery:5000"
-      MINDSDB_STORAGE_DIR: "/mindsdb/var"
       MINDSDB_DB_SERVICE_HOST: "db_service"
       MINDSDB_DB_SERVICE_PORT: "50050"
-
 
   db_service:
     build:

@@ -43,7 +43,7 @@ class DiscordHandler(APIHandler):
         async with aiohttp.ClientSession() as session:
             self.webhook = Webhook.from_url(self.connection_args['webhook_url'], session=session)
             return self.webhook
-   
+
     def connect(self):
         return self.loop.run_until_complete(self.__create_connection())
 

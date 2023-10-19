@@ -6,6 +6,8 @@ from mindsdb.utilities.log import get_log
 
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
+from youtube_transcript_api import YouTubeTranscriptApi
+
 
 import pandas as pd
 import re
@@ -264,6 +266,16 @@ class YoutubeVideoTable(APITable):
             if d:
                 duration_str += f"{d[:-1]}:"
         data["duration_str"] = duration_str.strip(":")
+
+        # Add this section to retrieve the transcript
+        try:
+            transcript = YouTubeTranscriptApi.get_transcript(video_id)
+            transcript_text = ' '.join(entry['text'] for entry in transcript)
+            data["transcript"] = transcript_text
+        except Exception as e:
+            logger.error(f"Error retrieving transcript for video {video_id}: {e}")
+            data["transcript"] = ""
+
         return pd.json_normalize(data)
 
     def get_columns(self) -> List[str]:

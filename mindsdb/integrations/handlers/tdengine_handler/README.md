@@ -41,7 +41,7 @@ parameters={
 };
 ```
 
-**Note :-> You can sepecify token instead of user and password while using TDEngine.**
+**Note :-> You can specify a token instead of user and password while using TDEngine.**
 
 Now, you can use this established connection to query your database as follows,
 

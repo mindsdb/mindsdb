@@ -17,7 +17,7 @@ The required arguments to establish a connection are,
 - `host`: host to server IP Address or hostname
 - `port`: port through which TCP/IP connection is to be made
 - `database`: Database name to be connected
-- `schema`(OPTIONAL): comma seperated schemas to be considered for querying (e.g., "**class,company**")
+- `schema`(OPTIONAL): comma-separated schemas to be considered for querying (e.g., "**class,company**")
 - `sslmode`(OPTIONAL): Specifies the SSL mode for the connection, determining whether to use SSL encryption and the level of verification required (e.g., "**disable**", "**allow**", "**prefer**", "**require**", "**verify-ca**", "**verify-full**").
 
 ## Usage

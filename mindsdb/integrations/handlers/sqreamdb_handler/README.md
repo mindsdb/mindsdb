@@ -15,7 +15,7 @@ The required arguments to establish a connection are,
 - `user`: username associated with database
 - `password`: password to authenticate your access
 - `host`: host to server IP Address or hostname
-- `port`: port through which sevice is exposed
+- `port`: port through which the service is exposed
 - `database`: Database name to be connected
 - `service`: Optional: service queue (default: "sqream")
 - `use_ssl`: use SSL connection (default: False)

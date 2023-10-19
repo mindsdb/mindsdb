@@ -8,7 +8,7 @@ Approved users of the Tripadvisor Content API can access the following business 
 
 - Location ID, name, address, latitude & longitude
 - Read reviews link, write-a-review link
-- Overall rating, ranking, subratings, awards, the number of reviews the rating is based on, rating bubbles image
+- Overall rating, ranking, sub-ratings, awards, the number of reviews the rating is based on, rating bubbles image
 - Price level symbol, accommodation category/subcategory, attraction type, restaurant cuisine(s)
 
 # Connecting to TripAdvisor and Calling APIs

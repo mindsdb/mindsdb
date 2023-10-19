@@ -39,7 +39,7 @@ These are used for `CREATE` queries:
 * `create_index_metric_type`: metric used to create the index (default='L2')
 * `create_index_type`: the type of index (default='AUTOINDEX')
 
-For more information about how these perameters map to Milvus API, look at Milvus' documentation
+For more information about how these parameters map to Milvus API, look at Milvus' documentation
 
 ## Usage
 

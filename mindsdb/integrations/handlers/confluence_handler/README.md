@@ -4,7 +4,7 @@ Confluence handler for MindsDB provides interfaces to connect with Confluence vi
 
 ## Confluence
 
-Confluence is a collaborative documentation tool,it can be used to host Wiki pages. In this handler,python client of api is used and more information about this python client can be found (here)[https://pypi.org/project/atlassian-python-api/]
+Confluence is a collaborative documentation tool, it can be used to host Wiki pages. In this handler,python client of api is used and more information about this python client can be found (here)[https://pypi.org/project/atlassian-python-api/]
 
 ## Confluence Handler Initialization
 
@@ -27,29 +27,29 @@ Please follow this (link)[https://docs.searchunify.com/Content/Content-Sources/A
 
 The first step is to create a database with the new `confluence` engine.
 
-~~~~sql
+```sql
 CREATE DATABASE mindsdb_confluence
 WITH
     ENGINE = 'confluence',
     PARAMETERS = {
     "url": "https://marios.atlassian.net/",
     "username": "your_username",
-    "password":"access_token" 
+    "password":"access_token"
     };
-~~~~
+```
 
 Use the established connection to query your database:
 
-~~~~sql
+```sql
 SELECT * FROM mindsdb_confluence.pages
-~~~~
+```
 
 Advanced queries for the confluence handler
 
-~~~~sql
+```sql
 SELECT id,key,name,type
 FROM mindsdb_confluence.pages
 WHERE type="personal"
 ORDER BY id ASC, name DESC
 LIMIT 10
-~~~~
+```

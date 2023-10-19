@@ -19,7 +19,7 @@ WITH
 
 ### Select Data
 
-To see if the connection was succesful, try searching for the most recent article data.
+To see if the connection was successful, try searching for the most recent article data.
 
 ```
 SELECT *
@@ -29,19 +29,19 @@ WHERE query = 'mindsdb';
 
 The result come with all these columns
 
-* author
-* title
-* description
-* url
-* urlToImage
-* publishedAt
-* content
-* source_id
-* source_name
-* query
-* searchIn
-* domains
-* excludedDomains
+- author
+- title
+- description
+- url
+- urlToImage
+- publishedAt
+- content
+- source_id
+- source_name
+- query
+- searchIn
+- domains
+- excludedDomains
 
 You can select with multiple clauses
 
@@ -58,7 +58,7 @@ LIMIT 40;
 
 #### **WHERE CLAUSE PARAMETERS:**
 
-**query** : Base on the newsAPI documentation you must provide at least this  parameter with is the keywords or phrases to search for in the article title and body.
+**query** : Base on the newsAPI documentation you must provide at least this parameter with is the keywords or phrases to search for in the article title and body.
 
 **sources** : Is a comma-seperated string of identifiers (maximum 20) for the news sources or blogs you want headlines from.
 
@@ -68,7 +68,7 @@ LIMIT 40;
 
 **exclude_domains** : A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to remove from the results.
 
-**searchIn** : The fields to restrict your query search to possible options are title, description,  conten. Multiple options can be specified by separating them with a comma, for example: `title,content`
+**searchIn** : The fields to restrict your query search to possible options are title, description, conten. Multiple options can be specified by separating them with a comma, for example: `title,content`
 
 **lamguage** : The 2-letter ISO-639-1 code of the language you want to get headlines for. Possible options: `ar de, en es, fr he, it nl, no pt, ru,  sv, ud , zh`.
 

@@ -3,7 +3,7 @@
 This is the implementation of the Jira handler for MindsDB.
 
 ## Jira
-In short, Jira is a tool to track the progress of software defects,story and releases.
+In short, Jira is a tool to track the progress of software defects, story and releases.
 In this handler. python client of api is used and more information about this python client can be found (here)[https://pypi.org/project/atlassian-python-api/]
 
 

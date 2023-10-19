@@ -7,6 +7,7 @@ This handler integrates with the [Binance API](https://binance-docs.github.io/ap
 To see how the Binance handler is used, let's walk through a simple example to create a time series model to predict the future price of Bitcoin (BTC) in terms of USDT.
 
 ### Connect to the Binance API
+
 We start by creating a database to connect to the Binance API. Currently, there is no need for an API key:
 
 ```
@@ -17,7 +18,8 @@ WITH
 ```
 
 ### Select Data
-To see if the connection was succesful, try searching for the most recent trade data. By default, aggregate data (klines) from the latest 1000 trading intervals with a length of 1m each are returned.
+
+To see if the connection was successful, try searching for the most recent trade data. By default, aggregate data (klines) from the latest 1000 trading intervals with a length of 1m each are returned.
 
 ```
 SELECT *
@@ -27,24 +29,24 @@ WHERE symbol = 'BTCUSDT';
 
 Each row should look like this:
 
-| symbol      | open_time    | open_price  | high_price  | low_price   | close_price | volume      | close_time    | quote_asset_volume | number_of_trades | taker_buy_base_asset_volume | taker_buy_quote_asset_volume |
-| ----------- | -----------  | ----------- | ----------- | ----------- | ----------- | ----------- | -----------   | ------------------ | ---------------- | --------------------------- | ---------------------------- |
-| BTCUSDT     | 1678338600| 21752.65000 | 21761.33000 | 21751.53000 | 21756.7000  | 103.8614100 | 1678338659.999 | 2259656.20520700   | 3655             | 55.25763000                 | 1202219.60971860
+| symbol  | open_time  | open_price  | high_price  | low_price   | close_price | volume      | close_time     | quote_asset_volume | number_of_trades | taker_buy_base_asset_volume | taker_buy_quote_asset_volume |
+| ------- | ---------- | ----------- | ----------- | ----------- | ----------- | ----------- | -------------- | ------------------ | ---------------- | --------------------------- | ---------------------------- |
+| BTCUSDT | 1678338600 | 21752.65000 | 21761.33000 | 21751.53000 | 21756.7000  | 103.8614100 | 1678338659.999 | 2259656.20520700   | 3655             | 55.25763000                 | 1202219.60971860             |
 
 where:
-* symbol - Trading pair (BTC to USDT in the above example)
-* open_time - Start time of interval in seconds since the Unix epoch (default interval is 1m)
-* open_price - Price of base asset at beginning of trading interval
-* high_price - Highest price of base asset during trading interval
-* low_price - Lowest price of base asset during trading interval
-* close_price - Price of base asset at end of trading interval
-* volume - Total amount of base asset traded during interval
-* close_time - End time of interval in seconds since the Unix epoch
-* quote_asset_volume - Total amount of quote asset (USDT in above case) traded during interval
-* number_of_trades - Total number of trades made during interval
-* taker_buy_base_asset_volume - How much of the base asset volume is contributed by taker buy orders
-* taker_buy_quote_asset_volume - How much of the quote asset volume is contributed by taker buy orders
 
+- symbol - Trading pair (BTC to USDT in the above example)
+- open_time - Start time of interval in seconds since the Unix epoch (default interval is 1m)
+- open_price - Price of base asset at beginning of trading interval
+- high_price - Highest price of base asset during trading interval
+- low_price - Lowest price of base asset during trading interval
+- close_price - Price of base asset at end of trading interval
+- volume - Total amount of base asset traded during interval
+- close_time - End time of interval in seconds since the Unix epoch
+- quote_asset_volume - Total amount of quote asset (USDT in above case) traded during interval
+- number_of_trades - Total number of trades made during interval
+- taker_buy_base_asset_volume - How much of the base asset volume is contributed by taker buy orders
+- taker_buy_quote_asset_volume - How much of the quote asset volume is contributed by taker buy orders
 
 You can customize open_time, close_time, and interval:
 
@@ -59,21 +61,22 @@ LIMIT 10000;
 ```
 
 Supported intervals are [listed here](https://binance-docs.github.io/apidocs/spot/en/#kline-candlestick-data):
-* 1s
-* 1m
-* 3m
-* 5m
-* 15m
-* 30m
-* 1h
-* 2h
-* 4h
-* 6h
-* 8h
-* 12h
-* 1d
-* 3d
-* 1w
+
+- 1s
+- 1m
+- 3m
+- 5m
+- 15m
+- 30m
+- 1h
+- 2h
+- 4h
+- 6h
+- 8h
+- 12h
+- 1d
+- 3d
+- 1w
 
 ### Train a Model
 

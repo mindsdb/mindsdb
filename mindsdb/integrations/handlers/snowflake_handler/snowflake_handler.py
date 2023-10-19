@@ -51,7 +51,7 @@ class SnowflakeHandler(DatabaseHandler):
             return
         self.connection.close()
         self.is_connected = False
-        return 
+        return
 
     def check_connection(self) -> StatusResponse:
         """
@@ -112,7 +112,7 @@ class SnowflakeHandler(DatabaseHandler):
     def get_tables(self) -> Response:
         """
         Get a list with all of the tabels in the current database or schema
-        that the user has acces to
+        that the user has access to
         """
         q = "SHOW TABLES;"
         result = self.native_query(q)

@@ -11,7 +11,7 @@ AutoKeras will build an accurate deep learning model for the end-user, with no p
 The handler will automatically search and tune different neural network architectures to find the most accurate for the given problem.
 The ideal use case is a very large dataset with many predictive features, where the user doesn't have strong priors about how these features may affect the target variable.
 
-Do not use this integration for for small datasets, as neural networks are prone to overfitting.
+Do not use this integration for small datasets, as neural networks are prone to overfitting.
 
 Do not use this integration if you need to fit a model very quickly, as training time can be long.
 

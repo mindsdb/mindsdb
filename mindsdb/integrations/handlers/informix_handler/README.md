@@ -4,7 +4,7 @@ This is the implementation of the IBM Informix handler for MindsDB.
 
 ## IBM Informix
 
-IBM Informix is a product family within IBM's Information Management division that is centered on several relational database management system (RDBMS) offerings.The Informix server supports the object–relational model and supports (through extensions) data types that are not a part of the SQL standard. The most widely used of these are the JSON, BSON, time series and spatial extensions, which provide both data type support and language extensions that permit high performance domain specific queries and efficient storage for data sets based on semi-structured, time series, and spatial data.
+IBM Informix is a product family within IBM's Information Management division that is centered on several relational database management system (RDBMS) offerings. The Informix server supports the object–relational model and supports (through extensions) data types that are not a part of the SQL standard. The most widely used of these are the JSON, BSON, time series and spatial extensions, which provide both data type support and language extensions that permit high performance domain specific queries and efficient storage for data sets based on semi-structured, time series, and spatial data.
 
 ## Implementation
 

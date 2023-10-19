@@ -131,16 +131,21 @@ class NotionHandler(APIHandler):
         self.api = self.connect()
         # use the service as the resource to query(database, page, block, comment)
         # and query as the type of method(retrieve, list, query)
-        service, query = method_name.split(".")
-        if service in ["databases", "pages", "blocks", "comments"]:
-            method = getattr(self.api, service)
-            if query:
+        parts = method_name.split(".")
+        if len(parts) == 2:
+            service, query = parts
+            if service in ["databases", "pages", "blocks", "comments"]:
+                method = getattr(self.api, service)
+                method = getattr(method, query)
+        else:
+            service, children, query = parts
+            if service in ["blocks"]:
+                method = getattr(self.api, service)
+                method = getattr(method, children)
                 method = getattr(method, query)
 
-        count_results = None
-        if "max_results" in params:
-            count_results = params["max_results"]
 
+        count_results = None
         data = []
         includes = defaultdict(list)
 
@@ -153,6 +158,7 @@ class NotionHandler(APIHandler):
             # if we have filters: do big page requests
             params["max_results"] = max_page_size
 
+        chunk = []
         while True:
             if time.time() > limit_exec_time:
                 raise RuntimeError("Handler request timeout error")

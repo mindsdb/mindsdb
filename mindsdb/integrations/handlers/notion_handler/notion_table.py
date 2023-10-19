@@ -1,3 +1,4 @@
+import json
 import pandas as pd
 
 from mindsdb_sql.parser import ast
@@ -81,8 +82,24 @@ class NotionDatabaseTable(APITable):
         ]
 
     def insert(self, query: ast.Insert):
-        # TODO
-        pass
+        columns = [col.name for col in query.columns]
+
+        insert_params = ("api_token",)
+        for p in insert_params:
+            if p not in self.handler.connection_args:
+                raise Exception(
+                    f"To insert data into Notion, you need to provide the following parameters when connecting it to MindsDB: {insert_params}"
+                )  # noqa
+
+        for row in query.values:
+            params = dict(zip(columns, row))
+
+            # parent and properties as required params for creating a database
+            params["parent"] = json.loads(params["parent"])
+            params["properties"] = json.loads(params["properties"])
+            params["title"] = json.loads(params.get("title", "{}"))
+
+            self.handler.call_notion_api("databases.create", params)
 
 
 class NotionPagesTable(APITable):
@@ -174,7 +191,7 @@ class NotionPagesTable(APITable):
             # title and database_id as required params for creating the page
             # optionally provide the text to populate the page
             title = params["title"]
-            text = params.get("title", "")
+            text = params.get("text", "")
 
             messages = []
 
@@ -320,8 +337,24 @@ class NotionBlocksTable(APITable):
         ]
 
     def insert(self, query: ast.Insert):
-        # TODO
-        pass
+        columns = [col.name for col in query.columns]
+
+        insert_params = ("api_token",)
+        for p in insert_params:
+            if p not in self.handler.connection_args:
+                raise Exception(
+                    f"To insert data into Notion, you need to provide the following parameters when connecting it to MindsDB: {insert_params}"
+                )  # noqa
+
+        for row in query.values:
+            params = dict(zip(columns, row))
+
+            # block_id and children as required params for appending to a block
+            params["block_id"] = params["block_id"]
+            params["children"] = json.loads(params["children"])
+            params["after"] = params.get("after", "")
+
+            self.handler.call_notion_api("blocks.children.append", params)
 
 
 class NotionCommentsTable(APITable):

@@ -13,7 +13,7 @@ from type_infer.infer import infer_types
 
 
 class AutoGluonHandler(BaseMLEngine):
-    name = "autogluon handler"
+    name = "autogluon"
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
         config_args = args['using']
 
@@ -31,9 +31,7 @@ class AutoGluonHandler(BaseMLEngine):
         else:
             raise Exception('This task is not supported!')
 
-        model = model.fit(df,**vars(config))
-
-
+        model.fit(df,**vars(config))
         self.model_storage.file_set('model', dill.dumps(model))
         self.model_storage.json_set('args', args)
 

@@ -1,5 +1,6 @@
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.handlers.vertex_handler.vertex_client import VertexClient
+from mindsdb.utilities import log
 import pandas as pd
 
 
@@ -16,6 +17,7 @@ class VertexHandler(BaseMLEngine):
         If the endpoint does not exist, we create it and deploy the model to it.
         The runtime for this is long, it took 15 minutes for a small model.
         """
+        assert "using" in args, "Must provide USING arguments for this handler"
         model_name = args["using"]["model_name"]
         service_key_path = args["using"]["service_key_path"]
         project_id = args["using"]["project_id"]
@@ -23,16 +25,16 @@ class VertexHandler(BaseMLEngine):
         vertex = VertexClient(service_key_path, project_id)
         model = vertex.get_model_by_display_name(model_name)
         if not model:
-            print("Model not found")
-            return
+            raise Exception(f"Vertex model {model_name} not found")
         endpoint_name = model_name + "_endpoint"
         if vertex.get_endpoint_by_display_name(endpoint_name):
-            print("Endpoint already exists")
+            log.logger.info(f"Endpoint {endpoint_name} already exists, skipping deployment")
         else:
+            log.logger.info(f"Starting deployment at {endpoint_name}")
             endpoint = vertex.deploy_model(model)
             endpoint.display_name = endpoint_name
             endpoint.update()
-            print("Endpoint deployed")
+            log.logger.info(f"Endpoint {endpoint_name} deployed")
         predict_args = {}
         predict_args["endpoint_name"] = endpoint_name
         predict_args["custom_model"] = custom_model

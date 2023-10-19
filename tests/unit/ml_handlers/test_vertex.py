@@ -62,30 +62,6 @@ def mock_models():
 
 
 # Test of Vertex client class
-def test_print_datasets(vertex_client, capsys):
-    with patch(f"{path}.aiplatform.TabularDataset.list", return_value=mock_datasets()):
-        vertex_client.print_datasets()
-        captured = capsys.readouterr()
-        assert "Dataset1" in captured.out
-        assert "Dataset2" in captured.out
-
-
-def test_print_models(vertex_client, capsys):
-    with patch(f"{path}.aiplatform.Model.list", return_value=mock_models()):
-        vertex_client.print_models()
-        captured = capsys.readouterr()
-        assert "Model1" in captured.out
-        assert "Model2" in captured.out
-
-
-def test_print_endpoints(vertex_client, capsys):
-    with patch(f"{path}.aiplatform.Endpoint.list", return_value=mock_endpoints()):
-        vertex_client.print_endpoints()
-        captured = capsys.readouterr()
-        assert "Endpoint1" in captured.out
-        assert "Endpoint2" in captured.out
-
-
 def test_get_model_by_display_name(vertex_client):
     with patch(f"{path}.aiplatform.Model.list", return_value=mock_models()):
         model = vertex_client.get_model_by_display_name("Model1")

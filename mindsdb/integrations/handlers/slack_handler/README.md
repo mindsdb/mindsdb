@@ -83,13 +83,6 @@ DELETE FROM mindsdb_slack.channels
 WHERE channel = "<channel-name>" AND ts = "1688863707.197229";
 ~~~~
 
-Updating a message in channel change the `channel-name` and `timestamp` in the `WHERE` clause
-~~~~sql
-UPDATE mindsdb_slack.channels
-SET text = 'sample message is updated.'
-WHERE channel = "<channel-name>" AND ts = '<timestamp>';
-~~~~
-
 Selects only 10 created after the specified timestamp
 
 ~~~~sql
@@ -191,3 +184,5 @@ Every minute, our model is going to look for the questions, and the model will g
 
 - Add functionality to Update messages
   
+
+

@@ -275,12 +275,13 @@ class SlackChannelsTable(APITable):
         try:
             response = self.client.chat_update(
                 channel=params['channel'],
-                ts=str(params['ts']),
-                text=params['text'].strip()
+                ts=params['ts'],
+                text=params['text']
             )
         except SlackApiError as e:
-            raise Exception(f"Error updating message in Slack channel '{params['channel']}' with timestamp '{params['ts']}' and message '{params['text']}': {e.response['error']}")
+            raise Exception(f"Error updating message in Slack channel '{params['channel']}' with timestamp '{params['ts']}' and message '{params['message']}': {e.response['error']}")
 
+        return response
     
     def delete(self, query: ASTNode):
         """

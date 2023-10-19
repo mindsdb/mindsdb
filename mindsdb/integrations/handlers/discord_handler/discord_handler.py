@@ -4,26 +4,23 @@ import aiohttp
 
 from discord import Webhook
 
-from collections import OrderedDict
-from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
+from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-    
-)
+    HandlerResponse as Response)
 from mindsdb_sql import parse_sql
 
 
 class DiscordHandler(APIHandler):
     """A class for handling connections and interactions with the Discord API.
 
-    Attributes: 
+    Attributes:
     webhook_url(str): URL for your Discord server's webhook
     """
 
-    def __init__(self, name=None, **kwargs):
+    def __init__(self, name = None, **kwargs):
         super().__init__(name)
         self.loop = asyncio.get_event_loop()
         args = kwargs.get('connection_data', {})
@@ -49,9 +46,9 @@ class DiscordHandler(APIHandler):
         
     def connect(self):
         return self.loop.run_until_complete(self.__create_connection())
-    
+
     def check_connection(self) -> StatusResponse:
-        
+    
         response = StatusResponse(False)
         try:
             self.connect()
@@ -64,27 +61,24 @@ class DiscordHandler(APIHandler):
         self.is_connected = response.success
 
         return response
-    
-    def native_query(self, query: str = None) -> Response:
-        ast = parse_sql(query, dialect='mindsdb')
-        return self.query(ast)
-    
 
-    async def __send_message(self,message,username):
+    def native_query(self, query: str = None) -> Response:
+        ast = parse_sql(query, dialect = 'mindsdb')
+        return self.query(ast)
+
+    async def __send_message(self, message, username):
         async with aiohttp.ClientSession() as session:
             webhook = Webhook.from_url(self.connection_args["webhook_url"], session=session)
-            await webhook.send(content=message, username=username)
-    
+            await webhook.send(content = message, username = username)
+
     def message(self,message,username):
         return self.loop.run_until_complete(self.__send_message(message,username))
-    
-    async def __send_announcement(self,message,username):
+
+    async def __send_announcement(self, message, username):
         async with aiohttp.ClientSession() as session:
             webhook = Webhook.from_url(self.connection_args["webhook_url"], session=session)
-            message='@everyone '+message
-            await webhook.send(content=message, username=username)
+            message='@everyone ' + message
+            await webhook.send(content = message, username = username)
 
     def announce(self,message,username):
-        return self.loop.run_until_complete(self.__send_announcement(message,username))
-
-connection_args=  {"webhook_url": "URL for your discord server's webhook"}
+        return self.loop.run_until_complete(self.__send_announcement(message, username))

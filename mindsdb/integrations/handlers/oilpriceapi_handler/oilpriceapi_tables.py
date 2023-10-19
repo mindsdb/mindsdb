@@ -40,26 +40,26 @@ class OilPriceLatestTable(APITable):
 
         search_params = {}
         subset_where_conditions = []
-        
+
         for op, arg1, arg2 in where_conditions:
             if arg1 == 'by_type':
                 if op == '=':
                     search_params["by_type"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for namespace column.")
-                
+
                 if not self.handler.client._is_valid_by_type(arg2):
                     raise ValueError("Unknown value for `by_type` parameter. The allowed values are - " + self.handler.client.valid_values_by_type)
-                
+
             elif arg1 == 'by_code':
                 if op == '=':
                     search_params["by_code"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for namespace column.")
-                
+
                 if not self.handler.client._is_valid_by_code(arg2):
                     raise ValueError("Unknown value for `by_code` parameter. The allowed values are - " + self.handler.client.valid_values_by_code)
-                
+
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
 
@@ -140,26 +140,26 @@ class OilPricePastDayPriceTable(APITable):
 
         search_params = {}
         subset_where_conditions = []
-        
+
         for op, arg1, arg2 in where_conditions:
             if arg1 == 'by_type':
                 if op == '=':
                     search_params["by_type"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for namespace column.")
-                
+
                 if not self.handler.client._is_valid_by_type(arg2):
                     raise ValueError("Unknown value for `by_type` parameter. The allowed values are - " + self.handler.client.valid_values_by_type)
-                
+
             elif arg1 == 'by_code':
                 if op == '=':
                     search_params["by_code"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for namespace column.")
-                
+
                 if not self.handler.client._is_valid_by_code(arg2):
                     raise ValueError("Unknown value for `by_code` parameter. The allowed values are - " + self.handler.client.valid_values_by_code)
-                
+
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
 

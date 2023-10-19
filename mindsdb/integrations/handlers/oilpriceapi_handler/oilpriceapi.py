@@ -22,10 +22,10 @@ class OilPriceAPIClient:
 
     def _is_valid_by_type(self, val):
         return val in self.valid_values_by_type
-    
+
     def _is_valid_by_code(self, val):
         return val in self.valid_values_by_code
-    
+
     def create_params_dict(self, by_type, by_code):
         params = {}
         if by_type is not None:
@@ -33,7 +33,7 @@ class OilPriceAPIClient:
         if by_code is not None:
             params["by_code"] = by_code
         return params
-            
+
     def get_latest_price(self, by_type=None, by_code=None):
         url = f'{self.base_endpoint}/latest/'
         params = self.create_params_dict(by_type=by_type, by_code=by_code)

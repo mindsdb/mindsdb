@@ -39,10 +39,9 @@ class OilPriceAPIHandler(APIHandler):
 
         latest_price_data = OilPriceLatestTable(self)
         self._register_table("latest_price", latest_price_data)
-        
+
         past_day_price_data = OilPricePastDayPriceTable(self)
         self._register_table("past_day_price", past_day_price_data)
-        
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.
@@ -74,7 +73,7 @@ class OilPriceAPIHandler(APIHandler):
         try:
             status = self.client.get_latest_price()
             if status["code"] == 200:
-                logger.info(f"Authentication successful")
+                logger.info("Authentication successful")
                 response.success = True
             else:
                 response.success = False

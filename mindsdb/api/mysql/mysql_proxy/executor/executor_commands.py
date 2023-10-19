@@ -431,7 +431,7 @@ class ExecuteCommands:
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
             elif "show create table" in sql_lower:
                 # SHOW CREATE TABLE `MINDSDB`.`predictors`
-                table = sql[sql.rfind(".") + 1:].strip(" .;\n\t").replace("`", "")
+                table = sql[sql.rfind(".") + 1 :].strip(" .;\n\t").replace("`", "")
                 return self.answer_show_create_table(table)
             elif sql_category in ("character set", "charset"):
                 new_statement = Select(
@@ -1296,13 +1296,12 @@ class ExecuteCommands:
         embedding_model_id = model_record["model_record"].id
 
         # search for the vector database table
-        if len(statement.storage.parts) < 2:
+        if statement.storage and len(statement.storage.parts) < 2:
             raise SqlApiException(
                 f"Invalid vectordatabase table name: {statement.storage}"
                 "Need the form 'database_name.table_name'"
             )
 
-        statement.storage = None  # todo: remove this line just for debug
         vector_db_name = (
             statement.storage.parts[0] if statement.storage else project_name
         )

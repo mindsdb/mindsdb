@@ -1,3 +1,6 @@
+# Add this import at the top of your file
+from youtube_transcript_api import YouTubeTranscriptApi
+
 from mindsdb.integrations.handlers.youtube_handler.youtube_tables import YoutubeGetCommentsTable, YoutubeChannelTable, YoutubeVideoTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
@@ -42,6 +45,15 @@ class YoutubeHandler(APIHandler):
         youtube_video_data = YoutubeVideoTable(self)
         self._register_table("video", youtube_video_data)
 
+    def get_transcript(self, video_id):
+        """Retrieve the transcript of a video."""
+        try:
+            transcript = YouTubeTranscriptApi.get_transcript(video_id)
+            return transcript
+        except Exception as e:
+            logger.error(f"Error retrieving transcript for video {video_id}: {e}")
+            return []
+
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.
         Returns
@@ -72,7 +84,7 @@ class YoutubeHandler(APIHandler):
             response.success = True
         except Exception as e:
             logger.error(f"Error connecting to Youtube API: {e}!")
-            response.error_message = e
+            response.error_message = str(e)
 
         self.is_connected = response.success
 
@@ -94,14 +106,14 @@ class YoutubeHandler(APIHandler):
 
 
 connection_args = OrderedDict(
-    youtube_access_token={
+    youtube_api_token={
         'type': ARG_TYPE.STR,
         'description': 'API Token for accessing Youtube Application API',
         'required': True,
-        'label': 'Youtube access token',
+        'label': 'Youtube API Token',
     }   
 )
 
 connection_args_example = OrderedDict(
-    youtube_api_token ='<your-youtube-api-token>'
+    youtube_api_token='<your-youtube-api-token>'
 )

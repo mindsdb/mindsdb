@@ -72,7 +72,7 @@ Please change the `channel-name` in the `WHERE` clause to the channel where, you
 Post a new message to a Channel
 
 ~~~~sql
-INSERT INTO mindsdb_slack.channels (channel, message)
+INSERT INTO mindsdb_slack.channels (channel, text)
 VALUES("<channel-name>", "Hey MindsDB, Thanks to you! Now I can respond to my Slack messages through SQL Queries. 🚀 ");
 ~~~~
 
@@ -81,6 +81,13 @@ Whoops, Sent it by mistake, No worries, use this to delete a specific message
 ~~~~sql
 DELETE FROM mindsdb_slack.channels
 WHERE channel = "<channel-name>" AND ts = "1688863707.197229";
+~~~~
+
+Updating a message in channel change the `channel-name` and `timestamp` in the `WHERE` clause
+~~~~sql
+UPDATE mindsdb_slack.channels
+SET text = 'sample message is updated.'
+WHERE channel = "<channel-name>" AND ts = '<timestamp>';
 ~~~~
 
 Selects only 10 created after the specified timestamp

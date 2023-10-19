@@ -1127,7 +1127,7 @@ class GithubProjectsTable(APITable):
                                         "creator_id": self.check_none(raw_data["creator"]["id"]),
                                         "creator_url": self.check_none(raw_data["creator"]["url"]),
                                         "creator_html_url": self.check_none(raw_data["creator"]["html_url"]),
-                                        "creator_site_admin": self.check_none(raw_data["creator"]["side_admin"])
+                                        "creator_site_admin": self.check_none(raw_data["creator"]["site_admin"])
                                     }
                                 ]
                             ),
@@ -1167,4 +1167,22 @@ class GithubProjectsTable(APITable):
             List of columns
         """
 
-        return ["owner_url", "url", "html_url", "columns_url", "id", "node_id", "name", "body", "number", "state", "created_at", "updated_at", "creator_login", "creator_id", "creator_url", "creator_html_url", "creator_site_admin"]
+        return [
+            "owner_url", 
+            "url",
+            "html_url", 
+            "columns_url", 
+            "id", 
+            "node_id",
+            "name", 
+            "body", 
+            "number", 
+            "state", 
+            "created_at",
+            "updated_at", 
+            "creator_login", 
+            "creator_id", 
+            "creator_url",
+            "creator_html_url", 
+            "creator_site_admin"
+        ]

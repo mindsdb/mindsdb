@@ -184,5 +184,3 @@ Every minute, our model is going to look for the questions, and the model will g
 
 - Add functionality to Update messages
   
-
-

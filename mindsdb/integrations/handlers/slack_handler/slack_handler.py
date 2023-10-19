@@ -254,8 +254,8 @@ class SlackChannelsTable(APITable):
                 else:
                     raise ValueError(f"Channel '{arg2}' not found")
 
-            if keys[0] == 'text':
-                params['text'] =  str(query.update_columns['text'])
+            if keys[0] == 'message':
+                params['message'] = str(query.update_columns['message'])
             else:
                 raise ValueError(f"Message '{arg2}' not found")
 

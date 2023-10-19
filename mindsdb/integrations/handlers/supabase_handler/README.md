@@ -8,15 +8,15 @@ Supabase is an open source Firebase alternative. Start your project with a Postg
 
 ## Implementation
 
-This handler was implemented by extending postres connector.
+This handler was implemented by extending the postgres connector.
 
 The required arguments to establish a connection are:
 
-* `host`: the host name of the Supabase connection 
-* `port`: the port to use when connecting 
-* `user`: the user to authenticate 
-* `password`: the password to authenticate the user
-* `database`: database name
+- `host`: the host name of the Supabase connection
+- `port`: the port to use when connecting
+- `user`: the user to authenticate
+- `password`: the password to authenticate the user
+- `database`: database name
 
 ## Usage
 
@@ -25,7 +25,7 @@ In order to make use of this handler and connect to a Supabase server in MindsDB
 ```sql
 CREATE DATABASE example_supabase_data
 WITH ENGINE = "supabase",
-PARAMETERS = { 
+PARAMETERS = {
   "user": "root",
   "password": "root",
   "host": "hostname",

@@ -7,9 +7,8 @@ The objective of this tutorial is to create an AI-powered personalized chatbot b
 
 To illustrate practically, we will be having a Slack bot - **@Whiz_Fizz** - which will reply to the user's queries with proper context and with a unique persona while responding. It is a weird magician 🪄 and a Space Science Expert! Let's see how it responds.
 
-
 <p align="center">
-    <img src="/assets/SLBot-Hero-Whizfizz.png" />
+  <img src="/assets/SLBot-Hero-Whizfizz.png" />
 </p>
 
 Before Jumping more into it. Let's first see how to create a bot and connect it to our Slack Workspace.
@@ -23,9 +22,9 @@ Before Jumping more into it. Let's first see how to create a bot and connect it 
 _[MindsDB](https://mindsdb.com/) is a famous open-source application used for simplifying the use of Machine Learning in modern-day applications without the need for any external tool by making forecasts on the Data available in your database. It lets you build any Generative AI application with minimal steps required._
 
 <Tip>
-If you already have the API token of a Slack Bot, feel free to skip the following steps.
+  If you already have the API token of a Slack Bot, feel free to skip the
+  following steps.
 </Tip>
-
 
 If you have a Slack Account, you have to generate the API token, please follow below instructions:
 
@@ -43,28 +42,30 @@ If you have a Slack Account, you have to generate the API token, please follow b
         - im:read
         - mpim:read
     5. Install the bot to your workspace.
-    6. Under the *OAuth Tokens for Your Workspace* section, copy the the *Bot User OAuth Token* value.
+    6. Under the *OAuth Tokens for Your Workspace* section, copy the *Bot User OAuth Token* value.
     7. Open your Slack application and add the App/Bot to one of the channels:
         - Go to the channel where you want to use the bot.
         - Right-click on the channel and select *View Channel Details*.
         - Select *Integrations*.
         - Click on *Add an App*.
     8. Now you can use the token from step 6 to initialize the Slack handler in MindsDB, and use the channel name to query and write messages.
+
 </Accordion>
 
 Now, let's establish a connection to our Slack using MindsDB SQL Editor:
 
 ```sql
-CREATE DATABASE mindsdb_slack 
-WITH 
-    ENGINE = 'slack', 
-    PARAMETERS = { 
-        "token": "<slack-bot-token>" 
+CREATE DATABASE mindsdb_slack
+WITH
+    ENGINE = 'slack',
+    PARAMETERS = {
+        "token": "<slack-bot-token>"
     };
 ```
 
 <Note>
-Please change the `slack-bot-token` with the token mentioned in `Bot User OAuth Access Token`.
+  Please change the `slack-bot-token` with the token mentioned in `Bot User
+  OAuth Access Token`.
 </Note>
 
 ## Usage
@@ -81,7 +82,8 @@ LIMIT 10;
 ```
 
 <Note>
-Please change the `channel-name` in the `WHERE` clause to the channel where, you added the bot in your Slack Workspace.
+  Please change the `channel-name` in the `WHERE` clause to the channel where,
+  you added the bot in your Slack Workspace.
 </Note>
 
 However, you can also retrieve messages in alphabetical order by using:
@@ -112,7 +114,7 @@ DELETE FROM mindsdb_slack.channels
 WHERE channel = "<channel-name>" AND ts = "1688863707.197229";
 ```
 
-Now, let's roll up our sleeves and start building the GPT-4 Model together. 
+Now, let's roll up our sleeves and start building the GPT-4 Model together.
 Here's how we can do it:
 
 ### 1. Crafting the GPT-4 Model:
@@ -135,8 +137,10 @@ prompt_template = 'From input message: {{messages}}\
 write a short response to the user in the following format:\
 Hi, I am an automated bot here to help you, Can you please elaborate the issue which you are facing! ✨🚀 ';
 ```
+
 <Note>
-    If you are using MindsDB on Docker or if you want to use your own OpenAI API Key, simply remove `--` from `api_key` argument.
+  If you are using MindsDB on Docker or if you want to use your own OpenAI API
+  Key, simply remove `--` from `api_key` argument.
 </Note>
 
 The critical attribute here is `prompt_template` where we tell the GPT model, how to respond to the questions asked by the user, feel free to change any values passed in the columns, from our example, `{{messages}}`, will be replaced by the `WHERE` clause provided in the query. Let's see how it works:
@@ -149,15 +153,14 @@ WHERE messages = 'Hi, can you please explain me more about MindsDB?';
 ```
 
 <p align="center">
-    <img src="/assets/SLBot-response1.png" />
+  <img src="/assets/SLBot-response1.png" />
 </p>
 
 ### 2. Feeding Personality into Our Model
 
-Alright, so the old model's replies were *good*. But hey, we can use some prompt template tricks to make it respond the way we want. Let's do some Prompt Engineering.
+Alright, so the old model's replies were _good_. But hey, we can use some prompt template tricks to make it respond the way we want. Let's do some Prompt Engineering.
 
 Now, let's make a model called `whizfizz_model` with a prompt template that gives GPT a wild personality that eludes a playful and magical aura. Imagine scientific knowledge with whimsical storytelling to create a unique and enchanting experience. We'll call him **WhizFizz**:
-
 
 ```sql
 CREATE MODEL mindsdb.whizfizz_model
@@ -182,7 +185,7 @@ WHERE messages = 'Hi, can you please explain me more about MindsDB?';
 ```
 
 <p align="center">
-    <img src="/assets/SLBot-response2.png" />
+  <img src="/assets/SLBot-response2.png" />
 </p>
 
 You see the difference! Now, I'm getting excited, let's try again.
@@ -193,20 +196,21 @@ SELECT
 FROM mindsdb.whizfizz_model
 WHERE messages = 'if a time-traveling astronaut had a dance-off with a black hole, what mind-bending moves would they showcase, and how would gravity groove to the rhythm?!';
 ```
+
 <p align="center">
-    <img src="/assets/SLBot-response3.png" />
+  <img src="/assets/SLBot-response3.png" />
 </p>
 
 ### 3. Let's Connect our GPT Model to Slack!
 
-The database has `channels` table. This table can be used to search for `channels`, `messages`, and `timestamps`, as well as to post `messages` into slack channels. These functionalities can also be done by using Slack API or Webhooks. 
+The database has `channels` table. This table can be used to search for `channels`, `messages`, and `timestamps`, as well as to post `messages` into slack channels. These functionalities can also be done by using Slack API or Webhooks.
 
 Let's query the user's question and see how our GPT model responds to it, by joining the model with the `channels` table:
 
 ```sql
 SELECT
     t.channel as channel,
-    t.messages as input_text, 
+    t.messages as input_text,
     r.response as message
 FROM mindsdb_slack.channels as t
 JOIN mindsdb.whizfizz_model as r
@@ -222,7 +226,7 @@ We want to respond to the user's questions by posting the output of our newly cr
 INSERT INTO mindsdb_slack.channels(channel, message)
   SELECT
     t.channel as channel,
-    t.messages as input_text, 
+    t.messages as input_text,
     r.response as message
   FROM mindsdb_slack.channels as t
   JOIN mindsdb.whizfizz_model as r
@@ -233,15 +237,12 @@ INSERT INTO mindsdb_slack.channels(channel, message)
 Works like a charm!!
 
 <p align="center">
-    <img src="/assets/SLBot-response4.png" />
+  <img src="/assets/SLBot-response4.png" />
 </p>
 
 ### 5. Let's automate this
 
-We will `CREATE JOB` that means the query which we will give, will execute after some interval. Let's schedule a job every hour. The job will do the following:
-    1. Check for new messages
-    2. Generate an appropriate response
-    3. Post the response into the channel
+We will `CREATE JOB` that means the query which we will give, will execute after some interval. Let's schedule a job every hour. The job will do the following: 1. Check for new messages 2. Generate an appropriate response 3. Post the response into the channel
 
 Let's do it in single SQL statement:
 
@@ -251,7 +252,7 @@ CREATE JOB mindsdb.gpt4_slack_job AS (
   INSERT INTO mindsdb_slack.channels(channel, message)
   SELECT
     t.channel as channel,
-    t.messages as input_text, 
+    t.messages as input_text,
     r.response as message
   FROM mindsdb_slack.channels as t
   JOIN mindsdb.whizfizz_model as r
@@ -280,5 +281,5 @@ DROP JOB gpt4_slack_job;
 **What's next?**
 
 Check out [How to Generate Images using OpenAI with MindsDB](/sql/tutorials/image-generator) to see another interesting use case of OpenAI integration.
-</Tip>
 
+</Tip>

@@ -8,20 +8,15 @@ from mindsdb_sql.parser.ast.select.identifier import Identifier
 
 from mindsdb.integrations.libs.base import BaseHandler
 
-from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
-    RESPONSE_TYPE
-)
+from mindsdb.integrations.libs.response import HandlerResponse as Response, RESPONSE_TYPE
 
 
 class FuncParser:
-
     def from_string(self, query_string):
-
-        body = py_ast.parse(query_string.strip(), mode='eval').body
+        body = py_ast.parse(query_string.strip(), mode="eval").body
 
         if not isinstance(body, py_ast.Call):
-            raise RuntimeError(f'Api function not found {query_string}')
+            raise RuntimeError(f"Api function not found {query_string}")
 
         fnc_name = body.func.id
 
@@ -35,7 +30,6 @@ class FuncParser:
         return fnc_name, params
 
     def process(self, node):
-
         if isinstance(node, py_ast.List):
             elements = []
             for node2 in node.elts:
@@ -43,7 +37,6 @@ class FuncParser:
             return elements
 
         if isinstance(node, py_ast.Dict):
-
             keys = []
             for node2 in node.keys:
                 if isinstance(node2, py_ast.Constant):
@@ -51,7 +44,7 @@ class FuncParser:
                 elif isinstance(node2, py_ast.Str):  # py37
                     value = node2.s
                 else:
-                    raise NotImplementedError(f'Unknown dict key {node2}')
+                    raise NotImplementedError(f"Unknown dict key {node2}")
 
                 keys.append(value)
 
@@ -64,11 +57,11 @@ class FuncParser:
         if isinstance(node, py_ast.Name):
             # special attributes
             name = node.id
-            if name == 'true':
+            if name == "true":
                 return True
-            elif name == 'false':
+            elif name == "false":
                 return False
-            elif name == 'null':
+            elif name == "null":
                 return None
 
         if isinstance(node, py_ast.Constant):
@@ -88,11 +81,10 @@ class FuncParser:
                 value = self.process(node.operand)
                 return -value
 
-        raise NotImplementedError(f'Unknown node {node}')
+        raise NotImplementedError(f"Unknown node {node}")
 
 
-class APITable():
-
+class APITable:
     def __init__(self, handler):
         self.handler = handler
 
@@ -170,17 +162,16 @@ class APIHandler(BaseHandler):
 
     def _get_table(self, name: Identifier):
         """
-        Check if the table name was added to the the _register_table
+        Check if the table name was added to the _register_table
         Args:
             name (Identifier): the table name
         """
         name = name.parts[-1]
         if name not in self._tables:
-            raise RuntimeError(f'Table not found: {name}')
+            raise RuntimeError(f"Table not found: {name}")
         return self._tables[name]
 
     def query(self, query: ASTNode):
-
         if isinstance(query, Select):
             result = self._get_table(query.from_table).select(query)
         elif isinstance(query, Update):
@@ -210,8 +201,8 @@ class APIHandler(BaseHandler):
 
         result = self._get_table(Identifier(table_name)).get_columns()
 
-        df = pd.DataFrame(result, columns=['Field'])
-        df['Type'] = 'str'
+        df = pd.DataFrame(result, columns=["Field"])
+        df["Type"] = "str"
 
         return Response(RESPONSE_TYPE.TABLE, df)
 
@@ -223,14 +214,13 @@ class APIHandler(BaseHandler):
         """
         result = list(self._tables.keys())
 
-        df = pd.DataFrame(result, columns=['table_name'])
-        df['table_type'] = 'BASE TABLE'
+        df = pd.DataFrame(result, columns=["table_name"])
+        df["table_type"] = "BASE TABLE"
 
         return Response(RESPONSE_TYPE.TABLE, df)
 
 
 class APIChatHandler(APIHandler):
-
     def get_chat_config(self):
         """Return configuration to connect to chatbot
 

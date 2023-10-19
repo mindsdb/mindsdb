@@ -15,11 +15,12 @@ This handler was implemented using [`slack-sdk`](https://slack.dev/python-slack-
 
 The Slack handler is initialized with the following parameters:
 
-* `token` is a Slack bot token to use for authentication.
-* `app_token` is a Slack app token to use for authentication.
+- `token` is a Slack bot token to use for authentication.
+- `app_token` is a Slack app token to use for authentication.
 
 <Note>
-Please note that `app_token` is an optional parameter. Without providing it, you need to integrate an app to a Slack channel.
+  Please note that `app_token` is an optional parameter. Without providing it,
+  you need to integrate an app to a Slack channel.
 </Note>
 
 ### Method 1
@@ -28,37 +29,40 @@ One way to connect Slack is to use both bot and app tokens. By following the ins
 
 Here is how to set up a Slack app and generate both Slack bot token and Slack app token:
 
-  1. Follow [this link](https://api.slack.com/apps) and sign in with your Slack account.
-  2. Create a new app `From scratch` or select an existing app.
-      - Please note that the following instructions support apps created `From scratch`.
-      - For apps created `From an app manifest`, please follow the [Slack docs here](https://api.slack.com/reference/manifests).
-  3. Go to *Basic Information* under *Settings*.
-      - Under *App-Level Tokens*, click on *Generate Token and Scopes*.
-      - Name the token `socket` and add the `connections:write` scope.
-      - **Copy and save the `xapp-...` token - you'll need it to publish the chatbot.**
-  4. Go to *Socket Mode* under *Settings* and toggle the button to *Enable Socket Mode*.
-  5. Go to *OAuth & Permissions* under *Features*.
-      - Add the following *Bot Token Scopes*:
-        - channels:history
-        - channels:read
-        - chat:write
-        - groups:read
-        - im:history
-        - im:read
-        - im:write
-        - mpim:read
-        - users.profile:read
-      - In the *OAuth Tokens for Your Workspace* section, click on *Install to Workspace* and then *Allow*.
-      - **Copy and save the `xoxb-...` token - you'll need it to publish the chatbot.**
-  6. Go to *App Home* under *Features* and click on the checkbox to *Allow users to send Slash commands and messages from the messages tab*.
-  7. Go to *Event Subscriptions* under *Features*.
-      - Toggle the button to *Enable Events*.
-      - Under *Subscribe to bot events*, click on *Add Bot User Event* and add `message.im`.
-      - Click on *Save Changes*.
-  8. Now you can use tokens from points 3 and 5 to initialize the Slack handler in MindsDB.
+1. Follow [this link](https://api.slack.com/apps) and sign in with your Slack account.
+2. Create a new app `From scratch` or select an existing app.
+   - Please note that the following instructions support apps created `From scratch`.
+   - For apps created `From an app manifest`, please follow the [Slack docs here](https://api.slack.com/reference/manifests).
+3. Go to _Basic Information_ under _Settings_.
+   - Under _App-Level Tokens_, click on _Generate Token and Scopes_.
+   - Name the token `socket` and add the `connections:write` scope.
+   - **Copy and save the `xapp-...` token - you'll need it to publish the chatbot.**
+4. Go to _Socket Mode_ under _Settings_ and toggle the button to _Enable Socket Mode_.
+5. Go to _OAuth & Permissions_ under _Features_.
+   - Add the following _Bot Token Scopes_:
+     - channels:history
+     - channels:read
+     - chat:write
+     - groups:read
+     - im:history
+     - im:read
+     - im:write
+     - mpim:read
+     - users.profile:read
+   - In the _OAuth Tokens for Your Workspace_ section, click on _Install to Workspace_ and then _Allow_.
+   - **Copy and save the `xoxb-...` token - you'll need it to publish the chatbot.**
+6. Go to _App Home_ under _Features_ and click on the checkbox to _Allow users to send Slash commands and messages from the messages tab_.
+7. Go to _Event Subscriptions_ under _Features_.
+   - Toggle the button to _Enable Events_.
+   - Under _Subscribe to bot events_, click on _Add Bot User Event_ and add `message.im`.
+   - Click on _Save Changes_.
+8. Now you can use tokens from points 3 and 5 to initialize the Slack handler in MindsDB.
 
 <Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/slack_handler) and run this command: `pip install -r requirements.txt`.
+  If you installed MindsDB locally via pip, you need to install all handler
+  dependencies manually. To do so, go to the handler's folder
+  (mindsdb/integrations/handlers/slack_handler) and run this command: `pip
+  install -r requirements.txt`.
 </Tip>
 
 Here is how to connect Slack to MindsDB:
@@ -79,29 +83,32 @@ Another way to connect Slack is to use the bot token only. By following the inst
 
 Here is how to set up a Slack app and generate a Slack bot token:
 
-  1. Follow [this link](https://api.slack.com/apps) and sign in with your Slack account.
-  2. Create a new app `From scratch` or select an existing app.
-      - Please note that the following instructions support apps created `From scratch`.
-      - For apps created `From an app manifest`, please follow the [Slack docs here](https://api.slack.com/reference/manifests).
-  3. Go to the *OAuth & Permissions* section.
-  4. Under the *Scopes* section, add the *Bot Token Scopes* necessary for your application. You can add more later as well.
-      - channels:history
-      - channels:read
-      - chat:write
-      - groups:read
-      - im:read
-      - mpim:read
-  5. Install the bot to your workspace.
-  6. Under the *OAuth Tokens for Your Workspace* section, copy the the *Bot User OAuth Token* value.
-  7. Open your Slack application and add the App/Bot to one of the channels:
-      - Go to the channel where you want to use the bot.
-      - Right-click on the channel and select *View Channel Details*.
-      - Select *Integrations*.
-      - Click on *Add an App*.
-  8. Now you can use the token from step 6 to initialize the Slack handler in MindsDB, and use the channel name to query and write messages.
+1. Follow [this link](https://api.slack.com/apps) and sign in with your Slack account.
+2. Create a new app `From scratch` or select an existing app.
+   - Please note that the following instructions support apps created `From scratch`.
+   - For apps created `From an app manifest`, please follow the [Slack docs here](https://api.slack.com/reference/manifests).
+3. Go to the _OAuth & Permissions_ section.
+4. Under the _Scopes_ section, add the _Bot Token Scopes_ necessary for your application. You can add more later as well.
+   - channels:history
+   - channels:read
+   - chat:write
+   - groups:read
+   - im:read
+   - mpim:read
+5. Install the bot to your workspace.
+6. Under the _OAuth Tokens for Your Workspace_ section, copy the _Bot User OAuth Token_ value.
+7. Open your Slack application and add the App/Bot to one of the channels:
+   - Go to the channel where you want to use the bot.
+   - Right-click on the channel and select _View Channel Details_.
+   - Select _Integrations_.
+   - Click on _Add an App_.
+8. Now you can use the token from step 6 to initialize the Slack handler in MindsDB, and use the channel name to query and write messages.
 
 <Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/slack_handler) and run this command: `pip install -r requirements.txt`.
+  If you installed MindsDB locally via pip, you need to install all handler
+  dependencies manually. To do so, go to the handler's folder
+  (mindsdb/integrations/handlers/slack_handler) and run this command: `pip
+  install -r requirements.txt`.
 </Tip>
 
 Here is how to connect Slack to MindsDB:
@@ -123,6 +130,7 @@ It comes with the `channels` table.
 The following usage applies when **Connection Method 2** was used to connect Slack.
 
 The usage for **Connection Method 1** is through the LLM UI. More details [here](/sql/tutorials/llm-chatbot-ui).
+
 </Warning>
 
 You can select all messages from the channel using the below query.
@@ -169,5 +177,6 @@ LIMIT 5;
 ```
 
 <Info>
-You can find more examples [here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/slack_handler#lets-use-gpt-model-to-respond-to-messages-for-us).
+  You can find more examples
+  [here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/slack_handler#lets-use-gpt-model-to-respond-to-messages-for-us).
 </Info>

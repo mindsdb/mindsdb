@@ -47,7 +47,7 @@ Now, you can use this established connection to query your database as follows,
 SELECT * FROM informix_datasource.items;
 ```
 
-This integration uses IfxPy it is in develpment stage there it can be install using `pip install IfxPy`.But it doesn't work for higher version of python, therfore you have to build it from source.
+This integration uses IfxPy it is in develpment stage there it can be install using `pip install IfxPy`.But it doesn't work for higher version of python, therefore. you have to build it from source.
 
 <br>
 

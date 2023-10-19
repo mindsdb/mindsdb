@@ -15,28 +15,31 @@ This handler is implemented using the [PRAW (Python Reddit API Wrapper)](https:/
 
 The required arguments to establish a connection are as follows:
 
-* `client_id` is a Reddit API client ID.
-* `client_secret` is a Reddit API client secret.
-* `user_agent` is a user agent string to identify your application.
+- `client_id` is a Reddit API client ID.
+- `client_secret` is a Reddit API client secret.
+- `user_agent` is a user agent string to identify your application.
 
 <Tip>
 Here is how to get your Reddit credentials:
 
 1. Go to Reddit App Preferences at https://www.reddit.com/prefs/apps or https://old.reddit.com/prefs/apps/
-2. Scroll down to the bottom of the page and click *create another app...*
-3. Fill out the form with the name, description, and redirect URL for your app, then click *create app*
-4. Now you should be able to see the personal user script, secret, and name of your app. Store those as environment variables: `CLIENT_ID`, `CLIENT_SECRET`, and `USER_AGENT`, respecitvely.
-</Tip>
+2. Scroll down to the bottom of the page and click _create another app..._
+3. Fill out the form with the name, description, and redirect URL for your app, then click _create app_
+4. Now you should be able to see the personal user script, secret, and name of your app. Store those as environment variables: `CLIENT_ID`, `CLIENT_SECRET`, and `USER_AGENT`, respectively.
+   </Tip>
 
 <Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/reddit_handler) and run this command: `pip install -r requirements.txt`.
+  If you installed MindsDB locally via pip, you need to install all handler
+  dependencies manually. To do so, go to the handler's folder
+  (mindsdb/integrations/handlers/reddit_handler) and run this command: `pip
+  install -r requirements.txt`.
 </Tip>
 
 In order to make use of this handler and connect the Reddit app to MindsDB, the following syntax can be used:
 
 ```sql
 CREATE DATABASE my_reddit
-WITH 
+WITH
     ENGINE = 'reddit',
     PARAMETERS = {
      "client_id": "YOUR_CLIENT_ID",
@@ -68,5 +71,7 @@ WHERE submission_id = '12gls93'
 ```
 
 <Info>
-For more information about available actions and development plans, visit [this page](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/reddit_handler/README.md).
+  For more information about available actions and development plans, visit
+  [this
+  page](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/reddit_handler/README.md).
 </Info>

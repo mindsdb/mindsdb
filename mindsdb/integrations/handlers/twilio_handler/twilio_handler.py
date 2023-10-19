@@ -2,6 +2,7 @@ import os
 
 import re
 from twilio.rest import Client
+from datetime import datetime
 import pandas as pd
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
@@ -64,7 +65,6 @@ class TwilioHandler(APIHandler):
 
         return response
 
-
     def parse_native_query(self, query_string: str):
         """Parses the native query string of format method(arg1=val1, arg2=val2, ...) and returns the method name and arguments."""
         
@@ -112,13 +112,10 @@ class TwilioHandler(APIHandler):
             status=message.status
         )
 
-    
-    
-
     def fetch_messages(self, params):
         n = int(params.get('n', 10))
 
-         # Convert date strings to datetime objects if provided
+        # Convert date strings to datetime objects if provided
         date_sent_after = params.get('date_sent_after', None)
         if date_sent_after:
             date_sent_after = datetime.strptime(date_sent_after, '%Y-%m-%d')
@@ -129,7 +126,6 @@ class TwilioHandler(APIHandler):
 
         # Extract 'from_' and 'body' search criteria from params
         from_ = params.get('from_', None)
-        body = params.get('body', None)
 
         messages = self.client.messages.list(
             limit=n,

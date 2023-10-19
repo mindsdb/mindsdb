@@ -1102,7 +1102,7 @@ class GithubMilestonesTable(APITable):
         while True:
             try:
 
-                for milestone in self.handler.connection.get_repo(self.handler.repository).a.get_milestones()[start: start + 10]:
+                for milestone in self.handler.connection.get_repo(self.handler.repository).get_milestones()[start: start + 10]:
                     
                     raw_data = milestone.raw_data
                     github_milestones_df = pd.concat(
@@ -1166,4 +1166,21 @@ class GithubMilestonesTable(APITable):
             List of columns
         """
 
-        return ['url', 'html_url', 'labels_url', 'id', 'node_id', 'number', 'title', 'description', 'creator', 'open_issues', 'closed_issues', 'state', 'created_at', 'updated_at', 'due_on', 'closed_at']
+        return [
+            "url", 
+            "html_url", 
+            "labels_url", 
+            "id", 
+            "node_id", 
+            "number", 
+            "title", 
+            "description", 
+            "creator", 
+            "open_issues", 
+            "closed_issues", 
+            "state", 
+            "created_at", 
+            "updated_at", 
+            "due_on", 
+            "closed_at"
+        ]

@@ -8,7 +8,7 @@ Apache Doris is a new-generation open-source real-time data warehouse based on M
 
 ## Implementation
 
-Since Doris uses MySQL dilect of SQL, this handler is implemented using the `mysql-connector-python` library.
+Since Doris uses MySQL dialect of SQL, this handler is implemented using the `mysql-connector-python` library.
 
 The required arguments to establish a connection are as follows:
 

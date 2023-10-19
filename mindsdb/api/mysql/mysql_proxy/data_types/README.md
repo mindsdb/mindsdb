@@ -17,4 +17,4 @@ Also, we try to keep a catalog of the constants that are needed for this impleme
 ENJOY!
 
 NOTE: All of these libraries are homebrewn by mindsdb from scratch,
-if yuu need to copy something from a different project, please make sure you place it in external_libs
+if you need to copy something from a different project, please make sure you place it in external_libs

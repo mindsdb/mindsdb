@@ -407,7 +407,7 @@ Methods that not implemented, but may be required to be used
 Main method for performing querying is "find".
 It uses MongoToAst class to transform mongo query to AST-query 
 
-It can work in tho modes: normal and join mode
+It can work in these modes: normal and join mode
 
 In normal mode all filters from mongo query
 are passed to WHERE operator of AST-query. 

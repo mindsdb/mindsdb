@@ -819,7 +819,6 @@ class ExecuteCommands:
         )
 
     def answer_describe_predictor(self, statement):
-
         # try full name
         attribute = None
         model_info = self._get_model_info(statement.value, except_absent=False)
@@ -1256,6 +1255,18 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
+    def _create_persistent_chroma(self, project_name, kb_name, engine="chromadb"):
+        """Create default vector database for knowledge base, if not specified"""
+
+        vector_store_name = f"{kb_name}_{engine}"
+
+        persist_directory = f"{self.session.config.paths['storage']}/vector_databases//{project_name}/{vector_store_name}"
+        connection_args = {"persist_directory": persist_directory}
+
+        self._create_integration(vector_store_name, engine, connection_args)
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK), vector_store_name
+
     def answer_create_kb(self, statement: CreateKnowledgeBase):
         project_name = (
             statement.name.parts[0]
@@ -1291,8 +1302,15 @@ class ExecuteCommands:
                 "Need the form 'database_name.table_name'"
             )
 
-        vector_db_name = statement.storage.parts[0]
-        vector_table_name = statement.storage.parts[-1]
+        statement.storage = None  # todo: remove this line just for debug
+        vector_db_name = (
+            statement.storage.parts[0] if statement.storage else project_name
+        )
+        vector_table_name = (
+            statement.storage.parts[-1]
+            if statement.storage
+            else self._create_persistent_chroma(project_name, kb_name)[1]
+        )
 
         # verify the vector database exists and get its id
         database_records = self.session.database_controller.get_dict()
@@ -1856,7 +1874,6 @@ class ExecuteCommands:
         )
 
     def answer_update_model_version(self, statement):
-
         # get project name
         if len(statement.table.parts) > 1:
             project_name = statement.table.parts[0]

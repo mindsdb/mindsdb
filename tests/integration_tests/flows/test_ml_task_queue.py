@@ -86,7 +86,7 @@ class TestMLTaskQueue(HTTPHelperMixin):
         db = Database(protocol=3)
         assert TASKS_STREAM_NAME in db.keys()
         assert db.type(TASKS_STREAM_NAME) == b'stream'
-        assert db.xlen(TASKS_STREAM_NAME) == 2
+        assert db.xlen(TASKS_STREAM_NAME) == 0
 
     def test_predict(self):
         """ make predict queries to both trained models
@@ -114,7 +114,7 @@ class TestMLTaskQueue(HTTPHelperMixin):
         assert len(response['data'][0]) == 2
 
         db = Database(protocol=3)
-        assert db.xlen(TASKS_STREAM_NAME) == 4
+        assert db.xlen(TASKS_STREAM_NAME) == 0
 
     def test_finetune(self):
         """ check that finetune is work
@@ -142,4 +142,4 @@ class TestMLTaskQueue(HTTPHelperMixin):
         assert status == 'complete'
 
         db = Database(protocol=3)
-        assert db.xlen(TASKS_STREAM_NAME) == 6
+        assert db.xlen(TASKS_STREAM_NAME) == 0

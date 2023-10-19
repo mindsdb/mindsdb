@@ -431,7 +431,7 @@ class ExecuteCommands:
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
             elif "show create table" in sql_lower:
                 # SHOW CREATE TABLE `MINDSDB`.`predictors`
-                table = sql[sql.rfind(".") + 1 :].strip(" .;\n\t").replace("`", "")
+                table = sql[sql.rfind(".") + 1:].strip(" .;\n\t").replace("`", "")
                 return self.answer_show_create_table(table)
             elif sql_category in ("character set", "charset"):
                 new_statement = Select(
@@ -819,6 +819,7 @@ class ExecuteCommands:
         )
 
     def answer_describe_predictor(self, statement):
+
         # try full name
         attribute = None
         model_info = self._get_model_info(statement.value, except_absent=False)
@@ -1255,27 +1256,6 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
-    def _create_persistent_chroma(self, project_name, kb_name, engine="chromadb"):
-        """Create default vector database for knowledge base, if not specified"""
-
-        # todo: move to chroma handler
-
-        vector_store_name = f"{kb_name}_{engine}"
-
-        integration = self.session.integration_controller.get(engine)
-        chroma_handler_storage = HandlerStorage(integration["id"])
-        vector_store_folder_name = f"{project_name}/{vector_store_name}"
-
-        persist_directory = chroma_handler_storage.folder_get(vector_store_folder_name)
-
-        connection_args = {"persist_directory": persist_directory}
-
-        self._create_integration(vector_store_name, engine, connection_args)
-
-        chroma_handler_storage.folder_sync(vector_store_folder_name)
-
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK), vector_store_name
-
     def answer_create_kb(self, statement: CreateKnowledgeBase):
         project_name = (
             statement.name.parts[0]
@@ -1305,20 +1285,14 @@ class ExecuteCommands:
         embedding_model_id = model_record["model_record"].id
 
         # search for the vector database table
-        if statement.storage and len(statement.storage.parts) < 2:
+        if len(statement.storage.parts) < 2:
             raise SqlApiException(
                 f"Invalid vectordatabase table name: {statement.storage}"
                 "Need the form 'database_name.table_name'"
             )
 
-        vector_db_name = (
-            statement.storage.parts[0] if statement.storage else project_name
-        )
-        vector_table_name = (
-            statement.storage.parts[-1]
-            if statement.storage
-            else self._create_persistent_chroma(project_name, kb_name)[1]
-        )
+        vector_db_name = statement.storage.parts[0]
+        vector_table_name = statement.storage.parts[-1]
 
         # verify the vector database exists and get its id
         database_records = self.session.database_controller.get_dict()
@@ -1882,6 +1856,7 @@ class ExecuteCommands:
         )
 
     def answer_update_model_version(self, statement):
+
         # get project name
         if len(statement.table.parts) > 1:
             project_name = statement.table.parts[0]

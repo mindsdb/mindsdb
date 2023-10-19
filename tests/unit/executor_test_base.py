@@ -122,7 +122,8 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="rag", data={}, engine="rag")
         db.session.add(r)
-
+        r = db.Integration(name="auto_ts",data={}, engine="auto_ts")
+        db.session.add(r)
         # Lightwood should always be last (else tests break, why?)
         r = db.Integration(name="lightwood", data={}, engine="lightwood")
         db.session.add(r)

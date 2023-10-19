@@ -1,1 +1,2 @@
 nixtlats>=0.1.10
+hierarchicalforecast==0.3.0

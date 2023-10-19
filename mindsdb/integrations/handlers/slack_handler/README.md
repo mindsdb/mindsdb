@@ -72,7 +72,7 @@ Please change the `channel-name` in the `WHERE` clause to the channel where, you
 Post a new message to a Channel
 
 ~~~~sql
-INSERT INTO mindsdb_slack.channels (channel, message)
+INSERT INTO mindsdb_slack.channels (channel, text)
 VALUES("<channel-name>", "Hey MindsDB, Thanks to you! Now I can respond to my Slack messages through SQL Queries. 🚀 ");
 ~~~~
 

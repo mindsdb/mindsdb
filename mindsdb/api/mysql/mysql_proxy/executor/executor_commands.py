@@ -431,7 +431,7 @@ class ExecuteCommands:
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
             elif "show create table" in sql_lower:
                 # SHOW CREATE TABLE `MINDSDB`.`predictors`
-                table = sql[sql.rfind(".") + 1 :].strip(" .;\n\t").replace("`", "")
+                table = sql[sql.rfind(".") + 1:].strip(" .;\n\t").replace("`", "")
                 return self.answer_show_create_table(table)
             elif sql_category in ("character set", "charset"):
                 new_statement = Select(
@@ -1251,7 +1251,7 @@ class ExecuteCommands:
             else:
                 db_name = self.session.database
             project = self.session.database_controller.get_project(db_name)
-            project.drop_view(view_name)
+            project.drop_table(view_name)
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
@@ -1876,6 +1876,7 @@ class ExecuteCommands:
         )
 
     def answer_update_model_version(self, statement):
+
         # get project name
         if len(statement.table.parts) > 1:
             project_name = statement.table.parts[0]

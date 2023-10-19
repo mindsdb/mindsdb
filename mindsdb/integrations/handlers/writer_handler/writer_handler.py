@@ -69,12 +69,11 @@ class WriterHandler(BaseMLEngine):
         """
 
         input_args = extract_llm_params(args["using"])
-        # if user doesn't provide a dataset key, use the input in FROM clause in model creation
-        input_args["evaluate_dataset"] = (
-            input_args["evaluate_dataset"]
-            if "evaluate_dataset" in input_args
-            else df.to_dict(orient="records")
-        )
+
+        if "evaluate_dataset" not in input_args and df is not None:
+            # if user doesn't provide an evaluation dataset, use the input df from create query
+            input_args["evaluate_dataset"] = df.to_dict(orient="records")
+
         args = WriterHandlerParameters(**input_args)
 
         # create folder for vector store to persist embeddings
@@ -82,7 +81,7 @@ class WriterHandler(BaseMLEngine):
             args.vector_store_folder_name
         )
 
-        if not df.empty and args.run_embeddings:
+        if df is not None and args.run_embeddings:
             if "context_columns" not in args:
                 # if no context columns provided, use all columns in df
                 logger.info("No context columns provided, using all columns in df")
@@ -131,7 +130,7 @@ class WriterHandler(BaseMLEngine):
                 )
 
         args.vector_store_storage_path = self.engine_storage.folder_get(
-            args.vector_store_folder_name, update=False
+            args.vector_store_folder_name
         )
 
         # get question answering results
@@ -154,6 +153,7 @@ class WriterHandler(BaseMLEngine):
             evaluate_df = load_dataset(
                 ml_task_type="question_answering", dataset_name=args.evaluate_dataset
             )
+            args.context_columns = "context"
 
         if args.n_rows_evaluation:
             # if user specifies n_rows_evaluation in create, only use that many rows

@@ -18,7 +18,7 @@ from sqlalchemy import func
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
-from mindsdb.interfaces.storage.fs import FsStore, FileStorage, FileStorageFactory, RESOURCE_GROUP
+from mindsdb.interfaces.storage.fs import FsStore, FileStorage, RESOURCE_GROUP
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -186,6 +186,8 @@ class IntegrationController:
                     arg_name in accept_connection_args
                     and accept_connection_args[arg_name]['type'] == ARG_TYPE.PATH
                 ):
+                    if arg_value is None or arg_value == '':
+                        continue
                     if files_dir is None:
                         files_dir = tempfile.mkdtemp(prefix='mindsdb_files_')
                     shutil.copy(arg_value, files_dir)
@@ -400,7 +402,7 @@ class IntegrationController:
             root_dir='tmp',
             sync=False
         )
-        handler_storage = HandlerStorage(integration_id, root_dir='tmp')
+        handler_storage = HandlerStorage(integration_id, root_dir='tmp', is_temporal=True)
         handler_ars = self._make_handler_args(
             name='tmp_handler',
             handler_type=handler_type,
@@ -416,9 +418,10 @@ class IntegrationController:
     def copy_integration_storage(self, integration_id_from, integration_id_to):
         storage_from = HandlerStorage(integration_id_from)
         root_path = ''
-        folder_from = storage_from.folder_get(root_path, not_empty=True)
-        if folder_from is None:
-            return
+
+        if storage_from.is_empty():
+            return None
+        folder_from = storage_from.folder_get(root_path)
 
         storage_to = HandlerStorage(integration_id_to)
         folder_to = storage_to.folder_get(root_path)
@@ -496,24 +499,18 @@ class IntegrationController:
             handler_storage=handler_storage
         )
 
-        handler_type = self.handler_modules[integration_engine].type
-        if handler_type == 'ml':
-            handler_ars['storage_factory'] = FileStorageFactory(
-                resource_group=RESOURCE_GROUP.PREDICTOR,
-                sync=True
-            )
-
         HandlerClass = self.handler_modules[integration_engine].Handler
 
-        if isinstance(HandlerClass, type) and issubclass(HandlerClass, BaseMLEngine):
-            handler_ars['handler_class'] = HandlerClass
-            handler_ars['execution_method'] = getattr(self.handler_modules[integration_engine], 'execution_method', None)
-            handler_ars['integration_engine'] = integration_engine
-            logger.info("%s.get_handler: create a ML client, params - %s", self.__class__.__name__, handler_ars)
-            handler = BaseMLEngineExec(**handler_ars)
-            # handler = MLClient(**handler_ars)
+        if integration_meta.get('type') == HANDLER_TYPE.ML:
+            ml_handler_args = {
+                'name': handler_ars['name'],
+                'integration_id': handler_ars['integration_id'],
+                'integration_engine': integration_engine,
+                'handler_class': HandlerClass
+            }
+            logger.info("%s.get_handler: create a ML client, params - %s", self.__class__.__name__, ml_handler_args)
+            handler = BaseMLEngineExec(**ml_handler_args)
         else:
-
             logger.info("%s.get_handler: create a client to db service of %s type, args - %s", self.__class__.__name__, integration_engine, handler_ars)
             handler = HandlerClass(**handler_ars)
             # handler = DBClient(integration_engine, HandlerClass, **handler_ars)

@@ -166,13 +166,14 @@ class Integration(Resource):
             if engine is not None:
                 del params['type']
             params.pop('publish', False)
+            storage = params.pop('storage', None)
             ca.integration_controller.add(name, engine, params)
 
             # copy storage
-            if params.get('storage'):
+            if storage is not None:
                 handler = ca.integration_controller.get_handler(name)
 
-                export = decrypt(params['storage'].encode(), secret_key)
+                export = decrypt(storage.encode(), secret_key)
                 handler.handler_storage.import_files(export)
 
         except Exception as e:

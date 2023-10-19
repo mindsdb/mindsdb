@@ -1,0 +1,86 @@
+---
+title: Popularity Recommender
+sidebarTitle: Popularity Recommender
+---
+
+The popularity recommender is built using polars to create a simple but fast popularity recommender, recommending items based on global popularity and personal past interaction. It calculates the most popular items across the whole input data and for each user removes any that have already been interacted with. It is very simple in how it works, thus, it serves as a useful benchmark when evaluating more complex recommendation engines.
+
+The ideal use cases include ecommerce rating data, web page browsing data, or past purchase data for serving users recommendations.
+
+As the current implementations stand, the input data should be a table containing user-item interaction data:
+
+```
++---------+---------+--------+
+| user_id | item_id | rating |
++---------+---------+--------+
+| 1       | 2       | 4      |
+| 1       | 3       | 7      |
++---------+---------+--------+
+```
+
+<Note>
+Please note that at the moment this integrations does not support `DESCRIBE` and `FINETUNE` features.
+</Note>
+
+## Example
+
+Before creating a popularity recommender model, we need to create an ML engine.
+
+```sql
+CREATE ML_ENGINE popularity_recommender
+FROM popularity_recommender;
+```
+
+You can verify it by running `SHOW ML_ENGINES`.
+
+Now let's create a popularity recommender model specifying the necessary input parameters.
+
+```sql
+CREATE MODEL pop_rec_demo
+FROM mysql_demo_db (SELECT * FROM movie_lens_ratings)
+PREDICT movieId
+USING
+  engine = 'popularity_recommender',
+  item_id = 'movieId',
+  user_id = 'userId',
+  n_recommendations = 10;
+```
+
+The required parameters include the following:
+
+- The `item_id` parameter that stores items to be recommended; here, these are movies.
+- The `user_id` parameter that stores users to whom items are recommended.
+- The `n_recommendations` parameter stores the number of recommendations to be returned.
+
+<Tip>
+Here is how to connect the `mysql_demo_db` used for training the model:
+
+```sql
+CREATE DATABASE mysql_demo_db
+WITH ENGINE = 'mysql',
+PARAMETERS = {
+    "user": "user",
+    "password": "MindsDBUser123!",
+    "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
+    "port": "3306",
+    "database": "public"
+};
+```
+</Tip>
+
+Here is how to get recommendations per user based on the global most popular items:
+
+```sql
+SELECT b.*
+FROM mysql_demo_db.movie_lens_ratings AS a
+JOIN pop_rec_demo AS b;
+```
+
+And here is how to get recommendations for specific users based on popularity:
+
+```sql
+SELECT b.*
+FROM mysql_demo_db.movie_lens_ratings AS a
+JOIN pop_rec_demo AS b
+WHERE a.userId in (215,216);
+```

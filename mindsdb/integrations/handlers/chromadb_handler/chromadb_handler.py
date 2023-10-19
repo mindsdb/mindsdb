@@ -279,6 +279,10 @@ class ChromaDBHandler(VectorStoreHandler):
 
         collection = self._client.get_collection(table_name)
 
+        # drop columns with all None values
+
+        data.dropna(axis=1, inplace=True)
+
         data = data.to_dict(orient="list")
 
         collection.add(

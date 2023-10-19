@@ -1,17 +1,19 @@
 from pathlib import Path
 import json
 
-import requests
 import pytest
 
 from pymongo import MongoClient
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from .conftest import CONFIG_PATH
+from .http_test_helpers import HTTPHelperMixin
 
 # used by mindsdb_app fixture in conftest
 OVERRIDE_CONFIG = {
     'integrations': {},
+    'tasks': {'disable': True},
+    'jobs': {'disable': True}
 }
 
 # used by (required for) mindsdb_app fixture in conftest
@@ -27,7 +29,7 @@ def get_string_params(parameters):
 
 
 @pytest.mark.usefixtures('mindsdb_app', 'postgres_db')
-class TestCompanyIndependent:
+class TestCompanyIndependent(HTTPHelperMixin):
     @classmethod
     def setup_class(cls):
         CONFIG.update(
@@ -65,41 +67,6 @@ class TestCompanyIndependent:
         b = set(b)
         assert len(a) == len(b)
         assert a == b
-
-    def sql_via_http(self, request: str, expected_resp_type: str = None, context: dict = None,
-                     headers: dict = None, company_id: int = None) -> dict:
-        if context is None:
-            context = {}
-
-        if headers is None:
-            headers = {}
-        if company_id is not None:
-            headers['company-id'] = str(company_id)
-
-        root = 'http://127.0.0.1:47334/api'
-        response = requests.post(
-            f'{root}/sql/query',
-            json={
-                'query': request,
-                'context': context
-            },
-            headers=headers
-        )
-        assert response.status_code == 200
-        response = response.json()
-        if expected_resp_type is not None:
-            assert response.get('type') == expected_resp_type
-        else:
-            assert response.get('type') in [RESPONSE_TYPE.OK, RESPONSE_TYPE.TABLE, RESPONSE_TYPE.ERROR]
-        assert isinstance(response.get('context'), dict)
-        if response['type'] == 'table':
-            assert isinstance(response.get('data'), list)
-            assert isinstance(response.get('column_names'), list)
-        elif response['type'] == 'error':
-            assert isinstance(response.get('error_code'), int)
-            assert isinstance(response.get('error_message'), str)
-        self._sql_via_http_context = response['context']
-        return response
 
     def test_initial_state_http(self):
         # add permanent integrations

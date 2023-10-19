@@ -155,3 +155,52 @@ class PaymentIntentsTable(APITable):
         stripe = self.handler.connect()
         payment_intents = stripe.PaymentIntent.list(**kwargs)
         return [payment_intent.to_dict() for payment_intent in payment_intents]
+
+class RefundsTable(APITable):
+    """The Stripe Refund Table implementation"""
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """
+        Pulls Stripe Refund data.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+            Stripe Refunds matching the query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'refunds',
+            self.get_columns()
+        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        refunds_df = pd.json_normalize(self.get_refunds(limit=result_limit))
+        select_statement_executor = SELECTQueryExecutor(
+            refunds_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+        refunds_df = select_statement_executor.execute_query()
+
+        return refunds_df
+
+    def get_columns(self) -> List[Text]:
+        return pd.json_normalize(self.get_refunds(limit=1)).columns.tolist()
+
+    def get_refunds(self, **kwargs) -> List[Dict]:
+        stripe = self.handler.connect()
+        refunds = stripe.Refund.list(**kwargs)
+        return [refund.to_dict() for refund in refunds ]

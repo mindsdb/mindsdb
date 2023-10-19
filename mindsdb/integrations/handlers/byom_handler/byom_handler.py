@@ -105,7 +105,7 @@ class BYOMHandler(BaseMLEngine):
                 return 'categorical'
 
         columns = {
-            target: convert_type(np.object)
+            target: convert_type(object)
         }
 
         self.model_storage.columns_set(columns)

@@ -3,7 +3,7 @@
 Youtube handler for MindsDB provides interfaces to connect with Youtube via APIs and pull the video comments of the particular video.
 
 ## Youtube
-Youtube is app that needs no introduction. It provides a great distrbution for all business and creators and It opens-up a great opportunity to do NLP on youtube comments
+Youtube is app that needs no introduction. It provides a great distribution for all business and creators and It opens-up a great opportunity to do NLP on youtube comments
 
 ## Youtube Handler Initialization
 

@@ -67,7 +67,6 @@ class TwilioHandler(APIHandler):
 
     def parse_native_query(self, query_string: str):
         """Parses the native query string of format method(arg1=val1, arg2=val2, ...) and returns the method name and arguments."""
-        
         # Extract method name and argument string
         print(f"query_string {query_string}")
         match = re.match(r'(\w+)\(([^)]+)\)', query_string)

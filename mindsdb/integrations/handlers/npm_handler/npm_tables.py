@@ -40,7 +40,7 @@ class CustomAPITable(APITable):
     def apply_query_params(self, df, query):
         select_statement_parser = SELECTQueryParser(query, self.name, self.get_columns())
         selected_columns, _, order_by_conditions, result_limit = select_statement_parser.parse_query()
-        select_statement_executor = SELECTQueryExecutor(df, selected_columns, [], order_by_conditions)
+        select_statement_executor = SELECTQueryExecutor(df, selected_columns, [], order_by_conditions, result_limit)
         return select_statement_executor.execute_query()
 
 

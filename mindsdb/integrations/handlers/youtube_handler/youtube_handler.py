@@ -1,4 +1,3 @@
-# Add this import at the top of your file
 from youtube_transcript_api import YouTubeTranscriptApi
 
 from mindsdb.integrations.handlers.youtube_handler.youtube_tables import YoutubeGetCommentsTable, YoutubeChannelTable, YoutubeVideoTable

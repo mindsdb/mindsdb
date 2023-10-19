@@ -13,7 +13,7 @@ This handler was implemented as per the MindsDB API Handler documentation.
 
 The required arguments to establish a connection are,
 * `jira_url`: Jira  hosted url instance
-* `jira_api_token`: API key for acessing the Jira url instance
+* `jira_api_token`: API key for accessing the Jira url instance
 * `project`: Jira project name 
 
 

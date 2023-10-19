@@ -20,7 +20,7 @@ class DiscordHandler(APIHandler):
     webhook_url(str): URL for your Discord server's webhook
     """
 
-    def __init__(self, name = None, **kwargs):
+    def __init__(self, name=None, **kwargs):
         super().__init__(name)
         self.loop = asyncio.get_event_loop()
         args = kwargs.get('connection_data', {})
@@ -43,16 +43,16 @@ class DiscordHandler(APIHandler):
         async with aiohttp.ClientSession() as session:
             self.webhook = Webhook.from_url(self.connection_args['webhook_url'], session=session)
             return self.webhook
-        
+   
     def connect(self):
         return self.loop.run_until_complete(self.__create_connection())
 
     def check_connection(self) -> StatusResponse:
-    
+
         response = StatusResponse(False)
         try:
             self.connect()
-            
+
             response.success = True
         except Exception as e:
             log.logger.error(f"Error connecting to Discord Webhook: {e}!")
@@ -63,22 +63,22 @@ class DiscordHandler(APIHandler):
         return response
 
     def native_query(self, query: str = None) -> Response:
-        ast = parse_sql(query, dialect = 'mindsdb')
+        ast = parse_sql(query, dialect='mindsdb')
         return self.query(ast)
 
     async def __send_message(self, message, username):
         async with aiohttp.ClientSession() as session:
             webhook = Webhook.from_url(self.connection_args["webhook_url"], session=session)
-            await webhook.send(content = message, username = username)
+            await webhook.send(content=message, username=username)
 
-    def message(self,message,username):
-        return self.loop.run_until_complete(self.__send_message(message,username))
+    def message(self, message, username):
+        return self.loop.run_until_complete(self.__send_message(message, username))
 
     async def __send_announcement(self, message, username):
         async with aiohttp.ClientSession() as session:
             webhook = Webhook.from_url(self.connection_args["webhook_url"], session=session)
-            message='@everyone ' + message
-            await webhook.send(content = message, username = username)
+            message = '@everyone ' + message
+            await webhook.send(content=message, username=username)
 
-    def announce(self,message,username):
+    def announce(self, message, username):
         return self.loop.run_until_complete(self.__send_announcement(message, username))

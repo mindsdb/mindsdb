@@ -46,7 +46,6 @@ Read about creating an account [here](https://hub.docker.com/).
 
 ## TODO
 
-- [ ] Repository's Images Table for a given Repository
 - [ ] Image's Tags Table for a given Image
 - [ ] Organization Settings Table for a given Organization
 - [ ] Repository Tags Table for a given Repository

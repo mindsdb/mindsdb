@@ -285,6 +285,28 @@ class QdrantHandler(VectorStoreHandler):
         """
         return super().update(table_name, data, columns)
 
+def enable_payload_indexing(self, table_name: str):
+    '''Modify the collection configuration to enable payload indexing'''
+    collection_config = self._client.get_collection(table_name).config
+    collection_config['payload_indexing'] = True
+    '''Update the collection with the modified configuration'''
+    '''To enable payload indexing, you can add a method to set the payload indexing configuration. This might involve using the collection_config dictionary, which includes the configuration options for creating collections. You can add an option like "payload_indexing" to the collection configuration, and if this option is set to True, then payload indexing should be enabled.'''
+    self._client.update_collection(table_name, collection_config)
+
+   def set_optimization_options(self, table_name: str, optimization_config: dict):
+   
+    response = qdrant_api.update_collection_configuration(
+        table_name,
+        optimization_config=optimization_config
+    )
+    if response.success:
+        return "Optimization options are set."
+    else:
+        return "Failed to set optimization options."
+
+    
+
+    
     def select(self, table_name: str, columns: Optional[List[str]] = None, conditions: Optional[List[FilterCondition]] = None, offset: int = 0, limit: int = 10,) -> HandlerResponse:
         """Select query handler
            Eg: SELECT * FROM qdrant.test_table

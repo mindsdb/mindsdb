@@ -1,7 +1,7 @@
 """add knowledge base
 
 Revision ID: 309db3d07cf4
-Revises: 011e6f2dd9c2
+Revises: 6cb02dfd7f61
 Create Date: 2023-09-20 13:48:39.422306
 
 """
@@ -12,7 +12,7 @@ import mindsdb.interfaces.storage.db  # noqa
 
 # revision identifiers, used by Alembic.
 revision = "309db3d07cf4"
-down_revision = "011e6f2dd9c2"
+down_revision = "6cb02dfd7f61"
 branch_labels = None
 depends_on = None
 

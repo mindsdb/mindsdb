@@ -19,9 +19,9 @@ class Auto_ts_Handler(BaseMLEngine):
         """
         score_type = ['rmse', 'normalized_rmse']
         frequency = ['B', 'C', 'D', 'W', 'M', 'SM', 'BM', 'CBM', 'MS',
-                    'SMS', 'BMS', 'CBMS', 'Q', 'BQ', 'QS', 'BQS',
-                    'A,Y', 'BA,BY', 'AS,YS', 'BAS,BYS', 'BH',
-                    'H', 'T,min', 'S', 'L,ms', 'U,us', 'N']
+                     'SMS', 'BMS', 'CBMS', 'Q', 'BQ', 'QS', 'BQS',
+                     'A,Y', 'BA,BY', 'AS,YS', 'BAS,BYS', 'BH',
+                     'H', 'T,min', 'S', 'L,ms', 'U,us', 'N']
         model = ['best', 'prophet', 'stats', 'ARIMA', 'SARIMAX', 'VAR', 'ML']
 
         if 'using' in args:

@@ -19,8 +19,6 @@ jobs:
           ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
           AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_MAX_ATTEMPTS: 700
-          AWS_POLL_DELAY_SECONDS: 30
         #NOTE: Send variables to packer build command or var file, because if using env in conf they are not vissible to build
         run: |
           curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -

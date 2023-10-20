@@ -43,6 +43,9 @@ class ShopifyHandler(APIHandler):
         orders_data = OrdersTable(self)
         self._register_table("orders", orders_data)
 
+        discounts_data = DiscountsTable(self)
+        self._register_table("discounts", discounts_data)
+
         inventory_level_data = InventoryLevelTable(self)
         self._register_table("inventory_level", inventory_level_data)
     

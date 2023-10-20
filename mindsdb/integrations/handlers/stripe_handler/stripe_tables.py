@@ -147,6 +147,18 @@ class PaymentIntentsTable(APITable):
         payment_intents_df = select_statement_executor.execute_query()
 
         return payment_intents_df
+   
+    def insert(self, data: Dict) -> None:
+        stripe = self.handler.connect()
+        stripe.PaymentIntent.create(**data)
+
+    def update(self, payment_intent_id: str, data: Dict) -> None:
+        stripe = self.handler.connect()
+        stripe.PaymentIntent.update(payment_intent_id, **data)
+
+    def delete(self, payment_intent_id: str) -> None:
+        stripe = self.handler.connect()
+        stripe.PaymentIntent.cancel(payment_intent_id)
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_payment_intents(limit=1)).columns.tolist()

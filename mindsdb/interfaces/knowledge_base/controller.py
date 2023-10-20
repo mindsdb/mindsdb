@@ -304,7 +304,7 @@ class KnowledgeBaseExecutor:
         try:
             self._get_knowledge_base_metadata(identifier)
             return True
-        except ValueError:
+        except (ValueError, AttributeError):
             return False
 
     def select_from_kb(self, query: Select) -> ExecuteAnswer:
@@ -477,6 +477,10 @@ class KnowledgeBaseExecutor:
             return ExecuteAnswer(
                 answer_type=ANSWER_TYPE.OK,
             )
+        
+    def plan_insert(self, query: Insert):
+        # TODO: to be implemented
+        raise NotImplementedError()
 
     def delete_from_kb(self, query: Delete):
         metadata = self._get_knowledge_base_metadata(query.table)
@@ -492,3 +496,5 @@ class KnowledgeBaseExecutor:
     def update_kb(self, query: Update) -> ExecuteAnswer:
         # TODO: to be implemented
         raise NotImplementedError()
+    
+

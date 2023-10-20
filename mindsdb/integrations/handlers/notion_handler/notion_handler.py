@@ -59,6 +59,7 @@ class NotionHandler(APIHandler):
     def connect(self, args=None, **kwargs):
         api_token = self.connection_args[self.key]
         notion = Client(auth=api_token)
+        self.is_connected = True
         return notion
 
     def check_connection(self) -> StatusResponse:
@@ -143,7 +144,6 @@ class NotionHandler(APIHandler):
                 method = getattr(self.api, service)
                 method = getattr(method, children)
                 method = getattr(method, query)
-
 
         count_results = None
         data = []

@@ -33,6 +33,7 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
             if not re.match(pattern, args["layers"]):
                 raise Exception("Please specify layers in format : '128-64-32'")
 
+
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
         train_data = df
         args = args["using"]
@@ -90,10 +91,12 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
         self.model_storage.json_set('args', args)
         self.model_storage.file_set('model', dill.dumps(tabular_model))
 
+
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         tabular_model = dill.load(self.model_storage.file_get('model'))
         predictions = tabular_model.predict(df)
         return predictions
+
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         args = self.model_storage.json_get('args')

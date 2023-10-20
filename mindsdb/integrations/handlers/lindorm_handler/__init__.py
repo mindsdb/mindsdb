@@ -14,7 +14,6 @@ except Exception as e:
 title = "LindormDB"
 name = "lindormdb"
 type = HANDLER_TYPE.DATA
-icon_path = "icon.png"
 
 __all__ = [
     "Handler",
@@ -24,5 +23,4 @@ __all__ = [
     "title",
     "description",
     "import_error",
-    "icon_path",
 ]

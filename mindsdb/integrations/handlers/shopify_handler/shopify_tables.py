@@ -1,3 +1,4 @@
+from mindsdb_sql.parser.ast import ASTNode
 import shopify
 import requests
 import pandas as pd
@@ -365,6 +366,34 @@ class OrdersTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         orders = shopify.Order.find(**kwargs)
         return [order.to_dict() for order in orders]
+    
+    def insert(self, query: ASTNode) -> None:
+        """Inserts data into the Shopify "POST /orders" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Insert
+           Given SQL INSERT query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        insert_statement_parser = INSERTQueryParser(
+            query,
+            supported_columns=['email', 'phone', 'currency', 'note', 'tags', 'send_receipt', 'send_fulfillment_receipt', 'send_rec eipt', 'send_fullfillment'
+                                'line_items', 'shipping_address', 'billing_address', 'customer', 'shipping_lines', 'tax_lines', 'discount_codes', 'note_attributes'],
+            mandatory_columns=['email', 'line_items'],
+            all_mandatory=False
+        )
+        order_data = insert_statement_parser.parse_query()
+        self.create_orders(order_data)
+        return super().insert(query)
 
 class InventoryLevelTable(APITable):
     """The Shopify Inventory Table implementation"""

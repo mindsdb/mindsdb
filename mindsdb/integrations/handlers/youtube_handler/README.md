@@ -50,6 +50,7 @@ SELECT * FROM mindsdb_youtube.get_comments
 WHERE youtube_video_id = "raWFGQ20OfA"
 ORDER BY display_name ASC
 LIMIT 5;
+~~~~
 
 Given a channel_id, get information about the channel
 

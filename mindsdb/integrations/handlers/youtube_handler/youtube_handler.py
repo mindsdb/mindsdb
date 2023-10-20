@@ -13,6 +13,7 @@ from googleapiclient.discovery import build
 
 logger = get_log("integrations.youtube_handler")
 
+
 class YoutubeHandler(APIHandler):
     """Youtube handler implementation"""
 
@@ -33,7 +34,7 @@ class YoutubeHandler(APIHandler):
         self.connection = None
         self.is_connected = False
 
-        youtube_video_comments_data =YoutubeGetCommentsTable(self)
+        youtube_video_comments_data = YoutubeGetCommentsTable(self)
         self._register_table("get_comments", youtube_video_comments_data)
 
         youtube_channel_data = YoutubeChannelTable(self)

@@ -6,12 +6,13 @@ from mindsdb.utilities.log import get_log
 
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
+from youtube_transcript_api import YouTubeTranscriptApi
 
 import pandas as pd
 import re
 
-
 logger = get_log("integrations.youtube_handler")
+
 
 class YoutubeGetCommentsTable(APITable):
     """Youtube List Comments  by video id Table implementation"""
@@ -42,7 +43,7 @@ class YoutubeGetCommentsTable(APITable):
 
             for an_order in query.order_by:
                 if an_order.field.parts[0] != "id":
-                    next    
+                    next
                 if an_order.field.parts[1] in self.get_columns():
                     order_by_conditions["columns"].append(an_order.field.parts[1])
 
@@ -63,7 +64,6 @@ class YoutubeGetCommentsTable(APITable):
             else:
                 raise ValueError(f"Unsupported where argument {a_where[1]}")
 
-
         youtube_comments_df = self.call_youtube_comments_api(a_where[2])
 
         selected_columns = []
@@ -75,7 +75,6 @@ class YoutubeGetCommentsTable(APITable):
                 selected_columns.append(target.parts[-1])
             else:
                 raise ValueError(f"Unknown query target {type(target)}")
-
 
         if len(youtube_comments_df) == 0:
             youtube_comments_df = pd.DataFrame([], columns=selected_columns)
@@ -103,20 +102,21 @@ class YoutubeGetCommentsTable(APITable):
             List of columns
         """
         return [
-        'user_id', 
-        'display_name', 
-        'comment'
+            'user_id',
+            'display_name',
+            'comment'
         ]
 
-    def call_youtube_comments_api(self,video_id):
+    def call_youtube_comments_api(self, video_id):
         """Pulls all the records from the given youtube api end point and returns it select()
-    
+
         Returns
         -------
         pd.DataFrame of all the records of the "commentThreads()" API end point
         """
 
-        resource = self.handler.connect().commentThreads().list(part='snippet',videoId=video_id,textFormat='plainText')
+        resource = self.handler.connect().commentThreads().list(part='snippet', videoId=video_id,
+                                                                textFormat='plainText')
 
         video_cols = self.get_columns()
         all_youtube_comments_df = pd.DataFrame(columns=video_cols)
@@ -144,11 +144,10 @@ class YoutubeGetCommentsTable(APITable):
             else:
                 break
 
-
         return all_youtube_comments_df
 
-class YoutubeChannelTable(APITable):
 
+class YoutubeChannelTable(APITable):
     """Youtube Channel Info  by channel id Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
@@ -186,26 +185,30 @@ class YoutubeChannelTable(APITable):
         return channel_df
 
     def get_channel_details(self, channel_id):
-        details = self.handler.connect().channels().list(part="statistics,snippet,contentDetails",id=channel_id).execute()
+        details = self.handler.connect().channels().list(part="statistics,snippet,contentDetails",
+                                                         id=channel_id).execute()
         snippet = details["items"][0]["snippet"]
         statistics = details["items"][0]["statistics"]
-        data = { "country":snippet["country"],
-        "description": snippet["description"],
-        "creation_date": snippet["publishedAt"],
-        "title": snippet["title"],
-        "subscriber_count": statistics["subscriberCount"],
-        "video_count": statistics["videoCount"],
-        "view_count": statistics["viewCount"],
-        "channel_id":channel_id
-        }
+        data = {"country": snippet["country"],
+                "description": snippet["description"],
+                "creation_date": snippet["publishedAt"],
+                "title": snippet["title"],
+                "subscriber_count": statistics["subscriberCount"],
+                "video_count": statistics["videoCount"],
+                "view_count": statistics["viewCount"],
+                "channel_id": channel_id
+                }
         return pd.json_normalize(data)
 
     def get_columns(self) -> List[str]:
-        return ["country", "description", "creation_date", "title", "subscriber_count", "video_count","view_count", "channel_id"]
+        return [
+            "country", "description", "creation_date", "title", "subscriber_count", "video_count", "view_count",
+            "channel_id"
+        ]
+
 
 class YoutubeVideoTable(APITable):
-
-    """Youtube Video info  by video id Table implementation"""
+    """YouTube Video info  by video id Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         select_statement_parser = SELECTQueryParser(
@@ -242,21 +245,22 @@ class YoutubeVideoTable(APITable):
         return video_df
 
     def get_video_details(self, video_id):
-        details = self.handler.connect().videos().list(part="statistics,snippet,contentDetails",id=video_id).execute()
+        details = self.handler.connect().videos().list(part="statistics,snippet,contentDetails", id=video_id).execute()
         items = details.get("items")[0]
-        snippet         = items["snippet"]
-        statistics      = items["statistics"]
+        snippet = items["snippet"]
+        statistics = items["statistics"]
         content_details = items["contentDetails"]
-        
+
         data = {"channel_title": snippet["channelTitle"],
-        "title": snippet["title"],
-        "description": snippet["description"],
-        "publish_time": snippet["publishedAt"],
-        "comment_count": statistics["commentCount"],
-        "like_count": statistics["likeCount"],
-        "view_count": statistics["viewCount"],
-        "video_id": video_id
-        }
+                "title": snippet["title"],
+                "description": snippet["description"],
+                "publish_time": snippet["publishedAt"],
+                "comment_count": statistics["commentCount"],
+                "like_count": statistics["likeCount"],
+                "view_count": statistics["viewCount"],
+                "video_id": video_id,
+                "transcript": self.get_video_transcript(video_id)
+                }
         duration = content_details["duration"]
         parsed_duration = re.search(f"PT(\d+H)?(\d+M)?(\d+S)", duration).groups()
         duration_str = ""
@@ -266,6 +270,18 @@ class YoutubeVideoTable(APITable):
         data["duration_str"] = duration_str.strip(":")
         return pd.json_normalize(data)
 
-    def get_columns(self) -> List[str]:
-        return ["channel_title", "title", "description", "publish_time", "comment_count", "like_count","view_count", "view_count", "video_id", "duration_str"]
+    @staticmethod
+    def get_video_transcript(video_id):
+        try:
+            transcript_data = YouTubeTranscriptApi.get_transcript(video_id)
+            transcript = " ".join([entry['text'] for entry in transcript_data])
+            return transcript
+        except Exception as ex:
+            logger.error(f"Error fetching video transcript for video id {video_id}: {ex}!")
+            return ""
 
+    def get_columns(self) -> List[str]:
+        return [
+            "channel_title", "title", "description", "publish_time", "comment_count", "like_count", "view_count",
+            "view_count", "video_id", "duration_str", "transcript"
+        ]

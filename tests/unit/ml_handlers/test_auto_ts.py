@@ -5,8 +5,8 @@ import pytest
 from mindsdb_sql import parse_sql
 from ..executor_test_base import BaseExecutorTest
 
-class TestAuto_ts(BaseExecutorTest):
 
+class TestAuto_ts(BaseExecutorTest):
     def run_sql(self, sql):
         ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
         assert ret.error_code is None
@@ -52,10 +52,10 @@ class TestAuto_ts(BaseExecutorTest):
             self.wait_predictor("proj", "auto_ts_missing_ts_column")
 
     def test_invalid_time_period(self):
-            # create project
+        # create project
         self.run_sql("create database proj")
         self.run_sql(
-            f"""
+            """
             CREATE MODEL proj.auto_ts_invalid_time_period
             FROM files
                 (SELECT * FROM Sales_and_Marketing)
@@ -72,23 +72,22 @@ class TestAuto_ts(BaseExecutorTest):
         with pytest.raises(Exception):
             self.wait_predictor("proj", "auto_ts_invalid_time_period")
 
-
     def test_invalid_score_type(self):
         self.run_sql("create database proj")
         self.run_sql(
-            f"""
-                    CREATE MODEL proj.auto_ts_missing_ts_column
-                    FROM files
-                        (SELECT * FROM Sales_and_Marketing)
-                    PREDICT Sales
-                    USING
-                       engine="auto_ts"
-                       score_type = 'invalid_score_type',
-                       ts_columns = 'Time_period'
-                       non_seasonal_pdq = 'None',
-                       seasonal_period = 12,
-                       time_period = 'M';
-                       """
+            """
+            CREATE MODEL proj.auto_ts_missing_ts_column
+            FROM files
+                (SELECT * FROM Sales_and_Marketing)
+            PREDICT Sales
+            USING
+               engine="auto_ts"
+               score_type = 'invalid_score_type',
+               ts_columns = 'Time_period'
+               non_seasonal_pdq = 'None',
+               seasonal_period = 12,
+               time_period = 'M';
+               """
         )
         with pytest.raises(Exception):
             self.wait_predictor("proj", "auto_ts_invalid_score_type")
@@ -96,19 +95,19 @@ class TestAuto_ts(BaseExecutorTest):
     def test_invalid_non_seasonal_pdq(self):
         self.run_sql("create database proj")
         self.run_sql(
-                """
-                CREATE MODEL proj.auto_ts_invalid_non_seasonal_pdq
-                FROM files
-                    (SELECT * FROM Sales_and_Marketing)
-                PREDICT Sales
-                USING
-                   engine="auto_ts"
-                   score_type = 'rmse',
-                   ts_columns = 'Time_period'
-                   non_seasonal_pdq = 'invalid_non_seasonal_pdq',
-                   seasonal_period = 12,
-                   time_period = 'M';
-                   """
+            """
+            CREATE MODEL proj.auto_ts_invalid_non_seasonal_pdq
+            FROM files
+                (SELECT * FROM Sales_and_Marketing)
+            PREDICT Sales
+            USING
+               engine="auto_ts"
+               score_type = 'rmse',
+               ts_columns = 'Time_period'
+               non_seasonal_pdq = 'invalid_non_seasonal_pdq',
+               seasonal_period = 12,
+               time_period = 'M';
+               """
             )
         with pytest.raises(Exception):
             self.wait_predictor("proj", "auto_ts_invalid_non_seasonal_pdq")

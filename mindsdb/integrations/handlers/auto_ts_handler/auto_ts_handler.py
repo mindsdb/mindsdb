@@ -2,9 +2,9 @@ import pandas as pd
 from auto_ts import auto_timeseries as ATS
 from typing import Optional
 import dill
-import dataprep_ml
 
 from mindsdb.integrations.libs.base import BaseMLEngine
+
 
 class Auto_ts_Handler(BaseMLEngine):
     """
@@ -17,11 +17,11 @@ class Auto_ts_Handler(BaseMLEngine):
         """
         Create validation set from training set
         """
-        score_type = ['rmse','normalized_rmse']
-        frequency = ['B','C','D','W','M','SM','BM','CBM', 'MS',
-                     'SMS','BMS','CBMS','Q','BQ','QS','BQS',
-                     'A,Y','BA,BY','AS,YS','BAS,BYS','BH',
-                     'H','T,min','S','L,ms','U,us','N']
+        score_type = ['rmse', 'normalized_rmse']
+        frequency = ['B', 'C', 'D', 'W', 'M', 'SM', 'BM', 'CBM', 'MS',
+                      'SMS', 'BMS', 'CBMS', 'Q', 'BQ', 'QS', 'BQS',
+                      'A,Y', 'BA,BY', 'AS,YS', 'BAS,BYS', 'BH',
+                      'H', 'T,min', 'S', 'L,ms', 'U,us', 'N']
         model = ['best', 'prophet', 'stats', 'ARIMA', 'SARIMAX', 'VAR', 'ML']
 
         if 'using' in args:
@@ -33,7 +33,7 @@ class Auto_ts_Handler(BaseMLEngine):
         if 'time_interval' in args and args['time_interval'] not in frequency:
             raise Exception(f"frequency must be one of {frequency}")
 
-        if 'non_seasonal_pdq' in args and not (isinstance(args['non_seasonal_pdq'],tuple) or args['non_seasonal_pdq']=='None'):
+        if 'non_seasonal_pdq' in args and not (isinstance(args['non_seasonal_pdq'], tuple) or args['non_seasonal_pdq'] == 'None'):
             raise Exception("non_seasonal_pdq must be a tuple")
 
         if 'model_type' in args and args['model_type'] not in model:
@@ -66,20 +66,14 @@ class Auto_ts_Handler(BaseMLEngine):
                     seasonality=seasonality,
                     seasonal_period=seasonal_period,
                     model_type=[model_type],
-                    verbose = 0
-                )
+                    verbose=0)
 
         ts_column = args['ts_column']
         target = args['target']
 
-        #Drop rows with null values
-        df  = df.dropna()
-        model.fit(traindata=df,
-                  target=target,
-                  ts_column=ts_column,
-                  cv=cv,
-                  sep=sep
-                )
+        # Drop rows with null values
+        df = df.dropna()
+        model.fit(traindata=df, target=target, ts_column=ts_column, cv=cv, sep=sep)
 
         self.model_storage.json_set('args', args)
         self.model_storage.file_set('model', dill.dumps(model))
@@ -100,4 +94,3 @@ class Auto_ts_Handler(BaseMLEngine):
         """
         args = self.model_storage.json_get('args')
         return pd.DataFrame(args, index=[0])
-

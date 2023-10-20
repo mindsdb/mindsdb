@@ -9,22 +9,6 @@ Autogluon is an open-source machine learning library designed to make machine le
 The Autogluon Python SDK can be found at [https://github.com/autogluon/autogluon](https://github.com/autogluon/autogluon).
 
 ## Example Usage
-
-
-
-CREATE ML_ENGINE autoglucon_engine FROM autogluon;
-
-
-SELECT *
-FROM mindsdb.models
-WHERE name='autogluconpredictor_8';
-
-SELECT m.quality
-FROM files.red_wine_quality AS t
-JOIN mindsdb.autogluconpredictor_7 AS m;
-
-
-
 To create an ML Engine with the new `autogluon` engine, you can use the following SQL command:
 
 ```sql

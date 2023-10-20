@@ -9,7 +9,7 @@ The Apache Hive ™ data warehouse software facilitates reading, writing, and ma
 This handler was implemented using the `pyHive`, a Python library that allows you to use Python code to run SQL commands on Hive.
 
 The required arguments to establish a connection are,
-* `user`: username asscociated with database
+* `user`: username associated with database
 * `password`: password to authenticate your access
 * `host`: host to server IP Address or hostname
 * `port`: port through which TCPIP connection is to be made

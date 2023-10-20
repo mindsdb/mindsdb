@@ -5,8 +5,6 @@ import dill
 import pandas as pd
 import ast
 
-import io
-import torch
 from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig
 from pytorch_tabular.models import CategoryEmbeddingModelConfig
 from pytorch_tabular.models.common.heads import LinearHeadConfig
@@ -20,22 +18,21 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
     """
     name = 'pytorch_tabular'
 
+
     @staticmethod
     def create_validation(self,args: Optional[dict] = None) -> None:
-        task_supported = ['regression','classification','backbone']
-        initialization_supported = ['kaiming','xavier','random']
+        task_supported = ['regression', 'classification', 'backbone']
+        initialization_supported = ['kaiming', 'xavier', 'random']
         args = args["using"]
-        #pattern for layers regex
+        # pattern for layers regex
         pattern = r'^\d+-\d+-\d+$'
         if "task" in args and args["task"] not in task_supported:
-                raise Exception(f"Please specify task parameter supported : {task_supported}")
+            raise Exception(f"Please specify task parameter supported : {task_supported}")
         if "initialization" in args and args["initialization"] not in initialization_supported:
             raise Exception(f"Initialization scheme choices are : {initialization_supported}")
         if "layers" in args:
             if not re.match(pattern,args["layers"]):
-                raise Exception(f"Please specify layers in format : '128-64-32'")
-        if "target" not in args:
-            raise Exception(f"Please specify target parameter")
+                raise Exception("Please specify layers in format : '128-64-32'")
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
         train_data = df
@@ -58,11 +55,11 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
         layers = args.get('layers', '128-64-32')
         initialization = args.get('initialization', 'kaiming')
 
-        #Create the data config
-        data_config = DataConfig(
-            target = [target],
-            continuous_cols = continuous_columns,
-            categorical_cols = categorical_columns,
+        # Create the data config
+        data_config=DataConfig(
+            target=[target],
+            continuous_cols=continuous_columns,
+            categorical_cols=categorical_columns,
             continuous_feature_transform=None,
             normalize_continuous_features=True,
         )

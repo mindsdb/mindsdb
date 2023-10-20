@@ -1,8 +1,8 @@
-# LindormDB Handler
+# Lindorm Handler
 
 This is the implementation of the Lindrom for MindsDB.
 
-## LindormDB
+## Lindorm
 Lindorm is Alibaba Cloud's data governance platform that helps users protect sensitive data and ensure regulatory compliance. It provides discovery, classification, access control, and monitoring capabilities to help customers find, understand, and control their data across cloud services and on-premises systems.
 
 ## Implementation

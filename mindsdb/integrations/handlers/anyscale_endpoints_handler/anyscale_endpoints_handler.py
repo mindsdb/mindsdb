@@ -35,7 +35,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         self.rate_limit = 25  # requests per minute
         self.max_batch_size = 20
         self.default_max_tokens = 100
-        self.ft_cls = openai.FineTuningJob  # non-legacy finetuning endpoint
+        self.ft_cls = openai.FineTuningJob  # non-legacy fine-tuning endpoint
 
     @staticmethod
     @contextlib.contextmanager
@@ -50,10 +50,14 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     def create(self, target, args=None, **kwargs):
         with self._anyscale_base_api():
+            # load fine-tuned models, then hand over
+            self.chat_completion_models = args.get('chat_completion_models', self.chat_completion_models)
             super().create(target, args, **kwargs)
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         with self._anyscale_base_api():
+            # load fine-tuned models, then hand over
+            self.chat_completion_models = args.get('chat_completion_models', self.chat_completion_models)
             return super().predict(df, args)
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
@@ -61,7 +65,8 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             super().finetune(df, args)
             # rewrite chat_completion_models to include the newly fine-tuned model
             args = self.model_storage.json_get('args')
-            self.chat_completion_models = list(self.chat_completion_models) + [args['model_name']]
+            args['chat_completion_models'] = list(self.chat_completion_models) + [args['model_name']]
+            self.model_storage.json_set('args', args)
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         args = self.model_storage.json_get('args')

@@ -109,7 +109,7 @@ You can find the complete documentation of MindsDB at [docs.mindsdb.com](https:/
 
 ## Support <a name="Support"></a>
 
-If you found a bug, please submit an [issue on GitHub](https://github.com/mindsdb/mindsdb/issues/new/choose).
+If you find a bug, please submit an [issue on GitHub](https://github.com/mindsdb/mindsdb/issues/new/choose).
 
 To get community support, you can:
 
@@ -126,7 +126,7 @@ A great place to start contributing to MindsDB is to check our GitHub projects :
 * Community contributor's [dashboard tasks](https://github.com/mindsdb/mindsdb/projects/8).
 * [First timers only issues](https://github.com/mindsdb/mindsdb/issues?q=is%3Aissue+is%3Aopen+label%3Afirst-timers-only), if this is your first time contributing to an open source project.
 
-We are always open to suggestions, so feel free to open new issues with your ideas, and we can guide you!
+We are always open to suggestions, so feel free to open new issues with your ideas, so that we can guide you better!
 
 Being part of the core team is accessible to anyone who is motivated and wants to be part of that journey!
 If you'd like to contribute to the project, refer to the [contributing documentation](https://docs.mindsdb.com/contribute/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).

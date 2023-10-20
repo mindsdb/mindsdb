@@ -6,6 +6,7 @@ from mindsdb_sql import parse_sql
 
 from ..executor_test_base import BaseExecutorTest
 
+
 class TestPytorchTabular(BaseExecutorTest):
     def wait_predictor(self, project, name):
         # wait

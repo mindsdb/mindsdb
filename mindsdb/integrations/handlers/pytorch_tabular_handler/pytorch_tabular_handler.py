@@ -12,15 +12,14 @@ from pytorch_tabular.tabular_model import TabularModel
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 
+
 class Pytorch_Tabular_Handler(BaseMLEngine):
     """
     Implements pytorch tabular to train deep neural networks.
     """
     name = 'pytorch_tabular'
-
-
     @staticmethod
-    def create_validation(self,args: Optional[dict] = None) -> None:
+    def create_validation(self, args: Optional[dict] = None) -> None:
         task_supported = ['regression', 'classification', 'backbone']
         initialization_supported = ['kaiming', 'xavier', 'random']
         args = args["using"]
@@ -31,7 +30,7 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
         if "initialization" in args and args["initialization"] not in initialization_supported:
             raise Exception(f"Initialization scheme choices are : {initialization_supported}")
         if "layers" in args:
-            if not re.match(pattern,args["layers"]):
+            if not re.match(pattern, args["layers"]):
                 raise Exception("Please specify layers in format : '128-64-32'")
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
@@ -56,7 +55,7 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
         initialization = args.get('initialization', 'kaiming')
 
         # Create the data config
-        data_config=DataConfig(
+        data_config = DataConfig(
             target=[target],
             continuous_cols=continuous_columns,
             categorical_cols=categorical_columns,
@@ -68,8 +67,8 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
             # No additional layer in head, just a mapping layer to output_dim
         ).__dict__
         model_config = CategoryEmbeddingModelConfig(
-            task = args['task'],
-            head_config = head_config
+            task=args['task'],
+            head_config=head_config
         )
         trainer_config = TrainerConfig(auto_lr_find=True,
                                        fast_dev_run=False,

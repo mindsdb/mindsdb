@@ -33,6 +33,7 @@ class BaseUnitTest:
 
     @staticmethod
     def setup_class(cls):
+
         # remove imports of mindsdb in previous tests
         unload_module("mindsdb")
 
@@ -66,6 +67,7 @@ class BaseUnitTest:
 
     @staticmethod
     def teardown_class(cls):
+
         # remove tmp db file
         cls.db.session.close()
         os.unlink(cls.db_file)
@@ -117,6 +119,8 @@ class BaseUnitTest:
         r = db.Integration(
             name="langchain_embedding", data={}, engine="langchain_embedding"
         )
+        db.session.add(r)
+        r = db.Integration(name="pytorch_tabular", data={}, engine="pytorch_tabular")
         db.session.add(r)
         r = db.Integration(name="rag", data={}, engine="rag")
         db.session.add(r)

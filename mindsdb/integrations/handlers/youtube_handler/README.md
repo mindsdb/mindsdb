@@ -66,4 +66,3 @@ select * from mindsdb_youtube.video where video_id="id"
 ~~~~
 
 `video_id` is a mandatory column in the where clause.
-

@@ -431,7 +431,7 @@ class ExecuteCommands:
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
             elif "show create table" in sql_lower:
                 # SHOW CREATE TABLE `MINDSDB`.`predictors`
-                table = sql[sql.rfind(".") + 1:].strip(" .;\n\t").replace("`", "")
+                table = sql[sql.rfind(".") + 1 :].strip(" .;\n\t").replace("`", "")
                 return self.answer_show_create_table(table)
             elif sql_category in ("character set", "charset"):
                 new_statement = Select(
@@ -1259,7 +1259,6 @@ class ExecuteCommands:
         """Create default vector database for knowledge base, if not specified"""
 
         # todo: move to chroma handler
-
         vector_store_name = f"{kb_name}_{engine}"
 
         integration = self.session.integration_controller.get(engine)

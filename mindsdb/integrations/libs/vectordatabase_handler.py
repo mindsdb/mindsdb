@@ -1,5 +1,7 @@
 import ast
+import difflib
 import uuid
+from pydantic import BaseModel, root_validator, Extra
 from enum import Enum
 from typing import Any, List, Optional
 
@@ -18,6 +20,7 @@ from mindsdb_sql.parser.ast import (
 )
 from mindsdb_sql.parser.ast.base import ASTNode
 
+from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse
 from mindsdb.utilities.log import get_log
 
@@ -91,6 +94,77 @@ class TableField(Enum):
     DISTANCE = "distance"
 
 
+class VectorStoreHandlerConfig(BaseModel):
+    """
+    Configuration for VectorStoreHandler.
+    """
+
+    vector_store: str
+    persistence_folder: str = None
+    host: str = None
+    port: int = None
+    url: str = None
+
+    class Config:
+        extra = Extra.forbid
+
+    @root_validator(pre=True)
+    def check_param_typos(cls, values):
+        """Check if there are any typos in the parameters."""
+
+        expected_params = cls.__fields__.keys()
+        for key in values.keys():
+            if key not in expected_params:
+                close_matches = difflib.get_close_matches(key, expected_params)
+                if close_matches:
+                    raise ValueError(
+                        f"Unexpected parameter '{key}'. Did you mean '{close_matches[0]}'?"
+                    )
+                else:
+                    raise ValueError(f"Unexpected parameter '{key}'.")
+        return values
+
+    @root_validator
+    def check_config(cls, values):
+        """Check if config is valid."""
+
+        vector_store = values.get("vector_store")
+        host = values.get("host")
+        port = values.get("port")
+        url = values.get("url")
+        persistence_directory = values.get("persistence_directory")
+
+        if host and not port:
+            raise ValueError(
+                f"For {vector_store} handler - if host is provided, port must also be provided."
+            )
+
+        if port and not host:
+            raise ValueError(
+                f"For {vector_store} handler - if port is provided, host must also be provided."
+            )
+
+        if port and host and (url or persistence_directory):
+            raise ValueError(
+                f"For {vector_store} handler - if host and port are provided, "
+                f"url and persistence_folder should not be provided."
+            )
+
+        if url and (host or port or persistence_directory):
+            raise ValueError(
+                f"For {vector_store} handler - if url is provided, host, port, "
+                f"persistence_directory should not be provided."
+            )
+
+        if persistence_directory and (url or host or port):
+            raise ValueError(
+                f"For {vector_store} handler - if persistence_folder is provided, "
+                f"url, host, port should not be provided."
+            )
+
+        return values
+
+
 class VectorStoreHandler(BaseHandler):
     """
     Base class for handlers associated to vector databases.
@@ -115,8 +189,34 @@ class VectorStoreHandler(BaseHandler):
         },
     ]
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, **kwargs):
         super().__init__(name)
+
+        self.handler_storage = HandlerStorage(kwargs.get("integration_id"))
+
+        _config = kwargs.get("connection_data")
+        _config["vector_store"] = name
+
+        self.config = VectorStoreHandlerConfig(**_config)
+
+        self.is_connected = False
+
+        if self.config.persistence_folder:
+            # get full persistence directory from handler storage
+            self.persistence_directory = self.handler_storage.folder_get(
+                self.config.persistence_folder
+            )
+
+    def __del__(self):
+        if self.is_connected is True:
+            if self.persistence_directory:
+                # sync folder to handler storage
+                self.handler_storage.folder_sync(self.persistence_directory)
+
+            self.disconnect()
+
+    def disconnect(self):
+        raise NotImplementedError()
 
     def _value_or_self(self, value):
         if isinstance(value, Constant):
@@ -147,7 +247,8 @@ class VectorStoreHandler(BaseHandler):
                         # Constant could be actually a list i.e. [1.2, 3.2]
                         right_hand = [
                             ast.literal_eval(item.value)
-                            if isinstance(item, Constant) and not isinstance(item.value, list)
+                            if isinstance(item, Constant)
+                            and not isinstance(item.value, list)
                             else item.value
                             for item in node.args[1].items
                         ]

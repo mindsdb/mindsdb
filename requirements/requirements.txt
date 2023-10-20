@@ -12,6 +12,7 @@ pdfminer.six==20221105
 unstructured~=0.10.18
 python-multipart >= 0.0.5
 pyparsing == 2.3.1
+pydantic~=1.10.13
 cryptography>=35.0
 psycopg[binary] >= 1.15.3
 psycopg2-binary

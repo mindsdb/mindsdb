@@ -1258,12 +1258,21 @@ class ExecuteCommands:
     def _create_persistent_chroma(self, project_name, kb_name, engine="chromadb"):
         """Create default vector database for knowledge base, if not specified"""
 
+        # todo: move to chroma handler
+
         vector_store_name = f"{kb_name}_{engine}"
 
-        persist_directory = f"{self.session.config.paths['storage']}/vector_databases//{project_name}/{vector_store_name}"
+        integration = self.session.integration_controller.get(engine)
+        chroma_handler_storage = HandlerStorage(integration["id"])
+        vector_store_folder_name = f"{project_name}/{vector_store_name}"
+
+        persist_directory = chroma_handler_storage.folder_get(vector_store_folder_name)
+
         connection_args = {"persist_directory": persist_directory}
 
         self._create_integration(vector_store_name, engine, connection_args)
+
+        chroma_handler_storage.folder_sync(vector_store_folder_name)
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK), vector_store_name
 

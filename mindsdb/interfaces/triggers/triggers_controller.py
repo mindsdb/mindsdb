@@ -43,7 +43,9 @@ class TriggersController:
 
         df = db_handler.get_tables().data_frame
         tables = list(df[df.columns[0]])
-        if table_name not in tables:
+
+        # check only if tables are visible
+        if len(tables) > 0 and table_name not in tables:
             raise Exception(f'Table {table_name} not found in {db_name}')
 
         columns_str = None

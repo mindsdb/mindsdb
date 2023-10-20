@@ -119,7 +119,7 @@ class PagesTable(APITable):
     connection = self.handler.connect()
 
     try:
-        .
+        
         page = connection.page(title)
         page.text = content
         page.save()

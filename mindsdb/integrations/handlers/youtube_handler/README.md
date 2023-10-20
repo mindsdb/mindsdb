@@ -67,15 +67,3 @@ select * from mindsdb_youtube.video where video_id="id"
 
 `video_id` is a mandatory column in the where clause.
 
-## Adding Transcript to Video Details
-
-The YouTube Handler for MindsDB now includes the ability to retrieve the transcript of a video. When querying the `mindsdb_youtube.video` table, you can now access the `transcript` column to get the transcript of the video.
-
-Example Query:
-
-Note: Remember to replace "raWFGQ20OfA" with the actual video ID you're interested in.
-
-```sql
-SELECT video_id, title, description, transcript
-FROM mindsdb_youtube.video
-WHERE video_id = "raWFGQ20OfA";

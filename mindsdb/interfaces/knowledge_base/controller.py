@@ -477,7 +477,7 @@ class KnowledgeBaseExecutor:
             return ExecuteAnswer(
                 answer_type=ANSWER_TYPE.OK,
             )
-        
+
     def plan_insert(self, query: Insert):
         # TODO: to be implemented
         raise NotImplementedError()
@@ -496,5 +496,3 @@ class KnowledgeBaseExecutor:
     def update_kb(self, query: Update) -> ExecuteAnswer:
         # TODO: to be implemented
         raise NotImplementedError()
-    
-

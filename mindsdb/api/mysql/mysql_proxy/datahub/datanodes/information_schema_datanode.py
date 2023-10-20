@@ -661,7 +661,7 @@ class InformationSchemaDataNode(DataNode):
                 kb.embedding_model.name,
                 kb.vector_database.name + '.' + kb.vector_database_table
             ) for kb in kb_list
-        ] 
+        ]
 
         return pd.DataFrame(data, columns=columns)
 

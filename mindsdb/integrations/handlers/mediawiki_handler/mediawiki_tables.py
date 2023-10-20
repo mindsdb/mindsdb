@@ -96,3 +96,38 @@ class PagesTable(APITable):
                 logger.debug(f"Error accessing '{attribute}' attribute. Skipping...")
 
         return result
+    
+    def insert(self, data_to_insert: dict):
+    """
+    Insert data into the MediaWiki table.
+
+    Parameters:
+    data_to_insert (dict): Data to be inserted into the table.
+
+    Returns:
+    pd.DataFrame: A DataFrame representing the result of the insert operation.
+    """
+    page_id = data_to_insert.get('pageid')
+    title = data_to_insert.get('title')
+    content = data_to_insert.get('content')
+    original_title = data_to_insert.get('original_title')
+    summary = data_to_insert.get('summary')
+    url = data_to_insert.get('url')
+    categories=data_to_insert.get('categories')
+    
+    #should Use the MediaWiki API to create or update a page with the provided data.
+    connection = self.handler.connect()
+
+    try:
+        .
+        page = connection.page(title)
+        page.text = content
+        page.save()
+
+        result = {'message': 'Data inserted/updated successfully'}
+    except Exception as e:
+        result = {'error': str(e)}
+
+    result_df = pd.DataFrame([result])
+
+    return result_df

@@ -65,5 +65,5 @@ SELECT * FROM mindsdb_oilpriceapi.latest_price where by_type="daily_average_pric
 ~~~~
 
 ~~~~sql
-SELECT * FROM mindsdb_oilpriceapi.latest_price where by_type="daily_average_price" and by_code="WTI_USD";
+SELECT * FROM mindsdb_oilpriceapi.past_day_price where by_type="daily_average_price" and by_code="WTI_USD";
 ~~~~

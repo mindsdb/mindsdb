@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.lindorm_handler.lindorm_handler import LindormDBHandler
+from mindsdb.integrations.handlers.lindorm_handler.lindorm_handler import LindormHandler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 
@@ -10,7 +10,7 @@ class LindormHandlerTest(unittest.TestCase):
             "url": 'http://127.0.0.1:8765',
             "autocommit": True
         }
-        cls.handler = LindormDBHandler('test_phoenix_handler', cls.kwargs)
+        cls.handler = LindormHandler('test_phoenix_handler', cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()

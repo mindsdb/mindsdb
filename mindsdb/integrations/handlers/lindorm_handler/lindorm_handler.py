@@ -23,12 +23,12 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 
-class LindormDBHandler(DatabaseHandler):
+class LindormHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Apache Phoenix statements.
     """
 
-    name = 'lindormdb'
+    name = 'lindorm'
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """

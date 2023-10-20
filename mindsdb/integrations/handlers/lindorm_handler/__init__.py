@@ -11,8 +11,8 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = "LindormDB"
-name = "lindormdb"
+title = "Lindorm"
+name = "lindorm"
 type = HANDLER_TYPE.DATA
 
 __all__ = [

@@ -19,9 +19,9 @@ class Auto_ts_Handler(BaseMLEngine):
         """
         score_type = ['rmse', 'normalized_rmse']
         frequency = ['B', 'C', 'D', 'W', 'M', 'SM', 'BM', 'CBM', 'MS',
-                      'SMS', 'BMS', 'CBMS', 'Q', 'BQ', 'QS', 'BQS',
-                      'A,Y', 'BA,BY', 'AS,YS', 'BAS,BYS', 'BH',
-                      'H', 'T,min', 'S', 'L,ms', 'U,us', 'N']
+                    'SMS', 'BMS', 'CBMS', 'Q', 'BQ', 'QS', 'BQS',
+                    'A,Y', 'BA,BY', 'AS,YS', 'BAS,BYS', 'BH',
+                    'H', 'T,min', 'S', 'L,ms', 'U,us', 'N']
         model = ['best', 'prophet', 'stats', 'ARIMA', 'SARIMAX', 'VAR', 'ML']
 
         if 'using' in args:
@@ -85,7 +85,7 @@ class Auto_ts_Handler(BaseMLEngine):
         args = self.model_storage.json_get('args')
         target = args['target']
         model = dill.loads(self.model_storage.file_get('model'))
-        df[f'{target}_preds'] = model.predict(testdata=df,model='best',simple=False)['yhat'].values
+        df[f'{target}_preds'] = model.predict(testdata=df, model='best', simple=False)['yhat'].values
         return df
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:

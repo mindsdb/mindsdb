@@ -108,7 +108,7 @@ class TestAuto_ts(BaseExecutorTest):
                seasonal_period = 12,
                time_period = 'M';
                """
-            )
+        )
         with pytest.raises(Exception):
             self.wait_predictor("proj", "auto_ts_invalid_non_seasonal_pdq")
 

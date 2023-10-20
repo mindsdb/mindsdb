@@ -36,23 +36,15 @@ class TestOilPriceAPIHandler(BaseExecutorTest):
         """)
 
     def test_basic_select_from(self):
-        sql = f"""
-            SELECT * FROM mindsdb_oilpriceapi.latest_price;
-        """
+        sql = "SELECT * FROM mindsdb_oilpriceapi.latest_price;"
         assert self.run_sql(sql).shape[0] == 1
 
-        sql = f"""
-            SELECT * FROM mindsdb_oilpriceapi.past_day_price;
-        """
+        sql = "SELECT * FROM mindsdb_oilpriceapi.past_day_price;"
         assert self.run_sql(sql).shape[0] == 20
 
     def test_complex_select(self):
-        sql = f"""
-            SELECT price FROM mindsdb_oilpriceapi.latest_price where by_type="daily_average_price" and by_code="WTI_USD";
-        """
+        sql = 'SELECT price FROM mindsdb_oilpriceapi.latest_price where by_type="daily_average_price" and by_code="WTI_USD";'
         assert self.run_sql(sql).shape[1] == 1
 
-        sql = f"""
-            SELECT * FROM npm_test.past_day_price LIMIT 1;
-        """
+        sql = "SELECT * FROM npm_test.past_day_price LIMIT 1;"
         assert self.run_sql(sql).shape[0] == 1

@@ -66,6 +66,45 @@ class PagesTable(APITable):
         pages_df = select_statement_executor.execute_query()
 
         return pages_df
+    
+    def delete(self, query: ast.Delete) -> None:
+        """Deletes MediaWiki pages data.
+
+        Parameters
+        ----------
+        query : ast.Delete
+           Given SQL DELETE query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+
+        title, page_id = None, None
+        for condition in query.where.conditions:
+            if condition[1] == 'title':
+                if condition[0] != '=':
+                    raise ValueError(f"Unsupported operator '{condition[0]}' for column '{condition[1]}' in WHERE clause.")
+                title = condition[2]
+            elif condition[1] == 'pageid':
+                if condition[0] != '=':
+                    raise ValueError(f"Unsupported operator '{condition[0]}' for column '{condition[1]}' in WHERE clause.")
+                page_id = condition[2]
+            else:
+                raise ValueError(f"Unsupported column '{condition[1]}' in WHERE clause.")
+
+        connection = self.handler.connect()
+
+        if title is not None:
+            pages = connection.search(f'intitle:{title}')
+        elif page_id is not None:
+            pages = [connection.page(page_id)]
+        else:
+            raise ValueError("No conditions specified in DELETE query.")
+
+        for page in pages:
+            page.delete()
 
     def get_columns(self) -> List[str]:
         return ['pageid', 'title', 'original_title', 'content', 'summary', 'url', 'categories']

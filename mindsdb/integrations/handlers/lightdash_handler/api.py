@@ -49,6 +49,7 @@ class Lightdash:
         resp = self._request("get", "user")
         if resp.ok:
             return resp.json()["results"]
+        return {}
 
     def get_org(self):
         """
@@ -56,12 +57,14 @@ class Lightdash:
         Return format:
             {'organizationUuid': 'd00805a0-b0b4-400d-a136-66f620493f11',
               'name': 'testing-comp',
-              'chartColors': None,
+              'defaultProjectUuid': 'string',
+              'chartColors': ['string'],
               'needsProject': False}
         """
         resp = self._request("get", "org")
         if resp.ok:
             return resp.json()["results"]
+        return {}
 
     def get_projects(self):
         """
@@ -74,6 +77,7 @@ class Lightdash:
         resp = self._request("get", "org/projects")
         if resp.ok:
             return resp.json()["results"]
+        return []
 
     def get_org_members(self):
         """
@@ -91,28 +95,44 @@ class Lightdash:
         resp = self._request("get", "org/users")
         if resp.ok:
             return resp.json()["results"]
+        return []
 
     def get_project(self, project_uuid: str):
         """
         Get details of a project in user's organization
         Return format:
-             {'organizationUuid': 'd00805a0-b0b4-400d-a136-66f620493f11',
-              'projectUuid': '95dfda3b-02e2-4708-a014-5967966020f3',
-              'name': 'Jaffle shop',
-              'type': 'DEFAULT',
-              'dbtConnection': {'type': 'none', 'target': 'jaffle'},
-              'warehouseConnection': {'type': 'postgres',
-               'host': 'db',
-               'port': 5432,
-               'dbname': 'postgres',
-               'schema': 'jaffle',
-               'sslmode': 'disable'},
-              'pinnedListUuid': None,
-              'dbtVersion': 'v1.4'}
+            { "dbtVersion": "v1.4",
+              "copiedFromProjectUuid": "string",
+              "pinnedListUuid": "string",
+              "warehouseConnection": {
+                "role": "string",
+                "type": "snowflake",
+                "account": "string",
+                "database": "string",
+                "warehouse": "string",
+                "schema": "string",
+                "threads": 0,
+                "clientSessionKeepAlive": true,
+                "queryTag": "string",
+                "accessUrl": "string",
+                "startOfWeek": 0 },
+              "dbtConnection": {
+                "type": "dbt",
+                "target": "string",
+                "environment": [ {
+                    "value": "string",
+                    "key": "string" } ],
+                "profiles_dir": "string",
+                "project_dir": "string" },
+              "type": "DEFAULT",
+              "name": "string",
+              "projectUuid": "string",
+              "organizationUuid": "string" }
         """
         resp = self._request("get", f"projects/{project_uuid}")
         if resp.ok:
             return resp.json()["results"]
+        return {}
 
     def get_charts_in_project(self, project_uuid: str):
         """
@@ -133,6 +153,7 @@ class Lightdash:
         resp = self._request("get", f"projects/{project_uuid}/charts")
         if resp.ok:
             return resp.json()["results"]
+        return []
 
     def get_spaces_in_project(self, project_uuid: str):
         """
@@ -153,6 +174,7 @@ class Lightdash:
         resp = self._request("get", f"projects/{project_uuid}/spaces")
         if resp.ok:
             return resp.json()["results"]
+        return []
 
     def get_project_access_list(self, project_uuid: str):
         """
@@ -168,19 +190,7 @@ class Lightdash:
         resp = self._request("get", f"projects/{project_uuid}/access")
         if resp.ok:
             return resp.json()["results"]
-
-    def run_sql_on_project(self, project_uuid: str, raw_query: str):
-        """
-        Run a raw sql query against the project's warehouse connection
-        Return format (depends on table schema):
-            {'rows': [{'customer_id': 54,
-                'first_name': 'Rose',
-                'last_name': 'M.',
-                'created': ...
-        """
-        resp = self._request("post", f"projects/{project_uuid}/sqlQuery", {"sql": raw_query})
-        if resp.ok:
-            return resp.json()["results"]
+        return []
 
     def get_validation_results(self, project_uuid: str):
         """
@@ -205,6 +215,7 @@ class Lightdash:
         resp = self._request("get", f"projects/{project_uuid}/validate")
         if resp.ok:
             return resp.json()["results"]
+        return []
 
     def get_space(self, project_uuid: str, space_uuid: str):
         """
@@ -236,9 +247,7 @@ class Lightdash:
                   "validationErrors": [ {
                       "validationId": 0,
                       "createdAt": "2019-08-24T14:15:22Z",
-                      "error": "string" } ]
-                }
-              ],
+                      "error": "string" } ] } ],
               "projectUuid": "string",
               "queries": [ {
                   "name": "string",
@@ -258,8 +267,7 @@ class Lightdash:
                       "validationId": 0,
                       "createdAt": "2019-08-24T14:15:22Z",
                       "error": "string" } ],
-                  "chartType": "line"
-                } ],
+                  "chartType": "line" } ],
               "isPrivate": true,
               "name": "string",
               "uuid": "string",
@@ -268,6 +276,7 @@ class Lightdash:
         resp = self._request("get", f"projects/{project_uuid}/spaces/{space_uuid}")
         if resp.ok:
             return resp.json()["results"]
+        return {}
 
     def get_chart_version_history(self, chart_uuid: str):
         """
@@ -284,6 +293,7 @@ class Lightdash:
         resp = self._request("get", f"saved/{chart_uuid}/history")
         if resp.ok:
             return resp.json()["results"]["history"]
+        return []
 
     def get_chart(self, chart_uuid: str, version_uuid: str):
         """
@@ -391,12 +401,12 @@ class Lightdash:
                 "lastName": "string" },
               "createdAt": "2019-08-24T14:15:22Z",
               "versionUuid": "string",
-              "chartUuid": "string"
-            }
+              "chartUuid": "string" }
         """
         resp = self._request("get", f"saved/{chart_uuid}/version/{version_uuid}")
         if resp.ok:
             return resp.json()["results"]
+        return {}
 
     def get_scheduler_logs(self, project_uuid: str):
         """
@@ -448,6 +458,7 @@ class Lightdash:
         resp = self._request("get", f"schedulers/{project_uuid}/logs")
         if resp.ok:
             return resp.json()["results"]
+        return {}
 
     def get_scheduler(self, scheduler_uuid: str):
         """
@@ -476,6 +487,7 @@ class Lightdash:
         resp = self._request("get", f"schedulers/{scheduler_uuid}")
         if resp.ok:
             return resp.json()["results"]
+        return {}
 
     def get_scheduler_jobs(self, scheduler_uuid: str):
         """
@@ -487,6 +499,7 @@ class Lightdash:
         resp = self._request("get", f"schedulers/{scheduler_uuid}/jobs")
         if resp.ok:
             return resp.json()["results"]
+        return []
 
     def get_scheduler_job_status(self, job_id: str):
         """
@@ -497,22 +510,4 @@ class Lightdash:
         resp = self._request("get", f"schedulers/job/{job_id}/status")
         if resp.ok:
             return resp.json()["results"]
-
-    def get_user_attributes(self):
-        """
-        Get all user attributes
-        Return format:
-            [ { "attributeDefault": "string",
-                "users": [ {
-                    "value": "string",
-                    "email": "string",
-                    "userUuid": "string" } ],
-                "description": "string",
-                "organizationUuid": "string",
-                "name": "string",
-                "createdAt": "2019-08-24T14:15:22Z",
-                "uuid": "string" } ]
-        """
-        resp = self._request("get", "org/attributes")
-        if resp.ok:
-            return resp.json()["results"]
+        return {}

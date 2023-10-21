@@ -2,10 +2,36 @@ from mindsdb_sql import parse_sql
 
 from mindsdb.integrations.handlers.lightdash_handler.api import Lightdash
 from mindsdb.integrations.handlers.lightdash_handler.lightdash_tables import (
-    # TODO: Create tables
+    UserTable,
+    UserAbilityTable,
+    OrgTable,
+    OrgProjectsTable,
+    OrgMembersTable,
+    ProjectTable,
+    WarehouseConnectionTable,
+    DBTConnectionTable,
+    DBTEnvironmentVarsTable,
+    ChartsTable,
+    SpacesTable,
+    AccessTable,
+    ValidationTable,
+    DashboardsTable,
+    QueriesTable,
+    ChartHistoryTable,
+    ChartConfigTable,
+    ChartAdditionalMetricsTable,
+    ChartTableCalculationsTable,
+    SchedulerLogsTable,
+    SchedulerTable,
+    SchedulerJobsTable,
+    SchedulerJobStatus,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
-from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+    RESPONSE_TYPE
+)
 
 
 class LightdashHandler(APIHandler):
@@ -17,7 +43,29 @@ class LightdashHandler(APIHandler):
         self.api_key = kwargs.get("connection_data", {}).get("api_key", "")
         self.base_url = kwargs.get("connection_data", {}).get("base_url", "")
         _tables = [
-            # TODO: Create tables
+            UserTable,
+            UserAbilityTable,
+            OrgTable,
+            OrgProjectsTable,
+            OrgMembersTable,
+            ProjectTable,
+            WarehouseConnectionTable,
+            DBTConnectionTable,
+            DBTEnvironmentVarsTable,
+            ChartsTable,
+            SpacesTable,
+            AccessTable,
+            ValidationTable,
+            DashboardsTable,
+            QueriesTable,
+            ChartHistoryTable,
+            ChartConfigTable,
+            ChartAdditionalMetricsTable,
+            ChartTableCalculationsTable,
+            SchedulerLogsTable,
+            SchedulerTable,
+            SchedulerJobsTable,
+            SchedulerJobStatus,
         ]
         for Table in _tables:
             self._register_table(Table.name, Table(self))
@@ -28,7 +76,6 @@ class LightdashHandler(APIHandler):
         return self.connection
 
     def check_connection(self) -> StatusResponse:
-        response = StatusResponse(False)
         if self.connection and not self.connection.is_connected():
             return Response(
                 RESPONSE_TYPE.ERROR,

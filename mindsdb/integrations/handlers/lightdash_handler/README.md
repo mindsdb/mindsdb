@@ -1,107 +1,63 @@
 # Lightdash Handler
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-This handler allows you to interact with the data that [pypi.org](https://pypi.org) is storing on Google's BigQuery about the rates of Python packages.
+This handler allows you to interact with a Lightdash instance
 
 ## About Lightdash
-Python Package Index (Lightdash) is a host for maintaining and storing Python packages. It's a good place for publishing your Python packages in different versions and releases.
 
-## Lightdash Handler Implementation
-This implementation is based on the RESTful service that [pypistats.org](https://pypistats.org) is serving.
+Lightdash instantly turns your dbt project into a full-stack BI platform. Analysts write metrics and Lightdash enables self-serve for the entire business.
 
 ## Lightdash Handler Initialization
-There is nothing needed to be passed in the database initialization process. You can create the database via the following flow.
+
+You can create the database like so:
 
 ```sql
-CREATE DATABASE pypi_datasource
-WITH ENGINE = 'pypi';
+CREATE DATABASE lightdash_datasource
+WITH ENGINE = "lightdash",
+PARAMETERS = {
+  "api_key": "...",
+  "base_url": "https://..."
+};
 ```
 
-Once you execute this query, you'll have access to all the following tables.
+To select from various tables, you can use `SELECT` statement. You must provide a package for this to work.
 
-- Overal Table: `pypi_datasource.overall`
-- Recent Table: `pypi_datasource.recent`
-- Python Major Table: `pypi_datasource.python_major`
-- Python Minor Table: `pypi_datasource.python_minor`
-- System Table: `pypi_datasource.system`
-
-## Example Usage
-Each table has its `WHERE` clause(s) and condition(s) as follows.
-
-- `recent`
-  - `period`: `{day, week, month}`
-- `overall`
-  - `mirrors`: `{true, false}`
-- `python_major`
-  - `version`: `{2, 3, ...}`
-- `python_minor`
-  - `version`: `{2.7, 3.2, ...}`
-- `system`:
-  - `os`: `{"Windows", "Linux", "Darwin", ...}`
-
-
-### All the recent downloads
 ```sql
-SELECT *
-FROM pypi_datasource.recent WHERE package="mindsdb";
+SELECT * FROM lightdash_datasource.user;
 ```
+
 ```sql
-SELECT *
-FROM pypi_datasource.recent WHERE package="mindsdb" AND period="day";
+SELECT firstName FROM npm_datasource.maintainers;
 ```
 
-### Overall downloads (only mirrors included)
+Some tables requre additional parameters that can be passed through `WHERE` clause separated by `AND`s:
+
 ```sql
-SELECT *
-FROM pypi_datasource.overall WHERE package="mindsdb" AND mirrors=true;
+SELECT * FROM lightdash_datasource.project_table
+WHERE project_uuid='....';
 ```
 
-### Overall downloads on CPython==2.7
-```sql
-SELECT *
-FROM pypi_datasource.python_minor WHERE package="mindsdb" AND version="2.7";
-```
+## Available tables
 
-### All the downloads on the Linux-based distros
-```sql
-SELECT date, downloads
-FROM pypi_datasource.system WHERE package="mindsdb" AND os="Linux";
-```
-
-### Keep in mind..
-- Each table takes a *REQUIRED* `WHERE` parameter and that's nothing but the package name that is specified with the `package` keyword.
-- All the `Null` recordes are ignored from viewing.
-- `SELECT` query is limited by 20 records by default. You can change it to whatever amount of records you need.
-
-
-## Implemented Features
-- [x] Database initialization
-- [x] Tracking the downloads rate
-  - [x] Overall downloads
-  - [x] Recent downloads
-- [x] System-based filtering
-- [x] Version-based filtering
-  - [x] Minor-based filtering
-  - [x] Major-based filtering
-
-## TODO
-- [ ] Writing tests
-- [ ] Tracking the dependency graph
-- [ ] Packages' metadata filtering
+- `user`: details of authenticated user
+- `user_abilities`: list of abilities of authenticated user
+- `org`: details of organization of authenticated user
+- `org_projects`: list of projects under authenticated user's organization
+- `org_members`: list of members of authenticated user's organization
+- `project_table`: details of project defined by `project_uuid`
+- `warehouse_connection`: details of the warehouse to which project with `project_uuid` is connected
+- `dbt_connection`: details of dbt connection to which project with `project_uuid` is connected
+- `dbt_env_vars`: list of environment variables of dbt connection to which project with `project_uuid` is connected
+- `charts`: list of charts in project with `project_uuid`
+- `spaces`: list of spaces in project with `project_uuid`
+- `access`: list of users with access to project with `project_uuid`
+- `validation`: list of validation results of the project with `project_uuid`
+- `dashboards`: list of dashboards defined in space `space_uuid` of project `project_uuid`
+- `queries`: list of queries in the space `space_uuid` of project `project_uuid`
+- `chart_history`: history of changes of chart `chart_uuid`
+- `chart_config`: configuration of chart defined by version `version_uuid` and chart `chart_uuid`
+- `chart_additional_metrics`: additional metrices used in chart defined by version `version_uuid` and chart `chart_uuid`
+- `chart_table_calculations`: table calculations used in chart defined by version `version_uuid` and chart `chart_uuid`
+- `scheduler_logs`: logs of scheduler in project `project_uuid`
+- `scheduler`: details of scheduler with `scheduler_uuid`
+- `scheduler_jobs`: jobs scheduled by scheduler with `scheduler_uuid`
+- `scheduler_job_status`: status of a job with `job_id`

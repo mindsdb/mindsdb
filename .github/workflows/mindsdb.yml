@@ -155,6 +155,8 @@ jobs:
       env:
         TWINE_USERNAME:  __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       run: |
         python setup.py sdist
         twine upload dist/*
@@ -188,3 +190,5 @@ jobs:
         AWS_REGION: 'us-west-2'
         SOURCE_DIR: 'distributions/ver/dist'
         DEST_DIR: 'mindsdb-installer/ver'
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

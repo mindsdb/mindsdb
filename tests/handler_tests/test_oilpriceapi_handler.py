@@ -1,5 +1,5 @@
 import importlib
-
+import os
 import pandas as pd
 import pytest
 from mindsdb_sql import parse_sql
@@ -27,11 +27,12 @@ class TestOilPriceAPIHandler(BaseExecutorTest):
 
     def setup_method(self):
         super().setup_method()
-        self.run_sql("""
+        self.api_key = os.environ.get("LIGHTDASH_API_KEY")
+        self.run_sql(f"""
             CREATE DATABASE mindsdb_oilpriceapi
                 WITH ENGINE = 'oilpriceapi',
                 PARAMETERS = {
-                "api_key": ""
+                "api_key": '{self.api_key}'
                 };
         """)
 

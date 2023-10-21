@@ -95,7 +95,32 @@ class YoutubeGetCommentsTable(APITable):
 
         return youtube_comments_df
 
-    def get_columns(self) -> List[str]:
+ def insert(self, query: ast.Insert) -> None:
+        """Insert data into the Youtube Comments table"""
+        data = query.values
+
+        if not isinstance(data, list) or len(data) == 0:
+            raise ValueError("Invalid data for INSERT operation")
+
+        columns = self.get_columns()
+        if len(data[0]) != len(columns):
+            raise ValueError("Data columns do not match the table columns")
+
+  def update(self, query: ast.Update) -> None:
+        """Update data in the Youtube Comments table"""
+        data = query.set
+        conditions = extract_comparison_conditions(query.where)
+
+        if not data:
+            raise ValueError("No data provided for UPDATE operation")   
+   def delete(self, query: ast.Delete) -> None:
+        """Delete data from the Youtube Comments table"""
+        conditions = extract_comparison_conditions(query.where)
+
+        if not conditions:
+            raise ValueError("No conditions provided for DELETE operation")      
+                   
+  def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
         Returns
         -------

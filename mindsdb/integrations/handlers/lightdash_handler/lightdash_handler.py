@@ -27,11 +27,7 @@ from mindsdb.integrations.handlers.lightdash_handler.lightdash_tables import (
     SchedulerJobStatus,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
-from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-    RESPONSE_TYPE
-)
+from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 
 
 class LightdashHandler(APIHandler):

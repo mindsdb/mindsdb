@@ -20,7 +20,7 @@ jobs:
     - name: Set up Python 3.8
       uses: actions/setup-python@v4.7.0
       with:
-        python-version: 3.9
+        python-version: 3.8
     - name: Install flake8
       run: |
         pip install flake8==5.0.4 pycodestyle==2.9.1
@@ -64,7 +64,7 @@ jobs:
       shell: bash
       env:
         ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
-        mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
+        mindsdb_github_masterkey: ${{ secrets.mindsdb_github_masterkey }}
     - name: Install staging mdb libraries if it's not mindsdb/stable
       if: ${{ github.ref != 'refs/heads/stable' }}
       run: |

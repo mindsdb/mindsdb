@@ -76,12 +76,12 @@ class LightdashHandler(APIHandler):
         return self.connection
 
     def check_connection(self) -> StatusResponse:
+        resp = StatusResponse(False)
         if self.connection and not self.connection.is_connected():
-            return Response(
-                RESPONSE_TYPE.ERROR,
-                error_message="Client not connected"
-            )
-        return Response(RESPONSE_TYPE.OK)
+            resp.error = "Client not connected"
+        else:
+            resp.success = True
+        return resp
 
     def native_query(self, query: str) -> StatusResponse:
         ast = parse_sql(query, dialect="mindsdb")

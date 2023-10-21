@@ -1,17 +1,17 @@
 import requests
-import urlparse
+from urllib.parse import urljoin
 
 
 class Lightdash:
 
     def __init__(self, url: str, api_key: str) -> None:
-        self.base_url = urlparse.urljoin(url, "/api/v1/")
+        self.base_url = urljoin(url, "/api/v1/")
         self.api_key = api_key
 
-    def _request(self, method: str, relative_endpoint: str, data: None):
+    def _request(self, method: str, relative_endpoint: str, data=None):
         kwargs = {
             "method": method,
-            "url": urlparse.urljoin(self.base_url, relative_endpoint),
+            "url": urljoin(self.base_url, relative_endpoint),
             "headers": {
                 "Authorization": "ApiKey " + self.api_key,
             }

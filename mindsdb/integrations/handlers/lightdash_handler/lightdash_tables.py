@@ -32,7 +32,7 @@ def move_under(d, key_contents_to_move, key_to_move_under=None):
 def select_keys(d, keys):
     new_d = {}
     for key in keys:
-        new_d = d.get(key, "")
+        new_d[key] = d.get(key, "")
     return new_d
 
 
@@ -175,7 +175,7 @@ class OrgMembersTable(CustomAPITable):
 
 
 class ProjectTable(CustomAPITable):
-    name: str = "project"
+    name: str = "project_table"
     columns: List[str] = [
         'organizationUuid',
         'projectUuid',

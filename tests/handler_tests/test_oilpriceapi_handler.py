@@ -27,7 +27,7 @@ class TestOilPriceAPIHandler(BaseExecutorTest):
 
     def setup_method(self):
         super().setup_method()
-        self.api_key = os.environ.get("LIGHTDASH_API_KEY")
+        self.api_key = os.environ.get("OILPRICEAPI_KEY")
         self.run_sql(f"""
             CREATE DATABASE mindsdb_oilpriceapi
                 WITH ENGINE = 'oilpriceapi',

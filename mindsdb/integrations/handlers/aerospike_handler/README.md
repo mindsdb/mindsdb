@@ -1,69 +1,35 @@
-# ChromaDB Handler
-
-This is the implementation of the ChromaDB for MindsDB.
-
-## ChromaDB
-
-Chroma is the open-source embedding database. Chroma makes it easy to build LLM apps by making knowledge, facts, and skills pluggable for LLMs.
-
 ## Implementation
 
-This handler uses `chromadb` python library connect to a chromadb instance, it uses langchain to make use of their pre-existing semantic search functionality
+This is the implementation of the Aereospike for MindsDB.
 
-The required arguments to establish a connection are:
+The required arguments to establish a connection are as follows:
 
-* `chroma_server_host`: the host name or IP address of the ChromaDB instance
-* `chroma_server_http_port`: the port to use when connecting
-* `persist_directory`: the directory to use for persisting data
+-   `user` is the database user.
+-   `password` is the database password.
+-   `host` is the host IP address or URL.
+-   `port` is the port used to make TCP/IP connection.
+-   `namespace` is the aerospike namespace.
 
+Other optional parameters are not supported as of now.
 
 ## Usage
 
-In order to make use of this handler and connect to a hosted ChromaDB instance in MindsDB, the following syntax can be used:
+In order to make use of this handler and connect to the MariaDB database in MindsDB, the following syntax can be used:
 
 ```sql
-CREATE DATABASE chroma_dev
-WITH ENGINE = "chromadb",
+CREATE DATABASE aerospike_db
+WITH ENGINE = "aerospike",
 PARAMETERS = {
-   "chroma_server_host": "localhost",
-   "chroma_server_http_port": 8000
-    }
+    "user": "test",
+    "password": "password",
+    "host": "localhost",
+    "port": 3000,
+    "namespace": "test"
+    };
 ```
 
-Another option is to use in memory ChromaDB instance, you can do so by using the following syntax:
+You can use this established connection to query your table as follows.
 
 ```sql
-CREATE DATABASE chroma_dev
-WITH ENGINE = "chromadb",
-PARAMETERS = {
-   "persist_directory": <persist_directory>
-    }
-```
-
-You can insert data into a new collection like so
-
-```sql
-create table chroma_dev.test_embeddings (
-SELECT embeddings,'{"source": "fda"}' as metadata FROM mysql_demo_db.test_embeddings
-);
-```
-
-You can query a collection within your ChromaDB as follows:
-
-```sql
-SELECT * FROM chroma_dev.test_embeddings;
-```
-
-filter by metadata
-
-```sql
-SELECT * FROM chroma_dev.test_embeddings
-where `metadata.source` = "fda";
-```
-
-search for similar embeddings
-
-```sql
-SELECT * FROM chroma_dev.test_embeddings
-WHERE search_vector = (select embeddings from mysql_demo_db.test_embeddings limit 1);
+SELECT * FROM aerospike_db.house_rentals;
 ```

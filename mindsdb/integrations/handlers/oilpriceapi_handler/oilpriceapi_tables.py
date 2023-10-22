@@ -46,7 +46,7 @@ class OilPriceLatestTable(APITable):
                 if op == '=':
                     search_params["by_type"] = arg2
                 else:
-                    raise NotImplementedError("Only '=' operator is supported for namespace column.")
+                    raise NotImplementedError("Only '=' operator is supported for by_type column.")
 
                 if not self.handler.client._is_valid_by_type(arg2):
                     raise ValueError("Unknown value for `by_type` parameter. The allowed values are - " + self.handler.client.valid_values_by_type)
@@ -55,7 +55,7 @@ class OilPriceLatestTable(APITable):
                 if op == '=':
                     search_params["by_code"] = arg2
                 else:
-                    raise NotImplementedError("Only '=' operator is supported for namespace column.")
+                    raise NotImplementedError("Only '=' operator is supported for by_code column.")
 
                 if not self.handler.client._is_valid_by_code(arg2):
                     raise ValueError("Unknown value for `by_code` parameter. The allowed values are - " + self.handler.client.valid_values_by_code)
@@ -146,7 +146,7 @@ class OilPricePastDayPriceTable(APITable):
                 if op == '=':
                     search_params["by_type"] = arg2
                 else:
-                    raise NotImplementedError("Only '=' operator is supported for namespace column.")
+                    raise NotImplementedError("Only '=' operator is supported for by_type column.")
 
                 if not self.handler.client._is_valid_by_type(arg2):
                     raise ValueError("Unknown value for `by_type` parameter. The allowed values are - " + self.handler.client.valid_values_by_type)
@@ -155,7 +155,7 @@ class OilPricePastDayPriceTable(APITable):
                 if op == '=':
                     search_params["by_code"] = arg2
                 else:
-                    raise NotImplementedError("Only '=' operator is supported for namespace column.")
+                    raise NotImplementedError("Only '=' operator is supported for by_code column.")
 
                 if not self.handler.client._is_valid_by_code(arg2):
                     raise ValueError("Unknown value for `by_code` parameter. The allowed values are - " + self.handler.client.valid_values_by_code)

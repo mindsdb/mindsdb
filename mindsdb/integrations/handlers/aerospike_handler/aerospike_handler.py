@@ -9,7 +9,7 @@ import duckdb
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
 
-from mindsdb.utilities import log
+# from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -145,7 +145,7 @@ class AerospikeHandler(DatabaseHandler):
 
     def parse_aql_query(self, aql_query):
         # Split the AQL query into tokens
-        tokens = [t.replace(',','').upper() for t in re.split(r'\s+', aql_query)]
+        tokens = [t.replace(',', '').upper() for t in re.split(r'\s+', aql_query)]
         # Extract the relevant components
         select_index = tokens.index("SELECT")
         from_index = tokens.index("FROM")
@@ -153,7 +153,7 @@ class AerospikeHandler(DatabaseHandler):
 
         selected_bins = tokens[select_index + 1:from_index]
         namespace_set = tokens[from_index + 1]
-        aero_ns, aero_set = namespace_set.split('.')  if '.' in namespace_set else None, namespace_set
+        aero_ns, aero_set = namespace_set.split('.') if '.' in namespace_set else None, namespace_set
         if not aero_ns:
             aero_ns = self.connection_data.get('namespace')
         # filter_condition = " ".join(tokens[where_index + 1:])
@@ -181,16 +181,16 @@ class AerospikeHandler(DatabaseHandler):
                     data_lst.append(ele)
 
         response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        pd.DataFrame(data_lst, columns=['table_schema', 'table_name', 'table_type'])
-                    )
+            RESPONSE_TYPE.TABLE,
+            pd.DataFrame(data_lst, columns=['table_schema', 'table_name', 'table_type'])
+        )
         return response
 
-    def get_columns(self, table_name:str) -> Response:
+    def get_columns(self, table_name: str) -> Response:
         """
         Show details about the table
         """
-        column_df = pd.DataFrame([],  columns=['column_name', 'data_type'])
+        column_df = pd.DataFrame([], columns=['column_name', 'data_type'])
         response_table = self.get_tables()
         df = response_table.data_frame
         if not len(df):
@@ -203,9 +203,9 @@ class AerospikeHandler(DatabaseHandler):
         column_df = pd.DataFrame(data_df.dtypes).reset_index()
         column_df.columns = ['column_name', 'data_type']
         response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        column_df
-                    )
+            RESPONSE_TYPE.TABLE,
+            column_df
+        )
         return response
 
 

@@ -36,11 +36,10 @@ class ZipCodeBaseClient:
         )
         return self.make_request(url, params)
 
-    def codes_by_city(self, city, country, state, limit):
+    def codes_by_city(self, city, country, limit):
         url = f'{self.base_endpoint}/code/city'
         params = (
             ("city", city),
-            ("state_name", state),
             ("country", country),
             ("limit", limit),
         )
@@ -55,7 +54,7 @@ class ZipCodeBaseClient:
         )
         return self.make_request(url, params)
 
-    def codes_by_country(self, country):
+    def states_by_country(self, country):
         url = f'{self.base_endpoint}/country/province'
         params = (
             ("country", country),

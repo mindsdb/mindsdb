@@ -2,7 +2,10 @@ from collections import OrderedDict
 
 from mindsdb.integrations.handlers.zipcodebase_handler.zipcodebase_tables import (
     ZipCodeBaseCodeLocationTable,
-    ZipCodeBaseCodeInRadiusTable
+    ZipCodeBaseCodeInRadiusTable,
+    ZipCodeBaseCodeByCityTable,
+    ZipCodeBaseCodeByStateTable,
+    ZipCodeBaseStatesByCountryTable
 )
 from mindsdb.integrations.handlers.zipcodebase_handler.zipcodebase import ZipCodeBaseClient
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -41,6 +44,15 @@ class ZipCodeBaseHandler(APIHandler):
         
         codes_within_radius_data = ZipCodeBaseCodeInRadiusTable(self)
         self._register_table("codes_within_radius", codes_within_radius_data)
+        
+        codes_by_city_data = ZipCodeBaseCodeByCityTable(self)
+        self._register_table("codes_by_city", codes_by_city_data)
+        
+        codes_by_state_data = ZipCodeBaseCodeByStateTable(self)
+        self._register_table("codes_by_state", codes_by_state_data)
+        
+        states_by_country_data = ZipCodeBaseStatesByCountryTable(self)
+        self._register_table("states_by_country", states_by_country_data)
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.

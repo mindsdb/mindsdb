@@ -62,3 +62,15 @@ SELECT * FROM mindsdb_zipcodebase.code_to_location where codes="10005";
 ~~~~sql
 SELECT * FROM mindsdb_zipcodebase.codes_within_radius WHERE code="10005" AND radius="100" AND country="us";
 ~~~~
+
+~~~~sql
+SELECT * FROM mindsdb_zipcodebase.codes_by_city WHERE city="Amsterdam" AND country="nl";
+~~~~
+
+~~~~sql
+SELECT * FROM mindsdb_zipcodebase.codes_by_state WHERE state="Noord-Holland" AND country="nl";
+~~~~
+
+~~~~sql
+SELECT * FROM mindsdb_zipcodebase.states_by_country WHERE country="de";
+~~~~

@@ -1,4 +1,4 @@
-from mindsdb.integrations.handlers.youtube_handler.youtube_tables import YoutubeGetCommentsTable, YoutubeChannelTable, YoutubeVideoTable
+from mindsdb.integrations.handlers.youtube_handler.youtube_tables import YoutubeCommentsTable, YoutubeChannelsTable, YoutubeVideosTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -33,14 +33,14 @@ class YoutubeHandler(APIHandler):
         self.connection = None
         self.is_connected = False
 
-        youtube_video_comments_data =YoutubeGetCommentsTable(self)
-        self._register_table("get_comments", youtube_video_comments_data)
+        youtube_video_comments_data =YoutubeCommentsTable(self)
+        self._register_table("comments", youtube_video_comments_data)
 
-        youtube_channel_data = YoutubeChannelTable(self)
-        self._register_table("channel", youtube_channel_data)
+        youtube_channel_data = YoutubeChannelsTable(self)
+        self._register_table("channels", youtube_channel_data)
 
-        youtube_video_data = YoutubeVideoTable(self)
-        self._register_table("video", youtube_video_data)
+        youtube_video_data = YoutubeVideosTable(self)
+        self._register_table("videos", youtube_video_data)
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.

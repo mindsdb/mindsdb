@@ -1,6 +1,60 @@
 # spaCy Handler
 
-This is an integration with spaCy which is a free, open-source library for advanced Natural Language Processing (NLP) in Python
+This is an integration with spaCy which is a free, open-source library for advanced Natural Language Processing (NLP) in Python. The documentation is available here: https://spacy.io/usage
+
+# Initialization
+
+When initializing the model, it is important to define **"linguistic_feature"** and **"target_column"**. With lingustic feature, you define the type of NLP process you want to perform on specific column ("target_column").
+
+```sql
+CREATE MODEL spacy__morphology__model
+PREDICT recognition
+USING
+engine = 'spacy',
+linguistic_feature = 'morphology',
+target_column = 'review';
+```
+
+After creating the model and defining the specifications, you are ready to perform NLP on columns.
+
+## Perform NLP on single data
+
+```sql
+SELECT review, recognition
+FROM spacy__morphology__model
+WHERE review = '"Apple is looking at buying U.K. startup for $1 billion"';
+```
+
+## Perform NLP on batch data
+
+```sql
+CREATE DATABASE mysql_demo_db
+WITH ENGINE = "mysql",
+PARAMETERS = {
+    "user": "user",
+    "password": "MindsDBUser123!",
+    "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
+    "port": "3306",
+    "database": "public"
+    };
+```
+
+```sql
+SELECT input.review, output.recognition
+FROM mysql_demo_db.amazon_reviews AS input
+JOIN spacy__morphology__model AS output
+LIMIT 5;
+```
+
+# Linguistic Features
+
+List of linguistic features and its values:
+
+- Named Entity Recognition (NER): 'ner'
+- Lemmatization: 'lemmatization'
+- Dependency parsing: 'depedency-parsing'
+- Pos-tagging: 'pos-tag'
+- Morphology: 'morphology'
 
 ## Named Entity Recognition (NER)
 
@@ -31,3 +85,19 @@ RESULT: {(28, 32, 'GPE'), (45, 55, 'MONEY'), (1, 6, 'ORG')}
 
 The first and the second values are indices in the string that indicate the location
 of the word in a sentence. The third value is a named entity.
+
+## Lemmatization
+
+Lemmatization in linguistics is the process of grouping together the inflected forms of a word so they can be analysed as a single item, identified by the word's lemma, or dictionary form.
+
+## Dependency parsing
+
+Dependency parsing is a linguistic analysis technique used in natural language processing to uncover grammatical relationships between words in a sentence.
+
+## Pos-tagging
+
+spaCy can parse and tag a given Doc. This is where the trained pipeline and its statistical models come in, which enable spaCy to make predictions of which tag or label most likely applies in this context. A trained component includes binary data that is produced by showing a system enough examples for it to make predictions that generalize across the language – for example, a word following “the” in English is most likely a noun.
+
+## Morphology
+
+Inflectional morphology is the process by which a root form of a word is modified by adding prefixes or suffixes that specify its grammatical function but do not change its part-of-speech. We say that a lemma (root form) is inflected (modified/combined) with one or more morphological features to create a surface form.

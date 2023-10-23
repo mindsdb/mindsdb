@@ -1,3 +1,5 @@
+import sys
+
 from collections import OrderedDict
 from typing import List, Optional
 
@@ -16,6 +18,9 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
     VectorStoreHandler,
 )
 from mindsdb.utilities import log
+
+__import__('pysqlite3')
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 
 class ChromaDBHandler(VectorStoreHandler):

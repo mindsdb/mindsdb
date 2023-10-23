@@ -19,17 +19,15 @@ class StatusPages(APITable):
         Returns:
             pd.DataFrame
         """
-
         conditions = extract_comparison_conditions(query.where)
-
-        # Get page_no from query
+        # Get page id from query
+        page_id = None
         for op, arg1, arg2 in conditions:
-
-            if arg1 == 'page_no' and op == '=':
-                page_no = int(arg2)
+            if arg1 == 'page_id' and op == '=':
+                page_id = arg2
             else:
                 raise NotImplementedError
-            
+
         # Get column names from query
         selected_columns = []
         for target in query.targets:
@@ -42,21 +40,30 @@ class StatusPages(APITable):
                 raise ValueError(f"Unknown query target {type(target)}")
 
         # Get limit from query
-        if query.limit:
-            per_page = query.limit.value
-            if per_page > 100:
-                raise Exception("The maximum is 100 items per page")
-        else:
-            per_page = 50
+        limit = query.limit.value if query.limit else 20
+        total_results = limit
+
+        page_no = 1  # default page no
+        result_df = pd.DataFrame(columns=selected_columns)
 
         # call instatus api and get the response as pd.DataFrame
-        df = self.handler.call_instatus_api(endpoint='/v2/pages', params={'page': page_no, 'per_page': per_page})
+        while True:
+            df = self.handler.call_instatus_api(endpoint='/v2/pages', params={'page': page_no, 'per_page': 100})
+            if len(df) == 0 or limit <= 0:
+                break
+            else:
+                result_df = pd.concat([result_df, df[selected_columns]], ignore_index=True)
+
+            page_no += 1
+            limit -= len(df)
 
         # select columns from pandas data frame df
-        if len(df) == 0:
-            df = pd.DataFrame([], columns=selected_columns)
+        if result_df.empty:
+            result_df = pd.DataFrame(columns=selected_columns)
+        elif page_id:
+            result_df = result_df[result_df['id'] == page_id]
 
-        return df[selected_columns]
+        return result_df.head(n=total_results)
 
     def insert(self, query: ast.Insert) -> None:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.
@@ -67,10 +74,17 @@ class StatusPages(APITable):
         Returns:
             None
         """
-        # TODO
-        raise NotImplementedError()
-
-        return None
+        import json
+        columns = []
+        for column in query.columns:
+            columns.append(column.name)
+        data = {
+            columns[i]: json.loads(query.values[0][i]) if columns[i] == 'components' else
+            (True if query.values[0][i] == 'True' else
+             (False if query.values[0][i] == 'False' else query.values[0][i]))
+            for i in range(len(columns))
+        }
+        self.handler.call_instatus_api(endpoint='/v1/pages', method='POST', data=data)
 
     def update(self, query: ast.Update) -> None:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.
@@ -80,24 +94,6 @@ class StatusPages(APITable):
         Returns:
             None
         """
-        # TODO
-        raise NotImplementedError()
-
-        return None
-
-    def delete(self, query: ast.Delete) -> None:
-        """Receive query as AST (abstract syntax tree) and act upon it somehow.
-
-        Args:
-            query (ASTNode): sql query represented as AST. Usually it should be ast.Delete
-
-        Returns:
-            None
-        """
-        # TODO
-        raise NotImplementedError()
-
-        return None
 
     def get_columns(self, ignore: List[str] = []) -> List[str]:
         """columns

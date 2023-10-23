@@ -431,7 +431,7 @@ class ExecuteCommands:
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
             elif "show create table" in sql_lower:
                 # SHOW CREATE TABLE `MINDSDB`.`predictors`
-                table = sql[sql.rfind(".") + 1:].strip(" .;\n\t").replace("`", "")
+                table = sql[sql.rfind(".") + 1 :].strip(" .;\n\t").replace("`", "")
                 return self.answer_show_create_table(table)
             elif sql_category in ("character set", "charset"):
                 new_statement = Select(
@@ -1255,7 +1255,7 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
-    def _create_persistent_chroma(self, kb_name, engine="chromadb"):
+    def _create_persistent_chroma(self, kb_name, collection_name, engine="chromadb"):
         """Create default vector database for knowledge base, if not specified"""
 
         vector_store_name = f"{kb_name}_{engine}"
@@ -1265,7 +1265,7 @@ class ExecuteCommands:
         self._create_integration(vector_store_name, engine, connection_args)
 
         self.session.datahub.get(vector_store_name).integration_handler.create_table(
-            "default_collection"
+            collection_name
         )
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK), vector_store_name
@@ -1305,13 +1305,16 @@ class ExecuteCommands:
                 "Need the form 'database_name.table_name'"
             )
 
+        vector_table_name = (
+            statement.storage.parts[-1] if statement.storage else "default_collection"
+        )
+
         vector_db_name = (
             statement.storage.parts[0]
             if statement.storage
-            else self._create_persistent_chroma(kb_name)[1]
-        )
-        vector_table_name = (
-            statement.storage.parts[-1] if statement.storage else "default_collection"
+            else self._create_persistent_chroma(
+                kb_name, collection_name=vector_table_name
+            )[1]
         )
 
         # verify the vector database exists and get its id
@@ -1876,7 +1879,6 @@ class ExecuteCommands:
         )
 
     def answer_update_model_version(self, statement):
-
         # get project name
         if len(statement.table.parts) > 1:
             project_name = statement.table.parts[0]

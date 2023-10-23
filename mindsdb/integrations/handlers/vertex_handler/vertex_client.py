@@ -8,18 +8,18 @@ import json
 class VertexClient:
     """A class to interact with Vertex AI"""
 
-    def __init__(self, credentials_path, project_id):
+    def __init__(self, credentials_path, args_json):
         credentials = service_account.Credentials.from_service_account_file(credentials_path)
         aiplatform.init(
-            project=project_id,
-            location="us-central1",
-            staging_bucket="gs://my_staging_bucket",
             credentials=credentials,
+            project=args_json["project_id"],
+            location=args_json["location"],
+            staging_bucket=args_json["staging_bucket"],
             # the name of the experiment to use to track
             # logged metrics and parameters
-            experiment="my-experiment",
+            experiment=args_json["experiment"],
             # description of the experiment above
-            experiment_description="my experiment description",
+            experiment_description=args_json["experiment_description"],
         )
 
     def print_datasets(self):

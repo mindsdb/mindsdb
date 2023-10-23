@@ -159,7 +159,7 @@ class TestVertex(BaseExecutorTest):
             engine='vertex',
             model_name='diamonds_anomaly_detection',
             custom_model='True',
-            project_id = 'mindsdb-401709',
+            vertex_args_path='tests/unit/ml_handlers/data/vertex_args.json',
             service_key_path='tests/unit/ml_handlers/data/vertex_service_key.json'
         """
         )

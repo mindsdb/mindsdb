@@ -179,7 +179,7 @@ class ExecuteCommands:
 
             try:
                 project = self.session.database_controller.get_project(database_name)
-                project.drop_table(model_name)
+                project.drop_model(model_name)
             except Exception as e:
                 if not statement.if_exists:
                     raise e
@@ -1252,7 +1252,7 @@ class ExecuteCommands:
             else:
                 db_name = self.session.database
             project = self.session.database_controller.get_project(db_name)
-            project.drop_table(view_name)
+            project.drop_view(view_name)
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 

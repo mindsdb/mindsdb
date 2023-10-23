@@ -16,7 +16,7 @@ Other optional parameters are not supported as of now.
 
 ## Usage
 
-In order to make use of this handler and connect to the MariaDB database in MindsDB, the following syntax can be used:
+In order to make use of this handler and connect to the Aereospike database in MindsDB, the following syntax can be used:
 
 ```sql
 CREATE DATABASE aerospike_db

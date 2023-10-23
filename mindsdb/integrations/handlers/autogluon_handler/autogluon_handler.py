@@ -52,3 +52,4 @@ class AutoGluonHandler(BaseMLEngine):
 
         if attribute == "args":
             return pd.DataFrame(args.items(), columns=["key", "value"])
+        

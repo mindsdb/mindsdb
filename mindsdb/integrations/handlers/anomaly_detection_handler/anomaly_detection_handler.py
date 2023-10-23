@@ -47,13 +47,27 @@ class AnomalyDetectionHandler(BaseMLEngine):
     def create(self, target, df, args={}):
         # Save the column names of all numeric columns before transforming any categorical columns into dummies
         using_args = args["using"]
+        model_type = using_args["type"] if "type" in using_args else None
+
         target = "outlier" if target is None else target  # give it a name for unsupervised learning
-        if target in df.columns:
-            training_df = df.drop(target, axis=1)
+        if model_type is not None:
+            if model_type == "supervised":
+                df = preprocess_data(df)
+                model = train_supervised(df.drop(target, axis=1), df[target].astype(int))
+            elif model_type == "semi-supervised":
+                df = preprocess_data(df)
+                model = train_semisupervised(df.drop(target, axis=1), df[target].astype(int))
+            else:
+                raise ValueError("model type must be one of 'supervised', 'semi-supervised', or 'unsupervised'")
         else:
-            training_df = df[:]
-        training_df = preprocess_data(training_df)
-        model = train_unsupervised(training_df)
+            if target in df.columns:
+                training_df = df.drop(target, axis=1)
+                training_df = preprocess_data(training_df)
+                model = choose_model(training_df)
+                model.fit(training_df, df[target].astype(int))
+            else:
+                training_df = preprocess_data(df)
+                model = train_unsupervised(training_df)
         # Save the model
         save_fp = "model.joblib"
         dump(model, save_fp)
@@ -61,11 +75,14 @@ class AnomalyDetectionHandler(BaseMLEngine):
         self.model_storage.json_set("model_args", model_args)
 
     def predict(self, df, args={}):
+        model_args = self.model_storage.json_get("model_args")
+
         if "__mindsdb_row_id" in df.columns:
             df = df.drop("__mindsdb_row_id", axis=1)
-
+        if model_args["target"] in df.columns:
+            df = df.drop(model_args["target"], axis=1)
         predict_df = preprocess_data(df).astype(float)
-        model_args = self.model_storage.json_get("model_args")
+
         model = load(model_args["model_path"])
         results = model.predict(predict_df)
         return pd.DataFrame({model_args["target"]: results})

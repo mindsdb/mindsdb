@@ -19,7 +19,7 @@ WITH
 
 ### Select Data
 
-To see if the connection was succesful, try searching for the most recent article data.
+To see if the connection was successful, try searching for the most recent article data.
 
 ```
 SELECT *
@@ -68,7 +68,7 @@ LIMIT 40;
 
 **exclude_domains** : A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to remove from the results.
 
-**searchIn** : The fields to restrict your query search to possible options are title, description,  conten. Multiple options can be specified by separating them with a comma, for example: `title,content`
+**searchIn** : The fields to restrict your query search to possible options are title, description,  content. Multiple options can be specified by separating them with a comma, for example: `title,content`
 
 **lamguage** : The 2-letter ISO-639-1 code of the language you want to get headlines for. Possible options: `ar de, en es, fr he, it nl, no pt, ru,  sv, ud , zh`.
 

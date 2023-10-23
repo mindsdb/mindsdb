@@ -33,23 +33,23 @@ PARAMETERS = {
 
 Now, you can use this established connection to query your table as follows,
 ~~~~sql
-SELECT * FROM mindsdb_gitlab.issues
+SELECT * FROM mindsdb_gitlab.issues;
 ~~~~
 
 ~~~~sql
-SELECT number, state, creator, assignee, title, labels
+SELECT number, state, creator, assignee, title, created, labels 
   FROM mindsdb_gitlab.issues
-  WHERE state="open"
+  WHERE state="opened"
   ORDER BY created ASC, creator DESC
-  LIMIT 10
+  LIMIT 10;
 ~~~~
 
 ~~~~sql
-SELECT number, state, creator, reviewers, title, has_conflicts
+SELECT number, state, creator, reviewers, title, created, has_conflicts
   FROM mindsdb_gitlab.merge_requests
   WHERE state="merged"
   ORDER BY created ASC, creator DESC
-  LIMIT 10
+  LIMIT 10;
 ~~~~
 
 ## What is next??

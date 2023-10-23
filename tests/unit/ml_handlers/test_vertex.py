@@ -191,7 +191,7 @@ class TestVertex(BaseExecutorTest):
            using
             engine='vertex',
             model_name='productivity_regression',
-            project_id = 'mindsdb-401709',
+            vertex_args_path='tests/unit/ml_handlers/data/vertex_args.json',
             service_key_path='tests/unit/ml_handlers/data/vertex_service_key.json'
         """
         )
@@ -225,7 +225,7 @@ class TestVertex(BaseExecutorTest):
            using
             engine='vertex',
             model_name='fraud_detection',
-            project_id = 'mindsdb-401709',
+            vertex_args_path='tests/unit/ml_handlers/data/vertex_args.json',
             service_key_path='tests/unit/ml_handlers/data/vertex_service_key.json'
         """
         )

@@ -45,7 +45,6 @@ class TestSpacy(BaseExecutorTest):
 
         assert "{(28, 32, 'GPE'), (45, 55, 'MONEY'), (1, 6, 'ORG')}" in result_df["recognition"].iloc[0]
 
-
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_spacy_lemmatization(self, mock_handler):
         self.run_sql("CREATE DATABASE proj")
@@ -139,7 +138,6 @@ class TestSpacy(BaseExecutorTest):
 
         assert "{('startup', 'startup', 'NOUN', 'NN', 'dep', 'xxxx', True, False), ('buying', 'buy', 'VERB', 'VBG', 'pcomp', 'xxxx', True, False), ('U.K.', 'U.K.', 'PROPN', 'NNP', 'dobj', 'X.X.', False, False), ('1', '1', 'NUM', 'CD', 'compound', 'd', False, False), ('for', 'for', 'ADP', 'IN', 'prep', 'xxx', True, True), ('$', '$', 'SYM', '$', 'quantmod', '$', False, False), ('Apple', 'Apple', 'PROPN', 'NNP', 'nsubj', 'Xxxxx', True, False), ('billion', 'billion', 'NUM', 'CD', 'pobj', 'xxxx', True, False), ('"', '"', 'PUNCT', "''", 'punct', '"', False, False), (\'looking\', \'look\', \'VERB\', \'VBG\', \'ROOT\', \'xxxx\', True, False), ('"', '"', \'PUNCT\', \'``\', \'punct\', '"', False, False), ('at', 'at', 'ADP', 'IN', 'prep', 'xx', True, True), ('is', 'be', 'AUX', 'VBZ', 'aux', 'xx', True, True)}" in result_df["recognition"].iloc[0]
 
-
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_spacy_morphology(self, mock_handler):
         self.run_sql("CREATE DATABASE proj")
@@ -170,4 +168,3 @@ class TestSpacy(BaseExecutorTest):
         )
 
         assert "{('"', \'PunctSide=Ini|PunctType=Quot\'), (\'billion\', \'NumType=Card\'), (\'U.K.\', \'Number=Sing\'), (\'at\', ''), (\'Apple\', \'Number=Sing\'), (\'looking\', \'Aspect=Prog|Tense=Pres|VerbForm=Part\'), (\'buying\', \'Aspect=Prog|Tense=Pres|VerbForm=Part\'), ('"', 'PunctSide=Fin|PunctType=Quot'), ('is', 'Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin'), ('$', ''), ('1', 'NumType=Card'), ('for', ''), ('startup', 'Number=Sing')}" in result_df["recognition"].iloc[0]
-

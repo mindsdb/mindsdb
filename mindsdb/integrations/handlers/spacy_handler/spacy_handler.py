@@ -32,7 +32,7 @@ class SpacyHandler(BaseMLEngine):
 
         if not args.get('linguistic_feature'):
             args['linguistic_feature'] = self.default_linguistic_feature
-        
+
         train_model = args.get('train_model', False)
         if train_model:
             pass
@@ -72,7 +72,7 @@ class SpacyHandler(BaseMLEngine):
 
             df[model_args['target']] = predictions
             return df
-        
+
         # Lemmatization
         elif linguistic_feature == 'lemmatization':
             predictions = []
@@ -83,31 +83,29 @@ class SpacyHandler(BaseMLEngine):
 
             df[model_args['target']] = predictions
             return df
-        
+
         # Dependency Parsing
         elif linguistic_feature == 'dependency-parsing':
             predictions = []
             for _, text in df.iterrows():
                 doc = nlp(text[column_name])
-                entities = {(token.text, token.dep_, token.head.text, token.head.pos_,
-            str([child for child in token.children])) for token in doc}
+                entities = {(token.text, token.dep_, token.head.text, token.head.pos_, str([child for child in token.children])) for token in doc}
                 predictions.append(entities)
 
             df[model_args['target']] = predictions
             return df
-        
+
         # Part-of-speech tagging
         elif linguistic_feature == 'pos-tag':
             predictions = []
             for _, text in df.iterrows():
                 doc = nlp(text[column_name])
-                entities = {(token.text, token.lemma_, token.pos_, token.tag_, token.dep_,
-            token.shape_, token.is_alpha, token.is_stop) for token in doc}
+                entities = {(token.text, token.lemma_, token.pos_, token.tag_, token.dep_, token.shape_, token.is_alpha, token.is_stop) for token in doc}
                 predictions.append(entities)
 
             df[model_args['target']] = predictions
             return df
-        
+
         # Morphology
         elif linguistic_feature == 'morphology':
             predictions = []
@@ -115,10 +113,10 @@ class SpacyHandler(BaseMLEngine):
                 doc = nlp(text[column_name])
                 tokens = {(str(token), str(token.morph)) for token in doc}
                 predictions.append(tokens)
-            
+
             df[model_args['target']] = predictions
             return df
-    
+
         else:
             df[model_args['target']] = []
             return df

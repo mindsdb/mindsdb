@@ -1,14 +1,8 @@
 from mindsdb_sql import parse_sql
 
-from mindsdb.integrations.handlers.npm_handler.api import NPM
-from mindsdb.integrations.handlers.npm_handler.npm_tables import (
-    NPMMetadataTable,
-    NPMMaintainersTable,
-    NPMKeywordsTable,
-    NPMDependenciesTable,
-    NPMDevDependenciesTable,
-    NPMOptionalDependenciesTable,
-    NPMGithubStatsTable,
+from mindsdb.integrations.handlers.sap_erp_handler.api import SAPERP
+from mindsdb.integrations.handlers.sap_erp_handler.sap_erp_tables import (
+    AddressEmailAddressTable
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
@@ -20,34 +14,26 @@ class SAPERPHandler(APIHandler):
         super().__init__(name)
         self.connection = None
         self.is_connected = False
+        self.api_key = kwargs.get("connection_data", {}).get("api_key", "")
+        self.base_url = kwargs.get("connection_data", {}).get("base_url", "")
         _tables = [
-            NPMMetadataTable,
-            NPMMaintainersTable,
-            NPMKeywordsTable,
-            NPMDependenciesTable,
-            NPMDevDependenciesTable,
-            NPMOptionalDependenciesTable,
-            NPMGithubStatsTable,
+            AddressEmailAddressTable
         ]
         for Table in _tables:
             self._register_table(Table.name, Table(self))
 
     def check_connection(self) -> StatusResponse:
-        """Check if connected"""
-        response = StatusResponse(False)
-        if NPM.is_connected():
-            response.success = True
+        resp = StatusResponse(False)
+        if self.connection and not self.connection.is_connected():
+            resp.error = "Client not connected"
         else:
-            response.success = False
-        self.is_connected = True
-        return response
+            resp.success = True
+        return resp
 
-    def connect(self) -> NPM:
-        """Make connection object"""
-        self.connection = NPM
+    def connect(self) -> SAPERP:
+        self.connection = SAPERP(self.base_url, self.api_key)
         return self.connection
 
     def native_query(self, query: str) -> StatusResponse:
-        """Receive and process a raw query"""
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)

@@ -1,26 +1,54 @@
 import requests
+from urllib.parse import urljoin
+
+
+def move_under(d, key_contents_to_move, key_to_move_under=None):
+    if key_contents_to_move not in d:
+        return
+    for k, v in d[key_contents_to_move].items():
+        if key_to_move_under:
+            d[key_to_move_under][k] = v
+        else:
+            d[k] = v
+    del d[key_contents_to_move]
 
 
 class SAPERP:
 
-    def __init__(self, package_name: str):
-        resp = requests.get("https://api.npms.io/v2/package/" + package_name)
-        if not resp or resp.status_code != 200:
-            raise Exception(f"Unable to get package datails: '{package_name}'")
-        self.data = resp.json()
+    def __init__(self, url: str, api_key: str) -> None:
+        self.base_url = url
+        self.api_key = api_key
 
-    def get_data(self):
-        return self.data
+    def _request(self, method: str, relative_endpoint: str, data=None):
+        kwargs = {
+            "method": method,
+            "url": urljoin(self.base_url, relative_endpoint),
+            "headers": {
+                "APIKey": self.api_key,
+                "Accept": "application/json",
+                "DataServiceVersion": "2.0"
+            }
+        }
+        if data is not None:
+            kwargs["data"] = data
+        return requests.request(**kwargs)
 
-    @staticmethod
-    def is_connected():
-        return True if requests.get("https://api.npms.io/v2/search?q=a&size=1").status_code == 200 else False
+    def is_connected(self) -> bool:
+        if self._request("get", "").ok:
+            return True
+        return False
 
-    def get_cols_in(self, path, cols):
-        curr_root = self.data
-        for p in path:
-            curr_root = curr_root[p]
-        req_cols = {}
-        for col in cols:
-            req_cols[col] = curr_root[col] if col in curr_root else ""
-        return req_cols
+    def get(self, endpoint):
+        """ Common method for all get endpoints """
+        resp = self._request("get", endpoint)
+        if resp.ok:
+            resp = resp.json()["d"]
+            if "results" in resp:
+                resp = resp["results"]
+            else:
+                resp = [resp]
+        else:
+            resp = []
+        for r in resp:
+            move_under(r, "__metadata")
+        return resp

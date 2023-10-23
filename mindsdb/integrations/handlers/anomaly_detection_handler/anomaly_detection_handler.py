@@ -53,7 +53,6 @@ class AnomalyDetectionHandler(BaseMLEngine):
         else:
             training_df = df[:]
         training_df = preprocess_data(training_df)
-        print(training_df)
         model = train_unsupervised(training_df)
         # Save the model
         save_fp = "model.joblib"
@@ -68,7 +67,5 @@ class AnomalyDetectionHandler(BaseMLEngine):
         predict_df = preprocess_data(df).astype(float)
         model_args = self.model_storage.json_get("model_args")
         model = load(model_args["model_path"])
-        print(predict_df)
         results = model.predict(predict_df)
-        print(results)
         return pd.DataFrame({model_args["target"]: results})

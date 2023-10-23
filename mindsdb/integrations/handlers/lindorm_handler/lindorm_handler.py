@@ -59,9 +59,8 @@ class LindormHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        lindorm_connection_data = {'lindorm_user': self.connection_data['lindorm_user'],
-                                    'lindorm_password': self.connection_data['lindorm_password']}
-        
+        lindorm_connection_data = {'lindorm_user': self.connection_data['lindorm_user'], 'lindorm_password': self.connection_data['lindorm_password']}
+
         print(self.connection_data['url'])
         self.connection = phoenixdb.connect(
             url=self.connection_data['url'],

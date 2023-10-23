@@ -74,7 +74,8 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
         trainer_config = TrainerConfig(auto_lr_find=True,
                                        fast_dev_run=False,
                                        max_epochs=epochs,
-                                       batch_size=batch_size)
+                                       batch_size=batch_size,
+                                       checkpoints_path='mindsdb/integrations/handlers/pytorch_tabular_handler')
 
         optimizer_config = OptimizerConfig()
 

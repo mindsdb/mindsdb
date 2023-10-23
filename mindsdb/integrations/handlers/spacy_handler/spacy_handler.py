@@ -120,4 +120,3 @@ class SpacyHandler(BaseMLEngine):
         else:
             df[model_args['target']] = []
             return df
-

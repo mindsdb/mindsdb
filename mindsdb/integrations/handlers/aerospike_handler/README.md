@@ -2,6 +2,8 @@
 
 This is the implementation of the Aereospike for MindsDB.
 
+This handler was implemented using `duckdb`, a library that allows SQL queries to be executed on `pandas` DataFrames.
+
 The required arguments to establish a connection are as follows:
 
 -   `user` is the database user.

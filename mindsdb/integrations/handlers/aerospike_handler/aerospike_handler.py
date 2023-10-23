@@ -163,49 +163,77 @@ class AerospikeHandler(DatabaseHandler):
         """
         Get a list with all of the tables in Aerospike
         """
+        need_to_close = self.is_connected is False
+        connection = self.connect()
+
         data_lst = []
         request = "sets"
-        for node, (err, res) in list(self.connection.info_all(request).items()):
-            if res:
-                entries = [entry.strip() for entry in res.strip().split(';') if entry.strip()]
-                for entry in entries:
-                    data = [d for d in entry.split('=') if ':set' in d or ':objects' in d]
-                    ele = [None, None, None]
-                    for d in data:
-                        if ':set' in d:
-                            ele[0] = d.split(':')[0]
-                        if ':objects' in d:
-                            ele[1] = d.split(':')[0]
-                        if d[0] or d[1]:
-                            ele[2] = request
-                    data_lst.append(ele)
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            pd.DataFrame(data_lst, columns=['table_schema', 'table_name', 'table_type'])
-        )
+        try:
+            for node, (err, res) in list(connection.info_all(request).items()):
+                if res:
+                    entries = [entry.strip() for entry in res.strip().split(';') if entry.strip()]
+                    for entry in entries:
+                        data = [d for d in entry.split('=') if ':set' in d or ':objects' in d]
+                        ele = [None, None, None]
+                        for d in data:
+                            if ':set' in d:
+                                ele[0] = d.split(':')[0]
+                            if ':objects' in d:
+                                ele[1] = d.split(':')[0]
+                            if d[0] or d[1]:
+                                ele[2] = request
+                        data_lst.append(ele)
+
+            response = Response(
+                RESPONSE_TYPE.TABLE,
+                pd.DataFrame(data_lst, columns=['table_schema', 'table_name', 'table_type'])
+            )
+        except Exception as e:
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
+
+        if need_to_close is True:
+            self.disconnect()
+
         return response
 
     def get_columns(self, table_name: str) -> Response:
         """
         Show details about the table
         """
+        need_to_close = self.is_connected is False
+        connection = self.connect()
+
         column_df = pd.DataFrame([], columns=['column_name', 'data_type'])
-        response_table = self.get_tables()
-        df = response_table.data_frame
-        if not len(df):
-            return column_df
-        df = df[df['table_name'] == table_name]
-        tbl_dtl_arr = df.iloc[0][['table_schema', 'table_name']]
-        scan = self.connection.scan(tbl_dtl_arr[0], tbl_dtl_arr[1])
-        res = scan.results()
-        data_df = pd.DataFrame.from_records([r[2] for r in res])
-        column_df = pd.DataFrame(data_df.dtypes).reset_index()
-        column_df.columns = ['column_name', 'data_type']
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            column_df
-        )
+
+        try:
+            response_table = self.get_tables()
+            df = response_table.data_frame
+            if not len(df):
+                return column_df
+            df = df[df['table_name'] == table_name]
+            tbl_dtl_arr = df.iloc[0][['table_schema', 'table_name']]
+            scan = connection.scan(tbl_dtl_arr[0], tbl_dtl_arr[1])
+            res = scan.results()
+            data_df = pd.DataFrame.from_records([r[2] for r in res])
+            column_df = pd.DataFrame(data_df.dtypes).reset_index()
+            column_df.columns = ['column_name', 'data_type']
+            response = Response(
+                RESPONSE_TYPE.TABLE,
+                column_df
+            )
+        except Exception as e:
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
+
+        if need_to_close is True:
+            self.disconnect()
+
         return response
 
 

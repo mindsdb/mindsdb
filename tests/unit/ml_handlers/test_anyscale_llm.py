@@ -57,7 +57,7 @@ class TestAnyscaleEndpoints(BaseExecutorTest):
             columns = [col.alias if col.alias else col.name for col in ret.columns]
             return pd.DataFrame(ret.data, columns=columns)
 
-    def test_missing_required_keys(self):
+    def test_1_missing_required_keys(self):
         """Test for missing required keys"""
         with pytest.raises(Exception):
             with self._use_anyscale_api_key() as api_key:
@@ -71,7 +71,7 @@ class TestAnyscaleEndpoints(BaseExecutorTest):
                     """
                 )
 
-    def test_invalid_anyscale_name_parameter(self):
+    def test_2_invalid_anyscale_name_parameter(self):
         """Test for invalid OpenAI model name parameter"""
         with self._use_anyscale_api_key() as api_key:
             self.run_sql(
@@ -88,7 +88,7 @@ class TestAnyscaleEndpoints(BaseExecutorTest):
         with pytest.raises(Exception):
             self.wait_predictor("proj", "test_anyscale_nonexistant_model")
 
-    def test_unknown_arguments(self):
+    def test_3_unknown_arguments(self):
         """Test for unknown arguments"""
         with pytest.raises(Exception):
             with self._use_anyscale_api_key() as api_key:
@@ -105,7 +105,7 @@ class TestAnyscaleEndpoints(BaseExecutorTest):
                 )
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_qa_no_context(self, mock_handler):
+    def test_4_qa_no_context(self, mock_handler):
         df = pd.DataFrame.from_dict({"question": [
             "What is the capital of Sweden?",
             "What is the second planet of the solar system?"
@@ -142,7 +142,7 @@ class TestAnyscaleEndpoints(BaseExecutorTest):
         )
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_qa_context(self, mock_handler):
+    def test_5_qa_context(self, mock_handler):
         df = pd.DataFrame.from_dict({"question": [
             "What is the capital of Sweden?",
             "What is the second planet of the solar system?"
@@ -182,7 +182,7 @@ class TestAnyscaleEndpoints(BaseExecutorTest):
         )
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_prompt_template(self, mock_handler):
+    def test_6_prompt_template(self, mock_handler):
         df = pd.DataFrame.from_dict({"question": [
             "What is the capital of Sweden?",
             "What is the second planet of the solar system?"
@@ -219,7 +219,7 @@ class TestAnyscaleEndpoints(BaseExecutorTest):
         )
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_bulk_normal_completion(self, mock_handler):
+    def test_7_bulk_normal_completion(self, mock_handler):
         """Tests normal completions (e.g. text-davinci-003) with bulk joins that are larger than the max batch_size"""
         class MockHandlerStorage:
             def json_get(self, key):

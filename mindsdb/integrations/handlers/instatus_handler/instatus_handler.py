@@ -5,6 +5,8 @@ from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 import requests
 import pandas as pd
+from collections import OrderedDict
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 
 class InstatusHandler(APIHandler):
@@ -111,3 +113,17 @@ class InstatusHandler(APIHandler):
                 raise Exception(f"Error connecting to Instatus API: {response.status_code} - {response.text}")
 
         return pd.DataFrame()
+
+
+connection_args = OrderedDict(
+    api_key={
+        "type": ARG_TYPE.PWD,
+        "description": "Instatus API key to use for authentication.",
+        "required": True,
+        "label": "Api key",
+    },
+)
+
+connection_args_example = OrderedDict(
+    api_key="d25509b171ad79395dc2c51b099ee6d0"
+)

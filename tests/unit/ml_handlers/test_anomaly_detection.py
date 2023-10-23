@@ -4,7 +4,7 @@ from unittest.mock import patch
 from mindsdb_sql import parse_sql
 
 from tests.unit.executor_test_base import BaseExecutorTest
-from mindsdb.integrations.handlers.anomaly_detection_handler import choose_model
+from mindsdb.integrations.handlers.anomaly_detection_handler.anomaly_detection_handler import choose_model
 
 
 def test_choose_model():
@@ -50,10 +50,12 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         # create predictor
         self.run_sql(
             """
-           create anomaly detection model proj.modelx
+           create model proj.modelx
            from pg (select * from df)
            predict class
-           using type='supervised'
+           using
+           engine='anomaly_detection'
+           type='supervised'
         """
         )
         self.wait_predictor("proj", "modelx")
@@ -78,10 +80,12 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         # create predictor
         self.run_sql(
             """
-           create anomaly detection model proj.modelx
+           create model proj.modelx
            from pg (select * from df)
            predict class
-           using type='semi-supervised'
+           using
+           engine='anomaly_detection'
+           type='semi-supervised'
         """
         )
         self.wait_predictor("proj", "modelx")
@@ -110,6 +114,8 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
             """
            create anomaly detection model proj.modelx
            from pg (select * from df)
+           using
+           engine='anomaly_detection'
         """
         )
         self.wait_predictor("proj", "modelx")

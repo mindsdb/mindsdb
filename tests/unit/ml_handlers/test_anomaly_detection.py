@@ -4,7 +4,10 @@ from unittest.mock import patch
 from mindsdb_sql import parse_sql
 
 from tests.unit.executor_test_base import BaseExecutorTest
-from mindsdb.integrations.handlers.anomaly_detection_handler.anomaly_detection_handler import choose_model
+from mindsdb.integrations.handlers.anomaly_detection_handler.anomaly_detection_handler import (
+    choose_model,
+    preprocess_data,
+)
 
 
 def test_choose_model():
@@ -15,6 +18,12 @@ def test_choose_model():
     # If the size of the dataset is greater than the semi_supervised_threshold, we should use the supervised model
     model = choose_model(df, supervised_threshold=2)
     assert model.__class__.__name__ == "CatBoostClassifier"
+
+
+def test_preprocess_data():
+    df = pd.read_csv("tests/unit/ml_handlers/data/anomaly_detection.csv")
+    preprocessed_df = preprocess_data(df)
+    assert len(preprocessed_df) == len(df)
 
 
 class TestAnomalyDetectionHandler(BaseExecutorTest):

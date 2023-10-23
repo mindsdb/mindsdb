@@ -17,12 +17,12 @@ class InstatusHandler(APIHandler):
             name (str): handler name
         """
         super().__init__(name)
-        self.base_url = "https://api.instatus.com"
-        self.api_key = None
+        self._base_url = "https://api.instatus.com"
+        self._api_key = None
 
         args = kwargs.get('connection_data', {})
         if 'api_key' in args:
-            self.api_key = args['api_key']
+            self._api_key = args['api_key']
 
         self.connection = None
         self.is_connected = False
@@ -57,10 +57,10 @@ class InstatusHandler(APIHandler):
         if self.is_connected and self.connection:
             return self.connection
 
-        if self.api_key:
+        if self._api_key:
             try:
-                headers = {"Authorization": f"Bearer {self.api_key}"}
-                response = requests.get(f"{self.base_url}/v2/pages", headers=headers)
+                headers = {"Authorization": f"Bearer {self._api_key}"}
+                response = requests.get(f"{self._base_url}/v2/pages", headers=headers)
 
                 if response.status_code == 200:
                     self.connection = response
@@ -93,8 +93,8 @@ class InstatusHandler(APIHandler):
         if not params:
             params = {}
 
-        headers = {"Authorization": f"Bearer {self.api_key}"}
-        url = f"{self.base_url}{endpoint}"
+        headers = {"Authorization": f"Bearer {self._api_key}"}
+        url = f"{self._base_url}{endpoint}"
 
         if method.upper() in ('GET', 'POST', 'PUT', 'DELETE'):
             headers['Content-Type'] = 'application/json'

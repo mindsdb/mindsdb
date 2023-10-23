@@ -31,11 +31,10 @@ class InfluxDBTables(APITable):
         """
         
         table_name=self.handler.connection_data['influxdb_table_name']
-        head_influx_table = self.handler.call_influxdb_tables(f"SELECT * FROM {table_name} LIMIT 1")
         select_statement_parser = SELECTQueryParser(
             query,
             "tables",
-            self.get_columns(head_influx_table)
+            self.get_columns()
         )
         selected_columns, where_conditions, order_by_conditions, _ = select_statement_parser.parse_query()
         
@@ -50,13 +49,15 @@ class InfluxDBTables(APITable):
 
         return influxdb_tables_df
 
-    def get_columns(self,dataframe) -> List[str]:
+    def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
         Returns
         -------
         List[str]
             List of columns
         """
+        
+        dataframe = self.handler.call_influxdb_tables(f"SELECT * FROM {self.handler.connection_data['influxdb_table_name']} LIMIT 1")
 
         return list(dataframe.columns)
     def get_select_query(self,table_name,selected_columns, where_conditions, order_by_conditions, result_limit):

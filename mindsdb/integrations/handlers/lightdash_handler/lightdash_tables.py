@@ -11,17 +11,15 @@ from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb.integrations.utilities.sql_utils import conditions_to_filter
 
 
-def rename_key(d, new_key, old_key):
-    d[new_key] = d.pop(old_key)
-
-
 def val_to_string(d, k):
     if k in d:
         d[k] = str(d[k])
 
 
 def move_under(d, key_contents_to_move, key_to_move_under=None):
-    for k, v in d[key_contents_to_move]:
+    if key_contents_to_move not in d:
+        return
+    for k, v in d[key_contents_to_move].items():
         if key_to_move_under:
             d[key_to_move_under][k] = v
         else:

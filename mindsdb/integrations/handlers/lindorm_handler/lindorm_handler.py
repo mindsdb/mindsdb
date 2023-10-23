@@ -1,19 +1,13 @@
 from typing import Optional
 from collections import OrderedDict
-
 import pandas as pd
 import phoenixdb
-import requests
 from requests.exceptions import InvalidSchema
-import json
-
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base import DatabaseHandler
 from pyphoenix.sqlalchemy_phoenix import PhoenixDialect
-
 from mindsdb_sql.parser.ast.base import ASTNode
-
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

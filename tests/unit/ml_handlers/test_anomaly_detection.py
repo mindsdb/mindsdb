@@ -4,7 +4,7 @@ from unittest.mock import patch
 from mindsdb_sql import parse_sql
 
 from tests.unit.executor_test_base import BaseExecutorTest
-from mindsdb.integrations.handlers.anomaly_detection_handler import AnomalyDetectionHandler, choose_model
+from mindsdb.integrations.handlers.anomaly_detection_handler import choose_model
 
 
 def test_choose_model():

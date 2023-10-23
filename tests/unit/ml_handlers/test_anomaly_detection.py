@@ -59,12 +59,10 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         # create predictor
         self.run_sql(
             """
-           create model proj.modelx
+           create anomaly detection model proj.modelx
            from pg (select * from df)
            predict class
-           using
-           engine='anomaly_detection'
-           type='supervised'
+           using engine='anomaly_detection', type='supervised'
         """
         )
         self.wait_predictor("proj", "modelx")
@@ -89,12 +87,10 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         # create predictor
         self.run_sql(
             """
-           create model proj.modelx
+           create anomaly detection model proj.modelx
            from pg (select * from df)
            predict class
-           using
-           engine='anomaly_detection'
-           type='semi-supervised'
+           using engine='anomaly_detection', type='semi-supervised'
         """
         )
         self.wait_predictor("proj", "modelx")
@@ -132,7 +128,7 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         # run predict
         ret = self.run_sql(
             """
-           SELECT p.anomaly
+           SELECT p.outlier
            FROM pg.df as t
            JOIN proj.modelx as p
         """

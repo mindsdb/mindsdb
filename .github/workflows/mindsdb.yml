@@ -52,7 +52,7 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4.7.0
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: ${{ matrix.python-version }}-dev
     - name: Install dependencies
       run: |
         pip install --upgrade pip

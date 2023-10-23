@@ -1306,12 +1306,12 @@ class ExecuteCommands:
             )
 
         vector_db_name = (
-            statement.storage.parts[0] if statement.storage else project_name
+            statement.storage.parts[0]
+            if statement.storage
+            else self._create_persistent_chroma(kb_name)[1]
         )
         vector_table_name = (
-            statement.storage.parts[-1]
-            if statement.storage
-            else self._create_persistent_chroma(project_name, kb_name)[1]
+            statement.storage.parts[-1] if statement.storage else "default_collection"
         )
 
         # verify the vector database exists and get its id

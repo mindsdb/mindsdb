@@ -1,13 +1,11 @@
 import time
 from unittest.mock import patch
 import pandas as pd
-import numpy as np
 
 from mindsdb_sql import parse_sql
 
 
 from unit.executor_test_base import BaseExecutorTest
-
 
 
 class TestAutoGluon(BaseExecutorTest):
@@ -28,7 +26,7 @@ class TestAutoGluon(BaseExecutorTest):
                     break
             time.sleep(15)
         if not done:
-            raise RuntimeError(f"predictor wasn't created")
+            raise RuntimeError("predictor wasn't created")
 
     def run_sql(self, sql):
         ret = self.command_executor.execute_command(
@@ -48,7 +46,7 @@ class TestAutoGluon(BaseExecutorTest):
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=['a'])
         df['b'] = 50 - df.a
-        df['c'] = round((df['a']*3 + df['b']) / 50)
+        df['c'] = round((df['a'] * 3 + df['b']) / 50)
 
         self.set_handler(mock_handler, name='pg', tables={'df': df})
 
@@ -57,11 +55,11 @@ class TestAutoGluon(BaseExecutorTest):
 
         # create predictor
         self.run_sql('''
-           create model proj.modelx
-           from pg (select * from df)
-           predict c
-           using 
-             engine='autogluon';
+            create model proj.modelx
+            from pg (select * from df)
+            predict c
+            using
+                engine='autogluon';
         ''')
 
         self.wait_predictor('proj', 'modelx')
@@ -69,7 +67,7 @@ class TestAutoGluon(BaseExecutorTest):
         # run predict
         ret = self.run_sql('''
            SELECT p.*
-           FROM pg.df as t 
+           FROM pg.df as t
            JOIN proj.modelx as p
            where t.c=1
         ''')

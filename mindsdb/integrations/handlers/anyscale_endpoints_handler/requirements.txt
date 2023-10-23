@@ -1,3 +1,2 @@
 pandas
 openai >= 0.28.0
-tiktoken >= 0.3.0

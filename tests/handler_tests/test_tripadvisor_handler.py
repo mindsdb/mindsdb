@@ -193,9 +193,9 @@ class ReviewTableTest(unittest.TestCase):
                     "en",  # lang
                     "99288",  # location_id
                     "2023-10-13T09:48:46Z",  # published_date
-                    "1", # rating
-                    "Check in is at 4:00 - my room wasn't ready until 9:00.  I had no A/C  on my first night and it was too late for engineering to fix it.  I was offered a $40 discount from some ridiculous hoteL fee - that was a joke on a 700/night stay.  I would not recommend this place at all.", # text review
-                    "POOR CHECK -IN  - NO A/C AND NO DISCOUNT", # title
+                    "1",  # rating
+                    "Check in is at 4:00 - my room wasn't ready until 9:00.  I had no A/C  on my first night and it was too late for engineering to fix it.  I was offered a $40 discount from some ridiculous hoteL fee - that was a joke on a 700/night stay.  I would not recommend this place at all.",  # text review
+                    "POOR CHECK -IN  - NO A/C AND NO DISCOUNT",  # title
                 ]
             ]
         )
@@ -222,6 +222,7 @@ class ReviewTableTest(unittest.TestCase):
         self.assertEqual(first_data["en"], "en")
         self.assertEqual(first_data["rating"], "1")
         self.assertEqual(first_data["title"], "POOR CHECK -IN  - NO A/C AND NO DISCOUNT")
+
 
 class PhotosTableTest(unittest.TestCase):
     def test_get_columns_returns_all_columns(self):

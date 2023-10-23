@@ -97,3 +97,12 @@ SELECT * FROM notion_test.comments where block_id='<your-block-id>';
 INSERT INTO notion_test.pages (title, text, database_id)
 VALUES ('Hello World', 'MindsDB is awesome. You should check it out', '<your-database-id>');
 ```
+
+### Run native query as a python function
+
+```sql
+SELECT * FROM notion_test
+(
+    databases.query(database_id=b144844d418f404a8f0f1da2a63cdf7c)
+);
+```

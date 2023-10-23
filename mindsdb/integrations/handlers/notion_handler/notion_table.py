@@ -420,7 +420,3 @@ class NotionCommentsTable(APITable):
             "created_by",
             "rich_text",
         ]
-
-    def insert(self, query: ast.Insert):
-        # TODO
-        pass

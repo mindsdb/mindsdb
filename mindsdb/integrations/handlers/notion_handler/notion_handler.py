@@ -2,28 +2,21 @@ import time
 import pandas as pd
 from collections import defaultdict
 
-from pydantic import BaseModel, Extra
 from notion_client import Client
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.api_handler import APIHandler
-from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
-
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse,
+    RESPONSE_TYPE,
+)
 from .notion_table import (
     NotionBlocksTable,
     NotionCommentsTable,
     NotionDatabaseTable,
     NotionPagesTable,
 )
-
-
-class NotionHandlerArgs(BaseModel):
-    target: str = None
-    api_token: str = None
-
-    class Config:
-        # for all args that are not expected, raise an error
-        extra = Extra.forbid
 
 
 class NotionHandler(APIHandler):
@@ -80,6 +73,18 @@ class NotionHandler(APIHandler):
             self.is_connected = False
 
         return response
+
+    def native_query(self, query: str = None) -> HandlerResponse:
+        method_name, param = query.split("(")
+        params = dict()
+        # parse the query as a python function
+        for map in param.strip(")").split(","):
+            if map:
+                k, v = map.split("=")
+                params[k] = v
+
+        df = self.call_notion_api(method_name, params)
+        return HandlerResponse(RESPONSE_TYPE.TABLE, data_frame=df)
 
     def _apply_filters(self, data, filters):
         if not filters:

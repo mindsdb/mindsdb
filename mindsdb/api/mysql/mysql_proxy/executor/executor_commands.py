@@ -1255,15 +1255,18 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
-    def _create_persistent_chroma(self, project_name, kb_name, engine="chromadb"):
+    def _create_persistent_chroma(self, kb_name, engine="chromadb"):
         """Create default vector database for knowledge base, if not specified"""
 
         vector_store_name = f"{kb_name}_{engine}"
 
-        persist_directory = f"{self.session.config.paths['storage']}/vector_databases//{project_name}/{vector_store_name}"
-        connection_args = {"persist_directory": persist_directory}
-
+        vector_store_folder_name = f"{vector_store_name}"
+        connection_args = {"persist_directory": vector_store_folder_name}
         self._create_integration(vector_store_name, engine, connection_args)
+
+        self.session.datahub.get(vector_store_name).integration_handler.create_table(
+            "default_collection"
+        )
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK), vector_store_name
 
@@ -1296,20 +1299,19 @@ class ExecuteCommands:
         embedding_model_id = model_record["model_record"].id
 
         # search for the vector database table
-        if len(statement.storage.parts) < 2:
+        if statement.storage and len(statement.storage.parts) < 2:
             raise SqlApiException(
                 f"Invalid vectordatabase table name: {statement.storage}"
                 "Need the form 'database_name.table_name'"
             )
 
-        statement.storage = None  # todo: remove this line just for debug
         vector_db_name = (
-            statement.storage.parts[0] if statement.storage else project_name
+            statement.storage.parts[0]
+            if statement.storage
+            else self._create_persistent_chroma(kb_name)[1]
         )
         vector_table_name = (
-            statement.storage.parts[-1]
-            if statement.storage
-            else self._create_persistent_chroma(project_name, kb_name)[1]
+            statement.storage.parts[-1] if statement.storage else "default_collection"
         )
 
         # verify the vector database exists and get its id

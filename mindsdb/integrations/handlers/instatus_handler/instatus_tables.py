@@ -3,6 +3,8 @@ import pandas as pd
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
+from mindsdb_sql.parser.ast.select.constant import Constant
+import json
 
 
 class StatusPages(APITable):
@@ -74,7 +76,6 @@ class StatusPages(APITable):
         Returns:
             None
         """
-        import json
         columns = []
         for column in query.columns:
             columns.append(column.name)
@@ -94,6 +95,24 @@ class StatusPages(APITable):
         Returns:
             None
         """
+        conditions = extract_comparison_conditions(query.where)
+        # Get page id from query
+        page_id = None
+        for op, arg1, arg2 in conditions:
+            if arg1 == 'page_id' and op == '=':
+                page_id = arg2
+            else:
+                raise NotImplementedError
+
+        data = {}
+        for key, value in query.update_columns.items():
+            if isinstance(value, Constant):
+                if key == 'components':
+                    data[key] = json.loads(value.value)  # Convert 'components' value to a Python list
+                else:
+                    data[key] = value.value
+        # print(data)
+        self.handler.call_instatus_api(endpoint=f'/v2/{page_id}', method='PUT', data=data)
 
     def get_columns(self, ignore: List[str] = []) -> List[str]:
         """columns

@@ -30,4 +30,4 @@ Google Big Query Integration Test Passed: https://github.com/maulanaakbardj/mind
 </br>
 Web Crawler Integration Test Passed: https://github.com/Taheralicyclewala/MindsDB-Testing/blob/main/WebCrawler/Web_Crawler_QA.md
 </br>
-Microsoft Access Integration Test Failed: https://github.com/adeyinkaezra123/mindsdb/blob/access-integration-test/mindsdb/integrations/handlers/access_handler/Microsoft_Access.md 
+Microsoft Access Integration Test Failed: https://github.com/adeyinkaezra123/mindsdb-integration-test/blob/main/handlers/access_handler/Microsoft_Access.md 

@@ -1281,6 +1281,7 @@ class ExecuteCommands:
             project = self.session.database_controller.get_project(project_name)
         except ValueError:
             raise SqlApiException(f"Project not found: {project_name}")
+
         project_id = project.id
 
         kb_name = statement.name.parts[-1]

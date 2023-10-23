@@ -31,6 +31,7 @@ mindsdb-sql ~= 0.7.3
 mindsdb-evaluator >= 0.0.7, < 0.1.0
 checksumdir >= 1.2.0
 duckdb == 0.6.1
+pydantic~=1.10.13
 chromadb~=0.4.8
 requests >= 2.0.0
 mysql-connector-python

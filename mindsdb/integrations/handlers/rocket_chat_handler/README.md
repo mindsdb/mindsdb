@@ -17,7 +17,7 @@ WITH
 ```
 
 ### Select Data
-To see if the connection was succesful, try searching for messages in a channel
+To see if the connection was successful, try searching for messages in a channel
 
 ```
 SELECT *

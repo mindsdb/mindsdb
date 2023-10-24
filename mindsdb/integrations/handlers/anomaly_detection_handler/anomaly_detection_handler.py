@@ -64,7 +64,7 @@ class AnomalyDetectionHandler(BaseMLEngine):
 
         save_path = "model.joblib"
         dump(model, save_path)
-        model_args = {"model_path":save_path, "target": target}
+        model_args = {"model_path":save_path, "target": target, "model_name": model.__class__.__name__}
         self.model_storage.json_set("model_args", model_args)
 
     def predict(self, df, args={}):
@@ -80,3 +80,8 @@ class AnomalyDetectionHandler(BaseMLEngine):
         model = load(model_args["model_path"])
         results = model.predict(predict_df)
         return pd.DataFrame({model_args["target"]: results})
+
+    def describe(self, attribute="model"):
+        model_args = self.model_storage.json_get("model_args")
+        if attribute == "model":
+            return pd.DataFrame({k: [model_args[k]] for k in ["model_name", "target"]})

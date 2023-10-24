@@ -88,6 +88,13 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         )
         assert len(ret) == len(df)
 
+        ret = self.run_sql(
+        """
+           describe model proj.modelx.model
+        """
+        )
+        assert ret["model_name"][0] == "CatBoostClassifier"
+
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_semi_supervised_model(self, mock_handler):
         # create database
@@ -118,6 +125,13 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         )
         assert len(ret) == len(df)
 
+        ret = self.run_sql(
+        """
+           describe model proj.modelx.model
+        """
+        )
+        assert ret["model_name"][0] == "XGBOD"
+
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_unsupervised_model(self, mock_handler):
         # dataset, string values
@@ -130,7 +144,7 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         # create predictor
         self.run_sql(
             """
-           create model proj.modelx
+           create anomaly detection model proj.modelx
            from pg (select * from df)
            using
            engine='anomaly_detection'
@@ -147,3 +161,10 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         """
         )
         assert len(ret) == len(df)
+
+        ret = self.run_sql(
+        """
+           describe model proj.modelx.model
+        """
+        )
+        assert ret["model_name"][0] == "ECOD"

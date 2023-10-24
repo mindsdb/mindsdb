@@ -21,7 +21,7 @@ Other optional arguments are,
 * `schema`: The schema name to use when connecting with the NuoDB.
 * `jar_location`: The location of the jar files which contain the JDBC class. This need not be specified if the required classes are already added to the CLASSPATH variable.
 * `driver_args`: The extra arguments which can be specified to the driver. Specify this in the format: "arg1=value1,arg2=value2. 
-More information on the supported paramters can be found at: https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/reference-information/connection-properties/
+More information on the supported parameters can be found at: https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/reference-information/connection-properties/
 
 ## Usage
 In order to make use of this handler and connect to Apache Derby in MindsDB, the following syntax can be used,

@@ -1,0 +1,73 @@
+---
+title: PyPI
+sidebarTitle: PyPI
+---
+
+In this section, we present how to connect PyPI to MindsDB.
+
+[PyPI](https://pypi.org) is a host for maintaining and storing Python packages. It's a good place for publishing your Python packages in different versions and releases.
+
+Data from PyPI can be utilized within MindsDB to train models and make predictions about your Python packages.
+
+## Connection
+
+This handler is implemented using the standard Python `requests` library. It is used to connect to the RESTful service that [pypistats.org](https://pypistats.org) is serving.
+
+There are no connection arguments required to initialize the handler.
+
+To connect to PyPI using MindsDB, the following CREATE DATABASE statement can be used:
+
+```sql
+CREATE DATABASE pypi_datasource
+WITH ENGINE = 'pypi'
+```
+
+## Usage
+
+Now, you can use the following queries to view the statistics for Python packages (MindsDB, for example):
+
+Overall downloads, including mirrors:
+```sql
+SELECT *
+FROM pypi_datasource.overall WHERE package="mindsdb" AND mirrors=true;
+```
+
+Overall downloads on CPython==2.7:
+```sql
+SELECT *
+FROM pypi_datasource.python_minor WHERE package="mindsdb" AND version="2.7";
+```
+
+Recent downloads:
+```sql
+SELECT *
+FROM pypi_datasource.recent WHERE package="mindsdb";
+```
+
+Recent downloads in the last day:
+```sql
+SELECT *
+FROM pypi_datasource.recent WHERE package="mindsdb" AND period="day";
+```
+
+All downloads on Linux-based distributions:
+```sql
+SELECT date, downloads
+FROM pypi_datasource.system WHERE package="mindsdb" AND os="Linux";
+```
+
+<Tip>
+Each table takes a required `package` argument in the WHERE clause, which is the name of the package you want to query.
+</Tip> 
+
+
+## Supported Tables
+
+The following tables are supported by the PyPI handler:
+
+* `overall`: daily download quantities for packages.
+* `recent`: recent download quantities for packages.
+* `python_major`: daily download quantities for packages, grouped by Python major version.
+* `python_minor`: daily download quantities for packages, grouped by Python minor version.
+* `system`: daily download quantities for packages, grouped by operating system.
+

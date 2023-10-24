@@ -13,7 +13,7 @@ import re
 
 logger = get_log("integrations.youtube_handler")
 
-class YoutubeGetCommentsTable(APITable):
+class YoutubeCommentsTable(APITable):
     """Youtube List Comments  by video id Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
@@ -56,7 +56,7 @@ class YoutubeGetCommentsTable(APITable):
                     )
 
         for a_where in conditions:
-            if a_where[1] == "youtube_video_id":
+            if a_where[1] == "video_id":
                 if a_where[0] != "=":
                     raise ValueError("Unsupported where operation for youtube video id")
                 clubs_kwargs["type"] = a_where[2]
@@ -147,7 +147,7 @@ class YoutubeGetCommentsTable(APITable):
 
         return all_youtube_comments_df
 
-class YoutubeChannelTable(APITable):
+class YoutubeChannelsTable(APITable):
 
     """Youtube Channel Info  by channel id Table implementation"""
 
@@ -203,7 +203,7 @@ class YoutubeChannelTable(APITable):
     def get_columns(self) -> List[str]:
         return ["country", "description", "creation_date", "title", "subscriber_count", "video_count","view_count", "channel_id"]
 
-class YoutubeVideoTable(APITable):
+class YoutubeVideosTable(APITable):
 
     """Youtube Video info  by video id Table implementation"""
 

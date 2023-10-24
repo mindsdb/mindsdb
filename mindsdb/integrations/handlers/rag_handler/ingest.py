@@ -142,9 +142,12 @@ class Ingestor:
         try:
             db = self.create_db_from_documents(documents, embeddings_model)
         except Exception as e:
-            logger.error(f"Error creating from documents: {e}")
+            logger.error(
+                f"Error loading using 'from_documents' method, trying 'from_text': {e}"
+            )
             try:
                 db = self.create_db_from_texts(documents, embeddings_model)
+                logger.info(f"successfully loaded using 'from_text' method: {e}")
 
             except Exception as e:
                 logger.error(f"Error creating from texts: {e}")

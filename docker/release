@@ -34,7 +34,7 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==23.1.2 &
     pip install --prefer-binary --no-cache-dir \
         ckanapi || true && \
     pip install --prefer-binary --no-cache-dir \
-        couchbase==4.0.2 || true && \
+        couchbase || true && \
     pip install --prefer-binary --no-cache-dir \
         ibm-db-sa ibm-db || true && \
     pip install --prefer-binary --no-cache-dir \

@@ -96,6 +96,8 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="autokeras", data={}, engine="autokeras")
         db.session.add(r)
+        r = db.Integration(name="autogluon", data={}, engine="autogluon")
+        db.session.add(r)
         r = db.Integration(name="huggingface", data={}, engine="huggingface")
         db.session.add(r)
         r = db.Integration(name="merlion", data={}, engine="merlion")
@@ -115,6 +117,8 @@ class BaseUnitTest:
         r = db.Integration(name="lightfm", data={}, engine="lightfm")
         db.session.add(r)
         r = db.Integration(name="openai", data={}, engine="openai")
+        db.session.add(r)
+        r = db.Integration(name="anyscale_endpoints", data={}, engine="anyscale_endpoints")
         db.session.add(r)
         r = db.Integration(
             name="langchain_embedding", data={}, engine="langchain_embedding"

@@ -9,10 +9,10 @@ RUN apt install -y libxml2 libmagic1 || true
 RUN python3 -m pip install --no-cache-dir --upgrade pip && \
     pip3 install --no-cache-dir boto3 psycopg2-binary
 
-WORKDIR /
+# WORKDIR /
 # COPY requirements.txt /requirements.txt
 
-COPY . /mindsdb/
+COPY . /mindsdb
 WORKDIR /mindsdb
 RUN pip install ".[grpc]" ".[telemetry]"
 

@@ -116,7 +116,11 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="anomaly_detection", data={}, engine="anomaly_detection")
         db.session.add(r)
-        r = db.Integration(name="langchain_embedding", data={}, engine="langchain_embedding")
+        r = db.Integration(name="anyscale_endpoints", data={}, engine="anyscale_endpoints")
+        db.session.add(r)
+        r = db.Integration(
+            name="langchain_embedding", data={}, engine="langchain_embedding"
+        )
         db.session.add(r)
         r = db.Integration(name="rag", data={}, engine="rag")
         db.session.add(r)

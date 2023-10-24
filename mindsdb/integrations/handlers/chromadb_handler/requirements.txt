@@ -1,1 +1,2 @@
 chromadb~=0.4.8
+pysqlite3-binary

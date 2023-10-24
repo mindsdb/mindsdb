@@ -50,7 +50,7 @@ class ZipCodeBaseCodeLocationTable(APITable):
 
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
-                
+
         filter_flag = "codes" in search_params
 
         if not filter_flag:
@@ -150,19 +150,19 @@ class ZipCodeBaseCodeInRadiusTable(APITable):
                     search_params["code"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for code column.")
-            
+
             if arg1 == "radius":
                 if op == '=':
                     search_params["radius"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for radius column.")
-            
+
             if arg1 == "country":
                 if op == '=':
                     search_params["country"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for country column.")
-            
+
             if arg1 == "unit":
                 if op == '=':
                     search_params["unit"] = arg2
@@ -171,7 +171,7 @@ class ZipCodeBaseCodeInRadiusTable(APITable):
 
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
-                
+
         filter_flag = ("code" in search_params) and ("radius" in search_params) and ("country" in search_params)
 
         if not filter_flag:
@@ -221,6 +221,7 @@ class ZipCodeBaseCodeInRadiusTable(APITable):
             "distance"
         ]
 
+
 class ZipCodeBaseCodeByCityTable(APITable):
     """The ZipCodeBase Codes within a City Table implementation"""
 
@@ -260,7 +261,7 @@ class ZipCodeBaseCodeByCityTable(APITable):
                     search_params["city"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for city column.")
-            
+
             if arg1 == "country":
                 if op == '=':
                     search_params["country"] = arg2
@@ -269,7 +270,7 @@ class ZipCodeBaseCodeByCityTable(APITable):
 
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
-                
+
         filter_flag = ("city" in search_params) and ("country" in search_params)
 
         if not filter_flag:
@@ -284,7 +285,7 @@ class ZipCodeBaseCodeByCityTable(APITable):
         content = response["content"]
 
         logger.info(f"response size - {len(content['results'])}")
-        codes_by_city_df = pd.json_normalize({"codes":content["results"]})
+        codes_by_city_df = pd.json_normalize({"codes": content["results"]})
 
         select_statement_executor = SELECTQueryExecutor(
             codes_by_city_df,
@@ -354,7 +355,7 @@ class ZipCodeBaseCodeByStateTable(APITable):
                     search_params["state"] = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for state column.")
-            
+
             if arg1 == "country":
                 if op == '=':
                     search_params["country"] = arg2
@@ -363,7 +364,7 @@ class ZipCodeBaseCodeByStateTable(APITable):
 
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
-                
+
         filter_flag = ("state" in search_params) and ("country" in search_params)
 
         if not filter_flag:
@@ -378,7 +379,7 @@ class ZipCodeBaseCodeByStateTable(APITable):
         content = response["content"]
 
         logger.info(f"response size - {len(content['results'])}")
-        codes_by_state_df = pd.json_normalize({"codes":content["results"]})
+        codes_by_state_df = pd.json_normalize({"codes": content["results"]})
 
         select_statement_executor = SELECTQueryExecutor(
             codes_by_state_df,
@@ -443,7 +444,7 @@ class ZipCodeBaseStatesByCountryTable(APITable):
         subset_where_conditions = []
 
         for op, arg1, arg2 in where_conditions:
-            
+
             if arg1 == "country":
                 if op == '=':
                     search_params["country"] = arg2
@@ -452,7 +453,7 @@ class ZipCodeBaseStatesByCountryTable(APITable):
 
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
-                
+
         filter_flag = ("country" in search_params)
 
         if not filter_flag:
@@ -467,7 +468,7 @@ class ZipCodeBaseStatesByCountryTable(APITable):
         content = response["content"]
 
         logger.info(f"response size - {len(content['results'])}")
-        states_by_country_df = pd.json_normalize({"states":content["results"]})
+        states_by_country_df = pd.json_normalize({"states": content["results"]})
 
         select_statement_executor = SELECTQueryExecutor(
             states_by_country_df,

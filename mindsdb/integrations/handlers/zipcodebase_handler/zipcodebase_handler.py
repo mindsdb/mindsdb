@@ -41,16 +41,16 @@ class ZipCodeBaseHandler(APIHandler):
 
         code_to_location_data = ZipCodeBaseCodeLocationTable(self)
         self._register_table("code_to_location", code_to_location_data)
-        
+
         codes_within_radius_data = ZipCodeBaseCodeInRadiusTable(self)
         self._register_table("codes_within_radius", codes_within_radius_data)
-        
+
         codes_by_city_data = ZipCodeBaseCodeByCityTable(self)
         self._register_table("codes_by_city", codes_by_city_data)
-        
+
         codes_by_state_data = ZipCodeBaseCodeByStateTable(self)
         self._register_table("codes_by_state", codes_by_state_data)
-        
+
         states_by_country_data = ZipCodeBaseStatesByCountryTable(self)
         self._register_table("states_by_country", states_by_country_data)
 

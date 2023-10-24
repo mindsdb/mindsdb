@@ -14,7 +14,7 @@ except ImportError:
 
 
 @pytest.mark.skipif(not NLPCLOUD_INSTALLED, reason="nlpcloud package is not installed")
-class TestOilPriceAPIHandler(BaseExecutorTest):
+class TestNLPCloudHandler(BaseExecutorTest):
 
     def run_sql(self, sql):
         ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))

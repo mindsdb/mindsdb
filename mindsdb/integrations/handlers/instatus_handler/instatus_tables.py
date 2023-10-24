@@ -111,7 +111,6 @@ class StatusPages(APITable):
                     data[key] = json.loads(value.value)  # Convert 'components' value to a Python list
                 else:
                     data[key] = value.value
-        # print(data)
         self.handler.call_instatus_api(endpoint=f'/v2/{page_id}', method='PUT', data=data)
 
     def get_columns(self, ignore: List[str] = []) -> List[str]:

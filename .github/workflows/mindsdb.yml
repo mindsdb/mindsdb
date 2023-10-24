@@ -21,7 +21,14 @@ jobs:
       uses: actions/setup-python@v4.7.0
       with:
         python-version: 3.9
-    - name: Check all requirements files are compatible
+    - uses: dorny/paths-filter@v2
+      id: changes
+      with:
+        filters: |
+          src:
+            - '**/requirements*.txt'
+    - if: steps.changes.outputs.src == 'true'
+      name: Check all requirements files are compatible
       shell: bash
       run: |
         pip install --dry-run --ignore-installed $(find . -name "requirements*.txt" | awk '$0="-r "$0" "' | xargs echo)

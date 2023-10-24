@@ -40,25 +40,25 @@ class SymblHandler(APIHandler):
         self.credentials = {"app_id": self.connection_data.get("app_id"), "app_secret": self.connection_data.get("app_secret")}
         self.kwargs = kwargs
         self.is_connected = False
-        
+
         conversation_id_data = GetConversationTable(self)
         self._register_table("get_conversation_id", conversation_id_data)
-        
+
         messages_data = GetMessagesTable(self)
         self._register_table("get_messages", messages_data)
-        
+
         topics_data = GetTopicsTable(self)
         self._register_table("get_topics", topics_data)
-        
+
         question_data = GetQuestionsTable(self)
         self._register_table("get_questions", question_data)
-        
+
         analytics_data = GetAnalyticsTable(self)
         self._register_table("get_analytics", analytics_data)
-        
+
         ai_data = GetActionItemsTable(self)
         self._register_table("get_action_items", ai_data)
-        
+
         follow_up_data = GetFollowUpsTable(self)
         self._register_table("get_follow_ups", follow_up_data)
 

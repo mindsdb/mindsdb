@@ -140,7 +140,7 @@ class GetMessagesTable(APITable):
         df = pd.DataFrame(columns=self.get_columns())
 
         resp = symbl.Conversations.get_messages(conversation_id=search_params.get("conversation_id"), credentials=self.handler.credentials)
-        
+
         resp = self.parse_response(resp)
 
         df = pd.json_normalize(resp["messages"])
@@ -159,7 +159,7 @@ class GetMessagesTable(APITable):
 
     def parse_response(self, res):
         return json.loads(json.dumps(res.to_dict(), default=str))
-        
+
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
 
@@ -234,7 +234,7 @@ class GetTopicsTable(APITable):
         df = pd.DataFrame(columns=self.get_columns())
 
         resp = symbl.Conversations.get_topics(conversation_id=search_params.get("conversation_id"), credentials=self.handler.credentials)
-        
+
         resp = self.parse_response(resp)
 
         df = pd.json_normalize(resp["topics"])
@@ -253,7 +253,7 @@ class GetTopicsTable(APITable):
 
     def parse_response(self, res):
         return json.loads(json.dumps(res.to_dict(), default=str))
-        
+
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
 
@@ -325,7 +325,7 @@ class GetQuestionsTable(APITable):
         df = pd.DataFrame(columns=self.get_columns())
 
         resp = symbl.Conversations.get_questions(conversation_id=search_params.get("conversation_id"), credentials=self.handler.credentials)
-        
+
         resp = self.parse_response(resp)
 
         df = pd.json_normalize(resp["questions"])
@@ -344,7 +344,7 @@ class GetQuestionsTable(APITable):
 
     def parse_response(self, res):
         return json.loads(json.dumps(res.to_dict(), default=str))
-        
+
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
 
@@ -560,6 +560,7 @@ class GetActionItemsTable(APITable):
             "assignee.name",
             "assignee.email"
         ]
+
 
 class GetAnalyticsTable(APITable):
     """The Get Analytics Table implementation"""

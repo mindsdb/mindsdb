@@ -1,0 +1,1 @@
+weaviate-client~=3.24.2

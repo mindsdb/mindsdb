@@ -4,12 +4,13 @@ from functools import wraps
 import hashlib
 import base64
 from cryptography.fernet import Fernet
+from collections.abc import Callable
 
 import requests
 from mindsdb_sql import get_lexer_parser
 from mindsdb_sql.parser.ast import Identifier
 
-from mindsdb.utilities.fs import create_process_mark, delete_process_mark
+from mindsdb.utilities.fs import create_process_mark, delete_process_mark, set_process_mark
 
 
 def args_parse():
@@ -20,7 +21,7 @@ def args_parse():
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--no_studio', action='store_true')
     parser.add_argument('-v', '--version', action='store_true')
-    parser.add_argument('--ray', action='store_true', default=None)
+    parser.add_argument('--ml_task_queue_consumer', action='store_true', default=None)
     return parser.parse_args()
 
 
@@ -54,11 +55,15 @@ def is_notebook():
         return False      # Probably standard Python interpreter
 
 
-def mark_process(name):
-    def mark_process_wrapper(func):
+def mark_process(name: str, custom_mark: str = None) -> Callable:
+    def mark_process_wrapper(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
-            mark = create_process_mark(name)
+            if custom_mark is None:
+                mark = create_process_mark(name)
+            else:
+                mark = set_process_mark(name, custom_mark)
+
             try:
                 return func(*args, **kwargs)
             finally:

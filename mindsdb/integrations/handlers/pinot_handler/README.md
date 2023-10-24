@@ -41,7 +41,7 @@ To quickly spin up Apache Pinot in Docker, run the following command,
 docker run --name pinot-quickstart -p 2123:2123 -p 9000:9000 -p 8000:8000 -d apachepinot/pinot:latest QuickStart -type batch
 ~~~~
 
-Install MindsDB on your local Python enviornment,
+Install MindsDB on your local Python environment,
 ~~~~bash
 pip install mindsdb
 ~~~~

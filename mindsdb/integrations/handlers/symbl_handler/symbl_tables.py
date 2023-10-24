@@ -416,7 +416,7 @@ class GetFollowUpsTable(APITable):
         df = pd.DataFrame(columns=self.get_columns())
 
         resp = symbl.Conversations.get_follow_ups(conversation_id=search_params.get("conversation_id"), credentials=self.handler.credentials)
-        
+
         resp = self.parse_response(resp)
 
         df = pd.json_normalize(resp["follow_ups"])
@@ -435,7 +435,7 @@ class GetFollowUpsTable(APITable):
 
     def parse_response(self, res):
         return json.loads(json.dumps(res.to_dict(), default=str))
-        
+
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
 
@@ -514,7 +514,7 @@ class GetActionItemsTable(APITable):
         df = pd.DataFrame(columns=self.get_columns())
 
         resp = symbl.Conversations.get_action_items(conversation_id=search_params.get("conversation_id"), credentials=self.handler.credentials)
-        
+
         resp = self.parse_response(resp)
 
         df = pd.json_normalize(resp["action_items"])
@@ -533,7 +533,7 @@ class GetActionItemsTable(APITable):
 
     def parse_response(self, res):
         return json.loads(json.dumps(res.to_dict(), default=str))
-        
+
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
 
@@ -612,7 +612,7 @@ class GetAnalyticsTable(APITable):
         df = pd.DataFrame(columns=self.get_columns())
 
         resp = symbl.Conversations.get_analytics(conversation_id=search_params.get("conversation_id"), credentials=self.handler.credentials)
-        
+
         resp = self.parse_response(resp)
 
         df = pd.json_normalize(resp["metrics"])
@@ -631,7 +631,7 @@ class GetAnalyticsTable(APITable):
 
     def parse_response(self, res):
         return json.loads(json.dumps(res.to_dict(), default=str))
-        
+
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
 
@@ -646,4 +646,3 @@ class GetAnalyticsTable(APITable):
             "percent",
             "seconds"
         ]
-

@@ -39,12 +39,12 @@ class TestSymblAPIHandler(BaseExecutorTest):
         """)
 
     def test_basic_select_from(self):
-        
+
         conversation_id = "5682305049034752"
-        
+
         sql = f'SELECT * FROM mindsdb_symbl.get_messages where conversation_id="{conversation_id}"'
         self.run_sql(sql)
-        
+
         sql = f'SELECT * FROM mindsdb_symbl.get_topics where conversation_id="{conversation_id}"'
         self.run_sql(sql)
 
@@ -59,4 +59,3 @@ class TestSymblAPIHandler(BaseExecutorTest):
 
         sql = f'SELECT * FROM mindsdb_symbl.get_follow_ups where conversation_id="{conversation_id}"'
         self.run_sql(sql)
-

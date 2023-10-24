@@ -1,10 +1,9 @@
 import sys
+__import__('pysqlite3')
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 from collections import OrderedDict
 from typing import List, Optional
-
-__import__('pysqlite3')
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 import chromadb
 import pandas as pd

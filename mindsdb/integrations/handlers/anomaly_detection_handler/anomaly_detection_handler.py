@@ -11,14 +11,28 @@ from mindsdb.integrations.handlers.anomaly_detection_handler.utils import (
 from joblib import dump, load
 
 
-def choose_model(df, supervised_threshold=3000):
-    if len(df) > supervised_threshold:
-        return CatBoostClassifier()
+def choose_model(df, model_type=None, target=None, supervised_threshold=3000):
+    """Choose the best model based on the size of the dataset and the model type"""
+    training_df = preprocess_data(df)
+    if target is not None:
+        X_train = training_df.drop(target, axis=1)
+        y_train = training_df[target].astype(int)
     else:
-        return XGBOD()
+        return train_unsupervised(training_df)
 
+    # If data length is longer than threshold, choose supervised model
+    if model_type is None:
+        model_type = "supervised" if len(X_train) > supervised_threshold else "semi-supervised"
+    assert model_type in ["supervised", "semi-supervised"], "model type must be 'supervised' or 'semi-supervised'"
+
+    if model_type == "supervised":
+        return train_supervised(X_train, y_train)
+    elif model_type == "semi-supervised":
+        return train_semisupervised(X_train, y_train)
+                        
 
 def preprocess_data(df):
+    """Preprocess the data by one-hot encoding categorical columns and scaling numeric columns"""
     # one-hot encode categorical columns
     categorical_columns = list(df.select_dtypes(include=["object"]).columns.values)
     df[categorical_columns] = df[categorical_columns].astype("category")
@@ -37,44 +51,24 @@ class AnomalyDetectionHandler(BaseMLEngine):
 
     name = "anomaly_detection"
 
-    # Write an init method that sets the generative attribute
-    # to True if the model type is unsupervised, and False otherwise.
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.generative = True
+        self.generative = True  # makes unsupervised learning work
 
     def create(self, target, df, args={}):
-        # Save the column names of all numeric columns before transforming any categorical columns into dummies
+        """Train a model and save it to the model storage"""
         using_args = args["using"]
         model_type = using_args["type"] if "type" in using_args else None
+        model = choose_model(df, model_type=model_type, target=target)
+        target = "outlier" if target is None else target  # output column name for unsupervised learning
 
-        target = "outlier" if target is None else target  # give it a name for unsupervised learning
-        if model_type is not None:
-            if model_type == "supervised":
-                df = preprocess_data(df)
-                model = train_supervised(df.drop(target, axis=1), df[target].astype(int))
-            elif model_type == "semi-supervised":
-                df = preprocess_data(df)
-                model = train_semisupervised(df.drop(target, axis=1), df[target].astype(int))
-            else:
-                raise ValueError("model type must be one of 'supervised', 'semi-supervised', or 'unsupervised'")
-        else:
-            if target in df.columns:
-                training_df = df.drop(target, axis=1)
-                training_df = preprocess_data(training_df)
-                model = choose_model(training_df)
-                model.fit(training_df, df[target].astype(int))
-            else:
-                training_df = preprocess_data(df)
-                model = train_unsupervised(training_df)
-        # Save the model
-        save_fp = "model.joblib"
-        dump(model, save_fp)
-        model_args = {"model_path": save_fp, "target": target}
+        save_path = "model.joblib"
+        dump(model, save_path)
+        model_args = {"model_path":save_path, "target": target}
         self.model_storage.json_set("model_args", model_args)
 
     def predict(self, df, args={}):
+        """Load a model from the model storage and use it to make predictions"""
         model_args = self.model_storage.json_get("model_args")
 
         if "__mindsdb_row_id" in df.columns:

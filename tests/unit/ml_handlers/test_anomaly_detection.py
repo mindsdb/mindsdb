@@ -12,12 +12,21 @@ from mindsdb.integrations.handlers.anomaly_detection_handler.anomaly_detection_h
 
 def test_choose_model():
     df = pd.read_csv("tests/unit/ml_handlers/data/anomaly_detection.csv")
+    # If no target is specified, we should use the unsupervised model
+    model = choose_model(df)
+    assert model.__class__.__name__ == "ECOD"
     # If the size of the dataset is less than the semi_supervised_threshold, we should use the semi-supervised model
-    model = choose_model(df, supervised_threshold=50)
+    model = choose_model(df, target="class", supervised_threshold=50)
     assert model.__class__.__name__ == "XGBOD"
-    # If the size of the dataset is greater than the semi_supervised_threshold, we should use the supervised model
-    model = choose_model(df, supervised_threshold=2)
+    # If the model type is specified, we should use that model type and override default logic
+    model = choose_model(df, target="class", model_type="supervised", supervised_threshold=50)
     assert model.__class__.__name__ == "CatBoostClassifier"
+    # If the size of the dataset is greater than the semi_supervised_threshold, we should use the supervised model
+    model = choose_model(df, target="class", supervised_threshold=2)
+    assert model.__class__.__name__ == "CatBoostClassifier"
+    # If the model type is specified, we should use that model type and override default logic
+    model = choose_model(df, target="class", model_type="semi-supervised", supervised_threshold=2)
+    assert model.__class__.__name__ == "XGBOD"
 
 
 def test_preprocess_data():

@@ -89,7 +89,7 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         assert len(ret) == len(df)
 
         ret = self.run_sql(
-        """
+            """
            describe model proj.modelx.model
         """
         )
@@ -126,7 +126,7 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         assert len(ret) == len(df)
 
         ret = self.run_sql(
-        """
+            """
            describe model proj.modelx.model
         """
         )
@@ -163,7 +163,7 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         assert len(ret) == len(df)
 
         ret = self.run_sql(
-        """
+            """
            describe model proj.modelx.model
         """
         )

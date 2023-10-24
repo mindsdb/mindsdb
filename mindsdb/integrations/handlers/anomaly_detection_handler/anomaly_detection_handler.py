@@ -29,7 +29,7 @@ def choose_model(df, model_type=None, target=None, supervised_threshold=3000):
         return train_supervised(X_train, y_train)
     elif model_type == "semi-supervised":
         return train_semisupervised(X_train, y_train)
-                        
+
 
 def preprocess_data(df):
     """Preprocess the data by one-hot encoding categorical columns and scaling numeric columns"""
@@ -64,7 +64,7 @@ class AnomalyDetectionHandler(BaseMLEngine):
 
         save_path = "model.joblib"
         dump(model, save_path)
-        model_args = {"model_path":save_path, "target": target, "model_name": model.__class__.__name__}
+        model_args = {"model_path": save_path, "target": target, "model_name": model.__class__.__name__}
         self.model_storage.json_set("model_args", model_args)
 
     def predict(self, df, args={}):

@@ -1,6 +1,6 @@
 import sys
-__import__('pysqlite3')
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+__import__('pysqlite3') # noqa
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3') # noqa
 
 from collections import OrderedDict
 from typing import List, Optional

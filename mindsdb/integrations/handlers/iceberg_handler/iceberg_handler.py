@@ -45,6 +45,7 @@ class IcebergHandler(DatabaseHandler):
         password = self.connection_data.get('password')
         db = self.connection_data.get('database')
         name = self.connection_data.get('name', 'default')
+        namespace = self.connection_data.get('namespace')
         table = self.connection_data.get('table')
 
         config = {
@@ -52,7 +53,7 @@ class IcebergHandler(DatabaseHandler):
             "uri": f"postgresql+psycopg2://{user}:{password}@localhost/{db}",
         }
 
-        connection = load_catalog(name, **config)
+        connection = load_catalog(namespace, **config)
 
         try:
             _ = connection.list_namespaces()
@@ -190,37 +191,43 @@ class IcebergHandler(DatabaseHandler):
 connection_args = OrderedDict(
     user={
         'name': 'user',
-        'type': ARG_TYPE.STRING,
+        'type': ARG_TYPE.STR,
         'description': 'The user name used to authenticate with the database.',
         'required': True,
     },
     password={
         'name': 'password',
-        'type': ARG_TYPE.STRING,
+        'type': ARG_TYPE.STR,
         'description': 'The password used to authenticate with the database.',
         'required': True,
     },
     database={
         'name': 'database',
-        'type': ARG_TYPE.STRING,
+        'type': ARG_TYPE.STR,
         'description': 'The database name.',
         'required': True,
     },
     table={
         'name': 'table',
-        'type': ARG_TYPE.STRING,
+        'type': ARG_TYPE.STR,
         'description': 'The table name.',
         'required': True,
     },
     type={
         'name': 'type',
-        'type': ARG_TYPE.STRING,
+        'type': ARG_TYPE.STR,
         'description': 'The type of the database.',
         'required': False,
     },
     name={
         'name': 'name',
-        'type': ARG_TYPE.STRING,
+        'type': ARG_TYPE.STR,
+        'description': 'The name of the catalog.',
+        'required': True,
+    },
+    namespace={
+        'name': 'namespace',
+        'type': ARG_TYPE.STR,
         'description': 'The namespace in the catalog.',
         'required': True,
     },

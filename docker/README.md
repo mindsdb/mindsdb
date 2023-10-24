@@ -11,11 +11,11 @@ https://pypi.org/project/MindsDB/ so no files in parent dir are used.
 To build `release` image using version reported at
 https://public.api.mindsdb.com/installer/release/docker___success___None
 
-    docker build -f release --no-cache -t mindsdb/mindsdb
+    docker build -f release --no-cache -t mindsdb/mindsdb .
 
 To build `release` image with specific MindsDB version.
 
-    docker build -f release --build-arg VERSION=2.57.0 -t mindsdb/mindsdb
+    docker build -f release --build-arg VERSION=2.57.0 -t mindsdb/mindsdb .
 
 ### `beta` vs `release`
 

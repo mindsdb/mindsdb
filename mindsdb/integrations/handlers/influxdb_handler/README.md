@@ -31,7 +31,7 @@ parameters={
 };
 ~~~~
 
-For querying different tables, you need to create another database with `influxdb` handler as engine & mention the appropriate databse & table name in the following  parameters `influxdb_db_name` & `influxdb_table_name`
+For querying different tables, you need to create another database with `influxdb` handler as engine & mention the appropriate database & table name in the following  parameters `influxdb_db_name` & `influxdb_table_name`
 
 Now, you can use this established connection to query your table as follows,
 ~~~~sql

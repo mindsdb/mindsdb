@@ -43,6 +43,10 @@ class SessionController:
         self.integration_controller = integration_controller
         self.database_controller = DatabaseController()
 
+        # to prevent circular imports
+        from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
+        self.kb_controller = KnowledgeBaseController(self)
+
         self.datahub = init_datahub(self)
 
         self.prepared_stmts = {}

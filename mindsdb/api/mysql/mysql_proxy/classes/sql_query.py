@@ -526,7 +526,7 @@ class SQLQuery():
             self.query,
             integrations=databases,
             predictor_metadata=predictor_metadata,
-            default_namespace=database
+            default_namespace=database,
         )
 
     def fetch(self, view='list'):

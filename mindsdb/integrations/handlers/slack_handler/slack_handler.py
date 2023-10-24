@@ -254,8 +254,8 @@ class SlackChannelsTable(APITable):
                 else:
                     raise ValueError(f"Channel '{arg2}' not found")
 
-            if keys[0] == 'message':
-                params['message'] = str(query.update_columns['message'])
+            if keys[0] == 'text':
+                params['text'] =  str(query.update_columns['text'])
             else:
                 raise ValueError(f"Message '{arg2}' not found")
 
@@ -275,13 +275,12 @@ class SlackChannelsTable(APITable):
         try:
             response = self.client.chat_update(
                 channel=params['channel'],
-                ts=params['ts'],
-                text=params['text']
+                ts=str(params['ts']),
+                text=params['text'].strip()
             )
         except SlackApiError as e:
-            raise Exception(f"Error updating message in Slack channel '{params['channel']}' with timestamp '{params['ts']}' and message '{params['message']}': {e.response['error']}")
+            raise Exception(f"Error updating message in Slack channel '{params['channel']}' with timestamp '{params['ts']}' and message '{params['text']}': {e.response['error']}")
 
-        return response
     
     def delete(self, query: ASTNode):
         """

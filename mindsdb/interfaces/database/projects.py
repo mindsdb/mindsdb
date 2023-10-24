@@ -70,23 +70,17 @@ class Project:
             self.id = None
         db.session.commit()
 
-    def drop_table(self, table_name: str):
-        tables = self.get_tables()
-        if table_name not in tables:
-            raise Exception(f"Table '{table_name}' do not exists")
-        table_meta = tables[table_name]
-        if table_meta['type'] == 'model':
-            ModelController().delete_model(
-                table_name,
-                project_name=self.name
-            )
-        elif table_meta['type'] == 'view':
-            ViewController().delete(
-                table_name,
-                project_name=self.name
-            )
-        else:
-            raise Exception(f"Can't delete table '{table_name}' because of it type: {table_meta['type']}")
+    def drop_model(self, name: str):
+        ModelController().delete_model(
+            name,
+            project_name=self.name
+        )
+
+    def drop_view(self, name: str):
+        ViewController().delete(
+            name,
+            project_name=self.name
+        )
 
     def create_view(self, name: str, query: str):
         ViewController().add(

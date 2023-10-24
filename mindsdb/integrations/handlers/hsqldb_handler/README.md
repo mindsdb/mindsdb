@@ -30,7 +30,7 @@ CommLog         = 1
 UsageCount      = 1
 ```
 
-then, in mindsDB, the following syntax can be used to acces your database,
+then, in mindsDB, the following syntax can be used to access your database,
 
 ```sql
 CREATE DATABASE exampledb

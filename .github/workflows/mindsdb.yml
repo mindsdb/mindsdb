@@ -52,7 +52,7 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4.7.0
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: ${{ matrix.python-version }}-dev
     - name: Install dependencies
       run: |
         pip install --upgrade pip
@@ -73,7 +73,7 @@ jobs:
           pip install git+https://github.com/mindsdb/mindsdb_sql.git@staging --upgrade --no-cache-dir  # install post lightwood so it does not get overwritten
     - name: Install ML engine related dependencies
       run: |
-        for engine in openai; do  # statsforecast huggingface lightwood
+        for engine in openai anyscale_endpoints; do  # statsforecast huggingface lightwood timegpt (Note: timegpt does not work, fix please)
           pip install -r ./mindsdb/integrations/handlers/${engine}_handler/requirements.txt
         done
       shell: bash
@@ -99,6 +99,8 @@ jobs:
 
           env PYTHONPATH=./ pytest tests/unit/test_cache.py
 
+          pytest -vx tests/integration_tests/flows/test_ml_task_queue.py
+
           # MySQL API
           echo -e "\n===============test MySQL API===============\n"
           pytest -vx tests/integration_tests/flows/test_mysql_api.py
@@ -121,7 +123,9 @@ jobs:
           # First-tier ML engines
           echo -e "\n===============test ML engines===============\n"
           pytest -vx tests/unit/ml_handlers/test_openai.py
-        
+          # pytest -vx tests/unit/ml_handlers/test_timegpt.py  # Note: timegpt doesn't work, fix please
+          pytest -vx tests/unit/ml_handlers/test_anyscale_llm.py
+
           # pending rework
           # pytest -vx tests/unit/ml_handlers/test_statsforecast.py
           # pytest -vx tests/unit/ml_handlers/test_huggingface.py
@@ -133,6 +137,7 @@ jobs:
         OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+        ANYSCALE_ENDPOINTS_API_KEY: ${{secrets.ANYSCALE_ENDPOINTS_API_KEY}}
 
   deploy_to_pypi:
     runs-on: ubuntu-latest

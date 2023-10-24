@@ -27,7 +27,7 @@ Generative AI Tables streamline the process of making predictions based on your 
 
 To better understand this concept, let’s have a deeper exploration in the use case of generating automated responses to emails coming from customers. 
 
-First lets look at the data that we have. In this case, imagine that you have a table with incoming emails.
+First let's look at the data that we have. In this case, imagine that you have a table with incoming emails.
 
 ```sql
 SELECT message_id, customer_message
@@ -52,7 +52,7 @@ On execution, we get:
 
 ## Creating a Generative AI-Table
 
-We can for example create an OpenAI model that will generate a *response* given some *prompt_template* instructions wirtten in plain English.
+We can for example create an OpenAI model that will generate a *response* given some *prompt_template* instructions written in plain English.
 
 ```sql
 CREATE MODEL ai_response_model
@@ -63,7 +63,7 @@ USING
 
 Generate a simple customer response depending on the following options:
 
-- If its a message about returns and there is an order number, the message should be as follows (populate order_id in the URL accordingly):
+- If it is a message about returns and there is an order number, the message should be as follows (populate order_id in the URL accordingly):
 "We are sorry about the issues with your product. Please follow this link to process your return: http://website.com/returns?order_id=<order_id>."
 - If the message is about returns but has no order number, respond by asking for the order number and provide a link to see the list of their orders: http://website.com/my_orders.
 - If the message is about the account being compromised, send them a link to immediately change their password: http://website.com/change_password.
@@ -93,7 +93,7 @@ Results in:
 | 4            | We understand your concern. Please change your password immediately using this link http://website.com/change_password                    | "I suspect my account has been hacked. I noticed some unusual activity. Please assist me in securing it."                              |
 | 5            | [NEEDS_ATTENTION]                                                                                                                         | "There seems to be an issue with the settings on my account, they're not saving correctly."                                            |
 | 6            | We understand your concern. Please change your password immediately using this link http://website.com/change_password                    | "I believe my account has been compromised. Please help me regain control and secure my account."                                      |
-| 7            | We are sorry about the issues with your product. Please follow this link to process your return http://website.com/returns?order_id=56789 | "I'm not satisfied with the product I received. It's not working . I'd like to return it, please. My order number is 56789."           |
+| 7            | We are sorry about the issues with your product. Please follow this link to process your return http://website.com/returns?order_id=56789 | "I'm not satisfied with the product I received. It's not working. I'd like to return it, please. My order number is 56789."           |
 +--------------+---------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 

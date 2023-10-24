@@ -2,14 +2,13 @@ from mindsdb.utilities import log
 from google.cloud import aiplatform
 from google.oauth2 import service_account
 import pandas as pd
-import json
 
 
 class VertexClient:
     """A class to interact with Vertex AI"""
 
-    def __init__(self, credentials_path, args_json):
-        credentials = service_account.Credentials.from_service_account_file(credentials_path)
+    def __init__(self, credentials_info, args_json):
+        credentials = service_account.Credentials.from_service_account_info(credentials_info)
         aiplatform.init(
             credentials=credentials,
             project=args_json["project_id"],
@@ -78,13 +77,10 @@ class VertexClient:
         df = pd.read_csv(csv_to_predict)
         return self.predict_from_df(endpoint_display_name, df)
 
-    def predict_from_json(self, endpoint_display_name, json_to_predict):
-        """Make a prediction from a JSON file"""
-        with open(json_to_predict, "r") as f:
-            instances = json.load(f)
+    def predict_from_dict(self, endpoint_display_name, data):
 
         # convert to list of dictionaries
-        instances = [dict(zip(instances.keys(), values)) for values in zip(*instances.values())]
+        instances = [dict(zip(data.keys(), values)) for values in zip(*data.values())]
         endpoint = self.get_endpoint_by_display_name(endpoint_display_name)
         prediction = endpoint.predict(instances=instances)
         return prediction

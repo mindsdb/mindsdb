@@ -1,4 +1,6 @@
 import time
+import json
+
 import pandas as pd
 
 import pytest
@@ -112,7 +114,11 @@ def test_predict_from_json(vertex_client, mocker):
     mocker.patch(f"{path}.json.load", return_value={"col1": ["data1", "data2"]})
     mocker.patch(f"{path}.VertexClient.get_endpoint_by_display_name", return_value=mock_endpoint)
 
-    predictions = vertex_client.predict_from_json("Endpoint1", "path_to_json")
+    """Make a prediction from a JSON file"""
+    with open("path_to_json", "r") as f:
+        data = json.load(f)
+
+    predictions = vertex_client.predict_from_dict("Endpoint1", data)
     assert predictions == "JSON Predictions"
 
 

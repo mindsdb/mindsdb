@@ -32,4 +32,6 @@ Web Crawler Integration Test Passed: https://github.com/Taheralicyclewala/MindsD
 Gitlab Integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Gitlab/Gitlab.md
 </br>
 Microsoft Acess integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Access/MicrosoftAccess.md
+<br>
+SendinBlue Integration Test Passed: https://github.com/adeyinkaezra123/mindsdb-integration-test/blob/main/handlers/sendinblue/SendinBlue_Brevo.md
 </br>

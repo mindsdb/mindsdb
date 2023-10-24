@@ -130,7 +130,7 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         # create predictor
         self.run_sql(
             """
-           create anomaly detection model proj.modelx
+           create model proj.modelx
            from pg (select * from df)
            using
            engine='anomaly_detection'

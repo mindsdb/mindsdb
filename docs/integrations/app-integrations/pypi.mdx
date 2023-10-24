@@ -56,6 +56,11 @@ SELECT date, downloads
 FROM pypi_datasource.system WHERE package="mindsdb" AND os="Linux";
 ```
 
+<Tip>
+Each table takes a required `package` argument in the WHERE clause, which is the name of the package you want to query.
+</Tip> 
+
+
 ## Supported Tables
 
 The following tables are supported by the PyPI handler:

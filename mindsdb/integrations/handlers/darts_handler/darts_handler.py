@@ -18,27 +18,22 @@ class DartsModel(BaseMLEngine):
         Args:
             target (str): Name of the target column.
             df (pd.DataFrame): Input DataFrame containing the time series data.
-            args (Dict): Additional arguments (if needed).
+            args (Dict): Additional arguments (if needed), including 'timeseries_settings'.
         """
 
-        # Find the timestamp column in the DataFrame
-        timestamp_column = None
-        for col in df.columns:
-            if pd.api.types.is_datetime_dtype(df[col]):
-                timestamp_column = col
-                break
+        time_settings = args["timeseries_settings"]
+        using_args = args["using"]
+        assert time_settings["is_timeseries"], "Specify time series settings in your query"
 
-        if timestamp_column is None:
-            raise Exception('No datetime column found in the DataFrame.')
+        # Get the 'order_by' column directly from the parsed information
+        order_by = time_settings["order_by"]
 
-        # Set the timestamp column as the index
-        df.set_index(timestamp_column, inplace=True)
+        # Convert the DataFrame to a Darts TimeSeries using 'order_by' for ordering
+        training_series = TimeSeries.from_dataframe(df, time_col=None, value_cols=[target], date_col=order_by)
 
-        # Convert DataFrame to Darts TimeSeries
-        time_series = TimeSeries.from_dataframe(df, time_col=timestamp_column, value_cols=[target])
-
+        # Create an AutoARIMA model
         auto_arima_model = AutoARIMA()  # AutoARIMA automatically finds the best ARIMA model
-        auto_arima_model.fit(time_series)
+        auto_arima_model.fit(training_series)
 
         # Save the trained model to model_storage
         self.model_storage.save_model('auto_arima_model', auto_arima_model)
@@ -49,30 +44,24 @@ class DartsModel(BaseMLEngine):
 
         Args:
             df (pd.DataFrame): Input DataFrame containing the time series data for prediction.
-            args (Dict): Additional arguments (if needed).
+            args (Dict): Additional arguments (if needed), including 'timeseries_settings'.
 
         Returns:
             pd.DataFrame: Predicted values in a DataFrame.
         """
 
-        # Find the timestamp column in the DataFrame
-        timestamp_column = None
-        for col in df.columns:
-            if pd.api.types.is_datetime_dtype(df[col]):
-                timestamp_column = col
-                break
+        time_settings = args["timeseries_settings"]
+        using_args = args["using"]
+        assert time_settings["is_timeseries"], "Specify time series settings in your query"
 
-        if timestamp_column is None:
-            raise Exception('No datetime column found in the DataFrame.')
+        # Get the 'order_by' column directly from the parsed information
+        order_by = time_settings["order_by"]
 
-        # Set the timestamp column as the index
-        df.set_index(timestamp_column, inplace=True)
+        # Convert the DataFrame to a Darts TimeSeries using 'order_by' for ordering
+        prediction_series = TimeSeries.from_dataframe(df, time_col=None, value_cols=[], date_col=order_by)
 
         # Load the trained AutoARIMA model from model_storage
         auto_arima_model = self.model_storage.load_model('auto_arima_model')
-
-        # Convert DataFrame to Darts TimeSeries for future extensions
-        time_series = TimeSeries.from_dataframe(df, time_col=timestamp_column)
 
         # Make predictions
         predictions = auto_arima_model.predict(len(df))

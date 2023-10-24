@@ -19,12 +19,12 @@ WITH
 
 ### Select Data
 
-To see if the connection was succesful, try searching for the most recent article data.
+To see if the connection was successful, try searching for the most recent article data.
 
 ```
 SELECT *
 FROM newsAPI.article
-WHERE query = 'mindsdb';
+WHERE query = 'Python';
 ```
 
 The result come with all these columns
@@ -48,12 +48,10 @@ You can select with multiple clauses
 ```
 SELECT *
 FROM newsAPI.article
-WHERE query = 'mindsdb'
-AND sources="abc-news"
-AND publishedAt >= "2023-03-23" AND  publishedAt <= "2023-04-23"
-AND language = 'en'
-ORDER BY publishedAt
-LIMIT 40;
+WHERE query = 'Python'
+AND sources="bbc-news"
+AND publishedAt >= "2021-03-23" AND  publishedAt <= "2023-04-23"
+LIMIT 4;
 ```
 
 #### **WHERE CLAUSE PARAMETERS:**
@@ -68,7 +66,7 @@ LIMIT 40;
 
 **exclude_domains** : A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to remove from the results.
 
-**searchIn** : The fields to restrict your query search to possible options are title, description,  conten. Multiple options can be specified by separating them with a comma, for example: `title,content`
+**searchIn** : The fields to restrict your query search to possible options are title, description,  content. Multiple options can be specified by separating them with a comma, for example: `title,content`
 
 **lamguage** : The 2-letter ISO-639-1 code of the language you want to get headlines for. Possible options: `ar de, en es, fr he, it nl, no pt, ru,  sv, ud , zh`.
 

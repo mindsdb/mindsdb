@@ -51,6 +51,7 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+  - [x] Support UPDATE
 - [x] Shopify Customers Table for a given Store
   - [x] Support SELECT
     - [x] Support LIMIT
@@ -58,6 +59,8 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
     - [x] Support ORDER BY
     - [x] Support column selection
   - [x] Support INSERT
+  - [x] Support DELETE
+    - [x] Support WHERE
 - [x] Shopify Orders Table for a given Store
   - [x] Support SELECT
     - [x] Support LIMIT
@@ -88,6 +91,12 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+- [x] Shopify Sales Channel for a given Store
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
 
 ## TODO
 
@@ -96,7 +105,6 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
 - [ ] Shopify Payments table
 - [ ] Shopify Inventory table
 - [ ] Shopify Discounts table
-- [ ] Shopify Sales Channels table
 - [ ] Many more
 
 ## Example Usage
@@ -177,4 +185,11 @@ FROM shopify_datasource.customer_reviews
 WHERE score=5
 ORDER BY id
 LIMIT 5
+~~~~
+
+For `customers` table, DELETE is supported too. You can delete the customers as follows:
+
+~~~~sql
+DELETE FROM shopify_datasource.customers
+WHERE verified_email = false;
 ~~~~

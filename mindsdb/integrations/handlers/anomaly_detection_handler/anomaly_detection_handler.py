@@ -1,7 +1,4 @@
 from mindsdb.integrations.libs.base import BaseMLEngine
-from pyod.models.ecod import ECOD  # unsupervised default
-from pyod.models.xgbod import XGBOD  # semi-supervised default
-from catboost import CatBoostClassifier  # supervised default
 import pandas as pd
 from mindsdb.integrations.handlers.anomaly_detection_handler.utils import (
     train_unsupervised,

@@ -71,7 +71,7 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
            create model proj.modelx
            from pg (select * from df)
            predict class
-           using 
+           using
              engine='anomaly_detection',
              type='supervised'
         """
@@ -108,8 +108,8 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
            create model proj.modelx
            from pg (select * from df)
            predict class
-           using 
-            engine='anomaly_detection', 
+           using
+            engine='anomaly_detection',
             type='semi-supervised'
         """
         )

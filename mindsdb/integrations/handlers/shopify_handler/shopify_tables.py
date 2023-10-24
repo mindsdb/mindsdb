@@ -655,6 +655,7 @@ class CarrierServiceTable(APITable):
 class ShippingZoneTable(APITable):
     """The Shopify shipping zone Table implementation"""
 
+
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Pulls data from the Shopify "GET /shipping_zone" API endpoint.
 
@@ -711,6 +712,120 @@ class ShippingZoneTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         zones = shopify.ShippingZone.find()
         return [self.clean_response(zone.to_dict()) for zone in zones]
+    
+
+    def insert(self, query: ast.Insert) -> None:
+        """Inserts data into the Shopify "POST /shipping_zone" API endpoint.
+
+        Parameters:
+        query : ast.Insert
+            Given SQL INSERT query
+
+        Returns:
+        None
+
+        Raises:
+        ValueError
+            If the query contains an unsupported condition
+        """
+        insert_statement_parser = INSERTQueryParser(
+            query,
+            supported_columns=['id', 'name'],  # Add supported columns
+            mandatory_columns=['id', 'name'],  # Add mandatory columns
+            all_mandatory=True
+        )
+        shipping_zone_data = insert_statement_parser.parse_query()
+        self.create_shipping_zone(shipping_zone_data)
+
+    def create_shipping_zone(self, shipping_zone_data: List[Dict[Text, Any]]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for zone_data in shipping_zone_data:
+            zone = shopify.ShippingZone.create(zone_data)
+            if 'id' not in zone.to_dict():
+                raise Exception('Shipping zone creation failed')
+            else:
+                logger.info(f'Shipping zone {zone.to_dict()["id"]} created')
+
+    def delete(self, query: ast.Delete) -> None:
+        """
+        Deletes data from the Shopify "DELETE /shipping_zone" API endpoint.
+
+        Parameters:
+        query : ast.Delete
+            Given SQL DELETE query
+
+        Returns:
+        None
+
+        Raises:
+        ValueError
+            If the query contains an unsupported condition
+        """
+        delete_statement_parser = DELETEQueryParser(query)
+        where_conditions = delete_statement_parser.parse_query()
+
+
+        shipping_zones = pd.json_normalize(self.get_shipping_zone())
+        update_query_executor = UPDATEQueryExecutor(
+            shipping_zones,
+            where_conditions
+        )
+        shipping_zones = update_query_executor.execute_query()
+        shipping_ids = shipping_zones['id'].tolist()
+
+        self.delete_shipping_zone(shipping_ids)
+
+    def delete_shipping_zone(self, zone_ids: List[int]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShippingZone.activate_session(api_session)
+
+        for zone_id in zone_ids:
+            zone = shopify.ShippingZone.find(zone_id)
+            zone.destroy()
+            logger.info(f'Shipping zone {zone_id} deleted')
+
+
+    def update(self, query: ast.Update) -> None:
+        """Updates data from the Shopify "PUT /shipping_zone" API endpoint.
+
+        Parameters:
+        query : ast.Update
+            Given SQL UPDATE query
+
+        Returns:
+        None
+
+        Raises:
+        ValueError
+            If the query contains an unsupported condition
+        """
+        update_statement_parser = UPDATEQueryParser(query)
+        values_to_update, where_conditions = update_statement_parser.parse_query()
+
+        shipping_zones = pd.json_normalize(self.get_shipping_zone())
+        update_query_executor = UPDATEQueryExecutor(
+            shipping_zones,
+            where_conditions
+        )
+        shipping_zones = update_query_executor.execute_query()
+        shipping_ids = shipping_zones['id'].tolist()
+
+        self.update_shipping_zone(shipping_ids, values_to_update)
+        
+    def update_shipping_zone(self, zone_ids: List[int], values_to_update: Dict[Text, Any]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for zone_id in zone_ids:
+            zone = shopify.ShippingZone.find(zone_id)
+            for key, value in values_to_update.items():
+                setattr(zone, key, value)
+            zone.save()
+            logger.info(f'Shipping zone {zone_id} updated')
+
+
 
 class SalesChannelTable(APITable):
     """The Shopify Sales Channel Table implementation"""

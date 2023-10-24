@@ -365,6 +365,46 @@ class OrdersTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         orders = shopify.Order.find(**kwargs)
         return [order.to_dict() for order in orders]
+    
+    def delete(self, query: Text) -> None:
+        """
+        Deletes data from the Shopify "DELETE /orders" API endpoint.
+        
+        Delete rows from the orders table that match the given query.
+
+        Parameters
+        ----------
+        query : Text
+           Given SQL DELETE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition.
+        """
+        delete_statement_parser = DELETEQueryParser(query)
+        where_conditions = delete_statement_parser.parse_query()
+
+        orders_df = pd.json_normalize(self.get_orders())
+
+        delete_query_executor = DELETEQueryExecutor(
+            orders_df,
+            where_conditions
+        )
+
+        orders_df = delete_query_executor.execute_query()
+
+        order_ids = orders_df['id'].tolist()
+        self.delete_orders(order_ids)
+
+    # This implementation uses a DELETEQueryParser to parse the SQL query and extract the WHERE conditions. 
+    # It then uses a DELETEQueryExecutor to execute the query on the orders DataFrame and get the rows that 
+    # match the conditions. Finally, it deletes the orders with the matching IDs using the delete_orders method.
+
 
 class InventoryLevelTable(APITable):
     """The Shopify Inventory Table implementation"""

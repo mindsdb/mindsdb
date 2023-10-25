@@ -38,7 +38,7 @@ def query_df(df, query, session=None):
         )
 
     table_name = query_ast.from_table.parts[0]
-    query_ast.from_table.parts = ['df_table']
+    query_ast.from_table.parts = ['df']
 
     json_columns = set()
 
@@ -96,11 +96,10 @@ def query_df(df, query, session=None):
 
     con = duckdb.connect(database=':memory:')
 
-    con.register('df_table', df)
+    con.execute('set global pandas_analyze_sample=10000')
     result_df = con.execute(query_str).fetchdf()
     result_df = result_df.replace({np.nan: None})
     description = con.description
-    con.unregister('df_table')
     con.close()
 
     new_column_names = {}

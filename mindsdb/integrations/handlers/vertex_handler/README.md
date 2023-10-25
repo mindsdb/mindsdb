@@ -27,7 +27,7 @@ USING
 
 Call prediction
 ```sql
-SELECT t.cut, m.prediction as anomaly
+SELECT t.cut, m.cut as anomaly
 FROM files.vertex_anomaly_detection as t
 JOIN mindsdb.vertex_anomaly_detection_model as m;
 ```

@@ -22,7 +22,7 @@ class VertexHandler(BaseMLEngine):
         args = args["using"]
 
         model_name = args.pop("model_name")
-        custom_model = args.pop("model_name", False)
+        custom_model = args.pop("custom_model", False)
 
         service_account_info = self.engine_storage.json_get('service_account')
 
@@ -65,11 +65,8 @@ class VertexHandler(BaseMLEngine):
         vertex = VertexClient(service_account_info, vertex_args)
         results = vertex.predict_from_df(predict_args["endpoint_name"], df, custom_model=predict_args["custom_model"])
 
-        # output column
-        results = results.rename(columns={'prediction': predict_args["target"]})
-
         if predict_args["custom_model"]:
-            return pd.DataFrame(results.predictions, columns=["prediction"])
+            return pd.DataFrame(results.predictions, columns=[predict_args["target"]])
         else:
             return pd.DataFrame(results.predictions)
 

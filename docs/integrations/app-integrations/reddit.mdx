@@ -23,9 +23,9 @@ The required arguments to establish a connection are as follows:
 Here is how to get your Reddit credentials:
 
 1. Go to Reddit App Preferences at https://www.reddit.com/prefs/apps or https://old.reddit.com/prefs/apps/
-2. Scroll down to the bottom of the page and click *create another app...*
-3. Fill out the form with the name, description, and redirect URL for your app, then click *create app*
-4. Now you should be able to see the personal user script, secret, and name of your app. Store those as environment variables: `CLIENT_ID`, `CLIENT_SECRET`, and `USER_AGENT`, respecitvely.
+2. Scroll down to the bottom of the page and click *Create another app...*
+3. Fill out the form with the name, description, and redirect URL for your app, then click *Create app*
+4. Now you should be able to see the personal user script, secret, and name of your app. Store those as environment variables: `CLIENT_ID`, `CLIENT_SECRET`, and `USER_AGENT`, respectively.
 </Tip>
 
 <Tip>
@@ -55,7 +55,7 @@ Now you can fetch data from Reddit, like this:
 SELECT *
 FROM my_reddit.submission
 WHERE subreddit = 'MachineLearning'
-AND sort_type = 'top'                   -- specifies the sorting type for the subreddit (possible value include 'hot', 'new', 'top', 'controversial', 'gilded', 'wiki', 'mod', 'rising')
+AND sort_type = 'top'                   -- specifies the sorting type for the subreddit (possible values include 'hot', 'new', 'top', 'controversial', 'gilded', 'wiki', 'mod', 'rising')
 AND items = 5;                          -- specifies the number of items to fetch from the subreddit
 ```
 

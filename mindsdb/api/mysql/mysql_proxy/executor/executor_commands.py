@@ -820,15 +820,19 @@ class ExecuteCommands:
 
     def answer_describe_predictor(self, statement):
 
-        # try full name
-        attribute = None
-        model_info = self._get_model_info(statement.value, except_absent=False)
+        parts = statement.value.parts.copy()[:2]
+        model_info = self._get_model_info(Identifier(parts=parts), except_absent=False)
         if model_info is None:
-            parts = statement.value.parts.copy()
-            attribute = parts.pop(-1)
+            parts.pop(-1)
+            attribute = statement.value.parts.copy()[1:]
             model_info = self._get_model_info(Identifier(parts=parts))
             if model_info is None:
                 raise SqlApiException(f"Model not found: {statement.value}")
+        else:
+            attribute = statement.value.parts.copy()[2:]
+
+        if len(attribute) == 1:
+            attribute = attribute[0]
 
         df = self.session.model_controller.describe_model(
             self.session,

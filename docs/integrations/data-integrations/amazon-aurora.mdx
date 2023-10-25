@@ -13,13 +13,13 @@ This handler was implemented using the existing MindsDB handlers for MySQL and P
 
 The required arguments to establish a connection are as follows:
 
-* `host`: the host name or IP address of the Amazon Aurora DB cluster.
+* `host`: the hostname or IP address of the Amazon Aurora DB cluster.
 * `port`: the TCP/IP port of the Amazon Aurora DB cluster.
 * `user`: the username used to authenticate with the Amazon Aurora DB cluster.
 * `password`: the password to authenticate the user with the Amazon Aurora DB cluster.
 * `database`: the database name to use when connecting with the Amazon Aurora DB cluster.
 
-There optional arguments that can be used are as follows:
+The optional arguments that can be used are:
 
 * `db_engine`: the database engine of the Amazon Aurora DB cluster. This can take one of two values: 'mysql' or 'postgresql'. This parameter is optional, but if it is not provided, `aws_access_key_id` and `aws_secret_access_key` parameters must be provided.
 * `aws_access_key_id`: the access key for the AWS account. This parameter is optional and is only required to be provided if the `db_engine` parameter is not provided.
@@ -73,7 +73,7 @@ SELECT * FROM aurora_postgres_datasource.example_table
 ~~~~
 
 <Tip>
-If you want to switch to different database, you can include it in your query as:
+If you want to switch to a different database, you can include it in your query as:
 ```sql
 SELECT *
 FROM aurora_datasource.new_database.example_table;

@@ -36,3 +36,5 @@ Microsoft Acess integration Test Passed: https://github.com/maulanaakbardj/minds
 </br>
 Jira App Integration Test Passed: https://github.com/Sekhar-Kumar-Dash/mindsdb_jira/blob/main/jira_handler_mindsdb/Jira_QA.md
 </br>
+Jira app integration Test Passed :
+https://github.com/boomlion8/mindsdb-test/blob/main/Jira_QA.md

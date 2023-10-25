@@ -1307,13 +1307,19 @@ class ExecuteCommands:
 
         is_cloud = self.session.config.get("cloud", False)
 
+        if not statement.storage and is_cloud:
+            raise SqlApiException(
+                "No default vector database currently exists in MindsDB cloud. "
+                'Please specify one using the "storage" parameter'
+            )
+
         vector_table_name = (
             statement.storage.parts[-1] if statement.storage else "default_collection"
         )
 
         vector_db_name = (
             statement.storage.parts[0]
-            if statement.storage and is_cloud
+            if statement.storage
             else self._create_persistent_chroma(
                 kb_name, collection_name=vector_table_name
             )[1]

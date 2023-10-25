@@ -1017,8 +1017,8 @@ class SQLQuery():
             try:
                 left_data = steps_data[step.left.step_num]
                 right_data = steps_data[step.right.step_num]
-                df_a, names_a = left_data.to_df_cols(prefix='A')
-                df_b, names_b = right_data.to_df_cols(prefix='B')
+                table_a, names_a = left_data.to_df_cols(prefix='A')
+                table_b, names_b = right_data.to_df_cols(prefix='B')
 
                 if right_data.is_prediction or left_data.is_prediction:
                     # ignore join condition, use row_id
@@ -1043,12 +1043,12 @@ class SQLQuery():
                         cols = left_data.find_columns(alias, table_alias)
                         if len(cols) == 1:
                             col_name = cols[0].get_hash_name(prefix='A')
-                            return Identifier(parts=['df_a', col_name])
+                            return Identifier(parts=['table_a', col_name])
 
                         cols = right_data.find_columns(alias, table_alias)
                         if len(cols) == 1:
                             col_name = cols[0].get_hash_name(prefix='B')
-                            return Identifier(parts=['df_b', col_name])
+                            return Identifier(parts=['table_b', col_name])
 
                     if step.query.condition is None:
                         raise ErNotSupportedYet('Unable to join table without condition')
@@ -1062,7 +1062,7 @@ class SQLQuery():
                 con = duckdb.connect(database=':memory:')
                 con.execute('set global pandas_analyze_sample=10000')
                 resp_df = con.execute(f"""
-                    SELECT * FROM df_a {join_type} df_b
+                    SELECT * FROM table_a {join_type} table_b
                     ON {join_condition}
                 """).fetchdf()
                 con.close()

@@ -6,9 +6,11 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities.log import get_log
 from mindsdb_sql import parse_sql
 
-import requests
-import pandas as pd
-import io
+# import requests
+# import pandas as pd
+# import io
+
+from influxdb_client_3 import InfluxDBClient3
 
 logger = get_log("integrations.influxdb_handler")
 
@@ -35,6 +37,7 @@ class InfluxDBHandler(APIHandler):
 
         influxdb_tables_data = InfluxDBTables(self)
         self._register_table("tables", influxdb_tables_data)
+        
 
     def connect(self):
         """Set up the connection required by the handler.
@@ -44,16 +47,25 @@ class InfluxDBHandler(APIHandler):
 
         Raises Expection if ping check fails
         """
+        # if self.is_connected is True:
+        #     return self.connection
+
+        # url = f"{self.connection_data['influxdb_url']}/ping"
+        # response = requests.request("GET",url)
+
+        # if response.status_code == 204:
+        #     self.connection = response
+        # else:
+        #     raise Expection
         if self.is_connected is True:
             return self.connection
+        
+        self.connection=InfluxDBClient3(host=self.connection_data['influxdb_url'],token=self.connection_data['influxdb_token'],org=self.connection_data.get('org'))
 
-        url = f"{self.connection_data['influxdb_url']}/ping"
-        response = requests.request("GET",url)
 
-        if response.status_code == 204:
-            self.connection = response
-        else:
-            raise Expection
+        self.is_connected = True
+
+        return self.connection
         
 
     def check_connection(self) -> StatusResponse:
@@ -64,7 +76,6 @@ class InfluxDBHandler(APIHandler):
             Status confirmation
         """
         response = StatusResponse(False)
-        need_to_close = self.is_connected is False
 
         try:
             self.connect()
@@ -98,18 +109,21 @@ class InfluxDBHandler(APIHandler):
         -------
         pd.DataFrame of all the records of the particular InfluxDB 
         """
-        url = f"{self.connection_data['influxdb_url']}/query"
+        influx_connection=self.connect()
+        database=self.connection_data['influxdb_table_name']
+        query=f"SELECT * FROM '{database}'"
+        # url = f"{self.connection_data['influxdb_url']}/query"
+        
+        # params = {
+        #     ('db',f"{self.connection_data['influxdb_db_name']}"),
+        #     ('q','SELECT * FROM '+ f"{self.connection_data['influxdb_table_name']}" )
+        # }
+        # headers = {
+        #     "Authorization": f"Token {self.connection_data['influxdb_token']}",
+        #     "Accept": "application/csv",
+        # }
 
-        params = {
-            ('db',f"{self.connection_data['influxdb_db_name']}"),
-            ('q','SELECT * FROM '+ f"{self.connection_data['influxdb_table_name']}" )
-        }
-        headers = {
-            "Authorization": f"Token {self.connection_data['influxdb_token']}",
-            "Accept": "application/csv",
-        }
-
-        response = requests.request("GET",url,params=params,headers=headers)
-        influxdb_df = pd.read_csv(io.StringIO(response.text))
-
-        return influxdb_df
+        # response = requests.request("GET",url,params=params,headers=headers)
+        # influxdb_df = pd.read_csv(io.StringIO(response.text))
+        table=influx_connection.query(query=query,database=self.connection_data['influxdb_db_name'], language='sql')
+        return table.to_pandas()

@@ -33,3 +33,9 @@ Gitlab Integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testin
 </br>
 Microsoft Acess integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Access/MicrosoftAccess.md
 </br>
+
+
+Jira app integration Test Passed :
+https://github.com/boomlion8/mindsdb-test/blob/main/Jira_QA.md
+
+</br>

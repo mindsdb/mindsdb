@@ -23,27 +23,39 @@ model_dict = {
 }
 
 
-def get_season_length(frequency):
-    """Infers best season length from frequency parameter.
+def get_season_length(model_args: dict) -> int:
+    """
+    Infers best season length from frequency parameter.
 
     We set a sensible default for seasonality based on the
     frequency parameter. For example: we assume monthly data
     has a season length of 12 (months in a year). If the inferred frequency
     isn't found, we default to 1 i.e. no seasonality.
+
+    input model_args: model argument dictionary
+
+    return: season length integer
     """
-    season_dict = {  # https://pandas.pydata.org/docs/user_guide/timeseries.html#timeseries-offset-aliases
-        "H": 24,
-        "M": 12,
-        "MS": 12,
-        "Q": 4,
-        "SM": 24,
-        "BM": 12,
-        "BMS": 12,
-        "BQ": 4,
-        "BH": 24,
-    }
-    new_freq = frequency.split("-")[0] if "-" in frequency else frequency  # shortens longer frequencies like Q-DEC
-    return season_dict[new_freq] if new_freq in season_dict else 1
+
+    if model_args.get("seasonality", None) is not None:
+        return model_args.get("seasonality", 1)
+
+    elif model_args.get("frequency", None) is not None:
+        frequency = model_args.get("frequency", "Z")  # defaults to value not in season dict.
+
+        season_dict = {  # https://pandas.pydata.org/docs/user_guide/timeseries.html#timeseries-offset-aliases
+            "H": 24,
+            "M": 12,
+            "MS": 12,
+            "Q": 4,
+            "SM": 24,
+            "BM": 12,
+            "BMS": 12,
+            "BQ": 4,
+            "BH": 24,
+        }
+        new_freq = frequency.split("-")[0] if "-" in frequency else frequency  # shortens longer frequencies like Q-DEC
+        return season_dict[new_freq] if new_freq in season_dict else 1
 
 
 def get_insample_cv_results(model_args, df):

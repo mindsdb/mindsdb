@@ -53,12 +53,12 @@ class IcebergHandler(DatabaseHandler):
             "uri": f"postgresql+psycopg2://{user}:{password}@localhost/{db}",
         }
 
-        connection = load_catalog(namespace, **config)
+        catalog = load_catalog(name, **config)
 
         try:
-            _ = connection.list_namespaces()
+            _ = catalog.list_namespaces()
         except Exception:
-            connection.create_tables()
+            catalog.create_tables()
             raise Exception(
                 "You need to configure a table schema first. "
                 + "Read the pyiceberg documentation for more information: "
@@ -67,8 +67,8 @@ class IcebergHandler(DatabaseHandler):
 
         self.is_connected = True
 
-        self.table = connection.load_table((name, table))
-        self.connection = self.table.scan().to_duckdb(table_name=table)
+        table_cat = catalog.load_table((namespace, table))
+        self.connection = table_cat.scan().to_duckdb(table_name=table)
         query = f"""
         INSTALL postgres_scanner;
         LOAD postgres_scanner;

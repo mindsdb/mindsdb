@@ -5,7 +5,7 @@ sidebarTitle: Apache Solr
 
 This is the implementation of the Solr data handler for MindsDB.
 
-[Apache Solr](https://solr.apache.org/) is a highly reliable, scalable and fault tolerant, providing distributed indexing, replication and load-balanced querying, automated failover and recovery, centralized configuration, and more.
+[Apache Solr](https://solr.apache.org/) is highly reliable, scalable, and fault-tolerant, providing distributed indexing, replication and load-balanced querying, automated failover and recovery, centralized configuration, and more.
 
 ## Implementation
 
@@ -15,7 +15,7 @@ The required arguments to establish a connection are as follows:
 
 * `username` is the username used to authenticate with the Solr server. This parameter is optional.
 * `password` is the password to authenticate the user with the Solr server. This parameter is optional.
-* `host` is the host name or IP address of the Solr server.
+* `host` is the hostname or IP address of the Solr server.
 * `port` is the port number of the Solr server.
 * `server_path` defaults to `solr` if not provided.
 * `collection` is the Solr Collection name.
@@ -59,11 +59,11 @@ LIMIT 10000;
 <Info>
 **Requirements**
 
-A Solr instance with a Parallel SQL supported up and running.
+A Solr instance with Parallel SQL support is up and running.
 
 There are certain limitations that need to be taken into account when issuing queries to Solr. Refer to [https://solr.apache.org/guide/solr/latest/query-guide/sql-query.html#parallel-sql-queries](https://solr.apache.org/guide/solr/latest/query-guide/sql-query.html#parallel-sql-queries).
 </Info>
 
 <Tip>
-Don't forget to put limit in the end of the SQL statement
+Don't forget to put a limit at the end of the SQL statement
 </Tip>

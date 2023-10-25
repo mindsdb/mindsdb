@@ -30,6 +30,9 @@ Google Big Query Integration Test Passed: https://github.com/maulanaakbardj/mind
 </br>
 Web Crawler Integration Test Passed: https://github.com/Taheralicyclewala/MindsDB-Testing/blob/main/WebCrawler/Web_Crawler_QA.md
 </br>
+Gitlab Integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Gitlab/Gitlab.md
+</br>
+Microsoft Acess integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Access/MicrosoftAccess.md
 </br>
 Jira App Integration Test Passed: https://github.com/Sekhar-Kumar-Dash/mindsdb_jira/blob/main/jira_handler_mindsdb/Jira_QA.md
 </br>

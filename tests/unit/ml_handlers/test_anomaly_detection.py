@@ -27,6 +27,15 @@ def test_choose_model():
     # If the model type is specified, we should use that model type and override default logic
     model = choose_model(df, target="class", model_type="semi-supervised", supervised_threshold=2)
     assert model.__class__.__name__ == "XGBOD"
+    # If the model name is specified, we should use that model name and override default logic
+    model = choose_model(df, target=None, model_name="knn", supervised_threshold=2)
+    assert model.__class__.__name__ == "KNN"
+    # If the model does not exist, we should raise an error
+    try:
+        model = choose_model(df, target="class", model_name="not_a_model", supervised_threshold=2)
+        assert False
+    except AssertionError:
+        assert True
 
 
 def test_preprocess_data():

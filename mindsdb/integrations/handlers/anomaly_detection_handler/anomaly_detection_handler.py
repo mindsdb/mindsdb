@@ -6,26 +6,56 @@ from mindsdb.integrations.handlers.anomaly_detection_handler.utils import (
     train_semisupervised,
 )
 from joblib import dump, load
+from pyod.models.ecod import ECOD  # unsupervised default
+from pyod.models.xgbod import XGBOD  # semi-supervised default
+from catboost import CatBoostClassifier  # supervised default
+from pyod.models.knn import KNN
 
 
-def choose_model(df, model_type=None, target=None, supervised_threshold=3000):
+MODELS = {
+    "supervised": {
+        "catboost": CatBoostClassifier(logging_level="Silent"),
+    },
+    "semi-supervised": {
+        "xgbod": XGBOD(estimator_list=[ECOD()]),
+    },
+    "unsupervised": {
+        "ecod": ECOD(),
+        "knn": KNN(),
+    }
+}
+
+
+def choose_model_type(training_df, model_type=None, target=None, supervised_threshold=3000):
+    """Choose the model type based on the presence of labels and size of the dataset"""
+    if model_type is None:
+        if target is None:
+            model_type = "unsupervised"
+        else:
+            model_type = "supervised" if len(training_df) > supervised_threshold else "semi-supervised"
+    assert model_type in ["supervised", "semi-supervised", "unsupervised"], "model type must be 'supervised', 'semi-supervised', or 'unsupervised'"
+    return model_type
+
+
+def choose_model(df, model_name=None, model_type=None, target=None, supervised_threshold=3000):
     """Choose the best model based on the size of the dataset and the model type"""
     training_df = preprocess_data(df)
-    if target is not None:
-        X_train = training_df.drop(target, axis=1)
-        y_train = training_df[target].astype(int)
+    model_type = choose_model_type(training_df, model_type, target, supervised_threshold)
+    if model_name is not None:
+        assert model_name in MODELS[model_type], f"model name must be one of {list(MODELS[model_type].keys())}"
+        model = MODELS[model_type][model_name]
     else:
-        return train_unsupervised(training_df)
-
-    # If data length is longer than threshold, choose supervised model
-    if model_type is None:
-        model_type = "supervised" if len(X_train) > supervised_threshold else "semi-supervised"
-    assert model_type in ["supervised", "semi-supervised"], "model type must be 'supervised' or 'semi-supervised'"
+        model = None
+    if model_type == "unsupervised":
+        return train_unsupervised(training_df, model=model)
+    
+    X_train = training_df.drop(target, axis=1)
+    y_train = training_df[target].astype(int)
 
     if model_type == "supervised":
-        return train_supervised(X_train, y_train)
+        return train_supervised(X_train, y_train, model=model)
     elif model_type == "semi-supervised":
-        return train_semisupervised(X_train, y_train)
+        return train_semisupervised(X_train, y_train) # Only one semi-supervised model available
 
 
 def preprocess_data(df):
@@ -56,7 +86,8 @@ class AnomalyDetectionHandler(BaseMLEngine):
         """Train a model and save it to the model storage"""
         using_args = args["using"]
         model_type = using_args["type"] if "type" in using_args else None
-        model = choose_model(df, model_type=model_type, target=target)
+        model_name = using_args["model_name"] if "model_name" in using_args else None
+        model = choose_model(df, model_name=model_name, model_type=model_type, target=target)
         target = "outlier" if target is None else target  # output column name for unsupervised learning
 
         save_path = "model.joblib"

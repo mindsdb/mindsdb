@@ -1017,8 +1017,8 @@ class SQLQuery():
             try:
                 left_data = steps_data[step.left.step_num]
                 right_data = steps_data[step.right.step_num]
-                df_a, names_a = left_data.to_df_cols(prefix='A')
-                df_b, names_b = right_data.to_df_cols(prefix='B')
+                table_a, names_a = left_data.to_df_cols(prefix='A')
+                table_b, names_b = right_data.to_df_cols(prefix='B')
 
                 if right_data.is_prediction or left_data.is_prediction:
                     # ignore join condition, use row_id
@@ -1060,15 +1060,11 @@ class SQLQuery():
                     join_type = step.query.join_type
 
                 con = duckdb.connect(database=':memory:')
-                con.register('table_a', df_a)
-                con.register('table_b', df_b)
-
+                con.execute('set global pandas_analyze_sample=10000')
                 resp_df = con.execute(f"""
                     SELECT * FROM table_a {join_type} table_b
                     ON {join_condition}
                 """).fetchdf()
-                con.unregister('table_a')
-                con.unregister('table_b')
                 con.close()
 
                 resp_df = resp_df.replace({np.nan: None})

@@ -1043,12 +1043,12 @@ class SQLQuery():
                         cols = left_data.find_columns(alias, table_alias)
                         if len(cols) == 1:
                             col_name = cols[0].get_hash_name(prefix='A')
-                            return Identifier(parts=['table_a', col_name])
+                            return Identifier(parts=['df_a', col_name])
 
                         cols = right_data.find_columns(alias, table_alias)
                         if len(cols) == 1:
                             col_name = cols[0].get_hash_name(prefix='B')
-                            return Identifier(parts=['table_b', col_name])
+                            return Identifier(parts=['df_b', col_name])
 
                     if step.query.condition is None:
                         raise ErNotSupportedYet('Unable to join table without condition')

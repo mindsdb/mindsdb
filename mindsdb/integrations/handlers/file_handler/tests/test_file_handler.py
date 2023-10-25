@@ -159,11 +159,13 @@ class TestQuery:
         assert response.type == RESPONSE_TYPE.ERROR
 
     def test_query_select(self, csv_file):
+        expected_df = pandas.read_csv(
+            csv_file
+        )  # Get expected data now, because saving the file moves it for some reason
+
+        # Config #
         db_file = tempfile.mkstemp(prefix="mindsdb_db_")[1]
-        config = {
-            "storage_db": "sqlite:///" + db_file,
-            "paths": {"content": os.path.dirname(os.path.dirname(csv_file))},
-        }
+        config = {"storage_db": "sqlite:///" + db_file}
         fdi, cfg_file = tempfile.mkstemp(prefix="mindsdb_conf_")
         with os.fdopen(fdi, "w") as fd:
             json.dump(config, fd)
@@ -186,16 +188,25 @@ class TestQuery:
         r = db.Integration(name="files", data={}, engine="files")
         db.session.add(r)
         db.session.flush()
+        # Config #
 
-        file_handler = FileHandler(file_controller=FileController())
-        file_handler.query(
+        file_controller = FileController()
+        file_controller.save_file("test_data", csv_file)
+
+        file_handler = FileHandler(file_controller=file_controller)
+        response = file_handler.query(
             Select(
                 targets=[Star()],
-                from_table=Identifier(parts=[os.path.basename(csv_file)]),
+                from_table=Identifier(
+                    parts=[os.path.splitext(os.path.basename(csv_file))[0]]
+                ),
             )
         )
 
-        assert False
+        assert response.type == RESPONSE_TYPE.TABLE
+        assert response.error_code == 0
+        assert response.error_message is None
+        assert expected_df.equals(response.data_frame)
 
     def test_query_bad_type(self):
         file_handler = FileHandler(file_controller=MockFileController())

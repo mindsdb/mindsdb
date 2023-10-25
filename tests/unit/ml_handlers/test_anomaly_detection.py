@@ -68,7 +68,7 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
             return pd.DataFrame(ret.data, columns=columns)
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_supervised_model(self, mock_handler):
+    def test_default_supervised_model(self, mock_handler):
         # create project
         self.run_sql("create database proj")
         df = pd.read_csv("tests/unit/ml_handlers/data/anomaly_detection.csv")
@@ -103,9 +103,86 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         """
         )
         assert ret["model_name"][0] == "CatBoostClassifier"
+   
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler") 
+    def test_non_default_supervised_model(self, mock_handler):
+        # create project
+        self.run_sql("create database proj")
+        df = pd.read_csv("tests/unit/ml_handlers/data/anomaly_detection.csv")
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
+
+        # create predictor
+        self.run_sql(
+            """
+           create model proj.modelx
+           from pg (select * from df)
+           predict class
+           using
+             engine='anomaly_detection',
+             type='supervised',
+             model_name='nb'
+        """
+        )
+        self.wait_predictor("proj", "modelx")
+
+        # run predict
+        ret = self.run_sql(
+            """
+           SELECT p.*
+           FROM pg.df as t
+           JOIN proj.modelx as p
+        """
+        )
+        assert len(ret) == len(df)
+
+        ret = self.run_sql(
+            """
+           describe model proj.modelx.model
+        """
+        )
+        assert ret["model_name"][0] == "GaussianNB"
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler") 
+    def test_specify_anomaly_type(self, mock_handler):
+        # create project
+        self.run_sql("create database proj")
+        df = pd.read_csv("tests/unit/ml_handlers/data/anomaly_detection.csv")
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
+
+        # create predictor
+        self.run_sql(
+            """
+           create model proj.modelx
+           from pg (select * from df)
+           predict outlier
+           using
+             engine='anomaly_detection',
+             anomaly_type='clustered',
+             type='unsupervised'
+        """
+        )
+        self.wait_predictor("proj", "modelx")
+
+        # run predict
+        ret = self.run_sql(
+            """
+           SELECT p.*
+           FROM pg.df as t
+           JOIN proj.modelx as p
+        """
+        )
+        assert len(ret) == len(df)
+
+        ret = self.run_sql(
+            """
+           describe model proj.modelx.model
+        """
+        )
+        assert ret["model_name"][0] == "PCA"
+
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_semi_supervised_model(self, mock_handler):
+    def test_default_semi_supervised_model(self, mock_handler):
         # create database
         self.run_sql("create database proj")
         df = pd.read_csv("tests/unit/ml_handlers/data/anomaly_detection.csv")
@@ -142,7 +219,7 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         assert ret["model_name"][0] == "XGBOD"
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_unsupervised_model(self, mock_handler):
+    def test_default_unsupervised_model(self, mock_handler):
         # dataset, string values
         df = pd.read_csv("tests/unit/ml_handlers/data/anomaly_detection.csv")
         self.set_handler(mock_handler, name="pg", tables={"df": df})

@@ -9,12 +9,20 @@ from joblib import dump, load
 from pyod.models.ecod import ECOD  # unsupervised default
 from pyod.models.xgbod import XGBOD  # semi-supervised default
 from catboost import CatBoostClassifier  # supervised default
+from pyod.models.lof import LOF
 from pyod.models.knn import KNN
+from pyod.models.pca import PCA
+from xgboost import XGBClassifier
+from sklearn.naive_bayes import GaussianNB
+
+
 
 
 MODELS = {
     "supervised": {
         "catboost": CatBoostClassifier(logging_level="Silent"),
+        "xgb": XGBClassifier(),
+        "nb": GaussianNB(),
     },
     "semi-supervised": {
         "xgbod": XGBOD(estimator_list=[ECOD()]),
@@ -22,6 +30,8 @@ MODELS = {
     "unsupervised": {
         "ecod": ECOD(),
         "knn": KNN(),
+        "pca": PCA(),
+        "lof": LOF(),
     }
 }
 
@@ -57,6 +67,18 @@ def choose_model(df, model_name=None, model_type=None, target=None, supervised_t
     elif model_type == "semi-supervised":
         return train_semisupervised(X_train, y_train) # Only one semi-supervised model available
 
+def anomaly_type_to_model_name(anomaly_type):
+    """Choose the best model name based on the anomaly type"""
+    assert anomaly_type in ["local", "global", "clustered", "dependency"], "anomaly type must be 'local', 'global', 'clustered', or 'dependency'"
+    if anomaly_type == "local":
+        return "lof"
+    elif anomaly_type == "global":
+        return "knn"
+    elif anomaly_type == "clustered":
+        return "pca"
+    elif anomaly_type == "dependency":
+        return "knn"
+
 
 def preprocess_data(df):
     """Preprocess the data by one-hot encoding categorical columns and scaling numeric columns"""
@@ -86,7 +108,8 @@ class AnomalyDetectionHandler(BaseMLEngine):
         """Train a model and save it to the model storage"""
         using_args = args["using"]
         model_type = using_args["type"] if "type" in using_args else None
-        model_name = using_args["model_name"] if "model_name" in using_args else None
+        model_name = anomaly_type_to_model_name(using_args["anomaly_type"]) if "anomaly_type" in using_args else None
+        model_name = using_args["model_name"] if "model_name" in using_args else model_name
         model = choose_model(df, model_name=model_name, model_type=model_type, target=target)
         target = "outlier" if target is None else target  # output column name for unsupervised learning
 

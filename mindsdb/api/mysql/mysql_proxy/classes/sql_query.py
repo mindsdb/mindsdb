@@ -1060,15 +1060,11 @@ class SQLQuery():
                     join_type = step.query.join_type
 
                 con = duckdb.connect(database=':memory:')
-                con.register('table_a', df_a)
-                con.register('table_b', df_b)
-
+                con.execute('set global pandas_analyze_sample=10000')
                 resp_df = con.execute(f"""
-                    SELECT * FROM table_a {join_type} table_b
+                    SELECT * FROM df_a {join_type} df_b
                     ON {join_condition}
                 """).fetchdf()
-                con.unregister('table_a')
-                con.unregister('table_b')
                 con.close()
 
                 resp_df = resp_df.replace({np.nan: None})

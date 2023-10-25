@@ -56,7 +56,7 @@ class VertexHandler(BaseMLEngine):
         """Predict using the deployed model by calling the endpoint."""
 
         if "__mindsdb_row_id" in df.columns:
-            df.drop("__mindsdb_row_id", axis=1, inplace=True) # TODO is this required?
+            df.drop("__mindsdb_row_id", axis=1, inplace=True)  # TODO is this required?
 
         predict_args = self.model_storage.json_get("predict_args")
         vertex_args = self.model_storage.json_get("vertex_args")
@@ -64,6 +64,9 @@ class VertexHandler(BaseMLEngine):
 
         vertex = VertexClient(service_account_info, vertex_args)
         results = vertex.predict_from_df(predict_args["endpoint_name"], df, custom_model=predict_args["custom_model"])
+
+        # output column
+        results = results.rename(columns={'prediction': predict_args["target"]})
 
         if predict_args["custom_model"]:
             return pd.DataFrame(results.predictions, columns=["prediction"])
@@ -77,8 +80,9 @@ class VertexHandler(BaseMLEngine):
         if isinstance(service_account, str):
             # convert to json
             service_account = json.loads(service_account)
+        else:
+            # unescape new lines in private_key
+            service_account['private_key'] = service_account['private_key'].replace('\\n', '\n')
 
         self.engine_storage.json_set('args', connection_args)
         self.engine_storage.json_set('service_account', service_account)
-
-

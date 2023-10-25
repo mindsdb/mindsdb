@@ -897,7 +897,7 @@ class BusinessPartnerRoleTable(CustomAPITable):
 class BusinessPartnerTaxNumberTable(CustomAPITable):
     """Tax number data of all the available records linked to business partners in the system"""
 
-    name: str = ""
+    name: str = "business_partner_tax_number"
     columns: List[str] = [
         "id",
         "uri",
@@ -1898,7 +1898,7 @@ class SupplierTextTable(CustomAPITable):
 class SupplierWithHoldingTaxTable(CustomAPITable):
     """Withholding tax records attached to supplier company in the system"""
 
-    name: str = "supplier_withholding_text"
+    name: str = "supplier_withholding_tax"
     columns: List[str] = [
         "id",
         "uri",

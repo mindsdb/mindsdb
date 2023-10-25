@@ -33,5 +33,6 @@ Gitlab Integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testin
 </br>
 Microsoft Acess integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Access/MicrosoftAccess.md
 <br>
-SendinBlue Integration Test Passed: https://github.com/adeyinkaezra123/mindsdb-integration-test/blob/main/handlers/sendinblue/SendinBlue_Brevo.md
+Sendinblue app integration Test Failed:  https://github.com/adeyinkaezra123/mindsdb-integration-test/blob/main/handlers/sendinblue/SendinBlue_Brevo.md https://github.com/mindsdb/mindsdb/issues/8098
 </br>
+

@@ -24,15 +24,37 @@ class ChromaDBHandler(VectorStoreHandler):
     name = "chromadb"
 
     def __init__(self, name: str, **kwargs):
-        super().__init__(name, **kwargs)
+        super().__init__(name)
+
+        self._connection_data = kwargs.get("connection_data")
 
         self._client_config = {
-            "chroma_server_host": self.config.host,
-            "chroma_server_http_port": self.config.port,
-            "persist_directory": self.persist_directory,
+            "chroma_server_host": self._connection_data.get("chroma_server_host"),
+            "chroma_server_http_port": self._connection_data.get(
+                "chroma_server_http_port"
+            ),
+            "persist_directory": self._connection_data.get("persist_directory"),
         }
 
+        # either host + port or persist_directory is required
+        # but not both
+        if (
+            self._client_config["chroma_server_host"] is None
+            or self._client_config["chroma_server_http_port"] is None
+        ) and self._client_config["persist_directory"] is None:
+            raise Exception(
+                "Either host + port or persist_directory is required for ChromaDB connection!"
+            )
+        elif (
+            self._client_config["chroma_server_host"] is not None
+            and self._client_config["chroma_server_http_port"] is not None
+        ) and self._client_config["persist_directory"] is not None:
+            raise Exception(
+                "Either host + port or persist_directory is required for ChromaDB connection, but not both!"
+            )
+
         self._client = None
+        self.is_connected = False
         self.connect()
 
     def _get_client(self):
@@ -50,7 +72,8 @@ class ChromaDBHandler(VectorStoreHandler):
             )
 
     def __del__(self):
-        super().__del__()
+        if self.is_connected is True:
+            self.disconnect()
 
     def connect(self):
         """Connect to a ChromaDB database."""
@@ -345,12 +368,12 @@ class ChromaDBHandler(VectorStoreHandler):
 
 
 connection_args = OrderedDict(
-    host={
+    chroma_server_host={
         "type": ARG_TYPE.STR,
         "description": "chromadb server host",
         "required": False,
     },
-    port={
+    chroma_server_http_port={
         "type": ARG_TYPE.INT,
         "description": "chromadb server port",
         "required": False,
@@ -363,7 +386,7 @@ connection_args = OrderedDict(
 )
 
 connection_args_example = OrderedDict(
-    host="localhost",
-    port=8000,
-    persist_directory="chroma",
+    chroma_server_host="localhost",
+    chroma_server_http_port=8000,
+    persist_directoryn="chroma",
 )

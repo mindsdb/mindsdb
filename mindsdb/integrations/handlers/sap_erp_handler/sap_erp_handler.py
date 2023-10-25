@@ -118,6 +118,7 @@ class SAPERPHandler(APIHandler):
         ]
         for Table in _tables:
             self._register_table(Table.name, Table(self))
+        self.connect()
 
     def check_connection(self) -> StatusResponse:
         resp = StatusResponse(False)

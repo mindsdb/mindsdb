@@ -492,6 +492,125 @@ class InventoryLevelTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         inventories = shopify.InventoryLevel.find(**kwargs)
         return [inventory.to_dict() for inventory in inventories]
+    
+    def insert(self, query: ast.Insert) -> None:
+        """
+        Inserts data into the Shopify "POST /inventory_levels" API endpoint.
+        Parameters
+        ----------
+        query : ast.Insert
+            Given SQL INSERT query
+            
+        Returns
+        -------
+        None
+        
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        insert_statement_parser = INSERTQueryParser(
+            query,
+            supported_columns=['inventory_item_id', 'location_id', 'available'],
+            mandatory_columns=['inventory_item_id', 'location_id', 'available'],
+            all_mandatory=True
+        )
+        inventory_level_data = insert_statement_parser.parse_query()
+        self.create_inventory_level(inventory_level_data)
+
+    def delete(self, query: ast.Delete) -> None:
+        """
+        Deletes data from the Shopify "DELETE /inventory_levels" API endpoint.
+        Parameters
+        ----------
+        query : ast.Delete
+            Given SQL DELETE query
+        Returns
+        -------
+        None
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        delete_statement_parser = DELETEQueryParser(query)
+        where_conditions = delete_statement_parser.parse_query()
+
+        inventory_levels_df = pd.json_normalize(self.get_inventory_levels())
+
+        delete_query_executor = DELETEQueryExecutor(
+            inventory_levels_df,
+            where_conditions
+        )
+
+        inventory_levels_df = delete_query_executor.execute_query()
+
+        inventory_level_ids = inventory_levels_df['id'].tolist()
+        self.delete_inventory_levels(inventory_level_ids)
+
+    def update(self, query: ast.Update) -> None:
+        """
+        Updates data from the Shopify "PUT /inventory_levels" API endpoint.
+        Parameters
+        ----------
+        query : ast.Update
+            Given SQL UPDATE query
+        Returns
+        -------
+        None
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        update_statement_parser = UPDATEQueryParser(query)
+        values_to_update, where_conditions = update_statement_parser.parse_query()
+
+        print(f"values_to_update: {values_to_update}")
+        print(f"where_conditions: {where_conditions}")
+        inventory_levels_df = pd.json_normalize(self.get_inventory_levels())
+        update_query_executor = UPDATEQueryExecutor(
+            inventory_levels_df,
+            where_conditions
+        )
+
+        inventory_levels_df = update_query_executor.execute_query()
+        print(f"inventory_levels_df: {inventory_levels_df}")
+        inventory_level_ids = inventory_levels_df['id'].tolist()
+        self.update_inventory_levels(inventory_level_ids, values_to_update)
+        
+    def create_inventory_level(self, inventory_level_data: List[Dict[Text, Any]]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for inventory_level in inventory_level_data:
+            created_inventory_level = shopify.InventoryLevel.create(inventory_level)
+            if 'id' not in created_inventory_level.to_dict():
+                raise Exception('Inventory level creation failed')
+            else:
+                logger.info(f'Inventory level {created_inventory_level.to_dict()["id"]} created')
+
+    def delete_inventory_levels(self, inventory_level_ids: List[int]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for inventory_level_id in inventory_level_ids:
+            inventory_level = shopify.InventoryLevel.find(inventory_level_id)
+            inventory_level.destroy()
+            logger.info(f'Inventory level {inventory_level_id} deleted')
+
+    def update_inventory_levels(self, inventory_level_ids: List[int], values_to_update: Dict[Text, Any]) -> None:
+        # Update the inventory levels using the Shopify API
+        session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(session)
+
+        for inventory_level_id in inventory_level_ids:
+            inventory_level = shopify.InventoryLevel.find(inventory_level_id)
+            for key, value in values_to_update.items():
+                setattr(inventory_level, key, value)
+            inventory_level.save()
+            logger.info(f'Inventory level {inventory_level_id} updated')
 
 class LocationTable(APITable):
     """The Shopify Location Table implementation"""
@@ -764,155 +883,3 @@ class SalesChannelTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         sales_channels = shopify.Publication.find(**kwargs)
         return  [sales_channel.to_dict() for  sales_channel in sales_channels]
-
-
-class InventoryLevelTable(APITable):
-    """The Shopify InventoryLevel Table implementation"""
-
-    def select(self, query: ast.Select) -> pd.DataFrame:
-        """Pulls data from the Shopify "GET /inventory_levels" API endpoint.
-
-        Parameters
-        ----------
-        query : ast.Select
-           Given SQL SELECT query
-
-        Returns
-        -------
-        pd.DataFrame
-
-            Shopify Inventory Level info
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'inventory_level',
-            self.get_columns()
-        )
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-
-        inventory_level_df = pd.json_normalize(self.get_inventory_levels(), record_path="inventory_levels", meta=["location_id", "inventory_item_id"], record_prefix="inventory_levels_")
-
-        select_statement_executor = SELECTQueryExecutor(
-            inventory_level_df,
-            selected_columns,
-            where_conditions,
-            order_by_conditions,
-            result_limit
-        )
-        
-        inventory_level_df = select_statement_executor.execute_query()
-
-        return inventory_level_df
-    
-
-    def insert(self, query: ast.Insert) -> None:
-        """Inserts Shopify inventory levels data.
-
-        Parameters
-        ----------
-        query : ast.Insert
-           Given SQL INSERT query
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported column
-        """
-
-        if 'inventory_item_id' not in query.columns or 'location_id' not in query.columns or 'available' not in query.columns:
-            raise ValueError("INSERT query must specify inventory_item_id, location_id, and available columns.")
-
-        connection = self.handler.connect()
-
-        for row in query.values:
-            inventory_item_id, location_id, available = row
-
-            inventory_level = {
-                'inventory_item_id': inventory_item_id,
-                'location_id': location_id,
-                'available': available
-            }
-
-            connection.InventoryLevel.create(inventory_level)
-
-    def update(self, query: ast.Update) -> None:
-        """Updates Shopify inventory levels data.
-
-        Parameters
-        ----------
-        query : ast.Update
-           Given SQL UPDATE query
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition or update
-        """
-
-        if 'available' not in [assignment.column for assignment in query.set]:
-            raise ValueError("UPDATE query must specify available column to update.")
-
-        inventory_item_id, location_id = None, None
-        for condition in query.where.conditions:
-            if condition[1] == 'inventory_item_id':
-                if condition[0] != '=':
-                    raise ValueError(f"Unsupported operator '{condition[0]}' for column '{condition[1]}' in WHERE clause.")
-                inventory_item_id = condition[2]
-            elif condition[1] == 'location_id':
-                if condition[0] != '=':
-                    raise ValueError(f"Unsupported operator '{condition[0]}' for column '{condition[1]}' in WHERE clause.")
-                location_id = condition[2]
-            else:
-                raise ValueError(f"Unsupported column '{condition[1]}' in WHERE clause.")
-
-        connection = self.handler.connect()
-
-        if inventory_item_id is not None and location_id is not None:
-            inventory_level = connection.InventoryLevel.find(inventory_item_id=inventory_item_id, location_id=location_id)
-            inventory_level.available = query.set[0].value
-            inventory_level.save()
-        else:
-            raise ValueError("No conditions specified in UPDATE query.")
-
-    def delete(self, query: ast.Delete) -> None:
-        """Deletes Shopify inventory levels data.
-
-        Parameters
-        ----------
-        query : ast.Delete
-           Given SQL DELETE query
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-
-        inventory_item_id, location_id = None, None
-        for condition in query.where.conditions:
-            if condition[1] == 'inventory_item_id':
-                if condition[0] != '=':
-                    raise ValueError(f"Unsupported operator '{condition[0]}' for column '{condition[1]}' in WHERE clause.")
-                inventory_item_id = condition[2]
-            elif condition[1] == 'location_id':
-                if condition[0] != '=':
-                    raise ValueError(f"Unsupported operator '{condition[0]}' for column '{condition[1]}' in WHERE clause.")
-                location_id = condition[2]
-            else:
-                raise ValueError(f"Unsupported column '{condition[1]}' in WHERE clause.")
-
-        connection = self.handler.connect()
-
-        if inventory_item_id is not None and location_id is not None:
-            inventory_level = connection.InventoryLevel.find(inventory_item_id=inventory_item_id, location_id=location_id)
-            inventory_level.destroy()
-        else:
-            raise ValueError("No conditions specified in DELETE query.")
-
-    def get_columns(self) -> List[str]:
-        return ['inventory_item_id', 'location_id', 'available']

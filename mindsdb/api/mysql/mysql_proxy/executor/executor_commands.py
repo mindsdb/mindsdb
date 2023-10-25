@@ -833,6 +833,8 @@ class ExecuteCommands:
 
         if len(attribute) == 1:
             attribute = attribute[0]
+        elif len(attribute) == 0:
+            attribute = None
 
         df = self.session.model_controller.describe_model(
             self.session,

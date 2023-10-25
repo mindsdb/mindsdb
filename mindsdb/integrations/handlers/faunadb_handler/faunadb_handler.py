@@ -51,9 +51,13 @@ class FaunaDBHandler(DatabaseHandler):
         # either scheme + domain + port or endpoint is required
         # but not both
         if not endpoint and not (scheme and domain and port):
-            raise Exception("Either scheme + domain + port or endpoint is required for FaunaDB connection!")
+            raise Exception(
+                "Either scheme + domain + port or endpoint is required for FaunaDB connection!"
+            )
         elif endpoint and (scheme or domain or port):
-            raise Exception("Either scheme + domain + port or endpoint is required for FaunaDB connection, but not both!")
+            raise Exception(
+                "Either scheme + domain + port or endpoint is required for FaunaDB connection, but not both!"
+            )
 
         self._client = None
         self.is_connected = False

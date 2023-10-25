@@ -112,4 +112,49 @@ class SubscriptionsTable(APITable):
         return [subscription.to_dict() for subscription in subscriptions['plans']]
 
 
+#The task is to extend this implementation to include the Payouts table.
+class PayoutsTable(APITable):
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """
+        Pulls PayPal Payouts data.
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+        Returns
+        -------
+        pd.DataFrame
+            PayPal Payouts matching the query
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'payouts',
+            self.get_columns()
+        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        payouts_df = pd.json_normalize(self.get_payouts(count=result_limit))
+        select_statement_executor = SELECTQueryExecutor(
+            payouts_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+        payouts_df = select_statement_executor.execute_query()
+
+        return payouts_df
+
+    def get_columns(self) -> List[Text]:
+        return pd.json_normalize(self.get_payouts(count=1)).columns.tolist()
+
+    def get_payouts(self, **kwargs) -> List[Dict]:
+        connection = self.handler.connect()
+        payouts = paypalrestsdk.Payout.find('12345678', api=connection)
+        return [payout.to_dict() for payout in payouts['payout']]
 

@@ -1,6 +1,7 @@
+import time
 import pickle
 
-from redis.exceptions import ConnectionError
+from redis.exceptions import ConnectionError as RedisConnectionError
 from walrus import Database
 from pandas import DataFrame
 
@@ -27,19 +28,30 @@ class MLTaskProducer:
 
     def __init__(self) -> None:
         config = Config().get('ml_task_queue', {})
-        self.db = Database(
-            host=config.get('host', 'localhost'),
-            port=config.get('port', 6379),
-            db=config.get('db', 0),
-            username=config.get('username'),
-            password=config.get('password'),
-            protocol=3
-        )
-        try:
-            self.db.ping()
-        except ConnectionError:
-            print('Cant connect to redis')
-            raise
+
+        time_to_connect_sec = 60
+        connected = False
+        while connected is False and time_to_connect_sec > 0:
+            self.db = Database(
+                host=config.get('host', 'localhost'),
+                port=config.get('port', 6379),
+                db=config.get('db', 0),
+                username=config.get('username'),
+                password=config.get('password'),
+                protocol=3
+            )
+            try:
+                self.db.ping()
+                connected = True
+            except RedisConnectionError as e:
+                if time_to_connect_sec == 60:
+                    print(e)
+                print("Can't connect to Radis, wait")
+                time_to_connect_sec = time_to_connect_sec - 2
+                time.sleep(2)
+        if connected is False:
+            raise RedisConnectionError
+
         self.stream = self.db.Stream(TASKS_STREAM_NAME)
         self.cache = self.db.cache()
         self.pubsub = self.db.pubsub()

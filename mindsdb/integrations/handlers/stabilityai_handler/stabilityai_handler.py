@@ -5,6 +5,10 @@ from mindsdb.integrations.handlers.stabilityai_handler.stabilityai import Stabil
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 
+from mindsdb.utilities.log import get_log
+
+
+logger = get_log("integrations.stabilityai_handler")
 
 class StabilityAIHandler(BaseMLEngine):
     name = "stabilityai"
@@ -63,14 +67,7 @@ class StabilityAIHandler(BaseMLEngine):
         client = StabilityAPIClient(args["api_key"], "")
         stability_engine_id = args["stability_engine_id"]
         response = client.available_engines.get(stability_engine_id)
-        description = {}
-        description[''] = response.body['name']
-        description['model_version'] = response.body['model_version']
-        description['date_created'] = response.body['created']
-        # pre-trained monkeylearn models guide about what industries they can be used
-        description['industries'] = response.body['industries']
-        des_df = pd.DataFrame([description])
-        return des_df
+        return pd.json_normalize(response)
     
     def _get_stability_api_key(self, args):
         if 'api_key' in args:

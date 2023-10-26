@@ -62,7 +62,7 @@ class MessagesTable(APITable):
         if query.limit is not None:
             params['limit'] = query.limit.value
 
-        result = self.handler.fetch_messages(params, df=True);
+        result = self.handler.fetch_messages(params, df=True)
         
         
         return result

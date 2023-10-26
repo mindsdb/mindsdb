@@ -189,13 +189,9 @@ class TwilioHandler(APIHandler):
 
         return response
 
-
     def parse_native_query(self, query_string: str):
         """Parses the native query string of format method(arg1=val1, arg2=val2, ...) and returns the method name and arguments."""
 
-        # Extract method name and argument string
-        print(f"query_string {query_string}")
-        
         # Adjust regex to account for the possibility of no arguments inside the parenthesis
         match = re.match(r'(\w+)\(([^)]*)\)', query_string)
         if not match:
@@ -218,7 +214,6 @@ class TwilioHandler(APIHandler):
         '''It parses any native statement string and acts upon it (for example, raw syntax commands).'''
 
         method_name, params = self.parse_native_query(query_string)
-        print(f"params {params}")
         if method_name == 'send_sms':
             response = self.send_sms(params)
         elif method_name == 'fetch_messages':
@@ -230,12 +225,12 @@ class TwilioHandler(APIHandler):
 
         return response
 
-    def send_sms(self, params, ret_as_dict = False):
+    def send_sms(self, params, ret_as_dict=False):
         message = self.client.messages.create(
             to=params.get("to_number"),
             from_=params.get('from_number'),
             body=params.get("body"),
-            media_url=params.get("media_url") 
+            media_url=params.get("media_url")
         )
 
         if ret_as_dict is True:
@@ -246,27 +241,15 @@ class TwilioHandler(APIHandler):
             status=message.status
         )
 
-    
-    
-
-    def fetch_messages(self, params, df = False):
+    def fetch_messages(self, params, df=False):
         limit = int(params.get('limit', 10))
-        direction = params.get('direction', None)
         sid = params.get('sid', None)
-
         # Convert date strings to datetime objects if provided
         date_sent_after = params.get('date_sent_after', None)
-        
-
         date_sent_before = params.get('date_sent_before', None)
-        #if date_sent_before:
-        #    date_sent_before = date_sent_before
-
         # Extract 'from_' and 'body' search criteria from params
         from_number = params.get('from_number', None)
         to_number = params.get('to_number', None)
-        body = params.get('body', None)
-
         args = {
             'limit': limit,
             'date_sent_after': date_sent_after,
@@ -275,7 +258,7 @@ class TwilioHandler(APIHandler):
             'to': to_number
         }
 
-        args = { arg: val for arg, val in args.items() if val is not None }
+        args = {arg: val for arg, val in args.items() if val is not None}
         if sid:
             messages = [self.client.messages(sid).fetch()]
         else:
@@ -291,7 +274,7 @@ class TwilioHandler(APIHandler):
                 'body': msg.body,
                 'direction': msg.direction,
                 'msg_status': msg.status,
-                'sent_at': msg.date_created, #datetime.strptime(str(msg.date_sent), '%Y-%m-%d %H:%M:%S%z'),
+                'sent_at': msg.date_created,  # datetime.strptime(str(msg.date_sent), '%Y-%m-%d %H:%M:%S%z'),
                 'account_sid': msg.account_sid,
                 'price': msg.price,
                 'price_unit': msg.price_unit,
@@ -306,8 +289,7 @@ class TwilioHandler(APIHandler):
             return pd.DataFrame(data)
         return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(data))
 
-
-    def list_phone_numbers(self, params, df = False):
+    def list_phone_numbers(self, params, df=False):
         phone_numbers = self.client.incoming_phone_numbers.list()
 
         # Extract properties for each phone number

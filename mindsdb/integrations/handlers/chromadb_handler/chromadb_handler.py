@@ -1,7 +1,6 @@
 from collections import OrderedDict
 from typing import List, Optional
 
-import chromadb
 import pandas as pd
 
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
@@ -17,6 +16,11 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 )
 from mindsdb.utilities import log
 
+import sys
+__import__("pysqlite3")
+sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+import chromadb  # noqa: E402
+
 
 class ChromaDBHandler(VectorStoreHandler):
     """This handler handles connection and execution of the ChromaDB statements."""
@@ -24,37 +28,15 @@ class ChromaDBHandler(VectorStoreHandler):
     name = "chromadb"
 
     def __init__(self, name: str, **kwargs):
-        super().__init__(name)
-
-        self._connection_data = kwargs.get("connection_data")
+        super().__init__(name, **kwargs)
 
         self._client_config = {
-            "chroma_server_host": self._connection_data.get("chroma_server_host"),
-            "chroma_server_http_port": self._connection_data.get(
-                "chroma_server_http_port"
-            ),
-            "persist_directory": self._connection_data.get("persist_directory"),
+            "chroma_server_host": self.config.host,
+            "chroma_server_http_port": self.config.port,
+            "persist_directory": self.persist_directory,
         }
 
-        # either host + port or persist_directory is required
-        # but not both
-        if (
-            self._client_config["chroma_server_host"] is None
-            or self._client_config["chroma_server_http_port"] is None
-        ) and self._client_config["persist_directory"] is None:
-            raise Exception(
-                "Either host + port or persist_directory is required for ChromaDB connection!"
-            )
-        elif (
-            self._client_config["chroma_server_host"] is not None
-            and self._client_config["chroma_server_http_port"] is not None
-        ) and self._client_config["persist_directory"] is not None:
-            raise Exception(
-                "Either host + port or persist_directory is required for ChromaDB connection, but not both!"
-            )
-
         self._client = None
-        self.is_connected = False
         self.connect()
 
     def _get_client(self):
@@ -72,8 +54,7 @@ class ChromaDBHandler(VectorStoreHandler):
             )
 
     def __del__(self):
-        if self.is_connected is True:
-            self.disconnect()
+        super().__del__()
 
     def connect(self):
         """Connect to a ChromaDB database."""
@@ -368,12 +349,12 @@ class ChromaDBHandler(VectorStoreHandler):
 
 
 connection_args = OrderedDict(
-    chroma_server_host={
+    host={
         "type": ARG_TYPE.STR,
         "description": "chromadb server host",
         "required": False,
     },
-    chroma_server_http_port={
+    port={
         "type": ARG_TYPE.INT,
         "description": "chromadb server port",
         "required": False,
@@ -386,7 +367,7 @@ connection_args = OrderedDict(
 )
 
 connection_args_example = OrderedDict(
-    chroma_server_host="localhost",
-    chroma_server_http_port=8000,
-    persist_directoryn="chroma",
+    host="localhost",
+    port=8000,
+    persist_directory="chroma",
 )

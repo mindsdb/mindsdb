@@ -1,0 +1,9 @@
+{
+    "name": "MindsDB",
+    "build": {
+      "dockerfile": "../docker/mindsdb.Dockerfile",
+      "context": ".."
+    },
+    "appPort": [47334, 47335],
+    "postCreateCommand": "pip3 install -r requirements/requirements.txt"
+}

@@ -54,21 +54,21 @@ class DockerHubRepoImagesSummaryTable(APITable):
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
 
-        filter_flag = ("namespace" in search_params) or ("repository" in search_params)
+        filter_flag = ("namespace" in search_params) and ("repository" in search_params)
 
         if not filter_flag:
-            raise NotImplementedError("namespace or repository column has to be present in where clause.")
+            raise NotImplementedError("Both namespace and repository columns have to be present in WHERE clause.")
 
         repo_images_summary_df = pd.DataFrame(columns=self.get_columns())
 
         response = self.handler.docker_client.get_images_summary(search_params["namespace"], search_params["repository"])
-        
+
         self.check_res(res=response)
 
         content = response["content"]
 
         repo_images_summary_df = pd.json_normalize({"active_from": content["active_from"], "total": content["statistics"]["total"], "active": content["statistics"]["active"], "inactive": content["statistics"]["inactive"]})
-        
+
         select_statement_executor = SELECTQueryExecutor(
             repo_images_summary_df,
             selected_columns,
@@ -82,7 +82,8 @@ class DockerHubRepoImagesSummaryTable(APITable):
         return repo_images_summary_df
 
     def check_res(self, res):
-        if res["code"] != 200: raise Exception("Error fetching results - " + res["error"])
+        if res["code"] != 200:
+            raise Exception("Error fetching results - " + res["error"])
 
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses

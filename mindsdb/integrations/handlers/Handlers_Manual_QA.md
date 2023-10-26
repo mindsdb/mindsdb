@@ -41,3 +41,5 @@ https://github.com/boomlion8/mindsdb-test/blob/main/Jira_QA.md
 </br>
 Frappe app integration Test Passed: https://github.com/adeyinkaezra123/mindsdb-integration-test/blob/main/handlers/frappe/Frappe_app.md
 </br>
+google search Integration Test Failed: https://github.com/Sekhar-Kumar-Dash/Mindsdb_google_search/blob/main/Mindsdb%20Google/google_search_qa.md, (https://github.com/mindsdb/mindsdb/issues/8124)
+</br>

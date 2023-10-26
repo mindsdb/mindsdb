@@ -3,19 +3,19 @@ from pyod.models.xgbod import XGBOD  # semi-supervised default
 from catboost import CatBoostClassifier  # supervised default
 
 
-def train_unsupervised(X_train):
-    clf = ECOD()
-    clf.fit(X_train)
-    return clf
+def train_unsupervised(X_train, model=None):
+    model = model if model is not None else ECOD()
+    model.fit(X_train)
+    return model
 
 
 def train_semisupervised(X_train, y_train):
-    clf = XGBOD(estimator_list=[ECOD()])
-    clf.fit(X_train, y_train)
-    return clf
+    model = XGBOD(estimator_list=[ECOD()])
+    model.fit(X_train, y_train)
+    return model
 
 
-def train_supervised(X_train, y_train):
-    clf = CatBoostClassifier(logging_level="Silent")
-    clf.fit(X_train, y_train)
-    return clf
+def train_supervised(X_train, y_train, model=None):
+    model = model if model is not None else CatBoostClassifier(logging_level="Silent")
+    model.fit(X_train, y_train)
+    return model

@@ -15,7 +15,6 @@ import datetime as dt
 from collections import defaultdict
 
 import dateinfer
-import duckdb
 import pandas as pd
 import numpy as np
 

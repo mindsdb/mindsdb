@@ -18,11 +18,12 @@ from mindsdb.utilities import log
 
 try:
     import sys
+
     __import__("pysqlite3")
     sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
 except ImportError:
     log.logger.error(
-        "pysqlite3 is not installed, this is not a problem for local usage"
+        "[Chromadb-handler] pysqlite3 is not installed, this is not a problem for local usage"
     )  # noqa: E501
 import chromadb  # noqa: E402
 

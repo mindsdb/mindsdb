@@ -54,10 +54,10 @@ class DockerHubRepoImagesSummaryTable(APITable):
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
 
-        filter_flag = ("namespace" in search_params) or ("repository" in search_params)
+        filter_flag = ("namespace" in search_params) and ("repository" in search_params)
 
         if not filter_flag:
-            raise NotImplementedError("namespace or repository column has to be present in where clause.")
+            raise NotImplementedError("Both namespace and repository columns have to be present in WHERE clause.")
 
         repo_images_summary_df = pd.DataFrame(columns=self.get_columns())
 

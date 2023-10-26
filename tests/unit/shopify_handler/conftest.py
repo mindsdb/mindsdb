@@ -6,7 +6,7 @@ import requests
 import shopify
 
 from mindsdb.integrations.handlers.shopify_handler import Handler
-from mindsdb.integrations.handlers.shopify_handler.shopify_tables import ProductsTable, CustomersTable
+from mindsdb.integrations.handlers.shopify_handler.shopify_tables import ProductsTable, CustomersTable, OrdersTable
 
 connection_data = {
     'shop_url': 'some-shopify-store.myshopify.com',
@@ -1040,3 +1040,8 @@ def sample_customers():
         ]
     """
     return json.loads(customers)
+
+
+@pytest.fixture
+def orders_table(shopify_handler):
+    return OrdersTable(shopify_handler)

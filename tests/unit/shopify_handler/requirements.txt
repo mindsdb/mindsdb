@@ -1,0 +1,6 @@
+mindsdb_sql==0.7.3
+pandas==2.0.3
+pytest==7.4.2
+Requests==2.31.0
+responses==0.23.3
+ShopifyAPI==12.3.0

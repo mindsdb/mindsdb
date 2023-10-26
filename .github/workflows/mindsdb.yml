@@ -61,11 +61,17 @@ jobs:
           REQUIREMENTS_FILES=requirements/requirements.txt,${HANDLER_DIR}/requirements.txt
 
           # List of package name maps to their import name in python
-          PACKAGE_MODULE_NAME_MAP="scylla-driver=cassandra,snowflake-connector-python=snowflake,snowflake-sqlalchemy=snowflake,auto-sklearn=autosklearn,google-cloud-bigquery=google,google-cloud-spanner=google,google-api-python-client=googleapiclient,binance-connector=binance,pysqlite3-binary=pysqlite3,sqlalchemy-spanner=sqlalchemy,atlassian-python-api=atlassian,databricks-sql-connector=databricks,elasticsearch-dbapi=es,pygithub=github,python-gitlab=gitlab,google-auth-httplib2=google,impyla=impala,IfxPy=IfxPyDbi,salesforce-merlion=merlion,newsapi-python=newsapi,google-generativeai=google,pinecone-client=pinecone,plaid-python=plaid,faiss-cpu=faiss,writerai=writer,sqlalchemy-redshift=sqlalchemy,rocketchat_API=rocketchat_API,ShopifyAPI=shopify,solace-pubsubplus=solace,taospy=taosrest,sqlalchemy-vertica-python=sqlalchemy,weaviate-client=weaviate,pymupdf=fitz,ibm-db=ibm_db_dbi,python-dateutil=dateutil,grpcio=grpc,sqlalchemy-redshift=redshift_sqlalchemy,sqlalchemy-vertica-python=sqla_vertica_python,grpcio-tools=grpc,psycopg2-binary=psycopg,pymongo=pymongo|bson,python-multipart=multipart,pydateinfer=dateinfer,scikit-learn=sklearn,protobuf=google"
+          PACKAGE_MODULE_NAME_MAP="gunicorn=gunicorn,hierarchicalforecast=hierarchicalforecast,clickhouse-sqlalchemy=clickhouse_sqlalchemy,cohere=cohere,scylla-driver=cassandra,snowflake-connector-python=snowflake,snowflake-sqlalchemy=snowflake,auto-sklearn=autosklearn,google-cloud-bigquery=google,google-cloud-spanner=google,google-api-python-client=googleapiclient,binance-connector=binance,pysqlite3-binary=pysqlite3,sqlalchemy-spanner=sqlalchemy,atlassian-python-api=atlassian,databricks-sql-connector=databricks,elasticsearch-dbapi=es,pygithub=github,python-gitlab=gitlab,google-auth-httplib2=google,impyla=impala,IfxPy=IfxPyDbi,salesforce-merlion=merlion,newsapi-python=newsapi,google-generativeai=google,pinecone-client=pinecone,plaid-python=plaid,faiss-cpu=faiss,writerai=writer,sqlalchemy-redshift=sqlalchemy,rocketchat_API=rocketchat_API,ShopifyAPI=shopify,solace-pubsubplus=solace,taospy=taosrest,sqlalchemy-vertica-python=sqlalchemy,weaviate-client=weaviate,pymupdf=fitz,ibm-db=ibm_db_dbi,python-dateutil=dateutil,grpcio=grpc,sqlalchemy-redshift=redshift_sqlalchemy,sqlalchemy-vertica-python=sqla_vertica_python,grpcio-tools=grpc,psycopg2-binary=psycopg,pymongo=pymongo|bson,python-multipart=multipart,pydateinfer=dateinfer,scikit-learn=sklearn,protobuf=google"
+
+          # THe following packages need exceptions because they are optional deps of some other packages. e.g. langchain CAN use openai
+          # (pysqlite3-binary is imported in an unusual way in the chromadb handler and needs to be excluded too)
+          OPTIONAL_HANDLER_DEPS="pysqlite3-binary|torch|openai|tiktoken|wikipedia|anthropic"
 
           # List of rules we can ignore for specific packages
           # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in this handler
-          RULE_IGNORES=DEP003="mindsdb",DEP001="mindsdb",DEP002="openai|wikipedia|anthropic|`cat requirements/requirements.txt | tr ' ><=~[' '|' | cut -d '|' -f 1 | paste -sd\| -`"
+          # We ignore mindsdb because we know it exists
+          MAIN_REQUIREMENTS_DEPS=`cat requirements/requirements.txt | tr ' ><=~[' '|' | cut -d '|' -f 1 | paste -sd\| -`
+          RULE_IGNORES=DEP003="mindsdb",DEP001="mindsdb",DEP002="${OPTIONAL_HANDLER_DEPS}|${MAIN_REQUIREMENTS_DEPS}"
 
           deptry --requirements-txt $REQUIREMENTS_FILES --package-module-name-map $PACKAGE_MODULE_NAME_MAP --per-rule-ignores $RULE_IGNORES ${HANDLER_DIR}
         done

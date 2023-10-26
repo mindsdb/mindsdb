@@ -1,2 +1,3 @@
 charset-normalizer
 python-magic >= 0.4.27
+langchain==0.0.303

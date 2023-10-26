@@ -1,3 +1,2 @@
 psycopg[binary]
-mysql-connector-python
 boto3

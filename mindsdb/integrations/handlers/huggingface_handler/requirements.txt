@@ -3,6 +3,5 @@ transformers==4.31.0
 datasets
 evaluate
 torch
-rouge-score
 nltk
 huggingface-hub

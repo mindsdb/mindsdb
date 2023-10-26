@@ -1,3 +1,2 @@
 autogluon
-pydantic
 type-infer

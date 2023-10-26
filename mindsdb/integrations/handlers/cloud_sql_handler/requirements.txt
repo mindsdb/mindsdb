@@ -1,3 +1,0 @@
-psycopg[binary]
-mysql-connector-python
-pymssql >= 2.1.4

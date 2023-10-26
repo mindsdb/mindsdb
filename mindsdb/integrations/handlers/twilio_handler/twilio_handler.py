@@ -12,8 +12,8 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
 from datetime import datetime
-from mindsdb.integrations.utilities.date_utils import parse_utc_date, parse_utc_date_with_limit
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
+from mindsdb.integrations.utilities.date_utils import parse_utc_date, parse_utc_date_with_limit, parse_local_date
+from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, project_dataframe, filter_dataframe
 
 from mindsdb_sql.parser import ast
 
@@ -30,9 +30,9 @@ class MessagesTable(APITable):
             if op == 'or':
                 raise NotImplementedError(f'OR is not supported')
             if arg1 == 'sent_at' and arg2 is not None:
-                
-                
-                date = parse_utc_date_with_limit(arg2, 300)
+
+                date = parse_local_date(arg2)
+                # date = parse_utc_date_with_limit(arg2, 300)
                 
                 if op == '>':
                     
@@ -41,6 +41,9 @@ class MessagesTable(APITable):
                     params['date_sent_before'] = date
                 else:
                     raise NotImplementedError
+
+                # also add to post query filter because date_sent_after=date1 will include date1
+                filters.append([op, arg1, arg2])
 
             
             elif arg1 == 'sid':
@@ -68,14 +71,17 @@ class MessagesTable(APITable):
             else:
                 filters.append([op, arg1, arg2])
 
-            
-
         if query.limit is not None:
             params['limit'] = query.limit.value
 
-        result = self.handler.fetch_messages(params, df=True);
-        
-        
+        result = self.handler.fetch_messages(params, df=True)
+
+        # filter targets
+        result = filter_dataframe(result, filters)
+
+        # project targets
+        result = project_dataframe(result, query.targets, self.get_columns())
+
         return result
 
     def get_columns(self):
@@ -308,7 +314,7 @@ class TwilioHandler(APIHandler):
                 'body': msg.body,
                 'direction': msg.direction,
                 'msg_status': msg.status,
-                'sent_at': msg.date_created, #datetime.strptime(str(msg.date_sent), '%Y-%m-%d %H:%M:%S%z'),
+                'sent_at': msg.date_created.replace(tzinfo=None),
                 'account_sid': msg.account_sid,
                 'price': msg.price,
                 'price_unit': msg.price_unit,

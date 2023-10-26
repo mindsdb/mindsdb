@@ -182,19 +182,19 @@ class APIHandler(BaseHandler):
     def query(self, query: ASTNode):
 
         if isinstance(query, Select):
-            query_string = query.get_string()
-            table_name = str(query.from_table)
+            # query_string = query.get_string()
+            # table_name = str(query.from_table)
             result = self._get_table(query.from_table).select(query)
 
             # now we are going to try to runa  last filter on the query using duckdb magic
-            if isinstance(result, pd.DataFrame):
-                try:
-                    conn = duckdb.connect()
-                    conn.register(table_name, result)
-                    result = conn.execute(query_string).fetchdf()
-                    conn.close()
-                except Exception as e:
-                    raise RuntimeError(str(e))
+            # if isinstance(result, pd.DataFrame):
+            #     try:
+            #         conn = duckdb.connect()
+            #         conn.register(table_name, result)
+            #         result = conn.execute(query_string).fetchdf()
+            #         conn.close()
+            #     except Exception as e:
+            #         raise RuntimeError(str(e))
         elif isinstance(query, Update):
             result = self._get_table(query.table).update(query)
         elif isinstance(query, Insert):

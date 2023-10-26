@@ -6,7 +6,8 @@ import requests
 import shopify
 
 from mindsdb.integrations.handlers.shopify_handler import Handler
-from mindsdb.integrations.handlers.shopify_handler.shopify_tables import ProductsTable, CustomersTable, OrdersTable, LocationTable
+from mindsdb.integrations.handlers.shopify_handler.shopify_tables import (ProductsTable, CustomersTable, OrdersTable,
+                                                                          LocationTable, CarrierServiceTable)
 
 connection_data = {
     'shop_url': 'some-shopify-store.myshopify.com',
@@ -1080,3 +1081,27 @@ def sample_locations():
     ]
     """
     return json.loads(locations)
+
+
+@pytest.fixture
+def carrier_service_table(shopify_handler):
+    return CarrierServiceTable(shopify_handler)
+
+
+@pytest.fixture
+def sample_carriers():
+    carriers = """
+        [
+            {
+              "active": true,
+              "callback_url": "http://myapp.com",
+              "carrier_service_type": "api",
+              "id": 14079244,
+              "format": "json",
+              "name": "My Carrier Service",
+              "service_discovery": true,
+              "admin_graphql_api_id": "gid://shopify/DeliveryCarrierService/1"
+            }
+        ]
+    """
+    return json.loads(carriers)

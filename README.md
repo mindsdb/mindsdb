@@ -52,12 +52,12 @@
 
 ----------------------------------------
 
-[MindsDB's](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) **AI Virtual Database** empowers developers to connect any AI/ML model to any datasource. This includes relational and non-relational databases, data warehouses and SaaS applications.
+[MindsDB's](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) **AI Virtual Database** empowers developers to connect any AI/ML model to any data source. This includes relational and non-relational databases, data warehouses, and SaaS applications.
  [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Build%20AI-Centered%20Applications%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,nlp,machine_learning,neural_networks,databases,gpt3)
 
 MindsDB offers two primary benefits to its users. 
 1. Hook AI models to run automatically as new data is observed and plug the output into any of our integrations. 
-2. Automate training and finetuning AI models from data contained in any of the 130+ datasources we support.
+2. Automate training and finetuning AI models from data contained in any of the 130+ data sources we support.
   
 <img width="1089" alt="image" src="https://github.com/mindsdb/mindsdb/assets/5898506/5451fe7e-a854-4c53-b34b-769b6c7c9863">
 
@@ -92,7 +92,7 @@ docker pull mindsdb/mindsdb
 4. **Fine-Tune Models:** Experiment and [Fine-Tune](https://docs.mindsdb.com/sql/api/finetune) to achieve optimal results.
 5. **Automate Workflows:** Streamline operations with [JOBS](https://docs.mindsdb.com/sql/create/jobs).
 
-Follow the [quickstart guide](https://docs.mindsdb.com/quickstart?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) with sample data to get on-boarded as fast as possible.
+Follow the [quickstart guide](https://docs.mindsdb.com/quickstart?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) with sample data to get board as fast as possible.
 
 
 ## Data Integrations <a name="DatabaseIntegrations"></a>

@@ -39,8 +39,8 @@ jobs:
         # Paths to ignore. We ignore the handlers dir because we will test each handler individually
         EXCLUDE_PATHS="mindsdb/integrations/handlers|tests/"
 
-        deptry --requirements-txt $REQUIREMENTS_FILES --per-rule-ignores $RULE_IGNORES \
-        --package-module-name-map $PACKAGE_MODULE_NAME_MAP --exclude $EXCLUDE_PATHS .
+        deptry --requirements-txt "$REQUIREMENTS_FILES" --per-rule-ignores "$RULE_IGNORES" \
+        --package-module-name-map "$PACKAGE_MODULE_NAME_MAP" --exclude "$EXCLUDE_PATHS" .
   code_checking:
     runs-on: ubuntu-latest
     steps:

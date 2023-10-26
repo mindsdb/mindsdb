@@ -14,7 +14,7 @@ from pyod.models.knn import KNN
 from pyod.models.pca import PCA
 from xgboost import XGBClassifier
 from sklearn.naive_bayes import GaussianNB
-
+import numpy as np
 
 
 
@@ -70,17 +70,15 @@ def choose_model(df, model_name=None, model_type=None, target=None, supervised_t
 def anomaly_type_to_model_name(anomaly_type):
     """Choose the best model name based on the anomaly type"""
     assert anomaly_type in ["local", "global", "clustered", "dependency"], "anomaly type must be 'local', 'global', 'clustered', or 'dependency'"
-    if anomaly_type == "local":
-        return "lof"
-    elif anomaly_type == "global":
-        return "knn"
-    elif anomaly_type == "clustered":
-        return "pca"
-    elif anomaly_type == "dependency":
-        return "knn"
+    anomaly_type_dict = {
+        "local": "lof",
+        "global": "knn",
+        "clustered": "pca",
+        "dependency": "knn",
+    }
+    return anomaly_type_dict[anomaly_type]
 
-
-def preprocess_data(df):
+def  preprocess_data(df):
     """Preprocess the data by one-hot encoding categorical columns and scaling numeric columns"""
     # one-hot encode categorical columns
     categorical_columns = list(df.select_dtypes(include=["object"]).columns.values)
@@ -108,31 +106,51 @@ class AnomalyDetectionHandler(BaseMLEngine):
         """Train a model and save it to the model storage"""
         using_args = args["using"]
         model_type = using_args["type"] if "type" in using_args else None
-        model_name = anomaly_type_to_model_name(using_args["anomaly_type"]) if "anomaly_type" in using_args else None
-        model_name = using_args["model_name"] if "model_name" in using_args else model_name
-        model = choose_model(df, model_name=model_name, model_type=model_type, target=target)
-        target = "outlier" if target is None else target  # output column name for unsupervised learning
+        
+        # Model names is a list of model names to train. If the model is not an ensemble, it only contains one model
+        model_names = anomaly_type_to_model_name(using_args["anomaly_type"]) if "anomaly_type" in using_args else None
+        model_names = using_args["model_name"] if "model_name" in using_args else model_names
+        model_names = using_args["ensemble_models"] if "ensemble_models" in using_args else model_names
+        model_names = [model_names] if model_names is None else model_names
+        model_names = [model_names] if type(model_names) == str else model_names
 
-        save_path = "model.joblib"
-        dump(model, save_path)
-        model_args = {"model_path": save_path, "target": target, "model_name": model.__class__.__name__}
+        model_save_paths = []
+        model_targets = []
+        model_class_names = []
+        for model_name in model_names:
+            model = choose_model(df, model_name=model_name, model_type=model_type, target=target)
+            target = "outlier" if target is None else target  # output column name for unsupervised learning
+            save_path = "model.joblib" if model_name is None else model_name + ".joblib"
+            dump(model, save_path)
+            model_save_paths.append(save_path)
+            model_targets.append(target)
+            model_class_names.append(model.__class__.__name__)
+            
+        model_args = {"model_path": model_save_paths, "target": model_targets, "model_name": model_class_names}
         self.model_storage.json_set("model_args", model_args)
 
     def predict(self, df, args={}):
         """Load a model from the model storage and use it to make predictions"""
         model_args = self.model_storage.json_get("model_args")
-
-        if "__mindsdb_row_id" in df.columns:
-            df = df.drop("__mindsdb_row_id", axis=1)
-        if model_args["target"] in df.columns:
-            df = df.drop(model_args["target"], axis=1)
-        predict_df = preprocess_data(df).astype(float)
-
-        model = load(model_args["model_path"])
-        results = model.predict(predict_df)
-        return pd.DataFrame({model_args["target"]: results})
+        results_list = []        
+        for model_path in model_args["model_path"]:
+            model = load(model_path)
+            if "__mindsdb_row_id" in df.columns:
+                df = df.drop("__mindsdb_row_id", axis=1)
+            if model_args["target"][0] in df.columns:
+                df = df.drop(model_args["target"], axis=1)
+            predict_df = preprocess_data(df).astype(float)
+            results = model.predict(predict_df)
+            results_list.append(results)
+        final_results = np.array(results_list).mean(axis=0)
+        final_results = np.where(final_results > 0.5, 1, 0)
+        return pd.DataFrame({model_args["target"][0]: final_results})
 
     def describe(self, attribute="model"):
         model_args = self.model_storage.json_get("model_args")
+        df = pd.DataFrame({"model_name": [], "target": []})
         if attribute == "model":
-            return pd.DataFrame({k: [model_args[k]] for k in ["model_name", "target"]})
+            for model_name, target in zip(model_args["model_name"], model_args["target"]):
+                df2 = pd.DataFrame({"model_name": model_name, "target": target}, index=[0])
+                df = pd.concat([df, df2], ignore_index=True)
+            return df

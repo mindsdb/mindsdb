@@ -180,6 +180,45 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         )
         assert ret["model_name"][0] == "PCA"
 
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler") 
+    def test_ensemble(self, mock_handler):
+        # create project
+        self.run_sql("create database proj")
+        df = pd.read_csv("tests/unit/ml_handlers/data/anomaly_detection.csv")
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
+
+        # create predictor
+        self.run_sql(
+            """
+           create model proj.modelx
+           from pg (select * from df)
+           predict outlier
+           using
+             engine='anomaly_detection',
+             type='unsupervised',
+             ensemble_models=['pca', 'knn', 'ecod']
+        """
+        )
+        #  change model_names to ensemble_models for clarity
+        self.wait_predictor("proj", "modelx")
+
+        # run predict
+        ret = self.run_sql(
+            """
+           SELECT p.*
+           FROM pg.df as t
+           JOIN proj.modelx as p
+        """
+        )
+        assert len(ret) == len(df)
+
+        ret = self.run_sql(
+            """
+           describe model proj.modelx.model
+        """
+        )
+        assert all(ret["model_name"] == pd.Series(["PCA", "KNN", "ECOD"]))
+
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_default_semi_supervised_model(self, mock_handler):

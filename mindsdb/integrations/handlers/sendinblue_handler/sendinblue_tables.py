@@ -58,6 +58,5 @@ class EmailCampaignsTable(APITable):
         connection = self.handler.connect()
         email_campaigns_api_instance = sib_api_v3_sdk.EmailCampaignsApi(connection)
         email_campaigns = email_campaigns_api_instance.get_email_campaigns(**kwargs)
-        ans = [email_campaign for email_campaign in email_campaigns.campaigns]
-        print(ans)
-        return ans
+        email_campaign_list = [email_campaign for email_campaign in email_campaigns.campaigns]
+        return email_campaign_list

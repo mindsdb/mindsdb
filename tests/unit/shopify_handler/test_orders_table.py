@@ -1,8 +1,3 @@
-import logging
-
-import pytest
-import pandas as pd
-
 from mindsdb.integrations.handlers.shopify_handler import shopify_tables
 from unittest import mock
 from mindsdb_sql import parse_sql

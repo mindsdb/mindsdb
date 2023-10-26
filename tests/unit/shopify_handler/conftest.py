@@ -6,7 +6,7 @@ import requests
 import shopify
 
 from mindsdb.integrations.handlers.shopify_handler import Handler
-from mindsdb.integrations.handlers.shopify_handler.shopify_tables import ProductsTable, CustomersTable, OrdersTable
+from mindsdb.integrations.handlers.shopify_handler.shopify_tables import ProductsTable, CustomersTable, OrdersTable, LocationTable
 
 connection_data = {
     'shop_url': 'some-shopify-store.myshopify.com',
@@ -1045,3 +1045,38 @@ def sample_customers():
 @pytest.fixture
 def orders_table(shopify_handler):
     return OrdersTable(shopify_handler)
+
+
+@pytest.fixture
+def locations_table(shopify_handler):
+    return LocationTable(shopify_handler)
+
+
+@pytest.fixture
+def sample_locations():
+    locations = """
+        [
+        {
+            "id": 72001192158,
+            "name": "NA",
+            "address1": "NA",
+            "address2": "NA",
+            "city": "NA",
+            "zip": "400000",
+            "province": "Maharashtra",
+            "country": "IN",
+            "phone": "0000000000",
+            "created_at": "2023-10-13T15:52:54-04:00",
+            "updated_at": "2023-10-13T15:52:54-04:00",
+            "country_code": "IN",
+            "country_name": "India",
+            "province_code": "MH",
+            "legacy": false,
+            "active": true,
+            "admin_graphql_api_id": "gid://shopify/Location/72001192158",
+            "localized_country_name": "India",
+            "localized_province_name": "Maharashtra"
+        }
+    ]
+    """
+    return json.loads(locations)

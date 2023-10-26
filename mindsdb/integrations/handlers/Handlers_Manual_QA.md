@@ -38,3 +38,6 @@ Jira App Integration Test Passed: https://github.com/Sekhar-Kumar-Dash/mindsdb_j
 </br>
 Jira app integration Test Passed :
 https://github.com/boomlion8/mindsdb-test/blob/main/Jira_QA.md
+</br>
+Frappe app integration Test Passed: https://github.com/adeyinkaezra123/mindsdb-integration-test/blob/main/handlers/frappe/Frappe_app.md
+</br>

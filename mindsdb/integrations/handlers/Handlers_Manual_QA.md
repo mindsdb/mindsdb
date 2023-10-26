@@ -33,6 +33,8 @@ Web Crawler Integration Test Passed: https://github.com/Taheralicyclewala/MindsD
 Gitlab Integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Gitlab/Gitlab.md
 </br>
 Microsoft Acess integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Access/MicrosoftAccess.md
+<br>
+Sendinblue app integration Test Failed:  https://github.com/adeyinkaezra123/mindsdb-integration-test/blob/main/handlers/sendinblue/SendinBlue_Brevo.md https://github.com/mindsdb/mindsdb/issues/8098
 </br>
 Jira App Integration Test Passed: https://github.com/Sekhar-Kumar-Dash/mindsdb_jira/blob/main/jira_handler_mindsdb/Jira_QA.md
 </br>
@@ -43,3 +45,4 @@ Frappe app integration Test Passed: https://github.com/adeyinkaezra123/mindsdb-i
 </br>
 google search Integration Test Failed: https://github.com/Sekhar-Kumar-Dash/Mindsdb_google_search/blob/main/Mindsdb%20Google/google_search_qa.md, (https://github.com/mindsdb/mindsdb/issues/8124)
 </br>
+

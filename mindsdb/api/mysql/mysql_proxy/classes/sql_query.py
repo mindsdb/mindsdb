@@ -15,7 +15,6 @@ import datetime as dt
 from collections import defaultdict
 
 import dateinfer
-import duckdb
 import pandas as pd
 import numpy as np
 
@@ -65,7 +64,7 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner import query_planner
 from mindsdb_sql.planner.utils import query_traversal
 
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df, query_df_with_type_infer_fallback
 from mindsdb.interfaces.model.functions import (
     get_model_records,
     get_predictor_project
@@ -1017,8 +1016,8 @@ class SQLQuery():
             try:
                 left_data = steps_data[step.left.step_num]
                 right_data = steps_data[step.right.step_num]
-                df_a, names_a = left_data.to_df_cols(prefix='A')
-                df_b, names_b = right_data.to_df_cols(prefix='B')
+                table_a, names_a = left_data.to_df_cols(prefix='A')
+                table_b, names_b = right_data.to_df_cols(prefix='B')
 
                 if right_data.is_prediction or left_data.is_prediction:
                     # ignore join condition, use row_id
@@ -1059,17 +1058,14 @@ class SQLQuery():
                     join_condition = SqlalchemyRender('postgres').get_string(condition)
                     join_type = step.query.join_type
 
-                con = duckdb.connect(database=':memory:')
-                con.register('table_a', df_a)
-                con.register('table_b', df_b)
-
-                resp_df = con.execute(f"""
+                query = f"""
                     SELECT * FROM table_a {join_type} table_b
                     ON {join_condition}
-                """).fetchdf()
-                con.unregister('table_a')
-                con.unregister('table_b')
-                con.close()
+                """
+                resp_df, _description = query_df_with_type_infer_fallback(query, {
+                    'table_a': table_a,
+                    'table_b': table_b
+                })
 
                 resp_df = resp_df.replace({np.nan: None})
 

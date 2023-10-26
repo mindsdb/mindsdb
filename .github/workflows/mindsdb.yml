@@ -26,6 +26,9 @@ jobs:
         pip install deptry
 
         ### USE DEPTRY TO CHECK PYTHON REQUIREMENTS ###
+        # This checks that:
+        # 1. We don't import a python package that isn't in a requirements.txt file
+        # 2. We don't have a package in requirements.txt that we don't import
 
         # Requirements files to use
         REQUIREMENTS_FILES="requirements/requirements.txt,docker/handler_discovery/requirements.txt"
@@ -41,6 +44,28 @@ jobs:
 
         deptry --requirements-txt $REQUIREMENTS_FILES --per-rule-ignores $RULE_IGNORES \
         --package-module-name-map $PACKAGE_MODULE_NAME_MAP --exclude $EXCLUDE_PATHS .
+
+    # - name: Check handler requirements
+    #   shell: bash
+    #   run: |
+    #     pip install deptry
+
+    #     ### USE DEPTRY TO CHECK PYTHON REQUIREMENTS ###
+
+    #     # Requirements files to use
+    #     REQUIREMENTS_FILES="requirements/requirements.txt,docker/handler_discovery/requirements.txt"
+
+    #     # List of package name maps to their import name in python
+    #     PACKAGE_MODULE_NAME_MAP="scylla-driver=cassandra,snowflake-connector-python=snowflake,snowflake-sqlalchemy=snowflake,auto-sklearn=autosklearn,google-cloud-bigquery=google,google-cloud-spanner=google,google-api-python-client=googleapiclient,binance-connector=binance,pysqlite3-binary=pysqlite3,sqlalchemy-spanner=sqlalchemy,atlassian-python-api=atlassian,databricks-sql-connector=databricks,elasticsearch-dbapi=es,pygithub=github,python-gitlab=gitlab,google-auth-httplib2=google,impyla=impala,IfxPy=IfxPyDbi,salesforce-merlion=merlion,newsapi-python=newsapi,google-generativeai=google,pinecone-client=pinecone,plaid-python=plaid,faiss-cpu=faiss,writerai=writer,sqlalchemy-redshift=sqlalchemy,rocketchat_API=rocketchat_API,ShopifyAPI=shopify,solace-pubsubplus=solace,taospy=taosrest,sqlalchemy-vertica-python=sqlalchemy,weaviate-client=weaviate,pymupdf=fitz,ibm-db=ibm_db_dbi,python-dateutil=dateutil,grpcio=grpc,sqlalchemy-redshift=redshift_sqlalchemy,sqlalchemy-vertica-python=sqla_vertica_python,grpcio-tools=grpc,psycopg2-binary=psycopg,pymongo=pymongo|bson,python-multipart=multipart,pydateinfer=dateinfer,scikit-learn=sklearn,protobuf=google"
+
+    #     # List of rules we can ignore for specific packages
+    #     RULE_IGNORES='DEP003=torch,DEP001=torch' # torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it
+
+    #     # Paths to ignore. We ignore the handlers dir because we will test each handler individually
+    #     EXCLUDE_PATHS="mindsdb/integrations/handlers|tests/"
+
+    #     deptry --requirements-txt $REQUIREMENTS_FILES --per-rule-ignores $RULE_IGNORES \
+    #     --package-module-name-map $PACKAGE_MODULE_NAME_MAP --exclude $EXCLUDE_PATHS .
   code_checking:
     runs-on: ubuntu-latest
     steps:
@@ -87,7 +112,7 @@ jobs:
         # temp
         pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
         pip install --no-cache-dir .
-        pip install -r requirements_test.txt
+        pip install -r requirements/requirements-test.txt
         pip uninstall pycodestyle -y && pip install pycodestyle==2.9.1  # temp fix while exist conflict in last version with flake8
       shell: bash
       env:

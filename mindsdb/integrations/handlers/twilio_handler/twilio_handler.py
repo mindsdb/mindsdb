@@ -63,8 +63,6 @@ class MessagesTable(APITable):
             params['limit'] = query.limit.value
 
         result = self.handler.fetch_messages(params, df=True)
-        
-        
         return result
 
     def get_columns(self):
@@ -75,7 +73,7 @@ class MessagesTable(APITable):
             'body',
             'direction',
             'msg_status',
-            'sent_at', #datetime.strptime(str(msg.date_sent), '%Y-%m-%d %H:%M:%S%z'),
+            'sent_at',  # datetime.strptime(str(msg.date_sent), '%Y-%m-%d %H:%M:%S%z'),
             'account_sid',
             'price',
             'price_unit',
@@ -88,8 +86,6 @@ class MessagesTable(APITable):
         columns = [col.name for col in query.columns]
 
         insert_params = ["to_number", "from_number", "body", 'media_url']
-
-        
         for row in query.values:
             params = dict(zip(columns, row))
 
@@ -124,7 +120,7 @@ class MessagesTable(APITable):
                 else:
                     text += ' '
 
-                if i>=1:
+                if i >= 1:
                     text += f'({i + 1}/{len_messages})'
                     # only send image on first url
                     if 'media_url' in params:
@@ -132,13 +128,11 @@ class MessagesTable(APITable):
 
                 params['body'] = text
                 params_to_send = {key: params[key] for key in insert_params if (key in params)}
-                
                 ret_row = self.handler.send_sms(params_to_send, ret_as_dict=True)
                 ret_row['body'] = text
                 ret.append(ret_row)
 
             return pd.DataFrame(ret)
-
 
 
 class TwilioHandler(APIHandler):

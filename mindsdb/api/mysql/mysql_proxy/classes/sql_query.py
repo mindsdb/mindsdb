@@ -65,7 +65,7 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner import query_planner
 from mindsdb_sql.planner.utils import query_traversal
 
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df, query_df_with_type_infer_fallback
 from mindsdb.interfaces.model.functions import (
     get_model_records,
     get_predictor_project
@@ -1059,13 +1059,14 @@ class SQLQuery():
                     join_condition = SqlalchemyRender('postgres').get_string(condition)
                     join_type = step.query.join_type
 
-                con = duckdb.connect(database=':memory:')
-                con.execute('set global pandas_analyze_sample=10000')
-                resp_df = con.execute(f"""
+                query = f"""
                     SELECT * FROM table_a {join_type} table_b
                     ON {join_condition}
-                """).fetchdf()
-                con.close()
+                """
+                resp_df, _description = query_df_with_type_infer_fallback(query, {
+                    'table_a': table_a,
+                    'table_b': table_b
+                })
 
                 resp_df = resp_df.replace({np.nan: None})
 

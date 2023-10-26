@@ -6,7 +6,7 @@ flask == 2.2.2
 python-multipart >= 0.0.5
 pyparsing >= 2.3.1
 cryptography>=35.0
-psycopg-binary
+psycopg[binary]
 waitress >= 1.4.4
 pymongo[srv] >= 4.1.1
 setuptools

@@ -431,7 +431,7 @@ class ExecuteCommands:
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
             elif "show create table" in sql_lower:
                 # SHOW CREATE TABLE `MINDSDB`.`predictors`
-                table = sql[sql.rfind(".") + 1:].strip(" .;\n\t").replace("`", "")
+                table = sql[sql.rfind(".") + 1 :].strip(" .;\n\t").replace("`", "")
                 return self.answer_show_create_table(table)
             elif sql_category in ("character set", "charset"):
                 new_statement = Select(
@@ -819,15 +819,22 @@ class ExecuteCommands:
         )
 
     def answer_describe_predictor(self, statement):
-        # try full name
-        attribute = None
-        model_info = self._get_model_info(statement.value, except_absent=False)
+
+        parts = statement.value.parts.copy()[:2]
+        model_info = self._get_model_info(Identifier(parts=parts), except_absent=False)
         if model_info is None:
-            parts = statement.value.parts.copy()
-            attribute = parts.pop(-1)
+            parts.pop(-1)
+            attribute = statement.value.parts.copy()[1:]
             model_info = self._get_model_info(Identifier(parts=parts))
             if model_info is None:
                 raise SqlApiException(f"Model not found: {statement.value}")
+        else:
+            attribute = statement.value.parts.copy()[2:]
+
+        if len(attribute) == 1:
+            attribute = attribute[0]
+        elif len(attribute) == 0:
+            attribute = None
 
         df = self.session.model_controller.describe_model(
             self.session,
@@ -1887,6 +1894,7 @@ class ExecuteCommands:
         )
 
     def answer_update_model_version(self, statement):
+
         # get project name
         if len(statement.table.parts) > 1:
             project_name = statement.table.parts[0]

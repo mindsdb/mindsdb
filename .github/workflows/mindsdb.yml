@@ -23,6 +23,8 @@ jobs:
     - name: Check main requirements
       shell: bash
       run: |
+        pip install deptry
+
         ### USE DEPTRY TO CHECK PYTHON REQUIREMENTS ###
 
         # Requirements files to use

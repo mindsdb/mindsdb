@@ -54,16 +54,21 @@ jobs:
         # 1. We don't import a python package that isn't in a requirements.txt file
         # 2. We don't have a package in requirements.txt that we don't import
 
-        # Requirements files to use
-        REQUIREMENTS_FILES=requirements/requirements.txt,mindsdb/integrations/handlers/langchain_handler/requirements.txt
+        # for each handler folder that contains a requirements.txt
+        for HANDLER_DIR in `find mindsdb/integrations/handlers -name "requirements.txt" -exec dirname "{}" \; |sort -u | xargs echo`; do
 
-        # List of package name maps to their import name in python
-        PACKAGE_MODULE_NAME_MAP="scylla-driver=cassandra,snowflake-connector-python=snowflake,snowflake-sqlalchemy=snowflake,auto-sklearn=autosklearn,google-cloud-bigquery=google,google-cloud-spanner=google,google-api-python-client=googleapiclient,binance-connector=binance,pysqlite3-binary=pysqlite3,sqlalchemy-spanner=sqlalchemy,atlassian-python-api=atlassian,databricks-sql-connector=databricks,elasticsearch-dbapi=es,pygithub=github,python-gitlab=gitlab,google-auth-httplib2=google,impyla=impala,IfxPy=IfxPyDbi,salesforce-merlion=merlion,newsapi-python=newsapi,google-generativeai=google,pinecone-client=pinecone,plaid-python=plaid,faiss-cpu=faiss,writerai=writer,sqlalchemy-redshift=sqlalchemy,rocketchat_API=rocketchat_API,ShopifyAPI=shopify,solace-pubsubplus=solace,taospy=taosrest,sqlalchemy-vertica-python=sqlalchemy,weaviate-client=weaviate,pymupdf=fitz,ibm-db=ibm_db_dbi,python-dateutil=dateutil,grpcio=grpc,sqlalchemy-redshift=redshift_sqlalchemy,sqlalchemy-vertica-python=sqla_vertica_python,grpcio-tools=grpc,psycopg2-binary=psycopg,pymongo=pymongo|bson,python-multipart=multipart,pydateinfer=dateinfer,scikit-learn=sklearn,protobuf=google"
+          # Requirements files to use
+          REQUIREMENTS_FILES=requirements/requirements.txt,${HANDLER_DIR}/requirements.txt
 
-        # List of rules we can ignore for specific packages
-        RULE_IGNORES=DEP003="mindsdb",DEP001="mindsdb",DEP002="openai|wikipedia|anthropic|`cat requirements/requirements.txt | tr ' ><=~[' '|' | cut -d '|' -f 1 | paste -sd\| -`"
+          # List of package name maps to their import name in python
+          PACKAGE_MODULE_NAME_MAP="scylla-driver=cassandra,snowflake-connector-python=snowflake,snowflake-sqlalchemy=snowflake,auto-sklearn=autosklearn,google-cloud-bigquery=google,google-cloud-spanner=google,google-api-python-client=googleapiclient,binance-connector=binance,pysqlite3-binary=pysqlite3,sqlalchemy-spanner=sqlalchemy,atlassian-python-api=atlassian,databricks-sql-connector=databricks,elasticsearch-dbapi=es,pygithub=github,python-gitlab=gitlab,google-auth-httplib2=google,impyla=impala,IfxPy=IfxPyDbi,salesforce-merlion=merlion,newsapi-python=newsapi,google-generativeai=google,pinecone-client=pinecone,plaid-python=plaid,faiss-cpu=faiss,writerai=writer,sqlalchemy-redshift=sqlalchemy,rocketchat_API=rocketchat_API,ShopifyAPI=shopify,solace-pubsubplus=solace,taospy=taosrest,sqlalchemy-vertica-python=sqlalchemy,weaviate-client=weaviate,pymupdf=fitz,ibm-db=ibm_db_dbi,python-dateutil=dateutil,grpcio=grpc,sqlalchemy-redshift=redshift_sqlalchemy,sqlalchemy-vertica-python=sqla_vertica_python,grpcio-tools=grpc,psycopg2-binary=psycopg,pymongo=pymongo|bson,python-multipart=multipart,pydateinfer=dateinfer,scikit-learn=sklearn,protobuf=google"
 
-        deptry --requirements-txt $REQUIREMENTS_FILES --package-module-name-map $PACKAGE_MODULE_NAME_MAP --per-rule-ignores $RULE_IGNORES mindsdb/integrations/handlers/langchain_handler
+          # List of rules we can ignore for specific packages
+          # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in this handler
+          RULE_IGNORES=DEP003="mindsdb",DEP001="mindsdb",DEP002="openai|wikipedia|anthropic|`cat requirements/requirements.txt | tr ' ><=~[' '|' | cut -d '|' -f 1 | paste -sd\| -`"
+
+          deptry --requirements-txt $REQUIREMENTS_FILES --package-module-name-map $PACKAGE_MODULE_NAME_MAP --per-rule-ignores $RULE_IGNORES ${HANDLER_DIR}
+        done
 
   code_checking:
     runs-on: ubuntu-latest

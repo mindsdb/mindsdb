@@ -108,7 +108,7 @@ class VectorStoreHandlerConfig(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    @root_validator(pre=True)
+    @root_validator(pre=True, allow_reuse=True)
     def check_param_typos(cls, values):
         """Check if there are any typos in the parameters."""
 

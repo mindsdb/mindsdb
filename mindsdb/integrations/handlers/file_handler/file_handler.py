@@ -164,7 +164,7 @@ class FileHandler(DatabaseHandler):
 
         else:
             raise ValueError(
-                "Could not load file into any format, supported formats are csv, json, xls, xlsx"
+                "Could not load file into any format, supported formats are csv, json, xls, xlsx, pdf, txt"
             )
 
         header = df.columns.values.tolist()

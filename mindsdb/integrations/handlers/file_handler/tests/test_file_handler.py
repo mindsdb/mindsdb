@@ -1,18 +1,15 @@
 import json
 import os
+import shutil
 import tempfile
 from io import BytesIO, StringIO
-from unittest.mock import patch, Mock
-
+from unittest.mock import patch
 
 import pandas
-import pandas as pd
 import pytest
 import responses
 from mindsdb_sql.parser.ast import CreateTable, DropTables, Identifier, Select, Star
 from pytest_lazyfixture import lazy_fixture
-import PyPDF2
-import pyarrow.parquet as pq
 
 from mindsdb.integrations.handlers.file_handler.file_handler import FileHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
@@ -25,8 +22,6 @@ test_file_content = [
     [2, -2, 0.2, "B"],
     [3, -3, 0.3, "C"],
 ]
-
-test_dataframe = pandas.DataFrame(test_file_content[1:], columns=test_file_content[0])
 
 file_records = [("one", 1, test_file_content[0]), ("two", 2, test_file_content[0])]
 
@@ -159,9 +154,14 @@ class TestQuery:
         assert response.type == RESPONSE_TYPE.ERROR
 
     def test_query_select(self, csv_file):
-        expected_df = pandas.read_csv(
-            csv_file
-        )  # Get expected data now, because saving the file moves it for some reason
+        expected_df = pandas.read_csv(csv_file)
+
+        # This is temporary because the file controller currently absconds with our file when we save it:
+        # https://github.com/mindsdb/mindsdb/issues/8141
+        csv_tmp = os.path.join(tempfile.gettempdir(), "test.csv")
+        if os.path.exists(csv_tmp):
+            os.remove(csv_tmp)
+        shutil.copy(csv_file, csv_tmp)
 
         # Config #
         db_file = tempfile.mkstemp(prefix="mindsdb_db_")[1]
@@ -191,7 +191,9 @@ class TestQuery:
         # Config #
 
         file_controller = FileController()
-        file_controller.save_file("test_data", csv_file)
+        file_controller.save_file(
+            os.path.splitext(os.path.basename(csv_file))[0], csv_tmp
+        )
 
         file_handler = FileHandler(file_controller=file_controller)
         response = file_handler.query(
@@ -233,73 +235,25 @@ def test_get_file_path_with_url(mock_fetch_url):
     mock_fetch_url.assert_called_with(mock_url)
 
 
-def test_handle_source(
-    csv_file, xlsx_file, json_file, parquet_file, pdf_file, txt_file
-):
-    supported_file_types = [".csv", ".json", ".parquet", ".pdf", ".txt", ".xlsx"]
+@pytest.mark.parametrize(
+    "file_path,expected_columns",
+    [
+        (lazy_fixture("csv_file"), test_file_content[0]),
+        (lazy_fixture("xlsx_file"), test_file_content[0]),
+        (lazy_fixture("json_file"), test_file_content[0]),
+        (lazy_fixture("parquet_file"), test_file_content[0]),
+        (lazy_fixture("pdf_file"), ["text"]),
+        (lazy_fixture("txt_file"), ["text"]),
+    ],
+)
+def test_handle_source(file_path, expected_columns):
+    df, col_map = FileHandler._handle_source(file_path)
+    assert isinstance(df, pandas.DataFrame)
+    assert df.columns.tolist() == expected_columns
 
-    file_paths = [csv_file, xlsx_file, json_file, parquet_file, pdf_file, txt_file]
-
-    for file_path in file_paths:
-        # Extract the file extension from the file_path
-        file_extension = os.path.splitext(file_path)[1].lower()
-
-        # Check if the file extension is supported
-        assert (
-            file_extension in supported_file_types
-        ), f"Unsupported file type: {file_extension}"
-
-        if file_extension == ".csv":
-            # Attempt to read the .csv file using Pandas
-            try:
-                df = pd.read_csv(file_path)
-                assert not df.empty, ".csv file is empty."
-                assert len(df) >= 0, "Unexpected number of rows."
-
-            except Exception as e:
-                assert False, f"Error reading .csv file: {str(e)}"
-
-        elif file_extension == ".json":
-            try:
-                with open(file_path, "r") as json_file:
-                    json_data = json.load(json_file)
-                assert isinstance(json_data, dict), "JSON data is not a dictionary."
-
-            except Exception as e:
-                assert False, f"Error reading JSON file: {str(e)}"
-
-        elif file_extension == ".parquet":
-            try:
-                table = pq.read_table(file_path)
-                assert table.num_rows > 0, "Parquet file is empty."
-                assert len(table) >= 0, "Unexpected number of rows."
-
-            except Exception as e:
-                assert False, f"Error reading Parquet file: {str(e)}"
-
-        elif file_extension == ".xlsx":
-            try:
-                df = pd.read_excel(
-                    file_path, sheet_name="Sheet1"
-                )  # Adjust sheet_name as needed
-                assert not df.empty, "XLSX file is empty."
-                assert len(df) >= 0, "Unexpected number of rows."
-
-            except Exception as e:
-                assert False, f"Error reading XLSX file: {str(e)}"
-
-        elif file_extension == ".pdf":
-            with open(file_path, "rb") as pdf_file:
-                pdf_reader = PyPDF2.PdfReader(pdf_file)
-                pdf_text = ""
-                for page_num in range(len(pdf_reader.pages)):
-                    pdf_text += pdf_reader.pages[page_num].extract_text()
-                assert pdf_text.strip() != "", "PDF text extraction failed."
-
-        elif file_extension == ".txt":
-            with open(file_path, "r") as text_file:
-                file_contents = text_file.read()
-            assert file_contents.strip() != "", "Text file is empty."
+    if not file_path.endswith(".pdf") and not file_path.endswith(".txt"):
+        assert len(df) == len(test_file_content) - 1
+        assert df.values.tolist() == test_file_content[1:]
 
 
 @pytest.mark.parametrize(

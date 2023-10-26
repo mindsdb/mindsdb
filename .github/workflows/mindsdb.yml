@@ -12,6 +12,33 @@ on:
       - 'docs/**'
       - '**/*.md'
 jobs:
+  check_requirements:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3.5.3
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v4.7.0
+      with:
+        python-version: 3.9
+    - name: Check main requirements
+      shell: bash
+      run: |
+        ### USE DEPTRY TO CHECK PYTHON REQUIREMENTS ###
+
+        # Requirements files to use
+        REQUIREMENTS_FILES="requirements/requirements.txt,docker/handler_discovery/requirements.txt"
+
+        # List of package name maps to their import name in python
+        PACKAGE_MODULE_NAME_MAP="scylla-driver=cassandra,snowflake-connector-python=snowflake,snowflake-sqlalchemy=snowflake,boto3=botocore,auto-sklearn=autosklearn,google-cloud-bigquery=google,google-cloud-spanner=google,google-api-python-client=googleapiclient,binance-connector=binance,pysqlite3-binary=pysqlite3,sqlalchemy-spanner=sqlalchemy,atlassian-python-api=atlassian,databricks-sql-connector=databricks,elasticsearch-dbapi=es,pygithub=github,python-gitlab=gitlab,google-auth-httplib2=google,impyla=impala,IfxPy=IfxPyDbi,salesforce-merlion=merlion,newsapi-python=newsapi,google-generativeai=google,pinecone-client=pinecone,plaid-python=plaid,faiss-cpu=faiss,writerai=writer,sqlalchemy-redshift=sqlalchemy,rocketchat_API=rocketchat_API,ShopifyAPI=shopify,solace-pubsubplus=solace,taospy=taosrest,sqlalchemy-vertica-python=sqlalchemy,weaviate-client=weaviate,pymupdf=fitz,ibm-db=ibm_db_dbi,python-dateutil=dateutil,grpcio=grpc,sqlalchemy-redshift=redshift_sqlalchemy,sqlalchemy-vertica-python=sqla_vertica_python,grpcio-tools=grpc,psycopg2-binary=psycopg"
+
+        # List of rules we can ignore for specific packages
+        RULE_IGNORES='DEP003=torch' # torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it
+
+        # Paths to ignore. We ignore the handlers dir because we will test each handler individually
+        EXCLUDE_PATHS="mindsdb/integrations/handlers|tests/"
+
+        deptry --requirements-txt $REQUIREMENTS_FILES --per-rule-ignores $RULE_IGNORES \
+        --package-module-name-map $PACKAGE_MODULE_NAME_MAP --exclude $EXCLUDE_PATHS .
   code_checking:
     runs-on: ubuntu-latest
     steps:

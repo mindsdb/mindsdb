@@ -103,8 +103,8 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         """
         )
         assert ret["model_name"][0] == "CatBoostClassifier"
-   
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler") 
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_non_default_supervised_model(self, mock_handler):
         # create project
         self.run_sql("create database proj")
@@ -142,7 +142,7 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         )
         assert ret["model_name"][0] == "GaussianNB"
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler") 
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_specify_anomaly_type(self, mock_handler):
         # create project
         self.run_sql("create database proj")
@@ -180,7 +180,7 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         )
         assert ret["model_name"][0] == "PCA"
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler") 
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_ensemble(self, mock_handler):
         # create project
         self.run_sql("create database proj")
@@ -218,7 +218,6 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         """
         )
         assert all(ret["model_name"] == pd.Series(["PCA", "KNN", "ECOD"]))
-
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_default_semi_supervised_model(self, mock_handler):

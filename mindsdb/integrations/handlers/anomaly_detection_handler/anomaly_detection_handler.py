@@ -17,7 +17,6 @@ from sklearn.naive_bayes import GaussianNB
 import numpy as np
 
 
-
 MODELS = {
     "supervised": {
         "catboost": CatBoostClassifier(logging_level="Silent"),
@@ -32,7 +31,7 @@ MODELS = {
         "knn": KNN(),
         "pca": PCA(),
         "lof": LOF(),
-    }
+    },
 }
 
 
@@ -43,7 +42,11 @@ def choose_model_type(training_df, model_type=None, target=None, supervised_thre
             model_type = "unsupervised"
         else:
             model_type = "supervised" if len(training_df) > supervised_threshold else "semi-supervised"
-    assert model_type in ["supervised", "semi-supervised", "unsupervised"], "model type must be 'supervised', 'semi-supervised', or 'unsupervised'"
+    assert model_type in [
+        "supervised",
+        "semi-supervised",
+        "unsupervised",
+    ], "model type must be 'supervised', 'semi-supervised', or 'unsupervised'"
     return model_type
 
 
@@ -58,18 +61,24 @@ def choose_model(df, model_name=None, model_type=None, target=None, supervised_t
         model = None
     if model_type == "unsupervised":
         return train_unsupervised(training_df, model=model)
-    
+
     X_train = training_df.drop(target, axis=1)
     y_train = training_df[target].astype(int)
 
     if model_type == "supervised":
         return train_supervised(X_train, y_train, model=model)
     elif model_type == "semi-supervised":
-        return train_semisupervised(X_train, y_train) # Only one semi-supervised model available
+        return train_semisupervised(X_train, y_train)  # Only one semi-supervised model available
+
 
 def anomaly_type_to_model_name(anomaly_type):
     """Choose the best model name based on the anomaly type"""
-    assert anomaly_type in ["local", "global", "clustered", "dependency"], "anomaly type must be 'local', 'global', 'clustered', or 'dependency'"
+    assert anomaly_type in [
+        "local",
+        "global",
+        "clustered",
+        "dependency",
+    ], "anomaly type must be 'local', 'global', 'clustered', or 'dependency'"
     anomaly_type_dict = {
         "local": "lof",
         "global": "knn",
@@ -78,7 +87,8 @@ def anomaly_type_to_model_name(anomaly_type):
     }
     return anomaly_type_dict[anomaly_type]
 
-def  preprocess_data(df):
+
+def preprocess_data(df):
     """Preprocess the data by one-hot encoding categorical columns and scaling numeric columns"""
     # one-hot encode categorical columns
     categorical_columns = list(df.select_dtypes(include=["object"]).columns.values)
@@ -90,8 +100,9 @@ def  preprocess_data(df):
     df[numeric_columns] = (df[numeric_columns] - df[numeric_columns].mean()) / df[numeric_columns].std()
     return df
 
+
 def get_model_names(using_args):
-    """Get the model names from the using_args. Model names is a list of model names to train. 
+    """Get the model names from the using_args. Model names is a list of model names to train.
     If the model is not an ensemble, it only contains one model"""
     model_names = anomaly_type_to_model_name(using_args["anomaly_type"]) if "anomaly_type" in using_args else None
     model_names = using_args["model_name"] if "model_name" in using_args else model_names
@@ -99,6 +110,7 @@ def get_model_names(using_args):
     model_names = [model_names] if model_names is None else model_names
     model_names = [model_names] if type(model_names) == str else model_names
     return model_names
+
 
 class AnomalyDetectionHandler(BaseMLEngine):
     """Integration with the PyOD and CatBoost libraries for
@@ -115,7 +127,7 @@ class AnomalyDetectionHandler(BaseMLEngine):
         """Train a model and save it to the model storage"""
         using_args = args["using"]
         model_type = using_args["type"] if "type" in using_args else None
-        
+
         model_names = get_model_names(using_args)
 
         model_save_paths = []
@@ -129,14 +141,14 @@ class AnomalyDetectionHandler(BaseMLEngine):
             model_save_paths.append(save_path)
             model_targets.append(target)
             model_class_names.append(model.__class__.__name__)
-            
+
         model_args = {"model_path": model_save_paths, "target": model_targets, "model_name": model_class_names}
         self.model_storage.json_set("model_args", model_args)
 
     def predict(self, df, args={}):
         """Load a model from the model storage and use it to make predictions"""
         model_args = self.model_storage.json_get("model_args")
-        results_list = []        
+        results_list = []
         for model_path in model_args["model_path"]:
             model = load(model_path)
             if "__mindsdb_row_id" in df.columns:

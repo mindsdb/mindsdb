@@ -128,7 +128,7 @@ jobs:
     - name: Check if actor is an organization member
       id: check-membership
       run: |
-        if [[ "${{ github.actor }}" == "mindsdb/"* ]];
+        if [[ "${{ github.actor }}" == "mindsdb/"* ]]; then
           echo "::set-output name=isOrgMember::true"
         else
           echo "::set-output name=isOrgMember::false"

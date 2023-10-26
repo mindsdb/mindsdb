@@ -3,7 +3,7 @@ import os
 import re
 from twilio.rest import Client
 import pandas as pd
-from mindsdb.integrations.libs.api_handler import APIHandler,  APITable, FuncParser
+from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -11,11 +11,11 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
-from datetime import datetime
-from mindsdb.integrations.utilities.date_utils import parse_utc_date, parse_utc_date_with_limit
+from mindsdb.integrations.utilities.date_utils import parse_utc_date_with_limit
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
 from mindsdb_sql.parser import ast
+
 
 class MessagesTable(APITable):
 
@@ -28,29 +28,21 @@ class MessagesTable(APITable):
         for op, arg1, arg2 in conditions:
 
             if op == 'or':
-                raise NotImplementedError(f'OR is not supported')
+                raise NotImplementedError('OR is not supported')
             if arg1 == 'sent_at' and arg2 is not None:
-                
-                
                 date = parse_utc_date_with_limit(arg2, 300)
-                
                 if op == '>':
-                    
                     params['date_sent_after'] = date
                 elif op == '<':
                     params['date_sent_before'] = date
                 else:
                     raise NotImplementedError
-
-            
             elif arg1 == 'sid':
                 if op == '=':
                     params['sid'] = arg2
                 # TODO: implement IN
                 else:
                     NotImplementedError('Only  "from_number=" is implemented')
-
-
             elif arg1 == 'from_number':
                 if op == '=':
                     params['from_number'] = arg2
@@ -67,9 +59,6 @@ class MessagesTable(APITable):
 
             else:
                 filters.append([op, arg1, arg2])
-
-            
-
         if query.limit is not None:
             params['limit'] = query.limit.value
 

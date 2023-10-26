@@ -1,0 +1,50 @@
+---
+title: Docker Hub
+sidebarTitle: Docker Hub
+---
+
+In this section, we present how to connect Docker Hub repository to MindsDB.
+
+[Docker Hub](https://hub.docker.com/) is the world's easiest way to create, manage, and deliver your team's container applications.
+
+Data from Docker Hub can be utilized within MindsDB to train models and make predictions about Docker Hub repositories.
+
+## Connection
+
+This handler is implemented using the `requests` library that makes http calls to https://docs.docker.com/docker-hub/api/latest/#tag/resources.
+
+The required arguments to establish a connection are as follows:
+
+* `username`: Username used to login to DockerHub.
+* `password`: Password used to login to DockerHub.
+
+<Tip>
+Read about creating an account [here](https://hub.docker.com/).
+</Tip>
+
+Here is how to connect to Docker Hub using MindsDB:
+
+```sql
+CREATE DATABASE dockerhub_datasouce
+WITH ENGINE = 'dockerhub',
+PARAMETERS = {
+  "username": "username",
+  "password": "password"
+};
+```
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/dockerhub_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+Now, you can query Docker Hub as follows:
+
+```sql
+SELECT * FROM dockerhub_datasouce.repo_images_summary WHERE namespace="docker" AND repository="trusted-registry-nginx";
+```
+
+<Tip>
+Both the `namespace` and `repository` parameters are required in the WHERE clause.
+</Tip>

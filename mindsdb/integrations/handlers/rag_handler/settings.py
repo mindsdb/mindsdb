@@ -68,7 +68,6 @@ class VectorStoreFactory:
 
     @staticmethod
     def get_vectorstore_class(name):
-
         if not isinstance(name, str):
             raise TypeError("name must be a string")
 
@@ -145,7 +144,9 @@ class PersistedVectorStoreSaver:
         getattr(self, method_name)(vector_store)
 
     def save_chroma(self, vector_store: Chroma):
-        vector_store.persist()
+        """Save Chroma vector store to disk"""
+        # no need to save chroma vector store to disk, auto save
+        pass
 
     def save_faiss(self, vector_store: FAISS):
         vector_store.save_local(
@@ -167,17 +168,13 @@ class PersistedVectorStoreLoader:
         """Load vector store from the persisted vector store"""
 
         if vector_store == "chroma":
-
             return Chroma(
                 collection_name=self.config.collection_name,
                 embedding_function=self.config.embeddings_model,
-                client_settings=get_chroma_settings(
-                    persist_directory=self.config.persist_directory
-                ),
+                persist_directory=self.config.persist_directory,
             )
 
         elif vector_store == "faiss":
-
             return FAISS.load_local(
                 folder_path=self.config.persist_directory,
                 embeddings=self.config.embeddings_model,
@@ -255,13 +252,13 @@ class WriterLLMParameters(LLMParameters):
 
 
 class LLMLoader(BaseModel):
-    llm_config: Union[WriterLLMParameters, OpenAIParameters]
+    llm_config: dict
     config_dict: dict = None
 
     def load_llm(self) -> Union[Writer, partial]:
         """Load LLM"""
-        method_name = f"load_{self.llm_config.llm_name}_llm"
-        self.config_dict = self.llm_config.dict()
+        method_name = f"load_{self.llm_config['llm_name']}_llm"
+        self.config_dict = self.llm_config.copy()
         self.config_dict.pop("llm_name")
         return getattr(self, method_name)()
 
@@ -271,8 +268,8 @@ class LLMLoader(BaseModel):
 
     def load_openai_llm(self) -> partial:
         """Load OpenAI LLM API interface"""
-        openai.api_key = self.llm_config.openai_api_key
-        config = self.config_dict
+        openai.api_key = self.config_dict["openai_api_key"]
+        config = self.config_dict.copy()
         config.pop("openai_api_key")
         config["model"] = config.pop("model_id")
 

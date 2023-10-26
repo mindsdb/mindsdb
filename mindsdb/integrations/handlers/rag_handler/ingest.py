@@ -94,14 +94,10 @@ class Ingestor:
         """Create DB from documents."""
 
         if self.args.vector_store_name == "chroma":
-
             return self.vector_store.from_documents(
                 documents=documents,
                 embedding=embeddings_model,
                 persist_directory=self.args.vector_store_storage_path,
-                client_settings=get_chroma_settings(
-                    persist_directory=self.args.vector_store_storage_path
-                ),
                 collection_name=self.args.collection_name,
             )
         else:
@@ -164,7 +160,8 @@ class Ingestor:
 
         vector_store_saver.save_vector_store(db)
 
-        db = None
+        db = None  # clear db from memory
+
         end_time = time.time()
         elapsed_time = end_time - start_time
 

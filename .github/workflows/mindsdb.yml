@@ -119,7 +119,25 @@ jobs:
           # Company independent
           echo -e "\n===============test company independent===============\n"
           pytest -vx tests/integration_tests/flows/test_company_independent.py
-
+        fi
+      shell: bash
+      env:
+        CHECK_FOR_UPDATES: False
+        AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+        AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+    - name: Check if actor is an organization member
+      id: check-membership
+      run: |
+        if [[ "${{ github.actor }}" == "mindsdb/"* ]];
+          echo "::set-output name=isOrgMember::true"
+        else
+          echo "::set-output name=isOrgMember::false"
+        fi
+      shell: bash
+    - name: Run ML Engines tests
+      if: steps.check-membership.outputs.isOrgMember == 'true'
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
           # First-tier ML engines
           echo -e "\n===============test ML engines===============\n"
           pytest -vx tests/unit/ml_handlers/test_openai.py
@@ -130,13 +148,10 @@ jobs:
           # pytest -vx tests/unit/ml_handlers/test_statsforecast.py
           # pytest -vx tests/unit/ml_handlers/test_huggingface.py
           # pytest -vx tests/unit/ml_handlers/test_lightwood.py
-        fi
       shell: bash
       env:
         CHECK_FOR_UPDATES: False
         OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
-        AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-        AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
         ANYSCALE_ENDPOINTS_API_KEY: ${{secrets.ANYSCALE_ENDPOINTS_API_KEY}}
 
   deploy_to_pypi:

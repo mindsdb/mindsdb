@@ -90,6 +90,15 @@ def  preprocess_data(df):
     df[numeric_columns] = (df[numeric_columns] - df[numeric_columns].mean()) / df[numeric_columns].std()
     return df
 
+def get_model_names(using_args):
+    """Get the model names from the using_args. Model names is a list of model names to train. 
+    If the model is not an ensemble, it only contains one model"""
+    model_names = anomaly_type_to_model_name(using_args["anomaly_type"]) if "anomaly_type" in using_args else None
+    model_names = using_args["model_name"] if "model_name" in using_args else model_names
+    model_names = using_args["ensemble_models"] if "ensemble_models" in using_args else model_names
+    model_names = [model_names] if model_names is None else model_names
+    model_names = [model_names] if type(model_names) == str else model_names
+    return model_names
 
 class AnomalyDetectionHandler(BaseMLEngine):
     """Integration with the PyOD and CatBoost libraries for
@@ -107,12 +116,7 @@ class AnomalyDetectionHandler(BaseMLEngine):
         using_args = args["using"]
         model_type = using_args["type"] if "type" in using_args else None
         
-        # Model names is a list of model names to train. If the model is not an ensemble, it only contains one model
-        model_names = anomaly_type_to_model_name(using_args["anomaly_type"]) if "anomaly_type" in using_args else None
-        model_names = using_args["model_name"] if "model_name" in using_args else model_names
-        model_names = using_args["ensemble_models"] if "ensemble_models" in using_args else model_names
-        model_names = [model_names] if model_names is None else model_names
-        model_names = [model_names] if type(model_names) == str else model_names
+        model_names = get_model_names(using_args)
 
         model_save_paths = []
         model_targets = []

@@ -11,8 +11,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
-from datetime import datetime
-from mindsdb.integrations.utilities.date_utils import parse_utc_date, parse_utc_date_with_limit, parse_local_date
+from mindsdb.integrations.utilities.date_utils import parse_local_date
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, project_dataframe, filter_dataframe
 
 from mindsdb_sql.parser import ast
@@ -33,8 +32,7 @@ class MessagesTable(APITable):
             if arg1 == 'sent_at' and arg2 is not None:
 
                 date = parse_local_date(arg2)
-                # date = parse_utc_date_with_limit(arg2, 300)
-                
+
                 if op == '>':
                     params['date_sent_after'] = date
                 elif op == '<':
@@ -44,7 +42,6 @@ class MessagesTable(APITable):
 
                 # also add to post query filter because date_sent_after=date1 will include date1
                 filters.append([op, arg1, arg2])
-
 
             elif arg1 == 'sid':
                 if op == '=':

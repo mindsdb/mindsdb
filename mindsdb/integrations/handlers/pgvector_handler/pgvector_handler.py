@@ -66,7 +66,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         """
 
         if conditions is None:
-            return None
+            return {}
 
         return {
             condition.column.split(".")[-1]: {
@@ -77,10 +77,12 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         }
 
     @staticmethod
-    def _construct_where_clause(filter_conditions):
+    def _construct_where_clause(filter_conditions=None):
         """
         Construct where clauses from filter conditions
         """
+        if filter_conditions is None:
+            return ""
 
         where_clauses = [
             f'{key} {value["op"]} {value["value"]}'
@@ -159,7 +161,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         with self.connection.cursor() as cur:
             try:
 
-                query = self._build_select_query(table_name, conditions, offset, limit)
+                query = self._build_select_query(table_name, conditions, limit, offset)
                 cur.execute(query)
 
                 self.connection.commit()

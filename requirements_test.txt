@@ -12,4 +12,3 @@ pymssql >= 2.1.4
 boto3
 openai >= 0.27.0 # for ml handler tests [should match version defined in handler's requirements.txt]
 responses~=0.23.3
-shutil

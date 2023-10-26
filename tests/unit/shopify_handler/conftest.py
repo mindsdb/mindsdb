@@ -8,7 +8,8 @@ import shopify
 from mindsdb.integrations.handlers.shopify_handler import Handler
 from mindsdb.integrations.handlers.shopify_handler.shopify_tables import (ProductsTable, CustomersTable, OrdersTable,
                                                                           LocationTable, CarrierServiceTable,
-                                                                          SalesChannelTable, ShippingZoneTable)
+                                                                          SalesChannelTable, ShippingZoneTable,
+                                                                          InventoryLevelTable)
 
 connection_data = {
     'shop_url': 'some-shopify-store.myshopify.com',
@@ -5864,3 +5865,44 @@ def sample_shipping_zones():
     ]
     """
     return json.loads(shipping_zones)
+
+
+@pytest.fixture
+def inventory_level_table(shopify_handler):
+    return InventoryLevelTable(shopify_handler)
+
+@pytest.fixture
+def sample_inventory_levels():
+    inventory_levels = """
+         [
+    {
+      "inventory_item_id": 49148385,
+      "location_id": 655441491,
+      "available": 2,
+      "updated_at": "2023-10-03T13:19:52-04:00",
+      "admin_graphql_api_id": "gid://shopify/InventoryLevel/655441491?inventory_item_id=49148385"
+    },
+    {
+      "inventory_item_id": 808950810,
+      "location_id": 655441491,
+      "available": 1,
+      "updated_at": "2023-10-03T13:19:52-04:00",
+      "admin_graphql_api_id": "gid://shopify/InventoryLevel/655441491?inventory_item_id=808950810"
+    },
+    {
+      "inventory_item_id": 457924702,
+      "location_id": 655441491,
+      "available": 4,
+      "updated_at": "2023-10-03T13:19:52-04:00",
+      "admin_graphql_api_id": "gid://shopify/InventoryLevel/655441491?inventory_item_id=457924702"
+    },
+    {
+      "inventory_item_id": 39072856,
+      "location_id": 655441491,
+      "available": 3,
+      "updated_at": "2023-10-03T13:19:52-04:00",
+      "admin_graphql_api_id": "gid://shopify/InventoryLevel/655441491?inventory_item_id=39072856"
+    }
+  ]
+    """
+    return json.loads(inventory_levels)

@@ -1262,6 +1262,21 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
+    def _create_persistent_chroma(self, kb_name, collection_name, engine="chromadb"):
+        """Create default vector database for knowledge base, if not specified"""
+
+        vector_store_name = f"{kb_name}_{engine}"
+
+        vector_store_folder_name = f"{vector_store_name}"
+        connection_args = {"persist_directory": vector_store_folder_name}
+        self._create_integration(vector_store_name, engine, connection_args)
+
+        self.session.datahub.get(vector_store_name).integration_handler.create_table(
+            collection_name
+        )
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK), vector_store_name
+
     def answer_create_kb(self, statement: CreateKnowledgeBase):
         project_name = (
             statement.name.parts[0]
@@ -1291,14 +1306,31 @@ class ExecuteCommands:
         embedding_model_id = model_record["model_record"].id
 
         # search for the vector database table
-        if len(statement.storage.parts) < 2:
+        if statement.storage and len(statement.storage.parts) < 2:
             raise SqlApiException(
                 f"Invalid vectordatabase table name: {statement.storage}"
                 "Need the form 'database_name.table_name'"
             )
 
-        vector_db_name = statement.storage.parts[0]
-        vector_table_name = statement.storage.parts[-1]
+        is_cloud = self.session.config.get("cloud", False)
+
+        if not statement.storage and is_cloud:
+            raise SqlApiException(
+                "No default vector database currently exists in MindsDB cloud. "
+                'Please specify one using the "storage" parameter'
+            )
+
+        vector_table_name = (
+            statement.storage.parts[-1] if statement.storage else "default_collection"
+        )
+
+        vector_db_name = (
+            statement.storage.parts[0]
+            if statement.storage
+            else self._create_persistent_chroma(
+                kb_name, collection_name=vector_table_name
+            )[1]
+        )
 
         # verify the vector database exists and get its id
         database_records = self.session.database_controller.get_dict()

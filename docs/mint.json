@@ -772,6 +772,7 @@
           "pages": [
             "integrations/app-integrations/binance",
             "integrations/app-integrations/confluence",
+            "integrations/app-integrations/dockerhub",
             "integrations/app-integrations/email",
             "integrations/app-integrations/github",
             "integrations/app-integrations/gmail",

@@ -108,7 +108,7 @@ def get_model_names(using_args):
     model_names = using_args["model_name"] if "model_name" in using_args else model_names
     model_names = using_args["ensemble_models"] if "ensemble_models" in using_args else model_names
     model_names = [model_names] if model_names is None else model_names
-    model_names = [model_names] if type(model_names) == str else model_names
+    model_names = [model_names] if type(model_names) is str else model_names
     return model_names
 
 

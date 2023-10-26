@@ -135,13 +135,12 @@ class AnomalyDetectionHandler(BaseMLEngine):
         model_class_names = []
         for model_name in model_names:
             model = choose_model(df, model_name=model_name, model_type=model_type, target=target)
-            target = "outlier" if target is None else target  # output column name for unsupervised learning
+            this_model_target = "outlier" if target is None else target  # output column name for unsupervised learning
             save_path = "model.joblib" if model_name is None else model_name + ".joblib"
             dump(model, save_path)
             model_save_paths.append(save_path)
-            model_targets.append(target)
+            model_targets.append(this_model_target)
             model_class_names.append(model.__class__.__name__)
-
         model_args = {"model_path": model_save_paths, "target": model_targets, "model_name": model_class_names}
         self.model_storage.json_set("model_args", model_args)
 

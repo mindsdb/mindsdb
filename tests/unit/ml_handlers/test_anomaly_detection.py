@@ -190,12 +190,10 @@ class TestAnomalyDetectionHandler(BaseExecutorTest):
         # create predictor
         self.run_sql(
             """
-           create model proj.modelx
+           create ANOMALY DETECTION MODEL proj.modelx
            from pg (select * from df)
-           predict outlier
            using
              engine='anomaly_detection',
-             type='unsupervised',
              ensemble_models=['pca', 'knn', 'ecod']
         """
         )

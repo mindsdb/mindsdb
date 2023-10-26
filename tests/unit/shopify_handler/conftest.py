@@ -7,7 +7,8 @@ import shopify
 
 from mindsdb.integrations.handlers.shopify_handler import Handler
 from mindsdb.integrations.handlers.shopify_handler.shopify_tables import (ProductsTable, CustomersTable, OrdersTable,
-                                                                          LocationTable, CarrierServiceTable)
+                                                                          LocationTable, CarrierServiceTable,
+                                                                          SalesChannelTable)
 
 connection_data = {
     'shop_url': 'some-shopify-store.myshopify.com',
@@ -1105,3 +1106,27 @@ def sample_carriers():
         ]
     """
     return json.loads(carriers)
+
+
+@pytest.fixture
+def sales_channel_table(shopify_handler):
+    return SalesChannelTable(shopify_handler)
+
+
+@pytest.fixture
+def sample_sales_channel():
+    sales_channel = """
+        [
+            {
+                "id": 107948343518,
+                "created_at": "2023-10-13T15:52:57-04:00",
+                "name": "Point of Sale"
+            },
+            {
+                "id": 107948212446,
+                "created_at": "2023-10-13T15:49:05-04:00",
+                "name": "Online Store"
+            }
+        ]
+    """
+    return json.loads(sales_channel)

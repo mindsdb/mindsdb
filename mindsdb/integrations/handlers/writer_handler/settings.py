@@ -3,7 +3,6 @@ from functools import lru_cache
 from typing import List, Union
 
 import pandas as pd
-from chromadb import Settings
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.docstore.document import Document
 from langchain.document_loaders import DataFrameLoader
@@ -55,7 +54,6 @@ def is_valid_store(name):
 class VectorStoreFactory:
     @staticmethod
     def get_vectorstore_class(name):
-
         if not isinstance(name, str):
             raise TypeError("name must be a string")
 
@@ -67,14 +65,6 @@ class VectorStoreFactory:
 
         if name == "chroma":
             return Chroma
-
-
-def get_chroma_settings(persist_directory: str = "chromadb") -> Settings:
-    return Settings(
-        chroma_db_impl="duckdb+parquet",
-        persist_directory=persist_directory,
-        anonymized_telemetry=False,
-    )
 
 
 @dataclass
@@ -102,7 +92,8 @@ class PersistedVectorStoreSaver:
         getattr(self, method_name)(vector_store)
 
     def save_chroma(self, vector_store: Chroma):
-        vector_store.persist()
+        # no need to save chroma, it is already persisted automatically in new version
+        pass
 
     def save_faiss(self, vector_store: FAISS):
         vector_store.save_local(
@@ -122,17 +113,13 @@ class PersistedVectorStoreLoader:
         """Load vector store client from the persisted vector store"""
 
         if vector_store == "chroma":
-
             return Chroma(
                 collection_name=self.config.collection_name,
                 embedding_function=self.config.embeddings_model,
-                client_settings=get_chroma_settings(
-                    persist_directory=self.config.persist_directory
-                ),
+                persist_directory=self.config.persist_directory,
             )
 
         elif vector_store == "faiss":
-
             return FAISS.load_local(
                 folder_path=self.config.persist_directory,
                 embeddings=self.config.embeddings_model,

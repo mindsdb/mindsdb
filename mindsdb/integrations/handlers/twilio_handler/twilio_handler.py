@@ -285,7 +285,7 @@ class TwilioHandler(APIHandler):
             }
             data.append(msg_data)
 
-        if df == True:
+        if df is True:
             return pd.DataFrame(data)
         return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(data))
 
@@ -312,6 +312,6 @@ class TwilioHandler(APIHandler):
             }
             data.append(num_data)
 
-        if df == True:
+        if df is True:
             return data
         return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(data))

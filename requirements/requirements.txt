@@ -1,21 +1,15 @@
-Werkzeug==1.0.1
+packaging
+werkzeug==1.0.1
 lightwood >= 23.8.1.0, < 23.8.2.0
 pandas >=2.0.0, <2.1.0
-markupsafe == 2.0.1
 flask-restx >= 1.0.1, < 2.0.0
 flask >= 1.0, < 2.0
-itsdangerous==2.0.1
-jinja2<3.1.0
 langchain~=0.0.267
-pdf2image~=1.16.3
-pdfminer.six==20221105
-pypdf
 python-multipart >= 0.0.5
 pyparsing >= 2.3.1
 cryptography>=35.0
 psycopg[binary] >= 1.15.3
 psycopg2-binary
-python-tds >= 1.10.0
 waitress >= 1.4.4
 pymongo[srv] >= 4.1.1
 setuptools
@@ -36,12 +30,15 @@ chromadb==0.4.8
 requests >= 2.0.0
 mysql-connector-python
 charset-normalizer
-pyOpenSSL >= 22.0.0
 pydateinfer==0.3.0
-pyarrow >= 10.0.1, < 10.1.0
 dataprep_ml
 python-magic >= 0.4.27
-openpyxl >= 3.1.1
 dill == 0.3.6
 slack_sdk==3.21.3
-watchfiles==0.19.0
+numpy
+pytz
+botocore
+boto3
+python-dateutil
+gunicorn
+grpcio

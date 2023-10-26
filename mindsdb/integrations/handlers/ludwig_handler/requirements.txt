@@ -1,5 +1,4 @@
 ludwig[distributed]>=0.5.2
 ray<=1.13.0
-hyperopt
 dill
 dask

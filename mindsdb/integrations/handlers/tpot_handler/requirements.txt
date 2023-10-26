@@ -1,2 +1,3 @@
 tpot<=0.11.7
 dill
+type-infer

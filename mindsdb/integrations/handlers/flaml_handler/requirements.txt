@@ -1,2 +1,3 @@
 flaml<=1.2.3
 dill
+type-infer

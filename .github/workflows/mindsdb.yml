@@ -112,6 +112,7 @@ jobs:
         # temp
         pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
         pip install --no-cache-dir .
+        pip install --no-cache-dir .[file]
         pip install -r requirements/requirements-test.txt
         pip uninstall pycodestyle -y && pip install pycodestyle==2.9.1  # temp fix while exist conflict in last version with flake8
       shell: bash

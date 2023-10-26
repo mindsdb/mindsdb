@@ -1,69 +1,45 @@
-# OilPriceAPI Handler
+# Stability AI Handler
 
-OilPriceAPI handler for MindsDB provides interfaces to connect to OilPriceAPI via APIs and Oil Price data into MindsDB.
+Stability AI ML handler for MindsDB provides interfaces to connect with Stability AI ML via APIs and pull Stability AI ML Capabilites into MindsDB.
 
----
+## Stability AI
 
-## Table of Contents
-
-- [OilPriceAPI Handler](#oilpriceapi-handler)
-  - [Table of Contents](#table-of-contents)
-  - [About OilPriceAPI](#about-oilpriceapi)
-  - [OilPriceAPI Handler Implementation](#oilpriceapi-handler-implementation)
-  - [OilPriceAPI Handler Initialization](#oilpriceapi-handler-initialization)
-  - [Implemented Features](#implemented-features)
-  - [Example Usage](#example-usage)
-
----
-
-## About OilPriceAPI
-
-OilPriceAPI is a RESTful providing various endpoints and parameters for retrieving historical or live oil prices.
-
-
-## OilPriceAPI Handler Implementation
-
-This handler was implemented using the `requests` library that makes http calls to https://docs.oilpriceapi.com/guide/#endpoints.
-
-## OilPriceAPI Handler Initialization
-
-The OilPriceAPI handler is initialized with the following parameters:
-
-- `api_key`: API Key used to authenticate with OilPriceAPI
-
-Read about creating an API Key [here](https://www.oilpriceapi.com/).
+Stability AI world’s leading open source generative AI company. Learn more about stability AI[here](https://stability.ai/about)
 
 ## Implemented Features
 
-- [x] OilPriceAPI 
-  - [x] Support SELECT
-    - [x] Support LIMIT
-    - [x] Support WHERE
-    - [x] Support ORDER BY
-    - [x] Support column selection
+- [x] Stability AI ML Handler
+  - [x] Support Generate Image
 
 ## Example Usage
 
-The first step is to create a database with the new `oilpriceapi` engine. 
+The first step is to create a ML Engine with the new `stabilityai` engine.
 
 ~~~~sql
-CREATE DATABASE mindsdb_oilpriceapi
-WITH ENGINE = 'oilpriceapi',
-PARAMETERS = {
-  "api_key": ""
-};
+CREATE ML_ENGINE stabilityai_engine
+FROM stabilityai
+USING
+  api_key = 'your_api_key';
 ~~~~
 
-Use the established connection to query your database:
+### Generate Image from Text
+
+Create a model:
 
 ~~~~sql
-SELECT * FROM mindsdb_oilpriceapi.latest_price;
+CREATE MODEL mindsdb.stability_image_generation
+PREDICT image
+USING
+  local_directory_path = "/Users/sam/Documents/test",
+  input_column = 'text',
+  engine = 'stabilityai_engine',
+  api_key = 'your_api_key'
 ~~~~
 
-~~~~sql
-SELECT * FROM mindsdb_oilpriceapi.latest_price where by_type="daily_average_price" and by_code="WTI_USD";
-~~~~
+Query the model:
 
 ~~~~sql
-SELECT * FROM mindsdb_oilpriceapi.past_day_price where by_type="daily_average_price" and by_code="WTI_USD";
+SELECT text, image
+FROM mindsdb.stability_image_generation
+WHERE text = 'A blue lake';
 ~~~~

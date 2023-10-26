@@ -1,3 +1,4 @@
+import sys
 from collections import OrderedDict
 from typing import List, Optional
 
@@ -16,9 +17,15 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 )
 from mindsdb.utilities import log
 
-import sys
-__import__("pysqlite3")
-sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+try:
+    import sys
+
+    __import__("pysqlite3")
+    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+except ImportError:
+    log.logger.error(
+        "pysqlite3 is not installed, this is not a problem for local usage"
+    )  # noqa: E501
 import chromadb  # noqa: E402
 
 

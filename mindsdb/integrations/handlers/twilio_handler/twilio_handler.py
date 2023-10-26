@@ -12,7 +12,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
 from datetime import datetime
-from mindsdb.integrations.utilities.date_utils import parse_utc_date
+from mindsdb.integrations.utilities.date_utils import parse_utc_date, parse_utc_date_with_limit
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
 from mindsdb_sql.parser import ast
@@ -29,8 +29,11 @@ class MessagesTable(APITable):
 
             if op == 'or':
                 raise NotImplementedError(f'OR is not supported')
-            if arg1 == 'sent_at':
-                date = parse_utc_date(arg2)
+            if arg1 == 'sent_at' and arg2 is not None:
+                
+                
+                date = parse_utc_date_with_limit(arg2, 300)
+                
                 if op == '>':
                     
                     params['date_sent_after'] = date
@@ -71,7 +74,7 @@ class MessagesTable(APITable):
             params['limit'] = query.limit.value
 
         result = self.handler.fetch_messages(params, df=True);
-
+        
         
         return result
 
@@ -82,7 +85,7 @@ class MessagesTable(APITable):
             'to_number',
             'body',
             'direction',
-            'status',
+            'msg_status',
             'sent_at', #datetime.strptime(str(msg.date_sent), '%Y-%m-%d %H:%M:%S%z'),
             'account_sid',
             'price',
@@ -304,8 +307,8 @@ class TwilioHandler(APIHandler):
                 'from_number': msg.from_,
                 'body': msg.body,
                 'direction': msg.direction,
-                'status': msg.status,
-                'sent_at': parse_utc_date(msg.date_sent), #datetime.strptime(str(msg.date_sent), '%Y-%m-%d %H:%M:%S%z'),
+                'msg_status': msg.status,
+                'sent_at': msg.date_created, #datetime.strptime(str(msg.date_sent), '%Y-%m-%d %H:%M:%S%z'),
                 'account_sid': msg.account_sid,
                 'price': msg.price,
                 'price_unit': msg.price_unit,

@@ -16,10 +16,6 @@ mintlify dev
 The documentation website will be available at `http://127.0.0.1:3000`
 
 
-## Deploy the docs
-
-The latest version shall be automatically pushed and deployed after merge on master. If the CI/CD deploy failed, locally run:
-
 
 ## How can you help us? [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/mindsdb/mindsdb-docs/issues)
 

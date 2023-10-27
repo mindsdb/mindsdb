@@ -134,7 +134,7 @@ class SkillResource(Resource):
         new_params = skill.get('params', None)
         updated_skill = skills_controller.update_skill(
             skill_name,
-            new_name,
+            new_name=new_name,
             project_name=project_name,
             type=new_type,
             params=new_params)

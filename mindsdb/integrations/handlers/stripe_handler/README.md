@@ -100,6 +100,11 @@ or, for the `payouts` table
 SELECT * FROM stripe_datasource.payouts
 ~~~~
 
+or, for the `products` table
+~~~~sql
+SELECT * FROM stripe_datasource.products
+~~~~
+
 Run more advanced queries:
 
 ~~~~sql
@@ -121,6 +126,15 @@ Run more advanced queries:
 SELECT  name, email
 FROM stripe_datasource.refunds
 WHERE currency = 'inr'
+ORDER BY name
+LIMIT 5
+~~~~
+
+
+~~~~sql
+SELECT id, name, active
+FROM stripe_datasource.products
+WHERE active = true
 ORDER BY name
 LIMIT 5
 ~~~~

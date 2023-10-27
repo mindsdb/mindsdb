@@ -13,6 +13,7 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 
+
 class LindormHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Apache Phoenix statements.

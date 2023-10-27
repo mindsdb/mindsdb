@@ -37,3 +37,11 @@ class DockerHubClient:
     def get_images_summary(self, namespace, repo):
         url = f'{self.docker_hub_base_endpoint}namespaces/{namespace}/repositories/{repo}/images-summary'
         return self.make_request(url)
+    
+    def get_org_settings(self, namespace):
+        url = f'{self.docker_hub_base_endpoint}orgs/{namespace}/settings'
+        return self.make_request(url)
+    
+    
+    
+    # https://hub.docker.com/v2/namespaces/{namespace}/repositories/{repository}/tags/{tag}

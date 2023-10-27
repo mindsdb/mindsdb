@@ -160,8 +160,6 @@ class Ingestor:
 
         vector_store_saver.save_vector_store(db)
 
-        db = None  # clear db from memory
-
         end_time = time.time()
         elapsed_time = end_time - start_time
 

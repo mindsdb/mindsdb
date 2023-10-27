@@ -46,6 +46,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     CreateKnowledgeBase,
     CreateMLEngine,
     CreatePredictor,
+    CreateSkill,
     CreateTrigger,
     CreateView,
     DropChatBot,
@@ -54,11 +55,13 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     DropKnowledgeBase,
     DropMLEngine,
     DropPredictor,
+    DropSkill,
     DropTrigger,
     Evaluate,
     FinetunePredictor,
     RetrainPredictor,
     UpdateChatBot,
+    UpdateSkill
 )
 from mindsdb_sql.parser.dialects.mysql import Variable
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -651,6 +654,12 @@ class ExecuteCommands:
             return self.answer_create_kb(statement)
         elif type(statement) == DropKnowledgeBase:
             return self.anwser_drop_kb(statement)
+        elif type(statement) == CreateSkill:
+            return self.answer_create_skill(statement)
+        elif type(statement) == DropSkill:
+            return self.answer_drop_skill(statement)
+        elif type(statement) == UpdateSkill:
+            return self.answer_update_skill(statement)
         elif type(statement) == Evaluate:
             statement.data = parse_sql(statement.query_str, dialect="mindsdb")
             return self.answer_evaluate_metric(statement)
@@ -1383,6 +1392,65 @@ class ExecuteCommands:
             project_id=project_id,
             if_exists=statement.if_exists,
         )
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def answer_create_skill(self, statement):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        try:
+            _ = self.session.skills_controller.add_skill(
+                name,
+                project_name,
+                statement.type,
+                statement.params
+            )
+        except ValueError as e:
+            # Project does not exist or skill already exists.
+            raise SqlApiException(str(e))
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def answer_drop_skill(self, statement):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        try:
+            self.session.skills_controller.delete_skill(name, project_name)
+        except ValueError as e:
+            # Project does not exist or skill does not exist.
+            raise SqlApiException(str(e))
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def answer_update_skill(self, statement):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        type = statement.params.pop('type', None)
+        try:
+            _ = self.session.skills_controller.update_skill(
+                name,
+                project_name=project_name,
+                type=type,
+                params=statement.params
+            )
+        except ValueError as e:
+            # Project does not exist or skill does not exist.
+            raise SqlApiException(str(e))
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 

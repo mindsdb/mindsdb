@@ -17,8 +17,6 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 from mindsdb_sql.parser import ast
 
 
-
-
 class PhoneNumbersTable(APITable):
 
     def select(self, query: ast.Select) -> Response:
@@ -62,8 +60,6 @@ class PhoneNumbersTable(APITable):
             'sms_url',
             'uri'
         ]
-
-    
 
 
 class MessagesTable(APITable):

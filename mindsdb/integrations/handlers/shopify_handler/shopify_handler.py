@@ -9,7 +9,7 @@ from mindsdb.integrations.libs.response import (
 
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
-from mindsdb.integrations.handlers.exceptions import InvalidNativeQuery, ConnectionFailed, MissingConnectionParams
+from mindsdb.exceptions import InvalidNativeQuery, ConnectionFailed, MissingConnectionParams
 
 
 class ShopifyHandler(APIHandler):

@@ -721,9 +721,6 @@ class CarrierServiceTable(APITable):
         """
         update_statement_parser = UPDATEQueryParser(query)
         values_to_update, where_conditions = update_statement_parser.parse_query()
-
-        print(f"values_to_update: {values_to_update}")
-        print(f"where_conditions: {where_conditions}")
         carrier_services_df = pd.json_normalize(self.get_carrier_service())
         update_query_executor = UPDATEQueryExecutor(
             carrier_services_df,
@@ -731,7 +728,6 @@ class CarrierServiceTable(APITable):
         )
 
         carrier_services_df = update_query_executor.execute_query()
-        print(f"carrier_services_df: {carrier_services_df}")
         carrier_service_ids = carrier_services_df['id'].tolist()
         self.update_carrier_service(carrier_service_ids, values_to_update)
 
@@ -752,6 +748,7 @@ class CarrierServiceTable(APITable):
 
         for carrier_service in carrier_service_data:
             created_carrier_service = shopify.CarrierService.create(carrier_service)
+            print(f"created carrier service: {created_carrier_service}")
             if 'id' not in created_carrier_service.to_dict():
                 raise Exception('Product creation failed')
             else:
@@ -770,9 +767,12 @@ class CarrierServiceTable(APITable):
         # Update the carrier service using the Shopify API
         session = self.handler.connect()
         shopify.ShopifyResource.activate_session(session)
+        print(f"carrier_service_id: {carrier_service_id}")
 
         carrier_service = shopify.CarrierService.find(carrier_service_id)
+        print(f"carrier_service: {carrier_service}")
         for key, value in values_to_update.items():
+            print(f"key: {key}, value: {value}")
             setattr(carrier_service, key, value)
         carrier_service.save()
         logger.info(f'Carrier Service {carrier_service_id} updated')

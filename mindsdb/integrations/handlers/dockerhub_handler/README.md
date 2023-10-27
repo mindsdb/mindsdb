@@ -46,7 +46,6 @@ Read about creating an account [here](https://hub.docker.com/).
 
 ## TODO
 
-- [ ] Repository's Images Table for a given Repository
 - [ ] Image's Tags Table for a given Image
 - [ ] Organization Settings Table for a given Organization
 - [ ] Repository Tags Table for a given Repository
@@ -71,9 +70,14 @@ SELECT * FROM mindsdb_dockerhub.repo_images_summary WHERE namespace="docker" AND
 ~~~~
 
 ~~~~sql
+SELECT * FROM mindsdb_dockerhub.repo_images WHERE namespace="docker" AND repository="trusted-registry-nginx";
+~~~~
+
+~~~~sql
 SELECT * FROM mindsdb_dockerhub.repo_tag_details WHERE namespace="docker" AND repository="trusted-registry-nginx" AND tag="latest";
 ~~~~
 
 ~~~~sql
 SELECT * FROM mindsdb_dockerhub.repo_tags WHERE namespace="docker" AND repository="trusted-registry-nginx";
 ~~~~
+

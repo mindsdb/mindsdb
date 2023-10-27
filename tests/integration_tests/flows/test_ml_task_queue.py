@@ -29,6 +29,11 @@ class TestMLTaskQueue(HTTPHelperMixin):
         db = Database(protocol=3)
         db.ping()
 
+    @classmethod
+    def setup_class(cls):
+        print("setup class")
+        print(cls.config)
+
     def test_create_model(self):
         """ 1. create db connection
             2. create test dataset

@@ -170,4 +170,3 @@ class AnomalyDetectionHandler(BaseMLEngine):
             return df
         else:
             raise NotImplementedError(f"attribute {attribute} not implemented")
-            

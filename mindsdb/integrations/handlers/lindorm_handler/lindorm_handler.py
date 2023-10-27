@@ -1,5 +1,4 @@
 from typing import Optional
-from collections import OrderedDict
 import pandas as pd
 import phoenixdb
 from mindsdb_sql import parse_sql
@@ -13,8 +12,6 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
-
 
 class LindormHandler(DatabaseHandler):
     """

@@ -1,3 +1,1 @@
 cachetools==5.3.0
-flask==2.2.2
-werkzeug==2.2.2

@@ -76,6 +76,11 @@ jobs:
           deptry --requirements-txt $REQUIREMENTS_FILES --package-module-name-map $PACKAGE_MODULE_NAME_MAP --per-rule-ignores $RULE_IGNORES ${HANDLER_DIR}
         done
 
+    - name: Check for duplicate requirements
+      shell: bash
+      run: |
+        python tests/scripts/check_duplicate_reqs.py
+
   code_checking:
     runs-on: ubuntu-latest
     steps:

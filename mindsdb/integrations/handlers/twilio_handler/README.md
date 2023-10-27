@@ -73,6 +73,12 @@ You can now run queries as follows:
 -- Get all messages 
 SELECT * FROM my_twilio.messages LIMIT 100;
 
+-- get all messages sent for all numbers in this account
+SELECT * FROM 
+    my_twilio.phone_numbers 
+    LEFT JOIN my_twilio.messages 
+    ON my_twilio.phone_numbers.phone_number = my_twilio.messages.from_number;
+
 -- Get message with sid
 SELECT sid, to_number, from_number FROM my_twilio.messages where sid="SMbefbd64e3caa7d4c147a0aab82d47";
 

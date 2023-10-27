@@ -1,2 +1,2 @@
 neuralforecast>=1.4.0, <1.5.0
-ray<=1.13.0
+ray==2.0.1

@@ -95,8 +95,7 @@ def preprocess_data(df):
     df[categorical_columns] = df[categorical_columns].astype("category")
     df[categorical_columns] = df[categorical_columns].apply(lambda x: x.cat.codes)
     df = pd.get_dummies(df, columns=categorical_columns)
-    # scale numeric columns to have mean 0 and std 1
-    numeric_columns = list(df.select_dtypes(include=["float64", "int64"]).columns.values)
+    numeric_columns = list(df.select_dtypes(include=["number"]).columns.values)
     df[numeric_columns] = (df[numeric_columns] - df[numeric_columns].mean()) / df[numeric_columns].std()
     return df
 
@@ -148,12 +147,12 @@ class AnomalyDetectionHandler(BaseMLEngine):
         """Load a model from the model storage and use it to make predictions"""
         model_args = self.model_storage.json_get("model_args")
         results_list = []
+        if "__mindsdb_row_id" in df.columns:
+            df = df.drop("__mindsdb_row_id", axis=1)
+        if model_args["target"][0] in df.columns:
+            df = df.drop(model_args["target"], axis=1)
         for model_path in model_args["model_path"]:
             model = load(model_path)
-            if "__mindsdb_row_id" in df.columns:
-                df = df.drop("__mindsdb_row_id", axis=1)
-            if model_args["target"][0] in df.columns:
-                df = df.drop(model_args["target"], axis=1)
             predict_df = preprocess_data(df).astype(float)
             results = model.predict(predict_df)
             results_list.append(results)
@@ -169,3 +168,6 @@ class AnomalyDetectionHandler(BaseMLEngine):
                 df2 = pd.DataFrame({"model_name": model_name, "target": target}, index=[0])
                 df = pd.concat([df, df2], ignore_index=True)
             return df
+        else:
+            raise NotImplementedError(f"attribute {attribute} not implemented")
+            

@@ -41,6 +41,9 @@ The Stripe handler is initialized with the following parameters:
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+  - [x] Support INSERT
+  - [x] Support UPDATE
+  - [x] Support DELETE
 - [x] Stripe Customers Table for a given account
   - [x] Support SELECT
     - [x] Support LIMIT
@@ -68,7 +71,7 @@ The Stripe handler is initialized with the following parameters:
 
 ## TODO
 
-- [ ] Support INSERT, UPDATE and DELETE for Products, Customers and Payment Intents tables
+- [ ] Support INSERT, UPDATE and DELETE for Customers and Payment Intents tables
 - [ ] Stripe Charges table
 - [ ] Stripe Balance table
 - [ ] Many more

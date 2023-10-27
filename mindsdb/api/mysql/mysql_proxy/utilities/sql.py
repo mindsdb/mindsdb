@@ -1,7 +1,7 @@
 import copy
 
 import duckdb
-from duckdb.duckdb import InvalidInputException
+from duckdb import InvalidInputException
 import numpy as np
 
 from mindsdb_sql import parse_sql

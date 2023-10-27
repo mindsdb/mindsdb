@@ -10,7 +10,7 @@ The PirateWeather handler is initialized with the following parameters:
 
 Read about creating a PirateWeather API key [here](http://pirateweather.net/en/latest/).
 
-## Provided Tables
+Provided Tables
 
 - `hourly` - historical hourly weather data for a given location. Columns:
     - `localtime`
@@ -62,14 +62,14 @@ Both tables support the following parameters:
 
 ## Example Usage
 
-The first step is to create a database with the new `github` engine.
+The first step is to create a database with the new `pirateweather` engine.
 
 ~~~~sql
 CREATE
 DATABASE pirateweather
 WITH ENGINE = 'pirateweather',
 PARAMETERS = {
-  "api_key": "your_api_key"    -- optional GitHub API key
+  "api_key": "your_api_key"
 };
 ~~~~
 

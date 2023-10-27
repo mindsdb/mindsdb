@@ -175,7 +175,8 @@ class PirateWeatherAPIHandler(APIHandler):
 
         try:
             self.call_application_api(method_name="daily", params=dict(latitude=51.507351,
-                                                                       longitude=-0.127758))
+                                                                       longitude=-0.127758,
+                                                                       time="1672578052"))
             response.success = True
 
         except Exception as e:
@@ -222,11 +223,11 @@ class PirateWeatherAPIHandler(APIHandler):
 
         # Parse the response
         data = response.json()
-        if "hourly" not in data:
-            raise ValueError(f"API response did not contain hourly data. Check your API key. Got response: {data}")
+        if method_name not in data:
+            raise ValueError(f"API response did not contain {method_name} data. Check your API key. Got response: {data}")
 
         # Convert to dataframe
-        df = pd.DataFrame(data["hourly"]["data"]).assign(
+        df = pd.DataFrame(data[method_name]["data"]).assign(
             latitude=params["latitude"],
             longitude=params["longitude"],
             timezone=data["timezone"],

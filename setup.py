@@ -1,6 +1,9 @@
 import os
 from setuptools import setup, find_packages
 
+# An special env var that allows us to disable the installation of the default extras for advanced users / containers / etc
+MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS = True if os.getenv("MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS", "true").lower() == "true" else False
+
 
 class Deps:
     pkgs = []
@@ -17,8 +20,6 @@ with open("mindsdb/__about__.py") as fp:
 with open("README.md", "r", encoding="utf8") as fh:
     long_description = fh.read()
 
-# An special env var that allows us to disable the installation of the default extras for advanced users / containers / etc
-MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS = True if os.getenv("MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS", "true").lower() == "true" else False
 
 def define_deps():
     """Reads requirements.txt requirements-extra.txt files and preprocess it
@@ -55,7 +56,10 @@ def define_deps():
 
     extra_requirements = {}
     full_requirements = []
-    default_extras = ['postgres','mssql','mysql','mariadb','scylla','cassandra','clickhouse','snowflake','slack','file','sqlite','mongodb','neuralforecast','langchain','openai','byom','lightwood','statsforecast','huggingface','timegpt']
+    default_extras = ['postgres', 'mssql', 'mysql', 'mariadb', 'scylla', 'cassandra',
+                      'clickhouse', 'snowflake', 'slack', 'file', 'sqlite', 'mongodb',
+                      'neuralforecast', 'langchain', 'openai', 'byom', 'lightwood',
+                      'statsforecast', 'huggingface', 'timegpt']
     for fn in os.listdir(os.path.normpath('./requirements')):
         if fn.startswith('requirements-') and fn.endswith('.txt'):
             extra_name = fn.replace('requirements-', '').replace('.txt', '')

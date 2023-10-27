@@ -1,13 +1,10 @@
 from collections import OrderedDict
 
-from mindsdb.integrations.handlers.dockerhub_handler.dockerhub_tables import (
-    DockerHubRepoImagesSummaryTable,
-    DockerHubRepoImagesTable,
-    DockerHubRepoTagTable,
-    DockerHubRepoTagsTable,
-    DockerHubOrgSettingsTable
+from mindsdb.integrations.handlers.oilpriceapi_handler.oilpriceapi_tables import (
+    OilPriceLatestTable,
+    OilPricePastDayPriceTable
 )
-from mindsdb.integrations.handlers.dockerhub_handler.dockerhub import DockerHubClient
+from mindsdb.integrations.handlers.oilpriceapi_handler.oilpriceapi import OilPriceAPIClient
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -18,14 +15,14 @@ from mindsdb.utilities.log import get_log
 from mindsdb_sql import parse_sql
 
 
-logger = get_log("integrations.dockerhub_handler")
+logger = get_log("integrations.oilpriceapi_handler")
 
 
-class DockerHubHandler(APIHandler):
-    """The DockerHub handler implementation"""
+class OilPriceAPIHandler(APIHandler):
+    """The OilPriceAPI handler implementation"""
 
     def __init__(self, name: str, **kwargs):
-        """Initialize the DockerHub handler.
+        """Initialize the OilPriceAPI handler.
 
         Parameters
         ----------
@@ -37,23 +34,14 @@ class DockerHubHandler(APIHandler):
         connection_data = kwargs.get("connection_data", {})
         self.connection_data = connection_data
         self.kwargs = kwargs
-        self.docker_client = DockerHubClient()
+        self.client = OilPriceAPIClient(self.connection_data["api_key"])
         self.is_connected = False
 
-        repo_images_stats_data = DockerHubRepoImagesSummaryTable(self)
-        self._register_table("repo_images_summary", repo_images_stats_data)
-        
-        repo_images_data = DockerHubRepoImagesTable(self)
-        self._register_table("repo_images", repo_images_data)
+        latest_price_data = OilPriceLatestTable(self)
+        self._register_table("latest_price", latest_price_data)
 
-        repo_tag_details_data = DockerHubRepoTagTable(self)
-        self._register_table("repo_tag_details", repo_tag_details_data)
-        
-        repo_tags_data = DockerHubRepoTagsTable(self)
-        self._register_table("repo_tags", repo_tags_data)
-
-        org_settings = DockerHubOrgSettingsTable(self)
-        self._register_table("org_settings", org_settings)
+        past_day_price_data = OilPricePastDayPriceTable(self)
+        self._register_table("past_day_price", past_day_price_data)
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.
@@ -64,7 +52,7 @@ class DockerHubHandler(APIHandler):
             connection object
         """
         resp = StatusResponse(False)
-        status = self.docker_client.login(self.connection_data.get("username"), self.connection_data.get("password"))
+        status = self.client.get_latest_price()
         if status["code"] != 200:
             resp.success = False
             resp.error_message = status["error"]
@@ -83,17 +71,16 @@ class DockerHubHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            status = self.docker_client.login(self.connection_data.get("username"), self.connection_data.get("password"))
+            status = self.client.get_latest_price()
             if status["code"] == 200:
-                current_user = self.connection_data.get("username")
-                logger.info(f"Authenticated as user {current_user}")
+                logger.info("Authentication successful")
                 response.success = True
             else:
                 response.success = False
-                logger.info("Error connecting to dockerhub. " + status["error"])
+                logger.info("Error connecting to OilPriceAPI. " + status["error"])
                 response.error_message = status["error"]
         except Exception as e:
-            logger.error(f"Error connecting to DockerHub API: {e}!")
+            logger.error(f"Error connecting to OilPriceAPI: {e}!")
             response.error_message = e
 
         self.is_connected = response.success
@@ -117,21 +104,14 @@ class DockerHubHandler(APIHandler):
 
 
 connection_args = OrderedDict(
-    username={
-        "type": ARG_TYPE.STR,
-        "description": "DockerHub username",
-        "required": True,
-        "label": "username",
-    },
-    password={
+    api_key={
         "type": ARG_TYPE.PWD,
-        "description": "DockerHub password",
+        "description": "OilPriceAPI key to use for authentication.",
         "required": True,
         "label": "Api key",
     }
 )
 
 connection_args_example = OrderedDict(
-    username="username",
-    password="password"
+    api_key=""
 )

@@ -12,7 +12,6 @@ DockerHub handler for MindsDB provides interfaces to connect to DockerHub via AP
   - [DockerHub Handler Implementation](#dockerhub-handler-implementation)
   - [DockerHub Handler Initialization](#dockerhub-handler-initialization)
   - [Implemented Features](#implemented-features)
-  - [TODO](#todo)
   - [Example Usage](#example-usage)
 
 ---
@@ -44,11 +43,6 @@ Read about creating an account [here](https://hub.docker.com/).
     - [x] Support ORDER BY
     - [x] Support column selection
 
-## TODO
-
-- [ ] Image's Tags Table for a given Image
-- [ ] Organization Settings Table for a given Organization
-- [ ] Repository Tags Table for a given Repository
 
 ## Example Usage
 
@@ -81,3 +75,6 @@ SELECT * FROM mindsdb_dockerhub.repo_tag_details WHERE namespace="docker" AND re
 SELECT * FROM mindsdb_dockerhub.repo_tags WHERE namespace="docker" AND repository="trusted-registry-nginx";
 ~~~~
 
+=======
+SELECT * FROM mindsdb_dockerhub.org_settings where organization="docker";
+~~~~

@@ -7,7 +7,7 @@ from mindsdb_sql.parser.ast import ASTNode, Select, Insert, Update, Delete
 from mindsdb_sql.parser.ast.select.identifier import Identifier
 
 from mindsdb.integrations.libs.base import BaseHandler
-from mindsdb.exceptions import TableAlreadyExists, TableNotFound
+from mindsdb.integrations.libs.api_handler_exceptions import TableAlreadyExists, TableNotFound
 
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,

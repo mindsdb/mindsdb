@@ -1,1 +1,1 @@
-anthropic==0.3.5
+anthropic==0.3.4

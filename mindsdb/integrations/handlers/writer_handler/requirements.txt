@@ -1,5 +1,5 @@
-langchain==0.0.303
-chromadb==0.4.8
+langchain==0.0.267
+chromadb==0.3.25
 pydantic>=1.10.8
 nltk>=3.8.1
 rouge-score>=0.1.2

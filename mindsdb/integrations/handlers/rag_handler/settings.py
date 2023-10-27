@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from functools import lru_cache, partial
 from typing import Any, Dict, List, Union
 
-import chromadb
 import html2text
 import openai
 import pandas as pd
@@ -19,6 +18,7 @@ from langchain.vectorstores import FAISS, Chroma, VectorStore
 from pydantic import BaseModel, Extra, Field, validator
 from writer.models import shared
 
+from mindsdb.integrations.handlers.chromadb_handler.chromadb_handler import get_chromadb
 from mindsdb.integrations.handlers.rag_handler.exceptions import (
     InvalidOpenAIModel,
     InvalidPromptTemplate,
@@ -57,6 +57,8 @@ DEFAULT_CHUNK_OVERLAP = 50
 DEFAULT_VECTOR_STORE_NAME = "chroma"
 DEFAULT_VECTOR_STORE_COLLECTION_NAME = "collection"
 DEFAULT_PERSISTED_VECTOR_STORE_FOLDER_NAME = "vector_store_folder"
+
+chromadb = get_chromadb()
 
 
 def is_valid_store(name) -> bool:

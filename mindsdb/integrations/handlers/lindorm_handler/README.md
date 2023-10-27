@@ -12,8 +12,9 @@ This handler uses `phoenixdb` python library connect to a Lindorm database insta
 The required arguments to establish a connection are:
 
 * `url`: the url of database while connecting 
-* `username`: Username for authentication
-* `password`: Password for authentication
+* `autocommit`: Whether or not to autocommit changes
+* `lindorm_user`: Username for authentication
+* `lindorm_password`: Password for authentication
 
 
 ## Usage

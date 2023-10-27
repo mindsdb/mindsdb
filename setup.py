@@ -3,6 +3,10 @@ from setuptools import setup, find_packages
 
 # An special env var that allows us to disable the installation of the default extras for advanced users / containers / etc
 MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS = True if os.getenv("MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS", "true").lower() == "true" else False
+DEFAULT_PIP_EXTRAS = ['postgres', 'mssql', 'mysql', 'mariadb', 'scylla', 'cassandra',
+                      'clickhouse', 'snowflake', 'slack', 'file', 'sqlite', 'mongodb',
+                      'neuralforecast', 'langchain', 'openai', 'byom', 'lightwood',
+                      'statsforecast', 'huggingface', 'timegpt']
 
 
 class Deps:
@@ -56,10 +60,6 @@ def define_deps():
 
     extra_requirements = {}
     full_requirements = []
-    default_extras = ['postgres', 'mssql', 'mysql', 'mariadb', 'scylla', 'cassandra',
-                      'clickhouse', 'snowflake', 'slack', 'file', 'sqlite', 'mongodb',
-                      'neuralforecast', 'langchain', 'openai', 'byom', 'lightwood',
-                      'statsforecast', 'huggingface', 'timegpt']
     for fn in os.listdir(os.path.normpath('./requirements')):
         if fn.startswith('requirements-') and fn.endswith('.txt'):
             extra_name = fn.replace('requirements-', '').replace('.txt', '')
@@ -88,7 +88,7 @@ def define_deps():
 
             # If this is a default extra and if we want to install defaults (enabled by default)
             #   then add it to the default requirements needing to install
-            if MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS and extra_name in default_extras:
+            if MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS and extra_name in DEFAULT_PIP_EXTRAS:
                 requirements += extra
 
     extra_requirements['all_handlers_extras'] = list(set(full_handlers_requirements))

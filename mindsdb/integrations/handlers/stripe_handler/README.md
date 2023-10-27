@@ -138,3 +138,19 @@ WHERE active = true
 ORDER BY name
 LIMIT 5
 ~~~~
+
+~~~~sql
+INSERT INTO stripe_datasource.products(name)
+VALUES('product_name')
+~~~~
+
+~~~~sql
+UPDATE stripe_datasource.products
+SET name = 'product_name_updated'
+WHERE name = 'product_name'
+~~~~
+
+~~~~sql
+DELETE FROM stripe_datasource.products
+WHERE name = 'product_name_updated'
+~~~~

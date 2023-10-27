@@ -73,3 +73,7 @@ SELECT * FROM mindsdb_dockerhub.repo_images_summary WHERE namespace="docker" AND
 ~~~~sql
 SELECT * FROM mindsdb_dockerhub.repo_tag_details WHERE namespace="docker" AND repository="trusted-registry-nginx" AND tag="latest";
 ~~~~
+
+~~~~sql
+SELECT * FROM mindsdb_dockerhub.repo_tags WHERE namespace="docker" AND repository="trusted-registry-nginx";
+~~~~

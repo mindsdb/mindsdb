@@ -16,6 +16,7 @@ from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.interfaces.file.file_controller import FileController
 
 # Define a table to use as content for all of the file types
+# This data needs to match that saved in the files in the ./data/ dir (except pdf and txt files)
 test_file_content = [
     ["col_one", "col_two", "col_three", "col_four"],
     [1, -1, 0.1, "A"],

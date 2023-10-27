@@ -3,12 +3,12 @@ from dataclasses import dataclass
 from functools import lru_cache, partial
 from typing import Dict, List, Union
 
+import chromadb
 import html2text
 import openai
 import pandas as pd
 import requests
 import writer
-from chromadb import Settings
 from langchain import Writer
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.docstore.document import Document
@@ -68,6 +68,7 @@ class VectorStoreFactory:
 
     @staticmethod
     def get_vectorstore_class(name):
+
         if not isinstance(name, str):
             raise TypeError("name must be a string")
 
@@ -81,13 +82,9 @@ class VectorStoreFactory:
             return Chroma
 
 
-def get_chroma_settings(persist_directory: str = "chromadb") -> Settings:
-    """Get chroma settings"""
-    return Settings(
-        chroma_db_impl="duckdb+parquet",
-        persist_directory=persist_directory,
-        anonymized_telemetry=False,
-    )
+def get_chroma_client(persist_directory: str) -> chromadb.PersistentClient:
+    """Get Chroma client"""
+    return chromadb.PersistentClient(path=persist_directory)
 
 
 def get_available_writer_model_ids(args: dict) -> list:
@@ -168,13 +165,15 @@ class PersistedVectorStoreLoader:
         """Load vector store from the persisted vector store"""
 
         if vector_store == "chroma":
+
             return Chroma(
                 collection_name=self.config.collection_name,
                 embedding_function=self.config.embeddings_model,
-                persist_directory=self.config.persist_directory,
+                client=get_chroma_client(self.config.persist_directory),
             )
 
         elif vector_store == "faiss":
+
             return FAISS.load_local(
                 folder_path=self.config.persist_directory,
                 embeddings=self.config.embeddings_model,

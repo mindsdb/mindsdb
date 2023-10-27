@@ -1,7 +1,8 @@
 from collections import OrderedDict
 
 from mindsdb.integrations.handlers.dockerhub_handler.dockerhub_tables import (
-    DockerHubRepoImagesSummaryTable
+    DockerHubRepoImagesSummaryTable,
+    DockerHubOrgSettingsTable
 )
 from mindsdb.integrations.handlers.dockerhub_handler.dockerhub import DockerHubClient
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -38,6 +39,9 @@ class DockerHubHandler(APIHandler):
 
         repo_images_stats_data = DockerHubRepoImagesSummaryTable(self)
         self._register_table("repo_images_summary", repo_images_stats_data)
+        
+        org_settings = DockerHubOrgSettingsTable(self)
+        self._register_table("org_settings", org_settings)
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.

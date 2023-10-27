@@ -7,7 +7,6 @@ import requests
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from collections import OrderedDict
 import pandas as pd
-import json
 
 
 class StrapiHandler(APIHandler):

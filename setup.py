@@ -1,12 +1,34 @@
 import os
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 
 # An special env var that allows us to disable the installation of the default extras for advanced users / containers / etc
-MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS = True if os.getenv("MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS", "true").lower() == "true" else False
-DEFAULT_PIP_EXTRAS = ['postgres', 'mssql', 'mysql', 'mariadb', 'scylla', 'cassandra',
-                      'clickhouse', 'snowflake', 'slack', 'file', 'sqlite', 'mongodb',
-                      'neuralforecast', 'langchain', 'openai', 'byom', 'lightwood',
-                      'statsforecast', 'huggingface', 'timegpt']
+MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS = (
+    True
+    if os.getenv("MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS", "true").lower() == "true"
+    else False
+)
+DEFAULT_PIP_EXTRAS = [
+    'postgres',
+    'mssql',
+    'mysql',
+    'mariadb',
+    'scylla',
+    'cassandra',
+    'clickhouse',
+    'snowflake',
+    'slack',
+    'file',
+    'sqlite',
+    'mongodb',
+    'langchain',
+    'openai',
+    'byom',
+    'lightwood',
+    'statsforecast',
+    'huggingface',
+    'timegpt',
+]
 
 
 class Deps:
@@ -73,7 +95,9 @@ def define_deps():
     full_handlers_requirements = []
     handlers_dir_path = os.path.normpath('./mindsdb/integrations/handlers')
     for fn in os.listdir(handlers_dir_path):
-        if os.path.isdir(os.path.join(handlers_dir_path, fn)) and fn.endswith("_handler"):
+        if os.path.isdir(os.path.join(handlers_dir_path, fn)) and fn.endswith(
+            "_handler"
+        ):
             req_file_path = os.path.join(handlers_dir_path, fn, 'requirements.txt')
             extra_name = fn.replace("_handler", "")
             # If requirements.txt in our handler folder, import them as our extra's requirements
@@ -122,5 +146,5 @@ setup(
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.8"
+    python_requires=">=3.8",
 )

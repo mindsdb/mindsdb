@@ -95,7 +95,7 @@ connection_args = OrderedDict(
     },
     base_url={
         'type': ARG_TYPE.STR,
-        'description': 'Base url of Lightdash instance',
+        'description': 'Base URL of Lightdash instance',
         'required': True,
         'label': 'Base URL',
     }

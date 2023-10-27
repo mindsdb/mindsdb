@@ -93,7 +93,10 @@ class StrapiTable(APITable):
         """
         data = {'data': {}}
         for column, value in zip(query.columns, query.values[0]):
-            data['data'][column.name] = value
+            if isinstance(value, Constant):
+                data['data'][column.name] = value.value
+            else:
+                data['data'][column.name] = value
         self.handler.call_strapi_api(method='POST', endpoint=f'/api/{self.name}', json_data=json.dumps(data))
 
     def update(self, query: ast.Update) -> None:

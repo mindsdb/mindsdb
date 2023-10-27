@@ -36,8 +36,7 @@ class StrapiHandlerTest(unittest.TestCase):
 
     def test_5_insert_data(self):
         # Ensure that data insertion is successful
-        query = '''INSERT INTO myshop.sellers (name, email, sellerid)
-                    VALUES ('Ram', 'ram@gmail.com', 'ramu')'''
+        query = "INSERT INTO myshop.sellers (name, email, sellerid) VALUES ('Ram', 'ram@gmail.com', 'ramu4')"
         result = self.handler.native_query(query)
         self.assertTrue(result)
 

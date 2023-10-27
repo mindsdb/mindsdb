@@ -1,5 +1,7 @@
+from collections import OrderedDict
 from mindsdb_sql import parse_sql
 
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.handlers.lightdash_handler.api import Lightdash
 from mindsdb.integrations.handlers.lightdash_handler.lightdash_tables import (
     UserTable,
@@ -82,3 +84,25 @@ class LightdashHandler(APIHandler):
     def native_query(self, query: str) -> StatusResponse:
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
+
+
+connection_args = OrderedDict(
+    api_key={
+        'type': ARG_TYPE.STR,
+        'description': 'API Token for accessing Lightdash instance',
+        'required': True,
+        'label': 'API Key',
+    },
+    base_url={
+        'type': ARG_TYPE.STR,
+        'description': 'Base url of Lightdash instance',
+        'required': True,
+        'label': 'Base URL',
+    }
+)
+
+
+connection_args_example = OrderedDict(
+    api_key='23d6b9e0c2fab7eba2e8b7e452cead47',
+    base_url='http://localhost:8080/'
+)

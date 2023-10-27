@@ -7,7 +7,8 @@ def parse_local_date(date_str: str) -> dt.datetime:
     """Parses common date string formats to local datetime objects."""
     if isinstance(date_str, dt.datetime):
         return date_str
-    date_formats = ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d']
+    date_formats = ['%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d']
+
     date = None
     for date_format in date_formats:
         try:
@@ -17,6 +18,24 @@ def parse_local_date(date_str: str) -> dt.datetime:
     if date is None:
         raise ValueError(f"Can't parse date: {date_str}")
     return date
+
+
+def parse_utc_date_with_limit(date_str: str, max_window_in_days: int = None) -> dt.datetime:
+    """Parses common date string formats to UTC datetime objects."""
+    date = parse_local_date(date_str)
+
+    # Convert date to UTC
+    date_utc = date.astimezone(pytz.utc)
+
+    # If max_window_in_days is provided, apply the logic
+    if max_window_in_days is not None:
+        # Get the current UTC time
+        now_utc = dt.datetime.utcnow().replace(tzinfo=pytz.utc)
+        # Check if the parsed date is earlier than the maximum window allowed
+        max_window_date = now_utc - dt.timedelta(days=max_window_in_days)
+        if date_utc < max_window_date:
+            return max_window_date
+    return date_utc
 
 
 def parse_utc_date(date_str: str) -> dt.datetime:

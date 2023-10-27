@@ -667,7 +667,7 @@ class InformationSchemaDataNode(DataNode):
         ]
 
         return pd.DataFrame(data, columns=columns)
-    
+
     def _get_skills(self, query: ASTNode = None):
         skills_controller = SkillsController()
         project_name = None

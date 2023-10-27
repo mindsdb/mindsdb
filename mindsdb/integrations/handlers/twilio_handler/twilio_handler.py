@@ -17,6 +17,51 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 from mindsdb_sql.parser import ast
 
 
+class PhoneNumbersTable(APITable):
+
+    def select(self, query: ast.Select) -> Response:
+
+        conditions = extract_comparison_conditions(query.where)
+
+        params = {}
+        filters = []
+        for op, arg1, arg2 in conditions:
+
+            if op == 'or':
+                raise NotImplementedError('OR is not supported')
+            else:
+                filters.append([op, arg1, arg2])
+
+        if query.limit is not None:
+            params['limit'] = query.limit.value
+
+        result = self.handler.list_phone_numbers(params, df=True)
+
+        # filter targets
+        result = filter_dataframe(result, filters)
+
+        # project targets
+        result = project_dataframe(result, query.targets, self.get_columns())
+
+        return result
+
+    def get_columns(self):
+        return [
+            'sid',
+            'date_created',
+            'date_updated',
+            'phone_number',
+            'friendly_name',
+            'account_sid',
+            'capabilities',
+            'number_status',
+            'api_version',
+            'voice_url',
+            'sms_url',
+            'uri'
+        ]
+
+
 class MessagesTable(APITable):
 
     def select(self, query: ast.Select) -> Response:
@@ -170,7 +215,9 @@ class TwilioHandler(APIHandler):
         self.is_connected = False
 
         messages = MessagesTable(self)
+        phone_numbers = PhoneNumbersTable(self)
         self._register_table('messages', messages)
+        self._register_table('phone_numbers', phone_numbers)
 
     def connect(self):
         """Authenticate with the Twilio API using the account_sid and auth_token provided in the constructor."""
@@ -256,7 +303,7 @@ class TwilioHandler(APIHandler):
         )
 
     def fetch_messages(self, params, df=False):
-        limit = int(params.get('limit', 10))
+        limit = int(params.get('limit', 1000))
         sid = params.get('sid', None)
         # Convert date strings to datetime objects if provided
         date_sent_after = params.get('date_sent_after', None)
@@ -304,7 +351,12 @@ class TwilioHandler(APIHandler):
         return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(data))
 
     def list_phone_numbers(self, params, df=False):
-        phone_numbers = self.client.incoming_phone_numbers.list()
+        limit = int(params.get('limit', 100))
+        args = {
+            'limit': limit
+        }
+        args = {arg: val for arg, val in args.items() if val is not None}
+        phone_numbers = self.client.incoming_phone_numbers.list(**args)
 
         # Extract properties for each phone number
         data = []
@@ -317,7 +369,7 @@ class TwilioHandler(APIHandler):
                 'friendly_name': number.friendly_name,
                 'account_sid': number.account_sid,
                 'capabilities': number.capabilities,
-                'status': number.status,
+                'number_status': number.status,
                 'api_version': number.api_version,
                 'voice_url': number.voice_url,
                 'sms_url': number.sms_url,
@@ -327,5 +379,5 @@ class TwilioHandler(APIHandler):
             data.append(num_data)
 
         if df is True:
-            return data
+            return pd.DataFrame(data)
         return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(data))

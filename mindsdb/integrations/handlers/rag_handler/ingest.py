@@ -8,7 +8,7 @@ from langchain.vectorstores import VectorStore
 from mindsdb.integrations.handlers.rag_handler.settings import (
     PersistedVectorStoreSaver,
     PersistedVectorStoreSaverConfig,
-    RAGHandlerParameters,
+    RAGBaseParameters,
     VectorStoreFactory,
     df_to_documents,
     get_chroma_client,
@@ -45,12 +45,12 @@ def validate_documents(documents) -> bool:
     return all([validate_document(doc) for doc in documents])
 
 
-class Ingestor:
+class RAGIngestor:
     """A class for converting a dataframe and/or url to a vectorstore embedded with a given embeddings model"""
 
     def __init__(
         self,
-        args: RAGHandlerParameters,
+        args: RAGBaseParameters,
         df: pd.DataFrame,
     ):
         self.args = args

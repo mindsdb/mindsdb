@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 from functools import lru_cache, partial
-from typing import Dict, List, Union
+from typing import Any, Dict, List, Union
 
 import chromadb
 import html2text
@@ -91,9 +91,7 @@ def get_available_writer_model_ids(args: dict) -> list:
     """Get available writer LLM model ids"""
 
     writer_client = writer.Writer(
-        security=shared.Security(
-            api_key=args["writer_api_key"],
-        ),
+        security=shared.Security(api_key=args["writer_api_key"]),
         organization_id=args["writer_org_id"],
     )
 
@@ -275,24 +273,22 @@ class LLMLoader(BaseModel):
         return partial(openai.Completion.create, **config)
 
 
-class RAGHandlerParameters(BaseModel):
-    """Model parameters for create model"""
+class RAGBaseParameters(BaseModel):
+    """Base model parameters for RAG Handler"""
 
-    llm_type: str
-    llm_params: LLMParameters
+    llm_params: Any
     prompt_template: str = DEFAULT_QA_PROMPT_TEMPLATE
     chunk_size: int = DEFAULT_CHUNK_SIZE
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
     url: Union[str, List[str]] = None
     run_embeddings: bool = True
-    external_index_name: str = None
     top_k: int = 4
     embeddings_model_name: str = DEFAULT_EMBEDDINGS_MODEL
     context_columns: Union[List[str], str] = None
     vector_store_name: str = DEFAULT_VECTOR_STORE_NAME
     vector_store: VectorStore = None
     collection_name: str = DEFAULT_VECTOR_STORE_COLLECTION_NAME
-    summarize_context: bool = False
+    summarize_context: bool = True
     summarization_prompt_template: str = DEFAULT_SUMMARIZATION_PROMPT_TEMPLATE
     vector_store_folder_name: str = DEFAULT_PERSISTED_VECTOR_STORE_FOLDER_NAME
     vector_store_storage_path: str = None
@@ -311,12 +307,6 @@ class RAGHandlerParameters(BaseModel):
             )
         return v
 
-    @validator("llm_type")
-    def llm_type_must_be_supported(cls, v):
-        if v not in SUPPORTED_LLMS:
-            raise UnsupportedLLM(f"'llm_type' must be one of {SUPPORTED_LLMS}, got {v}")
-        return v
-
     @validator("vector_store_name")
     def name_must_be_lower(cls, v):
         return v.lower()
@@ -327,6 +317,19 @@ class RAGHandlerParameters(BaseModel):
             raise UnsupportedVectorStore(
                 f"currently we only support {', '.join(str(v) for v in SUPPORTED_VECTOR_STORES)} vector store"
             )
+        return v
+
+
+class RAGHandlerParameters(RAGBaseParameters):
+    """Model parameters for create model"""
+
+    llm_type: str
+    llm_params: LLMParameters
+
+    @validator("llm_type")
+    def llm_type_must_be_supported(cls, v):
+        if v not in SUPPORTED_LLMS:
+            raise UnsupportedLLM(f"'llm_type' must be one of {SUPPORTED_LLMS}, got {v}")
         return v
 
 

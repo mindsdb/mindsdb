@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 from mindsdb.integrations.handlers.dockerhub_handler.dockerhub_tables import (
     DockerHubRepoImagesSummaryTable,
+    DockerHubRepoTagTable,
     DockerHubRepoTagsTable
 )
 from mindsdb.integrations.handlers.dockerhub_handler.dockerhub import DockerHubClient
@@ -39,6 +40,9 @@ class DockerHubHandler(APIHandler):
 
         repo_images_stats_data = DockerHubRepoImagesSummaryTable(self)
         self._register_table("repo_images_summary", repo_images_stats_data)
+        
+        repo_tag_details_data = DockerHubRepoTagTable(self)
+        self._register_table("repo_tag_details", repo_tag_details_data)
         
         repo_tags_data = DockerHubRepoTagsTable(self)
         self._register_table("repo_tags", repo_tags_data)

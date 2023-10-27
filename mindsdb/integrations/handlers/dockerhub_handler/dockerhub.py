@@ -38,6 +38,11 @@ class DockerHubClient:
         url = f'{self.docker_hub_base_endpoint}namespaces/{namespace}/repositories/{repo}/images-summary'
         return self.make_request(url)
     
+    def get_repo_tag(self, namespace, repo, tag):
+        url = f'{self.docker_hub_base_endpoint}namespaces/{namespace}/repositories/{repo}/tags/{tag}'
+        return self.make_request(url)
+      
     def get_repo_tags(self, namespace, repo):
         url = f'{self.docker_hub_base_endpoint}namespaces/{namespace}/repositories/{repo}/tags'
         return self.make_request(url)
+

@@ -6,6 +6,7 @@ from mindsdb_sql.parser.ast import ASTNode, Select, Insert, Update, Delete
 from mindsdb_sql.parser.ast.select.identifier import Identifier
 
 from mindsdb.integrations.libs.base import BaseHandler
+from mindsdb.integrations.libs.api_handler_exceptions import TableAlreadyExists, TableNotFound
 
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
@@ -165,6 +166,8 @@ class APIHandler(BaseHandler):
         """
         Register the data resource. For e.g if you are using Twitter API it registers the `tweets` resource from `/api/v2/tweets`.
         """
+        if table_name in self._tables:
+            raise TableAlreadyExists(f"Table with name {table_name} already exists for this handler")
         self._tables[table_name] = table_class
 
     def _get_table(self, name: Identifier):
@@ -175,7 +178,7 @@ class APIHandler(BaseHandler):
         """
         name = name.parts[-1]
         if name not in self._tables:
-            raise RuntimeError(f'Table not found: {name}')
+            raise TableNotFound(f'Table not found: {name}')
         return self._tables[name]
 
     def query(self, query: ASTNode):

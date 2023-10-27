@@ -1,7 +1,5 @@
-import time
 import pickle
 
-from redis.exceptions import ConnectionError as RedisConnectionError
 from walrus import Database
 from pandas import DataFrame
 
@@ -9,6 +7,7 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.ml_task_queue.utils import RedisKey, to_bytes
 from mindsdb.utilities.ml_task_queue.task import Task
+from mindsdb.utilities.ml_task_queue.base import BaseRedisQueue
 from mindsdb.utilities.ml_task_queue.const import (
     TASKS_STREAM_NAME,
     ML_TASK_TYPE,
@@ -16,7 +15,7 @@ from mindsdb.utilities.ml_task_queue.const import (
 )
 
 
-class MLTaskProducer:
+class MLTaskProducer(BaseRedisQueue):
     """ Interface around the redis for putting tasks to the queue
 
         Attributes:
@@ -29,28 +28,15 @@ class MLTaskProducer:
     def __init__(self) -> None:
         config = Config().get('ml_task_queue', {})
 
-        time_to_connect_sec = 60
-        connected = False
-        while connected is False and time_to_connect_sec > 0:
-            self.db = Database(
-                host=config.get('host', 'localhost'),
-                port=config.get('port', 6379),
-                db=config.get('db', 0),
-                username=config.get('username'),
-                password=config.get('password'),
-                protocol=3
-            )
-            try:
-                self.db.ping()
-                connected = True
-            except RedisConnectionError as e:
-                if time_to_connect_sec == 60:
-                    print(e)
-                print("Can't connect to Radis, wait")
-                time_to_connect_sec = time_to_connect_sec - 2
-                time.sleep(2)
-        if connected is False:
-            raise RedisConnectionError
+        self.db = Database(
+            host=config.get('host', 'localhost'),
+            port=config.get('port', 6379),
+            db=config.get('db', 0),
+            username=config.get('username'),
+            password=config.get('password'),
+            protocol=3
+        )
+        self.wait_redis_ping(60)
 
         self.stream = self.db.Stream(TASKS_STREAM_NAME)
         self.cache = self.db.cache()
@@ -79,6 +65,7 @@ class MLTaskProducer:
                 "redis_key": redis_key.base
             }
 
+            self.wait_redis_ping()
             if dataframe is not None:
                 self.cache.set(redis_key.dataframe, to_bytes(dataframe), 180)
             self.cache.set(redis_key.status, ML_TASK_STATUS.WAITING, 180)

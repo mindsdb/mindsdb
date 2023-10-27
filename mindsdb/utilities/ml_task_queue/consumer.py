@@ -10,12 +10,12 @@ from collections.abc import Callable
 import psutil
 from walrus import Database
 from pandas import DataFrame
-from redis.exceptions import ConnectionError as RedisConnectionError
 
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.integrations.libs.process_cache import process_cache
 from mindsdb.utilities.ml_task_queue.utils import RedisKey, StatusNotifier, to_bytes, from_bytes
+from mindsdb.utilities.ml_task_queue.base import BaseRedisQueue
 from mindsdb.utilities.fs import clean_unlinked_process_marks
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.ml_task_queue.const import (
@@ -43,7 +43,7 @@ def _save_thread_link(func: Callable) -> Callable:
     return wrapper
 
 
-class MLTaskConsumer:
+class MLTaskConsumer(BaseRedisQueue):
     """ Listener of ML tasks queue and tasks executioner.
         Each new message waited and executed in separate thread.
 
@@ -77,28 +77,15 @@ class MLTaskConsumer:
 
         # region connect to redis
         config = Config().get('ml_task_queue', {})
-        time_to_connect_sec = 60
-        connected = False
-        while connected is False and time_to_connect_sec > 0:
-            self.db = Database(
-                host=config.get('host', 'localhost'),
-                port=config.get('port', 6379),
-                db=config.get('db', 0),
-                username=config.get('username'),
-                password=config.get('password'),
-                protocol=3
-            )
-            try:
-                self.db.ping()
-                connected = True
-            except RedisConnectionError as e:
-                if time_to_connect_sec == 60:
-                    print(e)
-                print("Can't connect to Radis, wait")
-                time_to_connect_sec = time_to_connect_sec - 2
-                time.sleep(2)
-        if connected is False:
-            raise RedisConnectionError
+        self.db = Database(
+            host=config.get('host', 'localhost'),
+            port=config.get('port', 6379),
+            db=config.get('db', 0),
+            username=config.get('username'),
+            password=config.get('password'),
+            protocol=3
+        )
+        self.wait_redis_ping(60)
 
         self.db.Stream(TASKS_STREAM_NAME)
         self.cache = self.db.cache()
@@ -150,6 +137,7 @@ class MLTaskConsumer:
         message = None
         while message is None:
             self.wait_free_resources()
+            self.wait_redis_ping()
             if self._stop_event.is_set():
                 return
             message = self.consumer_group.read(count=1, block=1000, consumer=TASKS_STREAM_CONSUMER_NAME)
@@ -194,12 +182,14 @@ class MLTaskConsumer:
             status_notifier.start()
             result = task.result()
         except Exception as e:
+            self.wait_redis_ping()
             status_notifier.stop()
             exception_bytes = to_bytes(e)
             self.cache.set(redis_key.exception, exception_bytes, 10)
             self.db.publish(redis_key.status, ML_TASK_STATUS.ERROR.value)
             self.cache.set(redis_key.status, ML_TASK_STATUS.ERROR.value, 180)
         else:
+            self.wait_redis_ping()
             status_notifier.stop()
             if isinstance(result, DataFrame):
                 dataframe_bytes = to_bytes(result)

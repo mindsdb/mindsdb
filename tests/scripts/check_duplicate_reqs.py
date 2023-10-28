@@ -2,7 +2,7 @@ import glob
 import re
 import sys
 
-pattern = '\=|~|>|<| |\n|#'
+pattern = '\=|~|>|<| |\n|#'  # noqa: W605
 main_reqs_path = "requirements/requirements.txt"
 success = True
 

@@ -30,7 +30,7 @@ class PyCaretHandler(BaseMLEngine):
         s = self._get_experiment(using['model_type'])
         s.setup(df, **self._get_experiment_setup_kwargs(using, args['target']))
         # train model
-        model = self._train_model(using['model_type'], using['model_name'], s)
+        model = self._train_model(s, using)
         # save model and args
         model_file_path = os.path.join(self.model_storage.fileStorage.folder_path, 'model')
         s.save_model(model, model_file_path)
@@ -93,19 +93,21 @@ class PyCaretHandler(BaseMLEngine):
             raise Exception(f"Unrecognized model type '{model_type}'")
         return s.predict_model(model, **kwargs)
 
-    def _train_model(self, model_type: str, model_name: str, experiment):
+    def _train_model(self, experiment, args):
         """Train the model and return the best (if applicable)"""
+        model_type = args['model_type']
+        model_name = args['model_name']
+        kwargs = self._select_keys(args, "create_")
         if (
             model_type == 'classification'
             or model_type == 'regression'
             or model_type == 'time_series'
         ) and model_name == 'best':
-            # TODO: compare has more args
-            return experiment.compare_models()
+            return experiment.compare_models(**kwargs)
         if model_name == 'best':
             raise Exception("Specific model name must be provided for clustering or anomaly tasks")
         # TODO: do we need assign_model for clustering and anomaly
-        return experiment.create_model(model_name)
+        return experiment.create_model(model_name, **kwargs)
 
     def _select_keys(self, d, prefix):
         """Selects keys with given prefix and returns a new dict"""

@@ -153,17 +153,14 @@ class PaymentIntentsTable(APITable):
         payment_intents_df = select_statement_executor.execute_query()
 
         return payment_intents_df
-    
-   
-
     def delete(self, query: ast.Delete) -> None:
         """
-        Deletes data from the Stripe "DELETE /v1/payment_intents/:id" API endpoint.
+        Cancels Stripe Payment Intents and updates the local data.
 
         Parameters
         ----------
         query : ast.Delete
-           Given SQL DELETE query
+        Given SQL DELETE query
 
         Returns
         -------
@@ -172,28 +169,40 @@ class PaymentIntentsTable(APITable):
         Raises
         ------
         ValueError
-            If the query contains an unsupported condition
+        If the query contains an unsupported condition
         """
         delete_statement_parser = DELETEQueryParser(query)
         where_conditions = delete_statement_parser.parse_query()
 
-        payment_intents_df = pd.json_normalize(self.get_payment_intents())
+        if 'payment_intents_df' not in self.__dict__:
+            self.payment_intents_df = pd.json_normalize(self.get_payment_intents())
 
         delete_query_executor = DELETEQueryExecutor(
-            payment_intents_df,
+            self.payment_intents_df,
             where_conditions
         )
 
-        payment_intents_df = delete_query_executor.execute_query()
+        canceled_payment_intents_df = delete_query_executor.execute_query()
 
-        payment_intent_ids = payment_intents_df['id'].tolist()
-        self.delete_payment_intents(payment_intent_ids)
+        payment_intent_ids = canceled_payment_intents_df['id'].tolist()
+        self.cancel_payment_intents(payment_intent_ids)
+
         
-    def delete_payment_intents(self, payment_intent_ids: list) -> None:
-        for payment_intent_id in payment_intent_ids:
-         stripe.PaymentIntent.delete(payment_intent_id)
+        self.payment_intents_df = self.payment_intents_df[~self.payment_intents_df['id'].isin(payment_intent_ids)]
 
-    
+    def cancel_payment_intents(self, payment_intent_ids: List[str]) -> None:
+        stripe = self.handler.connect()
+        for payment_intent_id in payment_intent_ids:
+            try:
+              
+                payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+                if payment_intent.status in ['requires_payment_method', 'requires_capture', 'requires_confirmation', 'requires_action', 'processing']:
+                    stripe.PaymentIntent.cancel(payment_intent_id)
+                else:
+                     logger.warning(f"Payment intent {payment_intent_id} is in status {payment_intent.status} and cannot be canceled.")
+            except stripe.error.StripeError as e:
+                logger.error(f"Error cancelling payment intent {payment_intent_id}: {str(e)}")
+                
     def update(self, query: 'ast.Update') -> None:
         """
         Updates data in Stripe "POST /v1/payment_intents/:id" API endpoint.
@@ -270,10 +279,6 @@ class PaymentIntentsTable(APITable):
         for data in payment_intent_data:
             stripe.PaymentIntent.create(**data)
         
-
-    
-
-
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_payment_intents(limit=1)).columns.tolist()
 

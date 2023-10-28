@@ -12,7 +12,7 @@ This handler uses `lancedb` python library connect to a LanceDB instance.
 
 The required arguments to establish a connection are:
 
-* `uri`: The uri of the LanceDB database. Usually a local path.
+* `persist_directory`: The uri of the LanceDB database. Usually a local path.
 * `api_key`: If presented, connect to LanceDB cloud. Otherwise, connect to a database on file system or cloud storage.
 * `region`: The region to use for LanceDB Cloud.
 * `host_override`: The override url for LanceDB Cloud.
@@ -27,7 +27,7 @@ In order to make use of this handler and connect to a local LanceDB instance in 
 CREATE DATABASE lancedb
 WITH ENGINE = "lancedb",
 PARAMETERS = {
-    "uri" : "~/lancedb"
+    "persist_directory" : "~/lancedb"
 };
 ```
 

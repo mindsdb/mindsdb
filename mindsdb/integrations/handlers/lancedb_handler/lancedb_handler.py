@@ -6,6 +6,7 @@ import pandas as pd
 import pyarrow as pa
 from lance.vector import vec_to_table
 import duckdb
+import json
 
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
@@ -27,12 +28,11 @@ class LanceDBHandler(VectorStoreHandler):
     name = "lancedb"
 
     def __init__(self, name: str, **kwargs):
-        super().__init__(name)
-
+        super().__init__(name, **kwargs)
         self._connection_data = kwargs.get("connection_data")
 
         self._client_config = {
-            "uri": self._connection_data.get("uri"),
+            "uri": self._connection_data.get("persist_directory"),
             "api_key": self._connection_data.get("api_key", None),
             "region": self._connection_data.get("region"),
             "host_override": self._connection_data.get("host_override"),
@@ -41,7 +41,7 @@ class LanceDBHandler(VectorStoreHandler):
         # uri is required either for LanceDB Cloud or local
         if not self._client_config["uri"]:
             raise Exception(
-                "uri is required for LanceDB connection!"
+                "persist_directory is required for LanceDB connection!"
             )
         # uri, api_key and region is required either for LanceDB Cloud
         elif self._client_config["uri"] and self._client_config["api_key"] and not self._client_config["region"]:
@@ -201,7 +201,8 @@ class LanceDBHandler(VectorStoreHandler):
             vector_filter = None
 
         if vector_filter is not None:
-            result = collection.search(vector_filter.value).select(columns).to_pandas()
+            vec = json.loads(vector_filter.value) if isinstance(vector_filter.value, str) else vector_filter.value
+            result = collection.search(vec).select(columns).to_pandas()
             result = result.rename(columns={"_distance": TableField.DISTANCE.value})
         else:
             result = self._client.open_table(table_name).to_pandas()
@@ -232,7 +233,6 @@ class LanceDBHandler(VectorStoreHandler):
         try:
             collection = self._client.open_table(table_name)
             df = data[[TableField.ID.value, TableField.CONTENT.value, TableField.METADATA.value, TableField.EMBEDDINGS.value]]
-            # append_data = df.to_dict(orient='records')
             pa_data = pa.Table.from_pandas(df, preserve_index=False)
             vec_data = vec_to_table(df[TableField.EMBEDDINGS.value].values.tolist())
             new_pa_data = pa_data.append_column("vector", vec_data["vector"])
@@ -314,7 +314,6 @@ class LanceDBHandler(VectorStoreHandler):
                     resp_type=RESPONSE_TYPE.ERROR,
                     error_message=f"Table {table_name} does not exist!",
                 )
-
         return Response(resp_type=RESPONSE_TYPE.OK)
 
     def get_tables(self) -> HandlerResponse:
@@ -339,11 +338,11 @@ class LanceDBHandler(VectorStoreHandler):
                 resp_type=RESPONSE_TYPE.ERROR,
                 error_message=f"Table {table_name} does not exist!",
             )
-        return HandlerResponse(data_frame=column_df)
+        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=column_df)
 
 
 connection_args = OrderedDict(
-    uri={
+    persist_directory={
         "type": ARG_TYPE.STR,
         "description": "The uri of the database.",
         "required": True,
@@ -366,7 +365,7 @@ connection_args = OrderedDict(
 )
 
 connection_args_example = OrderedDict(
-    uri="~/lancedb",
+    persist_directory="~/lancedb",
     api_key=None,
     region="us-west-2",
     host_override=None,

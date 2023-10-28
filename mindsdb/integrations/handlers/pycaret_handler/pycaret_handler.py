@@ -27,7 +27,6 @@ class PyCaretHandler(BaseMLEngine):
             raise Exception("PyCaret engine requires a some data to initialize!")
         # create experiment
         s = self._get_experiment(using['model_type'])
-        # TODO: what about the ones that don't want PREDICT/target
         s.setup(df, **self._get_experiment_setup_kwargs(using, args['target']))
         # train model
         model = self._train_model(s, using)
@@ -106,7 +105,6 @@ class PyCaretHandler(BaseMLEngine):
             return experiment.compare_models(**kwargs)
         if model_name == 'best':
             raise Exception("Specific model name must be provided for clustering or anomaly tasks")
-        # TODO: do we need assign_model for clustering and anomaly
         return experiment.create_model(model_name, **kwargs)
 
     def _select_keys(self, d, prefix):

@@ -16,7 +16,6 @@ class PyCaretHandler(BaseMLEngine):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # figure out the location where the model will be stored
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """Create and train model on given data"""

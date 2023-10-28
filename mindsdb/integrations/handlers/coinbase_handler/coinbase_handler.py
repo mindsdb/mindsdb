@@ -21,6 +21,7 @@ from mindsdb_sql import parse_sql
 
 _BASE_COINBASE_US_URL = 'https://api.exchange.coinbase.com'
 
+
 class CoinBaseHandler(APIHandler):
     """A class for handling connections and interactions with the CoinBase API.
 
@@ -78,16 +79,16 @@ class CoinBaseHandler(APIHandler):
         jdocs = []
         current_time = datetime.datetime.now()
         start_time = current_time - datetime.timedelta(seconds=granularity)
-        start_time_iso = start_time.isoformat().split(".")[0]+ "-04:00"
-        path = "/products/"+symbol+"/candles?granularity="+str(granularity)+"&start="+start_time_iso#+"&end="+current_time_iso
-        headers = self.generateApiHeaders("GET",path,"")
+        start_time_iso = start_time.isoformat().split(".")[0] + "-04:00"
+        path = "/products/" + symbol + "/candles?granularity=" + str(granularity) + "&start=" + start_time_iso
+        headers = self.generateApiHeaders("GET", path, "")
         url = _BASE_COINBASE_US_URL + path
         response = requests.get(url, headers=headers)
         candles = response.json()
         for candle in candles:
             dt = datetime.datetime.fromtimestamp(candle[0], pytz.timezone('US/Eastern')).isoformat()
             low, high, open, close, volume = candle[1:]
-            jdoc = {"symbol":symbol,"low":low,"high":high,"open":open,"close":close,"volume":volume,"timestamp":candle[0],"timestamp_iso":dt}
+            jdoc = {"symbol": symbol, "low": low, "high": high, "open": open, "close": close, "volume": volume, "timestamp": candle[0], "timestamp_iso": dt}
             jdocs.append(jdoc)
         return pd.DataFrame(jdocs)
 
@@ -111,16 +112,16 @@ class CoinBaseHandler(APIHandler):
         ast = parse_sql(query, dialect='mindsdb')
         return self.query(ast)
 
-    def generateApiHeaders(self, method,path,body = ""):
+    def generateApiHeaders(self, method, path, body = ""):
         timestamp = str(int(time.time()))
         message = timestamp + method + path + (body or '')
         signature = base64.b64encode(hmac.new(base64.b64decode(self.api_secret), str.encode(message), hashlib.sha256).digest())
         headers = {
-            "Content-Type":"application/json", 
-            "CB-ACCESS-SIGN":signature,
-            "CB-ACCESS-KEY":self.api_key, 
-            "CB-ACCESS-TIMESTAMP":timestamp,
-            "CB-VERSION":"2015-04-08",
+            "Content-Type": "application/json",
+            "CB-ACCESS-SIGN": signature,
+            "CB-ACCESS-KEY": self.api_key,
+            "CB-ACCESS-TIMESTAMP": timestamp,
+            "CB-VERSION": "2015-04-08",
             "CB-ACCESS-PASSPHRASE": self.api_passphrase
         }
         return headers
@@ -131,12 +132,13 @@ class CoinBaseHandler(APIHandler):
         Returns results as a pandas DataFrame.
 
         Args:
-            method_name (str): Method name to call 
+            method_name (str): Method name to call
             params (Dict): Params to pass to the API call
         """
         if method_name == 'get_candle':
             return self._get_candle(params)
         raise NotImplementedError('Method name {} not supported by CoinBase API Handler'.format(method_name))
+
 
 connection_args = OrderedDict(
     api_key={

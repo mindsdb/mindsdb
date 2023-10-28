@@ -60,4 +60,4 @@ class CoinBaseAggregatedTradesTable(APITable):
             'timestamp',
             'current_time'
         ]
-                                                              
+

@@ -1,7 +1,11 @@
 import pandas as pd
 from typing import Dict
 import datetime
-import hmac, hashlib, time, requests,pytz
+import hmac
+import hashlib
+import time
+import requests
+import pytz
 from collections import OrderedDict
 import base64
 
@@ -12,7 +16,7 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
 )
-from mindsdb.utilities import log
+
 from mindsdb_sql import parse_sql
 
 _BASE_COINBASE_US_URL = 'https://api.exchange.coinbase.com'

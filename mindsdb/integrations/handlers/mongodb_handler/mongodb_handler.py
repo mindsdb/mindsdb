@@ -69,6 +69,7 @@ class MongoDBHandler(DatabaseHandler):
         connection = MongoClient(
             self.host,
             port=self.port,
+            serverSelectionTimeoutMS=5000,
             **kwargs
         )
         self.is_connected = True

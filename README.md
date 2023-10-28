@@ -152,3 +152,5 @@ Join our [Slack community](https://mindsdb.com/joincommunity) and subscribe to t
 ## License <a name="License"></a>
 
 MindsDB is licensed under [GNU General Public License v3.0](https://github.com/mindsdb/mindsdb/blob/master/LICENSE)
+
+<p align="right"><a href="#top"><img src="https://cdn-icons-png.flaticon.com/512/892/892692.png" height="50px"></a></p>

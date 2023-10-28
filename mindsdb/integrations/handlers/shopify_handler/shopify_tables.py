@@ -493,6 +493,19 @@ class InventoryLevelTable(APITable):
         inventories = shopify.InventoryLevel.find(**kwargs)
         return [inventory.to_dict() for inventory in inventories]
     
+    
+    def create_inventory_level(self, inventory_level_data: List[Dict[Text, Any]]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for inventory_level in inventory_level_data:
+            created_inventory_level = shopify.InventoryLevel.create(inventory_level)
+            if 'id' not in created_inventory_level.to_dict():
+                raise Exception('Inventory level creation failed')
+            else:
+                logger.info(f'Inventory level {created_inventory_level.to_dict()["id"]} created')
+                
+                
     def insert(self, query: ast.Insert) -> None:
         """
         Inserts data into the Shopify "POST /inventory_levels" API endpoint.
@@ -549,6 +562,12 @@ class InventoryLevelTable(APITable):
         inventory_level_ids = inventory_levels_df['id'].tolist()
         self.delete_inventory_levels(inventory_level_ids)
 
+    def get_inventory_levels(self) -> List[Dict]:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+        inventory_levels = shopify.InventoryLevel.find()
+        return [inventory_level.to_dict() for inventory_level in inventory_levels]
+    
     def update(self, query: ast.Update) -> None:
         """
         Updates data from the Shopify "PUT /inventory_levels" API endpoint.
@@ -566,9 +585,7 @@ class InventoryLevelTable(APITable):
         """
         update_statement_parser = UPDATEQueryParser(query)
         values_to_update, where_conditions = update_statement_parser.parse_query()
-
-        print(f"values_to_update: {values_to_update}")
-        print(f"where_conditions: {where_conditions}")
+        
         inventory_levels_df = pd.json_normalize(self.get_inventory_levels())
         update_query_executor = UPDATEQueryExecutor(
             inventory_levels_df,
@@ -576,20 +593,9 @@ class InventoryLevelTable(APITable):
         )
 
         inventory_levels_df = update_query_executor.execute_query()
-        print(f"inventory_levels_df: {inventory_levels_df}")
         inventory_level_ids = inventory_levels_df['id'].tolist()
         self.update_inventory_levels(inventory_level_ids, values_to_update)
         
-    def create_inventory_level(self, inventory_level_data: List[Dict[Text, Any]]) -> None:
-        api_session = self.handler.connect()
-        shopify.ShopifyResource.activate_session(api_session)
-
-        for inventory_level in inventory_level_data:
-            created_inventory_level = shopify.InventoryLevel.create(inventory_level)
-            if 'id' not in created_inventory_level.to_dict():
-                raise Exception('Inventory level creation failed')
-            else:
-                logger.info(f'Inventory level {created_inventory_level.to_dict()["id"]} created')
 
     def delete_inventory_levels(self, inventory_level_ids: List[int]) -> None:
         api_session = self.handler.connect()
@@ -600,18 +606,18 @@ class InventoryLevelTable(APITable):
             inventory_level.destroy()
             logger.info(f'Inventory level {inventory_level_id} deleted')
 
-    def update_inventory_levels(self, inventory_level_ids: List[int], values_to_update: Dict[Text, Any]) -> None:
+    def update_inventory_levels(self, inventory_level_id, values_to_update: Dict[Text, Any]) -> None:
         # Update the inventory levels using the Shopify API
         session = self.handler.connect()
         shopify.ShopifyResource.activate_session(session)
-
-        for inventory_level_id in inventory_level_ids:
-            inventory_level = shopify.InventoryLevel.find(inventory_level_id)
-            for key, value in values_to_update.items():
-                setattr(inventory_level, key, value)
-            inventory_level.save()
-            logger.info(f'Inventory level {inventory_level_id} updated')
-
+        inventory_level = shopify.InventoryLevel.find(inventory_level_id)
+        
+        for key, value in inventory_level.items():
+            setattr(inventory_level, key, value)
+            
+        inventory_level.save()
+        logger.info(f'Inventory level {inventory_level_id} updated')
+   
 class LocationTable(APITable):
     """The Shopify Location Table implementation"""
 

@@ -27,6 +27,7 @@ class PyCaretHandler(BaseMLEngine):
             raise Exception("PyCaret engine requires a some data to initialize!")
         # create experiment
         s = self._get_experiment(using['model_type'])
+        # TODO: what about the ones that don't want PREDICT/target
         s.setup(df, **self._get_experiment_setup_kwargs(using, args['target']))
         # train model
         model = self._train_model(s, using)
@@ -68,9 +69,9 @@ class PyCaretHandler(BaseMLEngine):
         # copy setup kwargs
         kwargs = self._select_keys(args, "setup_")
         # return kwargs
-        if model_type == 'classification' or model_type == 'regression':
+        if model_type == 'classification' or model_type == 'regression' or model_type == 'time_series':
             return {**kwargs, 'target': target}
-        elif model_type == 'time_series' or model_type == 'clustering' or model_type == 'anomaly':
+        elif model_type == 'clustering' or model_type == 'anomaly':
             return {**kwargs}
         raise Exception(f"Unrecognized model type '{model_type}'")
 

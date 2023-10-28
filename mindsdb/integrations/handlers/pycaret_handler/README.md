@@ -40,6 +40,20 @@ USING
   setup_session_id = 123;
 ~~~~
 
+For model types that don't want a target column (like anomaly and clustering), just pass in any one of the column names in `PREDICT` clause to comply with MindsDB's SQL syntax:
+
+~~~sql
+CREATE MODEL my_pycaret_anom_model
+FROM anomalydb
+    (SELECT Col1, Col2, Col3, Col4, Col5, Col6, Col7, Col8, Col9, Col10 FROM anomaly)
+PREDICT Col10
+USING 
+  engine = 'pycaret',
+  model_type = 'anomaly',
+  model_name = 'iforest',
+  setup_session_id = 123;
+~~~~
+
 ### Prediction
 
 You can predict using normal mindsdb syntax like so:

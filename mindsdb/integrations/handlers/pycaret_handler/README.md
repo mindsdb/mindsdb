@@ -17,7 +17,7 @@ USING
   engine = 'pycaret',
   model_type = 'classification',
   model_name = 'xgboost',
-  session_id = 123;
+  setup_session_id = 123;
 ~~~~
 
 ~~~sql

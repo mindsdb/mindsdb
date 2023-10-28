@@ -65,50 +65,30 @@ class PyCaretHandler(BaseMLEngine):
 
     def _get_experiment_setup_kwargs(self, args: Dict, target: str):
         """Returns the arguments that need to passed in setup function for the experiment"""
-        # TODO: support more kwargs
         model_type = args['model_type']
-        kwargs = {
-            'session_id': args['session_id'],
-            'system_log': False
-        }
-        if model_type == 'classification':
+        # copy setup kwargs
+        kwargs = self._select_keys(args, "setup_")
+        # return kwargs
+        if model_type == 'classification' or model_type == 'regression':
             return {**kwargs, 'target': target}
-        elif model_type == 'regression':
-            return {**kwargs, 'target': target}
-        elif model_type == 'time_series':
+        elif model_type == 'time_series' or model_type == 'clustering' or model_type == 'anomaly':
             return {**kwargs}
-        elif model_type == 'clustering':
-            return {**kwargs}
-        elif model_type == 'anomaly':
-            return {**kwargs}
-        else:
-            raise Exception(f"Unrecognized model type '{model_type}'")
+        raise Exception(f"Unrecognized model type '{model_type}'")
 
-    def _predict_model(self, s, model, df, saved_args):
+    def _predict_model(self, s, model, df, args):
         """Apply predictor arguments and get predictions"""
-        model_type = saved_args["model_type"]
-        kwargs = {}
-        if model_type == 'classification':
-            kwargs = self._select_keys_if_exist(saved_args, [
-                "probability_threshold",
-                "encoded_labels",
-                "raw_score",
-            ], "predict_")
-            kwargs["data"] = df
-        elif model_type == 'regression':
+        model_type = args["model_type"]
+        kwargs = self._select_keys(args, "predict_")
+        if (
+            model_type == 'classification'
+            or model_type == 'regression'
+            or model_type == 'clustering'
+            or model_type == 'anomaly'
+        ):
             kwargs["data"] = df
         elif model_type == 'time_series':
-            kwargs = self._select_keys_if_exist(saved_args, [
-                "fh",
-                "X",
-                "return_pred_int",
-                "alpha",
-                "coverage",
-            ], "predict_")
-        elif model_type == 'clustering':
-            kwargs["data"] = df
-        elif model_type == 'anomaly':
-            kwargs["data"] = df
+            # do nothing
+            pass
         else:
             raise Exception(f"Unrecognized model type '{model_type}'")
         return s.predict_model(model, **kwargs)
@@ -120,17 +100,17 @@ class PyCaretHandler(BaseMLEngine):
             or model_type == 'regression'
             or model_type == 'time_series'
         ) and model_name == 'best':
-            # TODO: compare models take various params
+            # TODO: compare has more args
             return experiment.compare_models()
         if model_name == 'best':
             raise Exception("Specific model name must be provided for clustering or anomaly tasks")
         # TODO: do we need assign_model for clustering and anomaly
         return experiment.create_model(model_name)
 
-    def _select_keys_if_exist(self, d, keys, prefix):
-        """Copies selected keys having a specified prefix to a new dict without the prefix"""
+    def _select_keys(self, d, prefix):
+        """Selects keys with given prefix and returns a new dict"""
         result = {}
-        for k in keys:
-            if prefix + k in d:
-                result[k] = d[prefix + k]
+        for k in d:
+            if k.startswith(prefix):
+                result[k[len(prefix):]] = d[k]
         return result

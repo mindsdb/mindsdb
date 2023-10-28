@@ -1,0 +1,2 @@
+aerospike~=13.0.0
+duckdb~=0.6.1

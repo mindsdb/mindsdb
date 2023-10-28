@@ -4,13 +4,13 @@ on:
   push:
     paths-ignore:
       - 'docs/**'
-      - '**.md'
+      - '**/*.md'
   # pull_request_target:
   pull_request:
     branches: [stable, staging]
     paths-ignore:
       - 'docs/**'
-      - 'README.md'
+      - '**/*.md'
 
 jobs:
   code_checking:
@@ -52,7 +52,7 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4.7.0
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: ${{ matrix.python-version }}-dev
     - name: Install dependencies
       run: |
         pip install --upgrade pip
@@ -73,7 +73,7 @@ jobs:
           pip install git+https://github.com/mindsdb/mindsdb_sql.git@staging --upgrade --no-cache-dir  # install post lightwood so it does not get overwritten
     - name: Install ML engine related dependencies
       run: |
-        for engine in openai timegpt; do  # statsforecast huggingface lightwood
+        for engine in openai anyscale_endpoints; do  # statsforecast huggingface lightwood timegpt (Note: timegpt does not work, fix please)
           pip install -r ./mindsdb/integrations/handlers/${engine}_handler/requirements.txt
         done
       shell: bash
@@ -119,24 +119,40 @@ jobs:
           # Company independent
           echo -e "\n===============test company independent===============\n"
           pytest -vx tests/integration_tests/flows/test_company_independent.py
-
-          # First-tier ML engines
-          echo -e "\n===============test ML engines===============\n"
-          pytest -vx tests/unit/ml_handlers/test_openai.py
-          pytest -vx tests/unit/ml_handlers/test_timegpt.py
-        
-          # pending rework
-          # pytest -vx tests/unit/ml_handlers/test_statsforecast.py
-          # pytest -vx tests/unit/ml_handlers/test_huggingface.py
-          # pytest -vx tests/unit/ml_handlers/test_lightwood.py
         fi
       shell: bash
       env:
         CHECK_FOR_UPDATES: False
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+    - name: Check if actor is an organization member
+      id: check-membership
+      run: |
+        if [[ "${{ github.actor }}" == "mindsdb/"* ]]; then
+          echo "::set-output name=isOrgMember::true"
+        else
+          echo "::set-output name=isOrgMember::false"
+        fi
+      shell: bash
+    - name: Run ML Engines tests
+      if: steps.check-membership.outputs.isOrgMember == 'true'
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          # First-tier ML engines
+          echo -e "\n===============test ML engines===============\n"
+          pytest -vx tests/unit/ml_handlers/test_openai.py
+          # pytest -vx tests/unit/ml_handlers/test_timegpt.py  # Note: timegpt doesn't work, fix please
+          pytest -vx tests/unit/ml_handlers/test_anyscale_llm.py
+
+          # pending rework
+          # pytest -vx tests/unit/ml_handlers/test_statsforecast.py
+          # pytest -vx tests/unit/ml_handlers/test_huggingface.py
+          # pytest -vx tests/unit/ml_handlers/test_lightwood.py
+      shell: bash
+      env:
+        CHECK_FOR_UPDATES: False
         OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
-        TIMEGPT_API_KEY: ${{secrets.TIME_GPT_API_KEY}}
+        ANYSCALE_ENDPOINTS_API_KEY: ${{secrets.ANYSCALE_ENDPOINTS_API_KEY}}
 
   deploy_to_pypi:
     runs-on: ubuntu-latest

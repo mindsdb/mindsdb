@@ -11,7 +11,7 @@ pdf2image~=1.16.3
 pdfminer.six==20221105
 unstructured~=0.10.18
 python-multipart >= 0.0.5
-pyparsing == 2.3.1
+pyparsing >= 2.3.1
 cryptography>=35.0
 psycopg[binary] >= 1.15.3
 psycopg2-binary
@@ -27,10 +27,12 @@ redis >=5.0.0, < 6.0.0
 walrus==0.9.3
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
-mindsdb-sql >= 0.7.2, < 0.8.0
+mindsdb-sql ~= 0.7.3
 mindsdb-evaluator >= 0.0.7, < 0.1.0
 checksumdir >= 1.2.0
-duckdb == 0.6.1
+duckdb == 0.9.1
+pydantic~=1.10.13
+chromadb~=0.4.8
 requests >= 2.0.0
 mysql-connector-python
 charset-normalizer

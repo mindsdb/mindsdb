@@ -1,6 +1,5 @@
 from typing import Optional, Dict
 import os
-import uuid
 
 import pandas as pd
 
@@ -18,10 +17,6 @@ class PyCaretHandler(BaseMLEngine):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # figure out the location where the model will be stored
-        try:
-            self.model_file = os.path.join(self.model_storage.fileStorage.folder_path, str(uuid.uuid4()))
-        except Exception:
-            self.model_file = str(uuid.uuid4())
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """Create and train model on given data"""
@@ -32,23 +27,29 @@ class PyCaretHandler(BaseMLEngine):
         if df is None:
             raise Exception("PyCaret engine requires a some data to initialize!")
         # create experiment
-        self.model_type = using['model_type']
         s = self._get_experiment(using['model_type'])
         s.setup(df, **self._get_experiment_setup_kwargs(using, args['target']))
         # train model
         model = self._train_model(using['model_type'], using['model_name'], s)
-        # save model
-        s.save_model(model, self.model_file)
+        # save model and args
+        model_file_path = os.path.join(self.model_storage.fileStorage.folder_path, 'model')
+        s.save_model(model, model_file_path)
+        self.model_storage.json_set('saved_args', {
+            **args['using'],
+            'model_path': model_file_path
+        })
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> pd.DataFrame:
-        """
-        Calls a model with some input dataframe `df`, and optionally some arguments `args` that may modify the model behavior.
-        The expected output is a dataframe with the predicted values in the target-named column.
-        Additional columns can be present, and will be considered row-wise explanations if their names finish with `_explain`.
-        """
-        pass
+        """Predict on the given data"""
+        saved_args = self.model_storage.json_get('saved_args')
+        s = self._get_experiment(saved_args['model_type'])
+        model = s.load_model(self.model_file)
+        # TODO: predict model can have various params
+        result = s.predict_model(model, df)
+        result.drop(df.columns, axis=1, inplace=True)
+        return result
 
-    def _get_experiment(self, model_type: str):
+    def _get_experiment(self, model_type):
         """Returns one of the types of experiments in PyCaret"""
         if model_type == "classification":
             return ClassificationExperiment()

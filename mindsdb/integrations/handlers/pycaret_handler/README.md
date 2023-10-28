@@ -20,6 +20,11 @@ USING
   session_id = 123;
 ~~~~
 
+~~~sql
+SELECT t.Id, m.prediction_label, m.prediction_score
+FROM irisdb.Iris as t
+JOIN my_pycaret_class_model AS m;
+~~~~
 
 
 

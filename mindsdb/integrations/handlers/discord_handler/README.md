@@ -1,73 +1,59 @@
-# Discord Handler
+## About Discord
 
-Discord handler for MindsDB provides interfaces to connect to Discord via a webhook and send messages from MindsDB.
+Discord is a communication platform designed around communities. It provides voice, video and text communication channels, along with various features for community management. See [discord.com](https://discord.com/) for more information.
 
----
+# Discord Handler Setup
 
-## Table of Contents
+The Discord handler functions through a Discord bot, which must be registered on the [Discord Developer Portal](https://discord.com/developers). Make sure to give the bot the `Message Content` Privileged Intent the `Send Messages` permission in the channel you want to send messages to.
 
-- [Microsoft Teams Handler](#microsoft-teams-handler)
-  - [Table of Contents](#table-of-contents)
-  - [About Microsoft Teams](#about-microsoft-teams)
-  - [Microsoft Teams Handler Implementation](#microsoft-teams-handler-implementation)
-  - [Microsoft Teams Handler Initialization](#microsoft-teams-handler-initialization)
-  - [Implemented Features](#implemented-features)
-  - [TODO](#todo)
-  - [Example Usage](#example-usage)
+--- 
 
----
+## Parameters
 
-## About Microsoft Teams
+- `token`: a required token to give the bot access to the Discord API. This can be found on the Discord Developer Portal.
 
-Microsoft Teams is the ultimate messaging app for your organization—a workspace for real-time collaboration and communication, meetings, file and app sharing, and even the occasional emoji! All in one place, all in the open, all accessible to everyone.
-<br>
-https://support.microsoft.com/en-us/topic/what-is-microsoft-teams-3de4d369-0167-8def-b93b-0eb5286d7a29
-
-## Microsoft Teams Handler Implementation
-
-This handler was implemented using [pymsteams](https://pypi.org/project/pymsteams/), the Python Wrapper Library to send requests to Microsoft Teams Webhooks.
-
-## Microsoft Teams Handler Initialization
-
-The Microsoft Teams handler is initialized with the following parameters:
-
-- `webhook_url`: a required webhook url for the Microsoft Teams channel to send messages to
-
-Read about creating an Incoming Webhook in Microsoft Teams [here](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook?tabs=dotnet).
+Step 1 of [this guide](https://discord.com/developers/docs/getting-started) covers the basics of provisioning a bot.
 
 ## Implemented Features
 
-- [x] Send messages to a Microsoft Teams channel via a webhook
+- [x] Send and receive messages to a Discord channel via the API
 
 ## TODO
 
-- [ ] Support other options for sending messages such as sections, images, actions, etc.
-- [ ] Support INSERT, UPDATE and DELETE for messages table
+- [ ] Support other options for sending messages such as embeds, images, etc.
+- [ ] Support UPDATE and DELETE for messages table
 
 ## Example Usage
 
-The first step is to create a database with the new `teams` engine by passing in the required `webhook_url` parameter:
+The first step is to create a database with the new `discord` engine by passing in the required `token` parameter:
 
 ~~~~sql
-CREATE DATABASE teams_datasource
-WITH ENGINE = 'teams',
+CREATE DATABASE discord_datasource
+WITH ENGINE = 'discord',
 PARAMETERS = {
-  "webhook_url": "https://..."
+  "token": "{YOUR_TOKEN_HERE}"
 };
 ~~~~
 
-Use the established connection to send messages to your Teams channel:
+Use the established connection to send messages to your Discord channel:
 
 ~~~~sql
-INSERT INTO teams_datasource.messages (title, text)
-VALUES ('Hello', 'World');
+INSERT INTO discord_datasource.messages (channel_id, text)
+VALUES (842979385837092867, 'Hello World!');
 ~~~~
 
-Multiple messages can also be sent in a single query:
+Query messages with a SELECT statement, but remember to always include a channel id in the WHERE clause:
 
 ~~~~sql
-INSERT INTO teams_datasource.messages (title, text)
-VALUES 
-('Hello', 'World'),
-('Hello', 'MindsDB');
+SELECT * FROM discord_datasource.messages 
+WHERE channel_id = 842979385837092867;
+~~~~
+
+Select only the rows you want: 
+
+~~~~sql
+SELECT author_username, content, timestamp FROM discord_datasource.messages 
+WHERE channel_id = 842979385837092867
+AND timestamp > '2023-10-28 3:50:01'
+LIMIT 25;
 ~~~~

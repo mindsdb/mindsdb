@@ -173,7 +173,7 @@ class DiscordHandler(APIHandler):
                     'Content-Type': 'application/json',
                 }, 
                 json={
-                    'content': params['message'],
+                    'content': params['text'],
                 },
             )
  

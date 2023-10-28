@@ -163,7 +163,7 @@ class DiscordTable(APITable):
 
         for message in message_data:
             try:
-                params = { 'channel_id': message['channel_id'], 'message': message['text'] }
+                params = { 'channel_id': message['channel_id'], 'text': message['text'] }
                 self.handler.call_discord_api('send_message', params=params)
                 logger.info(f"Message sent to Discord channel successfully.")
             except Exception as e:

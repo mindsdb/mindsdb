@@ -47,3 +47,5 @@ google search Integration Test Failed: https://github.com/Sekhar-Kumar-Dash/Mind
 Reddit app integration Test Failed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Reddit/Reddit_QA.md
 (https://github.com/mindsdb/mindsdb/issues/8127)
 </br>
+Plaid Test Failed: https://github.com/shakeel-3/mindsdb/blob/plaid/Plaid_QA.md , (https://github.com/mindsdb/mindsdb/issues/8171)
+</br>

@@ -41,13 +41,12 @@ class PyCaretHandler(BaseMLEngine):
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> pd.DataFrame:
         """Predict on the given data"""
+        # load model
         saved_args = self.model_storage.json_get('saved_args')
         s = self._get_experiment(saved_args['model_type'])
-        model = s.load_model(self.model_file)
-        # TODO: predict model can have various params
-        result = s.predict_model(model, df)
-        result.drop(df.columns, axis=1, inplace=True)
-        return result
+        model = s.load_model(saved_args['model_path'])
+        # predict and return
+        return self._predict_model(s, model, df, saved_args)
 
     def _get_experiment(self, model_type):
         """Returns one of the types of experiments in PyCaret"""
@@ -85,6 +84,35 @@ class PyCaretHandler(BaseMLEngine):
         else:
             raise Exception(f"Unrecognized model type '{model_type}'")
 
+    def _predict_model(self, s, model, df, saved_args):
+        """Apply predictor arguments and get predictions"""
+        model_type = saved_args["model_type"]
+        kwargs = {}
+        if model_type == 'classification':
+            kwargs = self._select_keys_if_exist(saved_args, [
+                "probability_threshold",
+                "encoded_labels",
+                "raw_score",
+            ], "predict_")
+            kwargs["data"] = df
+        elif model_type == 'regression':
+            kwargs["data"] = df
+        elif model_type == 'time_series':
+            kwargs = self._select_keys_if_exist(saved_args, [
+                "fh",
+                "X",
+                "return_pred_int",
+                "alpha",
+                "coverage",
+            ], "predict_")
+        elif model_type == 'clustering':
+            kwargs["data"] = df
+        elif model_type == 'anomaly':
+            kwargs["data"] = df
+        else:
+            raise Exception(f"Unrecognized model type '{model_type}'")
+        return s.predict_model(model, **kwargs)
+
     def _train_model(self, model_type: str, model_name: str, experiment):
         """Train the model and return the best (if applicable)"""
         if (
@@ -98,3 +126,11 @@ class PyCaretHandler(BaseMLEngine):
             raise Exception("Specific model name must be provided for clustering or anomaly tasks")
         # TODO: do we need assign_model for clustering and anomaly
         return experiment.create_model(model_name)
+
+    def _select_keys_if_exist(self, d, keys, prefix):
+        """Copies selected keys having a specified prefix to a new dict without the prefix"""
+        result = {}
+        for k in keys:
+            if prefix + k in d:
+                result[k] = d[prefix + k]
+        return result

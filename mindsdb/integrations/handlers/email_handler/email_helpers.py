@@ -26,6 +26,22 @@ class EmailClient:
         self.smtp_server.send_message(msg)
         self.smtp_server.quit()
 
+    def save_draft(self, to_addr, subject, body):
+        msg = MIMEMultipart()
+        msg['From'] = self.email
+        msg['To'] = to_addr
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
+
+        self.smtp_server.starttls()
+        self.smtp_server.login(self.email, self.password)
+
+        # Save the draft message in Gmail's Drafts folder
+        self.smtp_server.append("Drafts", '', imaplib.Time2Internaldate(time.time()), msg.as_bytes())
+
+        self.smtp_server.quit()
+
+    
     def search_email(self, mailbox="INBOX", subject=None, to=None, from_=None, since_date=None, until_date=None,
                      since_emailid=None):
 

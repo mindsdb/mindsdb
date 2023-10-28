@@ -81,7 +81,7 @@ class CoinBaseHandler(APIHandler):
         start_time = current_time - datetime.timedelta(seconds=granularity)
         start_time_iso = start_time.isoformat().split(".")[0] + "-04:00"
         path = "/products/" + symbol + "/candles?granularity=" + str(granularity) + "&start=" + start_time_iso
-        headers = self.generateApiHeaders("GET", path, "")
+        headers = self.generateApiHeaders("GET", path)
         url = _BASE_COINBASE_US_URL + path
         response = requests.get(url, headers=headers)
         candles = response.json()
@@ -112,9 +112,9 @@ class CoinBaseHandler(APIHandler):
         ast = parse_sql(query, dialect='mindsdb')
         return self.query(ast)
 
-    def generateApiHeaders(self, method, path, body = ""):
+    def generateApiHeaders(self, method, path):
         timestamp = str(int(time.time()))
-        message = timestamp + method + path + (body or '')
+        message = timestamp + method + path
         signature = base64.b64encode(hmac.new(base64.b64decode(self.api_secret), str.encode(message), hashlib.sha256).digest())
         headers = {
             "Content-Type": "application/json",

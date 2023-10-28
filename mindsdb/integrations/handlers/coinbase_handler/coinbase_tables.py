@@ -12,7 +12,7 @@ class CoinBaseAggregatedTradesTable(APITable):
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Selects data from the CoinBase API and returns it as a pandas DataFrame.
-        
+
         Returns dataframe representing the CoinBase API results.
 
         Args:
@@ -39,7 +39,7 @@ class CoinBaseAggregatedTradesTable(APITable):
             method_name='get_candle',
             params=params
         )
-        
+
         return coinbase_candle_data
 
     def get_columns(self):

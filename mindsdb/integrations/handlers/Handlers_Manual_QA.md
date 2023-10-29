@@ -47,3 +47,6 @@ google search Integration Test Failed: https://github.com/Sekhar-Kumar-Dash/Mind
 Reddit app integration Test Failed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Reddit/Reddit_QA.md
 (https://github.com/mindsdb/mindsdb/issues/8127)
 </br>
+</br>
+Strava app integration passed : https://github.com/Sekhar-Kumar-Dash/strava_mindsdb/blob/main/strava%20mindsdb/Starva_app_qa.md
+</br>

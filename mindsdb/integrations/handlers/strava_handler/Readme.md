@@ -29,14 +29,14 @@ Please follow this (link)[https://developers.strava.com/docs/getting-started/] t
 
 ## Example Usage
 
-The first step is to create a database with the new `confluence` engine.
+The first step is to create a database with the new `strava` engine.
 
 ~~~~sql
 CREATE DATABASE mindsdb_strava
 WITH ENGINE = 'strava',
 PARAMETERS = {
-  "strava_client_id": "<your-strava-client-id>",
-  "strava_access_token": "<your-strava-api-key-token>"  
+  "strava_client_id": "your-strava-client-id",
+  "strava_access_token": "your-strava-api-key-token"  
 };
 ~~~~
 
@@ -54,7 +54,7 @@ WHERE strava_club_id = 158786;
 ~~~~
 
 
-Advanced queries for the confluence handler
+Advanced queries for the strava handler
 
 ~~~~sql
 SELECT id,localized_sport_type,country,member_count FROM 

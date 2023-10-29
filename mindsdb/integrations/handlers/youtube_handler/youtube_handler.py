@@ -8,8 +8,8 @@ from mindsdb_sql import parse_sql
 
 from collections import OrderedDict
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
-
 from googleapiclient.discovery import build
+from google_auth_oauthlib.flow import InstalledAppFlow
 
 logger = get_log("integrations.youtube_handler")
 
@@ -49,12 +49,37 @@ class YoutubeHandler(APIHandler):
         StatusResponse
             connection object
         """
-        if self.is_connected is True:
+        if self.connection and self.is_connected is True:
             return self.connection
+        # Create an OAuth 2.0 flow object.
+        client_id = self.connection_data["youtube_client_token"]
+        client_secret = self.connection_data["youtube_client_secret"]
+        flow_config = {
+            "installed": {
+                "client_id": client_id,
+                "project_id": "mindsdb-youtube",
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "client_secret": client_secret,
+                "redirect_uris": [
+                    "https://cloud.mindsdb.com",
+                    "http://localhost:8080/",
+                ],
+                "javascript_origins": [
+                    "https://cloud.mindsdb.com",
+                    "http://127.0.0.1:47334",
+                ],
+            }
+        }
 
-        youtube = build('youtube', 'v3', developerKey=self.connection_data['youtube_api_token'])
+        flow = InstalledAppFlow.from_client_config(
+            client_config=flow_config,
+            scopes=["https://www.googleapis.com/auth/youtube.force-ssl"],
+        )
+        credentials = flow.run_local_server()
+        youtube = build("youtube", "v3", credentials=credentials)
         self.connection = youtube
-
         return self.connection
 
     def check_connection(self) -> StatusResponse:
@@ -94,14 +119,21 @@ class YoutubeHandler(APIHandler):
 
 
 connection_args = OrderedDict(
-    youtube_access_token={
-        'type': ARG_TYPE.STR,
-        'description': 'API Token for accessing Youtube Application API',
-        'required': True,
-        'label': 'Youtube access token',
-    }   
+    youtube_client_token={
+        "type": ARG_TYPE.STR,
+        "description": "Client Token for accessing Youtube Application API",
+        "required": True,
+        "label": "Youtube client token",
+    },
+    youtube_client_secret={
+        "type": ARG_TYPE.STR,
+        "description": "Client Secret for accessing Youtube Application API",
+        "required": True,
+        "label": "Youtube client secret",
+    },
 )
 
 connection_args_example = OrderedDict(
-    youtube_api_token ='<your-youtube-api-token>'
+    youtube_client_secret="<your_youtube_client_secret>",
+    youtube_client_token="<your_youtube_client_token>",
 )

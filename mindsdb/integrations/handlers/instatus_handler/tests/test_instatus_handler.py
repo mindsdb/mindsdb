@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.integrations.handlers.instatus_handler.instatus_handler import InstatusHandler, StatusPages
+from mindsdb.integrations.handlers.instatus_handler.instatus_handler import InstatusHandler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 import pandas as pd
 
@@ -78,9 +78,10 @@ class InstatusHandlerTest(unittest.TestCase):
                     translations = '{
                     "name": {
                         "fr": "nasa"
-                    }
+                        }
                     }'
-                WHERE page_id = 'clo3xshsk1114842hkn377y3lrap';'''
+                WHERE id = 'clo3xshsk1114842hkn377y3lrap';'''
+        self.assertTrue(self.handler.native_query(query))
 
 
 if __name__ == '__main__':

@@ -45,7 +45,7 @@ class StatusPages(APITable):
         temp_selected_columns = selected_columns
         if _id and 'id' not in selected_columns:
             selected_columns = ['id'] + selected_columns
-        
+
         # Get limit from query
         limit = query.limit.value if query.limit else 20
         total_results = limit
@@ -69,11 +69,11 @@ class StatusPages(APITable):
             result_df = pd.DataFrame(columns=selected_columns)
         elif _id:
             result_df = result_df[result_df['id'] == _id]
-        
+
         # delete 'id' column if 'id' not present in temp_selected_columns
         if 'id' not in temp_selected_columns and 'id' in selected_columns:
             result_df = result_df.drop('id', axis=1)
-        
+
         return result_df.head(n=total_results)
 
     def insert(self, query: ast.Insert) -> None:

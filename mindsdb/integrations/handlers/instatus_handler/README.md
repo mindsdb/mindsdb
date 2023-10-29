@@ -55,7 +55,7 @@ Example 3: Get specific status page
 ```sql
 SELECT *
 FROM mindsdb_instatus.status_pages
-WHERE page_id = '<status-page-id>';
+WHERE id = '<status-page-id>';
 ```
 
 Example 4: Apply limit
@@ -93,7 +93,7 @@ Note:
 ```sql
 UPDATE mindsdb_instatus.status_pages
 SET column1 = value1, column2 = value2, ...
-WHERE page_id = '<status-page-id>';
+WHERE id = '<status-page-id>';
 ```
 
 Example:
@@ -143,5 +143,5 @@ SET name = 'mindsdb',
         "fr": "nasa"
       }
     }'
-WHERE page_id = '<status-page-id>';
+WHERE id = '<status-page-id>';
 ```

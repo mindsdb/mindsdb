@@ -23,10 +23,10 @@ class StatusPages(APITable):
         """
         conditions = extract_comparison_conditions(query.where)
         # Get page id from query
-        page_id = None
+        _id = None
         for op, arg1, arg2 in conditions:
-            if arg1 == 'page_id' and op == '=':
-                page_id = arg2
+            if arg1 == 'id' and op == '=':
+                _id = arg2
             else:
                 raise NotImplementedError
 
@@ -41,6 +41,11 @@ class StatusPages(APITable):
             else:
                 raise ValueError(f"Unknown query target {type(target)}")
 
+        # 'id' needs to selected when searching with 'id'
+        temp_selected_columns = selected_columns
+        if _id and 'id' not in selected_columns:
+            selected_columns = ['id'] + selected_columns
+        
         # Get limit from query
         limit = query.limit.value if query.limit else 20
         total_results = limit
@@ -62,9 +67,13 @@ class StatusPages(APITable):
         # select columns from pandas data frame df
         if result_df.empty:
             result_df = pd.DataFrame(columns=selected_columns)
-        elif page_id:
-            result_df = result_df[result_df['id'] == page_id]
-
+        elif _id:
+            result_df = result_df[result_df['id'] == _id]
+        
+        # delete 'id' column if 'id' not present in temp_selected_columns
+        if 'id' not in temp_selected_columns and 'id' in selected_columns:
+            result_df = result_df.drop('id', axis=1)
+        
         return result_df.head(n=total_results)
 
     def insert(self, query: ast.Insert) -> None:
@@ -76,16 +85,13 @@ class StatusPages(APITable):
         Returns:
             None
         """
-        columns = []
-        for column in query.columns:
-            columns.append(column.name)
-        data = {
-            columns[i]: json.loads(query.values[0][i]) if columns[i] == 'components' else
-            (True if query.values[0][i] == 'True' else
-             (False if query.values[0][i] == 'False' else query.values[0][i]))
-            for i in range(len(columns))
-        }
-        self.handler.call_instatus_api(endpoint='/v1/pages', method='POST', data=data)
+        data = {}
+        for column, value in zip(query.columns, query.values[0]):
+            if isinstance(value, Constant):
+                data[column.name] = value.value
+            else:
+                data[column.name] = value
+        self.handler.call_instatus_api(endpoint='/v1/pages', method='POST', data=json.dumps(data))
 
     def update(self, query: ast.Update) -> None:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.
@@ -97,10 +103,10 @@ class StatusPages(APITable):
         """
         conditions = extract_comparison_conditions(query.where)
         # Get page id from query
-        page_id = None
+        _id = None
         for op, arg1, arg2 in conditions:
-            if arg1 == 'page_id' and op == '=':
-                page_id = arg2
+            if arg1 == 'id' and op == '=':
+                _id = arg2
             else:
                 raise NotImplementedError
 
@@ -111,7 +117,7 @@ class StatusPages(APITable):
                     data[key] = json.loads(value.value)  # Convert 'components' value to a Python list
                 else:
                     data[key] = value.value
-        self.handler.call_instatus_api(endpoint=f'/v2/{page_id}', method='PUT', data=data)
+        self.handler.call_instatus_api(endpoint=f'/v2/{_id}', method='PUT', data=json.dumps(data))
 
     def get_columns(self, ignore: List[str] = []) -> List[str]:
         """columns

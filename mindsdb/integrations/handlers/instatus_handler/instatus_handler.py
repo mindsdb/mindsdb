@@ -100,7 +100,7 @@ class InstatusHandler(APIHandler):
             headers['Content-Type'] = 'application/json'
 
             if method.upper() in ('POST', 'PUT', 'DELETE'):
-                response = requests.request(method, url, headers=headers, params=params, json=data)
+                response = requests.request(method, url, headers=headers, params=params, data=data)
             else:
                 response = requests.get(url, headers=headers, params=params)
 

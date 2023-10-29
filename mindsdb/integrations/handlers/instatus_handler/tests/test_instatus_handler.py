@@ -9,7 +9,6 @@ class InstatusHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.handler = InstatusHandler(name='mindsdb_instatus', connection_data={'api_key': 'd25509b171ad79395dc2c51b099ee6d0'})
-        cls.table = StatusPages(cls.handler)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -22,8 +21,66 @@ class InstatusHandlerTest(unittest.TestCase):
         assert tables.type is not RESPONSE_TYPE.ERROR
 
     def test_3_get_columns(self):
-        columns = self.table.get_columns()
+        columns = self.handler.get_columns(table_name='status_pages')
         assert type(columns) is not RESPONSE_TYPE.ERROR
+
+    def test_4_select(self):
+        query = '''SELECT *
+                    FROM mindsdb_instatus.status_pages'''
+        self.assertTrue(self.handler.native_query(query))
+
+    def test_5_select_by_conditions(self):
+        query = '''SELECT name, status, subdomain
+                    FROM mindsdb_instatus.status_pages
+                    WHERE id = "clo3xshsk1114842hkn377y3lrap"'''
+        self.assertTrue(self.handler.native_query(query))
+
+    def test_6_insert(self):
+        query = '''INSERT INTO mindsdb_instatus.status_pages (email, name, subdomain, components, logoUrl) VALUES ('ritwickrajmakhal11@gmail.com', 'mindsdb', 'mindsdb-ritwick-raj', '["Website", "App", "API"]', 'https://instatus.com/sample.png')'''
+        self.assertTrue(self.handler.native_query(query))
+
+    def test_7_update(self):
+        query = '''UPDATE mindsdb_instatus.status_pages
+                SET logoUrl = 'https://instatus.com/sample.png',
+                    faviconUrl = 'https://instatus.com/favicon-32x32.png',
+                    websiteUrl = 'https://instatus.com',
+                    language = 'en',
+                    useLargeHeader = true,
+                    brandColor = '#111',
+                    okColor = '#33B17E',
+                    disruptedColor = '#FF8C03',
+                    degradedColor = '#ECC94B',
+                    downColor = '#DC123D',
+                    noticeColor = '#70808F',
+                    unknownColor = '#DFE0E1',
+                    googleAnalytics = 'UA-00000000-1',
+                    subscribeBySms = true,
+                    smsService = 'twilio',
+                    twilioSid = 'YOUR_TWILIO_SID',
+                    twilioToken = 'YOUR_TWILIO_TOKEN',
+                    twilioSender = 'YOUR_TWILIO_SENDER',
+                    nexmoKey = null,
+                    nexmoSecret = null,
+                    nexmoSender = null,
+                    htmlInMeta = null,
+                    htmlAboveHeader = null,
+                    htmlBelowHeader = null,
+                    htmlAboveFooter = null,
+                    htmlBelowFooter = null,
+                    htmlBelowSummary = null,
+                    cssGlobal = null,
+                    launchDate = null,
+                    dateFormat = 'MMMMMM d, yyyy',
+                    dateFormatShort = 'MMM yyyy',
+                    timeFormat = 'p',
+                    private = false,
+                    useAllowList = false,
+                    translations = '{
+                    "name": {
+                        "fr": "nasa"
+                    }
+                    }'
+                WHERE page_id = 'clo3xshsk1114842hkn377y3lrap';'''
 
 
 if __name__ == '__main__':

@@ -46,6 +46,5 @@ class KrakenTradesTable(APITable):
             "fee",
             "vol",
             "margin",
-            "misc",
-            "leverage",
+            "misc"
         ]

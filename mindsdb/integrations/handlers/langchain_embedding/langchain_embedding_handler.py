@@ -1,3 +1,4 @@
+import copy
 import importlib
 from typing import Dict, Union
 
@@ -71,7 +72,8 @@ def construct_model_from_args(args: Dict) -> Embeddings:
         )
         class_name = EMBEDDING_MODELS[class_name]
     MODEL_CLASS = get_langchain_class(class_name)
-    serialized_dict = args
+    serialized_dict = copy.deepcopy(args)
+    serialized_dict.pop("input_columns", None)
     model = MODEL_CLASS(**serialized_dict)
     if target is not None:
         args["target"] = target

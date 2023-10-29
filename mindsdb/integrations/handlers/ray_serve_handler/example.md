@@ -95,13 +95,12 @@ Here, we take a look at a simple linear regression done on a single feature to p
 
 ```python
 import ray
-from fastapi import Request, FastAPI
+from fastapi import FastAPI, Request
 from ray import serve
 import time
 import pandas as pd
 import json
 from sklearn.linear_model import LogisticRegression
-
 
 app = FastAPI()
 ray.init()
@@ -119,24 +118,31 @@ async def parse_req(request: Request):
 @serve.deployment(route_prefix="/my_model")
 @serve.ingress(app)
 class MyModel:
-    @app.post("/train")
-    async def train(self, request: Request):
-        df, target = await parse_req(request)
-        feature_cols = list(set(list(df.columns)) - set([target]))
-        self.feature_cols = feature_cols
-        X = df.loc[:, self.feature_cols]
-        Y = list(df[target])
-        self.model = LogisticRegression()
-        self.model.fit(X, Y)
-        return {'status': 'ok'}
-
-    @app.post("/predict")
-    async def predict(self, request: Request):
-        df, _ = await parse_req(request)
-        X = df.loc[:, self.feature_cols]
-        predictions = self.model.predict(X)
-        pred_dict = {'prediction': [float(x) for x in predictions]}
-        return pred_dict
+    @serve.accept_batch
+    async def __call__(self, starlette_requests):
+        results = []
+        for request in starlette_requests:
+            try:
+                if request.url.path == "/train" and request.method == "POST":
+                    df, target = await parse_req(request)
+                    feature_cols = list(set(list(df.columns)) - set([target]))
+                    self.feature_cols = feature_cols
+                    X = df.loc[:, self.feature_cols]
+                    Y = list(df[target])
+                    self.model = LogisticRegression()
+                    self.model.fit(X, Y)
+                    results.append({'status': 'ok'})
+                elif request.url.path == "/predict" and request.method == "POST":
+                    df, _ = await parse_req(request)
+                    X = df.loc[:, self.feature_cols]
+                    predictions = self.model.predict(X)
+                    pred_dict = {'prediction': [float(x) for x in predictions]}
+                    results.append(pred_dict)
+                else:
+                    results.append({'error': 'Invalid endpoint or method'})
+            except Exception as e:
+                results.append({'error': str(e)})
+        return results
 
 
 if __name__ == '__main__':
@@ -144,6 +150,7 @@ if __name__ == '__main__':
 
     while True:
         time.sleep(1)
+
 ```
 
 And the MindsDB commands to train and query the model are:

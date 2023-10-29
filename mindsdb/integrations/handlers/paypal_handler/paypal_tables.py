@@ -137,7 +137,7 @@ class OrdersTable(APITable):
         )
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        search_params = {}
+        search_params = {"ids": []}
         subset_where_conditions = []
         for op, arg1, arg2 in where_conditions:
             if arg1 == 'ids':

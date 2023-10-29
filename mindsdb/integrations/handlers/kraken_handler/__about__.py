@@ -1,9 +1,9 @@
-__title__ = 'MindsDB Kraken handler'
-__package_name__ = 'mindsdb_kraken_handler'
-__version__ = '0.0.1'
+__title__ = "MindsDB Kraken handler"
+__package_name__ = "mindsdb_kraken_handler"
+__version__ = "0.0.1"
 __description__ = "MindsDB handler for the Kraken API"
-__author__ = 'Nimish Lingesh'
-__github__ = 'https://github.com/NimishLingesh'
-__pypi__ = 'https://pypi.org/project/mindsdb/'
-__license__ = 'GPL-3.0'
-__copyright__ = 'Copyright 2023 - mindsdb'
+__author__ = "Nimish Lingesh"
+__github__ = "https://github.com/NimishLingesh"
+__pypi__ = "https://pypi.org/project/mindsdb/"
+__license__ = "GPL-3.0"
+__copyright__ = "Copyright 2023 - mindsdb"

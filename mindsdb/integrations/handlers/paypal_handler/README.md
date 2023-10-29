@@ -150,7 +150,7 @@ Query Orders with specific columns:
 SELECT id, name FROM paypal_datasource.orders
 ~~~~
 
-Query Subscriptions with conditions and ordering:
+Query Orders with conditions and ordering:
 
 ~~~~sql
 SELECT id , state, amount 

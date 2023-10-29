@@ -5,6 +5,11 @@ from mindsdb.integrations.libs.api_handler import APITable
 
 class KrakenTradesTable(APITable):
     def select_trade_history(self, queries: dict):
+        """Selects data from the Kraken API and returns it as a pandas DataFrame.
+        Returns dataframe representing the Kraken API results.
+        Args:
+            queries in dict key-value pair
+        """
         # nounce - default mandatory field
         data = {"nounce": str(int(1000 * time.time()))}
 

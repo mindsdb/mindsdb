@@ -10,7 +10,16 @@ from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusRe
 
 
 class KrakenHandler(APIHandler):
+    """A class for handling connections and interactions with the Kraken API.
+    Attributes:
+        api_key (str): API Public key
+        api_secret (str): API Private key
+    """
     def __init__(self, name: str = None, **kwargs):
+        """Registers all API tables and prepares the handler for an API connection.
+        Args:
+            name: (str): The handler name to use
+        """
         super().__init__(name)
         self.api_key = None
         self.api_secret = None
@@ -42,6 +51,11 @@ class KrakenHandler(APIHandler):
         return response
 
     def get_trade_history(self, queries: dict) -> pd.DataFrame:
+        """Gets trade history for a user based on given parameters
+        Returns results as a pandas DataFrame.
+        Args:
+            params (Dict): Trade data params (symbol, interval)
+        """
         api_url = "https://api.kraken.com"
         uri_path = "/0/private/TradesHistory"
         headers = {}
@@ -60,6 +74,12 @@ class KrakenHandler(APIHandler):
         return df
 
     def call_kraken_api(self, method_name, params):
+        """Calls the Kraken API method with the given params.
+        Returns results as a pandas DataFrame.
+        Args:
+            method_name (str): Method name to call
+            params (Dict): Params to pass to the API call
+        """
         if method_name == "get_trade_history":
             return self.get_trade_history(params)
         raise NotImplementedError(

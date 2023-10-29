@@ -6,10 +6,7 @@ from collections import OrderedDict
 
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
-from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-)
+from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 
 
 class KrakenHandler(APIHandler):
@@ -52,7 +49,7 @@ class KrakenHandler(APIHandler):
         headers["API-Sign"] = self.api_secret
         res = requests.post((api_url + uri_path), headers=headers, data=queries)
         result = res["result"]
-        error = res["error"]
+        # error = res["error"]
         trades = result["trades"]
         trades_list = []
         for trade_id, details in trades:

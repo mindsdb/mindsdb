@@ -44,4 +44,3 @@ class PayPalHandlerTest(unittest.TestCase):
         query = "SELECT * FROM test_paypal_handler.orders WHERE ids = ('')"
         result = self.handler.native_query(query)
         assert result.type is RESPONSE_TYPE.TABLE
-

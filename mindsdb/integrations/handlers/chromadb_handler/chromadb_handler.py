@@ -20,7 +20,6 @@ from mindsdb.utilities import log
 def get_chromadb():
     """
     Import and return the chromadb module, using pysqlite3 if available.
-    
     this is a hack to make chromadb work with pysqlite3 instead of sqlite3 for cloud usage
     see https://docs.trychroma.com/troubleshooting#sqlite
     """

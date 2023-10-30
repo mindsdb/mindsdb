@@ -16,10 +16,30 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 )
 from mindsdb.utilities import log
 
-import sys
-__import__("pysqlite3")
-sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
-import chromadb  # noqa: E402
+
+def get_chromadb():
+    """
+    Import and return the chromadb module, using pysqlite3 if available.
+    this is a hack to make chromadb work with pysqlite3 instead of sqlite3 for cloud usage
+    see https://docs.trychroma.com/troubleshooting#sqlite
+    """
+
+    try:
+        import sys
+
+        __import__("pysqlite3")
+        sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+    except ImportError:
+        log.logger.error(
+            "[Chromadb-handler] pysqlite3 is not installed, this is not a problem for local usage"
+        )  # noqa: E501
+
+    try:
+        import chromadb
+
+        return chromadb
+    except ImportError:
+        raise ImportError("Failed to import chromadb.")
 
 
 class ChromaDBHandler(VectorStoreHandler):
@@ -43,6 +63,8 @@ class ChromaDBHandler(VectorStoreHandler):
         client_config = self._client_config
         if client_config is None:
             raise Exception("Client config is not set!")
+
+        chromadb = get_chromadb()
 
         # decide the client type to be used, either persistent or httpclient
         if client_config["persist_directory"] is not None:

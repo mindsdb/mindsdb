@@ -11,7 +11,7 @@ The Strava handler is initialized with the following parameters:
 
 - `strava_api_token`: Strava API key to use for authentication 
 
-Please follow this (link)[https://developers.strava.com/docs/getting-started/] to generate the token for accessing strava API
+Please follow  [this link](https://developers.strava.com/docs/getting-started/) to generate the token for accessing strava API
 
 ## Implemented Features
 
@@ -29,14 +29,14 @@ Please follow this (link)[https://developers.strava.com/docs/getting-started/] t
 
 ## Example Usage
 
-The first step is to create a database with the new `confluence` engine.
+The first step is to create a database with the new `Strava` engine.
 
 ~~~~sql
 CREATE DATABASE mindsdb_strava
 WITH ENGINE = 'strava',
 PARAMETERS = {
-  "strava_client_id": "<your-strava-client-id>",
-  "strava_access_token": "<your-strava-api-key-token>"  
+  "strava_client_id": "your-strava-client-id",
+  "strava_access_token": "your-strava-api-key-token"  
 };
 ~~~~
 
@@ -50,11 +50,11 @@ Use the established connection to query the Strava club_activities table
 
 ~~~~sql
 SELECT * FROM mindsdb_strava.club_activities
-WHERE strava_club_id = 158786;
+WHERE strava_club_id = 195748;
 ~~~~
 
 
-Advanced queries for the confluence handler
+Advanced queries for the strava handler
 
 ~~~~sql
 SELECT id,localized_sport_type,country,member_count FROM 
@@ -64,10 +64,10 @@ LIMIT 10;
 ~~~~~~~
 
 ~~~~sql
-SELECT distance, sport_type, athlete_firstname
+SELECT name, distance, sport_type
 FROM
 mindsdb_strava.club_activities
-WHERE strava_club_id = 158786;
-ORDER BY athelete.firstname ASC
-LIMIT 10
+WHERE strava_club_id = 195748
+ORDER BY distance ASC
+LIMIT 10;
 ~~~~

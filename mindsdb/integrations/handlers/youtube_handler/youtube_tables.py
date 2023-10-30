@@ -1,5 +1,7 @@
 from typing import List
 
+from requests import HTTPError
+
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.utilities.log import get_log
@@ -114,7 +116,6 @@ class YoutubeCommentsTable(APITable):
             selected_columns,
             where_conditions,
         ) = update_statement_parser.parse_query()
-        print(selected_columns, where_conditions)
         params = {}
         for op, arg1, arg2 in where_conditions:
             if arg1 == "video_id":
@@ -143,14 +144,14 @@ class YoutubeCommentsTable(APITable):
                 )
                 .execute()
             )
-            return update_response
-        except Exception as e:
-            if e.reason == "forbidden":
+            return f"Video comment {params['comment_id']} updated"
+        except HTTPError as e:
+            if e[0]["reason"] == "forbidden":
                 logger.error(
                     "Due to ownership restrictions, you are unable to update this comment on the YouTube server."
                 )
             else:
-                logger.error(f"Unexpected error encountered while updating comments {e.message}")
+                logger.error(f"Unexpected error encountered while updating comments {e}")
 
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
@@ -169,8 +170,8 @@ class YoutubeCommentsTable(APITable):
         pd.DataFrame of all the records of the "commentThreads()" API end point
         """
 
-        resource = (
-            self.handler.connect().commentThreads().list(part="snippet", videoId=video_id, textFormat="plainText")
+        resource = self.handler.connection.commentThreads().list(
+            part="snippet", videoId=video_id, textFormat="plainText"
         )
 
         video_cols = self.get_columns()
@@ -194,15 +195,11 @@ class YoutubeCommentsTable(APITable):
                 )
                 all_youtube_comments_df = pd.concat([all_youtube_comments_df, data], ignore_index=True)
             if "nextPageToken" in comments:
-                resource = (
-                    self.handler.connect()
-                    .commentThreads()
-                    .list(
-                        part="snippet",
-                        videoId=video_id,
-                        textFormat="plainText",
-                        pageToken=comments["nextPageToken"],
-                    )
+                resource = self.handler.connection.commentThreads().list(
+                    part="snippet",
+                    videoId=video_id,
+                    textFormat="plainText",
+                    pageToken=comments["nextPageToken"],
                 )
             else:
                 break
@@ -248,7 +245,7 @@ class YoutubeChannelsTable(APITable):
 
     def get_channel_details(self, channel_id):
         details = (
-            self.handler.connect().channels().list(part="statistics,snippet,contentDetails", id=channel_id).execute()
+            self.handler.connect.channels().list(part="statistics,snippet,contentDetails", id=channel_id).execute()
         )
         snippet = details["items"][0]["snippet"]
         statistics = details["items"][0]["statistics"]
@@ -314,7 +311,7 @@ class YoutubeVideosTable(APITable):
         return video_df
 
     def get_video_details(self, video_id):
-        details = self.handler.connect().videos().list(part="statistics,snippet,contentDetails", id=video_id).execute()
+        details = self.handler.connection.videos().list(part="statistics,snippet,contentDetails", id=video_id).execute()
         items = details.get("items")[0]
         snippet = items["snippet"]
         statistics = items["statistics"]

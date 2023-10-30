@@ -1,10 +1,11 @@
 # check if weaviate is installed
-import re
 import importlib
-from unittest.mock import patch
+import re
 import tempfile
-import psutil
+from unittest.mock import patch
+
 import pandas as pd
+import psutil
 import pytest
 from mindsdb_sql import parse_sql
 
@@ -38,7 +39,7 @@ class TestWeaviateHandler(BaseExecutorTest):
             CREATE DATABASE weaviate_test
             WITH ENGINE = "weaviate",
             PARAMETERS = {{
-                "persistence_directory": "{tmp_directory}"
+                "persist_directory": "{tmp_directory}"
             }}
         """
         )

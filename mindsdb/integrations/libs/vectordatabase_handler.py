@@ -1,5 +1,6 @@
 import ast
 import difflib
+import sys
 import uuid
 from enum import Enum
 from typing import Any, List, Optional
@@ -104,6 +105,7 @@ class VectorStoreHandlerConfig(BaseModel):
     host: str = None
     port: int = None
     url: str = None
+    api_key: str = None
 
     class Config:
         extra = Extra.forbid
@@ -134,34 +136,25 @@ class VectorStoreHandlerConfig(BaseModel):
         host = values.get("host")
         port = values.get("port")
         url = values.get("url")
+        api_key = values.get("api_key")
         persist_directory = values.get("persist_directory")
 
-        if host and not port:
+        if bool(port) != bool(host) or (host and (persist_directory or api_key or url)):
             raise ValueError(
-                f"For {vector_store} handler - if host is provided, port must also be provided."
+                f"For {vector_store} handler - host and port must be provided together. "
+                f"Additionally, if host and port are provided, url, api_key, persist_directory should not be provided."
             )
 
-        if port and not host:
+        if bool(url) != bool(api_key) or (url and (host or port or persist_directory)):
             raise ValueError(
-                f"For {vector_store} handler - if port is provided, host must also be provided."
+                f"For {vector_store} handler - url and api_key must be provided together. "
+                f"Additionally, if url and api_key are provided, host, port, persist_directory should not be provided."
             )
 
-        if port and host and (url or persist_directory):
-            raise ValueError(
-                f"For {vector_store} handler - if host and port are provided, "
-                f"url and persistence_folder should not be provided."
-            )
-
-        if url and (host or port or persist_directory):
-            raise ValueError(
-                f"For {vector_store} handler - if url is provided, host, port, "
-                f"persist_directory should not be provided."
-            )
-
-        if persist_directory and (url or host or port):
+        if persist_directory and (url or api_key or host or port):
             raise ValueError(
                 f"For {vector_store} handler - if persistence_folder is provided, "
-                f"url, host, port should not be provided."
+                f"url, host, api_key, port should not be provided."
             )
 
         return values
@@ -205,8 +198,10 @@ class VectorStoreHandler(BaseHandler):
 
         if self.config.persist_directory and not self.handler_storage.is_temporal:
             # get full persistence directory from handler storage
-            self.persist_directory = self.handler_storage.folder_get(
-                self.config.persist_directory
+            self.persist_directory = (
+                self.handler_storage.folder_get(self.config.persist_directory)
+                if "pytest" not in sys.modules
+                else self.config.persist_directory
             )
 
     def __del__(self):

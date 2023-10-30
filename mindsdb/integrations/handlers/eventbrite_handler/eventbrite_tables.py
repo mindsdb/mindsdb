@@ -1,4 +1,5 @@
 import pandas as pd
+import collections
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
@@ -6,6 +7,17 @@ from mindsdb.integrations.handlers.utilities.query_utilities import (
     SELECTQueryParser,
     SELECTQueryExecutor,
 )
+
+
+def flatten(d, parent_key="", sep="_"):
+    items = []
+    for k, v in d.items():
+        new_key = parent_key + sep + k if parent_key else k
+        if isinstance(v, collections.MutableMapping):
+            items.extend(flatten(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
 
 
 class UserInfoTable(APITable):
@@ -363,20 +375,16 @@ class EventDetailsTable(APITable):
         event_details = self.handler.api.get_event(params["event_id"])
 
         # Normalize event data
-        result = pd.DataFrame([event_details])
+        flat_event_details = flatten(event_details)
+        result = pd.DataFrame([flat_event_details])
 
-        # Split nested dictionaries into separate columns
-        result = pd.concat(
-            [
-                result.drop(["name", "description", "start", "end", "logo"], axis=1),
-                result["name"].apply(pd.Series).add_prefix("name_"),
-                result["description"].apply(pd.Series).add_prefix("description_"),
-                result["start"].apply(pd.Series).add_prefix("start_"),
-                result["end"].apply(pd.Series).add_prefix("end_"),
-                result["logo"].apply(pd.Series).add_prefix("logo_"),
-            ],
-            axis=1,
-        )
+        for col in ["name", "description", "start", "end", "logo"]:
+            if col in result.columns:
+                result = pd.concat(
+                    [result, result[col].apply(pd.Series).add_prefix(f"{col}_")],
+                    axis=1,
+                )
+                result = result.drop([col], axis=1)
 
         # filter targets
         columns = []

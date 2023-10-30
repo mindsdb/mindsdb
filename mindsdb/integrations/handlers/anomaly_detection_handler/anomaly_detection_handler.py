@@ -125,7 +125,7 @@ class AnomalyDetectionHandler(BaseMLEngine):
 
     def create(self, target, df, args=None):
         """Train a model and save it to the model storage"""
-        arg = {} if args is None else args
+        args = {} if args is None else args
         using_args = args["using"]
         model_type = using_args["type"] if "type" in using_args else None
 
@@ -148,7 +148,7 @@ class AnomalyDetectionHandler(BaseMLEngine):
 
     def predict(self, df, args=None):
         """Load a model from the model storage and use it to make predictions"""
-        arg = {} if args is None else args
+        args = {} if args is None else args
         model_args = self.model_storage.json_get("model_args")
         results_list = []
         if "__mindsdb_row_id" in df.columns:

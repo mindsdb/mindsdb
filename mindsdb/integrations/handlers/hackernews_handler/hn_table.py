@@ -150,3 +150,118 @@ class CommentsTable(APITable):
 
         if len(columns) > 0:
             result = result[columns]
+
+    def insert(self, query: ast.Insert) -> None:
+        """Insert new comments into the comments table.
+        Args:
+            query (ast.Insert): The SQL query to insert new comments.
+        """
+        hn_handler = self.handler
+
+        # Extract the data from the INSERT query
+        columns = [col.value for col in query.columns]
+        values = [expr.value for expr in query.values[0]]
+
+        # Create a dictionary with the comment data
+        comment_data = dict(zip(columns, values))
+
+        # Call the Hacker News API to add the comment
+        hn_handler.call_hackernews_api('add_comment', params=comment_data)
+
+        # You may want to return a success message or handle errors here
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Select data from the comments table and return it as a pandas DataFrame.
+        Args:
+            query (ast.Select): The SQL query to be executed.
+        Returns:
+            pandas.DataFrame: A pandas DataFrame containing the selected data.
+        """
+        hn_handler = self.handler
+
+        # Get the limit value from the SQL query, if it exists
+        limit = None
+        if query.limit is not None:
+            limit = query.limit.value
+
+        # Get the item ID from the SQL query
+        item_id = None
+        conditions = extract_comparison_conditions(query.where)
+        for condition in conditions:
+            if condition[0] == '=' and condition[1] == 'item_id':
+                item_id = condition[2]
+
+        if item_id is None:
+            raise ValueError('Item ID is missing in the SQL query')
+
+        # Call the Hacker News API to get the comments for the specified item
+        comments_df = hn_handler.call_hackernews_api('get_comments', params={'item_id': item_id})
+
+        # Fill NaN values with 'deleted'
+        comments_df = comments_df.fillna('deleted')
+        # Filter the columns to those specified in the SQL query
+        self.filter_columns(comments_df, query)
+
+        # Limit the number of results if necessary
+        if limit is not None:
+            comments_df = comments_df.head(limit)
+
+        return comments_df
+    
+    def update(self, query: ast.Update) -> None:
+        """Update existing comments in the comments table.
+        Args:
+            query (ast.Update): The SQL query to update comments.
+        """
+        hn_handler = self.handler
+
+        # Extract the data from the UPDATE query
+        columns = [col.value for col in query.columns]
+        values = [expr.value for expr in query.values[0]]
+
+        # Create a dictionary with the comment data to be updated
+        comment_data = dict(zip(columns, values))
+
+        # Extract the condition for the update
+        conditions = extract_comparison_conditions(query.where)
+
+        # Assuming you have a method to find the comment by item_id
+        item_id = None
+        for condition in conditions:
+            if condition[0] == '=' and condition[1] == 'item_id':
+                item_id = condition[2]
+
+        if item_id is None:
+            raise ValueError('Item ID is missing in the SQL query')
+
+        # Call the Hacker News API to update the comment
+        hn_handler.call_hackernews_api('update_comment', item_id=item_id, data=comment_data)
+
+    # You may want to return a success message or handle errors here
+
+    def delete(self, query: ast.Delete) -> None:
+        """Delete comments from the comments table.
+        Args:
+            query (ast.Delete): The SQL query to delete comments.
+        """
+        hn_handler = self.handler
+
+        # Extract the condition for the delete
+        conditions = extract_comparison_conditions(query.where)
+
+        # Assuming you have a method to find the comment by item_id
+        item_id = None
+        for condition in conditions:
+            if condition[0] == '=' and condition[1] == 'item_id':
+                item_id = condition[2]
+
+        if item_id is None:
+            raise ValueError('Item ID is missing in the SQL query')
+
+        # Call the Hacker News API to delete the comment
+        hn_handler.call_hackernews_api('delete_comment', item_id=item_id)
+
+        # You may want to return a success message or handle errors here
+
+
+            

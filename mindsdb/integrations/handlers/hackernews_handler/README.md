@@ -77,3 +77,36 @@ FROM my_hackernews.comments
 WHERE item_id=35662571
 LIMIT 1;
 ```
+
+Using **INSERT**, **UPDATE**, and **DELETE**
+
+### Insert Comments
+
+To insert new comments into the Comments table, use the following SQL command:
+
+```sql
+INSERT INTO my_hackernews.comments (id, by, parent, text, time, type)
+VALUES (comment_id, 'comment_author', parent_item_id, 'comment_text', 'comment_timestamp', 'comment_type');
+```
+
+### Update Comments
+
+To update existing comments in the Comments table, use the following SQL command:
+
+```sql
+UPDATE my_hackernews.comments
+SET column1 = new_value1, column2 = new_value2
+WHERE item_id = comment_id;
+```
+
+### Delete Comments
+
+To delete comments from the Comments table, use the following SQL command:
+
+```sql
+DELETE FROM my_hackernews.comments
+WHERE item_id = comment_id;
+```
+
+Make sure to replace `comment_id`, `comment_author`, `parent_item_id`, `comment_text`, `comment_timestamp`, `comment_type`, and `item_id` with the appropriate values in your SQL commands.
+

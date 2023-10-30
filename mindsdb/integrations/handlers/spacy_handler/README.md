@@ -6,6 +6,8 @@ This is an integration with spaCy which is a free, open-source library for advan
 
 When initializing the model, it is important to define **"linguistic_feature"** and **"target_column"**. With lingustic feature, you define the type of NLP process you want to perform on specific column ("target_column").
 
+In case of errors, for English model or any model you have to install it in the following way: **python -m spacy download en_core_web_sm**
+
 ```sql
 CREATE MODEL spacy__morphology__model
 PREDICT recognition

@@ -6,18 +6,12 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities.log import get_log
 from mindsdb_sql import parse_sql
 
-import requests
 import os.path
-import pandas as pd
-import json
-from collections import OrderedDict
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
-
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+
 
 
 
@@ -84,8 +78,7 @@ class GoogleDocs_Handler(APIHandler):
             Status confirmation
         """
         response = StatusResponse(False)
-        need_to_close = self.is_connected is False
-
+        
         try:
             self.connect()
             response.success = True

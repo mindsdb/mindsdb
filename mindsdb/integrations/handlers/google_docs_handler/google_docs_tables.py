@@ -3,13 +3,8 @@ from typing import List
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.utilities.log import get_log
-
 from mindsdb_sql.parser import ast
 
-
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
-import os
 import pandas as pd
 
 

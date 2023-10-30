@@ -5,7 +5,9 @@ This handler integrates with the Google Docs API to make the docs content availa
 First we need to create a database to connect to the Google Docs API.
 
 However, you will need to have a Google account and have enabled the Google Docs API and scope of the API can be restricted to read only. More information on the scope of the API can be found [here](https://developers.google.com/identity/protocols/oauth2/scopes#docs)
-Also, you will need to have a doc id from your google docs and the credentials for that google doc in a json file. credentials.json file can be created using the link [here](https://developers.google.com/workspace/guides/create-credentials#oauth-client-id)
+Also, you will need to get a doc id from your google docs url and the credentials for google doc service in a json file. credentials.json file can be created using the link [here](https://developers.google.com/workspace/guides/create-credentials#oauth-client-id)
+
+Doc id can be reterived by user from the Google docs url. For instance, if this is the google doc url [](https://docs.google.com/document/d/1fpTvJIlCQhL8a-_80L_dQ9j6V5QVDsql_UOg-du8QXw/edit) and the corresponding google_doc_id is *1fpTvJIlCQhL8a-_80L_dQ9j6V5QVDsql_UOg-du8QXw*
 
 This creates a database called my_docs. This database connects to the google docs service to reterive the google doc contents and name of the google doc as of now and the list of rest api endpoints supported by google docs is [here](https://developers.google.com/docs/api/reference/rest)
 

@@ -457,7 +457,7 @@ connection_args = OrderedDict(
     },
     path={
         "type": ARG_TYPE.STR,
-        "description": "Persistence path for a local Qdrant instance(:memory:).",
+        "description": "Persistence path for a local Qdrant instance.",
         "required": False,
     },
     collection_config={

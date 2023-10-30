@@ -8,9 +8,6 @@ from mindsdb_sql import parse_sql
 
 from tests.unit.executor_test_base import BaseExecutorTest
 
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
-
 WRITER_API_KEY = os.environ.get("WRITER_API_KEY")
 os.environ["WRITER_API_KEY"] = WRITER_API_KEY
 
@@ -18,7 +15,7 @@ WRITER_ORG_ID = os.environ.get("WRITER_ORG_ID")
 os.environ["WRITER_ORG_ID"] = WRITER_ORG_ID
 
 
-class TestRAG(BaseExecutorTest):
+class TestWriter(BaseExecutorTest):
     def wait_predictor(self, project, name):
         # wait
         done = False
@@ -49,62 +46,14 @@ class TestRAG(BaseExecutorTest):
 
         self.run_sql(
             """
-                CREATE MODEL proj.test_rag_handler_missing_required_args
+                CREATE MODEL proj.test_writer_handler_missing_required_args
                 PREDICT answer
                 USING
-                   engine="rag"
+                   engine="writer"
                    """
         )
         with pytest.raises(Exception):
-            self.wait_predictor("proj", "test_rag_handler_missing_required_args")
-
-    def test_invalid_model_id_parameter(self):
-        # create project
-
-        self.run_sql("create database proj")
-        self.run_sql(
-            f"""
-              create model proj.test_rag_openai_nonexistant_model
-              predict answer
-              using
-                engine='rag',
-                llm_type='openai',
-                model_id='this-model-does-not-exist',
-                openai_api_key='{OPENAI_API_KEY}';
-           """
-        )
-        with pytest.raises(Exception):
-            self.wait_predictor("proj", "test_rag_openai_nonexistant_model")
-
-        self.run_sql(
-            f"""
-                  create model proj.test_rag_writer_nonexistant_model
-                  predict answer
-                  using
-                    engine='rag',
-                    llm_type='writer',
-                    model_id='this-model-does-not-exist',
-                    writer_api_key='{WRITER_API_KEY}',
-                    writer_org_id='{WRITER_ORG_ID}';
-               """
-        )
-
-        with pytest.raises(Exception):
-            self.wait_predictor("proj", "test_rag_writer_nonexistant_model")
-
-    def test_unsupported_llm_type(self):
-        self.run_sql("create database proj")
-        self.run_sql(
-            """
-            create model proj.test_unsupported_llm
-            predict answer
-            using
-                engine='rag',
-                llm_type='unsupported_llm'
-        """
-        )
-        with pytest.raises(Exception):
-            self.wait_predictor("proj", "test_unsupported_llm")
+            self.wait_predictor("proj", "test_writer_handler_missing_required_args")
 
     def test_unsupported_vector_store(self):
         self.run_sql("create database proj")
@@ -113,9 +62,9 @@ class TestRAG(BaseExecutorTest):
             create model proj.test_unsupported_vector_store
             predict answer
             using
-                engine='rag',
-                llm_type='openai',
-                openai_api_key='{OPENAI_API_KEY}',
+                engine='writer',
+                writer_api_key='{WRITER_API_KEY}',
+                writer_org_id='{WRITER_ORG_ID}',
                 vector_store_name='unsupported_vector_store'
         """
         )
@@ -127,17 +76,17 @@ class TestRAG(BaseExecutorTest):
         self.run_sql("create database proj")
         self.run_sql(
             f"""
-            create model proj.test_openai_unknown_arguments
+            create model proj.test_writer_unknown_arguments
             predict answer
             using
-                engine='rag',
-                llm_type='openai',
-                openai_api_key='{OPENAI_API_KEY}',
+                engine='writer',
+                writer_api_key='{WRITER_API_KEY}',
+                writer_org_id='{WRITER_ORG_ID}',
                 evidently_wrong_argument='wrong value'  --- this is a wrong argument name
         """
         )
         with pytest.raises(Exception):
-            self.wait_predictor("proj", "test_openai_unknown_arguments")
+            self.wait_predictor("proj", "test_writer_unknown_arguments")
 
     @pytest.mark.xfail(
         reason="there seems to be an issue with running inner queries, it appears to be a potential bug in the mock handler"
@@ -159,21 +108,21 @@ class TestRAG(BaseExecutorTest):
 
         self.run_sql(
             f"""
-           create model proj.test_rag_openai_qa
+           create model proj.test_writer_writer_qa
            from pg (select * from df)
            predict answer
            using
-             engine='rag',
-             llm_type='openai',
-             openai_api_key='{OPENAI_API_KEY}';
+                engine='writer',
+                writer_api_key='{WRITER_API_KEY}',
+                writer_org_id='{WRITER_ORG_ID}';
         """
         )
-        self.wait_predictor("proj", "test_rag_openai_qa")
+        self.wait_predictor("proj", "test_writer_writer_qa")
 
         result_df = self.run_sql(
             """
             SELECT p.answer
-            FROM proj.test_rag_openai_qa as p
+            FROM proj.test_writer_writer_qa as p
             WHERE question='What is the best treatment for a cold?'
         """
         )
@@ -187,10 +136,10 @@ class TestRAG(BaseExecutorTest):
            create model proj.test_invalid_prompt_template_format
            predict completion
            using
-             engine='rag',
-             llm_type="openai",
-             prompt_template="not valid format",
-             openai_api_key='{OPENAI_API_KEY}';
+                engine='writer',
+                prompt_template="not valid format",
+                writer_api_key='{WRITER_API_KEY}',
+                writer_org_id='{WRITER_ORG_ID}';
         """
         )
         with pytest.raises(Exception):

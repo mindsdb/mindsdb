@@ -85,9 +85,8 @@ class LanceDBHandler(VectorStoreHandler):
         """Check the connection to the LanceDB database."""
         response_code = StatusResponse(False)
         need_to_close = self.is_connected is False
-
         try:
-            # self._client.heartbeat()
+            self._client.table_names()
             response_code.success = True
         except Exception as e:
             log.logger.error(f"Error connecting to LanceDB , {e}!")
@@ -212,6 +211,7 @@ class LanceDBHandler(VectorStoreHandler):
         col_str = ', '.join([col for col in new_columns if col in (TableField.ID.value, TableField.CONTENT.value, TableField.METADATA.value, TableField.EMBEDDINGS.value, TableField.DISTANCE.value)])
 
         where_str = f'where {filters}' if filters else ''
+        # implementing limit and offset. Not supported natively in lancedb
         if limit and offset:
             sql = f"""select {col_str} from result {where_str} limit {limit} offset {offset}"""
         elif limit and not offset:
@@ -229,6 +229,9 @@ class LanceDBHandler(VectorStoreHandler):
     ) -> HandlerResponse:
         """
         Insert data into the LanceDB database.
+        In case of create table statements the there is a mismatch between the column types of the `data` pandas dataframe filled with data
+        and the empty base table column types which raises a pa.lib.ArrowNotImplementedError, in that case the base table is deleted (doesn't matter as it is empty)
+        and recreated with the right datatypes
         """
         try:
             collection = self._client.open_table(table_name)

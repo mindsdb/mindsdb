@@ -15,6 +15,10 @@ jobs:
   code_checking:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3.5.3
+        with:
+          fetch-depth: 0  # Fetch all history for all branches and tags
       - id: changed-files
         uses: tj-actions/changed-files@v37
       - uses: pre-commit/action@v3.0.0

@@ -4,13 +4,13 @@ on:
   push:
     paths-ignore:
       - 'docs/**'
-      - '**.md'
+      - '**/*.md'
   # pull_request_target:
   pull_request:
     branches: [stable, staging]
     paths-ignore:
       - 'docs/**'
-      - 'README.md'
+      - '**/*.md'
 
 jobs:
   code_checking:

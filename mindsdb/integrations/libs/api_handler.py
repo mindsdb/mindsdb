@@ -2,7 +2,6 @@ from typing import Any
 import ast as py_ast
 
 import pandas as pd
-
 from mindsdb_sql.parser.ast import ASTNode, Select, Insert, Update, Delete
 from mindsdb_sql.parser.ast.select.identifier import Identifier
 

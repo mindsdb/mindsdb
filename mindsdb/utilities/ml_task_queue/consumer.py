@@ -15,6 +15,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.integrations.libs.process_cache import process_cache
 from mindsdb.utilities.ml_task_queue.utils import RedisKey, StatusNotifier, to_bytes, from_bytes
+from mindsdb.utilities.ml_task_queue.base import BaseRedisQueue
 from mindsdb.utilities.fs import clean_unlinked_process_marks
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.ml_task_queue.const import (
@@ -42,7 +43,7 @@ def _save_thread_link(func: Callable) -> Callable:
     return wrapper
 
 
-class MLTaskConsumer:
+class MLTaskConsumer(BaseRedisQueue):
     """ Listener of ML tasks queue and tasks executioner.
         Each new message waited and executed in separate thread.
 
@@ -84,11 +85,8 @@ class MLTaskConsumer:
             password=config.get('password'),
             protocol=3
         )
-        try:
-            self.db.ping()
-        except ConnectionError:
-            print('Cant connect to redis')
-            raise
+        self.wait_redis_ping(60)
+
         self.db.Stream(TASKS_STREAM_NAME)
         self.cache = self.db.cache()
         self.consumer_group = self.db.consumer_group(TASKS_STREAM_CONSUMER_GROUP_NAME, [TASKS_STREAM_NAME])
@@ -139,6 +137,7 @@ class MLTaskConsumer:
         message = None
         while message is None:
             self.wait_free_resources()
+            self.wait_redis_ping()
             if self._stop_event.is_set():
                 return
             message = self.consumer_group.read(count=1, block=1000, consumer=TASKS_STREAM_CONSUMER_NAME)
@@ -183,12 +182,14 @@ class MLTaskConsumer:
             status_notifier.start()
             result = task.result()
         except Exception as e:
+            self.wait_redis_ping()
             status_notifier.stop()
             exception_bytes = to_bytes(e)
             self.cache.set(redis_key.exception, exception_bytes, 10)
             self.db.publish(redis_key.status, ML_TASK_STATUS.ERROR.value)
             self.cache.set(redis_key.status, ML_TASK_STATUS.ERROR.value, 180)
         else:
+            self.wait_redis_ping()
             status_notifier.stop()
             if isinstance(result, DataFrame):
                 dataframe_bytes = to_bytes(result)

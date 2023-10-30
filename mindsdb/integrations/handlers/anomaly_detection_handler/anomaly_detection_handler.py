@@ -122,8 +122,9 @@ class AnomalyDetectionHandler(BaseMLEngine):
         super().__init__(*args, **kwargs)
         self.generative = True  # makes unsupervised learning work
 
-    def create(self, target, df, args={}):
+    def create(self, target, df, args=None):
         """Train a model and save it to the model storage"""
+        arg = {} if args is None else args
         using_args = args["using"]
         model_type = using_args["type"] if "type" in using_args else None
 
@@ -143,8 +144,9 @@ class AnomalyDetectionHandler(BaseMLEngine):
         model_args = {"model_path": model_save_paths, "target": model_targets, "model_name": model_class_names}
         self.model_storage.json_set("model_args", model_args)
 
-    def predict(self, df, args={}):
+    def predict(self, df, args=None):
         """Load a model from the model storage and use it to make predictions"""
+        arg = {} if args is None else args
         model_args = self.model_storage.json_get("model_args")
         results_list = []
         if "__mindsdb_row_id" in df.columns:

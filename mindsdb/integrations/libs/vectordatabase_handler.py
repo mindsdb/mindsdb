@@ -202,6 +202,7 @@ class VectorStoreHandler(BaseHandler):
         self.config = VectorStoreHandlerConfig(**_config)
 
         self.is_connected = False
+        self.persist_directory = None
 
         if self.config.persist_directory and not self.handler_storage.is_temporal:
             # get full persistence directory from handler storage

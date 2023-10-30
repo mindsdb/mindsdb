@@ -1,4 +1,6 @@
-from mindsdb.integrations.handlers.google_docs_handler.google_docs_tables import GoogleDocGetDetailsTable
+from mindsdb.integrations.handlers.google_docs_handler.google_docs_tables import (
+    GoogleDocGetDetailsTable,
+)
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -13,13 +15,13 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 
-
-
 logger = get_log("integrations.google_docs_handler")
+
 
 class GoogleDocs_Handler(APIHandler):
     """Google Docs handler implementation"""
-    name = 'google_docs'
+
+    name = "google_docs"
 
     def __init__(self, name=None, **kwargs):
         """Initialize the Google Docs handler.
@@ -32,16 +34,15 @@ class GoogleDocs_Handler(APIHandler):
 
         self.token = None
         self.connection = None
-        self.connection_data = kwargs.get('connection_data', {})
-        self.credentials_file = self.connection_data.get('credentials', None)
-        self.scopes = ['https://www.googleapis.com/auth/documents.readonly']
+        self.connection_data = kwargs.get("connection_data", {})
+        self.credentials_file = self.connection_data.get("credentials", None)
+        self.scopes = ["https://www.googleapis.com/auth/documents.readonly"]
         self.credentials = None
         self.is_connected = False
         self.parser = parse_sql
-        
+
         google_doc_data = GoogleDocGetDetailsTable(self)
         self._register_table("doc_content", google_doc_data)
-
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.
@@ -54,21 +55,27 @@ class GoogleDocs_Handler(APIHandler):
             return self.service
 
         if self.credentials_file:
-            if os.path.exists('token.json'):
-                self.credentials = Credentials.from_authorized_user_file('token.json', self.scopes)
+            if os.path.exists("token.json"):
+                self.credentials = Credentials.from_authorized_user_file(
+                    "token.json", self.scopes
+                )
             if not self.credentials or not self.credentials.valid:
-                if self.credentials and self.credentials.expired and self.credentials.refresh_token:
+                if (
+                    self.credentials
+                    and self.credentials.expired
+                    and self.credentials.refresh_token
+                ):
                     self.credentials.refresh(Request())
                 else:
                     flow = InstalledAppFlow.from_client_secrets_file(
-                        self.credentials_file, self.scopes)
+                        self.credentials_file, self.scopes
+                    )
                     self.credentials = flow.run_local_server(port=0)
-            with open('token.json', 'w') as token:
+            with open("token.json", "w") as token:
                 token.write(self.credentials.to_json())
-            self.connection = build('docs', 'v1', credentials=self.credentials)
+            self.connection = build("docs", "v1", credentials=self.credentials)
 
         return self.connection
-
 
     def check_connection(self) -> StatusResponse:
         """Check connection to the handler.
@@ -78,7 +85,7 @@ class GoogleDocs_Handler(APIHandler):
             Status confirmation
         """
         response = StatusResponse(False)
-        
+
         try:
             self.connect()
             response.success = True
@@ -103,4 +110,3 @@ class GoogleDocs_Handler(APIHandler):
         """
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
-

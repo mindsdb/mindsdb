@@ -240,4 +240,5 @@ connection_args_example = OrderedDict(
     table='table',
     type='sql',
     name='default',
+    namespace='docs_example',
 )

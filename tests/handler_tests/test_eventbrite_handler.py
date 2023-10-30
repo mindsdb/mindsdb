@@ -8,7 +8,6 @@ from mindsdb.integrations.handlers.eventbrite_handler.eventbrite_handler import 
 )
 
 from mindsdb_sql.parser import ast
-from mindsdb_sql.parser.ast.select.star import Star
 from mindsdb_sql.parser.ast.select.identifier import Identifier
 
 from unittest.mock import Mock

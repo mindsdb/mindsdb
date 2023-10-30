@@ -15,6 +15,7 @@ from pyod.models.pca import PCA
 from xgboost import XGBClassifier
 from sklearn.naive_bayes import GaussianNB
 import numpy as np
+import os
 
 
 MODELS = {
@@ -133,11 +134,12 @@ class AnomalyDetectionHandler(BaseMLEngine):
         model_save_paths = []
         model_targets = []
         model_class_names = []
+        base_path = self.model_storage.folder_get("context")
         for model_name in model_names:
             model = choose_model(df, model_name=model_name, model_type=model_type, target=target)
             this_model_target = "outlier" if target is None else target  # output column name for unsupervised learning
             save_path = "model.joblib" if model_name is None else model_name + ".joblib"
-            dump(model, save_path)
+            dump(model, os.path.join(base_path, save_path))
             model_save_paths.append(save_path)
             model_targets.append(this_model_target)
             model_class_names.append(model.__class__.__name__)
@@ -153,8 +155,9 @@ class AnomalyDetectionHandler(BaseMLEngine):
             df = df.drop("__mindsdb_row_id", axis=1)
         if model_args["target"][0] in df.columns:
             df = df.drop(model_args["target"], axis=1)
+        base_path = self.model_storage.folder_get("context")
         for model_path in model_args["model_path"]:
-            model = load(model_path)
+            model = load(os.path.join(base_path, model_path))
             predict_df = preprocess_data(df).astype(float)
             results = model.predict(predict_df)
             results_list.append(results)

@@ -11,20 +11,24 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'README.md'
-
 jobs:
   code_checking:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3.5.3
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v4.7.0
+    - name: Install pre-commit
+      run: pip install pre-commit
+    - name: Install git hooks
+      run: pre-commit install
+    - name: Detect changed files
+      id: changed-files
+      uses: dorny/paths-filter@v2
       with:
-        python-version: 3.9
+        filters: |
+          all:
+            - '**'
     - name: Static code checking
-      run: |
-        make precommit
-      shell: bash
+      if: steps.changed-files.outputs.all == 'true'
+      run: pre-commit run --files ${{ steps.changed-files.outputs.all_files }}
   matrix_prep:
     needs: code_checking
     runs-on: ubuntu-latest

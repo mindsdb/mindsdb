@@ -146,6 +146,6 @@ connection_args = OrderedDict(
 connection_args_example = OrderedDict(
     host="localhost",
     port=1337,
-    api_token="277c4d669060c2c66b140aaa8a38e00b824182dd1634af7c9718344807e662c5cd77d3bfbfa756332d7b044b7ee12e26fc96f800b2d030a9bb0afda422bbf20d2ce6962fc313e32a2ca9cc19f2d89d51a4ca7f64576717c0c2ea28d7908b3be6f8b345f1f351498b7382fb5469a61a42a96ece4c72b21b0e3485ea7addd5189c",
+    api_token="c56c000d867e95848c",
     pluralApiIds=["posts", "portfolios"],
 )

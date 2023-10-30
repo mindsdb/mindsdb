@@ -10,7 +10,7 @@ class StrapiHandlerTest(unittest.TestCase):
         connection_data = {
             'host': 'localhost',
             'port': '1337',
-            'api_token': 'dcb6fdf6355e2b49fe18ef4ff618b94cadf16bd2d4e6e33f40a61cdfc5ca6896a3ff2e906cb9da3894ffe38a645aa3e941a8aed65dee16064bfda3ce139b3023b187428a12d295bbfc93162c1aca68fd195180919d8757b6562d641682c652655d9b00a152ef191d8c140e8f9e8d9e8a975944be08e56f387c451513235bfa49',
+            'api_token': 'c56c000d867e95848c',
             'pluralApiIds': ['products', 'sellers']}
         cls.handler = StrapiHandler(name='myshop', connection_data=connection_data)
 

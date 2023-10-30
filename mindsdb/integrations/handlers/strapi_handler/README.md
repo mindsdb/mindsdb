@@ -48,7 +48,7 @@ WITH ENGINE = 'strapi',
 PARAMETERS = {
   "host" : "localhost",
   "port" : "1337",
-  "api_token": "c56c000d867e95848cb75419b47ceb169ab790cb81dfa52022b10ae8d7bffebe9f8927d7b2a1af88352c76506b82f907f98bb000eb2f590e62abe6b83e70318f90d152b63b97a5837f6dc0b607dc8b82b849cc5c6543e650d111c3706a8a50c02a1494fa9bb7d91ab2c4773df2aede75f159e1a87d9336b166bbde7839ffcd7f",
+  "api_token": "c56c000d867e95848c",
   "pluralApiIds" : ["products", "sellers"]
 };
 ```

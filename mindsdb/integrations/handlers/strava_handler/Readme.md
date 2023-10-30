@@ -35,8 +35,8 @@ The first step is to create a database with the new `Strava` engine.
 CREATE DATABASE mindsdb_strava
 WITH ENGINE = 'strava',
 PARAMETERS = {
-  "strava_client_id": "<your-strava-client-id>",
-  "strava_access_token": "<your-strava-api-key-token>"  
+  "strava_client_id": "your-strava-client-id",
+  "strava_access_token": "your-strava-api-key-token"  
 };
 ~~~~
 

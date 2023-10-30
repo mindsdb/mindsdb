@@ -101,7 +101,7 @@ USING
 just say that you do not know, do not try to make up an answer.
 Context: {context}
 Question: {question}
-Helpful Answer:"; --this can be any sentence transformer that is compatible with Hugging Face sentence_transformer library, if none provided defaults to "sentence-transformers/all-mpnet-base-v2"
+Helpful Answer:";
 
 -- Ask a question on your data using Writer LLM API
 SELECT *

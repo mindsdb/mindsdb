@@ -1,5 +1,4 @@
 import os
-import pandas as pd
 
 from eventbrite.client import Client
 from mindsdb.utilities import log

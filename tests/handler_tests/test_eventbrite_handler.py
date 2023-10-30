@@ -1,22 +1,10 @@
-from mindsdb.integrations.handlers.tripadvisor_handler.tripadvisor_handler import (
-    TripAdvisorHandler,
-)
-
 from mindsdb.integrations.handlers.eventbrite_handler.eventbrite_handler import (
     EventbriteHandler,
 )
 
 from mindsdb.integrations.handlers.eventbrite_handler.eventbrite_handler import (
     CategoryInfoTable,
-    EventDetailsTable
-)
-
-from mindsdb.integrations.handlers.tripadvisor_handler.tripadvisor_table import (
-    SearchLocationTable,
-    LocationDetailsTable,
-    ReviewsTable,
-    PhotosTable,
-    NearbyLocationTable,
+    EventDetailsTable,
 )
 
 from mindsdb_sql.parser import ast
@@ -56,7 +44,7 @@ class CategoryInfoTableTest(unittest.TestCase):
                 ]
             ]
         )
-        eventbrite_table = (api_handler)
+        eventbrite_table = api_handler
 
         select_all = ast.Select(
             targets=[Star()],
@@ -66,10 +54,14 @@ class CategoryInfoTableTest(unittest.TestCase):
         all_location_data = eventbrite_table.select(select_all)
         first_data = all_location_data.iloc[0]
 
-        self.assertEqual(first_data["resource_uri"], "https://www.eventbriteapi.com/v3/categories/103/")
+        self.assertEqual(
+            first_data["resource_uri"],
+            "https://www.eventbriteapi.com/v3/categories/103/",
+        )
         self.assertEqual(first_data["id"], "103")
         self.assertEqual(first_data["name"], "Music")
         self.assertEqual(first_data["name_localized"], "Music")
+
 
 class EventDetailsTableTest(unittest.TestCase):
     def test_get_columns_returns_all_columns(self):
@@ -149,9 +141,9 @@ class EventDetailsTableTest(unittest.TestCase):
         )
         eventbrite_table = EventDetailsTable(api_handler)
 
-        name_text_identifier = Identifier(path_str='name_text')
-        description_text_identifier = Identifier(path_str='description_text')
-        url_identifier = Identifier(path_str='url')
+        name_text_identifier = Identifier(path_str="name_text")
+        description_text_identifier = Identifier(path_str="description_text")
+        url_identifier = Identifier(path_str="url")
 
         select_all = ast.Select(
             targets=[name_text_identifier, description_text_identifier, url_identifier],
@@ -163,6 +155,14 @@ class EventDetailsTableTest(unittest.TestCase):
         first_data = review_data.iloc[0]
 
         self.assertEqual(review_data.shape[1], 3)
-        self.assertEqual(first_data["name_text"], "AI Forum: Can AI Fix Climate Change?")
-        self.assertEqual(first_data["description_text"], "The third in a series of lunchtime presentations by King's researchers at Science Gallery London")
-        self.assertEqual(first_data["url"], "https://www.eventbrite.co.uk/e/ai-forum-can-ai-fix-climate-change-tickets-717926867587")
+        self.assertEqual(
+            first_data["name_text"], "AI Forum: Can AI Fix Climate Change?"
+        )
+        self.assertEqual(
+            first_data["description_text"],
+            "The third in a series of lunchtime presentations by King's researchers at Science Gallery London",
+        )
+        self.assertEqual(
+            first_data["url"],
+            "https://www.eventbrite.co.uk/e/ai-forum-can-ai-fix-climate-change-tickets-717926867587",
+        )

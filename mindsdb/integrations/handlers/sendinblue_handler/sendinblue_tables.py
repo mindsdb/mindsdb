@@ -59,3 +59,45 @@ class EmailCampaignsTable(APITable):
         email_campaigns_api_instance = sib_api_v3_sdk.EmailCampaignsApi(connection)
         email_campaigns = email_campaigns_api_instance.get_email_campaigns(**kwargs)
         return [email_campaign for  email_campaign in email_campaigns.campaigns]
+    
+   def update(self, query: ast.Update) -> None:
+    """Updates data in the Sendinblue Email Campaigns Table.
+
+    Parameters
+    ----------
+    query : ast.Update
+        Given SQL UPDATE query
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    ValueError
+        If the query contains an unsupported condition
+    """
+    update_statement_parser = UPDATEQueryParser(
+        query,
+        'email_campaigns',
+        self.get_columns()
+    )
+    set_clause, where_conditions = update_statement_parser.parse_query()
+
+    
+    email_campaigns_df = pd.json_normalize(self.get_email_campaigns())
+
+    campaigns_to_update = UPDATEQueryExecutor(
+        email_campaigns_df,
+        where_conditions
+    ).execute_query()
+
+
+    for index, row in campaigns_to_update.iterrows():
+        campaign_id = row['id']
+        update_data = {col: row[col] for col in set_clause.keys()}
+        try:
+            self.handler.connect().update_email_campaign(campaign_id, update_data)
+            print(f"Campaign {campaign_id} updated successfully")
+        except Exception as e:
+            print(f"Failed to update campaign {campaign_id}: {str(e)}")

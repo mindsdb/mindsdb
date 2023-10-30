@@ -26,7 +26,7 @@ Application handlers act as a bridge between MindsDB and any application that pr
     To learn more about handlers and how to implement a machine learning (ML) handler, visit our [doc page here](/contribute/ml-handlers/).
 </Note>
 
-## Creating a Application Handler
+## Creating an Application Handler
 
 You can create your own application handler within MindsDB by inheriting from the [`APIHandler`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/api_handler.py#L150) class.
 
@@ -44,7 +44,7 @@ Let's review the purpose of each method.
 | [`connect()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L23)       | It performs the necessary steps to connect/authenticate to the underlying system.                                                                                                                                   |
 | [`check_connection()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L39)   | It evaluates if the connection is alive and healthy.                                                                                                                 |
 | [`native_query()`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L47)    | It parses any *native* statement string and acts upon it (for example, raw syntax commands).                                                                                                              |
-| `call_application_api()` | It calls the application API and maps the data to pandas DataFrame. This method handles the paggination and data mapping. |
+| `call_application_api()` | It calls the application API and maps the data to pandas DataFrame. This method handles the pagination and data mapping. |
 
 Authors can opt for adding private methods, new files and folders, or any combination of these to structure all the necessary work that will enable the core methods to work as intended.
 
@@ -138,7 +138,7 @@ Here is a step-by-step guide:
     def call_application_api(self, method_name:str = None, params:dict = None) -> DataFrame:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.
         Args:
-            query (ASTNode): sql query represented as AST. May be any kind
+            query (ASTNode): sql query represented as AST. Can be any kind
                 of query: SELECT, INSERT, DELETE, etc
         Returns:
             DataFrame
@@ -147,7 +147,7 @@ Here is a step-by-step guide:
 
 ### The `connection_args` Dictionary
 
-The `connection_args` dictionary contains all of arguments used to establish the connection along with their descriptions, types, labels and whether they are required or not.
+The `connection_args` dictionary contains all of the arguments used to establish the connection along with their descriptions, types, labels, and whether they are required or not.
 
 Here is an example of the `connection_args` dictionary from the [GitHub handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/github_handler):
 
@@ -163,13 +163,13 @@ connection_args = OrderedDict(
         "type": ARG_TYPE.PWD,
         "description": "Optional GitHub API key to use for authentication.",
         "required": False,
-        "label": "Api key",
+        "label": "API key",
     },
     github_url={
         "type": ARG_TYPE.STR,
         "description": "Optional GitHub URL to connect to a GitHub Enterprise instance.",
         "required": False,
-        "label": "Github url",
+        "label": "GitHub url",
     },
 )
 ```
@@ -203,7 +203,7 @@ The following should be exported in the `__init__.py` file of the handler:
 - The `connection_args_example` dictionary with an example of the connection arguments.
 - The `import_error` message that is used if the import of the `Handler` class fails.
 
-A few of these variables are defined in another file called `__about__.py`. This file is imported in the `__init__.py` file.
+A few of these variables are defined in another file called `__about__.py`. This file is imported into the `__init__.py` file.
 
 Here is an example of the `__init__.py` file for the [GitHub handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/github_handler).
 

@@ -697,8 +697,8 @@ class ExecuteCommands:
         try:
             jobs_controller.add(job_name, project_name, statement.query_str,
                                 statement.start_str, statement.end_str, statement.repeat_str)
-        except Exception as e:
-            if "already exists" in str(e) and getattr(statement, "if_not_exists", False):
+        except EntityExistsError as e:
+            if getattr(statement, "if_not_exists", False):
                 return ExecuteAnswer(ANSWER_TYPE.OK)
             raise e
 

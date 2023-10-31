@@ -194,6 +194,8 @@ class VectorStoreHandler(BaseHandler):
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
 
+        self.is_connected = False
+
         if kwargs:
             kwargs["connection_data"].pop("password", None)
             self.handler_storage = HandlerStorage(kwargs.get("integration_id"))
@@ -210,8 +212,6 @@ class VectorStoreHandler(BaseHandler):
                 self.persist_directory = self.handler_storage.folder_get(
                     self.config.persist_directory
                 )
-
-        self.is_connected = False
 
     def __del__(self):
         if self.is_connected is True:

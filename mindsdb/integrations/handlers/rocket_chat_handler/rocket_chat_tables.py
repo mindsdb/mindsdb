@@ -70,7 +70,8 @@ class ChannelMessagesTable(APITable):
         message_rows = [message_to_dataframe_row(m) for m in message_data['messages']]
         df = pd.DataFrame(message_rows)
 
-        df = sort_dataframe(df, query.order_by)
+        if query.order_by is not None:
+            df = sort_dataframe(df, query.order_by)
         df = project_dataframe(df, query.targets, self.get_columns())
 
         return df
@@ -145,6 +146,8 @@ class DirectMessagesTable(APITable):
 
         message_rows = [message_to_dataframe_row(m) for m in message_data['messages']]
         df = pd.DataFrame(message_rows)
+        if query.order_by is not None:
+            df = sort_dataframe(df, query.order_by)
         df = sort_dataframe(df, query.order_by)
         df = project_dataframe(df, query.targets, self.get_columns())
 

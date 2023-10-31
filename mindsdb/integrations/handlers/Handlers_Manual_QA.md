@@ -51,3 +51,5 @@ Strava app integration passed : https://github.com/Sekhar-Kumar-Dash/strava_mind
 </br>
 Strava app integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Strava/Strava_app_QA.md
 </br>
+Mendeley integration Test Passed: https://github.com/Sekhar-Kumar-Dash/mindsdb_mendeley/blob/main/mendeley_handler/mendeley_qa.md
+</br>

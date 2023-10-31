@@ -44,19 +44,18 @@ Simple Search for recent articles:
 ```sql
 SELECT *
 FROM newsAPI.article
-WHERE query = 'mindsdb';
+WHERE query = 'Python';
 ```
 
-Advanced search for recent articles:
+Advanced search for recent articles per specific sources between dates:
 
 ```sql
 SELECT *
 FROM newsAPI.article
-WHERE query = 'mindsdb'
-AND sources="abc-news"
-AND publishedAt >= "2023-03-23" AND  publishedAt <= "2023-04-23"
-ORDER BY publishedAt
-LIMIT 40;
+WHERE query = 'Python'
+AND sources="bbc-news"
+AND publishedAt >= "2021-03-23" AND  publishedAt <= "2023-04-23"
+LIMIT 4;
 ```
 
 <Info>

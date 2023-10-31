@@ -8,10 +8,10 @@ from langchain.vectorstores import VectorStore
 from mindsdb.integrations.handlers.rag_handler.settings import (
     PersistedVectorStoreSaver,
     PersistedVectorStoreSaverConfig,
-    RAGHandlerParameters,
+    RAGBaseParameters,
     VectorStoreFactory,
     df_to_documents,
-    get_chroma_settings,
+    get_chroma_client,
     load_embeddings_model,
     url_to_documents,
 )
@@ -45,12 +45,12 @@ def validate_documents(documents) -> bool:
     return all([validate_document(doc) for doc in documents])
 
 
-class Ingestor:
+class RAGIngestor:
     """A class for converting a dataframe and/or url to a vectorstore embedded with a given embeddings model"""
 
     def __init__(
         self,
-        args: RAGHandlerParameters,
+        args: RAGBaseParameters,
         df: pd.DataFrame,
     ):
         self.args = args
@@ -98,8 +98,7 @@ class Ingestor:
             return self.vector_store.from_documents(
                 documents=documents,
                 embedding=embeddings_model,
-                persist_directory=self.args.vector_store_storage_path,
-                client_settings=get_chroma_settings(
+                client=get_chroma_client(
                     persist_directory=self.args.vector_store_storage_path
                 ),
                 collection_name=self.args.collection_name,
@@ -164,7 +163,7 @@ class Ingestor:
 
         vector_store_saver.save_vector_store(db)
 
-        db = None
+        db = None  # Free up memory
         end_time = time.time()
         elapsed_time = end_time - start_time
 

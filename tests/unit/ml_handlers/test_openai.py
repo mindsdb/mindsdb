@@ -8,6 +8,7 @@ from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHa
 from ..executor_test_base import BaseExecutorTest
 
 
+@pytest.mark.skipif(os.environ.get('OPENAI_API_KEY') is None, reason='Missing API key!')
 class TestOpenAI(BaseExecutorTest):
     """Test Class for OpenAI Integration Testing"""
 

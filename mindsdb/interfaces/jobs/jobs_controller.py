@@ -6,10 +6,11 @@ import sqlalchemy as sa
 
 from mindsdb_sql import parse_sql, ParsingException
 
+from mindsdb.utilities import log
+from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
-from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities import log
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
 
 
@@ -153,7 +154,6 @@ class JobsController:
         return date
 
     def delete(self, name, project_name):
-
         project_controller = ProjectController()
         project = project_controller.get(name=project_name)
 
@@ -165,7 +165,7 @@ class JobsController:
             deleted_at=sa.null()
         ).first()
         if record is None:
-            raise Exception(f'Job does not exist: {name}')
+            raise EntityNotExistsError('Job does not exist', name)
 
         self._delete_record(record)
         db.session.commit()

@@ -102,6 +102,7 @@ from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.interfaces.triggers.triggers_controller import TriggersController
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import mark_process, resolve_model_identifier
+from mindsdb.utilities.exception import EntityNotExistsError
 
 
 def _get_show_where(
@@ -711,9 +712,9 @@ class ExecuteCommands:
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
         try:
             jobs_controller.delete(job_name, project_name)
+        except EntityNotExistsError:
+            return ExecuteAnswer(ANSWER_TYPE.OK)
         except Exception as e:
-            if "does not exist" in str(e) and statement.if_exists:
-                return ExecuteAnswer(ANSWER_TYPE.OK)
             raise e
 
         return ExecuteAnswer(ANSWER_TYPE.OK)

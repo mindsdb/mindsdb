@@ -1,33 +1,16 @@
-import re
-    """
-    The above code is a Python script that defines classes and functions for integrating with the
-    Facebook Messenger API and performing various actions such as sending messages, images, audio,
-    video, files, and quick replies, as well as retrieving messages from the Messenger API.
-    
-    :param query: The `query` parameter is an instance of the `ast.Select` class, which represents a SQL
-    SELECT query. It contains information about the columns to select, the table to select from, any
-    conditions to filter the data, and any other clauses such as LIMIT or ORDER BY
-    """
 import os
-import datetime as dt
-import ast
 import time
 from collections import defaultdict
-import pytz
-import io
 import fbmessenger
 from fbmessenger import MessengerClient
-from fbmessenger.elements import Text, Messager
-from fbmessenger.quick_replies import QuickReply
-from fbmessenger.buttons import URLButton, POSTBACK
-from fbmessenger.threads import ThreadType
+from fbmessenger.elements import Messager
+from fbmessenger.buttons import POSTBACK
 import pandas as pd
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb_sql.parser import ast
-from mindsdb.integrations.libs.api_handler import APIHandler, APITable
+from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from mindsdb.integrations.utilities.date_utils import parse_utc_date
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -36,7 +19,6 @@ from mindsdb.integrations.libs.response import (
 
 # Import additional required libraries
 import requests
-import json
 
 from messengerapi import SendApi
 from messengerapi.components import Elements, Element, Buttons, Button, QuickReply
@@ -56,19 +38,19 @@ class MessagesTable(APITable):
             elif op == 'image':
                 if arg1 == 'message':
                     send_api = SendApi('<page_access_token>')
-                    send_api.send_local_image(arg2 , 'Recipient ID')
+                    send_api.send_local_image(arg2, 'Recipient ID')
             elif op == 'audio':
                 if arg1 == 'message':
                     send_api = SendApi('<page_access_token>')
-                    send_api.send_local_audio(arg2 , 'Recipient ID')
+                    send_api.send_local_audio(arg2, 'Recipient ID')
             elif op == 'video':
                 if arg1 == 'message':
                     send_api = SendApi('<page_access_token>')
-                    send_api.send_local_video(arg2 , 'Recipient ID')
+                    send_api.send_local_video(arg2, 'Recipient ID')
             elif op == 'file':
                 if arg1 == 'message':
                     send_api = SendApi('<page_access_token>')
-                    send_api.send_local_file(arg2 , 'Recipient ID')
+                    send_api.send_local_file(arg2, 'Recipient ID')
             elif op == 'quick_reply':
                 if arg1 == 'message':
                     client = Messager('<access_token>')
@@ -86,7 +68,7 @@ class MessagesTable(APITable):
                     buttons.add_button(button.get_content())
                     element = Element(title="My element", subtitle="The element's subtitle", image_url=arg2, buttons=buttons)
                     elements.add_element(element.get_content())
-                    send_api.send_generic_message(elements.get_content() , 'Recipient ID' , image_aspect_ratio="horizontal")
+                    send_api.send_generic_message(elements.get_content(), 'Recipient ID', image_aspect_ratio="horizontal")
 
         if query.limit is not None:
             params['limit'] = query.limit.value
@@ -130,16 +112,9 @@ class MessagesTable(APITable):
 
         return result
 
-
     def get_columns(self):
         return [
-            'id',
-            'created_time',
-            'message',
-            'from_id',
-            'from_name',
-            'to_id',
-            'to_name',
+            'id', 'created_time', 'message', 'from_id', 'from_name', 'to_id', 'to_name',
         ]
 
 
@@ -218,9 +193,7 @@ class FacebookMessengerHandler(APIHandler):
         self.is_connected = True
         return self.messenger_api
 
-
     def check_connection(self) -> StatusResponse:
-
         response = StatusResponse(False)
 
         try:
@@ -254,10 +227,8 @@ class FacebookMessengerHandler(APIHandler):
 
         return response
 
-
     def native_query(self, query_string: str = None):
         method_name, params = FuncParser().from_string(query_string)
-
         df = self.call_facebook_messenger_api(method_name, params)
 
         return Response(

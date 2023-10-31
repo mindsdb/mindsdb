@@ -79,7 +79,7 @@ class OpenStreetMapNodeTable(APITable):
         nodes_df = select_statement_executor.execute_query()
 
         return nodes_df
-    
+
     def get_nodes(self, **kwargs) -> List[Dict]:
         where_conditions = kwargs.get('where_conditions', None)
 
@@ -104,7 +104,7 @@ class OpenStreetMapNodeTable(APITable):
 
                 else:
                     tags[condition[1]] = condition[2]
-            
+
         result = self.execute_osm_node_query(
             tags=tags,
             area=area,
@@ -162,7 +162,7 @@ class OpenStreetMapNodeTable(APITable):
 
         result = api.query(query)
         return result
-    
+
 
 class OpenStreetMapWayTable(APITable):
     """The OpenStreetMap Ways Table implementation"""
@@ -187,10 +187,10 @@ class OpenStreetMapWayTable(APITable):
         ways_df = select_statement_executor.execute_query()
 
         return ways_df
-    
+
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_ways(limit=1)).columns.tolist()
-    
+
     def get_ways(self, **kwargs) -> List[Dict]:
 
         api_session = self.handler.connect()
@@ -199,12 +199,11 @@ class OpenStreetMapWayTable(APITable):
             ({{bbox}});
             out;
             """,
-           # bbox=self.connection_data['bbox']
-        )
+                                 # bbox=self.connection_data['bbox']
+                                 )
         return [way.to_dict() for way in ways.ways]
-    
-    
-    
+
+
 class OpenStreetMapRelationTable(APITable):
     """The OpenStreetMap Relations Table implementation"""
 
@@ -218,7 +217,7 @@ class OpenStreetMapRelationTable(APITable):
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
         relations_df = pd.json_normalize(self.get_relations(limit=result_limit))
-        
+
         select_statement_executor = SELECTQueryExecutor(
             relations_df,
             selected_columns,
@@ -228,19 +227,18 @@ class OpenStreetMapRelationTable(APITable):
         relations_df = select_statement_executor.execute_query()
 
         return relations_df
-    
+
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_relations(limit=1)).columns.tolist()
-    
+
     def get_relations(self, **kwargs) -> List[Dict]:
-                
-                api_session = self.handler.connect()
-                relations = api_session.query("""
+
+        api_session = self.handler.connect()
+        relations = api_session.query("""
                     relation
                     ({{bbox}});
                     out;
                     """,
-                   # bbox=self.connection_data['bbox']
-                )
-                return [relation.to_dict() for relation in relations.relations]
-    
+                                      # bbox=self.connection_data['bbox']
+                                      )
+        return [relation.to_dict() for relation in relations.relations]

@@ -3,8 +3,8 @@ import overpy
 import pandas as pd
 from typing import Text, List, Dict
 
-from mindsdb.integrations.handlers.openstreetmap_handler.openstreetmap_tables import ( OpenStreetMapNodeTable, 
-    OpenStreetMapWayTable, OpenStreetMapRelationTable )
+from mindsdb.integrations.handlers.openstreetmap_handler.openstreetmap_tables import (OpenStreetMapNodeTable,
+                                                                                      OpenStreetMapWayTable, OpenStreetMapRelationTable)
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -12,6 +12,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
+
 
 class OpenStreetMapHandler(APIHandler):
     """The OpenStreetMap handler implementation."""
@@ -56,7 +57,7 @@ class OpenStreetMapHandler(APIHandler):
         self.is_connected = True
 
         return self.connection
-    
+
     def check_connection(self) -> StatusResponse:
         """Check connection to the handler.
 
@@ -77,7 +78,6 @@ class OpenStreetMapHandler(APIHandler):
 
         return response
 
-        
     def native_query(self, query: str) -> Response:
         """Execute a native query on the handler.
 

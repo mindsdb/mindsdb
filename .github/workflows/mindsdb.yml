@@ -66,7 +66,8 @@ jobs:
 
           # THe following packages need exceptions because they are optional deps of some other packages. e.g. langchain CAN use openai
           # (pysqlite3-binary is imported in an unusual way in the chromadb handler and needs to be excluded too)
-          OPTIONAL_HANDLER_DEPS="pysqlite3-binary|torch|openai|tiktoken|wikipedia|anthropic"
+          # psycopg2 is required by sqlite for postgres databases (which we use in the core codebase)
+          OPTIONAL_HANDLER_DEPS="psycopg2|pysqlite3-binary|torch|openai|tiktoken|wikipedia|anthropic"
 
           # List of rules we can ignore for specific packages
           # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in this handler

@@ -49,18 +49,18 @@ Read about creating an account [here](https://hub.docker.com/).
 The first step is to create a database with the new `dockerhub` engine. 
 
 ~~~~sql
-CREATE DATABASE mindsdb_dockerhub
-WITH ENGINE = 'dockerhub',
+CREATE DATABASE mindsdb_clipdrop
+WITH ENGINE = 'clipdrop',
 PARAMETERS = {
-  "username": "user",
-  "password": "pass"
+  "api_key": "api_key",
+  "dir_to_save": "/Users/Sam/Documents/test/"
 };
 ~~~~
 
 Use the established connection to query your database:
 
 ~~~~sql
-SELECT * FROM mindsdb_dockerhub.repo_images_summary WHERE namespace="docker" AND repository="trusted-registry-nginx";
+SELECT * FROM mindsdb_clipdrop.remove_text WHERE img_url="https://static.vecteezy.com/system/resources/thumbnails/022/721/714/small/youtube-logo-for-popular-online-media-content-creation-website-and-application-free-png.png";
 ~~~~
 
 ~~~~sql

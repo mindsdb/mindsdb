@@ -34,7 +34,7 @@ class ClipdropHandler(APIHandler):
         self.connection_data = connection_data
         self.kwargs = kwargs
         self.client = ClipdropClient(connection_data.get("api_key"), 
-                                     connection_data.get(""))
+                                     connection_data.get("dir_to_save"))
         self.is_connected = False
 
         remove_text_data = RemoveTextTable(self)
@@ -51,6 +51,7 @@ class ClipdropHandler(APIHandler):
         # FYI - No way currently to establish a connection with the given key
         # without making a requests that is chargeable
         # TODO - Find a way to solve FYI
+        self.is_connected = True
         return StatusResponse(True)
 
     def check_connection(self) -> StatusResponse:
@@ -64,6 +65,7 @@ class ClipdropHandler(APIHandler):
         # FYI - No way currently to establish a connection with the given key
         # without making a requests that is chargeable
         # TODO - Find a way to solve FYI
+        self.is_connected = True
         return StatusResponse(True)
 
     def native_query(self, query: str) -> StatusResponse:
@@ -94,7 +96,7 @@ connection_args = OrderedDict(
         "type": ARG_TYPE.STR,
         "description": "The local directory to save Clipdrop API response",
         "required": True,
-        "label": "api_key",
+        "label": "dir_to_save",
     }
 )
 

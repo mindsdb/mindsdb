@@ -4,7 +4,7 @@ from .__about__ import __version__ as version, __description__ as description
 
 try:
     from .clipdrop_handler import (
-        DockerHubHandler as Handler,
+        ClipdropHandler as Handler,
         connection_args_example,
         connection_args,
     )
@@ -17,7 +17,7 @@ except Exception as e:
 title = "Clipdrop"
 name = "clipdrop"
 type = HANDLER_TYPE.DATA
-icon_path = "icon.svg"
+icon_path = "icon.png"
 
 __all__ = [
     "Handler",

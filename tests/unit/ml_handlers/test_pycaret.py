@@ -47,7 +47,7 @@ class TestPyCaret(BaseExecutorTest):
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_classifier(self, mock_handler):
-        iris_df = pd.read_csv('tests/unit/ml_handlers/data/iris.csv')
+        iris_df = pd.read_csv('https://raw.githubusercontent.com/pycaret/pycaret/master/datasets/iris.csv')
         self.set_handler(mock_handler, name='pg', tables={'iris': iris_df})
 
         # create project
@@ -57,8 +57,8 @@ class TestPyCaret(BaseExecutorTest):
         self.run_sql('''
             CREATE MODEL proj.my_pycaret_class_model
             FROM pg
-                (SELECT SepalLengthCm, SepalWidthCm, PetalLengthCm, PetalWidthCm, Species FROM iris)
-            PREDICT Species
+                (SELECT sepal_length, sepal_width, petal_length, petal_width, species FROM iris)
+            PREDICT species
             USING
               engine = 'pycaret',
               model_type = 'classification',
@@ -79,7 +79,7 @@ class TestPyCaret(BaseExecutorTest):
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_regression(self, mock_handler):
-        insurance_df = pd.read_csv('tests/unit/ml_handlers/data/insurance.csv')
+        insurance_df = pd.read_csv('https://raw.githubusercontent.com/pycaret/pycaret/master/datasets/insurance.csv')
         self.set_handler(mock_handler, name='pg', tables={'insurance': insurance_df})
 
         # create project
@@ -112,7 +112,7 @@ class TestPyCaret(BaseExecutorTest):
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     @pytest.mark.skip(reason="MindsDB recognizes 'Anomaly' as a keyword so it fails to fetch Anomaly column")
     def test_anomaly(self, mock_handler):
-        anomaly_df = pd.read_csv('tests/unit/ml_handlers/data/anomaly.csv')
+        anomaly_df = pd.read_csv('https://raw.githubusercontent.com/pycaret/pycaret/master/datasets/anomaly.csv')
         self.set_handler(mock_handler, name='pg', tables={'anomaly': anomaly_df})
 
         # create project
@@ -146,7 +146,7 @@ class TestPyCaret(BaseExecutorTest):
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_cluster(self, mock_handler):
-        jewellery_df = pd.read_csv('tests/unit/ml_handlers/data/jewellery.csv')
+        jewellery_df = pd.read_csv('https://raw.githubusercontent.com/pycaret/pycaret/master/datasets/jewellery.csv')
         self.set_handler(mock_handler, name='pg', tables={'jewellery': jewellery_df})
 
         # create project
@@ -178,7 +178,10 @@ class TestPyCaret(BaseExecutorTest):
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_timeseries(self, mock_handler):
-        airline_df = pd.read_csv('tests/unit/ml_handlers/data/airline.csv')
+        airline_df = pd.read_csv('https://raw.githubusercontent.com/sktime/sktime/main/sktime/datasets/data/Airline/Airline.csv')
+        airline_df[['Year', 'Month']] = airline_df['Date'].str.split('-', expand=True)
+        airline_df['Year'] = airline_df['Year'].astype(int)
+        airline_df['Month'] = airline_df['Month'].astype(int)
         self.set_handler(mock_handler, name='pg', tables={'airline': airline_df})
 
         # create project

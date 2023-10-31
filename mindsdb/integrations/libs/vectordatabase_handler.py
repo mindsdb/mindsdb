@@ -193,21 +193,25 @@ class VectorStoreHandler(BaseHandler):
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
-        kwargs["connection_data"].pop("password", None)
-        self.handler_storage = HandlerStorage(kwargs.get("integration_id"))
 
-        _config = kwargs.get("connection_data")
-        _config["vector_store"] = name
+        if kwargs:
+            kwargs["connection_data"].pop("password", None)
+            self.handler_storage = HandlerStorage(kwargs.get("integration_id"))
 
-        self.config = VectorStoreHandlerConfig(**_config)
+            _config = kwargs.get("connection_data")
+            _config["vector_store"] = name
+
+            self.config = VectorStoreHandlerConfig(**_config)
+
+            self.persist_directory = None
+
+            if self.config.persist_directory and not self.handler_storage.is_temporal:
+                # get full persistence directory from handler storage
+                self.persist_directory = self.handler_storage.folder_get(
+                    self.config.persist_directory
+                )
 
         self.is_connected = False
-
-        if self.config.persist_directory and not self.handler_storage.is_temporal:
-            # get full persistence directory from handler storage
-            self.persist_directory = self.handler_storage.folder_get(
-                self.config.persist_directory
-            )
 
     def __del__(self):
         if self.is_connected is True:

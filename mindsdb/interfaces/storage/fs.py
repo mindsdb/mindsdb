@@ -17,8 +17,10 @@ import psutil
 from checksumdir import dirhash
 try:
     import boto3
+    from botocore.exceptions import ClientError as S3ClientError
 except Exception:
     # Only required for remote storage on s3
+    S3ClientError = FileNotFoundError
     pass
 
 
@@ -37,13 +39,18 @@ class RESOURCE_GROUP:
 RESOURCE_GROUP = RESOURCE_GROUP()
 
 
+DIR_LOCK_FILE_NAME = 'dir.lock'
+DIR_LAST_MODIFIED_FILE_NAME = 'last_modified.txt'
+SERVICE_FILES_NAMES = (DIR_LOCK_FILE_NAME, DIR_LAST_MODIFIED_FILE_NAME)
+
+
 def copy(src, dst):
     if os.path.isdir(src):
         if os.path.exists(dst):
             if dirhash(src) == dirhash(dst):
                 return
         shutil.rmtree(dst, ignore_errors=True)
-        shutil.copytree(src, dst)
+        shutil.copytree(src, dst, dirs_exist_ok=True)
     else:
         if os.path.exists(dst):
             if hashlib.md5(open(src, 'rb').read()).hexdigest() == hashlib.md5(open(dst, 'rb').read()).hexdigest():
@@ -141,43 +148,62 @@ class FileLock:
         works as context
     """
 
-    def __init__(self, local_path: Path):
+    @staticmethod
+    def lock_folder_path(relative_path: Path) -> Path:
         """ Args:
-            local_path (Path): path to directory
+                relative_path (Path): path to resource directory relative to storage root
+
+            Returns:
+                Path: abs path to folder with lock file
         """
-        self._local_path = local_path
-        self._local_file_name = 'dir.lock'
-        self._lock_file_path = local_path / self._local_file_name
+        config = Config()
+        root_storage_path = Path(config.paths['root'])
+        return config.paths['locks'] / relative_path.relative_to(root_storage_path)
+
+    def __init__(self, relative_path: Path, mode: str = 'w'):
+        """ Args:
+                relative_path (Path): path to resource directory relative to storage root
+                mode (str): lock for read (r) or write (w)
+        """
+        if os.name != 'posix':
+            return
+
+        self._local_path = FileLock.lock_folder_path(relative_path)
+        self._lock_file_name = DIR_LOCK_FILE_NAME
+        self._lock_file_path = self._local_path / self._lock_file_name
+        self._mode = fcntl.LOCK_EX if mode == 'w' else fcntl.LOCK_SH
+
+        if self._lock_file_path.is_file() is False:
+            self._local_path.mkdir(parents=True, exist_ok=True)
+            try:
+                self._lock_file_path.write_text('')
+            except Exception:
+                pass
 
     def __enter__(self):
         if os.name != 'posix':
             return
-        if self._lock_file_path.is_file() is False:
-            try:
-                self._local_path.mkdir(parents=True, exist_ok=True)
-                self._lock_file_path.write_text('')
-            except Exception:
-                pass
+
         try:
             # On at least some systems, LOCK_EX can only be used if the file
             # descriptor refers to a file opened for writing.
-            self._file = open(self._lock_file_path, 'w')
-            fd = self._file.fileno()
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self._lock_fd = os.open(self._lock_file_path, os.O_RDWR | os.O_CREAT)
+            fcntl.lockf(self._lock_fd, self._mode | fcntl.LOCK_NB)
         except (ValueError, FileNotFoundError):
             # file probably was deleted between open and lock
             print(f'Cant accure lock on {self._local_path}')
             raise FileNotFoundError
         except BlockingIOError:
             print(f'Directory is locked by another process: {self._local_path}')
-            fcntl.flock(fd, fcntl.LOCK_EX)
+            fcntl.lockf(self._lock_fd, self._mode)
 
     def __exit__(self, exc_type, exc_value, traceback):
         if os.name != 'posix':
             return
+
         try:
-            fcntl.flock(self._file.fileno(), fcntl.LOCK_UN)
-            self._file.close()
+            fcntl.lockf(self._lock_fd, fcntl.LOCK_UN)
+            os.close(self._lock_fd)
         except Exception:
             pass
 
@@ -225,7 +251,7 @@ class S3FSStore(BaseFSStore):
             Returns:
                 datetime | None
         """
-        last_modified_file_path = Path(base_dir) / local_name / 'last_modified.txt'
+        last_modified_file_path = Path(base_dir) / local_name / DIR_LAST_MODIFIED_FILE_NAME
         if last_modified_file_path.is_file() is False:
             return None
         try:
@@ -244,7 +270,7 @@ class S3FSStore(BaseFSStore):
                 local_name (str): folder name
                 last_modified (datetime)
         """
-        last_modified_file_path = Path(base_dir) / local_name / 'last_modified.txt'
+        last_modified_file_path = Path(base_dir) / local_name / DIR_LAST_MODIFIED_FILE_NAME
         last_modified_text = last_modified.strftime(self.dt_format)
         last_modified_file_path.write_text(last_modified_text)
 
@@ -293,20 +319,23 @@ class S3FSStore(BaseFSStore):
         local_ziped_name = f'{local_name}.tar.gz'
         local_ziped_path = os.path.join(base_dir, local_ziped_name)
 
-        local_last_modified = self._get_local_last_modified(base_dir, local_name)
-        remote_last_modified = self._get_remote_last_modified(remote_ziped_name)
-        if (
-            local_last_modified is not None
-            and local_last_modified == remote_last_modified
-        ):
-            return
+        folder_path = Path(base_dir) / local_name
+        with FileLock(folder_path, mode='r'):
+            local_last_modified = self._get_local_last_modified(base_dir, local_name)
+            remote_last_modified = self._get_remote_last_modified(remote_ziped_name)
+            if (
+                local_last_modified is not None
+                and local_last_modified == remote_last_modified
+            ):
+                return
 
-        self._download(
-            base_dir,
-            remote_ziped_name,
-            local_ziped_path,
-            last_modified=remote_last_modified
-        )
+        with FileLock(folder_path, mode='w'):
+            self._download(
+                base_dir,
+                remote_ziped_name,
+                local_ziped_path,
+                last_modified=remote_last_modified
+            )
 
     @profiler.profile()
     def put(self, local_name, base_dir, compression_level=9):
@@ -324,11 +353,12 @@ class S3FSStore(BaseFSStore):
                 os.chdir(base_dir)
                 with tarfile.open(fileobj=fh, mode='w:gz', compresslevel=compression_level) as tar:
                     for path in dir_path.iterdir():
-                        if path.is_file() and path.name in ('dir.lock', 'last_modified.txt'):
+                        if path.is_file() and path.name in SERVICE_FILES_NAMES:
                             continue
                         tar.add(path.relative_to(base_dir))
                 os.chdir(old_cwd)
             fh.seek(0)
+
             self.s3.upload_fileobj(
                 fh,
                 self.bucket,
@@ -341,6 +371,7 @@ class S3FSStore(BaseFSStore):
                 root_dir=base_dir,
                 base_dir=local_name
             )
+
             self.s3.upload_file(
                 os.path.join(base_dir, remote_zipped_name),
                 self.bucket,
@@ -393,12 +424,12 @@ class FileStorage:
             self.folder_path.mkdir(parents=True, exist_ok=True)
 
     @profiler.profile()
-    def push(self, compression_level=9):
-        with FileLock(self.folder_path):
+    def push(self, compression_level: int = 9):
+        with FileLock(self.folder_path, mode='r'):
             self._push_no_lock(compression_level=compression_level)
 
     @profiler.profile()
-    def _push_no_lock(self, compression_level=9):
+    def _push_no_lock(self, compression_level: int = 9):
         self.fs_store.put(
             str(self.folder_name),
             str(self.resource_group_path),
@@ -406,40 +437,31 @@ class FileStorage:
         )
 
     @profiler.profile()
-    def push_path(self, path):
-        with FileLock(self.folder_path):
-            self.fs_store.put(os.path.join(self.folder_name, path), str(self.resource_group_path))
+    def push_path(self, path, compression_level: int = 9):
+        # TODO implement push per element
+        self.push(compression_level=compression_level)
 
     @profiler.profile()
     def pull(self):
-        with FileLock(self.folder_path):
-            self._pull_no_lock()
-
-    @profiler.profile()
-    def _pull_no_lock(self):
         try:
-            self.fs_store.get(str(self.folder_name), str(self.resource_group_path))
-        except Exception:
+            self.fs_store.get(
+                str(self.folder_name),
+                str(self.resource_group_path)
+            )
+        except (FileNotFoundError, S3ClientError):
             pass
 
     @profiler.profile()
-    def pull_path(self, path, update=True):
-        with FileLock(self.folder_path):
-            if update is False:
-                # not pull from source if object is exists
-                if os.path.exists(self.resource_group_path / self.folder_name / path):
-                    return
-            try:
-                # TODO not sync if not changed?
-                self.fs_store.get(os.path.join(self.folder_name, path), str(self.resource_group_path))
-            except Exception:
-                pass
+    def pull_path(self, path):
+        # TODO implement pull per element
+        self.pull()
 
     @profiler.profile()
     def file_set(self, name, content):
-        with FileLock(self.folder_path):
-            if self.sync is True:
-                self._pull_no_lock()
+        if self.sync is True:
+            self.pull()
+
+        with FileLock(self.folder_path, mode='w'):
 
             dest_abs_path = self.folder_path / name
 
@@ -451,12 +473,10 @@ class FileStorage:
 
     @profiler.profile()
     def file_get(self, name):
-        with FileLock(self.folder_path):
-            if self.sync is True:
-                self._pull_no_lock()
-
-            dest_abs_path = self.folder_path / name
-
+        if self.sync is True:
+            self.pull()
+        dest_abs_path = self.folder_path / name
+        with FileLock(self.folder_path, mode='r'):
             with open(dest_abs_path, 'rb') as fd:
                 return fd.read()
 
@@ -481,9 +501,9 @@ class FileStorage:
             path (Union[str, Path]): path to the resource
             dest_rel_path (Optional[Union[str, Path]]): relative path in storage to file or folder
         """
-        with FileLock(self.folder_path):
-            if self.sync is True:
-                self._pull_no_lock()
+        if self.sync is True:
+            self.pull()
+        with FileLock(self.folder_path, mode='w'):
 
             path = Path(path)
             if isinstance(dest_rel_path, str):
@@ -517,10 +537,10 @@ class FileStorage:
         Returns:
             Path: path to requested file or folder
         """
-        with FileLock(self.folder_path):
-            if self.sync is True:
-                self._pull_no_lock()
+        if self.sync is True:
+            self.pull()
 
+        with FileLock(self.folder_path, mode='r'):
             if isinstance(relative_path, str):
                 relative_path = Path(relative_path)
             # relative_path = relative_path.resolve()
@@ -536,19 +556,27 @@ class FileStorage:
         return ret_path
 
     def delete(self, relative_path: Union[str, Path] = '.'):
-        with FileLock(self.folder_path):
-            if isinstance(relative_path, str):
-                relative_path = Path(relative_path)
+        path = (self.folder_path / relative_path).resolve()
+        if isinstance(relative_path, str):
+            relative_path = Path(relative_path)
 
-            if relative_path.is_absolute():
-                raise TypeError('FSStorage.delete() got absolute path as argument')
+        if relative_path.is_absolute():
+            raise TypeError('FSStorage.delete() got absolute path as argument')
 
-            path = (self.folder_path / relative_path).resolve()
+        # complete removal
+        if path == self.folder_path.resolve():
+            with FileLock(self.folder_path, mode='w'):
+                self.fs_store.delete(self.folder_name)
+                # NOTE on some fs .rmtree is not working if any file is open
+                shutil.rmtree(str(self.folder_path))
 
-            if path == self.folder_path.resolve():
-                self._complete_removal()
-                return
+            # region del file lock
+            lock_folder_path = FileLock.lock_folder_path(self.folder_path)
+            shutil.rmtree(lock_folder_path)
+            # endregion
+            return
 
+        with FileLock(self.folder_path, mode='w'):
             if self.sync is True:
                 self._pull_no_lock()
 
@@ -562,10 +590,6 @@ class FileStorage:
 
             if self.sync is True:
                 self._push_no_lock()
-
-    def _complete_removal(self):
-        self.fs_store.delete(self.folder_name)
-        shutil.rmtree(str(self.folder_path))
 
 
 class FileStorageFactory:

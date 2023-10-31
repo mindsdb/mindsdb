@@ -32,25 +32,10 @@ LIMIT 1;
 ```
 
 
-This should return the conteants of docs.mindsdb.com
+This should return the contents of docs.mindsdb.com
 
 
-Now lets assume that we want to search for the contents on more than one website
-
-
-```
-SELECT 
-   * 
-FROM my_web.crawler 
-WHERE 
-   url IN ('docs.mindsdb.com', 'docs.python.com') 
-LIMIT 1;
-```
-
-That should obtain two rows, LIMIT 1 limits how deep you go on each
-
-
-now lets get 10 pages deep on both:
+Now let's assume that we want to search for the contents on more than one website
 
 
 ```
@@ -59,13 +44,12 @@ SELECT
 FROM my_web.crawler 
 WHERE 
    url IN ('docs.mindsdb.com', 'docs.python.com') 
-LIMIT 10;
+LIMIT 30;
 ```
 
-You will get 20 results, as the crawler went 10 levels deeper into each url
+This command will crawl two sites and stop when the count of results hit 30. The total count of rows in result will be 30.
 
-
-NOTE: If you dont pass a limit, it will crawl until there are no more links to crawl, you should try it, it may take a while but it is pretty useful if say you wan to train a 
-model to answer questions for you given the info on this website
+NOTE: limit is mandatory. If you want to crawl all pages on site you can pass a big number in limit (for example 10000), more than expected count of pages on site. 
+But big limit also increases time to waiting for response.
 
 

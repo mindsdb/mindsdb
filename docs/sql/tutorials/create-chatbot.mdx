@@ -1,0 +1,103 @@
+---
+title: Build a Chatbot with MindsDB
+sidebarTitle: Customize Chatbot
+---
+
+MindsDB provides the `CREATE CHATBOT` statement that is used under the hood by the [Chatbot Interface](/sql/tutorials/llm-chatbot-ui). But, if you want to customize your chatbot to learn from the underlying database or use a different model, check out this tutorial.
+
+The `CREATE CHATBOT` statement requires three componenets:
+
+1. The AI model in the `conversational` mode.
+
+<Note>
+Currently, we support the `langchain` and `llamaindex` engines to create models for chatbots.
+</Note>
+
+2. The connection to the chat app, like Slack or Rocket Chat.
+
+3. The training data source used to train the chatbot with your private data.
+
+Let's go over getting all the components ready.
+
+## Chatbot Components
+
+### AI Model
+
+Here is the command to create and deploy the model:
+
+```sql
+CREATE MODEL conversational_langchain_model
+PREDICT answer
+USING
+  engine = 'langchain',
+  mode = 'conversational',
+  prompt = 'answer users questions as a helpful assistant',
+  user_column = 'question',
+  assistant_column = 'answer';
+```
+
+Here is the command to check its status:
+
+```sql
+DESCRIBE conversational_langchain_model;
+```
+
+The status should read `complete` before proceeding.
+
+### Chat App
+
+Here is the command to connect your Slack app to MindsDB:
+
+```sql
+CREATE DATABASE chatbot_slack
+WITH
+  ENGINE = 'slack',
+  PARAMETERS = {
+      "token": "xoxb-...",
+      "app_token": "xapp-..."
+    };
+```
+
+<Tip>
+Follow [this link](/sql/tutorials/llm-chatbot-ui#slack-app-setup) to learn how to setup Slack app and generate tokens.
+</Tip>
+
+### Training Data
+
+Use the `CREATE DATABASE` statement to connect your database that stores training data.
+
+Here is an example for the MySQL database:
+
+```sql
+CREATE DATABASE mysql_demo_db
+WITH ENGINE = "mysql",
+PARAMETERS = {
+    "user": "user",
+    "password": "MindsDBUser123!",
+    "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
+    "port": "3306",
+    "database": "public"
+    };
+```
+
+## Create Chatbot
+
+Once all the components are ready, let's proceed to creating the chatbot.
+
+```sql
+CREATE CHATBOT my_chatbot
+USING
+   model = 'conversational_langchain_model',
+   database = 'chatbot_slack',
+   backoffice_db = 'mysql_demo_db';
+```
+
+The `model` parameter defines the underlying model for the chatbot. The `database` parameter stores connection to a chat app. And the `backoffice_db` parameter stores connection to a data source that contains training data.
+
+You can query all chatbot using this query:
+
+```sql
+SELECT * FROM chatbots;
+```
+
+Now you can go to Slack and chat with the app directly.

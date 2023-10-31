@@ -3,7 +3,11 @@ title: Gmail
 sidebarTitle: Gmail
 ---
 
-In this section, we present how to integrate a Gmail account with MindsDB.
+In this section, we present how to connect Gmail accounts to MindsDB.
+
+[Gmail](https://gmail.com/) is a widely used and popular email service developed by Google.
+
+By connecting your Gmail account to MindsDB, you can utilize various AI models available within MindsDB to summarize emails, detect spam, or even automate email replies.
 
 <Warning>
 Please note that currently you can connect your Gmail account to local MindsDB installation by providing a path to the credentials file stored locally.
@@ -15,7 +19,7 @@ If you want to connect your Gmail account to MindsDB Cloud, you can upload the c
 
 The required arguments to establish a connection are as follows:
 
-* `credentials_file` local path to the credentials.json or `s3_credentials_file` in case your file is uploaded to s3. Follow the instructions below to generate the credentials file.
+* `credentials_file` local path to the credentials.json or `credentials_url` in case your file is uploaded to s3. Follow the instructions below to generate the credentials file.
 * `scopes` define the level of access granted. It is optional and by default it uses 'https://.../gmail.compose' and 'https://.../gmail.readonly' scopes.
 * 
 <Tip>
@@ -39,7 +43,7 @@ Or, you can also connect by giving the credentials file from an s3 [pre signed u
 CREATE DATABASE mindsdb_gmail
 WITH ENGINE = 'gmail',
 parameters = {
-    "s3_credentials_file": "https://s3.amazonaws.com/your_bucket/credentials.json?response-content-disposition=inline&X-Amz-Security-Token=12312...",
+    "credentials_url": "https://s3.amazonaws.com/your_bucket/credentials.json?response-content-disposition=inline&X-Amz-Security-Token=12312...",
     -- "scopes": ['SCOPE_1', 'SCOPE_2', ...] -- Optional scopes. By default 'https://.../gmail.compose' & 'https://.../gmail.readonly' scopes are used
 };
 ```
@@ -74,9 +78,14 @@ You need a Google account in order to use this integration. Here is how to get t
     3.2 Click on the `Create Credentials` button and choose `OAuth client ID`.
 
     3.3 If you haven't configured the OAuth consent screen before, you'll be prompted to do so now. Make sure to choose `External` for User Type, and select the necessary scopes. Make sure to save the changes.
-    Now, create the OAuth client ID. Choose `Desktop app` for the Application Type and give it a name.
 
-    3.4 Click `Create`.
+    Now, create the OAuth client ID. Choose `Web application` for the Application Type and give it a name.
+
+    3.4 Add the following MindsDB URL to `Authorized JavaScript origins` and `Authorized redirect URIs` : 
+        - For local installation, add `http://localhost/verify-auth`
+        - For Cloud, add `http://cloud.mindsdb.com/verify-auth`.
+
+    3.5 Click `Create`.
 
 4. Download the JSON file:
 

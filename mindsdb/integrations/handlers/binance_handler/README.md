@@ -17,7 +17,7 @@ WITH
 ```
 
 ### Select Data
-To see if the connection was succesful, try searching for the most recent trade data. By default, aggregate data (klines) from the latest 1000 trading intervals with a length of 1m each are returned.
+To see if the connection was successful, try searching for the most recent trade data. By default, aggregate data (klines) from the latest 1000 trading intervals with a length of 1m each are returned.
 
 ```
 SELECT *

@@ -96,6 +96,8 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="autokeras", data={}, engine="autokeras")
         db.session.add(r)
+        r = db.Integration(name="autogluon", data={}, engine="autogluon")
+        db.session.add(r)
         r = db.Integration(name="huggingface", data={}, engine="huggingface")
         db.session.add(r)
         r = db.Integration(name="merlion", data={}, engine="merlion")
@@ -117,9 +119,18 @@ class BaseUnitTest:
         r = db.Integration(name="openai", data={}, engine="openai")
         db.session.add(r)
         r = db.Integration(
+            name="anyscale_endpoints", data={}, engine="anyscale_endpoints"
+        )
+        db.session.add(r)
+        r = db.Integration(
             name="langchain_embedding", data={}, engine="langchain_embedding"
         )
         db.session.add(r)
+        r = db.Integration(name="writer", data={}, engine="writer")
+        db.session.add(r)
+        r = db.Integration(name="rag", data={}, engine="rag")
+        db.session.add(r)
+
         # Lightwood should always be last (else tests break, why?)
         r = db.Integration(name="lightwood", data={}, engine="lightwood")
         db.session.add(r)
@@ -195,7 +206,7 @@ class BaseExecutorTest(BaseUnitTest):
 
         if mock_lightwood:
             predict_patcher = mock.patch(
-                'mindsdb.integrations.libs.ml_exec_base.BaseMLEngineExec.predict'
+                "mindsdb.integrations.libs.ml_exec_base.BaseMLEngineExec.predict"
             )
             self.mock_predict = predict_patcher.__enter__()
 

@@ -3,7 +3,11 @@ title: Web Crawler
 sidebarTitle: Web Crawler
 ---
 
-In this section, we present how to build a web crawler with MindsDB.
+In this section, we present how to use a web crawler within MindsDB.
+
+A web crawler is a computer program or automated script that browses the internet and navigates through websites, web pages, and web content to gather data. Within the realm of MindsDB, a web crawler can be employed to harvest data, which can be used to train models, 
+domain specific chatbots or fine-tune LLMs.
+
 
 ## Connection
 
@@ -33,7 +37,7 @@ WHERE url = 'docs.mindsdb.com'
 LIMIT 1;
 ```
 
-You can also get the content of subwebsites. Here is how to fetch the content from 10 subwebsites:
+You can also get the content of internal pages. Here is how to fetch the content from 10 internal pages:
 
 ```sql
 SELECT * 
@@ -42,7 +46,7 @@ WHERE url = 'docs.mindsdb.com'
 LIMIT 10;
 ```
 
-Another option is to get the content from multiple webistes.
+Another option is to get the content from multiple websites.
 
 ```sql
 SELECT * 
@@ -62,4 +66,4 @@ WHERE url = '<link-to-pdf-file>'
 LIMIT 1;
 ```
 
-For example, you can provide a link to a `pdf` file stores in Amazon S3.
+For example, you can provide a link to a `pdf` file stored in Amazon S3.

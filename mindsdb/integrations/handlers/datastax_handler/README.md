@@ -26,8 +26,20 @@ WITH ENGINE = "astra",
 PARAMETERS = {
     "user": "user",
     "password": "pass",
-    "secure_connection_bundle": "/home/Downloads/file.zip"
+    "secure_connect_bundle": "/home/Downloads/file.zip"
     }
+```
+
+or, reference the bundle from Datastax s3 as:
+
+```sql
+CREATE DATABASE astra_connection
+WITH ENGINE = "astra",
+PARAMETERS = {
+    "user": "user",
+    "password": "pass",
+    "secure_connect_bundle": "https://datastax-cluster-config-prod.s3.us-east-2.amazonaws.com/32312-b9eb-4e09-a641-213eaesa12-1/secure-connect-demo.zip?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AK..."
+}  
 ```
 
 Now, you can use this established connection to query your database as follows:

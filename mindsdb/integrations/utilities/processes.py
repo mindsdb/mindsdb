@@ -1,4 +1,7 @@
-import torch.multiprocessing as mp
+try:
+    import torch.multiprocessing as mp
+except Exception:
+    import multiprocessing as mp
 
 ctx = mp.get_context('spawn')
 

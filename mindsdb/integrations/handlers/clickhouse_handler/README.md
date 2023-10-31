@@ -18,7 +18,7 @@ pip install clickhouse-sqlalchemy
 
 ## Usage
 
-To connect to ClickHouse use add `engine=clickhouse` to the CREATE DATABSE statement as:
+To connect to ClickHouse use add `engine=clickhouse` to the CREATE DATABASE statement as:
 
 ```sql
 CREATE DATABASE clic

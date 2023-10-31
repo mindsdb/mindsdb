@@ -86,9 +86,22 @@ class Config():
         paths['tmp'] = os.path.join(paths['root'], 'tmp')
         paths['log'] = os.path.join(paths['root'], 'log')
         paths['cache'] = os.path.join(paths['root'], 'cache')
+        paths['locks'] = os.path.join(paths['root'], 'locks')
 
         for path_name in paths:
             create_directory(paths[path_name])
+
+        ml_queue = {
+            'type': 'local'
+        }
+
+        if os.environ.get('MINDSDB_ML_QUEUE_TYPE', '').lower() == 'redis':
+            ml_queue['type'] = 'redis'
+            ml_queue['host'] = os.environ.get('MINDSDB_ML_QUEUE_HOST', 'localhost')
+            ml_queue['port'] = int(os.environ.get('MINDSDB_ML_QUEUE_PORT', 6379))
+            ml_queue['db'] = int(os.environ.get('MINDSDB_ML_QUEUE_DB', 0))
+            ml_queue['username'] = os.environ.get('MINDSDB_ML_QUEUE_USERNAME')
+            ml_queue['password'] = os.environ.get('MINDSDB_ML_QUEUE_PASSWORD')
 
         api_host = "127.0.0.1" if not self.use_docker_env else "0.0.0.0"
         self._default_config = {
@@ -140,7 +153,8 @@ class Config():
             },
             "cache": {
                 "type": "local"
-            }
+            },
+            'ml_task_queue': ml_queue
         }
 
         return _merge_configs(self._default_config, self._override_config)

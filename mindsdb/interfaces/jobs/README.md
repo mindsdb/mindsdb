@@ -147,3 +147,60 @@ Result columns: NAME, PROJECT, RUN_START, RUN_END, ERROR, QUERY
 1. disable: scheduler activity. By default, scheduled is always starting with start of mindsdb. 
 To disable scheduler need to set it to false
 2. check_interval: interval in seconds to check schedule table. Default is 30 sec 
+
+## Technical information
+
+### Tables
+
+**Jobs table:**
+Contents information about current periodic tasks
+
+Columns:
+- name - name of the job defined by user
+- company_id, user_class - information about user
+- project_id - link to project, job with the same name can exist in different projects of the user
+- query_str - string of the query to execute inside the job
+- start_at - if specified, the date and time of first run of the job 
+- end_at - if specified, the date and time after which job mustn't be run
+- next_run_at - calculated date of next run, it is updated after every running
+- schedule_str - schedule rules in format 'EVERY [<number>] <time period>'
+  - time period can be 'minute', 'min', 'day', 'month' and others
+  - examples: 'every hour', 'every 2 hours'
+
+**Jobs_History table:**
+Contents information about executed jobs. 
+
+Columns:
+- company_id - the same as in jobs.company_id
+- job_id - link to jobs.id
+- query_str - rendered query that was actually executed
+- start_at and end_at - when execution started and finished
+- error - in case of error during execution will contend its text
+- created_at - equal next_run_at if the job.
+- updated_at - this column updates during job execution to indicate that execution is in progress
+
+Table has unique constraint: job_id and start_at 
+
+### Work scheme
+
+Mindsdb node runs jobs scheduler process.
+This process:
+- checks jobs table every X seconds
+- picks all jobs with next_run_at is in the past.
+- tries to lock it
+  - creates history record with next_run_at time
+  - because jobs_history table has the constraint on job_id, start_at: only one mindsdb node will be able to create such record
+    - this node will execute this task  
+    - other nodes will skip it
+- after execution of task the new next_run_at will be calculated and stored
+
+**Better implementation of jobs for microservice cloud:**
+- having one scheduler service (only one process running at the time) which will check jobs table and if time to execute the job - put record in queue for job execution
+- having multiple workers of executor which pick tasks from queue and execute them
+
+**Long tasks monitoring**
+Jobs scheduler has special thread to execute tasks in it. Main thread updates the updated_at column of jobs_history table
+- it is needed for understand if task is still executed or something went wrong, and we need to run this job again
+
+
+

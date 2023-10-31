@@ -47,6 +47,21 @@ WHERE
     AND column2 = prediction_data.column2
 ```
 
+Below is an alternative for the `UPDATE FROM SELECT` statement that updates a table with predictions. This syntax is easier to write.
+
+```sql
+UPDATE
+    integration_to_be_updated.table_to_be_updated
+ON 
+    column1, column2
+FROM 
+    (
+        SELECT p.predicted_value_column as column_to_be_updated, p.column1, p.column2
+        FROM integration_name.table_name as t
+        JOIN model_name as p
+    ) 
+```
+
 <Info>
 The steps followed by the syntax:
 

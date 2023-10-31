@@ -788,15 +788,16 @@ class TestTableau(BaseExecutorMockPredictor):
         }
         self.set_predictor(predictor)
         ret = self.command_executor.execute_command(parse_sql('''
-              SELECT
+            SELECT
               `Custom SQL Query`.`a` AS `height`,
-              last(`Custom SQL Query`.`b`) AS `length1`
+              last(`Custom SQL Query`.`b`) AS `lengtht`
             FROM (
                SELECT res.a, res.b
                FROM pg.tasks as source
                JOIN mindsdb.task_model as res
             ) `Custom SQL Query`
             group by 1
+            order by `height`
             LIMIT 1
                 ''', dialect='mindsdb'))
         assert ret.error_code is None

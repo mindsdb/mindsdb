@@ -1,4 +1,5 @@
 from typing import List, Dict
+import numpy as np
 import pandas as pd
 
 import streamlit as st
@@ -65,7 +66,7 @@ class DataHandler:
         self.templates = templates
 
     def format_connect(self, dataset: Dataset, connect_select: int):
-        return self.templates[connect_select].format(**dataset.parameters[connect_select])
+        return self.templates[0].format(**dataset.parameters[connect_select])  #TODO: map to api templates
 
 
 """******************************************************************************************************************"""
@@ -81,6 +82,7 @@ demo_dataset = Dataset(
     ml_tasks=["regression", "forecast"],
     tables=["example_db.demo_data.home_rentals", "example_db.demo_data.house_sales"],
     model_inputs=["*", "*"],
+    # order=['',""],
     targets=["rental_price", "ma"],
 )
 
@@ -114,6 +116,7 @@ ml_handlers = [lightwood_handler]
 """******************************************************************************************************************"""
 
 
+@st.cache_data
 def build_tuples():
     df_list = []
 
@@ -146,55 +149,68 @@ tuples_df = pd.concat(build_tuples()).reset_index(drop=True)
 
 """******************************************************************************************************************"""
 
-# dropdown Menu
+for column in tuples_df.columns:
+    if column not in st.session_state:
+        st.session_state[column] = None
 
-if 'ml_task' not in st.session_state:
-    st.session_state['ml_task'] = "regression"
-if 'use_case' not in st.session_state:
-    st.session_state['use_case'] = "Predict Home Rental Prices"
-if 'dataset_name' not in st.session_state:
-    st.session_state['dataset_name'] = None
-if 'ml_handler' not in st.session_state:
-    st.session_state['ml_handler'] = "lightwood"
-if 'data_handler' not in st.session_state:
-    st.session_state['data_handler'] = "postgres"
-if 'api' not in st.session_state:
-    st.session_state['api'] = "MindsDB SQL"
+def filter():
+    print("filter run")
+    for column in tuples_df.columns:
+        if st.session_state[column]:
+            tuples_df.drop(index=tuples_df[tuples_df[column] != st.session_state[column]].index, inplace=True)
 
-if st.session_state['ml_task']:
-    filtered_df = tuples_df[tuples_df["ML Task"] == st.session_state['ml_task']]
-else:
-    filtered_df = tuples_df
-if st.session_state['use_case']:
-    filtered_df = filtered_df[filtered_df["Use Case"] == st.session_state['use_case']]
-if st.session_state['dataset_name']:
-    filtered_df = filtered_df[filtered_df["Dataset"] == st.session_state['dataset_name']]
-if st.session_state['ml_handler']:
-    filtered_df = filtered_df[filtered_df["ML Handler"] == st.session_state['ml_handler']]
-if st.session_state['data_handler']:
-    filtered_df = filtered_df[filtered_df["Dataset Handler"] == st.session_state['data_handler']]
-if st.session_state['api']:
-    filtered_df = filtered_df[filtered_df["API"] == st.session_state['api']]
 
-st.session_state['ml_task'] = st.selectbox(label='Select ML Task', index=None, options=filtered_df["ML Task"])
-st.session_state['use_case'] = st.selectbox(label='Select Use Case', index=None, options=filtered_df["Use Case"])
-st.session_state['dataset_name'] = st.selectbox(label='Select Dataset', index=None, options=filtered_df["Dataset"])
-st.session_state['ml_handler'] = st.selectbox(label='Select ML Handler', index=None, options=filtered_df["ML Handler"])
-st.session_state['data_handler'] = st.selectbox(label='Select Data Handler', index=None,
-                                                options=filtered_df["Dataset Handler"])
-st.session_state['api'] = st.selectbox(label='Select API', index=None, options=filtered_df["API"])
+st.title('MindsDB CI Demo Generator')
+
+
+def find_index(value, unique_df):
+    indices = np.argwhere(value == unique_df)
+    if len(indices) > 0:
+        return int(indices[0])
+    else:
+        return None
+
+
+filter()  # filter tuples_df before creating dropdowns.
+
+labels = ['Select ML Task', 'Select Use Case', 'Select Dataset', 'Select ML Handler', 'Select Data Handler',
+          'Select API']
+for column, label in zip(tuples_df.columns, labels):
+    st.session_state[column] = st.selectbox(label=label,
+                                            options=tuples_df[column].unique(),
+                                            index=find_index(st.session_state[column], tuples_df[column].unique()))
+
+filter()  # filter tuples_df before creating dropdowns.
+
+# st.write(st.session_state)
+
+def reset():
+    for column in tuples_df.columns:
+        st.session_state[column] = None
+    # st.write(st.session_state)
+
+st.button(label="Reset", type="primary", on_click=reset)
+
+# st.write(st.session_state)
 
 """******************************************************************************************************************"""
 
-if len(filtered_df) == 1:
-    select_dataset = [dataset for dataset in datasets if dataset.name == filtered_df["Dataset"].loc[0]][0]
-    use_case_index = select_dataset.use_cases.index(filtered_df["Use Case"].loc[0])
+if len(tuples_df) == 1:
+    # st.write("state 1")
+    st.write(tuples_df["Dataset"])
+
+    select_dataset = [dataset for dataset in datasets if dataset.name == tuples_df["Dataset"].iloc[0]][0]
+
+    use_case_index = select_dataset.use_cases.index(tuples_df["Use Case"].iloc[0])
+
     select_data_handler = \
-        [data_handler for data_handler in data_handlers if data_handler.name == filtered_df["Dataset Handler"].loc[0]][
+        [data_handler for data_handler in data_handlers if data_handler.name == tuples_df["Dataset Handler"].iloc[0]][
             0]
+
     select_ml_handler = \
-    [ml_handler for ml_handler in ml_handlers if ml_handler.name == filtered_df["ML Handler"].loc[0]][0]
-    task_index = select_dataset.ml_tasks.index(filtered_df["ML Task"].loc[0])
+        [ml_handler for ml_handler in ml_handlers if ml_handler.name == tuples_df["ML Handler"].iloc[0]][0]
+
+    task_index = select_dataset.ml_tasks.index(tuples_df["ML Task"].iloc[0])
 
     connect_str = select_data_handler.format_connect(select_dataset, use_case_index)
 
@@ -202,9 +218,17 @@ if len(filtered_df) == 1:
 
     pred_str = select_ml_handler.format_predict(select_dataset, use_case_index, task_index)
 
-    script_str = "\n".join([connect_str, train_str, pred_str])
+    elements = [connect_str, train_str, pred_str]
+
+    script_str = "\n".join(elements)
 
     st.write('Your script:')
-    st.write(script_str)
+    for element in elements:
+        st.write(element)
+elif len(tuples_df) == 0:
+    # st.write("state 0")
+    reset()
 else:
+    # st.write("state >1")
     st.write('Select more options to generate script...')
+    st.write(tuples_df)

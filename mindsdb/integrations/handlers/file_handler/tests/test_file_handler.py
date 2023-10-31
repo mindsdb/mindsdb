@@ -8,6 +8,7 @@ from unittest.mock import patch
 import pandas
 import pytest
 import responses
+from mindsdb_sql.exceptions import ParsingException
 from mindsdb_sql.parser.ast import CreateTable, DropTables, Identifier, Select, Star
 from pytest_lazyfixture import lazy_fixture
 
@@ -28,6 +29,11 @@ file_records = [("one", 1, test_file_content[0]), ("two", 2, test_file_content[0
 
 
 class MockFileController:
+    """
+    Pretends to be a file controller. Gives details of 'file_records' above, and mocks file deletion.
+    We're not testing the file controller here, so we don't need to rely on it.
+    """
+
     def get_files(self):
         return [
             {
@@ -45,40 +51,39 @@ class MockFileController:
         return True
 
 
+def curr_dir():
+    return os.path.dirname(os.path.realpath(__file__))
+
+
+# Fixtures to get a path to a partiular type of file
 @pytest.fixture
 def csv_file() -> str:
-    curr_dir = os.path.dirname(os.path.realpath(__file__))
-    return os.path.join(curr_dir, "data", "test.csv")
+    return os.path.join(curr_dir(), "data", "test.csv")
 
 
 @pytest.fixture
 def xlsx_file() -> str:
-    curr_dir = os.path.dirname(os.path.realpath(__file__))
-    return os.path.join(curr_dir, "data", "test.xlsx")
+    return os.path.join(curr_dir(), "data", "test.xlsx")
 
 
 @pytest.fixture
 def json_file() -> str:
-    curr_dir = os.path.dirname(os.path.realpath(__file__))
-    return os.path.join(curr_dir, "data", "test.json")
+    return os.path.join(curr_dir(), "data", "test.json")
 
 
 @pytest.fixture
 def parquet_file() -> str:
-    curr_dir = os.path.dirname(os.path.realpath(__file__))
-    return os.path.join(curr_dir, "data", "test.parquet")
+    return os.path.join(curr_dir(), "data", "test.parquet")
 
 
 @pytest.fixture
 def pdf_file() -> str:
-    curr_dir = os.path.dirname(os.path.realpath(__file__))
-    return os.path.join(curr_dir, "data", "test.pdf")
+    return os.path.join(curr_dir(), "data", "test.pdf")
 
 
 @pytest.fixture
 def txt_file() -> str:
-    curr_dir = os.path.dirname(os.path.realpath(__file__))
-    return os.path.join(curr_dir, "data", "test.txt")
+    return os.path.join(curr_dir(), "data", "test.txt")
 
 
 class TestIsItX:
@@ -100,6 +105,8 @@ class TestIsItX:
             (lazy_fixture("xlsx_file"), True),
             (lazy_fixture("json_file"), False),
             (lazy_fixture("parquet_file"), False),
+            (lazy_fixture("txt_file"), False),
+            (lazy_fixture("pdf_file"), False),
         ],
     )
     def test_is_it_xlsx(self, file_path, result):
@@ -111,6 +118,7 @@ class TestIsItX:
         [
             (lazy_fixture("csv_file"), False),
             (lazy_fixture("json_file"), True),
+            (lazy_fixture("txt_file"), False),
         ],
     )
     def test_is_it_json(self, file_path, result):
@@ -124,6 +132,8 @@ class TestIsItX:
             (lazy_fixture("xlsx_file"), False),
             (lazy_fixture("json_file"), False),
             (lazy_fixture("parquet_file"), True),
+            (lazy_fixture("txt_file"), False),
+            (lazy_fixture("pdf_file"), False),
         ],
     )
     def test_is_it_parquet(self, file_path, result):
@@ -135,6 +145,8 @@ class TestQuery:
     """Tests all of the scenarios relating to the query() function"""
 
     def test_query_drop(self, monkeypatch):
+        """Test a valid drop table query"""
+
         def mock_delete(self, name):
             return True
 
@@ -145,6 +157,8 @@ class TestQuery:
         assert response.type == RESPONSE_TYPE.OK
 
     def test_query_drop_bad_delete(self, monkeypatch):
+        """Test an invalid drop table query"""
+
         def mock_delete(self, name):
             raise Exception("File delete error")
 
@@ -155,6 +169,7 @@ class TestQuery:
         assert response.type == RESPONSE_TYPE.ERROR
 
     def test_query_select(self, csv_file):
+        """Test a valid select query"""
         expected_df = pandas.read_csv(csv_file)
 
         # This is temporary because the file controller currently absconds with our file when we save it:
@@ -164,7 +179,8 @@ class TestQuery:
             os.remove(csv_tmp)
         shutil.copy(csv_file, csv_tmp)
 
-        # Config #
+        # Configure mindsdb and set up the file controller
+        # Ideally this would be a lot simpler..
         db_file = tempfile.mkstemp(prefix="mindsdb_db_")[1]
         config = {"storage_db": "sqlite:///" + db_file}
         fdi, cfg_file = tempfile.mkstemp(prefix="mindsdb_conf_")
@@ -178,7 +194,6 @@ class TestQuery:
         from mindsdb.interfaces.storage import db
 
         db.init()
-
         db.session.rollback()
         db.Base.metadata.drop_all(db.engine)
 
@@ -212,13 +227,32 @@ class TestQuery:
         assert expected_df.equals(response.data_frame)
 
     def test_query_bad_type(self):
+        """Test an invalid query type for files"""
         file_handler = FileHandler(file_controller=MockFileController())
         response = file_handler.query(CreateTable([Identifier(parts=["someTable"])]))
 
         assert response.type == RESPONSE_TYPE.ERROR
 
+    def test_native_query(self, monkeypatch):
+        """Test a valid native table query"""
+
+        def mock_delete(self, name):
+            return True
+
+        monkeypatch.setattr(MockFileController, "delete_file", mock_delete)
+        file_handler = FileHandler(file_controller=MockFileController())
+        response = file_handler.native_query("DROP TABLE one")
+
+        assert response.type == RESPONSE_TYPE.OK
+
+    def test_invalid_native_query(self):
+        file_handler = FileHandler(file_controller=MockFileController())
+        with pytest.raises(ParsingException):
+            file_handler.native_query("INVALID QUERY")
+
 
 def test_get_file_path_with_file_path():
+    """Test an valid native table query"""
     file_path = "example.txt"
     result = FileHandler._get_file_path(file_path)
     assert result == file_path
@@ -226,14 +260,15 @@ def test_get_file_path_with_file_path():
 
 @patch("mindsdb.integrations.handlers.file_handler.file_handler.FileHandler._fetch_url")
 def test_get_file_path_with_url(mock_fetch_url):
-    mock_url = "http://example.com/file.txt"
-    expected_result = "http://example.com/file.txt"
-    mock_fetch_url.return_value = mock_url
+    url = "http://example.com/file.txt"
+    expected_result = "some_file_path"
+    # we test _fetch_url separately below. Mock it for this test
+    mock_fetch_url.return_value = expected_result
 
-    result = FileHandler._get_file_path(mock_url)
+    result = FileHandler._get_file_path(url)
 
     assert result == expected_result
-    mock_fetch_url.assert_called_with(mock_url)
+    mock_fetch_url.assert_called_with(url)
 
 
 @pytest.mark.parametrize(
@@ -252,6 +287,7 @@ def test_handle_source(file_path, expected_columns):
     assert isinstance(df, pandas.DataFrame)
     assert df.columns.tolist() == expected_columns
 
+    # The pdf and txt files have some different content
     if not file_path.endswith(".pdf") and not file_path.endswith(".txt"):
         assert len(df) == len(test_file_content) - 1
         assert df.values.tolist() == test_file_content[1:]

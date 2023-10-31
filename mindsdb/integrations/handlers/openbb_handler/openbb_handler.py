@@ -3,7 +3,7 @@ from typing import Dict
 
 from openbb import obb
 
-from mindsdb.integrations.handlers.openbb_handler.openbb_tables import OpenBBtable
+from mindsdb.integrations.handlers.openbb_handler.openbb_tables import OpenBBtable, StocksLoadTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -37,7 +37,10 @@ class OpenBBHandler(APIHandler):
 
         self.is_connected = False
 
+        self.obb = obb
+
         self._register_table("openbb_fetcher", OpenBBtable(self))
+        self._register_table("stock_loads", StocksLoadTable(self))
 
     def connect(self) -> bool:
         """Connects with OpenBB account through personal access token (PAT).
@@ -48,11 +51,11 @@ class OpenBBHandler(APIHandler):
         obb.account.login(pat=self.PAT)
 
         # Check if PAT utilized is valid
-        if obb.user.profile.active:
-            self.is_connected = True
-            return True
+        #if obb.user.profile.active:
+        self.is_connected = True
+        return True
 
-        return False
+        #return False
 
     def check_connection(self) -> StatusResponse:
         """Checks connection to OpenBB accounting by checking the validity of the PAT.

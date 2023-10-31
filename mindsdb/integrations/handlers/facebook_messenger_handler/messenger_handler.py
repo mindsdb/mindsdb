@@ -1,14 +1,36 @@
-# facebookmessenger_handler.py
+import re
+import os
+import datetime as dt
+import ast
+import time
+from collections import defaultdict
+import pytz
+import io
+from fbmessenger import MessengerClient
+from fbmessenger.elements import Text
+from fbmessenger.quick_replies import QuickReply, QuickReplies
+from fbmessenger.buttons import URLButton, PostbackButton
+from fbmessenger.threads import ThreadType
+import pandas as pd
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.integrations.utilities.date_utils import parse_utc_date
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+    RESPONSE_TYPE
+)
 
 # Import additional required libraries
 import requests
 import json
+
+from messengerapi import SendApi
+from messengerapi.components import Elements, Element, Buttons, Button, QuickReply
+
 
 class MessagesTable(APITable):
     def select(self, query: ast.Select) -> Response:
@@ -96,7 +118,7 @@ class MessagesTable(APITable):
             # Filter by columns
             result = result[columns]
 
-        return result\
+        return result
 
 
     def get_columns(self):
@@ -110,27 +132,6 @@ class MessagesTable(APITable):
             'to_name',
         ]
 
-
-    def insert(self, query: ast.Insert):
-        # Implement this method to send messages to Facebook Messenger
-        pass
-
-class FacebookMessengerHandler(APIHandler):
-    def __init__(self, name=None, **kwargs):
-        super().__init__(name)
-        args = kwargs.get('connection_data', {})
-        self.connection_args = {}
-        handler_config = Config().get('facebookmessenger_handler', {})
-        for k in ['access_token']:
-            if k in args:
-                self.connection_args[k] = args[k]
-            elif f'FACEBOOK_{k.upper()}' in os.environ:
-                self.connection_args[k] = os.environ[f'FACEBOOK_{k.upper()}']
-            elif k in handler_config:
-                self.connection_args[k] = handler_config[k]
-        self.is_connected = False
-        messages = MessagesTable(self)
-        self._register_table('messages', messages)
 
 def insert(self, query):
     columns = [col.name for col in query.columns]
@@ -178,14 +179,270 @@ def insert(self, query):
         if response.status_code != 200:
             raise Exception('Failed to update persistent menu: ' + response.text)
 
-    def connect(self):
-        # Implement this method to authenticate with the Facebook Messenger API
-        pass
+
+class FacebookMessengerHandler(APIHandler):
+    def __init__(self, name=None, **kwargs):
+        super().__init__(name)
+        args = kwargs.get('connection_data', {})
+        self.connection_args = {}
+        handler_config = Config().get('facebookmessenger_handler', {})
+        for k in ['access_token']:
+            if k in args:
+                self.connection_args[k] = args[k]
+            elif f'FACEBOOK_{k.upper()}' in os.environ:
+                self.connection_args[k] = os.environ[f'FACEBOOK_{k.upper()}']
+            elif k in handler_config:
+                self.connection_args[k] = handler_config[k]
+        self.is_connected = False
+        messages = MessagesTable(self)
+        self._register_table('messages', messages)
+
+    def connect(self, api_version=2):
+        """Authenticate with the Facebook Messenger API using the API keys and secrets stored in the `consumer_key`, `consumer_secret`, `access_token`, and `access_token_secret` attributes."""  # noqa
+
+        if self.is_connected is True:
+            return self.messenger_api
+
+        self.messenger_api = self.create_connection()
+
+        self.is_connected = True
+        return self.messenger_api
+
 
     def check_connection(self) -> StatusResponse:
-        # Implement this method to check the connection to the Facebook Messenger API
-        pass
+
+        response = StatusResponse(False)
+
+        try:
+            api = self.connect()
+
+            # call get_user_profile with unknown id.
+            #   it raises an error in case if auth is not success and returns not-found otherwise
+            api.get_user_profile(user_id=1)
+            response.success = True
+
+        except fbmessenger.Unauthorized as e:
+            response.error_message = f'Error connecting to Facebook Messenger api: {e}. Check bearer_token'
+            log.logger.error(response.error_message)
+
+        if response.success is True and len(self.connection_args) > 1:
+            # not only bearer_token, check read-write mode (OAuth 2.0 Authorization Code with PKCE)
+            try:
+                api = self.connect()
+
+                api.get_my_profile()
+
+            except fbmessenger.Unauthorized as e:
+                keys = 'consumer_key', 'consumer_secret', 'access_token', 'access_token_secret'
+                response.error_message = f'Error connecting to Facebook Messenger api: {e}. Check' + ', '.join(keys)
+                log.logger.error(response.error_message)
+
+                response.success = False
+
+        if response.success is False and self.is_connected is True:
+            self.is_connected = False
+
+        return response
+
 
     def native_query(self, query_string: str = None):
-        # Implement this method to execute a native query on the Facebook Messenger API
-        pass
+        method_name, params = FuncParser().from_string(query_string)
+
+        df = self.call_facebook_messenger_api(method_name, params)
+
+        return Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=df
+        )
+
+    def _apply_filters(self, data, filters):
+        if not filters:
+            return data
+        data2 = []
+        for row in data:
+            add = False
+            for op, key, value in filters:
+                value2 = row.get(key)
+                if isinstance(value, int):
+                    # Facebook Messenger returns ids as string
+                    value = str(value)
+
+                if op in ('!=', '<>'):
+                    if value == value2:
+                        break
+                elif op in ('==', '='):
+                    if value != value2:
+                        break
+                elif op == 'in':
+                    if not isinstance(value, list):
+                        value = [value]
+                    if value2 not in value:
+                        break
+                elif op == 'not in':
+                    if not isinstance(value, list):
+                        value = [value]
+                    if value2 in value:
+                        break
+                else:
+                    raise NotImplementedError(f'Unknown filter: {op}')
+                # only if there wasn't breaks
+                add = True
+            if add:
+                data2.append(row)
+        return data2
+
+    def call_facebook_messenger_api(self, method_name: str = None, params: dict = None, filters: list = None):
+        # method > table > columns
+        expansions_map = {
+            'user': {
+                'table': 'users',
+                'columns': {
+                    'id': 'id',
+                    'name': 'name',
+                    'first_name': 'first_name',
+                    'last_name': 'last_name',
+                    'profile_pic': 'profile_pic',
+                    'locale': 'locale',
+                    'timezone': 'timezone',
+                    'gender': 'gender',
+                    'is_payment_enabled': 'is_payment_enabled',
+                    'last_ad_referral': 'last_ad_referral',
+                    'search_recent_messages': {
+                        'users': ['sender_id', 'recipient_id'],
+                    },
+                    'search_all_messages': {
+                        'users': ['sender_id'],
+                    },
+                }.get(params.get('expansions', {}).get('user', {}), {})
+            },
+            'page': {
+                'table': 'pages',
+                'columns': {
+                    'id': 'id',
+                    'name': 'name',
+                    'access_token': 'access_token',
+                    'category': 'category',
+                    'category_list': 'category_list',
+                    'search_recent_messages': {
+                        'users': ['sender_id', 'recipient_id'],
+                    },
+                    'search_all_messages': {
+                        'users': ['sender_id'],
+                    },
+                }.get(params.get('expansions', {}).get('page', {}), {})
+            },
+            'message': {
+                'table': 'messages',
+                'columns': {
+                    'id': 'id',
+                    'text': 'text',
+                    'attachments': 'attachments',
+                    'quick_reply': 'quick_reply',
+                    'is_echo': 'is_echo',
+                    'app_id': 'app_id',
+                    'metadata': 'metadata',
+                    'platform': 'platform',
+                    'created_at': 'created_at',
+                    'search_recent_messages': {
+                        'users': ['sender_id', 'recipient_id'],
+                    },
+                    'search_all_messages': {
+                        'users': ['sender_id'],
+                    },
+                }.get(params.get('expansions', {}).get('message', {}), {})
+            },
+        }.get(params.get('expansions', {}).get('type', {}), {})
+
+        api = self.connect()
+        method = getattr(api, method_name) if method_name in dir(MessengerClient) else None
+
+        # pagination handle
+
+        count_results = None
+        if 'max_results' in params:
+            count_results = params['max_results']
+
+        data = []
+        includes = defaultdict(list)
+
+        max_page_size = 100
+        min_page_size = 10
+        left = None
+
+        limit_exec_time = time.time() + 60
+
+        if filters:
+            # if we have filters: do big page requests
+            params['max_results'] = max_page_size
+
+        while True:
+            if time.time() > limit_exec_time:
+                raise RuntimeError('Handler request timeout error')
+
+            if count_results is not None:
+                left = count_results - len(data)
+                if left == 0:
+                    break
+                elif left < 0:
+                    # got more results that we need
+                    data = data[:left]
+                    break
+
+                if left > max_page_size:
+                    params['max_results'] = max_page_size
+                elif left < min_page_size:
+                    params['max_results'] = min_page_size
+                else:
+                    params['max_results'] = left
+
+            log.logger.debug(f'>>>facebook messenger in: {method_name}({params})')
+            resp = method(**params) if method else None
+
+            # handle response
+
+            if resp and isinstance(resp, list):
+                chunk = resp
+            else:
+                break
+
+            if filters:
+                chunk = self._apply_filters(chunk, filters)
+
+            # limit output
+            if left is not None:
+                chunk = chunk[:left]
+
+            data.extend(chunk)
+            # next page ?
+            if count_results is not None and 'next' in resp:
+                params['after'] = resp['next']
+            else:
+                break
+
+        df = pd.DataFrame(data)
+
+        # enrich
+
+        expansions = expansions_map.get(method_name)
+        if expansions is not None:
+            for table, records in includes.items():
+                df_ref = pd.DataFrame(records)
+
+                if table not in expansions:
+                    continue
+
+                for col_id in expansions[table]:
+                    col = col_id[:-3]  # cut _id
+                    if col_id not in df.columns:
+                        continue
+
+                    col_map = {
+                        col_ref: f'{col}_{col_ref}'
+                        for col_ref in df_ref.columns
+                    }
+                    df_ref2 = df_ref.rename(columns=col_map)
+                    df_ref2 = df_ref2.drop_duplicates(col_id)
+
+                    df = df.merge(df_ref2, on=col_id, how='left')
+
+        return df

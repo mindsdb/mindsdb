@@ -6,10 +6,11 @@ import time
 from collections import defaultdict
 import pytz
 import io
+import fbmessenger
 from fbmessenger import MessengerClient
 from fbmessenger.elements import Text
-from fbmessenger.quick_replies import QuickReply, QuickReplies
-from fbmessenger.buttons import URLButton, PostbackButton
+from fbmessenger.quick_replies import QuickReply, Messager
+from fbmessenger.buttons import URLButton, POSTBACK
 from fbmessenger.threads import ThreadType
 import pandas as pd
 from mindsdb.utilities import log

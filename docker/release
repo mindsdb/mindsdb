@@ -34,7 +34,7 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==23.1.2 &
     pip install --prefer-binary --no-cache-dir \
         ckanapi || true && \
     pip install --prefer-binary --no-cache-dir \
-        couchbase==4.0.2 || true && \
+        couchbase || true && \
     pip install --prefer-binary --no-cache-dir \
         ibm-db-sa ibm-db || true && \
     pip install --prefer-binary --no-cache-dir \
@@ -105,7 +105,8 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==23.1.2 &
     pip install --prefer-binary --no-cache-dir 'newsapi-python' || true && \
     pip install --prefer-binary --no-cache-dir 'databend-sqlalchemy' || true && \
     pip install --prefer-binary --no-cache-dir 'weaviate-client~=3.24.2' || true && \
-    pip install --prefer-binary --no-cache-dir 'pgvector' || true
+    pip install --prefer-binary --no-cache-dir 'pgvector' || true && \
+    pip install --prefer-binary --no-cache-dir 'anthropic==0.3.4' || true
 
 
 ARG VERSION=

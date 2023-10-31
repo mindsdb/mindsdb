@@ -1,7 +1,7 @@
 import shopify
 import requests
 
-from mindsdb.integrations.handlers.shopify_handler.shopify_tables import ProductsTable, CustomersTable, OrdersTable, InventoryLevelTable, LocationTable, CustomerReviews, CarrierServiceTable
+from mindsdb.integrations.handlers.shopify_handler.shopify_tables import ProductsTable, CustomersTable, OrdersTable, InventoryLevelTable, LocationTable, CustomerReviews, CarrierServiceTable, ShippingZoneTable, SalesChannelTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -9,6 +9,7 @@ from mindsdb.integrations.libs.response import (
 
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
+from mindsdb.integrations.libs.api_handler_exceptions import InvalidNativeQuery, ConnectionFailed, MissingConnectionParams
 
 
 class ShopifyHandler(APIHandler):
@@ -26,6 +27,9 @@ class ShopifyHandler(APIHandler):
             **kwargs: arbitrary keyword arguments.
         """
         super().__init__(name)
+
+        if kwargs.get("connection_data") is None:
+            raise MissingConnectionParams(f"Incomplete parameters passed to Shopify Handler")
 
         connection_data = kwargs.get("connection_data", {})
         self.connection_data = connection_data
@@ -55,6 +59,12 @@ class ShopifyHandler(APIHandler):
         carrier_service_data = CarrierServiceTable(self)
         self._register_table("carrier_service", carrier_service_data)
 
+        shipping_zone_data = ShippingZoneTable(self)
+        self._register_table("shipping_zone", shipping_zone_data)
+
+        sales_channel_data = SalesChannelTable(self)
+        self._register_table("sales_channel", sales_channel_data)
+
     def connect(self):
         """
         Set up the connection required by the handler.
@@ -66,8 +76,11 @@ class ShopifyHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        api_session = shopify.Session(self.connection_data['shop_url'], '2021-10', self.connection_data['access_token'])
+        if self.kwargs.get("connection_data") is None:
+            raise MissingConnectionParams(f"Incomplete parameters passed to Shopify Handler")
 
+        api_session = shopify.Session(self.connection_data['shop_url'], '2021-10', self.connection_data['access_token'])
+        
         self.yotpo_app_key = self.connection_data['yotpo_app_key'] if 'yotpo_app_key' in self.connection_data else None
         self.yotpo_access_token = self.connection_data['yotpo_access_token'] if 'yotpo_access_token' in self.connection_data else None
 
@@ -93,6 +106,7 @@ class ShopifyHandler(APIHandler):
             response.success = True
         except Exception as e:
             log.logger.error(f'Error connecting to Shopify!')
+            raise ConnectionFailed(f"Conenction to Shopify failed.")
             response.error_message = str(e)
 
         if self.yotpo_app_key is not None and self.yotpo_access_token is not None:
@@ -121,5 +135,8 @@ class ShopifyHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query, dialect="mindsdb")
+        try:
+            ast = parse_sql(query, dialect="mindsdb")
+        except Exception as e:
+            raise InvalidNativeQuery(f"The query {query} is invalid.")
         return self.query(ast)

@@ -76,7 +76,7 @@ services:
         source: ../
         target: /mindsdb
     environment:
-      # have to share mindsdb database, because it doens't work without it
+      # have to share mindsdb database, because it doesn't work without it
       REGISTRY_URL: "http://handler_discovery:5000"
       PORT: 50051
       HOST: "lightwood"
@@ -98,17 +98,15 @@ services:
         source: ../
         target: /mindsdb
     environment:
-      # have to share mindsdb database, because it doens't work without it
+      # have to share mindsdb database, because it doesn't work without it
       PORT: 50053
       HOST: "huggingface"
       MINDSDB_SERVICE_TYPE: "huggingface"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       MINDSDB_DB_CON: "postgresql://postgres:postgres@db:15432/mindsdb"
       REGISTRY_URL: "http://handler_discovery:5000"
-      MINDSDB_STORAGE_DIR: "/mindsdb/var"
       MINDSDB_DB_SERVICE_HOST: "db_service"
       MINDSDB_DB_SERVICE_PORT: "50050"
-
 
   db_service:
     build:
@@ -138,7 +136,7 @@ services:
     depends_on:
       - mindsdb
     environment:
-      # have to share mindsdb database, because it doens't work without it
+      # have to share mindsdb database, because it doesn't work without it
       PORT: 50052
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       MINDSDB_DB_CON: "postgresql://postgres:postgres@db:15432/mindsdb"

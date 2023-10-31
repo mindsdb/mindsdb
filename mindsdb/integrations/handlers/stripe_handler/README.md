@@ -41,6 +41,9 @@ The Stripe handler is initialized with the following parameters:
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+  - [x] Support INSERT
+  - [x] Support UPDATE
+  - [x] Support DELETE
 - [x] Stripe Customers Table for a given account
   - [x] Support SELECT
     - [x] Support LIMIT
@@ -53,12 +56,22 @@ The Stripe handler is initialized with the following parameters:
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+- [x] Stripe Refunds Table for a given account
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
+- [x] Stripe Payouts Table for a given account
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
 
 ## TODO
 
-- [ ] Support INSERT, UPDATE and DELETE for Products, Customers and Payment Intents tables
-- [ ] Stripe Payouts table
-- [ ] Stripe Refunds table
+- [ ] Support INSERT, UPDATE and DELETE for Customers and Payment Intents tables
 - [ ] Stripe Charges table
 - [ ] Stripe Balance table
 - [ ] Many more
@@ -77,8 +90,19 @@ PARAMETERS = {
 
 Use the established connection to query your database:
 
+### Querying the Customer Data
 ~~~~sql
 SELECT * FROM stripe_datasource.customers
+~~~~
+
+or, for the `payouts` table
+~~~~sql
+SELECT * FROM stripe_datasource.payouts
+~~~~
+
+or, for the `products` table
+~~~~sql
+SELECT * FROM stripe_datasource.products
 ~~~~
 
 Run more advanced queries:
@@ -89,4 +113,44 @@ FROM stripe_datasource.customers
 WHERE currency = 'inr'
 ORDER BY name
 LIMIT 5
+~~~~
+
+### Querying the Refund data
+~~~~sql
+SELECT * FROM stripe_datasource.refunds
+~~~~
+
+Run more advanced queries:
+
+~~~~sql
+SELECT  name, email
+FROM stripe_datasource.refunds
+WHERE currency = 'inr'
+ORDER BY name
+LIMIT 5
+~~~~
+
+
+~~~~sql
+SELECT id, name, active
+FROM stripe_datasource.products
+WHERE active = true
+ORDER BY name
+LIMIT 5
+~~~~
+
+~~~~sql
+INSERT INTO stripe_datasource.products(name)
+VALUES('product_name')
+~~~~
+
+~~~~sql
+UPDATE stripe_datasource.products
+SET name = 'product_name_updated'
+WHERE name = 'product_name'
+~~~~
+
+~~~~sql
+DELETE FROM stripe_datasource.products
+WHERE name = 'product_name_updated'
 ~~~~

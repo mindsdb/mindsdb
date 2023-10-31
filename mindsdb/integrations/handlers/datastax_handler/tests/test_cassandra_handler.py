@@ -1,6 +1,8 @@
 import unittest
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from mindsdb.integrations.handlers.datastax_handler.datastax_handler import DatastaxHandler
+from mindsdb.integrations.handlers.datastax_handler.datastax_handler import (
+    DatastaxHandler,
+)
 
 
 class DatastaxHandlerTest(unittest.TestCase):
@@ -10,10 +12,10 @@ class DatastaxHandlerTest(unittest.TestCase):
             "connection_data": {
                 "user": "cassandra",
                 "password": "",
-                "secure_connect_bundle": "/home/Downloads/file.zip"
+                "secure_connect_bundle": "/home/Downloads/file.zip",
             }
         }
-        cls.handler = DatastaxHandler('test_datastax_handler', **cls.kwargs)
+        cls.handler = DatastaxHandler("test_datastax_handler", **cls.kwargs)
 
     def test_0_connect(self):
         self.handler.check_connection()

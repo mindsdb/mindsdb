@@ -46,14 +46,14 @@ def transform_to_nixtla_df(df, settings_dict, exog_vars=[]):
     else:
         group_col = settings_dict["group_by"][0]
 
-    if "unique_id" not in nixtla_df.columns:
-        # add to dataframe
-        nixtla_df["unique_id"] = '1'
-
     # Rename columns to statsforecast names
     nixtla_df = nixtla_df.rename(
         {settings_dict["target"]: "y", settings_dict["order_by"]: "ds", group_col: "unique_id"}, axis=1
     )
+
+    if "unique_id" not in nixtla_df.columns:
+        # add to dataframe as it is expected by statsforecast
+        nixtla_df["unique_id"] = '1'
 
     columns_to_keep = ["unique_id", "ds", "y"] + exog_vars
     nixtla_df["ds"] = pd.to_datetime(nixtla_df["ds"])

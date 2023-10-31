@@ -15,3 +15,41 @@ XXX Test Failed: (link to the test results in your GitHub repository), (link to 
 </br>
 Email handler for Outlook - Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Email-Handler/Testing.md
 </br>
+QuestDB ML Integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/QuestDB/Testing.md
+</br>
+Writer.ai Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Writerai-Handler/Writer_QA.md
+</br>
+Cohere Handler Test passed: https://github.com/hridaya423/HacktoberfestMindsDBTesting/blob/master/Cohere_ML._QA.md
+</br>
+Apache Pinot data integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/PinotDB/Apache_Pinot_QA.md
+</br>
+Microsoft Teams Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/MsTeams/Microsoft_Teams_QA.md
+</br>
+Google Big Query Integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/BigQuery/GoogleBigQuery_QA.md
+</br>
+Web Crawler Integration Test Passed: https://github.com/Taheralicyclewala/MindsDB-Testing/blob/main/WebCrawler/Web_Crawler_QA.md
+</br>
+Gitlab Integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Gitlab/Gitlab.md
+</br>
+Microsoft Acess integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Access/MicrosoftAccess.md
+<br>
+Sendinblue app integration Test Failed:  https://github.com/adeyinkaezra123/mindsdb-integration-test/blob/main/handlers/sendinblue/SendinBlue_Brevo.md https://github.com/mindsdb/mindsdb/issues/8098
+</br>
+Jira App Integration Test Passed: https://github.com/Sekhar-Kumar-Dash/mindsdb_jira/blob/main/jira_handler_mindsdb/Jira_QA.md
+</br>
+Jira app integration Test Passed :
+https://github.com/boomlion8/mindsdb-test/blob/main/Jira_QA.md
+</br>
+Frappe app integration Test Passed: https://github.com/adeyinkaezra123/mindsdb-integration-test/blob/main/handlers/frappe/Frappe_app.md
+</br>
+google search Integration Test Failed: https://github.com/Sekhar-Kumar-Dash/Mindsdb_google_search/blob/main/Mindsdb%20Google/google_search_qa.md, (https://github.com/mindsdb/mindsdb/issues/8124)
+</br>
+Reddit app integration Test Failed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Reddit/Reddit_QA.md
+(https://github.com/mindsdb/mindsdb/issues/8127)
+</br>
+Strava app integration passed : https://github.com/Sekhar-Kumar-Dash/strava_mindsdb/blob/main/strava%20mindsdb/Starva_app_qa.md
+</br>
+Strava app integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Strava/Strava_app_QA.md
+</br>
+Mendeley integration Test Passed: https://github.com/Sekhar-Kumar-Dash/mindsdb_mendeley/blob/main/mendeley_handler/mendeley_qa.md
+</br>

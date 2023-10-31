@@ -38,7 +38,7 @@ The Reddit handler is initialized with the following parameters:
 1. Visit Reddit App Preferences (https://www.reddit.com/prefs/apps) or [https://old.reddit.com/prefs/apps/](https://old.reddit.com/prefs/apps/)
 2. Scroll to the bottom and click "create another app..."
 3. Fill out the name, description, and redirect url for your app, then click "create app"
-4. Now you should be able to see the personal use script, secret, and name of your app. Store those as environment variables CLIENT_ID, CLIENT_SECRET, and USER_AGENT respecitvely.
+4. Now you should be able to see the personal use script, secret, and name of your app. Store those as environment variables CLIENT_ID, CLIENT_SECRET, and USER_AGENT respectively.
 
 ## Implemented Features
 

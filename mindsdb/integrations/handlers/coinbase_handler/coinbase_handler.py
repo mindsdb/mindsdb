@@ -5,7 +5,6 @@ import hmac
 import hashlib
 import time
 import requests
-import pytz
 from collections import OrderedDict
 import base64
 

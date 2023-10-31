@@ -31,14 +31,14 @@ class CoinBaseAggregatedTradesTableTest(unittest.TestCase):
         api_handler = Mock(CoinBaseHandler)
         api_handler.call_coinbase_api.return_value = pd.DataFrame([
             [
-                'BTC-USD',  # symbol
-                34330.01,   # low
-                34623.21,   # high
-                34493.51,   # open
-                34349.16,   # close
-                719.064133, # volume
-                1698710400, # timestamp
-                "2023-10-30T20:00:00-04:00" # timestamp_iso
+                'BTC-USD',                   # symbol
+                34330.01,                    # low
+                34623.21,                    # high
+                34493.51,                    # open
+                34349.16,                    # close
+                719.064133,                  # volume
+                1698710400,                  # timestamp
+                "2023-10-30T20:00:00-04:00"  # timestamp_iso
             ]
         ])
         trades_table = CoinBaseAggregatedTradesTable(api_handler)

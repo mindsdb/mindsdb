@@ -1,5 +1,6 @@
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
 
 
@@ -46,7 +47,7 @@ class ViewController:
             db.View.project_id == project_record.id
         ).first()
         if rec is None:
-            raise Exception(f'View not found: {name}')
+            raise EntityNotExistsError('View not found', name)
         rec.query = query
         db.session.commit()
 
@@ -62,7 +63,7 @@ class ViewController:
             db.View.project_id == project_record.id
         ).first()
         if rec is None:
-            raise Exception(f'View not found: {name}')
+            raise EntityNotExistsError('View not found', name)
         db.session.delete(rec)
         db.session.commit()
 

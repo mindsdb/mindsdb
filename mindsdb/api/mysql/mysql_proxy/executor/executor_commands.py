@@ -1291,11 +1291,9 @@ class ExecuteCommands:
             project = self.session.database_controller.get_project(db_name)
 
             try:
-                project.drop_table(view_name)
-            except Exception as e:
-                if "does not exist" in str(e) and statement.if_exists:
-                    ...
-                else:
+                project.drop_view(view_name)
+            except EntityNotExistsError as e:
+                if statement.if_exists is False:
                     raise e
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)

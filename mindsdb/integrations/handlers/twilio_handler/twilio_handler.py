@@ -341,7 +341,7 @@ class TwilioHandler(APIHandler):
                 'price_unit': msg.price_unit,
                 'api_version': msg.api_version,
                 'uri': msg.uri,
-                'media_url': [media.url for media in msg.media.list()]
+                'media_url': [media.uri for media in msg.media.list()]
                 # ... Add other properties as needed
             }
             data.append(msg_data)

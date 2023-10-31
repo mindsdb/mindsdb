@@ -1,52 +1,53 @@
-# DockerHub Handler
+# Clipdrop Handler
 
-DockerHub handler for MindsDB provides interfaces to connect to DockerHub via APIs and pull repository data into MindsDB.
+Clipdrop handler for MindsDB provides interfaces to connect to Clipdrop via APIs.
 
 ---
 
 ## Table of Contents
 
-- [DockerHub Handler](#dockerhub-handler)
+- [Clipdrop Handler](#clipdrop-handler)
   - [Table of Contents](#table-of-contents)
-  - [About DockerHub](#about-dockerhub)
-  - [DockerHub Handler Implementation](#dockerhub-handler-implementation)
-  - [DockerHub Handler Initialization](#dockerhub-handler-initialization)
+  - [About Clipdrop](#about-clipdrop)
+  - [Clipdrop Handler Implementation](#clipdrop-handler-implementation)
+  - [Clipdrop Handler Initialization](#clipdrop-handler-initialization)
   - [Implemented Features](#implemented-features)
+  - [ToDO](#todo)
   - [Example Usage](#example-usage)
 
 ---
 
-## About DockerHub
+## About Clipdrop
 
-Docker Hub is the world's easiest way to create, manage, and deliver your team's container applications.
+The Clipdrop API allows you to integrate best-in-class AI to your apps in minutes.
 
+## Clipdrop Handler Implementation
 
-## DockerHub Handler Implementation
+This handler was implemented using the `requests` library that makes http calls to https://clipdrop.co/apis/docs/image-upscaling
 
-This handler was implemented using the `requests` library that makes http calls to https://docs.docker.com/docker-hub/api/latest/#tag/resources.
+## Clipdrop Handler Initialization
 
-## DockerHub Handler Initialization
+The Clipdrop handler is initialized with the following parameters:
 
-The DockerHub handler is initialized with the following parameters:
+- `api_key`: API key to connect to clipdrop
+- `dir_to_save`: Local Directory to save the output images from the API.
 
-- `username`: Username used to login to DockerHub
-- `password`: Password used to login to DockerHub
-
-Read about creating an account [here](https://hub.docker.com/).
+Read about creating an account [here](https://clipdrop.co/).
 
 ## Implemented Features
 
-- [x] DockerHub Repo Images Summary for a given Repository
-  - [x] Support SELECT
-    - [x] Support LIMIT
-    - [x] Support WHERE
-    - [x] Support ORDER BY
-    - [x] Support column selection
+- [x] Remove Text
 
+
+## ToDO
+
+- [x] Text to image
+- [x] Remove Background
+- [x] Image upscaling
 
 ## Example Usage
 
-The first step is to create a database with the new `dockerhub` engine. 
+The first step is to create a database with the new `clipdrop` engine. 
 
 ~~~~sql
 CREATE DATABASE mindsdb_clipdrop
@@ -61,20 +62,4 @@ Use the established connection to query your database:
 
 ~~~~sql
 SELECT * FROM mindsdb_clipdrop.remove_text WHERE img_url="https://static.vecteezy.com/system/resources/thumbnails/022/721/714/small/youtube-logo-for-popular-online-media-content-creation-website-and-application-free-png.png";
-~~~~
-
-~~~~sql
-SELECT * FROM mindsdb_dockerhub.repo_images WHERE namespace="docker" AND repository="trusted-registry-nginx";
-~~~~
-
-~~~~sql
-SELECT * FROM mindsdb_dockerhub.repo_tag_details WHERE namespace="docker" AND repository="trusted-registry-nginx" AND tag="latest";
-~~~~
-
-~~~~sql
-SELECT * FROM mindsdb_dockerhub.repo_tags WHERE namespace="docker" AND repository="trusted-registry-nginx";
-~~~~
-
-=======
-SELECT * FROM mindsdb_dockerhub.org_settings where organization="docker";
 ~~~~

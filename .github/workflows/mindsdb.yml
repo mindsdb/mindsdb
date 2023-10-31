@@ -42,6 +42,7 @@ jobs:
         # Paths to ignore. We ignore the handlers dir because we will test each handler individually
         EXCLUDE_PATHS="mindsdb/integrations/handlers|tests/"
 
+        # Actually do the check
         deptry --requirements-txt $REQUIREMENTS_FILES --per-rule-ignores $RULE_IGNORES \
         --package-module-name-map $PACKAGE_MODULE_NAME_MAP --exclude $EXCLUDE_PATHS .
 
@@ -80,6 +81,10 @@ jobs:
       shell: bash
       run: |
         python tests/scripts/check_duplicate_reqs.py
+    - name: Check requirements files are installable
+      shell: bash
+      run: |
+        pip install --dry-run --ignore-installed . # Install only the default handlers. We can expand this to all handlers later with: .[all_handlers_extras]
 
   code_checking:
     runs-on: ubuntu-latest

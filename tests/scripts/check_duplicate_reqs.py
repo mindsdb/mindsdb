@@ -1,3 +1,5 @@
+# Checks that handler requirements.txt and the main requirements.txt dont contain any of the same packages.
+
 import glob
 import re
 import sys
@@ -16,7 +18,6 @@ with open(main_reqs_path, 'r') as main_f:
 reqs_files = glob.glob("**/requirements*.txt", recursive=True)
 reqs_files.remove(main_reqs_path)
 
-# print(main_reqs)
 for file in reqs_files:
     with open(file, 'r') as fh:
         lines = [

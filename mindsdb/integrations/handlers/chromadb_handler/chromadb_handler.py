@@ -290,7 +290,7 @@ class ChromaDBHandler(VectorStoreHandler):
 
         data = data.to_dict(orient="list")
 
-        collection.add(
+        collection.upsert(
             ids=data[TableField.ID.value],
             documents=data.get(TableField.CONTENT.value),
             embeddings=data[TableField.EMBEDDINGS.value],
@@ -304,9 +304,24 @@ class ChromaDBHandler(VectorStoreHandler):
     ) -> HandlerResponse:
         """
         Update data in the ChromaDB database.
-        TODO: not implemented yet
         """
-        return super().update(table_name, data, columns)
+
+        collection = self._client.get_collection(table_name)
+
+        # drop columns with all None values
+
+        data.dropna(axis=1, inplace=True)
+
+        data = data.to_dict(orient="list")
+
+        collection.update(
+            ids=data[TableField.ID.value],
+            documents=data.get(TableField.CONTENT.value),
+            embeddings=data[TableField.EMBEDDINGS.value],
+            metadatas=data.get(TableField.METADATA.value),
+        )
+
+        return Response(resp_type=RESPONSE_TYPE.OK)
 
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None

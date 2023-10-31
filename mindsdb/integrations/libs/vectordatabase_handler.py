@@ -226,6 +226,61 @@ class VectorStoreHandler(BaseHandler):
         else:
             return value
 
+    def _prepare_data(self, query: ASTNode, columns: List) -> pd.DataFrame:
+
+        if not self._is_columns_allowed(columns):
+            raise Exception(
+                f"Columns {columns} not allowed."
+                f"Allowed columns are {[col['name'] for col in self.SCHEMA]}"
+            )
+
+        # get id column if it is present
+        if "id" in columns:
+            id_col_index = columns.index("id")
+            ids = [self._value_or_self(row[id_col_index]) for row in query.values]
+        else:
+            ids = [uuid.uuid4().hex for _ in query.values]
+
+        # get content column if it is present
+        if TableField.CONTENT.value in columns:
+            content_col_index = columns.index("content")
+            content = [
+                self._value_or_self(row[content_col_index]) for row in query.values
+            ]
+        else:
+            content = None
+
+        # get embeddings column if it is present
+        if TableField.EMBEDDINGS.value in columns:
+            embeddings_col_index = columns.index("embeddings")
+            embeddings = [
+                ast.literal_eval(self._value_or_self(row[embeddings_col_index]))
+                for row in query.values
+            ]
+        else:
+            raise Exception("Embeddings column is required!")
+
+        if TableField.METADATA.value in columns:
+            metadata_col_index = columns.index("metadata")
+            metadata = [
+                ast.literal_eval(self._value_or_self(row[metadata_col_index]))
+                for row in query.values
+            ]
+        else:
+            metadata = None
+
+        # create dataframe
+        data = pd.DataFrame(
+            {
+                TableField.ID.value: ids,
+                TableField.CONTENT.value: content,
+                TableField.EMBEDDINGS.value: embeddings,
+                TableField.METADATA.value: metadata,
+            }
+        )
+
+        return data
+
     def _extract_conditions(self, where_statement) -> Optional[List[FilterCondition]]:
         conditions = []
         # parse conditions
@@ -320,56 +375,7 @@ class VectorStoreHandler(BaseHandler):
         table_name = query.table.parts[-1]
         columns = [column.name for column in query.columns]
 
-        if not self._is_columns_allowed(columns):
-            raise Exception(
-                f"Columns {columns} not allowed."
-                f"Allowed columns are {[col['name'] for col in self.SCHEMA]}"
-            )
-
-        # get id column if it is present
-        if "id" in columns:
-            id_col_index = columns.index("id")
-            ids = [self._value_or_self(row[id_col_index]) for row in query.values]
-        else:
-            ids = [uuid.uuid4().hex for _ in query.values]
-
-        # get content column if it is present
-        if TableField.CONTENT.value in columns:
-            content_col_index = columns.index("content")
-            content = [
-                self._value_or_self(row[content_col_index]) for row in query.values
-            ]
-        else:
-            content = None
-
-        # get embeddings column if it is present
-        if TableField.EMBEDDINGS.value in columns:
-            embeddings_col_index = columns.index("embeddings")
-            embeddings = [
-                ast.literal_eval(self._value_or_self(row[embeddings_col_index]))
-                for row in query.values
-            ]
-        else:
-            raise Exception("Embeddings column is required!")
-
-        if TableField.METADATA.value in columns:
-            metadata_col_index = columns.index("metadata")
-            metadata = [
-                ast.literal_eval(self._value_or_self(row[metadata_col_index]))
-                for row in query.values
-            ]
-        else:
-            metadata = None
-
-        # create dataframe
-        data = pd.DataFrame(
-            {
-                TableField.ID.value: ids,
-                TableField.CONTENT.value: content,
-                TableField.EMBEDDINGS.value: embeddings,
-                TableField.METADATA.value: metadata,
-            }
-        )
+        data = self._prepare_data(query, columns)
 
         # dispatch insert
         return self.insert(table_name, data, columns=columns)
@@ -378,7 +384,14 @@ class VectorStoreHandler(BaseHandler):
         """
         Dispatch update query to the appropriate method.
         """
-        raise NotImplementedError("Update query is not supported!")
+        # parse key arguments
+        table_name = query.table.parts[-1]
+        columns = [column.name for column in query.columns]
+
+        data = self._prepare_data(query, columns)
+
+        # dispatch update
+        return self.update(table_name, data, columns=columns)
 
     def _dispatch_delete(self, query: Delete) -> HandlerResponse:
         """

@@ -102,7 +102,7 @@ from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.interfaces.triggers.triggers_controller import TriggersController
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import mark_process, resolve_model_identifier
-from mindsdb.utilities.exception import EntityNotExistsError
+from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 
 def _get_show_where(
@@ -1142,10 +1142,8 @@ class ExecuteCommands:
         if engine == "mindsdb":
             try:
                 ProjectController().add(database_name)
-            except Exception as e:
-                if "already exists" in str(e) and getattr(statement, "if_not_exists", False):
-                    return ExecuteAnswer(ANSWER_TYPE.OK)
-                raise e
+            except EntityExistsError:
+                return ExecuteAnswer(ANSWER_TYPE.OK)
         else:
             try:
                 self._create_integration(database_name, engine, connection_args)

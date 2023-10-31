@@ -10,7 +10,7 @@ CrateDB is a distributed SQL database management system that integrates a fully 
 This handler was implemented using the `crate`, a Python library that allows you to use Python code to run SQL commands on Crate DB.
 
 The required arguments to establish a connection are,
-* `user`: username asscociated with database
+* `user`: username associated with database
 * `password`: password to authenticate your access
 * `host`: host to server IP Address or hostname
 * `port`: port through which  connection is to be made.

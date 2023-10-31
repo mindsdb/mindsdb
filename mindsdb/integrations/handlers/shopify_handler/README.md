@@ -63,6 +63,7 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
   - [x] Support UPDATE
   - [x] Support INSERT
   - [x] Support DELETE
+  - [x] Support WHERE
 - [x] Shopify Orders Table for a given Store
   - [x] Support SELECT
     - [x] Support LIMIT
@@ -197,4 +198,11 @@ FROM shopify_datasource.customer_reviews
 WHERE score=5
 ORDER BY id
 LIMIT 5
+~~~~
+
+For `customers` table, DELETE is supported too. You can delete the customers as follows:
+
+~~~~sql
+DELETE FROM shopify_datasource.customers
+WHERE verified_email = false;
 ~~~~

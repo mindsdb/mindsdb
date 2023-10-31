@@ -3,7 +3,7 @@
 Youtube handler for MindsDB provides interfaces to connect with Youtube via APIs and pull the video comments of the particular video.
 
 ## Youtube
-Youtube is app that needs no introduction. It provides a great distrbution for all business and creators and It opens-up a great opportunity to do NLP on youtube comments
+Youtube is app that needs no introduction. It provides a great distribution for all business and creators and It opens-up a great opportunity to do NLP on youtube comments
 
 ## Youtube Handler Initialization
 
@@ -15,11 +15,15 @@ Please follow this (link)[https://blog.hubspot.com/website/how-to-get-youtube-ap
 
 ## Implemented Features
 
-- [x] Youtube video_comments table 
+- [x] Youtube comments table 
   - [x] Support LIMIT
   - [x] Support WHERE
   - [x] Support ORDER BY
   - [x] Support column selection
+
+- [x] Youtube channels table 
+
+- [x] Youtube videos table 
 
 
 ## Example Usage
@@ -34,27 +38,26 @@ PARAMETERS = {
 };
 ~~~~
 
-
-Use the established connection to query the get_comments table 
+Use the established connection to query the comments table 
 
 ~~~~sql
-SELECT * FROM mindsdb_youtube.get_comments
-WHERE youtube_video_id = "raWFGQ20OfA";
+SELECT * FROM mindsdb_youtube.comments
+WHERE video_id = "raWFGQ20OfA";
 ~~~~
-
 
 Advanced queries for the youtube handler
 
 ~~~~sql
-SELECT * FROM mindsdb_youtube.get_comments
-WHERE youtube_video_id = "raWFGQ20OfA"
+SELECT * FROM mindsdb_youtube.comments
+WHERE video_id = "raWFGQ20OfA"
 ORDER BY display_name ASC
 LIMIT 5;
 
 Given a channel_id, get information about the channel
 
 ~~~~sql
-SELECT * FROM mindsdb_youtube.channel where channel_id="UC-..."
+SELECT * FROM mindsdb_youtube.channels
+WHERE channel_id="UC-...";
 ~~~~
 
 Here, `channel_id` column is mandatory in the where clause.
@@ -62,7 +65,8 @@ Here, `channel_id` column is mandatory in the where clause.
 Get information about any youtube video using video_id:
 
 ~~~~sql
-select * from mindsdb_youtube.video where video_id="id"
+SELECT * FROM mindsdb_youtube.videos
+WHERE video_id="id";
 ~~~~
 
 `video_id` is a mandatory column in the where clause.

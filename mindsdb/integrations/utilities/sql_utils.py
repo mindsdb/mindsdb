@@ -1,5 +1,6 @@
 import pandas as pd
 
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb_sql.parser import ast
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.planner.utils import query_traversal
@@ -104,6 +105,24 @@ def project_dataframe(df, targets, table_columns):
     if len(df_col_rename) > 0:
         df = df.rename(columns=df_col_rename)
     return df
+
+
+def filter_dataframe(df: pd.DataFrame, conditions: list):
+
+    # convert list of conditions to ast.
+    # assumes that list was got from extract_comparison_conditions
+    where_query = None
+    for op, arg1, arg2 in conditions:
+
+        item = ast.BinaryOperation(op=op, args=[ast.Identifier(arg1), ast.Constant(arg2)])
+        if where_query is None:
+            where_query = item
+        else:
+            where_query = ast.BinaryOperation(op='and', args=[where_query, item])
+
+    query = ast.Select(targets=[ast.Star()], from_table=ast.Identifier('df'), where=where_query)
+
+    return query_df(df, query)
 
 
 def sort_dataframe(df, order_by: list):

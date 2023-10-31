@@ -1,8 +1,5 @@
 import overpy
 
-import pandas as pd
-from typing import Text, List, Dict
-
 from mindsdb.integrations.handlers.openstreetmap_handler.openstreetmap_tables import (OpenStreetMapNodeTable,
                                                                                       OpenStreetMapWayTable, OpenStreetMapRelationTable)
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -71,7 +68,7 @@ class OpenStreetMapHandler(APIHandler):
             if api_session is not None:
                 response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to OpenStreetMap!')
+            log.logger.error('Error connecting to OpenStreetMap!')
             response.error_message = str(e)
 
         self.is_connected = response.success

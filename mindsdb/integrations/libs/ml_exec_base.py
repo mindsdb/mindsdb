@@ -146,9 +146,6 @@ class BaseMLEngineExec:
         query_ast = self.parser(query, dialect=self.dialect)
         return self.query(query_ast)
 
-    def query_(self, query: ASTNode) -> Response:
-        raise Exception('Should not be used')
-
     @profiler.profile()
     def learn(
         self, model_name, project_name,

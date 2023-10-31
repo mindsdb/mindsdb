@@ -1,4 +1,13 @@
 import re
+    """
+    The above code is a Python script that defines classes and functions for integrating with the
+    Facebook Messenger API and performing various actions such as sending messages, images, audio,
+    video, files, and quick replies, as well as retrieving messages from the Messenger API.
+    
+    :param query: The `query` parameter is an instance of the `ast.Select` class, which represents a SQL
+    SELECT query. It contains information about the columns to select, the table to select from, any
+    conditions to filter the data, and any other clauses such as LIMIT or ORDER BY
+    """
 import os
 import datetime as dt
 import ast
@@ -8,8 +17,8 @@ import pytz
 import io
 import fbmessenger
 from fbmessenger import MessengerClient
-from fbmessenger.elements import Text
-from fbmessenger.quick_replies import QuickReply, Messager
+from fbmessenger.elements import Text, Messager
+from fbmessenger.quick_replies import QuickReply
 from fbmessenger.buttons import URLButton, POSTBACK
 from fbmessenger.threads import ThreadType
 import pandas as pd

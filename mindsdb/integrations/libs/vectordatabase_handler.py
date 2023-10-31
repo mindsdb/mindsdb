@@ -1,5 +1,4 @@
 import ast
-import difflib
 import uuid
 from enum import Enum
 from typing import Any, List, Optional
@@ -18,10 +17,8 @@ from mindsdb_sql.parser.ast import (
     Update,
 )
 from mindsdb_sql.parser.ast.base import ASTNode
-from pydantic import BaseModel, Extra, root_validator
 
 from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse
-from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities.log import get_log
 
 from ..utilities.sql_utils import query_traversal
@@ -94,72 +91,6 @@ class TableField(Enum):
     DISTANCE = "distance"
 
 
-class VectorStoreHandlerConfig(BaseModel):
-    """
-    Configuration for VectorStoreHandler.
-    """
-
-    vector_store: str
-    persist_directory: str = None
-    host: str = None
-    port: int = None
-    url: str = None
-    password: str = None
-    api_key: str = None
-
-    class Config:
-        extra = Extra.forbid
-
-    @root_validator(pre=True, allow_reuse=True)
-    def check_param_typos(cls, values):
-        """Check if there are any typos in the parameters."""
-
-        expected_params = cls.__fields__.keys()
-        for key in values.keys():
-            if key not in expected_params:
-                close_matches = difflib.get_close_matches(
-                    key, expected_params, cutoff=0.4
-                )
-                if close_matches:
-                    raise ValueError(
-                        f"Unexpected parameter '{key}'. Did you mean '{close_matches[0]}'?"
-                    )
-                else:
-                    raise ValueError(f"Unexpected parameter '{key}'.")
-        return values
-
-    @root_validator(allow_reuse=True)
-    def check_config(cls, values):
-        """Check if config is valid."""
-
-        vector_store = values.get("vector_store")
-        host = values.get("host")
-        port = values.get("port")
-        url = values.get("url")
-        api_key = values.get("api_key")
-        persist_directory = values.get("persist_directory")
-
-        if bool(port) != bool(host) or (host and (persist_directory or api_key or url)):
-            raise ValueError(
-                f"For {vector_store} handler - host and port must be provided together. "
-                f"Additionally, if host and port are provided, url, api_key, persist_directory should not be provided."
-            )
-
-        if bool(url) != bool(api_key) or (url and (host or port or persist_directory)):
-            raise ValueError(
-                f"For {vector_store} handler - url and api_key must be provided together. "
-                f"Additionally, if url and api_key are provided, host, port, persist_directory should not be provided."
-            )
-
-        if persist_directory and (url or api_key or host or port):
-            raise ValueError(
-                f"For {vector_store} handler - if persistence_folder is provided, "
-                f"url, host, api_key, port should not be provided."
-            )
-
-        return values
-
-
 class VectorStoreHandler(BaseHandler):
     """
     Base class for handlers associated to vector databases.
@@ -199,23 +130,10 @@ class VectorStoreHandler(BaseHandler):
 
             self.disconnect()
 
-    def create_validation(self, name, **kwargs):
+    def validate_connection_parameters(self, name, **kwargs):
         """Create validation for input parameters."""
 
-        _config = kwargs.get("connection_data")
-        _config["vector_store"] = name
-
-        config = VectorStoreHandlerConfig(**_config)
-
-        self.handler_storage = HandlerStorage(kwargs.get("integration_id"))
-
-        if config.persist_directory and not self.handler_storage.is_temporal:
-            # get full persistence directory from handler storage
-            self.persist_directory = self.handler_storage.folder_get(
-                config.persist_directory
-            )
-
-        return config
+        return NotImplementedError()
 
     def disconnect(self):
         raise NotImplementedError()

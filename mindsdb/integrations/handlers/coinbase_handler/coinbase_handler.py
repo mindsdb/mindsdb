@@ -75,18 +75,18 @@ class CoinBaseHandler(APIHandler):
 
     # symbol: BTC-USD
     # granularity 60, 300, 900, 3600, 21600, 86400
-    def get_coinbase_candle(self, symbol, granularity):
+    def get_coinbase_candle(self, symbol: str, granularity: int) -> pd.DataFrame:
         jdocs = []
         current_time = datetime.datetime.now()
         start_time = current_time - datetime.timedelta(seconds=granularity)
         start_time_iso = start_time.isoformat().split(".")[0] + "-04:00"
         path = "/products/" + symbol + "/candles?granularity=" + str(granularity) + "&start=" + start_time_iso
-        headers = self.generateApiHeaders("GET", path)
+        headers = self.generate_api_headers("GET", path)
         url = _BASE_COINBASE_US_URL + path
         response = requests.get(url, headers=headers)
         candles = response.json()
         for candle in candles:
-            dt = datetime.datetime.fromtimestamp(candle[0], pytz.timezone('US/Eastern')).isoformat()
+            dt = datetime.datetime.fromtimestamp(candle[0], None).isoformat()
             low, high, open, close, volume = candle[1:]
             jdoc = {"symbol": symbol, "low": low, "high": high, "open": open, "close": close, "volume": volume, "timestamp": candle[0], "timestamp_iso": dt}
             jdocs.append(jdoc)
@@ -101,7 +101,7 @@ class CoinBaseHandler(APIHandler):
             params (Dict): Trade data params (symbol, interval)
         """
         if 'symbol' not in params:
-            raise ValueError('Missing "symbol" param to fetch trade data for. (BTC-USD)')
+            raise ValueError('Missing "symbol" param to fetch trade data for.')
         if 'interval' not in params:
             raise ValueError('Missing "interval" param (60, 300, 900, 3600, 21600, 86400).')
 
@@ -112,7 +112,7 @@ class CoinBaseHandler(APIHandler):
         ast = parse_sql(query, dialect='mindsdb')
         return self.query(ast)
 
-    def generateApiHeaders(self, method, path):
+    def generate_api_headers(self, method: str, path: str) -> dict:
         timestamp = str(int(time.time()))
         message = timestamp + method + path
         signature = base64.b64encode(hmac.new(base64.b64decode(self.api_secret), str.encode(message), hashlib.sha256).digest())

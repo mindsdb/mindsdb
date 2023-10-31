@@ -34,7 +34,7 @@ class SkillsController:
             db.Skills.project_id == project.id
         ).first()
 
-    def get_skills(self, project_name: str = 'mindsdb') -> List[dict]:
+    def get_skills(self, project_name: str) -> List[dict]:
         '''
         Gets all skills in a project.
 
@@ -47,7 +47,8 @@ class SkillsController:
         Raises:
             ValueError: If `project_name` does not exist
         '''
-
+        if project_name is None:
+            project_name = 'mindsdb'
         project = self.project_controller.get(name=project_name)
         return db.Skills.query.filter(
             db.Skills.project_id == project.id

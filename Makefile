@@ -1,9 +1,8 @@
-install_precommit:
-	pip install pre-commit
+setup_dev:
+	pip install -r requirements_dev.txt
 	pre-commit install
 
-precommit: install_precommit
-	pre-commit run --files $(shell git diff --cached --name-only)
+precommit: setup_dev
+	pre-commit run --files $$(shell git diff --cached --name-only)
 
-
-.PHONY: precommit
+.PHONY: setup_dev  precommit

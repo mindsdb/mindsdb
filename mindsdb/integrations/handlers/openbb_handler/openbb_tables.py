@@ -9,7 +9,7 @@ from typing import Dict, List
 
 import pandas as pd
 import duckdb
-
+import datetime
 
 class OpenBBtable(APITable):
     def _get_params_from_conditions(self, conditions: List) -> Dict:
@@ -81,12 +81,13 @@ class StocksLoadTable(APITable):
         
         params = {}
         filters = []
+        arg_symbol = False
         for op, arg1, arg2 in conditions:
 
             if op == 'or':
                 raise NotImplementedError('OR is not supported')
             if arg1 == 'date' and arg2 is not None:
-
+                
                 date = parse_local_date(arg2)
 
                 if op == '>':
@@ -100,23 +101,26 @@ class StocksLoadTable(APITable):
                 filters.append([op, arg1, arg2])
 
             elif arg1 == 'symbol':
+                arg_symbol = True
                 if op == '=':
                     params['symbol'] = arg2
                 # TODO: implement IN
                 else:
-                    NotImplementedError('Only  "symbol=" is implemented')
+                    raise NotImplementedError('Only  "symbol=" is implemented')
 
             elif arg1 == 'interval':
                 if op == '=':
                     params['interval'] = arg2
                
                 else:
-                    NotImplementedError('Only  "interval=" is implemented')
+                    raise NotImplementedError('Only  "interval=" is implemented')
             
             else:
                 filters.append([op, arg1, arg2])
 
-        
+        if arg_symbol == False:
+            raise NotImplementedError("You must specify a symbol, for example WHERE symbol='SNAP'")
+
         result = self.handler.obb.stocks.load(**params).to_df()
 
         # Check if index is a datetime, if it is we want that as a column

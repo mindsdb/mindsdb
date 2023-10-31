@@ -1,7 +1,0 @@
-{
-    "project_id": "mindsdb-401709",
-    "location": "us-central1",
-    "staging_bucket": "gs://my_staging_bucket",
-    "experiment": "my-experiment",
-    "experiment_description": "my experiment description"
-}

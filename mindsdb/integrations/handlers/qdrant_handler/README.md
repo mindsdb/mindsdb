@@ -32,7 +32,7 @@ The available arguments for instantiating Qdrant can be found [here](https://git
 ## Creating a new table
 
 - Qdrant options for creating a collection can be specified as `collection_config` in the `CREATE DATABASE` parameters.
-- By default, UUIDs are set as collection IDs. You can provide your own IDs under the `ids` column.
+- By default, UUIDs are set as collection IDs. You can provide your own IDs under the `id` column.
 ```sql
 CREATE TABLE qdrant_test.test_table (
    SELECT embeddings,'{"source": "bbc"}' as metadata FROM mysql_demo_db.test_embeddings

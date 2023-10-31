@@ -8,11 +8,10 @@ GitHub handler for MindsDB provides interfaces to connect to GitHub via APIs and
 
 - [GitHub Handler](#github-handler)
   - [Table of Contents](#table-of-contents)
-  - [About GithHub](#about-githhub)
+  - [About GitHub](#about-github)
   - [GitHub Handler Implementation](#github-handler-implementation)
   - [GitHub Handler Initialization](#github-handler-initialization)
   - [Implemented Features](#implemented-features)
-  - [TODO](#todo)
   - [Example Usage](#example-usage)
 
 ---
@@ -82,6 +81,10 @@ SELECT * FROM mindsdb_github.branches
 
 ~~~~sql
 SELECT * FROM mindsdb_github.contributors
+~~~~
+
+~~~~sql
+SELECT * FROM mindsdb_github.projects
 ~~~~
 
 Run more advanced queries:

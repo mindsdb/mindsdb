@@ -104,6 +104,7 @@ class VectorStoreHandlerConfig(BaseModel):
     host: str = None
     port: int = None
     url: str = None
+    password: str = None
     api_key: str = None
 
     class Config:
@@ -183,27 +184,12 @@ class VectorStoreHandler(BaseHandler):
         },
     ]
 
-    def __init__(self, name: str, **kwargs):
+    def __init__(self, name: str):
         super().__init__(name)
 
         self.is_connected = False
-
-        if kwargs:
-            kwargs["connection_data"].pop("password", None)
-            self.handler_storage = HandlerStorage(kwargs.get("integration_id"))
-
-            _config = kwargs.get("connection_data")
-            _config["vector_store"] = name
-
-            self.config = VectorStoreHandlerConfig(**_config)
-
-            self.persist_directory = None
-
-            if self.config.persist_directory and not self.handler_storage.is_temporal:
-                # get full persistence directory from handler storage
-                self.persist_directory = self.handler_storage.folder_get(
-                    self.config.persist_directory
-                )
+        self.persist_directory = None
+        self.handler_storage = None
 
     def __del__(self):
         if self.is_connected is True:
@@ -212,6 +198,24 @@ class VectorStoreHandler(BaseHandler):
                 self.handler_storage.folder_sync(self.persist_directory)
 
             self.disconnect()
+
+    def create_validation(self, name, **kwargs):
+        """Create validation for input parameters."""
+
+        _config = kwargs.get("connection_data")
+        _config["vector_store"] = name
+
+        config = VectorStoreHandlerConfig(**_config)
+
+        self.handler_storage = HandlerStorage(kwargs.get("integration_id"))
+
+        if config.persist_directory and not self.handler_storage.is_temporal:
+            # get full persistence directory from handler storage
+            self.persist_directory = self.handler_storage.folder_get(
+                config.persist_directory
+            )
+
+        return config
 
     def disconnect(self):
         raise NotImplementedError()

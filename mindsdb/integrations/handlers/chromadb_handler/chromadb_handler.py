@@ -48,11 +48,13 @@ class ChromaDBHandler(VectorStoreHandler):
     name = "chromadb"
 
     def __init__(self, name: str, **kwargs):
-        super().__init__(name, **kwargs)
+        super().__init__(name)
+
+        config = self.create_validation(name, **kwargs)
 
         self._client_config = {
-            "chroma_server_host": self.config.host,
-            "chroma_server_http_port": self.config.port,
+            "chroma_server_host": config.host,
+            "chroma_server_http_port": config.port,
             "persist_directory": self.persist_directory,
         }
 

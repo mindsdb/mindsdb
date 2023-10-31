@@ -1,11 +1,7 @@
 from collections import OrderedDict
 
 from mindsdb.integrations.handlers.clipdrop_handler.clipdrop_tables import (
-    DockerHubRepoImagesSummaryTable,
-    DockerHubRepoImagesTable,
-    DockerHubRepoTagTable,
-    DockerHubRepoTagsTable,
-    DockerHubOrgSettingsTable
+    RemoveTextTable
 )
 from mindsdb.integrations.handlers.clipdrop_handler.clipdrop import ClipdropClient
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -37,11 +33,12 @@ class ClipdropHandler(APIHandler):
         connection_data = kwargs.get("connection_data", {})
         self.connection_data = connection_data
         self.kwargs = kwargs
-        self.client = ClipdropClient()
+        self.client = ClipdropClient(connection_data.get("api_key"), 
+                                     connection_data.get(""))
         self.is_connected = False
 
-        repo_images_stats_data = ClipdropRepoImagesSummaryTable(self)
-        self._register_table("repo_images_summary", repo_images_stats_data)
+        remove_text_data = RemoveTextTable(self)
+        self._register_table("remove_text", remove_text_data)
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.
@@ -51,14 +48,10 @@ class ClipdropHandler(APIHandler):
         StatusResponse
             connection object
         """
-        resp = StatusResponse(False)
-        status = self.client.login(self.connection_data.get("username"), self.connection_data.get("password"))
-        if status["code"] != 200:
-            resp.success = False
-            resp.error_message = status["error"]
-            return resp
-        self.is_connected = True
-        return resp
+        # FYI - No way currently to establish a connection with the given key
+        # without making a requests that is chargeable
+        # TODO - Find a way to solve FYI
+        return StatusResponse(True)
 
     def check_connection(self) -> StatusResponse:
         """Check connection to the handler.
@@ -68,24 +61,10 @@ class ClipdropHandler(APIHandler):
         StatusResponse
             Status confirmation
         """
-        response = StatusResponse(False)
-
-        try:
-            status = self.client.login(self.connection_data.get("username"), self.connection_data.get("password"))
-            if status["code"] == 200:
-                current_user = self.connection_data.get("username")
-                logger.info(f"Authenticated as user {current_user}")
-                response.success = True
-            else:
-                response.success = False
-                logger.info("Error connecting to dockerhub. " + status["error"])
-                response.error_message = status["error"]
-        except Exception as e:
-            logger.error(f"Error connecting to Clipdrop API: {e}!")
-            response.error_message = e
-
-        self.is_connected = response.success
-        return response
+        # FYI - No way currently to establish a connection with the given key
+        # without making a requests that is chargeable
+        # TODO - Find a way to solve FYI
+        return StatusResponse(True)
 
     def native_query(self, query: str) -> StatusResponse:
         """Receive and process a raw query.
@@ -110,7 +89,7 @@ connection_args = OrderedDict(
         "description": "Clipdrop API key",
         "required": True,
         "label": "api_key",
-    }
+    },
     dir_to_save={
         "type": ARG_TYPE.STR,
         "description": "The local directory to save Clipdrop API response",

@@ -137,7 +137,10 @@ def create_table_class(params_metadata, response_metadata, obb_function):
                 string = 'You must specify the following arguments in the WHERE statement:'
                 for key in mandatory_args:
                     if not mandatory_args[key]:
-                        string += "\n-----\n* {key}:\n{help}\n ".format(key=key, help=dict_to_yaml(params_metadata['properties'][key]))
+                        string += "\n--(required)---\n* {key}:\n{help}\n ".format(key=key, help=dict_to_yaml(params_metadata['properties'][key]))
+                for key in params_metadata["properties"]:
+                    if key not in mandatory_args:
+                        string += "\n--(optional)---\n* {key}:\n{help}\n ".format(key=key, help=dict_to_yaml(params_metadata['properties'][key]))
                 raise NotImplementedError(string)
 
             result = obb_function(**params).to_df()

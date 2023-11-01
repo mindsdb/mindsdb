@@ -41,12 +41,19 @@ class OpenBBHandler(APIHandler):
         from openbb_provider import standard_models
 
         self._register_table("openbb_fetcher", OpenBBtable(self))
-        stocks_loads_table_class = create_table_class(
+        stock_table_class = create_table_class(
             params_metadata = standard_models.stock_historical.StockHistoricalQueryParams.model_json_schema(),
             response_metadata = standard_models.stock_historical.StockHistoricalData.model_json_schema(),
             obb_function=self.obb.stocks.load
         )
-        self._register_table("stock_loads", stocks_loads_table_class(self))
+        self._register_table("stock_historical", stock_table_class(self))
+
+        crypto_table_class = create_table_class(
+            params_metadata = standard_models.crypto_historical.CryptoHistoricalQueryParams.model_json_schema(),
+            response_metadata = standard_models.crypto_historical.CryptoHistoricalData.model_json_schema(),
+            obb_function=self.obb.crypto.load
+        )
+        self._register_table("crypto_historical", crypto_table_class(self))
 
     def connect(self) -> bool:
         """Connects with OpenBB account through personal access token (PAT).

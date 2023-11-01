@@ -89,13 +89,22 @@ class StocksLoadTable(APITable):
             if arg1 == 'date' and arg2 is not None:
                 
                 date = parse_local_date(arg2)
-
+                interval = params.get('interval', '1d')
                 if op == '>':
-                    params['start_date'] = date
+                    params['start_date'] = date.strftime('%Y-%m-%d')
                 elif op == '<':
-                    params['end_date'] = date
-                else:
-                    raise NotImplementedError
+                    params['end_date'] = date.strftime('%Y-%m-%d')
+                elif op == '>=':
+                    date = date - pd.Timedelta(interval)
+                    params['start_date'] = date.strftime('%Y-%m-%d')
+                elif op == '<=':
+                    date = date + pd.Timedelta(interval)
+                    params['end_date'] = date.strftime('%Y-%m-%d')
+                elif op == '=':
+                    date = date - pd.Timedelta(interval)
+                    params['start_date'] = date.strftime('%Y-%m-%d')
+                    date = date + pd.Timedelta(interval)
+                    params['end_date'] = date.strftime('%Y-%m-%d')
 
                 # also add to post query filter because date_sent_after=date1 will include date1
                 filters.append([op, arg1, arg2])
@@ -126,24 +135,26 @@ class StocksLoadTable(APITable):
         # Check if index is a datetime, if it is we want that as a column
         if isinstance(result.index, pd.DatetimeIndex):
             result.reset_index(inplace=True)
+        
+
+        if query.limit is not None:
+            result = result.head(query.limit.value)
 
         result['symbol'] = params['symbol']
         
         # filter targets
         result = filter_dataframe(result, filters)
 
+        columns = self.get_columns()
+
+        columns += [col for col in result.columns if col not in columns]
+
+        # project targets
+        result = project_dataframe(result, query.targets, columns)
         # test this
         if query.order_by:
             result = sort_dataframe(result, query.order_by)
-
-        # project targets
-        columns = self.get_columns()
-        columns += [col for col in result.columns if col not in columns]
-        result = project_dataframe(result, query.targets, columns)
-
-        if query.limit is not None:
-            result = result.head(query.limit.value)
-
+        
         #result = group_by_df(resut, query)
 
 

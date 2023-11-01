@@ -91,7 +91,7 @@ def create_table_class(params_metadata, response_metadata, obb_function):
             for op, arg1, arg2 in conditions:
 
                 if op == 'or':
-                    raise NotImplementedError('OR is not supported')           
+                    raise NotImplementedError('OR is not supported')
                 if arg1 in mandatory_fields:
                     mandatory_args[arg1] = True
 
@@ -115,7 +115,7 @@ def create_table_class(params_metadata, response_metadata, obb_function):
                             date = date - pd.Timedelta(interval)
                             params['start_' + arg1] = date.strftime('%Y-%m-%d')
                             date = date + pd.Timedelta(interval)
-                            params['end_' + arg1] = date.strftime('%Y-%m-%d')      
+                            params['end_' + arg1] = date.strftime('%Y-%m-%d')
                 elif arg1 in params_metadata['properties'] or not strict_filter:
                     if op == '=':
                         params[arg1] = arg2
@@ -142,7 +142,7 @@ def create_table_class(params_metadata, response_metadata, obb_function):
                 result = result.head(query.limit.value)
 
             for key in columns_to_add:
-                result[key] = params[key]    
+                result[key] = params[key]
             # filter targets
             result = filter_dataframe(result, filters)
 

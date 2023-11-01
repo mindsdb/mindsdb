@@ -2,7 +2,7 @@
 
 [MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) enables you to use ML predictions in your database using SQL.
 
-- Developers can quickly add AI capabilities to your applications.
+- Developers can quickly add AI capabilities to your applications.ssss
 - Data Scientists can streamline MLOps by deploying ML models as AI Tables.
 - Data Analysts can easily make forecasts on complex data (like multivariate time-series with high cardinality) and visualize them in BI tools like Tableau.
 

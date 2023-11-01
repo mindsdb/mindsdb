@@ -41,7 +41,7 @@ class DiscordHandler(APIHandler):
         self.connection_data = connection_data
         self.kwargs = kwargs
 
-        self.is_authorized = False
+        self.is_connected = False
 
         messages = DiscordTable(self)
         self._register_table('messages', messages)
@@ -55,12 +55,12 @@ class DiscordHandler(APIHandler):
             connection object
         """
 
-        if self.is_authorized:
+        if self.is_connected:
             return StatusResponse(True)
 
         url = f'https://discord.com/api/v10/applications/@me'
         result = requests.get(
-            url, 
+            url,
             headers={
                 'Authorization': f'Bot {self.connection_data["token"]}',
                 'Content-Type': 'application/json',
@@ -68,9 +68,9 @@ class DiscordHandler(APIHandler):
         )
 
         if result.status_code != 200:
-            raise ValueError(f'Error connecting to Discord: {result.json()}')
+            raise ValueError(result.text)
 
-        self.is_authorized = True
+        self.is_connected = True
 
     def check_connection(self) -> StatusResponse:
         """
@@ -85,10 +85,10 @@ class DiscordHandler(APIHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Discord!')
-            response.error_message = str(e)
+            response.error_message = e
+            log.logger.error(f'Error connecting to Discord: {response.error_message}')
 
-        self.is_authorized = response.success
+        self.is_connected = response.success
 
         return response
 
@@ -154,13 +154,11 @@ class DiscordHandler(APIHandler):
                 raise ValueError(f'Error calling Discord API: {result.json()}')
 
             json = result.json()
-            for filter in filters:
-                json = list(filter(result.json()))
-
-            for msg in json:
-                msg['author_id'] = msg['author']['id']
-                msg['author_username'] = msg['author']['username']
-                msg['author_global_name'] = msg['author']['global_name']
+            author = json[0].get('author')
+            if author is not None:
+                json[0]['author_id'] = author.get('id')
+                json[0]['author_username'] = author.get('username')
+                json[0]['author_global_name'] = author.get('global_name')
 
             df = pd.DataFrame.from_records(json)
             return df

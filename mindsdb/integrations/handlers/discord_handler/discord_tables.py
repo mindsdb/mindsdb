@@ -1,5 +1,5 @@
-import ast
 import pandas as pd
+from typing import Text, List, Dict, Any
 
 from mindsdb_sql.parser import ast
 
@@ -85,12 +85,12 @@ class DiscordTable(APITable):
                 if op != '=':
                     raise NotImplementedError(f'Unsupported operator {op} for {arg1}')
 
-                if arg1 == 'author_id':
-                    filters.append(lambda x: x.author.id == int(arg2))
-                elif arg1 == 'author_username':
-                    filters.append(lambda x: x.author.username == arg2)
-                elif arg1 == 'author_global_name':
-                    filters.append(lambda x: x.author.global_name == arg2)
+                # if arg1 == 'author_id':
+                #     filters.append(lambda x: x.author.id == int(arg2))
+                # elif arg1 == 'author_username':
+                #     filters.append(lambda x: x.author.username == arg2)
+                # elif arg1 == 'author_global_name':
+                #     filters.append(lambda x: x.author.global_name == arg2)
 
             elif arg1 == 'channel_id':
                 if op != '=':
@@ -98,8 +98,11 @@ class DiscordTable(APITable):
                 channel_filter_flag = True
                 params['channel_id'] = int(arg2)
 
+            else:
+                filters.append([op, arg1, arg2])
+
         if query.limit is not None:
-            params['limit'] = query.limit.value
+            params['limit'] = query.limit
         else:
             params['limit'] = 100
 
@@ -135,7 +138,7 @@ class DiscordTable(APITable):
             # filter by columns
             result = result[columns]
         return result
-    
+        
     def insert(self, query: ast.Insert) -> None:
         """Sends messages to a Discord channel.
 
@@ -160,7 +163,20 @@ class DiscordTable(APITable):
             all_mandatory=False
         )
         message_data = insert_statement_parser.parse_query()
+        self.send_message(message_data)
 
+    def send_message(self, message_data: List[Dict[Text, Any]]) -> None: 
+        """Sends messages to a Microsoft Teams Channel using the parsed message data.
+
+        Parameters
+        ----------
+        message_data : List[Dict[Text, Any]]
+           List of dictionaries containing the messages to send.
+        
+        Returns
+        -------
+        None
+        """
         for message in message_data:
             try:
                 params = { 'channel_id': message['channel_id'], 'text': message['text'] }

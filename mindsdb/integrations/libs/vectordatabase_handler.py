@@ -118,25 +118,10 @@ class VectorStoreHandler(BaseHandler):
     def __init__(self, name: str):
         super().__init__(name)
 
-        self.is_connected = False
-        self.persist_directory = None
-        self.handler_storage = None
-
-    def __del__(self):
-        if self.is_connected is True:
-            if self.persist_directory:
-                # sync folder to handler storage
-                self.handler_storage.folder_sync(self.persist_directory)
-
-            self.disconnect()
-
     def validate_connection_parameters(self, name, **kwargs):
         """Create validation for input parameters."""
 
         return NotImplementedError()
-
-    def disconnect(self):
-        raise NotImplementedError()
 
     def _value_or_self(self, value):
         if isinstance(value, Constant):

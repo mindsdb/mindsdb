@@ -53,6 +53,8 @@ class ChromaDBHandler(VectorStoreHandler):
         super().__init__(name)
         self.handler_storage = HandlerStorage(kwargs.get("integration_id"))
         self._client = None
+        self.persist_directory = None
+        self.is_connected = False
 
         config = self.validate_connection_parameters(name, **kwargs)
 
@@ -99,7 +101,14 @@ class ChromaDBHandler(VectorStoreHandler):
             )
 
     def __del__(self):
-        super().__del__()
+        """Close the database connection."""
+
+        if self.is_connected is True:
+            if self.persist_directory:
+                # sync folder to handler storage
+                self.handler_storage.folder_sync(self.persist_directory)
+
+            self.disconnect()
 
     def connect(self):
         """Connect to a ChromaDB database."""
@@ -111,8 +120,8 @@ class ChromaDBHandler(VectorStoreHandler):
             self.is_connected = True
             return self._client
         except Exception as e:
-            log.logger.error(f"Error connecting to ChromaDB client, {e}!")
             self.is_connected = False
+            raise Exception(f"Error connecting to ChromaDB client, {e}!")
 
     def disconnect(self):
         """Close the database connection."""

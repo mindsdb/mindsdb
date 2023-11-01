@@ -1,5 +1,6 @@
 import ast
 import uuid
+from collections import defaultdict
 from enum import Enum
 from typing import Any, List, Optional
 
@@ -144,7 +145,7 @@ class VectorStoreHandler(BaseHandler):
         else:
             return value
 
-    def _prepare_data(self, query: ASTNode, columns: List) -> pd.DataFrame:
+    def _prepare_insert_data(self, query: ASTNode, columns: List) -> pd.DataFrame:
 
         if not self._is_columns_allowed(columns):
             raise Exception(
@@ -184,6 +185,60 @@ class VectorStoreHandler(BaseHandler):
                 ast.literal_eval(self._value_or_self(row[metadata_col_index]))
                 for row in query.values
             ]
+        else:
+            metadata = None
+
+        # create dataframe
+        data = pd.DataFrame(
+            {
+                TableField.ID.value: ids,
+                TableField.CONTENT.value: content,
+                TableField.EMBEDDINGS.value: embeddings,
+                TableField.METADATA.value: metadata,
+            }
+        )
+
+        return data
+
+    def _prepare_update_data(self, update_map: dict) -> pd.DataFrame:
+
+        columns = list(update_map.keys())
+
+        if not self._is_columns_allowed(columns):
+            raise Exception(
+                f"Columns {columns} not allowed."
+                f"Allowed columns are {[col['name'] for col in self.SCHEMA]}"
+            )
+
+        # must have either id or metadata
+        if TableField.ID.value not in columns:
+            raise Exception(
+                f"In order to update a row in {self.name} vectorDB, you must provide either the ids to update"
+            )
+
+        if TableField.ID.value in columns:
+            ids = [self._value_or_self(row) for row in update_map["id"]]
+        else:
+            ids = None
+
+        # get content column if it is present
+        if TableField.CONTENT.value in columns:
+            content = [self._value_or_self(row) for row in update_map["content"]]
+        else:
+            content = None
+
+        # get embeddings column if it is present
+        if TableField.EMBEDDINGS.value in columns:
+            embeddings = [
+                ast.literal_eval(self._value_or_self(row))
+                for row in update_map["embeddings"]
+            ]
+        else:
+            embeddings = None
+
+        if TableField.METADATA.value in columns:
+            metadata = [row for row in update_map["metadata"]]
+
         else:
             metadata = None
 
@@ -293,7 +348,7 @@ class VectorStoreHandler(BaseHandler):
         table_name = query.table.parts[-1]
         columns = [column.name for column in query.columns]
 
-        data = self._prepare_data(query, columns)
+        data = self._prepare_insert_data(query, columns)
 
         # dispatch insert
         return self.insert(table_name, data, columns=columns)
@@ -304,12 +359,29 @@ class VectorStoreHandler(BaseHandler):
         """
         # parse key arguments
         table_name = query.table.parts[-1]
-        columns = [column.name for column in query.columns]
 
-        data = self._prepare_data(query, columns)
+        update_map = defaultdict(list)
+
+        columns = [k for k, v in query.update_columns.items()]
+        where_statement = query.where
+        conditions = self._extract_conditions(where_statement)
+
+        for k in columns:
+            if TableField.METADATA.value in k:
+                # if metadata column, add to metadata update map
+                extract_fields = k.strip('`').split('.')
+                new_meta_data = {
+                    extract_fields[1]: self._value_or_self(query.update_columns[k])
+                }
+                update_map[extract_fields[0]].append(new_meta_data)
+            else:
+                # if not metadata column, add to update map
+                update_map[k].append(query.update_columns[k])
+
+        data = self._prepare_update_data(update_map)
 
         # dispatch update
-        return self.update(table_name, data, columns=columns)
+        return self.update(table_name, data, columns=columns, conditions=conditions)
 
     def _dispatch_delete(self, query: Delete) -> HandlerResponse:
         """
@@ -428,7 +500,11 @@ class VectorStoreHandler(BaseHandler):
         raise NotImplementedError()
 
     def update(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
+        self,
+        table_name: str,
+        data: pd.DataFrame,
+        columns: List[str] = None,
+        conditions: List[FilterCondition] = None,
     ) -> HandlerResponse:
         """Update data in table
 

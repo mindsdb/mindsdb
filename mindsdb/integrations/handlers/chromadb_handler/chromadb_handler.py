@@ -224,6 +224,9 @@ class ChromaDBHandler(VectorStoreHandler):
     ) -> HandlerResponse:
         collection = self._client.get_collection(table_name)
         filters = self._translate_metadata_condition(conditions)
+
+        include = ["metadatas", "documents", "embeddings"]
+
         # check if embedding vector filter is present
         vector_filter = (
             []
@@ -234,6 +237,7 @@ class ChromaDBHandler(VectorStoreHandler):
                 if condition.column == TableField.SEARCH_VECTOR.value
             ]
         )
+
         if len(vector_filter) > 0:
             vector_filter = vector_filter[0]
         else:
@@ -253,7 +257,7 @@ class ChromaDBHandler(VectorStoreHandler):
                 "query_embeddings": vector_filter.value
                 if vector_filter is not None
                 else None,
-                "include": ["metadatas", "documents", "distances"],
+                "include": include + ["distances"],
             }
             if limit is not None:
                 query_payload["n_results"] = limit
@@ -263,6 +267,8 @@ class ChromaDBHandler(VectorStoreHandler):
             documents = result["documents"][0]
             metadatas = result["metadatas"][0]
             distances = result["distances"][0]
+            embeddings = result["embeddings"][0]
+
         else:
             # general get query
             result = collection.get(
@@ -270,10 +276,12 @@ class ChromaDBHandler(VectorStoreHandler):
                 where=filters,
                 limit=limit,
                 offset=offset,
+                include=include,
             )
             ids = result["ids"]
             documents = result["documents"]
             metadatas = result["metadatas"]
+            embeddings = result["embeddings"]
             distances = None
 
         # project based on columns
@@ -281,14 +289,11 @@ class ChromaDBHandler(VectorStoreHandler):
             TableField.ID.value: ids,
             TableField.CONTENT.value: documents,
             TableField.METADATA.value: metadatas,
+            TableField.EMBEDDINGS.value: embeddings,
         }
 
         if columns is not None:
-            payload = {
-                column: payload[column]
-                for column in columns
-                if column != TableField.EMBEDDINGS.value
-            }
+            payload = {column: payload[column] for column in columns}
 
         # always include distance
         if distances is not None:
@@ -321,11 +326,17 @@ class ChromaDBHandler(VectorStoreHandler):
         return Response(resp_type=RESPONSE_TYPE.OK)
 
     def update(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
+        self,
+        table_name: str,
+        data: pd.DataFrame,
+        columns: List[str] = None,
+        conditions: List[FilterCondition] = None,
     ) -> HandlerResponse:
         """
         Update data in the ChromaDB database.
         """
+        if conditions:
+            raise Exception("Chroma update query doesn't support where clause")
 
         collection = self._client.get_collection(table_name)
 

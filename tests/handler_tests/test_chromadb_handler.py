@@ -356,21 +356,25 @@ class TestChromaDBHandler(BaseExecutorTest):
                 """
         self.run_sql(sql)
 
-        # update the embeddings
+        # updating the collection with only embeddings and not content is not allowed
         sql = """
             UPDATE chroma_test.test_table
             SET embeddings = '[3.0, 2.0, 1.0]',
-            id = 'id1'
+             id = 'id1'
         """
-        self.run_sql(sql)
-        # check if the data is updated
+
+        with pytest.raises(Exception):
+            self.run_sql(sql)
+
+        # updating the collection with only content and not embeddings is not allowed
         sql = """
-            SELECT * FROM chroma_test.test_table
-            WHERE id = 'id1'
+            UPDATE chroma_test.test_table
+            SET content = 'blah blah',
+             id = 'id1'
         """
-        ret = self.run_sql(sql)
-        assert ret.shape[0] == 1
-        assert ret.embeddings[0] == [3.0, 2.0, 1.0]
+
+        with pytest.raises(Exception):
+            self.run_sql(sql)
 
         # update multiple columns
         sql = """

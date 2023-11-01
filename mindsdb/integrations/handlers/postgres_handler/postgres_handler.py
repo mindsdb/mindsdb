@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 import psycopg
+from psycopg.postgres import types
 from psycopg.pq import ExecStatus
 from pandas import DataFrame
 
@@ -99,6 +100,27 @@ class PostgresHandler(DatabaseHandler):
 
         return response
 
+    def _cast_dtypes(self, df: DataFrame, description: list) -> None:
+        """ Cast df dtypes basing on postgres types
+
+            Args:
+                df (DataFrame)
+                description (list): psycopg cursor description
+        """
+        types_map = {
+            'int2': 'int16',
+            'int4': 'int32',
+            'int8': 'int64',
+            'numeric': 'float64',
+            'float4': 'float32',
+            'float8': 'float64'
+        }
+        for column_index, column_name in enumerate(df.columns):
+            if str(df[column_name].dtype) == 'object':
+                pg_type_name = types.get(description[column_index].type_code).name
+                if pg_type_name in types_map:
+                    df[column_name] = df[column_name].astype(types_map[pg_type_name])
+
     @profiler.profile()
     def native_query(self, query: str) -> Response:
         """
@@ -116,11 +138,16 @@ class PostgresHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
                 else:
                     result = cur.fetchall()
+                    df = DataFrame(
+                        result,
+                        columns=[x.name for x in cur.description]
+                    )
+                    self._cast_dtypes(df, cur.description)
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         DataFrame(
                             result,
-                            columns=[x.name for x in cur.description]
+                            columns=[x.name for x in cur.description], dtype={'amount': 'float64'}
                         )
                     )
                 connection.commit()

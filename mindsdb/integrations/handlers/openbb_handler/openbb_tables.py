@@ -96,36 +96,30 @@ def create_table_class(params_metadata, response_metadata, obb_function):
                     mandatory_args[arg1] = True
 
                 if ('start_' + arg1 in params_metadata['properties']
-                    and arg1 in response_columns
-                    and arg2 is not None
-                    and "format" in response_metadata['properties'][arg1]
-                    ):
+                    and arg1 in response_columns and arg2 is not None
+                        and "format" in response_metadata['properties'][arg1]):
                     if response_metadata['properties'][arg1]["format"] != 'date-time':
-                        
                         date = parse_local_date(arg2)
                         interval = arg_params.get('interval', '1d')
                         if op == '>':
-                            params['start_'+arg1] = date.strftime('%Y-%m-%d')
+                            params['start_' + arg1] = date.strftime('%Y-%m-%d')
                         elif op == '<':
-                            params['end_'+arg1] = date.strftime('%Y-%m-%d')
+                            params['end_' + arg1] = date.strftime('%Y-%m-%d')
                         elif op == '>=':
                             date = date - pd.Timedelta(interval)
-                            params['start_'+arg1] = date.strftime('%Y-%m-%d')
+                            params['start_' + arg1] = date.strftime('%Y-%m-%d')
                         elif op == '<=':
                             date = date + pd.Timedelta(interval)
-                            params['end_'+arg1] = date.strftime('%Y-%m-%d')
+                            params['end_' + arg1] = date.strftime('%Y-%m-%d')
                         elif op == '=':
                             date = date - pd.Timedelta(interval)
-                            params['start_'+arg1] = date.strftime('%Y-%m-%d')
+                            params['start_' + arg1] = date.strftime('%Y-%m-%d')
                             date = date + pd.Timedelta(interval)
-                            params['end_'+arg1] = date.strftime('%Y-%m-%d')
-                
+                            params['end_' + arg1] = date.strftime('%Y-%m-%d')      
                 elif arg1 in params_metadata['properties'] or not strict_filter:
                     if op == '=':
                         params[arg1] = arg2
                         columns_to_add[arg1] = arg2
-                
-                
                 filters.append([op, arg1, arg2])
 
             if not all(mandatory_args.values()):
@@ -143,14 +137,12 @@ def create_table_class(params_metadata, response_metadata, obb_function):
             # Check if index is a datetime, if it is we want that as a column
             if isinstance(result.index, pd.DatetimeIndex):
                 result.reset_index(inplace=True)
-            
 
             if query.limit is not None:
                 result = result.head(query.limit.value)
 
             for key in columns_to_add:
-                result[key] = params[key]
-            
+                result[key] = params[key]    
             # filter targets
             result = filter_dataframe(result, filters)
 
@@ -163,15 +155,9 @@ def create_table_class(params_metadata, response_metadata, obb_function):
             # test this
             if query.order_by:
                 result = sort_dataframe(result, query.order_by)
-            
-            #result = group_by_df(resut, query)
-
-
 
             return result
 
         def get_columns(self):
-            
             return response_columns
-        
     return AnyTable

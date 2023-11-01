@@ -1,13 +1,15 @@
 import sib_api_v3_sdk
 import pandas as pd
 
-from typing import List
-
+from typing import List, Optional, Dict, Text
+from mindsdb.utilities.log import get_log
 from mindsdb.integrations.libs.api_handler import APITable
-
+logger = get_log("integrations.sendinblue_handler")
 from mindsdb_sql.parser import ast
+from sib_api_v3_sdk.rest import ApiException
+from datetime import datetime
 
-from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
+from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor, UPDATEQueryExecutor, UPDATEQueryParser, DELETEQueryParser, DELETEQueryExecutor
 
 
 class EmailCampaignsTable(APITable):
@@ -59,45 +61,46 @@ class EmailCampaignsTable(APITable):
         email_campaigns_api_instance = sib_api_v3_sdk.EmailCampaignsApi(connection)
         email_campaigns = email_campaigns_api_instance.get_email_campaigns(**kwargs)
         return [email_campaign for  email_campaign in email_campaigns.campaigns]
-    
+              
     def delete(self, query: ast.Delete) -> None:
-    """Deletes data from the Sendinblue Email Campaigns Table.
+        """
+        Deletes an email campaign from Sendinblue.
 
-    Parameters
-    ----------
-    query : ast.Delete
-        Given SQL DELETE query
+        Parameters
+        ----------
+        query : ast.Delete
+           Given SQL DELETE query
 
-    Returns
-    -------
-    None
+        Returns
+        -------
+        None
 
-    Raises
-    ------
-    ValueError
-        If the query contains an unsupported condition
-    """
-    delete_statement_parser = DELETEQueryParser(
-        query,
-        'email_campaigns',
-        self.get_columns()
-    )
-    where_conditions = delete_statement_parser.parse_query()
+        Raises
+        ------
+        ApiException
+            If an error occurs when calling Sendinblue's API
+        """
+        delete_statement_parser = DELETEQueryParser(query)
+        where_conditions = delete_statement_parser.parse_query()
 
-    
-    email_campaigns_df = pd.json_normalize(self.get_email_campaigns())
+        email_campaigns_df = pd.json_normalize(self.get_email_campaigns())
 
-    
-    campaigns_to_delete = DELETEQueryExecutor(
-        email_campaigns_df,
-        where_conditions
-    ).execute_query()
+        delete_query_executor = DELETEQueryExecutor(
+            email_campaigns_df,
+            where_conditions
+        )
 
-  
-    for index, row in campaigns_to_delete.iterrows():
-        campaign_id = row['id']
-        try:
-            self.handler.connect().delete_email_campaign(campaign_id)
-            print(f"Campaign {campaign_id} deleted successfully")
-        except Exception as e:
-            print(f"Failed to delete campaign {campaign_id}: {str(e)}")
+        email_campaigns_df = delete_query_executor.execute_query()
+        campaign_ids = email_campaigns_df['id'].tolist()
+        self.delete_email_campaigns(campaign_ids)
+
+    def delete_email_campaigns(self, campaign_ids: List[Text]) -> None:
+        connection = self.handler.connect()
+        email_campaigns_api_instance = sib_api_v3_sdk.EmailCampaignsApi(connection)
+
+        for campaign_id in campaign_ids:
+            try:
+                email_campaigns_api_instance.delete_email_campaign(campaign_id)
+                logger.info(f'Email Campaign {campaign_id} deleted')
+            except ApiException as e:
+                logger.error(f"Exception when calling EmailCampaignsApi->delete_email_campaign: {e}\n")           

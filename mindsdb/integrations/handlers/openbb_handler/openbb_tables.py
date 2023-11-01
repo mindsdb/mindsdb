@@ -86,11 +86,13 @@ def create_table_class(params_metadata, response_metadata, obb_function):
                 query (ast.Select): Given SQL SELECT query
             """
             conditions = extract_comparison_conditions(query.where)
-            
+            arg_params = self._get_params_from_conditions(conditions=conditions)
             params = {}
             filters = []
             mandatory_args = {key: False for key in mandatory_fields}
             columns_to_add = {}
+            # filter only for properties in the
+            strict_filter = arg_params.get('strict_filter', False)
             for op, arg1, arg2 in conditions:
 
                 if op == 'or':
@@ -108,7 +110,7 @@ def create_table_class(params_metadata, response_metadata, obb_function):
                     if response_metadata['properties'][arg1]["format"] != 'date-time':
                         
                         date = parse_local_date(arg2)
-                        interval = params.get('interval', '1d')
+                        interval = arg_params.get('interval', '1d')
                         if op == '>':
                             params['start_'+arg1] = date.strftime('%Y-%m-%d')
                         elif op == '<':
@@ -124,8 +126,8 @@ def create_table_class(params_metadata, response_metadata, obb_function):
                             params['start_'+arg1] = date.strftime('%Y-%m-%d')
                             date = date + pd.Timedelta(interval)
                             params['end_'+arg1] = date.strftime('%Y-%m-%d')
-
-                if arg1 in params_metadata['properties']:
+                
+                elif arg1 in params_metadata['properties'] or not strict_filter:
                     if op == '=':
                         params[arg1] = arg2
                         columns_to_add[arg1] = arg2

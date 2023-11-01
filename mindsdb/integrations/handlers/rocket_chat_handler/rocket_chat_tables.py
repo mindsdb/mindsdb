@@ -148,7 +148,6 @@ class DirectMessagesTable(APITable):
         df = pd.DataFrame(message_rows)
         if query.order_by is not None:
             df = sort_dataframe(df, query.order_by)
-        df = sort_dataframe(df, query.order_by)
         df = project_dataframe(df, query.targets, self.get_columns())
 
         return df

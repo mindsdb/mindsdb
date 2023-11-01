@@ -40,7 +40,24 @@ These additional parameters need to have the exact same naming as in [OpenBB doc
 
 ### **Example 1**: obb.stocks.load
 
+
+
+
 Reference: [https://docs.openbb.co/sdk/reference/stocks/load](https://docs.openbb.co/sdk/reference/stocks/load)
+
+MindsDB will provide an abstraction in full SQL for commands so that they look like virtual tables: 
+
+```sql
+select * from obb_db.stock_historical 
+where  
+    symbol = 'MSFT' 
+    AND provider = "polygon" 
+    AND interval = "1m" 
+    AND date > "2023-09-01" 
+    ORDER BY date desc;
+```
+
+You can also call the command like this:
 
 ```sql
 SELECT *
@@ -106,12 +123,16 @@ Thus, you can go to the [requirements.txt](requirements.txt) file and add the ex
 E.g. if you want to access data from yfinance, all you need to do is add `openbb-yfinance` to that file, and now you can re-run the _Example 1_ with:
 
 ```sql
-SELECT *
-FROM obb_db.openbb_fetcher
-WHERE cmd = "obb.stocks.load"
-    AND symbol = "'RELIANCE.NS'"
-    AND start_date = "'2023-09-01'"
-    AND provider = "'yfinance'"
+
+select * from obb_db.stock_historical 
+where  
+    symbol = 'RELIANCE.NS' 
+    AND provider = "yfinance" 
+    AND interval = "1m" 
+    AND date >= "2023-09-01" 
+    ORDER BY date desc;
+
+
 ```
 
 which will allow you to access financial data from stocks from India (which wasn't possible before).

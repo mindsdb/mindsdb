@@ -240,7 +240,8 @@ class JobsExecutor:
         # filter next_run < now
         query = db.session.query(db.Jobs).filter(
             db.Jobs.next_run_at < dt.datetime.now(),
-            db.Jobs.deleted_at == sa.null()
+            db.Jobs.deleted_at == sa.null(),
+            db.Jobs.active == True,  # noqa
         ).order_by(db.Jobs.next_run_at)
 
         return query.all()

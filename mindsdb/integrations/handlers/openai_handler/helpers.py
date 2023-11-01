@@ -1,3 +1,4 @@
+import os
 from typing import List, Optional
 import random
 import time
@@ -7,7 +8,7 @@ import openai
 import tiktoken
 
 import mindsdb.utilities.profiler as profiler
-from mindsdb.integrations.handlers.openai_handler.models import ALL_MODELS as ALL_VALID_MODELS
+from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE
 
 
 def retry_with_exponential_backoff(
@@ -125,7 +126,7 @@ def count_tokens(messages, encoder, model_name='gpt-3.5-turbo-0301'):
         raise NotImplementedError(f"""_count_tokens() is not presently implemented for model {model_name}.""")
 
 
-def get_available_models(api_key: str, finetune_suffix: Optional[str] = None) -> List[str]:
+def get_available_models(api_key: str, all_models: List, finetune_suffix: Optional[str] = None) -> List[str]:
     """
         Helper method that returns available models for
             - a given API key and
@@ -137,8 +138,9 @@ def get_available_models(api_key: str, finetune_suffix: Optional[str] = None) ->
         else:
             return False
 
-    models = ALL_VALID_MODELS
-    user_models = [m.openai_id for m in openai.Model.list(api_key=api_key).data]
+    api_base = os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
+    models = all_models
+    user_models = [m.openai_id for m in openai.Model.list(api_key=api_key, api_base=api_base).data]
     if finetune_suffix is not None:
         user_models = list(filter(_get_user_fts, user_models))
         models.extend(user_models)

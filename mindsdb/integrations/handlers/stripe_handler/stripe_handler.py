@@ -1,6 +1,5 @@
 import stripe
-
-from mindsdb.integrations.handlers.stripe_handler.stripe_tables import CustomersTable, ProductsTable, PaymentIntentsTable,RefundsTable
+from mindsdb.integrations.handlers.stripe_handler.stripe_tables import CustomersTable, ProductsTable, PaymentIntentsTable, RefundsTable, PayoutsTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -41,6 +40,9 @@ class StripeHandler(APIHandler):
 
         payment_intents_data = PaymentIntentsTable(self)
         self._register_table("payment_intents", payment_intents_data)
+        
+        payouts_data = PayoutsTable(self)
+        self._register_table("payouts", payouts_data)
 
         refunds_data = RefundsTable(self)
         self._register_table("refunds", refunds_data)

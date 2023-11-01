@@ -23,7 +23,7 @@ Do not use this integration for short time-series, as they won't have enough dat
 Instead, we recommend using the Statsforecast handler, whose classical methods are more suited to small datasets.
 
 # Are models created with this integration fast and scalable, in general?
-Model training can be slow, as the default implementation will search differet network architectures and hyperparameters.
+Model training can be slow, as the default implementation will search different network architectures and hyperparameters.
 Once the model is trained, forecasting is very fast.
 
 # What are the recommended system specifications for models created with this framework?

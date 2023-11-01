@@ -3,7 +3,7 @@ from typing import Dict
 
 from openbb import obb
 
-from mindsdb.integrations.handlers.openbb_handler.openbb_tables import OpenBBtable, StocksLoadTable
+from mindsdb.integrations.handlers.openbb_handler.openbb_tables import OpenBBtable, create_table_class
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -38,9 +38,15 @@ class OpenBBHandler(APIHandler):
         self.is_connected = False
 
         self.obb = obb
+        from openbb_provider import standard_models
 
         self._register_table("openbb_fetcher", OpenBBtable(self))
-        self._register_table("stock_loads", StocksLoadTable(self))
+        stocks_loads_table_class = create_table_class(
+            params_metadata = standard_models.stock_historical.StockHistoricalQueryParams.model_json_schema(),
+            response_metadata = standard_models.stock_historical.StockHistoricalData.model_json_schema(),
+            obb_function=self.obb.stocks.load
+        )
+        self._register_table("stock_loads", stocks_loads_table_class(self))
 
     def connect(self) -> bool:
         """Connects with OpenBB account through personal access token (PAT).

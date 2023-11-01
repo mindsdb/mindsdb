@@ -4,12 +4,14 @@ from mindsdb_sql.parser import ast
 from mindsdb.integrations.utilities.date_utils import parse_local_date
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, project_dataframe, filter_dataframe
 from mindsdb.integrations.utilities.sql_utils import sort_dataframe
-
+from mindsdb.integrations.utilities.utils import dict_to_yaml
 from typing import Dict, List
 
 import pandas as pd
 import duckdb
 import datetime
+
+
 
 class OpenBBtable(APITable):
     def _get_params_from_conditions(self, conditions: List) -> Dict:
@@ -48,133 +50,130 @@ class OpenBBtable(APITable):
         )
 
         return openbb_data
+    
 
-class StocksLoadTable(APITable):
-    def _get_params_from_conditions(self, conditions: List) -> Dict:
-        """Gets aggregate trade data API params from SQL WHERE conditions.
+def create_table_class(params_metadata, response_metadata, obb_function):
 
-        Returns params to use for Binance API call to klines.
+    mandatory_fields = params_metadata['required'] if 'required' in params_metadata else []
+    response_columns = list(response_metadata['properties'].keys())
 
-        Args:
-            conditions (List): List of individual SQL WHERE conditions.
-        """
-        params: dict = {}
-        # generic interpreter for conditions
-        # since these are all equality conditions due to OpenBB Platform's API
-        # then we can just use the first arg as the key and the second as the value
-        for op, arg1, arg2 in conditions:
-            if op != "=":
-                raise NotImplementedError
-            params[arg1] = arg2
+    class AnyTable(APITable):
+        def _get_params_from_conditions(self, conditions: List) -> Dict:
+            """Gets aggregate trade data API params from SQL WHERE conditions.
 
-        return params
+            Returns params to use for Binance API call to klines.
 
-    def select(self, query: ast.Select) -> pd.DataFrame:
-        """Selects data from the OpenBB Platform and returns it as a pandas DataFrame.
+            Args:
+                conditions (List): List of individual SQL WHERE conditions.
+            """
+            params: dict = {}
+            # generic interpreter for conditions
+            # since these are all equality conditions due to OpenBB Platform's API
+            # then we can just use the first arg as the key and the second as the value
+            for op, arg1, arg2 in conditions:
+                if op != "=":
+                    raise NotImplementedError
+                params[arg1] = arg2
 
-        Returns dataframe representing the OpenBB data.
+            return params
 
-        Args:
-            query (ast.Select): Given SQL SELECT query
-        """
-        conditions = extract_comparison_conditions(query.where)
-        
-        params = {}
-        filters = []
-        arg_symbol = False
-        for op, arg1, arg2 in conditions:
+        def select(self, query: ast.Select) -> pd.DataFrame:
+            """Selects data from the OpenBB Platform and returns it as a pandas DataFrame.
 
-            if op == 'or':
-                raise NotImplementedError('OR is not supported')
-            if arg1 == 'date' and arg2 is not None:
-                
-                date = parse_local_date(arg2)
-                interval = params.get('interval', '1d')
-                if op == '>':
-                    params['start_date'] = date.strftime('%Y-%m-%d')
-                elif op == '<':
-                    params['end_date'] = date.strftime('%Y-%m-%d')
-                elif op == '>=':
-                    date = date - pd.Timedelta(interval)
-                    params['start_date'] = date.strftime('%Y-%m-%d')
-                elif op == '<=':
-                    date = date + pd.Timedelta(interval)
-                    params['end_date'] = date.strftime('%Y-%m-%d')
-                elif op == '=':
-                    date = date - pd.Timedelta(interval)
-                    params['start_date'] = date.strftime('%Y-%m-%d')
-                    date = date + pd.Timedelta(interval)
-                    params['end_date'] = date.strftime('%Y-%m-%d')
+            Returns dataframe representing the OpenBB data.
 
-                # also add to post query filter because date_sent_after=date1 will include date1
-                filters.append([op, arg1, arg2])
-
-            elif arg1 == 'symbol':
-                arg_symbol = True
-                if op == '=':
-                    params['symbol'] = arg2
-                # TODO: implement IN
-                else:
-                    raise NotImplementedError('Only  "symbol=" is implemented')
-
-            elif arg1 == 'interval':
-                if op == '=':
-                    params['interval'] = arg2
-               
-                else:
-                    raise NotImplementedError('Only  "interval=" is implemented')
+            Args:
+                query (ast.Select): Given SQL SELECT query
+            """
+            conditions = extract_comparison_conditions(query.where)
             
-            else:
+            params = {}
+            filters = []
+            mandatory_args = {key: False for key in mandatory_fields}
+            columns_to_add = {}
+            for op, arg1, arg2 in conditions:
+
+                if op == 'or':
+                    raise NotImplementedError('OR is not supported')
+                
+                if arg1 in mandatory_fields:
+                    mandatory_args[arg1] = True
+
+
+                if ('start_'+arg1  in params_metadata['properties'] 
+                    and  arg1 in response_columns 
+                    and arg2 is not None
+                    and "format" in response_metadata['properties'][arg1]
+                    ):
+                    if response_metadata['properties'][arg1]["format"] != 'date-time':
+                        
+                        date = parse_local_date(arg2)
+                        interval = params.get('interval', '1d')
+                        if op == '>':
+                            params['start_'+arg1] = date.strftime('%Y-%m-%d')
+                        elif op == '<':
+                            params['end_'+arg1] = date.strftime('%Y-%m-%d')
+                        elif op == '>=':
+                            date = date - pd.Timedelta(interval)
+                            params['start_'+arg1] = date.strftime('%Y-%m-%d')
+                        elif op == '<=':
+                            date = date + pd.Timedelta(interval)
+                            params['end_'+arg1] = date.strftime('%Y-%m-%d')
+                        elif op == '=':
+                            date = date - pd.Timedelta(interval)
+                            params['start_'+arg1] = date.strftime('%Y-%m-%d')
+                            date = date + pd.Timedelta(interval)
+                            params['end_'+arg1] = date.strftime('%Y-%m-%d')
+
+                if arg1 in params_metadata['properties']:
+                    if op == '=':
+                        params[arg1] = arg2
+                        columns_to_add[arg1] = arg2
+                
+                
                 filters.append([op, arg1, arg2])
 
-        if arg_symbol == False:
-            raise NotImplementedError("You must specify a symbol, for example WHERE symbol='SNAP'")
+            if not all(mandatory_args.values()):
+                string = 'You must specify the following arguments in the WHERE statement:'
+                for key in mandatory_args:
+                    if not mandatory_args[key]:
+                        string += "\n-----\n* {key}:\n{help}\n ".format(key=key, help=dict_to_yaml(params_metadata['properties'][key]))
+                raise NotImplementedError(string)
 
-        result = self.handler.obb.stocks.load(**params).to_df()
+            result = obb_function(**params).to_df()
 
-        # Check if index is a datetime, if it is we want that as a column
-        if isinstance(result.index, pd.DatetimeIndex):
-            result.reset_index(inplace=True)
+            # Check if index is a datetime, if it is we want that as a column
+            if isinstance(result.index, pd.DatetimeIndex):
+                result.reset_index(inplace=True)
+            
+
+            if query.limit is not None:
+                result = result.head(query.limit.value)
+
+            for key in columns_to_add:
+                result[key] = params[key]
+            
+            # filter targets
+            result = filter_dataframe(result, filters)
+
+            columns = self.get_columns()
+
+            columns += [col for col in result.columns if col not in columns]
+
+            # project targets
+            result = project_dataframe(result, query.targets, columns)
+            # test this
+            if query.order_by:
+                result = sort_dataframe(result, query.order_by)
+            
+            #result = group_by_df(resut, query)
+
+
+
+            return result
+
+        def get_columns(self):
+            
+            return response_columns
         
-
-        if query.limit is not None:
-            result = result.head(query.limit.value)
-
-        result['symbol'] = params['symbol']
-        
-        # filter targets
-        result = filter_dataframe(result, filters)
-
-        columns = self.get_columns()
-
-        columns += [col for col in result.columns if col not in columns]
-
-        # project targets
-        result = project_dataframe(result, query.targets, columns)
-        # test this
-        if query.order_by:
-            result = sort_dataframe(result, query.order_by)
-        
-        #result = group_by_df(resut, query)
-
-
-        # now we are going to try to runa  last filter on the query using duckdb magic
-        # print
-        # conn = duckdb.connect()
-        # conn.register(table_name, result)
-        # result = conn.execute(query_string).fetchdf()
-        # conn.close()
-
-        return result
-
-    def get_columns(self):
-        return [
-            'date',
-            'symbol', 
-            'open', 
-            'high', 
-            'low', 
-            'close', 
-            'volume', 
-            'vwap'
-        ]
+    return AnyTable

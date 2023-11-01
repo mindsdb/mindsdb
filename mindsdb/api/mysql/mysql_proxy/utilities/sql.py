@@ -124,9 +124,13 @@ def query_df(df, query, session=None):
         query_str = render.get_string(query_ast, with_failback=True)
 
     # workaround to prevent duckdb.TypeMismatchException
-    if len(df) > 0 and table_name.lower() in ('models', 'predictors', 'models_versions'):
-        if 'TRAINING_OPTIONS' in df.columns:
-            df = df.astype({'TRAINING_OPTIONS': 'string'})
+    if len(df) > 0:
+        if table_name.lower() in ('models', 'predictors', 'models_versions'):
+            if 'TRAINING_OPTIONS' in df.columns:
+                df = df.astype({'TRAINING_OPTIONS': 'string'})
+        if table_name.lower() == 'ml_engines':
+            if 'CONNECTION_DATA' in df.columns:
+                df = df.astype({'CONNECTION_DATA': 'string'})
 
     result_df, description = query_df_with_type_infer_fallback(query_str, {'df': df})
     result_df = result_df.replace({np.nan: None})

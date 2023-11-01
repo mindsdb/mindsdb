@@ -132,6 +132,3 @@ class PlayersTable(APITable):
             "statistics_0_penalty_missed",
             "statistics_0_penalty_saved"
         ]
-
-
-

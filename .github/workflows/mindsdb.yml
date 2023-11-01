@@ -23,7 +23,7 @@ jobs:
     - name: Check main requirements
       shell: bash
       run: |
-        pip install deptry
+        pip install -r requirements/requirements-dev.txt
 
         ### USE DEPTRY TO CHECK PYTHON REQUIREMENTS ###
         # This checks that:
@@ -72,9 +72,9 @@ jobs:
           # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in this handler
           # We ignore mindsdb because we know it exists
           MAIN_REQUIREMENTS_DEPS=`cat requirements/requirements.txt | tr ' ><=~[' '|' | cut -d '|' -f 1 | paste -sd\| -`
-          RULE_IGNORES=DEP003="mindsdb",DEP001="mindsdb",DEP002="${OPTIONAL_HANDLER_DEPS}|${MAIN_REQUIREMENTS_DEPS}"
+          RULE_IGNORES=DEP002="${OPTIONAL_HANDLER_DEPS}|${MAIN_REQUIREMENTS_DEPS}"
 
-          deptry --requirements-txt $REQUIREMENTS_FILES --package-module-name-map $PACKAGE_MODULE_NAME_MAP --per-rule-ignores $RULE_IGNORES --extend-exclude ${HANDLER_DIR}/setup.py ${HANDLER_DIR}
+          deptry --requirements-txt $REQUIREMENTS_FILES --package-module-name-map $PACKAGE_MODULE_NAME_MAP --per-rule-ignores $RULE_IGNORES --extend-exclude ${HANDLER_DIR}/setup.py --known-first-party mindsdb ${HANDLER_DIR}
         done
 
     - name: Check for duplicate requirements
@@ -128,32 +128,9 @@ jobs:
         python-version: ${{ matrix.python-version }}-dev
     - name: Install dependencies
       run: |
-        pip install --upgrade pip
-        # temp
-        pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
         pip install --no-cache-dir .
-        pip install --no-cache-dir .[file]
         pip install -r requirements/requirements-test.txt
-        pip uninstall pycodestyle -y && pip install pycodestyle==2.9.1  # temp fix while exist conflict in last version with flake8
       shell: bash
-      env:
-        ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
-        mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
-    - name: Install staging mdb libraries if it's not mindsdb/stable
-      if: ${{ github.ref != 'refs/heads/stable' }}
-      run: |
-          pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
-          pip uninstall pycodestyle -y && pip install pycodestyle==2.9.1  # temp fix while exist conflict in last version with flake8
-          pip install git+https://github.com/mindsdb/mindsdb_sql.git@staging --upgrade --no-cache-dir  # install post lightwood so it does not get overwritten
-    - name: Install ML engine related dependencies
-      run: |
-        for engine in openai anyscale_endpoints; do  # statsforecast huggingface lightwood timegpt (Note: timegpt does not work, fix please)
-          pip install -r ./mindsdb/integrations/handlers/${engine}_handler/requirements.txt
-        done
-      shell: bash
-      env:
-        ACCESS_KEY: ${{ secrets.GH_ACCESS_KEY }}
-        mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
     - name: Run integration api and flow tests
       run: |
 
@@ -237,12 +214,10 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4.7.0
       with:
-        python-version: '3.7'
+        python-version: '3.8'
     - name: Install dependencies
       run: |
-        echo ${{ github.ref }}
-        python -m pip install --upgrade pip
-        pip install setuptools wheel twine
+        pip install -r requirements/requirements-dev.txt
     - name: Build and publish
       env:
         TWINE_USERNAME:  __token__
@@ -250,10 +225,6 @@ jobs:
       run: |
         python setup.py sdist
         twine upload dist/*
-    - name: Install latest version from pypi to see that all is working
-      run: |
-        sleep 90
-        pip install mindsdb
 
   create_version_file:
     runs-on: ubuntu-latest

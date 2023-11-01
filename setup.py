@@ -47,6 +47,28 @@ with open("README.md", "r", encoding="utf8") as fh:
     long_description = fh.read()
 
 
+def expand_requirements_links(requirements: list) -> list:
+    """Expand requirements that contain links to other requirement files"""
+    to_add = []
+    to_remove = []
+
+    for requirement in requirements:
+        if requirement.startswith("-r "):
+            if os.path.exists(requirement.split()[1]):
+                with open(requirement.split()[1]) as fh:
+                    to_add += expand_requirements_links(
+                        [req.strip() for req in fh.read().splitlines()]
+                    )
+            to_remove.append(requirement)
+
+    for req in to_remove:
+        requirements.remove(req)
+    for req in to_add:
+        requirements.append(req)
+
+    return list(set(requirements))  # Remove duplicates
+
+
 def define_deps():
     """Reads requirements.txt requirements-extra.txt files and preprocess it
     to be feed into setuptools.
@@ -105,7 +127,10 @@ def define_deps():
             # If requirements.txt in our handler folder, import them as our extra's requirements
             if os.path.exists(req_file_path):
                 with open(req_file_path) as fp:
-                    extra = [req.strip() for req in fp.read().splitlines()]
+                    extra = expand_requirements_links(
+                        [req.strip() for req in fp.read().splitlines()]
+                    )
+
                 extra_requirements[extra_name] = extra
                 full_handlers_requirements += extra
             # Even with no requirements in our handler, list the handler as an extra (with no reqs)
@@ -114,7 +139,11 @@ def define_deps():
 
             # If this is a default extra and if we want to install defaults (enabled by default)
             #   then add it to the default requirements needing to install
-            if MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS and extra_name in DEFAULT_PIP_EXTRAS and extra:
+            if (
+                MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS
+                and extra_name in DEFAULT_PIP_EXTRAS
+                and extra
+            ):
                 requirements += extra
 
     extra_requirements['all_handlers_extras'] = list(set(full_handlers_requirements))

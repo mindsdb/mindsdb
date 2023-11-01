@@ -2,13 +2,14 @@ import unittest
 from mindsdb.integrations.handlers.instatus_handler.instatus_handler import InstatusHandler
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 import pandas as pd
+import os
 
 
 class InstatusHandlerTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.handler = InstatusHandler(name='mindsdb_instatus', connection_data={'api_key': 'd25509b171ad79395dc2c51b099ee6d0'})
+        cls.handler = InstatusHandler(name='mindsdb_instatus', connection_data={'api_key': os.environ.get('INSTATUS_API_KEY')})
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -36,11 +37,14 @@ class InstatusHandlerTest(unittest.TestCase):
         self.assertTrue(self.handler.native_query(query))
 
     def test_6_insert(self):
-        query = '''INSERT INTO mindsdb_instatus.status_pages (email, name, subdomain, components, logoUrl) VALUES ('ritwickrajmakhal11@gmail.com', 'mindsdb', 'mindsdb-ritwick-raj', '["Website", "App", "API"]', 'https://instatus.com/sample.png')'''
+        query = f'''INSERT INTO mindsdb_instatus.status_pages (email, name, subdomain, components, logoUrl) VALUES ('{os.environ.get('EMAIL_ID')}', 'mindsdb', 'somtirtha-roy-anthropology', '["Website", "App", "API"]', 'https://instatus.com/sample.png')'''
         self.assertTrue(self.handler.native_query(query))
 
     def test_7_update(self):
-        query = '''UPDATE mindsdb_instatus.status_pages
+        # get the id of the row to be updated
+        _id = self.handler.call_instatus_api(endpoint='/v2/pages')['id'][0]
+        # update the row with the id obtained
+        query = f'''UPDATE mindsdb_instatus.status_pages
                 SET logoUrl = 'https://instatus.com/sample.png',
                     faviconUrl = 'https://instatus.com/favicon-32x32.png',
                     websiteUrl = 'https://instatus.com',
@@ -75,12 +79,12 @@ class InstatusHandlerTest(unittest.TestCase):
                     timeFormat = 'p',
                     private = false,
                     useAllowList = false,
-                    translations = '{
-                    "name": {
+                    translations = '{{
+                    "name": {{
                         "fr": "nasa"
-                        }
-                    }'
-                WHERE id = 'clo3xshsk1114842hkn377y3lrap';'''
+                        }}
+                    }}'
+                WHERE id = "{_id}"'''
         self.assertTrue(self.handler.native_query(query))
 
 

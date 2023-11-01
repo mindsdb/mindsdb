@@ -17,7 +17,7 @@ from mindsdb.utilities.json_encoder import CustomJSONEncoder
 
 
 def query_df_with_type_infer_fallback(query_str: str, dataframes: dict):
-    ''' Duckdb need to infer column types if column.dtype == object. By default it take 100 rows,
+    ''' Duckdb need to infer column types if column.dtype == object. By default it take 1000 rows,
         but that may be not sufficient for some cases. This func try to run query multiple times
         increasing butch size for type infer
 
@@ -40,7 +40,8 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict):
             result_df = con.execute(query_str).fetchdf()
         except InvalidInputException:
             pass
-        break
+        else:
+            break
     else:
         raise InvalidInputException
     description = con.description

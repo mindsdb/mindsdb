@@ -210,16 +210,20 @@ class VectorStoreHandler(BaseHandler):
                 f"Allowed columns are {[col['name'] for col in self.SCHEMA]}"
             )
 
-        # must have either id or metadata
-        if TableField.ID.value not in columns:
+        # todo - I don't think we want user being able to update embedding or content in isolation?
+        if bool(TableField.EMBEDDINGS.value in columns) != bool(
+            TableField.CONTENT.value in columns
+        ):
             raise Exception(
-                f"In order to update a row in {self.name} vectorDB, you must provide either the ids to update"
+                f"You cannot update {TableField.EMBEDDINGS.value} without updating {TableField.CONTENT.value}"
             )
 
         if TableField.ID.value in columns:
             ids = [self._value_or_self(row) for row in update_map["id"]]
         else:
-            ids = None
+            raise Exception(
+                f"In order to update a row in {self.name} vectorDB, you must provide the ids to update"
+            )
 
         # get content column if it is present
         if TableField.CONTENT.value in columns:

@@ -71,9 +71,8 @@ def create_table_class(params_metadata, response_metadata, obb_function):
             # since these are all equality conditions due to OpenBB Platform's API
             # then we can just use the first arg as the key and the second as the value
             for op, arg1, arg2 in conditions:
-                if op != "=":
-                    raise NotImplementedError
-                params[arg1] = arg2
+                if op == "=":
+                    params[arg1] = arg2
 
             return params
 

@@ -28,6 +28,8 @@ DEFAULT_PIP_EXTRAS = [
     'statsforecast',
     'huggingface',
     'timegpt',
+    'binance',
+    'twitter',
 ]
 
 

@@ -1,25 +1,15 @@
 FROM python:3.8
 
+ARG EXTRAS
 
-RUN apt update && apt-get upgrade -y && apt install -y build-essential
+RUN apt update && apt-get upgrade -y && apt install -y build-essential libxml2 libmagic1
+RUN python3 -m pip install --no-cache-dir --upgrade pip
 
-# db2 requirement
-RUN apt install -y libxml2 libmagic1 || true
-
-RUN python3 -m pip install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir boto3 psycopg2-binary
-
-WORKDIR /
-# COPY requirements.txt /requirements.txt
-
-COPY . /mindsdb/
+COPY mindsdb /mindsdb
 WORKDIR /mindsdb
-RUN pip install ".[grpc]" ".[telemetry]"
 
-RUN pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
-RUN python3 -c 'import nltk; nltk.download("punkt");'
-RUN pip install neuralforecast
-# COPY ./mindsdb /mindsdb/mindsdb
+RUN pip install "."
+RUN pip install ${EXTRAS} || true
 
 ENV PYTHONPATH "/mindsdb"
 ENV FLASK_DEBUG "1"

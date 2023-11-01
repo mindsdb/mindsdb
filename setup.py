@@ -24,7 +24,6 @@ DEFAULT_PIP_EXTRAS = [
     'langchain',
     'openai',
     'byom',
-    'lightwood',
     'statsforecast',
     'huggingface',
     'timegpt',

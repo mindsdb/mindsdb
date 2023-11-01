@@ -4,7 +4,8 @@ from mindsdb.integrations.handlers.paypal_handler.paypal_tables import (
     InvoicesTable,
     PaymentsTable,
     SubscriptionsTable,
-    OrdersTable
+    OrdersTable,
+    PayoutsTable
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
@@ -53,6 +54,9 @@ class PayPalHandler(APIHandler):
 
         orders_data = OrdersTable(self)
         self._register_table("orders", orders_data)
+
+        payouts_data = PayoutsTable(self)
+        self._register_table("payouts", payouts_data)
 
     def connect(self):
         """

@@ -5,7 +5,7 @@ from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
 
-class FootballApiTable(APITable):
+class PlayersTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Pulls data from the Football API
 

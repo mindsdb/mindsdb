@@ -1,11 +1,11 @@
 import os
-import time
-from typing import Dict
 
 import pandas as pd
 from mindsdb_sql import parse_sql
 
-from mindsdb.integrations.handlers.footballApi_handler.FootballApi_Tables import FootballApiTable
+from mindsdb.integrations.handlers.footballApi_handler.footballapi_constants import FOOTBALL_API_CLIENT_METHODS
+from mindsdb.integrations.handlers.footballApi_handler.players_table import PlayersTable
+from mindsdb.integrations.handlers.footballApi_handler.football_apis.players_api import PlayersApi
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse, HandlerResponse,
@@ -40,8 +40,8 @@ class FootballApiHandler(APIHandler):
         self.is_connected = False
         self.connection_data = connection_data
         self.connection = None
-        football_api_players = FootballApiTable(self)
-        self._register_table("get_players", football_api_players)
+        players = PlayersTable(self)
+        self._register_table("get_players", players)
 
     def connect(self) -> FootballAPI:
         """Set up the connection required by the handler.
@@ -99,14 +99,14 @@ class FootballApiHandler(APIHandler):
         ast = parse_sql(query, dialect='mindsdb')
         return self.query(ast)
 
-    def call_football_api(self, method_name: str, **player_params) -> pd.DataFrame:
+    def call_football_api(self, method_name: str, **params) -> pd.DataFrame:
         """Calls the Football API.
 
                         Parameters
                         ----------
                         method_name : str
                             name of the calling method from Football api
-                        **player_params:
+                        **params:
                             Additional keyword arguments representing parameters specific
                             to the API method being called.
 
@@ -115,72 +115,8 @@ class FootballApiHandler(APIHandler):
                         pd.DataFrame
                             A Pandas DataFrame containing the retrieved player data.
                         """
-        if method_name == "get_players":
-            return self._get_players(**player_params)
+        if method_name == FOOTBALL_API_CLIENT_METHODS.get("PLAYERS"):
+            client = self.connect()
+            players_api = PlayersApi(client)
+            return players_api.get_players(**params)
         raise NotImplementedError(f"Method name {method_name} not supported by Football API Handler. ")
-
-    def _get_players_data(self, client, id=None, team=None, league=None, season=None, page=1, search=None,
-                          player_data_list=None, page_required=1):
-        if player_data_list is None:
-            player_data_list = []
-
-        players = client.get_player(id=id, team=team, league=league, season=season, page=page, search=search)
-        if players["errors"]:
-            raise Exception(players["errors"])
-        player_data_list.extend(players['response'])
-
-        if players['paging']['current'] < page_required and page_required <= players['paging']['total']:
-            next_page = players['paging']['current'] + 1
-            if next_page % 2 == 1:
-                time.sleep(2)  # to avoid api rate-limit
-            player_data_list = self._get_players_data(client, id=id, team=team, league=league, season=season, page=next_page,
-                                                      search=search,
-                                                      player_data_list=player_data_list,
-                                                      page_required=page_required)
-
-        return player_data_list
-
-    def _flatten_json(self, json_data, prefix=''):
-        """
-        Recursively flattens a nested JSON object into a flat dictionary.
-
-        Args:
-            json_data (dict): The JSON object to flatten.
-            prefix (str, optional): A prefix to be added to flattened keys.
-
-        Returns:
-            dict: A dictionary where keys represent the flattened keys of the JSON object,
-                and values are the corresponding values.
-        """
-        flattened_dict = {}
-        for key, value in json_data.items():
-            new_key = prefix + key if prefix else key
-            if isinstance(value, dict):
-                flattened_dict.update(self._flatten_json(value, new_key + '_'))
-            elif isinstance(value, list):
-                for index, item in enumerate(value):
-                    if isinstance(item, dict):
-                        flattened_dict.update(self._flatten_json(item, new_key + f'_{index}_'))
-                    else:
-                        flattened_dict[new_key + f'_{index}'] = item
-            else:
-                flattened_dict[new_key] = value
-        return flattened_dict
-
-    def _get_players(self, **params) -> pd.DataFrame:
-        client = self.connect()
-        league = params.get('league', None)
-        season = params.get('season', None)
-        team = params.get('team', None)
-        id = params.get('id', None)
-        search = params.get('search', None)
-        page = params.get('page', None)
-
-        try:
-            page_required = page if page is not None else 1
-            data = self._get_players_data(client, id=id, team=team, league=league, season=season,
-                                          search=search, page_required=page_required)
-            player_data = pd.DataFrame.from_dict([self._flatten_json(d) for d in data])
-        except Exception as e:
-            raise e
-        return player_data

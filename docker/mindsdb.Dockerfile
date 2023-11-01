@@ -5,7 +5,7 @@ ARG EXTRAS
 RUN apt update && apt-get upgrade -y && apt install -y build-essential libxml2 libmagic1
 RUN python3 -m pip install --no-cache-dir --upgrade pip
 
-COPY mindsdb /mindsdb
+COPY . /mindsdb
 WORKDIR /mindsdb
 
 RUN pip install "."

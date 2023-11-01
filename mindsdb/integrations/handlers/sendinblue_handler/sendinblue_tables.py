@@ -1,13 +1,15 @@
 import sib_api_v3_sdk
 import pandas as pd
 
-from typing import List
-
+from typing import List, Optional, Dict
+from mindsdb.utilities.log import get_log
 from mindsdb.integrations.libs.api_handler import APITable
-
+logger = get_log("integrations.sendinblue_handler")
 from mindsdb_sql.parser import ast
+from sib_api_v3_sdk.rest import ApiException
+from datetime import datetime
 
-from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
+from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor, UPDATEQueryExecutor, UPDATEQueryParser
 
 
 class EmailCampaignsTable(APITable):
@@ -60,44 +62,44 @@ class EmailCampaignsTable(APITable):
         email_campaigns = email_campaigns_api_instance.get_email_campaigns(**kwargs)
         return [email_campaign for  email_campaign in email_campaigns.campaigns]
     
-   def update(self, query: ast.Update) -> None:
-    """Updates data in the Sendinblue Email Campaigns Table.
-
-    Parameters
-    ----------
-    query : ast.Update
-        Given SQL UPDATE query
-
-    Returns
-    -------
-    None
-
-    Raises
-    ------
-    ValueError
-        If the query contains an unsupported condition
-    """
-    update_statement_parser = UPDATEQueryParser(
-        query,
-        'email_campaigns',
-        self.get_columns()
-    )
-    set_clause, where_conditions = update_statement_parser.parse_query()
-
     
-    email_campaigns_df = pd.json_normalize(self.get_email_campaigns())
+    def update(self, query: 'ast.Update') -> None:
+        """
+        Updates data in Sendinblue "PUT /emailCampaigns/{campaignId}" API endpoint.
+        
+        Parameters
+        ----------
+        query : ast.Update
+            Given SQL UPDATE query
+            
+        Returns
+        -------
+        None
+        
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        update_statement_parser = UPDATEQueryParser(query)
+        values_to_update, where_conditions = update_statement_parser.parse_query()
 
-    campaigns_to_update = UPDATEQueryExecutor(
-        email_campaigns_df,
-        where_conditions
-    ).execute_query()
+        email_campaigns_df = pd.json_normalize(self.get_email_campaigns())
+        update_query_executor = UPDATEQueryExecutor(
+            email_campaigns_df,
+            where_conditions
+        )
 
+        email_campaigns_df = update_query_executor.execute_query()
+        campaign_ids = email_campaigns_df['id'].tolist()
+        self.update_email_campaigns(campaign_ids, values_to_update)
 
-    for index, row in campaigns_to_update.iterrows():
-        campaign_id = row['id']
-        update_data = {col: row[col] for col in set_clause.keys()}
-        try:
-            self.handler.connect().update_email_campaign(campaign_id, update_data)
-            print(f"Campaign {campaign_id} updated successfully")
-        except Exception as e:
-            print(f"Failed to update campaign {campaign_id}: {str(e)}")
+    def update_email_campaigns(self, campaign_ids: List[int], values_to_update: Dict) -> None:
+        connection = self.handler.connect()
+        email_campaigns_api_instance = sib_api_v3_sdk.EmailCampaignsApi(connection)
+
+        for campaign_id in campaign_ids:
+            try:
+                email_campaigns_api_instance.update_email_campaign(campaign_id, values_to_update)
+            except ApiException as e:
+                print(f"Exception when updating campaign {campaign_id}: {e}")

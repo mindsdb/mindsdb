@@ -3,6 +3,23 @@ from urllib.parse import urljoin
 
 
 def move_under(d, key_contents_to_move, key_to_move_under=None):
+    """
+    Moves the keys in nested dict with key key_contents_to_move under the dict defined by key_to_move_under.
+    If no key_to_move_under is provided, the keys are moved under d.
+    eg.
+    Calling this on the following dict (d) with key_contents_to_move = "a":
+    {
+        "a": {
+            "b": 1,
+            "c": 2
+        }
+    }
+    results in:
+    {
+        "b": 1,
+        "c": 2
+    }
+    """
     if key_contents_to_move not in d:
         return
     for k, v in d[key_contents_to_move].items():
@@ -40,15 +57,19 @@ class SAPERP:
 
     def get(self, endpoint):
         """ Common method for all get endpoints """
-        resp = self._request("get", endpoint)
-        if resp.ok:
-            resp = resp.json()["d"]
-            if "results" in resp:
-                resp = resp["results"]
+        try:
+            resp = self._request("get", endpoint)
+            if resp.ok:
+                resp = resp.json()["d"]
+                if "results" in resp:
+                    resp = resp["results"]
+                else:
+                    resp = [resp]
             else:
-                resp = [resp]
-        else:
-            resp = []
-        for r in resp:
-            move_under(r, "__metadata")
-        return resp
+                resp = []
+            for r in resp:
+                move_under(r, "__metadata")
+            return resp
+        except Exception as e:
+            print(f"Error requesting endpoint {endpoint}: {e}")
+            return {}

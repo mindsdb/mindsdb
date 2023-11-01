@@ -181,7 +181,7 @@ class CompaniesTable(APITable):
             for company in companies
         ]
         return companies_dict
-    
+
     def create_companies(self, companies_data: List[Dict[Text, Any]]) -> None:
         hubspot = self.handler.connect()
         companies_to_create = [HubSpotObjectInputCreate(properties=company) for company in companies_data]
@@ -211,7 +211,7 @@ class CompaniesTable(APITable):
             hubspot.crm.companies.batch_api.archive(
                 HubSpotBatchObjectIdInput(inputs=companies_to_delete),
             )
-            logger.info(f"Companies deleted")
+            logger.info("Companies deleted")
         except Exception as e:
             raise Exception(f"Companies deletion failed {e}")
 
@@ -398,7 +398,7 @@ class ContactsTable(APITable):
             hubspot.crm.contacts.batch_api.archive(
                 HubSpotBatchObjectIdInput(inputs=contacts_to_delete),
             )
-            logger.info(f"Contacts deleted")
+            logger.info("Contacts deleted")
         except Exception as e:
             raise Exception(f"Contacts deletion failed {e}")
 
@@ -585,6 +585,6 @@ class DealsTable(APITable):
             hubspot.crm.deals.batch_api.archive(
                 HubSpotBatchObjectIdInput(inputs=deals_to_delete),
             )
-            logger.info(f"Deals deleted")
+            logger.info("Deals deleted")
         except Exception as e:
             raise Exception(f"Deals deletion failed {e}")

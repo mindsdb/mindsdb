@@ -102,7 +102,7 @@ class InfluxDBHandler(APIHandler):
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
 
-    def call_influxdb_tables(self):
+    def call_influxdb_tables(self,query):
         """Pulls all the records from the given  InfluxDB table and returns it select()
     
         Returns
@@ -110,20 +110,8 @@ class InfluxDBHandler(APIHandler):
         pd.DataFrame of all the records of the particular InfluxDB 
         """
         influx_connection=self.connect()
-        database=self.connection_data['influxdb_table_name']
-        query=f"SELECT * FROM '{database}'"
-        # url = f"{self.connection_data['influxdb_url']}/query"
+        if query is None:
+            query='SELECT * FROM '+ f"{self.connection_data['influxdb_table_name']}"
         
-        # params = {
-        #     ('db',f"{self.connection_data['influxdb_db_name']}"),
-        #     ('q','SELECT * FROM '+ f"{self.connection_data['influxdb_table_name']}" )
-        # }
-        # headers = {
-        #     "Authorization": f"Token {self.connection_data['influxdb_token']}",
-        #     "Accept": "application/csv",
-        # }
-
-        # response = requests.request("GET",url,params=params,headers=headers)
-        # influxdb_df = pd.read_csv(io.StringIO(response.text))
         table=influx_connection.query(query=query,database=self.connection_data['influxdb_db_name'], language='sql')
         return table.to_pandas()

@@ -142,3 +142,19 @@ WHERE state ="CREATED"
 LIMIT 5
 ~~~~
 
+
+`Orders_table`
+Query Orders with specific columns:
+
+~~~~sql
+SELECT id, name FROM paypal_datasource.orders
+~~~~
+
+Query Orders with conditions and ordering:
+
+~~~~sql
+SELECT id , state, amount 
+FROM paypal_datasource.orders 
+WHERE ids = ("{id1}","{id2}")
+ORDER BY total_amount DESC
+~~~~

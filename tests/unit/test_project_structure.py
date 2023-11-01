@@ -609,7 +609,7 @@ class TestProjectStructure(BaseExecutorDummyML):
                 SELECT m.*
                    FROM pg.tasks as t
                    JOIN task_model as m
-                   where t.a > last
+                   where t.a > last and t.b='b'
             )
           )  
           start now
@@ -641,7 +641,8 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert len(calls) == 1
         sql = calls[0][0][0].to_string()
         # getting next value, greater than max previous
-        assert ' t.a > 2' in sql
+        assert 't.a > 2' in sql
+        assert "t.b = 'b'" in sql
 
 class TestJobs(BaseExecutorDummyML):
 

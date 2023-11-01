@@ -103,6 +103,15 @@ class PostgresHandler(DatabaseHandler):
     def _cast_dtypes(self, df: DataFrame, description: list) -> None:
         """ Cast df dtypes basing on postgres types
 
+            Note:
+                Date types casting is not provided because of there is no issues (so far).
+                By default pandas will cast postgres date types to:
+                 - date -> object
+                 - time -> object
+                 - timetz -> object
+                 - timestamp -> datetime64[ns]
+                 - timestamptz -> datetime64[ns, {tz}]
+
             Args:
                 df (DataFrame)
                 description (list): psycopg cursor description
@@ -145,10 +154,7 @@ class PostgresHandler(DatabaseHandler):
                     self._cast_dtypes(df, cur.description)
                     response = Response(
                         RESPONSE_TYPE.TABLE,
-                        DataFrame(
-                            result,
-                            columns=[x.name for x in cur.description], dtype={'amount': 'float64'}
-                        )
+                        df
                     )
                 connection.commit()
             except Exception as e:

@@ -1,5 +1,4 @@
 from mindsdb.integrations.libs.api_handler import APITable
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.utilities.date_utils import parse_local_date
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, project_dataframe, filter_dataframe
@@ -8,9 +7,6 @@ from mindsdb.integrations.utilities.utils import dict_to_yaml
 from typing import Dict, List
 
 import pandas as pd
-import duckdb
-import datetime
-
 
 
 class OpenBBtable(APITable):
@@ -50,7 +46,7 @@ class OpenBBtable(APITable):
         )
 
         return openbb_data
-    
+
 
 def create_table_class(params_metadata, response_metadata, obb_function):
 
@@ -95,14 +91,12 @@ def create_table_class(params_metadata, response_metadata, obb_function):
             for op, arg1, arg2 in conditions:
 
                 if op == 'or':
-                    raise NotImplementedError('OR is not supported')
-                
+                    raise NotImplementedError('OR is not supported')           
                 if arg1 in mandatory_fields:
                     mandatory_args[arg1] = True
 
-
-                if ('start_'+arg1  in params_metadata['properties'] 
-                    and  arg1 in response_columns 
+                if ('start_' + arg1 in params_metadata['properties']
+                    and arg1 in response_columns
                     and arg2 is not None
                     and "format" in response_metadata['properties'][arg1]
                     ):

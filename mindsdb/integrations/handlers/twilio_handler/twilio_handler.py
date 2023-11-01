@@ -150,8 +150,8 @@ class MessagesTable(APITable):
         for row in query.values:
             params = dict(zip(columns, row))
 
-            # split long text over 280 symbols
-            max_text_len = 280
+            # split long text over 1500 symbols
+            max_text_len = 1500
             text = params['body']
             words = re.split('( )', text)
             messages = []

@@ -6,7 +6,7 @@ sidebarTitle: HuggingFace
 Hugging Face facilitates building, training, and deploying ML models. Now you can create Hugging Face models within MindsDB.
 
 <Note>
-Please note that if you use local installation of MindsDB, instead of MindsDB Cloud, you should install `transformers==4.21.0` to be able to use the Hugging Face models.
+Please note that if you use a local installation of MindsDB, instead of MindsDB Cloud, you should install `transformers==4.21.0` to be able to use the Hugging Face models.
 </Note>
 
 ## How to Bring the Hugging Face Model to MindsDB
@@ -49,7 +49,7 @@ FROM huggingface_api
 USING api_key = 'hf_xxx';
 ```
 
-You can generate Hugging Face tokens in the `Setings -> Access Tokens` tab of your Hugging Face account.
+You can generate Hugging Face tokens in the `Settings -> Access Tokens` tab of your Hugging Face account.
 </Tab>
 </Tabs>
 
@@ -61,7 +61,7 @@ Please note that the examples presented here use SQL. To see how to create Huggi
 
 ### Model 1: Spam Classifier
 
-Here is an example of a binary classification. The model determines whether a text string is a spam or not.
+Here is an example of a binary classification. The model determines whether a text string is spam or not.
 
 <Tabs>
 <Tab title="Downloading Models from Hugging Face Repository">
@@ -108,7 +108,7 @@ On execution, we get:
 +----+---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
 |spam|{'spam': 0.9051626920700073, 'ham': 0.09483727067708969} |Free entry in 2 a wkly comp to win FA Cup final tkts 21st May 2005. Text FA to 87121 to receive entry question(std txt rate)T&C's apply 08452810075over18's      |
 |ham |{'ham': 0.9380123615264893, 'spam': 0.061987683176994324}|Nah I don't think he goes to usf, he lives around here though                                                                                                    |
-|spam|{'spam': 0.9064534902572632, 'ham': 0.09354648739099503} |WINNER!! As a valued network customer you have been selected to receivea £900 prize reward! To claim call 09061701461. Claim code KL341. Valid 12 hours only.    |
+|spam|{'spam': 0.9064534902572632, 'ham': 0.09354648739099503} |WINNER!! As a valued network customer you have been selected to receive a £900 prize reward! To claim call 09061701461. Claim code KL341. Valid 12 hours only.    |
 +----+---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 </Tab>
@@ -131,7 +131,7 @@ Please note that the `text-classification` task uses two labels: `POSITIVE` and 
 
 ### Model 2: Sentiment Classifier
 
-Here is an example of a multi-value classification. The model determines a sentiment of a text string, where possible values are `negative`, `neutral`, and `positive`.
+Here is an example of a multi-value classification. The model determines the sentiment of a text string, where possible values are `negative`, `neutral`, and `positive`.
 
 <Tabs>
 <Tab title="Downloading Models from Hugging Face Repository">
@@ -330,7 +330,7 @@ Translation is currently not supported using the Huggingface Inference API.
 
 ### Model 5: Summarisation
 
-Here is an example of a summarisation.
+Here is an example of a summarization.
 
 
 <Tabs>
@@ -833,7 +833,7 @@ Once the status is `complete`, we can query for predictions.
 ```sql
 SELECT *
 FROM mindsdb.hf_us_party
-WHERE text = 'This pandemic has shown us clearly the vulgarity of our healthcare system. Highest costs in the world, yet not enough nurses or doctors. Many millions uninsured, while insurance company profits soar. The struggle continues. Healthcare is a human right. Medicare for all.';
+WHERE text = 'This pandemic has shown us clearly the vulgarity of our healthcare system. Highest costs in the world, yet not enough nurses or doctors. Many millions are uninsured, while insurance company profits soar. The struggle continues. Healthcare is a human right. Medicare for all.';
 ```
 
 On execution, we get:
@@ -842,7 +842,7 @@ On execution, we get:
 +--------+-------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 |PRED    |PRED_explain                                                       |text                                                                                                                                                                                                                                                                          |
 +--------+-------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-|Democrat|{"Democrat":0.9999973773956299,"Republican":0.00000261212517216336}|This pandemic has shown us clearly the vulgarity of our healthcare system. Highest costs in the world, yet not enough nurses or doctors. Many millions uninsured, while insurance company profits soar. The struggle continues. Healthcare is a human right. Medicare for all.|
+|Democrat|{"Democrat":0.9999973773956299,"Republican":0.00000261212517216336}|This pandemic has shown us clearly the vulgarity of our healthcare system. Highest costs in the world, yet not enough nurses or doctors. Many millions are uninsured, while insurance company profits soar. The struggle continues. Healthcare is a human right. Medicare for all.|
 +--------+-------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 

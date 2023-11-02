@@ -59,19 +59,32 @@ PARAMETERS = {
 
 Use the established connection to query your database:
 
+To get air quality metrics based on your location:
+
 ~~~~sql
 SELECT * FROM mindsdb_aqicn.air_quality_user_location;
 ~~~~
+
+To get air quality metrics based on city:
 
 ~~~~sql
 SELECT * FROM mindsdb_aqicn.air_quality_city where city="Bangalore";
 ~~~~
 
+The `city` column is mandatory in the above query.
+
+To get air quality metrics based on coordinates:
+
 ~~~~sql
 SELECT * FROM mindsdb_aqicn.air_quality_lat_lng where lat="12.938539" AND lng="77.5901";
 ~~~~
+
+The `lat` and `lng` columns are mandatory in the above query.
+
+To get air quality metrics based on station name:
 
 ~~~~sql
 SELECT * FROM mindsdb_aqicn.air_quality_station_by_name where name="bangalore";
 ~~~~
 
+The `name` column is mandatory in the above query.

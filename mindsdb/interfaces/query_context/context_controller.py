@@ -2,7 +2,7 @@ from typing import List
 
 import pandas as pd
 
-from mindsdb_sql.parser.ast import Identifier, Select, OrderBy, NullConstant, Constant, BinaryOperation, ASTNode
+from mindsdb_sql.parser.ast import ASTNode
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
@@ -121,26 +121,7 @@ class QueryContextController:
            'select <col> from <table> order by <col> desc limit 1"
         """
         last_values = {}
-        for info in l_query.get_last_columns():
-            col = Identifier(info['column_name'])
-
-            query = Select(
-                targets=[
-                    col
-                ],
-                from_table=info['table'],
-                order_by=[
-                    OrderBy(col, direction='DESC')
-                ],
-                where=BinaryOperation(
-                    op='is not',
-                    args=[
-                        col,
-                        NullConstant()
-                    ]
-                ),
-                limit=Constant(1)
-            )
+        for query, info in l_query.get_init_queries():
 
             data, columns_info = dn.query(
                 query=query,

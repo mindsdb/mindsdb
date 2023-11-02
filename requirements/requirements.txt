@@ -11,7 +11,7 @@ waitress >= 1.4.4
 pymongo[srv] >= 4.1.1
 psutil
 sqlalchemy >= 2.0.0, < 3.0.0
-psycopg2  # This is required for using sqlalchemy with postgres
+psycopg2-binary  # This is required for using sqlalchemy with postgres
 alembic >= 1.3.3
 sentry-sdk
 redis >=5.0.0, < 6.0.0

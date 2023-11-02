@@ -1,3 +1,4 @@
+from influxdb_client_3 import InfluxDBClient3
 from mindsdb.integrations.handlers.influxdb_handler.influxdb_tables import InfluxDBTables
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
@@ -6,11 +7,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities.log import get_log
 from mindsdb_sql import parse_sql
 
-# import requests
-# import pandas as pd
-# import io
 
-from influxdb_client_3 import InfluxDBClient3
 
 logger = get_log("integrations.influxdb_handler")
 
@@ -47,16 +44,7 @@ class InfluxDBHandler(APIHandler):
 
         Raises Expection if ping check fails
         """
-        # if self.is_connected is True:
-        #     return self.connection
-
-        # url = f"{self.connection_data['influxdb_url']}/ping"
-        # response = requests.request("GET",url)
-
-        # if response.status_code == 204:
-        #     self.connection = response
-        # else:
-        #     raise Expection
+        
         if self.is_connected is True:
             return self.connection
         

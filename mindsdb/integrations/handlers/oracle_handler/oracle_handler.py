@@ -60,7 +60,7 @@ class OracleHandler(DatabaseHandler):
     def connect(self) -> Connection:
         if self.is_connected is True:
             return self.connection
-        d = None  # default suitable for Linux
+        d = None  # default suitable for Linux OS
         oracledb.init_oracle_client(lib_dir=d)
         connection = connect(
             user=self.user, password=self.password, dsn=self.dsn,

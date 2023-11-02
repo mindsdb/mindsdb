@@ -33,7 +33,6 @@ class BaseUnitTest:
 
     @staticmethod
     def setup_class(cls):
-
         # remove imports of mindsdb in previous tests
         unload_module("mindsdb")
 
@@ -67,7 +66,6 @@ class BaseUnitTest:
 
     @staticmethod
     def teardown_class(cls):
-
         # remove tmp db file
         cls.db.session.close()
         os.unlink(cls.db_file)
@@ -110,21 +108,28 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="neuralforecast", data={}, engine="neuralforecast")
         db.session.add(r)
-        r = db.Integration(
-            name="popularity_recommender", data={}, engine="popularity_recommender"
-        )
+        r = db.Integration(name="popularity_recommender", data={}, engine="popularity_recommender")
         db.session.add(r)
         r = db.Integration(name="lightfm", data={}, engine="lightfm")
         db.session.add(r)
         r = db.Integration(name="openai", data={}, engine="openai")
         db.session.add(r)
-        r = db.Integration(name="anyscale_endpoints", data={}, engine="anyscale_endpoints")
+        r = db.Integration(name="anomaly_detection", data={}, engine="anomaly_detection")
+        db.session.add(r)
+        r = db.Integration(
+            name="anyscale_endpoints", data={}, engine="anyscale_endpoints"
+        )
         db.session.add(r)
         r = db.Integration(
             name="langchain_embedding", data={}, engine="langchain_embedding"
         )
         db.session.add(r)
+        r = db.Integration(name="writer", data={}, engine="writer")
+        db.session.add(r)
         r = db.Integration(name="rag", data={}, engine="rag")
+        db.session.add(r)
+
+        r = db.Integration(name="vertex", data={}, engine="vertex")
         db.session.add(r)
 
         # Lightwood should always be last (else tests break, why?)
@@ -145,9 +150,7 @@ class BaseUnitTest:
     @staticmethod
     def ret_to_df(ret):
         # converts executor response to dataframe
-        columns = [
-            col.alias if col.alias is not None else col.name for col in ret.columns
-        ]
+        columns = [col.alias if col.alias is not None else col.name for col in ret.columns]
         return pd.DataFrame(ret.data, columns=columns)
 
 
@@ -160,9 +163,7 @@ class BaseExecutorTest(BaseUnitTest):
         super().setup_method()
         self.set_executor()
 
-    def set_executor(
-        self, mock_lightwood=False, mock_model_controller=False, import_dummy_ml=False
-    ):
+    def set_executor(self, mock_lightwood=False, mock_model_controller=False, import_dummy_ml=False):
         # creates executor instance with mocked model_interface
         from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import (
             SessionController,
@@ -196,19 +197,13 @@ class BaseExecutorTest(BaseUnitTest):
 
             handler_module = sys.modules["dummy_ml_handler"]
             handler_meta = integration_controller._get_handler_meta(handler_module)
-            integration_controller.handlers_import_status[
-                handler_meta["name"]
-            ] = handler_meta
+            integration_controller.handlers_import_status[handler_meta["name"]] = handler_meta
 
         if mock_lightwood:
-            predict_patcher = mock.patch(
-                "mindsdb.integrations.libs.ml_exec_base.BaseMLEngineExec.predict"
-            )
+            predict_patcher = mock.patch("mindsdb.integrations.libs.ml_exec_base.BaseMLEngineExec.predict")
             self.mock_predict = predict_patcher.__enter__()
 
-            create_patcher = mock.patch(
-                "mindsdb.integrations.handlers.lightwood_handler.Handler.create"
-            )
+            create_patcher = mock.patch("mindsdb.integrations.handlers.lightwood_handler.Handler.create")
             self.mock_create = create_patcher.__enter__()
 
         ctx.set_default()
@@ -355,9 +350,7 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
             self.db.session.delete(r)
 
         if "problem_definition" not in predictor:
-            predictor["problem_definition"] = {
-                "timeseries_settings": {"is_timeseries": False}
-            }
+            predictor["problem_definition"] = {"timeseries_settings": {"is_timeseries": False}}
 
         # add predictor to table
         r = self.db.Predictor(

@@ -144,12 +144,14 @@ class MessagesTable(APITable):
         # https://docs.tweepy.org/en/stable/client.html#tweepy.Client.create_tweet
         columns = [col.name for col in query.columns]
 
+        ret = []
+
         insert_params = ["to_number", "from_number", "body", 'media_url']
         for row in query.values:
             params = dict(zip(columns, row))
 
-            # split long text over 280 symbols
-            max_text_len = 280
+            # split long text over 1500 symbols
+            max_text_len = 1500
             text = params['body']
             words = re.split('( )', text)
             messages = []
@@ -171,8 +173,6 @@ class MessagesTable(APITable):
 
             len_messages = len(messages)
 
-            ret = []
-
             for i, text in enumerate(messages):
                 if i < len_messages - 1:
                     text += '...'
@@ -191,7 +191,7 @@ class MessagesTable(APITable):
                 ret_row['body'] = text
                 ret.append(ret_row)
 
-            return pd.DataFrame(ret)
+        return pd.DataFrame(ret)
 
 
 class TwilioHandler(APIHandler):
@@ -341,7 +341,7 @@ class TwilioHandler(APIHandler):
                 'price_unit': msg.price_unit,
                 'api_version': msg.api_version,
                 'uri': msg.uri,
-                'media_url': [media.url for media in msg.media.list()]
+                'media_url': [media.uri for media in msg.media.list()]
                 # ... Add other properties as needed
             }
             data.append(msg_data)

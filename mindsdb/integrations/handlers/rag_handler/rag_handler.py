@@ -2,8 +2,8 @@ from typing import Dict, Optional
 
 import pandas as pd
 
-from mindsdb.integrations.handlers.rag_handler.ingest import Ingestor
-from mindsdb.integrations.handlers.rag_handler.rag import QuestionAnswerer
+from mindsdb.integrations.handlers.rag_handler.ingest import RAGIngestor
+from mindsdb.integrations.handlers.rag_handler.rag import RAGQuestionAnswerer
 from mindsdb.integrations.handlers.rag_handler.settings import (
     DEFAULT_EMBEDDINGS_MODEL,
     RAGHandlerParameters,
@@ -78,7 +78,7 @@ class RAGHandler(BaseMLEngine):
                 )
 
             if not df.empty:
-                ingestor = Ingestor(args=args, df=df)
+                ingestor = RAGIngestor(args=args, df=df)
                 ingestor.embeddings_to_vectordb()
             else:
                 logger.info(
@@ -130,7 +130,7 @@ class RAGHandler(BaseMLEngine):
         )
 
         # get question answering results
-        question_answerer = QuestionAnswerer(args=args)
+        question_answerer = RAGQuestionAnswerer(args=args)
 
         # get question from sql query
         # e.g. where question = 'What is the capital of France?'

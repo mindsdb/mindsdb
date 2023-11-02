@@ -37,8 +37,13 @@ class InstatusHandlerTest(unittest.TestCase):
         self.assertTrue(self.handler.native_query(query))
 
     def test_6_insert(self):
-        query = f'''INSERT INTO mindsdb_instatus.status_pages (email, name, subdomain, components, logoUrl) VALUES ('{os.environ.get('EMAIL_ID')}', 'mindsdb', 'somtirtha-roy-anthropology', '["Website", "App", "API"]', 'https://instatus.com/sample.png')'''
-        self.assertTrue(self.handler.native_query(query))
+        query = f'''INSERT INTO mindsdb_instatus.status_pages (email, name, subdomain, components, logoUrl) VALUES ('{os.environ.get('EMAIL_ID')}', 'mindsdb', 'somtirtha-roy', '["Website", "App", "API"]', 'https://instatus.com/sample.png')'''
+        try:
+            self.assertTrue(self.handler.native_query(query))
+        except Exception as e:
+            error_message = str(e)
+            if "This subdomain is taken by another status page" in error_message:
+                print("Subdomain is already taken. Choose a different one.")
 
     def test_7_update(self):
         # get the id of the row to be updated

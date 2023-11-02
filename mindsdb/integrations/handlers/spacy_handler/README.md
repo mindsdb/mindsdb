@@ -27,6 +27,16 @@ FROM spacy__morphology__model
 WHERE review = '"Apple is looking at buying U.K. startup for $1 billion"';
 ```
 
+RESULT:
+{('is', 'Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin'),
+('startup', 'Number=Sing'), ('"', 'PunctSide=Ini|PunctType=Quot'),
+('Apple', 'Number=Sing'), ('billion', 'NumType=Card'), ('at', ''),
+('U.K.', 'Number=Sing'), ('buying', 'Aspect=Prog|Tense=Pres|VerbForm=Part'),
+('1', 'NumType=Card'), ('looking', 'Aspect=Prog|Tense=Pres|VerbForm=Part'),
+('for', ''),
+('"', 'PunctSide=Fin|PunctType=Quot'),
+('$', '')}
+
 ## Perform NLP on batch data
 
 ```sql

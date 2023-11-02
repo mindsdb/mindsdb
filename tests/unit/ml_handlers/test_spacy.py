@@ -60,7 +60,7 @@ class TestSpacy(BaseExecutorTest):
             PREDICT recognition
             USING
               engine = 'spacy'
-              linguistic_feature = 'ner',
+              linguistic_feature = 'lemmatization',
               target_column = 'text';
             """
         )

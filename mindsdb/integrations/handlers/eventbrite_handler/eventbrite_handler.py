@@ -6,13 +6,13 @@ from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 
-from .eventbrite_tables import UserInfoTable
-from .eventbrite_tables import OrganizationInfoTable
-from .eventbrite_tables import CategoryInfoTable
-from .eventbrite_tables import SubcategoryInfoTable
-from .eventbrite_tables import FormatTable
-from .eventbrite_tables import EventDetailsTable
-from .eventbrite_tables import ListEventsTable
+from .eventbrite_tables import EventbriteUserTable
+from .eventbrite_tables import EventbriteOrganizationTable
+from .eventbrite_tables import EventbriteCategoryTable
+from .eventbrite_tables import EventbriteSubcategoryTable
+from .eventbrite_tables import EventbriteFormatTable
+from .eventbrite_tables import EventbriteEventDetailsTable
+from .eventbrite_tables import EventbriteEventsTable
 
 
 class EventbriteHandler(APIHandler):
@@ -41,26 +41,26 @@ class EventbriteHandler(APIHandler):
         self.api = None
         self.is_connected = False
 
-        userInfoTable = UserInfoTable(self)
-        self._register_table("userInfoTable", userInfoTable)
+        userTable = EventbriteUserTable(self)
+        self._register_table("user", userTable)
 
-        organizationInfoTable = OrganizationInfoTable(self)
-        self._register_table("organizationInfoTable", organizationInfoTable)
+        organizationTable = EventbriteOrganizationTable(self)
+        self._register_table("organization", organizationTable)
 
-        categoryInfoTable = CategoryInfoTable(self)
-        self._register_table("categoryInfoTable", categoryInfoTable)
+        categoryTable = EventbriteCategoryTable(self)
+        self._register_table("category", categoryTable)
 
-        subcategoryInfoTable = SubcategoryInfoTable(self)
-        self._register_table("subcategoryInfoTable", subcategoryInfoTable)
+        subcategoryTable = EventbriteSubcategoryTable(self)
+        self._register_table("subcategory", subcategoryTable)
 
-        formatInfoTable = FormatTable(self)
-        self._register_table("formatInfoTable", formatInfoTable)
+        formatTable = EventbriteFormatTable(self)
+        self._register_table("formats", formatTable)
 
-        eventDetailsTable = EventDetailsTable(self)
-        self._register_table("eventDetailsTable", eventDetailsTable)
+        eventDetailsTable = EventbriteEventDetailsTable(self)
+        self._register_table("event_details", eventDetailsTable)
 
-        listEventsTable = ListEventsTable(self)
-        self._register_table("listEventsTable", listEventsTable)
+        eventsTable = EventbriteEventsTable(self)
+        self._register_table("events", eventsTable)
 
     def connect(self):
         """Initialize the Eventbrite API Client."""

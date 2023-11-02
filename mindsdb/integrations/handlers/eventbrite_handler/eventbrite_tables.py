@@ -20,7 +20,7 @@ def flatten(d, parent_key="", sep="_"):
     return dict(items)
 
 
-class UserInfoTable(APITable):
+class EventbriteUserTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         self.handler.connect()
 
@@ -75,7 +75,7 @@ class UserInfoTable(APITable):
         ]
 
 
-class OrganizationInfoTable(APITable):
+class EventbriteOrganizationTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         self.handler.connect()
 
@@ -127,7 +127,7 @@ class OrganizationInfoTable(APITable):
         ]
 
 
-class CategoryInfoTable(APITable):
+class EventbriteCategoryTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         self.handler.connect()
 
@@ -194,7 +194,7 @@ class CategoryInfoTable(APITable):
         ]
 
 
-class SubcategoryInfoTable(APITable):
+class EventbriteSubcategoryTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         self.handler.connect()
 
@@ -276,7 +276,7 @@ class SubcategoryInfoTable(APITable):
         ]
 
 
-class FormatTable(APITable):
+class EventbriteFormatTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         self.handler.connect()
 
@@ -346,7 +346,7 @@ class FormatTable(APITable):
         ]
 
 
-class EventDetailsTable(APITable):
+class EventbriteEventDetailsTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         self.handler.connect()
 
@@ -475,7 +475,7 @@ class EventDetailsTable(APITable):
         ]
 
 
-class ListEventsTable(APITable):
+class EventbriteEventsTable(APITable):
     def __init__(self, handler):
         self.handler = handler
 

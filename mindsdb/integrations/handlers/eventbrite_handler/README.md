@@ -34,41 +34,41 @@ Use the established connection to query your database:
 **For ListEventsTable, you need organization permission to list all of their events. Otherwise, 403 error**
 
 ```sql
-SELECT * FROM my_eventbrite_handler.userInfoTable
+SELECT * FROM my_eventbrite_handler.user
 ```
 
 ```sql
-SELECT * FROM my_eventbrite_handler.organizationInfoTable
+SELECT * FROM my_eventbrite_handler.organization
 ```
 
 ```sql
-SELECT * FROM my_eventbrite_handler.categoryInfoTable
+SELECT * FROM my_eventbrite_handler.category
 ```
 
 ```sql
-SELECT * FROM my_eventbrite_handler.subcategoryInfoTable
+SELECT * FROM my_eventbrite_handler.subcategory
 ```
 
 ```sql
-SELECT * FROM my_eventbrite_handler.formatInfoTable
+SELECT * FROM my_eventbrite_handler.formats
 ```
 
 Run more advanced queries:
 
 ```sql
 SELECT id, name
-  FROM my_eventbrite_handler.categoryInfoTable
+  FROM my_eventbrite_handler.category
   ORDER BY name ASC
   LIMIT 3
 ```
 
 ```sql
-SELECT * FROM my_eventbrite_handler.userInfoTable
+SELECT * FROM my_eventbrite_handler.user
 WHERE event_id= "717926867587";
 ```
 
 ```sql
-SELECT * FROM my_eventbrite_handler.listEventsTable
+SELECT * FROM my_eventbrite_handler.events
 WHERE organization_id = '1871338711793';
 
 ```

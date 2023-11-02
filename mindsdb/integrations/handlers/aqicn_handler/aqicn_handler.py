@@ -3,7 +3,8 @@ from collections import OrderedDict
 from mindsdb.integrations.handlers.aqicn_handler.aqicn_tables import (
     AQByUserLocationTable,
     AQByCityTable,
-    AQByLatLngTable
+    AQByLatLngTable,
+    AQByNetworkStationTable
 )
 from mindsdb.integrations.handlers.aqicn_handler.aqicn import AQIClient
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -46,6 +47,9 @@ class AQICNHandler(APIHandler):
 
         ai_lat_lng_data = AQByLatLngTable(self)
         self._register_table("air_quality_lat_lng", ai_lat_lng_data)
+
+        aq_network_station_data = AQByNetworkStationTable(self)
+        self._register_table("air_quality_station_by_name", aq_network_station_data)
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.

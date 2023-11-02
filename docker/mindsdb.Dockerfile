@@ -4,14 +4,16 @@ ARG EXTRAS
 
 COPY . /mindsdb
 WORKDIR /mindsdb
-RUN pip install --no-cache-dir "."
-RUN pip install --no-cache-dir ${EXTRAS} || true
+RUN --mount=type=cache,target=/root/.cache/pip pip install "."
+RUN if [[ -n $EXTRAS ]]; then pip install ${EXTRAS}; fi
 
 
 
 FROM python:3.10-slim
 
-RUN apt update && apt-get upgrade -y && apt-get install -y libmagic1 libpq5 && rm -rf /var/lib/apt/lists/*
+RUN apt update && apt-get upgrade -y \
+&& apt-get install -y libmagic1 libpq5 \
+&& rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 
 ENV FLASK_DEBUG "1"

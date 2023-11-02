@@ -1,0 +1,23 @@
+name: MindsDB Docker Build
+
+on:
+  push:
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+
+jobs:
+  build:
+    runs-on: [self-hosted dev]
+    steps:
+    - uses: actions/checkout@v2
+    # Get clean environment variables via https://github.com/marketplace/actions/github-environment-variables-action
+    - uses: FranzDiebold/github-env-vars-action@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    - name: Login to Amazon ECR
+      uses: aws-actions/amazon-ecr-login@v1
+    - name: Build and push
+      shell: bash
+      run: |
+        TAG=${{ env.CI_SHA }} docker buildx bake --push

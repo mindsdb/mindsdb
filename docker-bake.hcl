@@ -1,5 +1,5 @@
 group "default" {
-  targets = ["bare", "cloud", "lightwood"]
+  targets = ["bare", "cloud"]
 }
 
 variable "TAG" {
@@ -25,15 +25,7 @@ target "bare" {
 target "cloud" {
   inherits = ["_common"]
   args = {
-    EXTRAS = ".[twitter,binance]"
+    EXTRAS = ".[lightwood,huggingface]"
   }
   tags = ["${REGISTRY}/mindsdb:${TAG}-cloud"]
-}
-
-target "lightwood" {
-  inherits = ["_common"]
-  args = {
-    EXTRAS = ".[lightwood]"
-  }
-  tags = ["${REGISTRY}/mindsdb:${TAG}-lightwood"]
 }

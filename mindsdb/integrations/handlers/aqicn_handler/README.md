@@ -70,3 +70,8 @@ SELECT * FROM mindsdb_aqicn.air_quality_city where city="Bangalore";
 ~~~~sql
 SELECT * FROM mindsdb_aqicn.air_quality_lat_lng where lat="12.938539" AND lng="77.5901";
 ~~~~
+
+~~~~sql
+SELECT * FROM mindsdb_aqicn.air_quality_station_by_name where name="bangalore";
+~~~~
+

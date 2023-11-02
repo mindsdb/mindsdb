@@ -291,7 +291,7 @@ class CustomersTable(APITable):
 
         Parameters
         ----------
-        query : ast.Insert
+        query : ast.Delete
            Given SQL DELETE query
 
         Returns
@@ -303,7 +303,6 @@ class CustomersTable(APITable):
         ValueError
             If the query contains an unsupported condition
         """
-
         delete_statement_parser = DELETEQueryParser(query)
         where_conditions = delete_statement_parser.parse_query()
 
@@ -318,7 +317,6 @@ class CustomersTable(APITable):
 
         customer_ids = customers_df['id'].tolist()
         self.delete_customers(customer_ids)
-
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_customers(limit=1)).columns.tolist()
@@ -357,9 +355,8 @@ class CustomersTable(APITable):
 
         for customer_id in customer_ids:
             customer = shopify.Customer.find(customer_id)
-            customer.destroy()
+            customer.delete()
             logger.info(f'Customer {customer_id} deleted')
-
 
 
 class OrdersTable(APITable):

@@ -1,17 +1,19 @@
-FROM python:3.8
+FROM python:3.10 as builder
 
 ARG EXTRAS
 
-RUN apt update && apt-get upgrade -y && apt install -y build-essential libxml2 libmagic1
-RUN python3 -m pip install --no-cache-dir --upgrade pip
-
 COPY . /mindsdb
 WORKDIR /mindsdb
+RUN pip install --no-cache-dir "."
+RUN pip install --no-cache-dir ${EXTRAS} || true
 
-RUN pip install "."
-RUN pip install ${EXTRAS} || true
 
-ENV PYTHONPATH "/mindsdb"
+
+FROM python:3.10-slim
+
+RUN apt update && apt-get upgrade -y && apt-get install -y libmagic1 && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+
 ENV FLASK_DEBUG "1"
 
 EXPOSE 47334/tcp

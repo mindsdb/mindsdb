@@ -25,7 +25,6 @@ DEFAULT_PIP_EXTRAS = [
     'openai',
     'byom',
     'statsforecast',
-    'huggingface',
     'timegpt',
     'binance',
     'twitter',

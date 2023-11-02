@@ -101,5 +101,6 @@ class EmailCampaignsTable(APITable):
         for campaign_id in campaign_ids:
             try:
                 email_campaigns_api_instance.update_email_campaign(campaign_id, values_to_update)
+                logger.info(f'Email Campaign {campaign_id} updated')
             except ApiException as e:
-                print(f"Exception when updating campaign {campaign_id}: {e}")
+                logger.error(f"Exception when calling EmailCampaignsApi->update_email_campaign: {e}\n") 

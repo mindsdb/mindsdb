@@ -1,34 +1,89 @@
-from typing import List, Dict
+from typing import List, Dict, Union
 import numpy as np
 import pandas as pd
+from string import Formatter
+import copy
 
 import streamlit as st
 
+task_template = {
+    "parameters": {},
+    "handlers": ["handler_name",],
+    "use_cases": "blurb",
+    "ml_task": "task name",
+    "table": "table name",
+    "model_inputs": "input columns",
+    "targets": "target columns"
+}
+
+class Regression_Task:
+    """
+    A class to hold the base template for a regression ml task. Required arguments conform to PPE backend minimal
+    requirements for this task.
+    """
+
+    def __init__(self,
+                 table: str,
+                 model_inputs: List[str],
+                 targets: List[str],
+                 **kwargs):
+        self.tables = table
+        self.model_inputs = model_inputs
+        self.targets = targets
+        self.__dict__.update(kwargs)
+
+class Forecast_Task:
+    """
+    A class to hold the base template for a regression ml task. Required arguments conform to PPE backend minimal
+    requirements for this task.
+    """
+
+    def __init__(self,
+                 table: str,
+                 model_inputs: List[str],
+                 order: str,
+                 groupby: List[str],
+                 targets: List[str],
+                 horizon: [str],
+                 **kwargs):
+        self.tables = table
+        self.model_inputs = model_inputs
+        self.order = order
+        self.groupby = groupby
+        self.targets = targets
+        self.horizon = horizon
+        self.__dict__.update(kwargs)
+
 
 class Dataset:
+    """
+    A Dataset object holds a collection of ML task objects that specify what can be done with the data it contains. The
+    Dataset object provides default handlers and connection parameters
+
+    This architecture presumes that each ml-task is hosted on each handler.
+
+    """
     def __init__(self,
                  name: str,
                  parameters: List[dict],
-                 handlers: List[List[str]],
-                 use_cases: List[str],
-                 ml_tasks: List[str],
-                 tables: List[str],
-                 model_inputs: List[str],
-                 targets: List[str]):
+                 data_handlers: List[str],
+                 ml_tasks: List[Union[Regression_Task, Forecast_Task]]
+                 ):
         self.name = name
         self.parameters = parameters
-        self.handlers = handlers
-        self.use_cases = use_cases
+        self.data_handlers = data_handlers
         self.ml_tasks = ml_tasks
-        self.tables = tables
-        self.model_inputs = model_inputs
-        self.targets = targets
+
+        # Check for templates
+        for ml_task in self.ml_tasks:
+            if "use_case" not in vars(ml_task):
+                raise Exception("No use case in ml task")
 
 
 class MLHandler:
     def __init__(self,
                  name: str,
-                 ml_tasks: List[str],
+                 ml_tasks: List[Union[Regression_Task, Forecast_Task]],
                  apis: List[str],
                  train_templates: List[str],
                  predict_templates: List[str]
@@ -39,19 +94,38 @@ class MLHandler:
         self.train_templates = train_templates
         self.predict_templates = predict_templates
 
-    def format_train(self, dataset: Dataset, dataset_task: int, train_task: int):
-        return self.train_templates[train_task].format(
-            model_input=dataset.model_inputs[dataset_task],
-            target=dataset.targets[dataset_task],
-            table=dataset.tables[dataset_task]
-        )
+        # Check for templates
+        for ml_task in self.ml_tasks:
+            if "train_template" not in vars(ml_task):
+                raise Exception("No train template in ml task")
+            if "predict_template" not in vars(ml_task):
+                raise Exception("No predict template in ml task")
 
-    def format_predict(self, dataset: Dataset, dataset_task: int, train_task: int):
-        return self.predict_templates[train_task].format(
-            model_input=dataset.model_inputs[dataset_task],
-            target=dataset.targets[dataset_task],
-            table=dataset.tables[dataset_task]
-        )
+    def format_template(self,
+                        dataset_task: Union[Regression_Task, Forecast_Task],
+                        train_task: Union[Regression_Task, Forecast_Task],
+                        template_key: str
+                        ):
+
+        # update params dict
+        params = copy.deepcopy(vars(train_task))
+        params.update(vars(dataset_task))
+        template = params[template_key]
+        template_params = [x[1] for x in Formatter().parse(template)]
+
+        for param in params.keys():
+            if param not in template_params:
+                del params[param]
+
+        for param in template_params:
+            if param not in params.keys():
+                raise Exception("Required argument {} not supplied for {} template.".format(param, template_key))
+
+        for key, val in params.items():
+            if type(val) is list:
+                params[key] = ', '.join(val)
+
+        return params[template_key].format(**params)
 
 
 class DataHandler:
@@ -66,7 +140,7 @@ class DataHandler:
         self.templates = templates
 
     def format_connect(self, dataset: Dataset, connect_select: int):
-        return self.templates[0].format(**dataset.parameters[connect_select])  #TODO: map to api templates
+        return self.templates[0].format(**dataset.parameters[connect_select])  # TODO: map to api templates
 
 
 """******************************************************************************************************************"""
@@ -153,6 +227,7 @@ for column in tuples_df.columns:
     if column not in st.session_state:
         st.session_state[column] = None
 
+
 def filter():
     print("filter run")
     for column in tuples_df.columns:
@@ -182,12 +257,14 @@ for column, label in zip(tuples_df.columns, labels):
 
 filter()  # filter tuples_df before creating dropdowns.
 
+
 # st.write(st.session_state)
 
 def reset():
     for column in tuples_df.columns:
         st.session_state[column] = None
     # st.write(st.session_state)
+
 
 st.button(label="Reset", type="primary", on_click=reset)
 

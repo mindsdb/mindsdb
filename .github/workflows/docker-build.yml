@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted dev]
+    runs-on: [self-hosted, dev]
     steps:
     - uses: actions/checkout@v2
     # Get clean environment variables via https://github.com/marketplace/actions/github-environment-variables-action

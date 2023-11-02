@@ -9,6 +9,11 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response
 )
 
+from langchain.llms import OpenAI
+from langchain.agents import initialize_agent, AgentType
+from langchain.tools.gmail.utils import build_resource_service, get_gmail_credentials
+from langchain.agents.agent_toolkits import GmailToolkit
+
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
@@ -311,6 +316,30 @@ class GmailHandler(APIHandler):
         self.emails = emails
         self._register_table('emails', emails)
 
+    def back_office_config(self):
+        tools = {
+            'connect': 'Connect to the gmail API. There is no input, just call the method.',
+            'call_agent': 'Calls langchain agent. This is useful when performing any email operations.',
+        }
+        return {'tools': tools}
+    
+    
+    def call_agent(self, data):
+        openai_key = os.environ["OPENAI_API_KEY"]
+        llm = OpenAI(temperature=0, openai_api_key=openai_key)
+        api_resource = build_resource_service(credentials=self.creds)
+        toolkit = GmailToolkit(api_resource=api_resource)
+        agent = initialize_agent(
+            tools=toolkit.get_tools(),
+            llm=llm,
+            agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+            verbose=True,
+            return_intermediate_steps=True,
+        )
+        response = agent({"input": data})
+        return response
+
+
     def _download_secret_file(self, secret_file):
         # Giving more priority to the S3 file
         if self.credentials_url:
@@ -336,9 +365,12 @@ class GmailHandler(APIHandler):
         creds_file = os.path.join(curr_dir, 'creds.json')
         secret_file = os.path.join(curr_dir, 'secret.json')
 
-        if os.path.isfile(creds_file):
+        if self.credentials_file:
+            creds = Credentials.from_authorized_user_file(self.credentials_file, self.scopes)
+        elif os.path.isfile(creds_file):
             creds = Credentials.from_authorized_user_file(creds_file, self.scopes)
 
+        self.creds = creds
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
@@ -356,7 +388,7 @@ class GmailHandler(APIHandler):
 
         return build('gmail', 'v1', credentials=creds)
 
-    def connect(self):
+    def connect(self, args=None):
         """Authenticate with the Gmail API using the credentials file.
 
         Returns

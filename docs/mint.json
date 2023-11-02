@@ -775,6 +775,7 @@
             "integrations/app-integrations/dockerhub",
             "integrations/app-integrations/email",
             "integrations/app-integrations/github",
+            "integrations/app-integrations/gitlab",
             "integrations/app-integrations/gmail",
             "integrations/app-integrations/google-calendar",
             "integrations/app-integrations/hackernews",

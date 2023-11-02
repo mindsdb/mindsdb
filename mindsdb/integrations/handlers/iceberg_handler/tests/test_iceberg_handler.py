@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
@@ -8,12 +9,12 @@ class IcebergHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         connection_data = {
-            'name': 'demo',
-            'namespace': 'docs_example',
-            'user': 'postgres',
-            'password': 'root',
-            'database': 'demo',
-            'table': 'bids',
+            'name': os.environ["ICEBERG_NAME"],
+            'namespace': os.environ["ICEBERG_NAMESPACE"],
+            'user': os.environ["ICEBERG_USER"],
+            'password': os.environ["ICEBERG_PASSWORD"],
+            'database': os.environ["ICEBERG_DATABASE"],
+            'table': os.environ["ICEBERG_TABLE"],
         }
         cls.handler = IcebergHandler('test_iceberg_handler', connection_data)
 

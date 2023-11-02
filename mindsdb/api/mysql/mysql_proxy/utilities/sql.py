@@ -1,7 +1,7 @@
 import copy
 
 import duckdb
-from duckdb.duckdb import InvalidInputException
+from duckdb import InvalidInputException
 import numpy as np
 
 from mindsdb_sql import parse_sql
@@ -17,7 +17,7 @@ from mindsdb.utilities.json_encoder import CustomJSONEncoder
 
 
 def query_df_with_type_infer_fallback(query_str: str, dataframes: dict):
-    ''' Duckdb need to infer column types if column.dtype == object. By default it take 100 rows,
+    ''' Duckdb need to infer column types if column.dtype == object. By default it take 1000 rows,
         but that may be not sufficient for some cases. This func try to run query multiple times
         increasing butch size for type infer
 
@@ -40,7 +40,8 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict):
             result_df = con.execute(query_str).fetchdf()
         except InvalidInputException:
             pass
-        break
+        else:
+            break
     else:
         raise InvalidInputException
     description = con.description
@@ -124,9 +125,13 @@ def query_df(df, query, session=None):
         query_str = render.get_string(query_ast, with_failback=True)
 
     # workaround to prevent duckdb.TypeMismatchException
-    if len(df) > 0 and table_name.lower() in ('models', 'predictors', 'models_versions'):
-        if 'TRAINING_OPTIONS' in df.columns:
-            df = df.astype({'TRAINING_OPTIONS': 'string'})
+    if len(df) > 0:
+        if table_name.lower() in ('models', 'predictors', 'models_versions'):
+            if 'TRAINING_OPTIONS' in df.columns:
+                df = df.astype({'TRAINING_OPTIONS': 'string'})
+        if table_name.lower() == 'ml_engines':
+            if 'CONNECTION_DATA' in df.columns:
+                df = df.astype({'CONNECTION_DATA': 'string'})
 
     result_df, description = query_df_with_type_infer_fallback(query_str, {'df': df})
     result_df = result_df.replace({np.nan: None})

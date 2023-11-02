@@ -11,9 +11,14 @@ RUN --mount=type=cache,target=/root/.cache/pip if [ ! -z $EXTRAS ]; then pip ins
 
 FROM python:3.10-slim
 
-RUN apt update && apt-get upgrade -y \
-&& apt-get install -y libmagic1 libpq5 \
-&& rm -rf /var/lib/apt/lists/*
+# "rm ... docker-clean" stops docker from removing packages from our cache
+# https://vsupalov.com/buildkit-cache-mount-dockerfile/
+RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
+    --mount=target=/var/cache/apt,type=cache,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean \
+    && apt update && apt-get upgrade -y \
+    && apt-get install -y libmagic1 libpq5
+
 COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 
 ENV FLASK_DEBUG "1"

@@ -1,11 +1,9 @@
-import sys
-
 from collections import OrderedDict
 from typing import List, Optional
 
-import chromadb
 import pandas as pd
 
+from mindsdb.integrations.handlers.chromadb_handler.settings import ChromaHandlerConfig
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse
@@ -17,10 +15,33 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
     TableField,
     VectorStoreHandler,
 )
+from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities import log
 
-__import__('pysqlite3')
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
+def get_chromadb():
+    """
+    Import and return the chromadb module, using pysqlite3 if available.
+    this is a hack to make chromadb work with pysqlite3 instead of sqlite3 for cloud usage
+    see https://docs.trychroma.com/troubleshooting#sqlite
+    """
+
+    try:
+        import sys
+
+        __import__("pysqlite3")
+        sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+    except ImportError:
+        log.logger.error(
+            "[Chromadb-handler] pysqlite3 is not installed, this is not a problem for local usage"
+        )  # noqa: E501
+
+    try:
+        import chromadb
+
+        return chromadb
+    except ImportError:
+        raise ImportError("Failed to import chromadb.")
 
 
 class ChromaDBHandler(VectorStoreHandler):
@@ -30,42 +51,45 @@ class ChromaDBHandler(VectorStoreHandler):
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
+        self.handler_storage = HandlerStorage(kwargs.get("integration_id"))
+        self._client = None
+        self.persist_directory = None
+        self.is_connected = False
 
-        self._connection_data = kwargs.get("connection_data")
+        config = self.validate_connection_parameters(name, **kwargs)
 
         self._client_config = {
-            "chroma_server_host": self._connection_data.get("chroma_server_host"),
-            "chroma_server_http_port": self._connection_data.get(
-                "chroma_server_http_port"
-            ),
-            "persist_directory": self._connection_data.get("persist_directory"),
+            "chroma_server_host": config.host,
+            "chroma_server_http_port": config.port,
+            "persist_directory": self.persist_directory,
         }
 
-        # either host + port or persist_directory is required
-        # but not both
-        if (
-            self._client_config["chroma_server_host"] is None
-            or self._client_config["chroma_server_http_port"] is None
-        ) and self._client_config["persist_directory"] is None:
-            raise Exception(
-                "Either host + port or persist_directory is required for ChromaDB connection!"
-            )
-        elif (
-            self._client_config["chroma_server_host"] is not None
-            and self._client_config["chroma_server_http_port"] is not None
-        ) and self._client_config["persist_directory"] is not None:
-            raise Exception(
-                "Either host + port or persist_directory is required for ChromaDB connection, but not both!"
+        self.connect()
+
+    def validate_connection_parameters(self, name, **kwargs):
+        """
+        Validate the connection parameters.
+        """
+
+        _config = kwargs.get("connection_data")
+        _config["vector_store"] = name
+
+        config = ChromaHandlerConfig(**_config)
+
+        if config.persist_directory and not self.handler_storage.is_temporal:
+            # get full persistence directory from handler storage
+            self.persist_directory = self.handler_storage.folder_get(
+                config.persist_directory
             )
 
-        self._client = None
-        self.is_connected = False
-        self.connect()
+        return config
 
     def _get_client(self):
         client_config = self._client_config
         if client_config is None:
             raise Exception("Client config is not set!")
+
+        chromadb = get_chromadb()
 
         # decide the client type to be used, either persistent or httpclient
         if client_config["persist_directory"] is not None:
@@ -77,7 +101,13 @@ class ChromaDBHandler(VectorStoreHandler):
             )
 
     def __del__(self):
+        """Close the database connection."""
+
         if self.is_connected is True:
+            if self.persist_directory:
+                # sync folder to handler storage
+                self.handler_storage.folder_sync(self.persist_directory)
+
             self.disconnect()
 
     def connect(self):
@@ -90,8 +120,8 @@ class ChromaDBHandler(VectorStoreHandler):
             self.is_connected = True
             return self._client
         except Exception as e:
-            log.logger.error(f"Error connecting to ChromaDB client, {e}!")
             self.is_connected = False
+            raise Exception(f"Error connecting to ChromaDB client, {e}!")
 
     def disconnect(self):
         """Close the database connection."""
@@ -373,13 +403,13 @@ class ChromaDBHandler(VectorStoreHandler):
 
 
 connection_args = OrderedDict(
-    chroma_server_host={
+    host={
         "type": ARG_TYPE.STR,
         "description": "chromadb server host",
         "required": False,
     },
-    chroma_server_http_port={
-        "type": ARG_TYPE.INT,
+    port={
+        "type": ARG_TYPE.STR,
         "description": "chromadb server port",
         "required": False,
     },
@@ -391,7 +421,7 @@ connection_args = OrderedDict(
 )
 
 connection_args_example = OrderedDict(
-    chroma_server_host="localhost",
-    chroma_server_http_port=8000,
-    persist_directoryn="chroma",
+    host="localhost",
+    port="8000",
+    persist_directory="chroma",
 )

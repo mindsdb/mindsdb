@@ -118,6 +118,11 @@ class VectorStoreHandler(BaseHandler):
     def __init__(self, name: str):
         super().__init__(name)
 
+    def validate_connection_parameters(self, name, **kwargs):
+        """Create validation for input parameters."""
+
+        return NotImplementedError()
+
     def _value_or_self(self, value):
         if isinstance(value, Constant):
             return value.value
@@ -147,7 +152,8 @@ class VectorStoreHandler(BaseHandler):
                         # Constant could be actually a list i.e. [1.2, 3.2]
                         right_hand = [
                             ast.literal_eval(item.value)
-                            if isinstance(item, Constant) and not isinstance(item.value, list)
+                            if isinstance(item, Constant)
+                            and not isinstance(item.value, list)
                             else item.value
                             for item in node.args[1].items
                         ]

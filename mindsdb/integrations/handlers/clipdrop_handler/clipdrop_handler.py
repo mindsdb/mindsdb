@@ -1,7 +1,12 @@
 from collections import OrderedDict
 
 from mindsdb.integrations.handlers.clipdrop_handler.clipdrop_tables import (
-    RemoveTextTable
+    RemoveTextTable,
+    RemoveBackgroundTable,
+    SketchToImageTable,
+    TextToImageTable,
+    ReplaceBackgroundTable,
+    ReimagineTable
 )
 from mindsdb.integrations.handlers.clipdrop_handler.clipdrop import ClipdropClient
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -33,12 +38,26 @@ class ClipdropHandler(APIHandler):
         connection_data = kwargs.get("connection_data", {})
         self.connection_data = connection_data
         self.kwargs = kwargs
-        self.client = ClipdropClient(connection_data.get("api_key"), 
-                                     connection_data.get("dir_to_save"))
+        self.client = None
         self.is_connected = False
 
         remove_text_data = RemoveTextTable(self)
         self._register_table("remove_text", remove_text_data)
+
+        remove_bq_data = RemoveBackgroundTable(self)
+        self._register_table("remove_background", remove_bq_data)
+
+        sk_image_data = SketchToImageTable(self)
+        self._register_table("sketch_to_image", sk_image_data)
+
+        txt_img_data = TextToImageTable(self)
+        self._register_table("text_to_image", txt_img_data)
+
+        replace_bg_data = ReplaceBackgroundTable(self)
+        self._register_table("replace_background", replace_bg_data)
+
+        reimagine_data = ReimagineTable(self)
+        self._register_table("reimagine", reimagine_data)
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.
@@ -51,6 +70,8 @@ class ClipdropHandler(APIHandler):
         # FYI - No way currently to establish a connection with the given key
         # without making a requests that is chargeable
         # TODO - Find a way to solve FYI
+        self.client = ClipdropClient(self.connection_data.get("api_key"),
+                                     self.connection_data.get("dir_to_save"))
         self.is_connected = True
         return StatusResponse(True)
 

@@ -1,5 +1,6 @@
 # check if chroma_db is installed
 import importlib
+import shutil
 import tempfile
 from unittest.mock import patch
 
@@ -28,6 +29,7 @@ class TestChromaDBHandler(BaseExecutorTest):
             ]
             return pd.DataFrame(ret.data, columns=columns)
 
+    @pytest.fixture(autouse=True, scope="function")
     def setup_method(self):
         super().setup_method()
         # create a chroma database under the tmp directory
@@ -39,8 +41,12 @@ class TestChromaDBHandler(BaseExecutorTest):
             PARAMETERS = {{
                 "persist_directory" : "{tmp_directory}"
             }}
-        """
+            """
         )
+        yield
+        # Teardown code: drop the database and remove the temporary directory
+        self.run_sql("DROP DATABASE chroma_test;")
+        shutil.rmtree(tmp_directory)
 
     @pytest.mark.xfail(reason="create table for vectordatabase is not well supported")
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")

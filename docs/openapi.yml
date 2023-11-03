@@ -36,7 +36,7 @@ components:
           description: Accuracy of trained model between 0 and 1
         active:
           type: boolean
-          description: Whether or not this model is currenty the active version
+          description: Whether or not this model is currently the active version
         version:
           type: number
           description: Version of this model

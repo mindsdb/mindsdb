@@ -39,6 +39,7 @@ from mindsdb_sql.parser.ast import (
 
 # typed models
 from mindsdb_sql.parser.dialects.mindsdb import (
+    CreateAgent,
     CreateAnomalyDetectionModel,
     CreateChatBot,
     CreateDatabase,
@@ -49,6 +50,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     CreateSkill,
     CreateTrigger,
     CreateView,
+    DropAgent,
     DropChatBot,
     DropDatasource,
     DropJob,
@@ -60,6 +62,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     Evaluate,
     FinetunePredictor,
     RetrainPredictor,
+    UpdateAgent,
     UpdateChatBot,
     UpdateSkill
 )
@@ -660,6 +663,12 @@ class ExecuteCommands:
             return self.answer_drop_skill(statement)
         elif type(statement) == UpdateSkill:
             return self.answer_update_skill(statement)
+        elif type(statement) == CreateAgent:
+            return self.answer_create_agent(statement)
+        elif type(statement) == DropAgent:
+            return self.answer_drop_agent(statement)
+        elif type(statement) == UpdateAgent:
+            return self.answer_update_agent(statement)
         elif type(statement) == Evaluate:
             statement.data = parse_sql(statement.query_str, dialect="mindsdb")
             return self.answer_evaluate_metric(statement)
@@ -1450,6 +1459,71 @@ class ExecuteCommands:
             )
         except ValueError as e:
             # Project does not exist or skill does not exist.
+            raise SqlApiException(str(e))
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def answer_create_agent(self, statement):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        skills = statement.params.pop('skills', [])
+        try:
+            _ = self.session.agents_controller.add_agent(
+                name,
+                project_name,
+                statement.model,
+                skills,
+                statement.params
+            )
+        except ValueError as e:
+            # Project does not exist or agent already exists.
+            raise SqlApiException(str(e))
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def answer_drop_agent(self, statement):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        try:
+            self.session.agents_controller.delete_agent(name, project_name)
+        except ValueError as e:
+            # Project does not exist or agent does not exist.
+            raise SqlApiException(str(e))
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def answer_update_agent(self, statement):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        model = statement.params.pop('model', None)
+        skills_to_add = statement.params.pop('skills_to_add', [])
+        skills_to_remove = statement.params.pop('skills_to_remove', [])
+        try:
+            _ = self.session.agents_controller.update_agent(
+                name,
+                project_name=project_name,
+                model_name=model,
+                skills_to_add=skills_to_add,
+                skills_to_remove=skills_to_remove,
+                params=statement.params
+            )
+        except ValueError as e:
+            # Project does not exist or agent does not exist.
             raise SqlApiException(str(e))
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)

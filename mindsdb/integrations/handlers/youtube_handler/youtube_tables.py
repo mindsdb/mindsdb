@@ -56,9 +56,7 @@ class YoutubeCommentsTable(APITable):
                     else:
                         order_by_conditions["ascending"].append(False)
                 else:
-                    raise ValueError(
-                        f"Order by unknown column {an_order.field.parts[1]}"
-                    )
+                    raise ValueError(f"Order by unknown column {an_order.field.parts[1]}")
 
         for a_where in conditions:
             if a_where[1] == "video_id":
@@ -84,9 +82,7 @@ class YoutubeCommentsTable(APITable):
             youtube_comments_df = pd.DataFrame([], columns=selected_columns)
         else:
             youtube_comments_df.columns = self.get_columns()
-            for col in set(youtube_comments_df.columns).difference(
-                set(selected_columns)
-            ):
+            for col in set(youtube_comments_df.columns).difference(set(selected_columns)):
                 youtube_comments_df = youtube_comments_df.drop(col, axis=1)
 
             if len(order_by_conditions.get("columns", [])) > 0:
@@ -107,7 +103,7 @@ class YoutubeCommentsTable(APITable):
         List[str]
             List of columns
         """
-        return ["user_id", "display_name", "comment"]
+        return ["user_id", "display_name", "comment", "replies"]
 
     def call_youtube_comments_api(self, video_id):
         """Pulls all the records from the given youtube api end point and returns it select()
@@ -120,7 +116,7 @@ class YoutubeCommentsTable(APITable):
         resource = (
             self.handler.connect()
             .commentThreads()
-            .list(part="snippet", videoId=video_id, textFormat="plainText")
+            .list(part="snippet, replies", videoId=video_id, textFormat="plainText")
         )
 
         video_cols = self.get_columns()
@@ -130,31 +126,33 @@ class YoutubeCommentsTable(APITable):
         while resource:
             comments = resource.execute()
             for comment in comments["items"]:
-                user_id = comment["snippet"]["topLevelComment"]["snippet"][
-                    "authorChannelId"
-                ]["value"]
-                display_name = comment["snippet"]["topLevelComment"]["snippet"][
-                    "authorDisplayName"
-                ]
-                comment_text = comment["snippet"]["topLevelComment"]["snippet"][
-                    "textDisplay"
-                ]
+                video_replies = comment["replies"]["comments"]
+                user_id = comment["snippet"]["topLevelComment"]["snippet"]["authorChannelId"]["value"]
+                display_name = comment["snippet"]["topLevelComment"]["snippet"]["authorDisplayName"]
+                comment_text = comment["snippet"]["topLevelComment"]["snippet"]["textDisplay"]
+                replies = []
+                for reply in video_replies:
+                    formatted_reply = {
+                        "reply_author": reply["snippet"]["authorDisplayName"],
+                        "user_id": reply["snippet"]["authorChannelId"]["value"],
+                        "reply": reply["snippet"]["textOriginal"],
+                    }
+                replies.append(formatted_reply)
                 data = pd.DataFrame(
                     {
                         "user_id": [user_id],
                         "display_name": [display_name],
                         "comment": [comment_text],
+                        "replies": [replies],
                     }
                 )
-                all_youtube_comments_df = pd.concat(
-                    [all_youtube_comments_df, data], ignore_index=True
-                )
+                all_youtube_comments_df = pd.concat([all_youtube_comments_df, data], ignore_index=True)
             if "nextPageToken" in comments:
                 resource = (
                     self.handler.connect()
                     .commentThreads()
                     .list(
-                        part="snippet",
+                        part="snippet, replies",
                         videoId=video_id,
                         textFormat="plainText",
                         pageToken=comments["nextPageToken"],
@@ -171,9 +169,7 @@ class YoutubeChannelsTable(APITable):
     """Youtube Channel Info  by channel id Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
-        select_statement_parser = SELECTQueryParser(
-            query, "channel", self.get_columns()
-        )
+        select_statement_parser = SELECTQueryParser(query, "channel", self.get_columns())
 
         (
             selected_columns,
@@ -189,9 +185,7 @@ class YoutubeChannelsTable(APITable):
                     channel_id = arg2
                     break
                 else:
-                    raise NotImplementedError(
-                        "Only '=' operator is supported for channel_id column."
-                    )
+                    raise NotImplementedError("Only '=' operator is supported for channel_id column.")
 
         if not channel_id:
             raise NotImplementedError("channel_id has to be present in where clause.")
@@ -208,10 +202,7 @@ class YoutubeChannelsTable(APITable):
 
     def get_channel_details(self, channel_id):
         details = (
-            self.handler.connect()
-            .channels()
-            .list(part="statistics,snippet,contentDetails", id=channel_id)
-            .execute()
+            self.handler.connect().channels().list(part="statistics,snippet,contentDetails", id=channel_id).execute()
         )
         snippet = details["items"][0]["snippet"]
         statistics = details["items"][0]["statistics"]
@@ -261,9 +252,7 @@ class YoutubeVideosTable(APITable):
                     video_id = arg2
                     break
                 else:
-                    raise NotImplementedError(
-                        "Only '=' operator is supported for video_id column."
-                    )
+                    raise NotImplementedError("Only '=' operator is supported for video_id column.")
 
         if not video_id:
             raise NotImplementedError("video_id has to be present in where clause.")
@@ -279,12 +268,7 @@ class YoutubeVideosTable(APITable):
         return video_df
 
     def get_video_details(self, video_id):
-        details = (
-            self.handler.connect()
-            .videos()
-            .list(part="statistics,snippet,contentDetails", id=video_id)
-            .execute()
-        )
+        details = self.handler.connect().videos().list(part="statistics,snippet,contentDetails", id=video_id).execute()
         items = details.get("items")[0]
         snippet = items["snippet"]
         statistics = items["statistics"]
@@ -312,18 +296,12 @@ class YoutubeVideosTable(APITable):
 
     def get_captions(self, video_id):
         try:
-            transcript_response = YouTubeTranscriptApi.get_transcript(
-                video_id, preserve_formatting=True
-            )
-            json_formatted_transcript = JSONFormatter().format_transcript(
-                transcript_response, indent=2
-            )
+            transcript_response = YouTubeTranscriptApi.get_transcript(video_id, preserve_formatting=True)
+            json_formatted_transcript = JSONFormatter().format_transcript(transcript_response, indent=2)
             return json_formatted_transcript
 
         except Exception as e:
-            logger.error(
-                f"Encountered an error while fetching transcripts for video ${video_id}: ${e}"
-            ),
+            logger.error(f"Encountered an error while fetching transcripts for video ${video_id}: ${e}"),
             return "Transcript not available for this video"
 
     def get_columns(self) -> List[str]:

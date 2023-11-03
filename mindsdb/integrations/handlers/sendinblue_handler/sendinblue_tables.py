@@ -33,7 +33,7 @@ class EmailCampaignsTable(APITable):
         ValueError
             If the query contains an unsupported condition
         """
-
+ 
         select_statement_parser = SELECTQueryParser(
             query,
             'email_campaigns',
@@ -80,21 +80,23 @@ class EmailCampaignsTable(APITable):
         ApiException
             If an error occurs when calling Sendinblue's API
         """
+        # this  parses the DELETE statement to extract where conditions
         delete_statement_parser = DELETEQueryParser(query)
         where_conditions = delete_statement_parser.parse_query()
-
+        # this retrieves the current list of email campaigns and normalize the data into a DataFrame
         email_campaigns_df = pd.json_normalize(self.get_email_campaigns())
-
+        # this execute the delete query  to filter out the campaigns to be deleted
         delete_query_executor = DELETEQueryExecutor(
             email_campaigns_df,
             where_conditions
         )
-
+        # this gets the updated DataFrame after executing  delete conditions
         email_campaigns_df = delete_query_executor.execute_query()
         campaign_ids = email_campaigns_df['id'].tolist()
         self.delete_email_campaigns(campaign_ids)
 
     def delete_email_campaigns(self, campaign_ids: List[Text]) -> None:
+        #this establish a connection to Sendinblue API
         connection = self.handler.connect()
         email_campaigns_api_instance = sib_api_v3_sdk.EmailCampaignsApi(connection)
 

@@ -21,7 +21,7 @@ class TestAnthropic(BaseMLAPITest):
             api_key = '{self.get_api_key('ANTHROPIC_API_KEY')}';
             """
         )
-    
+
     def test_invalid_model_parameter(self):
         """Test for invalid Anthropic model parameter"""
         self.run_sql(

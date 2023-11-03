@@ -9,7 +9,7 @@ class BaseMLTest(BaseExecutorTest):
     """
     Base test class for ML engines
     """
-    def wait_predictor(self, project: str, name: str, timeout:int = 100) -> None:
+    def wait_predictor(self, project: str, name: str, timeout: int = 100) -> None:
         """Wait for the predictor to be created, raising an exception if predictor creation fails or exceeds timeout"""
         for attempt in range(timeout):
             ret = self.run_sql(f"select * from {project}.models where name='{name}'")
@@ -21,7 +21,7 @@ class BaseMLTest(BaseExecutorTest):
                     raise RuntimeError("Predictor failed", ret["ERROR"][0])
             time.sleep(0.5)
         raise RuntimeError("Predictor wasn't created")
-    
+
     def run_sql(self, sql: str) -> pd.DataFrame:
         """Execute SQL and return a DataFrame, raising an AssertionError if an error occurs"""
         ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
@@ -29,7 +29,7 @@ class BaseMLTest(BaseExecutorTest):
         if ret.data is not None:
             columns = [col.alias if col.alias else col.name for col in ret.columns]
             return pd.DataFrame(ret.data, columns=columns)
-        
+
 
 class BaseMLAPITest(BaseMLTest):
     """
@@ -39,4 +39,3 @@ class BaseMLAPITest(BaseMLTest):
     def get_api_key(env_var: str):
         """Retrieve API key from environment variables"""
         return os.environ.get(env_var)
-

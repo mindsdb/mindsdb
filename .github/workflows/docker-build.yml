@@ -20,4 +20,5 @@ jobs:
     - name: Build and push
       shell: bash
       run: |
-        TAG=${{ env.CI_SHA }} docker buildx bake --push --set *.cache-to=type=local,dest=/mnt/shared/buildxcache --set *.cache-from=type=local,src=/mnt/shared/buildxcache
+        docker buildx create --driver=remote --use tcp://remote-buildkit-agent.infrastructure.svc.cluster.local:80
+        TAG=${{ env.CI_SHA }} docker buildx bake --push

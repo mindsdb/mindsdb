@@ -42,7 +42,7 @@ Supported query parameters for USING syntax are as follows:
 
 ## For the Writer LLM API
 
-- `prompt_template` - this is the template that is used to generate the prompt
+- `prompt_template` - this is the template that is used to generate the prompt. If not provided, the default is `DEFAULT_QA_PROMPT_TEMPLATE` (see settings.py in rag_handler for more details)
 - `writer_api_key` - this is the API key that is used to authenticate with the Writer LLM API
 - `writer_org_id` - this is the organization ID that is used to authenticate with the Writer LLM API
 - `base_url` - this is the base URL that is used to authenticate with the Writer LLM API, optional, if not provided uses org_id and model_id
@@ -67,7 +67,7 @@ Supported query parameters for USING syntax are as follows:
 - `evaluate_dataset` - this is the dataset that is used to evaluate the model, the default is 'squad_v2_val_100_sample'
 - `run_embeddings` - this is a boolean that determines if the embeddings are run, the default is True
 - `top_k` - this is the number of results that are returned from the retriever, the default is 4
-- `embeddings_model_name` - this is the name of the sentence transformer model that is used to generate the embeddings, the default is `sentence-transformers/all-mpnet-base-v2`
+- `embeddings_model_name` - this is the name of the sentence transformer model that is used to generate the embeddings, the default is `BAAI/bge-base-en`
 - `context_columns` - this is a list of columns that are used to generate the context, the default is None, which means all columns are used
 - `vector_store_name` - this is the name of the vector store that is used to store the embeddings, the default is `chroma`
 - `collection_name` - this is the name of the collection that is used to store the embeddings, the default is `langchain`
@@ -92,13 +92,7 @@ USING
    engine="writer",
    writer_org_id="",
    writer_api_key="",
-   embeddings_model_name="sentence-transformers/all-mpnet-base-v2",
-   vector_store_folder_name="writer_demo_vector_store",
-   prompt_template="Use the following pieces of context to answer the question at the end. If you do not know the answer,
-just say that you do not know, do not try to make up an answer.
-Context: {context}
-Question: {question}
-Helpful Answer:";
+   vector_store_folder_name="writer_demo_vector_store";
 
 -- Ask a question on your data using Writer LLM API
 SELECT *
@@ -112,18 +106,12 @@ WHERE question='what product is best for treating a cold?';
 CREATE MODEL writer_demo_evaluate
 PREDICT answer
 USING
-   engine="writer",
-     writer_org_id="",
-writer_api_key="",
-   embeddings_model_name="sentence-transformers/all-mpnet-base-v2",
-evaluate_dataset='squad_v2_val_100_sample',
-n_rows_evaluation=10,
-vector_store_folder_name="writer_demo_eval_vector_store",
-prompt_template="Use the following pieces of context to answer the question at the end. If you do not know the answer,
-just say that you do not know, do not try to make up an answer.
-Context: {context}
-Question: {question}
-Helpful Answer:";
+    engine="writer",
+    writer_org_id="",
+    writer_api_key="",
+    evaluate_dataset='squad_v2_val_100_sample',
+    n_rows_evaluation=10,
+    vector_store_folder_name="writer_demo_eval_vector_store";
 
 -- Evaluate model
 select * from writer_demo_evaluate where run_evaluation = True;

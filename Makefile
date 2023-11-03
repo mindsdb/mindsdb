@@ -1,4 +1,4 @@
-setup_dev:
+install_mindsdb:
 	pip install -e .
 	pip install -r requirements_dev.txt
 	pre-commit install
@@ -10,4 +10,7 @@ precommit:
 	pre-commit install
 	pre-commit run --files $$(git diff --cached --name-only)
 
-.PHONY: setup_dev precommit install_handler
+run_mindsdb:
+	python -m mindsdb
+
+.PHONY: install_mindsdb precommit install_handler  run_mindsdb

@@ -3,7 +3,7 @@ setup_dev:
 	pip install -r requirements_dev.txt
 	pre-commit install
 
-install_handler:  setup_dev
+install_handler:
 	pip install -r mindsdb/integrations/handlers/$(HANDLER_NAME)_handler/requirements.txt
 
 precommit:

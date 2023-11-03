@@ -46,22 +46,16 @@ python -m venv mindsdb-venv
 source mindsdb-venv/bin/activate
 ```
 
-5. Install dependencies:
+5. Install MindsDB and local development dependencies:
 
 ```bash
-cd mindsdb/requirements && pip install -r requirements.txt
+make install_mindsdb
 ```
 
-6. Install MindsDB:
+6. Start MindsDB:
 
 ```bash
-pip install -e .
-```
-
-7. Start MindsDB:
-
-```bash
-python -m mindsdb
+make run_mindsdb
 ```
 
 If everything works as expected, you should see the following message in the

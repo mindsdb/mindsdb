@@ -137,7 +137,7 @@ class YoutubeCommentsTable(APITable):
                         "user_id": reply["snippet"]["authorChannelId"]["value"],
                         "reply": reply["snippet"]["textOriginal"],
                     }
-                replies.append(formatted_reply)
+                    replies.append(formatted_reply)
                 data = pd.DataFrame(
                     {
                         "user_id": [user_id],

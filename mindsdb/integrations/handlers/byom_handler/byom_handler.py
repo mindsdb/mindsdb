@@ -128,7 +128,7 @@ class BYOMHandler(BaseMLEngine):
             engine_version = self.normalize_engine_version(engine_version)
         else:
             connection_args = self.engine_storage.get_connection_args()
-            engine_version = str(max([int(x) for x in connection_args['versions'].keys()]) + 1)
+            engine_version = max([int(x) for x in connection_args['versions'].keys()])
 
         model_proxy = self._get_model_proxy(engine_version)
         model_state = model_proxy.train(df, target, args)

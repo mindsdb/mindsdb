@@ -1,18 +1,15 @@
 import os
-import time
 import pytest
 import pandas as pd
 from unittest.mock import patch
-from mindsdb_sql import parse_sql
-from mindsdb.integrations.handlers.anthropic_handler.anthropic_handler import AnthropicHandler
-from ..executor_test_base import BaseExecutorTest
 from .base_ml_test import BaseMLAPITest
+
 
 @pytest.mark.skipif(os.environ.get('ANTHROPIC_API_KEY') is None, reason='Missing API key!')
 class TestAnthropic(BaseMLAPITest):
     """Test Class for Anthropic Integration Testing"""
 
-    def setup_method(self, method):
+    def setup_method(self):
         """Setup test environment, creating a project"""
         super().setup_method()
         self.run_sql("create database proj")

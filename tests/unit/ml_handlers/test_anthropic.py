@@ -85,3 +85,33 @@ class TestAnthropic(BaseExecutorTest):
         )
         with pytest.raises(Exception):
             self.wait_predictor("proj", "test_anthropic_unknown_argument")
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_bulk_qa(self, mock_handler):
+        df = pd.DataFrame.from_dict({"question": [
+            "What is the capital of Sweden?",
+            "What is the second planet of the solar system?"
+        ]})
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
+
+        self.run_sql(
+            f"""
+           CREATE MODEL proj.test_anthropic_bulk_qa
+           PREDICT answer
+           USING
+               engine='anthropic',
+               column='question',
+               api_key='{self.get_api_key()}';
+        """
+        )
+        self.wait_predictor("proj", "test_anthropic_bulk_qa")
+
+        result_df = self.run_sql(
+            """
+            SELECT p.answer
+            FROM pg.df as t
+            JOIN proj.test_anthropic_bulk_qa as p;
+        """
+        )
+        assert "stockholm" in result_df["answer"].iloc[0].lower()
+        assert "venus" in result_df["answer"].iloc[1].lower()

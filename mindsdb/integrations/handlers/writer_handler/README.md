@@ -70,10 +70,10 @@ Supported query parameters for USING syntax are as follows:
 - `embeddings_model_name` - this is the name of the sentence transformer model that is used to generate the embeddings, the default is `BAAI/bge-base-en`
 - `context_columns` - this is a list of columns that are used to generate the context, the default is None, which means all columns are used
 - `vector_store_name` - this is the name of the vector store that is used to store the embeddings, the default is `chroma`
-- `collection_name` - this is the name of the collection that is used to store the embeddings, the default is `langchain`
+- `collection_name` - this is the name of the collection that is used to store the embeddings, the default is `collection`
 - `summarize_context` - this is a boolean that determines if the context is summarized, the default is True
-- `summarization_prompt_template` - this is the template that is used to summarize the context, the default is `SUMMARIZATION_PROMPT_TEMPLATE` in settings.py
-- `vector_store_folder_name` - this is the name of the folder that is used to store the vector store, the default is `chromadb`
+- `summarization_prompt_template` - this is the template that is used to summarize the context, the default is `SUMMARIZATION_PROMPT_TEMPLATE` (see settings.py in rag_handler for more details)
+- `vector_store_folder_name` - this is the name of the folder that is used to store the vector store, the default is `vector_store_folder`
 
 ## Any directions for future work in subsequent versions of the handler?
 tbc

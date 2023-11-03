@@ -128,7 +128,14 @@ class BYOMUpload(Resource):
         byom_handler = base_ml_handler.get_ml_handler()
         byom_handler.update_engine(connection_args)
 
-        return '', 200
+        engine_versions = [
+            int(x) for x in byom_handler.engine_storage.get_connection_args()['versions'].keys()
+        ]
+
+        return {
+            'last_engine_version': max(engine_versions),
+            'engine_versions': engine_versions
+        }
 
     @ns_conf.doc('put_file')
     def put(self, name):

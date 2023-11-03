@@ -2,6 +2,7 @@ import os
 import re
 import io
 import zipfile
+from typing import Union
 
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -25,16 +26,23 @@ class ModelStorage:
 
     # -- fields --
 
-    def _get_model_record(self, model_id: int) -> db.Predictor:
+    def _get_model_record(self, model_id: int, check_exists: bool = False) -> Union[db.Predictor, None]:
         """Get model record by id
 
         Args:
             model_id (int): model id
+            check_exists (bool): true if need to check that model exists
 
         Returns:
-            Predictor: model record
+            Union[db.Predictor, None]: model record
+
+        Raises:
+            KeyError: if `check_exists` is True and model does not exists
         """
-        return db.Predictor.query.get(self.predictor_id)
+        model_record = db.Predictor.query.get(self.predictor_id)
+        if check_exists is True and model_record is None:
+            raise KeyError('Model does not exists')
+        return model_record
 
     def get_info(self):
         rec = self._get_model_record(self.predictor_id)
@@ -48,14 +56,26 @@ class ModelStorage:
         Args:
             data (dict): data to be merged with original model 'data' field
         """
-        model_record = self._get_model_record(self.predictor_id)
-        if model_record is None:
-            raise KeyError('Model does not exists')
+        model_record = self._get_model_record(self.predictor_id, check_exists=True)
         if isinstance(model_record.data, dict) is False:
             model_record.data = data
         else:
             model_record.data.update(data)
         flag_modified(model_record, 'data')
+        db.session.commit()
+
+    def update_learn_args(self, data: dict) -> None:
+        """update model 'learn_args' field
+
+        Args:
+            data (dict): data to be merged with original model 'learn_args' field
+        """
+        model_record = self._get_model_record(self.predictor_id, check_exists=True)
+        if isinstance(model_record.learn_args, dict) is False:
+            model_record.learn_args = data
+        else:
+            model_record.learn_args.update(data)
+        flag_modified(model_record, 'learn_args')
         db.session.commit()
 
     def status_set(self, status, status_info=None):

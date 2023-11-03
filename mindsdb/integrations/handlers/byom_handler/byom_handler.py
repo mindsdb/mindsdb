@@ -92,7 +92,7 @@ class BYOMHandler(BaseMLEngine):
 
     def _get_model_proxy(self, version=None):
         version_mark = ''
-        if version is not None and version > 1:
+        if version is not None and int(version) > 1:
             version_mark = f'_{version}'
 
         self.engine_storage.fileStorage.pull()
@@ -100,7 +100,7 @@ class BYOMHandler(BaseMLEngine):
             code = self.engine_storage.fileStorage.file_get(f'code{version_mark}')
             modules_str = self.engine_storage.fileStorage.file_get(f'modules{version_mark}')
         except FileNotFoundError:
-            raise Exception(f"Model version '{version}' does not exists")
+            raise Exception(f"Engine version '{version}' does not exists")
 
         if self.model_wrapper is None:
             if self._byom_type == BYOM_TYPE.UNSAFE:
@@ -123,12 +123,15 @@ class BYOMHandler(BaseMLEngine):
         return mp.describe(model_state, attribute)
 
     def create(self, target, df=None, args=None, **kwargs):
-        engine_version = args.get('using', {}).get('engine_version')
+        using_args = args.get('using', {})
+        engine_version = using_args.get('engine_version')
         if engine_version is not None:
             engine_version = self.normalize_engine_version(engine_version)
         else:
             connection_args = self.engine_storage.get_connection_args()
             engine_version = max([int(x) for x in connection_args['versions'].keys()])
+            using_args['engine_version'] = engine_version
+            self.model_storage.update_learn_args({'using': using_args})
 
         model_proxy = self._get_model_proxy(engine_version)
         model_state = model_proxy.train(df, target, args)
@@ -157,7 +160,12 @@ class BYOMHandler(BaseMLEngine):
     def predict(self, df, args=None):
         pred_args = args.get('predict_params', {})
 
-        engine_version = self.get_model_engine_version()
+        engine_version = pred_args.get('engine_version')
+        if engine_version is not None:
+            engine_version = int(engine_version)
+        else:
+            engine_version = self.get_model_engine_version()
+
         model_proxy = self._get_model_proxy(engine_version)
         model_state = self.model_storage.file_get('model')
         pred_df = model_proxy.predict(df, model_state, pred_args)
@@ -245,11 +253,14 @@ class BYOMHandler(BaseMLEngine):
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         # region get model version from 'using' or from model
-        engine_version = args.get('using', {}).get('engine_version')
+        using_args = args.get('using', {})
+        engine_version = using_args.get('engine_version')
         if engine_version is not None:
             engine_version = self.normalize_engine_version(engine_version)
         if engine_version is None:
             engine_version = self.get_model_engine_version()
+            using_args['engine_version'] = engine_version
+            self.model_storage.update_learn_args({'using': using_args})
         # endregion
 
         model_storage = self.model_storage

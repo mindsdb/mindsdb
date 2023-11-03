@@ -1,7 +1,7 @@
 import ast
-import uuid
 from enum import Enum
 from typing import Any, List, Optional
+import hashlib
 
 import pandas as pd
 from mindsdb_sql.parser.ast import (
@@ -230,7 +230,6 @@ class VectorStoreHandler(BaseHandler):
                 f"Allowed columns are {[col['name'] for col in self.SCHEMA]}"
             )
 
-
         # get content column if it is present
         if TableField.CONTENT.value in columns:
             content_col_index = columns.index("content")
@@ -328,7 +327,6 @@ class VectorStoreHandler(BaseHandler):
 
         self.update(table_name, df_update, 'id')
         self.insert(table_name, df_insert)
-
 
     def _dispatch_delete(self, query: Delete) -> HandlerResponse:
         """

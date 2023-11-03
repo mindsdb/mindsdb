@@ -350,5 +350,10 @@ class BaseMLEngine(ArgProbeMixin):
         """
         raise NotImplementedError
 
+    def update_engine(self, connection_args: dict):
+        """Optional.
+        """
+        raise NotImplementedError
+
     def close(self):
         pass

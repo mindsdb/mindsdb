@@ -83,6 +83,53 @@ class InstallDependencies(Resource):
 @ns_conf.route('/byom/<name>')
 @ns_conf.param('name', "Name of the model")
 class BYOMUpload(Resource):
+    @ns_conf.doc('post_file')
+    def post(self, name):
+        params = {}
+
+        def on_field(field):
+            name = field.field_name.decode()
+            value = field.value.decode()
+            params[name] = value
+
+        def on_file(file):
+            params[file.field_name.decode()] = file.file_object
+
+        temp_dir_path = tempfile.mkdtemp(prefix='mindsdb_file_')
+
+        parser = multipart.create_form_parser(
+            headers=request.headers,
+            on_field=on_field,
+            on_file=on_file,
+            config={
+                'UPLOAD_DIR': temp_dir_path.encode(),  # bytes required
+                'UPLOAD_KEEP_FILENAME': True,
+                'UPLOAD_KEEP_EXTENSIONS': True,
+                'MAX_MEMORY_FILE_SIZE': 0
+            }
+        )
+
+        while True:
+            chunk = request.stream.read(8192)
+            if not chunk:
+                break
+            parser.write(chunk)
+        parser.finalize()
+        parser.close()
+
+        connection_args = {
+            'code': params['code'].name.decode(),
+            'modules': params['modules'].name.decode()
+        }
+
+        session = SessionController()
+
+        base_ml_handler = session.integration_controller.get_handler(params.get('source'))
+        byom_handler = base_ml_handler.get_ml_handler()
+        byom_handler.update_engine(connection_args)
+
+        return '', 200
+
     @ns_conf.doc('put_file')
     def put(self, name):
         ''' upload new model

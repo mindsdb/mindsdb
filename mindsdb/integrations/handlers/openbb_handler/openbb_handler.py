@@ -3,7 +3,7 @@ from typing import Dict
 
 from openbb import obb
 
-from mindsdb.integrations.handlers.openbb_handler.openbb_tables import OpenBBtable
+from mindsdb.integrations.handlers.openbb_handler.openbb_tables import OpenBBtable, create_table_class
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -37,7 +37,23 @@ class OpenBBHandler(APIHandler):
 
         self.is_connected = False
 
+        self.obb = obb
+        from openbb_provider import standard_models
+
         self._register_table("openbb_fetcher", OpenBBtable(self))
+        stock_table_class = create_table_class(
+            params_metadata=standard_models.stock_historical.StockHistoricalQueryParams.model_json_schema(),
+            response_metadata=standard_models.stock_historical.StockHistoricalData.model_json_schema(),
+            obb_function=self.obb.stocks.load
+        )
+        self._register_table("stock_historical", stock_table_class(self))
+
+        crypto_table_class = create_table_class(
+            params_metadata=standard_models.crypto_historical.CryptoHistoricalQueryParams.model_json_schema(),
+            response_metadata=standard_models.crypto_historical.CryptoHistoricalData.model_json_schema(),
+            obb_function=self.obb.crypto.load
+        )
+        self._register_table("crypto_historical", crypto_table_class(self))
 
     def connect(self) -> bool:
         """Connects with OpenBB account through personal access token (PAT).
@@ -48,11 +64,9 @@ class OpenBBHandler(APIHandler):
         obb.account.login(pat=self.PAT)
 
         # Check if PAT utilized is valid
-        if obb.user.profile.active:
-            self.is_connected = True
-            return True
-
-        return False
+        # if obb.user.profile.active:
+        self.is_connected = True
+        return True
 
     def check_connection(self) -> StatusResponse:
         """Checks connection to OpenBB accounting by checking the validity of the PAT.

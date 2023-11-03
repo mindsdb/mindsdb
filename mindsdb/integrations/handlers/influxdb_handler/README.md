@@ -16,7 +16,15 @@ The required arguments to establish a connection are,
 * `influxdb_token`: Authentication token for the hosted influxdb cloud instance
 * `influxdb_db_name`: Database name of the influxdb cloud instance
 * `influxdb_table_name`: Table name of the influxdb cloud instance
+* `org` : Organisation of the influxdb cloud instance
 
+
+## Install Dependencies
+
+```
+pip install influxdb3-python
+
+```
 ## Usage
 In order to make use of this handler and connect to an Jira in MindsDB, the following syntax can be used,
 ~~~~sql
@@ -27,7 +35,8 @@ parameters={
     "influxdb_url": "<influxdb-hosted-url>",
     "influxdb_token": "<api-key-token",
     "influxdb_db_name": "<database-name>",
-    "influxdb_table_name": "<table-name>"
+    "influxdb_table_name": "<table-name>",
+    "org": "Organisation"
 };
 ~~~~
 

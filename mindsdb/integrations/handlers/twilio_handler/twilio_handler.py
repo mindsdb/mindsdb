@@ -150,8 +150,8 @@ class MessagesTable(APITable):
         for row in query.values:
             params = dict(zip(columns, row))
 
-            # split long text over 280 symbols
-            max_text_len = 280
+            # split long text over 1500 symbols
+            max_text_len = 1500
             text = params['body']
             words = re.split('( )', text)
             messages = []
@@ -341,7 +341,7 @@ class TwilioHandler(APIHandler):
                 'price_unit': msg.price_unit,
                 'api_version': msg.api_version,
                 'uri': msg.uri,
-                'media_url': [media.url for media in msg.media.list()]
+                'media_url': [media.uri for media in msg.media.list()]
                 # ... Add other properties as needed
             }
             data.append(msg_data)

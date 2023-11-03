@@ -1,6 +1,7 @@
 import copy
 
 import duckdb
+from duckdb import InvalidInputException
 import numpy as np
 
 from mindsdb_sql import parse_sql
@@ -13,6 +14,40 @@ from mindsdb_sql.parser.ast import (
 
 from mindsdb.utilities import log
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
+
+
+def query_df_with_type_infer_fallback(query_str: str, dataframes: dict):
+    ''' Duckdb need to infer column types if column.dtype == object. By default it take 1000 rows,
+        but that may be not sufficient for some cases. This func try to run query multiple times
+        increasing butch size for type infer
+
+        Args:
+            query_str (str): query to execute
+            dataframes (dict): dataframes
+
+        Returns:
+            pandas.DataFrame
+            pandas.columns
+    '''
+
+    for name, value in dataframes.items():
+        locals()[name] = value
+
+    con = duckdb.connect(database=':memory:')
+    for sample_size in [1000, 10000, 1000000]:
+        try:
+            con.execute(f'set global pandas_analyze_sample={sample_size};')
+            result_df = con.execute(query_str).fetchdf()
+        except InvalidInputException:
+            pass
+        else:
+            break
+    else:
+        raise InvalidInputException
+    description = con.description
+    con.close()
+
+    return result_df, description
 
 
 def query_df(df, query, session=None):
@@ -90,17 +125,16 @@ def query_df(df, query, session=None):
         query_str = render.get_string(query_ast, with_failback=True)
 
     # workaround to prevent duckdb.TypeMismatchException
-    if len(df) > 0 and table_name.lower() in ('models', 'predictors', 'models_versions'):
-        if 'TRAINING_OPTIONS' in df.columns:
-            df = df.astype({'TRAINING_OPTIONS': 'string'})
+    if len(df) > 0:
+        if table_name.lower() in ('models', 'predictors', 'models_versions'):
+            if 'TRAINING_OPTIONS' in df.columns:
+                df = df.astype({'TRAINING_OPTIONS': 'string'})
+        if table_name.lower() == 'ml_engines':
+            if 'CONNECTION_DATA' in df.columns:
+                df = df.astype({'CONNECTION_DATA': 'string'})
 
-    con = duckdb.connect(database=':memory:')
-
-    con.execute('set global pandas_analyze_sample=10000')
-    result_df = con.execute(query_str).fetchdf()
+    result_df, description = query_df_with_type_infer_fallback(query_str, {'df': df})
     result_df = result_df.replace({np.nan: None})
-    description = con.description
-    con.close()
 
     new_column_names = {}
     real_column_names = [x[0] for x in description]

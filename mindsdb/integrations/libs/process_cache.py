@@ -140,7 +140,10 @@ class WarmProcess:
 
 def warm_function(func, context: str, *args, **kwargs):
     ctx.load(context)
-    return func(*args, **kwargs)
+    try:
+        return func(*args, **kwargs)
+    except Exception as e:
+        raise RuntimeError(str(e)) from e
 
 
 class ProcessCache:

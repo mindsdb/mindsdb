@@ -1,24 +1,17 @@
-import copy
 from typing import List
+
+import pandas as pd
 
 import mindsdb_sql.planner.utils as utils
 from mindsdb_sql.parser.ast import (
-    ASTNode,
     BinaryOperation,
     Constant,
-    Data,
-    Delete,
     Identifier,
-    Insert,
-    Join,
     Select,
-    TableColumn,
     Update,
 )
 
 import mindsdb.interfaces.storage.db as db
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
-from mindsdb.api.mysql.mysql_proxy.executor.data_types import ANSWER_TYPE, ExecuteAnswer
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
 
 
@@ -33,11 +26,12 @@ class KnowledgeBaseTable:
         utils.query_traversal(query.where, self._replace_query_content)
 
         # set table name
-        query.from_table = Identifier(parts=[self._kb.vector_table_name])
+        query.from_table = Identifier(parts=[self._kb.vector_database_table])
 
         # send to vectordb
         db_handler = self._get_vector_db()
-        return db_handler.query(query)
+        resp = db_handler.query(query)
+        return resp.data_frame
 
     def update_query(self, query: Update):
         # add embeddings to content in updated collumns
@@ -50,7 +44,7 @@ class KnowledgeBaseTable:
         # TODO search content in where clause?
 
         # set table name
-        query.table = Identifier(parts=[self._kb.vector_table_name])
+        query.table = Identifier(parts=[self._kb.vector_database_table])
 
         # send to vectordb
         db_handler = self._get_vector_db()
@@ -59,19 +53,20 @@ class KnowledgeBaseTable:
     def _replace_query_content(self, node, **kwargs):
         if isinstance(node, BinaryOperation):
             if isinstance(node.args[0], Identifier) and isinstance(node.args[1], Constant):
-                col_name = node.args[0].parts[0]
+                col_name = node.args[0].parts[-1]
                 if col_name.lower() == TableField.CONTENT.value:
                     # replace
-                    node.args[0].parts[0] = TableField.EMBEDDINGS.value
-                    node.args[0].parts[1] = self._to_embeddings(node.args[1].value)
+                    node.args[0].parts = [TableField.EMBEDDINGS.value]
+                    node.args[1].value = [self._to_embeddings(node.args[1].value)]
 
     def insert(self, df):
         # add embeddings
-        df = self._add_embeddings(df)
+        df_emb = self._add_embeddings(df)
+        df = pd.concat([df, df_emb], axis=1)
 
         # send to vector db
         db_handler = self._get_vector_db()
-        db_handler.upsert(self._kb.vector_table_name, df)
+        db_handler.do_upsert(self._kb.vector_database_table, df)
 
     def _get_vector_db(self):
         if self._vector_db is None:
@@ -87,9 +82,14 @@ class KnowledgeBaseTable:
         assert model_rec is not None, f"Model not found: {model_id}"
         model_project = db.session.query(db.Project).filter_by(id=model_rec.project_id).first()
 
-        project_datanode = self.session.datahub.get(model_project)
+        project_datanode = self.session.datahub.get(model_project.name)
 
-        # TODO adjust input?
+        # TODO adjust input
+        input_col = model_rec.learn_args.get('using', {}).get('question_column')
+        if input_col is not None and input_col != TableField.CONTENT.value:
+            df = pd.DataFrame(data)
+            df = df.rename(columns={TableField.CONTENT.value: input_col})
+            data = df.to_dict('records')
 
         df_out = project_datanode.predict(
             model_name=model_rec.name,
@@ -114,7 +114,7 @@ class KnowledgeBaseTable:
             {TableField.CONTENT.value: content}
         ]
         res = self._call_embeddings_model(data)
-        return res[0][TableField.EMBEDDINGS.value]
+        return res[TableField.EMBEDDINGS.value][0]
 
     def delete(self):
         # TODO
@@ -155,7 +155,7 @@ class KnowledgeBaseController:
         self,
         name: str,
         project_name: str,
-        embedding_model_name: str,
+        embedding_model: Identifier,
         storage: Identifier,
         params: dict,
         if_not_exists: bool = False,
@@ -166,10 +166,9 @@ class KnowledgeBaseController:
         # check if knowledge base already exists
 
         # get project id
-        try:
-            project = self.session.database_controller.get_project(project_name)
-        except ValueError:
-            raise Exception(f"Project not found: {project_name}")
+
+        project = self.session.database_controller.get_project(project_name)
+
         project_id = project.id
 
         # not difference between cases in sql
@@ -183,9 +182,17 @@ class KnowledgeBaseController:
                 raise Exception(f"Knowledge base already exists: {name}")
 
         # model
+        model_name = embedding_model.parts[-1]
+
+        if len(embedding_model.parts) > 1:
+            # model project is set
+            model_project = self.session.database_controller.get_project(embedding_model.parts[-2])
+        else:
+            model_project = project
+
         model = self.session.model_controller.get_model(
-            embedding_model_name,
-            project_name=project_name
+            model_name,
+            project_name=model_project.name
         )
         model_record = db.Predictor.query.get(model['id'])
         embedding_model_id = model_record.id
@@ -194,20 +201,15 @@ class KnowledgeBaseController:
         if storage is None:
             # create chroma db with same name
             vector_table_name = "default_collection"
-            vector_db_name = name
-            self._create_persistent_chroma(
-                vector_db_name
+            vector_db_name = self._create_persistent_chroma(
+                name
             )
+        elif len(storage.parts) != 2:
+            raise Exception('Storage param has to be vector db with table')
         else:
-            vector_db_name, vector_table_name = storage.parts[0]
+            vector_db_name, vector_table_name = storage.parts
 
-        # verify the vector database exists and get its id
-        database_records = self.session.database_controller.get_dict()
-        is_database_exist = vector_db_name in database_records
-        if not is_database_exist:
-            raise Exception(f"Database not found: {vector_db_name}")
-
-        vector_database_id = database_records[vector_db_name]["id"]
+        vector_database_id = self.session.integration_controller.get(vector_db_name)['id']
 
         # create table in vectordb
         self.session.datahub.get(vector_db_name).integration_handler.create_table(
@@ -236,9 +238,10 @@ class KnowledgeBaseController:
 
         # check if exists
         if self.session.integration_controller.get(vector_store_name):
-            return
+            return vector_store_name
 
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
+        return vector_store_name
 
     def delete(self, name: str, project_name: str, if_exists: bool = False) -> None:
         """

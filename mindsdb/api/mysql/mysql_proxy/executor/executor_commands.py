@@ -91,7 +91,6 @@ from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.model.functions import (
-    PredictorRecordNotFound,
     get_model_record,
     get_model_records,
     get_predictor_integration,
@@ -1277,7 +1276,7 @@ class ExecuteCommands:
         self.session.kb_controller.add(
             name=kb_name,
             project_name=project_name,
-            embedding_model_name=statement.model,
+            embedding_model=statement.model,
             storage=statement.storage,
             params=statement.params,
             if_not_exists=statement.if_not_exists,

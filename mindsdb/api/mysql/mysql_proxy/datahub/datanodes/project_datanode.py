@@ -15,7 +15,6 @@ from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 
 
 class ProjectDataNode(DataNode):
@@ -75,7 +74,7 @@ class ProjectDataNode(DataNode):
                 kb_table.update_query(query_table, query)
                 return pd.DataFrame(), []
 
-            raise NotImplemented(f"Can't update object: {query_table}")
+            raise NotImplementedError(f"Can't update object: {query_table}")
 
         # region is it query to 'models' or 'models_versions'?
         query_table = query.from_table.parts[0].lower()
@@ -150,14 +149,15 @@ class ProjectDataNode(DataNode):
 
             return df.to_dict(orient='records'), columns_info
 
-    def create_table(self, table: Identifier, result_set, is_replace=False, **kwargs):
+    def create_table(self, table_name: Identifier, result_set, is_replace=False, **kwargs):
         # is_create - create table
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert
 
+        from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
         session = SessionController()
 
-        table_name = table.parts[-1]
+        table_name = table_name.parts[-1]
         kb_table = session.kb_controller.get_table(table_name, self.project.id)
         if kb_table:
             # this is the knowledge db
@@ -166,8 +166,5 @@ class ProjectDataNode(DataNode):
                 ...
 
             df = result_set.to_df()
-            return kb_table.insert(table_name, self.project.id, df)
-        raise NotImplemented(f"Cant create table {table_name}")
-
-
-
+            return kb_table.insert(df)
+        raise NotImplementedError(f"Cant create table {table_name}")

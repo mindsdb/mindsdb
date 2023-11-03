@@ -278,7 +278,7 @@ class VectorStoreHandler(BaseHandler):
             }
         )
 
-        return self._do_upsert(table_name, data)
+        return self.do_upsert(table_name, data)
 
     def _dispatch_update(self, query: Update):
         """
@@ -305,9 +305,9 @@ class VectorStoreHandler(BaseHandler):
         # store
         df = pd.DataFrame([row])
 
-        return self._do_upsert(table_name, df)
+        return self.do_upsert(table_name, df)
 
-    def _do_upsert(self, table_name, df):
+    def do_upsert(self, table_name, df):
         # find existing ids
         # id is string TODO is it ok?
         df['id'] = df['id'].apply(str)

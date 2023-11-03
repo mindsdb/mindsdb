@@ -152,7 +152,7 @@ class BYOMHandler(BaseMLEngine):
         }
 
         self.model_storage.columns_set(columns)
-        self.model_storage.update_data({'engine_version': '1'})
+        self.model_storage.update_data({'engine_version': engine_version})
 
     def predict(self, df, args=None):
         pred_args = args.get('predict_params', {})

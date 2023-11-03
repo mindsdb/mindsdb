@@ -4,7 +4,8 @@ ARG EXTRAS
 
 COPY . /mindsdb
 WORKDIR /mindsdb
-RUN --mount=type=cache,target=/root/.cache/pip ls -l /root/.cache/pip && pip install "."
+RUN --mount=type=cache,target=/root/.cache/pip pip cache lists
+RUN --mount=type=cache,target=/root/.cache/pip pip install "."
 RUN --mount=type=cache,target=/root/.cache/pip if [ ! -z $EXTRAS ]; then pip install ${EXTRAS}; fi
 
 

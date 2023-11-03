@@ -28,11 +28,11 @@ class ModelStorage:
     def _get_model_record(self, model_id: int) -> db.Predictor:
         """Get model record by id
 
-            Args:
-                model_id (int): model id
+        Args:
+            model_id (int): model id
 
-            Returns:
-                Predictor: model record
+        Returns:
+            Predictor: model record
         """
         return db.Predictor.query.get(self.predictor_id)
 
@@ -43,7 +43,11 @@ class ModelStorage:
                     data=rec.data)
 
     def update_data(self, data: dict) -> None:
-        """update model 'data' field"""
+        """update model 'data' field
+
+        Args:
+            data (dict): data to be merged with original model 'data' field
+        """
         model_record = self._get_model_record(self.predictor_id)
         if model_record is None:
             raise KeyError('Model does not exists')
@@ -185,7 +189,7 @@ class HandlerStorage:
         rec = db.Integration.query.get(self.integration_id)
         return rec.data
 
-    def update_connection_args(self, connection_args: dict):
+    def update_connection_args(self, connection_args: dict) -> None:
         """update integration connection args
 
         Args:

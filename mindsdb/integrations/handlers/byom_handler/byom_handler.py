@@ -192,7 +192,12 @@ class BYOMHandler(BaseMLEngine):
             model_proxy.remove_venv()
             raise e
 
-    def update_engine(self, connection_args: dict):
+    def update_engine(self, connection_args: dict) -> None:
+        """Add new version of engine
+
+            Args:
+                connection_args (dict): paths to code and requirements
+        """
         code_path = Path(connection_args['code'])
         requirements_path = Path(connection_args['modules'])
 
@@ -391,7 +396,7 @@ class ModelWrapperSafe:
         # get requirements from string
         # they should be located at the top of the file, before code
 
-        pattern = '^[\w\\[\\]-]+[=!<>\s]*[\d\.]*[,=!<>\s]*[\d\.]*$'
+        pattern = '^[\w\\[\\]-]+[=!<>\s]*[\d\.]*[,=!<>\s]*[\d\.]*$'  # noqa
         modules = []
         for line in requirements.split(b'\n'):
             line = line.decode().strip()

@@ -20,4 +20,4 @@ jobs:
     - name: Build and push
       shell: bash
       run: |
-        TAG=${{ env.CI_SHA }} docker buildx bake --push --cache-to type=local,dest=/mnt/shared/buildxcache --cache-from type=local,src=/mnt/shared/buildxcache
+        TAG=${{ env.CI_SHA }} docker buildx bake --push --set *.cache-to=type=local,dest=/mnt/shared/buildxcache --set *.cache-from=type=local,src=/mnt/shared/buildxcache

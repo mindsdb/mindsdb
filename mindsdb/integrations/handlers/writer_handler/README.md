@@ -66,17 +66,14 @@ Supported query parameters for USING syntax are as follows:
 - `generator_match_threshold` - this is the threshold that is used to determine if the generator has found a match, the default is 0.8
 - `evaluate_dataset` - this is the dataset that is used to evaluate the model, the default is 'squad_v2_val_100_sample'
 - `run_embeddings` - this is a boolean that determines if the embeddings are run, the default is True
-- `external_index_name` - this is the name of the external index that is used to store the embeddings, the default is None, which means a new index is created
 - `top_k` - this is the number of results that are returned from the retriever, the default is 4
 - `embeddings_model_name` - this is the name of the sentence transformer model that is used to generate the embeddings, the default is `sentence-transformers/all-mpnet-base-v2`
 - `context_columns` - this is a list of columns that are used to generate the context, the default is None, which means all columns are used
 - `vector_store_name` - this is the name of the vector store that is used to store the embeddings, the default is `chroma`
 - `collection_name` - this is the name of the collection that is used to store the embeddings, the default is `langchain`
-- `summarize_context` - this is a boolean that determines if the context is summarized, the default is False
+- `summarize_context` - this is a boolean that determines if the context is summarized, the default is True
 - `summarization_prompt_template` - this is the template that is used to summarize the context, the default is `SUMMARIZATION_PROMPT_TEMPLATE` in settings.py
 - `vector_store_folder_name` - this is the name of the folder that is used to store the vector store, the default is `chromadb`
-- `vector_store_storage_path` - this is the path that is used to store the vector store, the default is None, which means the vector store is not persisted
-
 
 ## Any directions for future work in subsequent versions of the handler?
 tbc

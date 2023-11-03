@@ -87,6 +87,7 @@ class TestAnthropic(BaseExecutorTest):
             self.wait_predictor("proj", "test_anthropic_unknown_argument")
 
     def test_single_qa(self):
+        """Test for single question/answer pair"""
         self.run_sql(
             f"""
             CREATE MODEL proj.test_anthropic_single_qa
@@ -110,6 +111,7 @@ class TestAnthropic(BaseExecutorTest):
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_bulk_qa(self, mock_handler):
+        """Test for bulk question/answer pairs"""
         df = pd.DataFrame.from_dict({"question": [
             "What is the capital of Sweden?",
             "What is the second planet of the solar system?"

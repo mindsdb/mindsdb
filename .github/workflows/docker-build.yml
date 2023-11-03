@@ -21,4 +21,4 @@ jobs:
       shell: bash
       run: |
         docker buildx create --driver=remote --use tcp://remote-buildkit-agent.infrastructure.svc.cluster.local:80
-        TAG=${{ env.CI_SHA }} docker buildx bake --push
+        TAG=${{ env.CI_SHA }} docker buildx bake --push --progress plain

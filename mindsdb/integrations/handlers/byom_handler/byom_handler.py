@@ -11,7 +11,6 @@ from datetime import datetime
 from typing import Optional, Dict, Union
 from collections import OrderedDict
 
-import numpy as np
 import pandas as pd
 from pandas.api import types as pd_types
 
@@ -80,7 +79,7 @@ class BYOMHandler(BaseMLEngine):
         if isinstance(engine_version, int) is False:
             engine_version = 1
         return engine_version
-    
+
     def get_model_engine_version(self) -> int:
         """Return current model engine version
 
@@ -228,7 +227,7 @@ class BYOMHandler(BaseMLEngine):
 
         self.engine_storage.update_connection_args(connection_args)
 
-        model_proxy = self._get_model_proxy()
+        model_proxy = self._get_model_proxy(new_version)
         try:
             model_proxy.check()
         except Exception as e:
@@ -255,7 +254,7 @@ class BYOMHandler(BaseMLEngine):
             predictor_id = model_storage.predictor_id
             predictor_record = db.Predictor.query.get(predictor_id)
 
-            predictor_record.data = {'training_log': 'training'} # TODO move to ModelStorage (don't work w/ db directly)
+            predictor_record.data = {'training_log': 'training'}  # TODO move to ModelStorage (don't work w/ db directly)
             predictor_record.training_start_at = datetime.now()
             predictor_record.status = PREDICTOR_STATUS.FINETUNING  # TODO: parallel execution block
             db.session.commit()
@@ -313,7 +312,7 @@ class ModelWrapperUnsafe:
         self.model_instance.__dict__ = model_state
         try:
             result = self.model_instance.predict(df, args)
-        except:
+        except Exception:
             result = self.model_instance.predict(df)
         return result
 
@@ -375,8 +374,7 @@ class ModelWrapperSafe:
 
             if len(modules) > 0:
                 self.install_modules(modules)
-
-        except Exception as e:
+        except Exception:
             # DANGER !!! VENV MUST BE CREATED
             log.logger.info("Can't create virtual environment. venv module should be installed")
 

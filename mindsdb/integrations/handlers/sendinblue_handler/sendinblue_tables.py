@@ -81,6 +81,7 @@ class EmailCampaignsTable(APITable):
         ValueError
             If the query contains an unsupported condition
         """
+        # this parse the UPDATE statement to extract the new values and the conditions for the update
         update_statement_parser = UPDATEQueryParser(query)
         values_to_update, where_conditions = update_statement_parser.parse_query()
 
@@ -89,12 +90,15 @@ class EmailCampaignsTable(APITable):
             email_campaigns_df,
             where_conditions
         )
-
+         # this retrieves the current list of email campaigns 
         email_campaigns_df = update_query_executor.execute_query()
+        # this  extracts the IDs of the campaigns that have been updated
         campaign_ids = email_campaigns_df['id'].tolist()
+        
         self.update_email_campaigns(campaign_ids, values_to_update)
 
     def update_email_campaigns(self, campaign_ids: List[int], values_to_update: Dict) -> None:
+         # this establish a connection to Sendinblue API
         connection = self.handler.connect()
         email_campaigns_api_instance = sib_api_v3_sdk.EmailCampaignsApi(connection)
 

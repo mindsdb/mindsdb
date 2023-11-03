@@ -108,7 +108,7 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==23.1.2 &
     pip install --prefer-binary --no-cache-dir 'pgvector' || true && \
     pip install --prefer-binary --no-cache-dir 'anthropic==0.3.4' || true  && \
     pip install --prefer-binary --no-cache-dir python-gitlab || true && \
-    pip install --prefer-binary --no-cache-dir 'chromadb~=0.4.8' 'pysqlite3-binary' || true && \
+    pip install --prefer-binary --no-cache-dir 'chromadb~=0.4.8' 'pysqlite3-binary' || true
 
 ARG VERSION=
 RUN pip install --no-cache-dir mindsdb${VERSION:+"==$VERSION"}

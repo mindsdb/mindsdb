@@ -54,7 +54,7 @@ class TestAnthropic(BaseExecutorTest):
             columns = [col.alias if col.alias else col.name for col in ret.columns]
             return pd.DataFrame(ret.data, columns=columns)
     
-    def test_invalid_anthropic_model_parameter(self):
+    def test_invalid_model_parameter(self):
         """Test for invalid Anthropic model parameter"""
         self.run_sql(
             f"""
@@ -70,7 +70,7 @@ class TestAnthropic(BaseExecutorTest):
         with pytest.raises(Exception):
             self.wait_predictor("proj", "test_anthropic_invalid_model")
 
-    def test_unknown_anthropic_model_argument(self):
+    def test_unknown_model_argument(self):
         """Test for unknown argument when creating a Anthropic model"""
         self.run_sql(
             f"""

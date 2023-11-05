@@ -1,0 +1,3 @@
+google-cloud-firestore
+google-api-core
+google-auth

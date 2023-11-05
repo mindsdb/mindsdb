@@ -236,4 +236,3 @@ class MongodbRender:
             raise RuntimeError(f'Not supported date format. Supported: {formats}')
         else:
             raise NotImplementedError(f'Unknown where element {node}')
-

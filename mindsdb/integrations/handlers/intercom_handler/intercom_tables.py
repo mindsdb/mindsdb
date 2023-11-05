@@ -1,6 +1,5 @@
 from typing import List
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-import pandas as pd
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb_sql.parser import ast
 import pandas as pd

@@ -7,6 +7,7 @@ import pandas as pd
 from collections import OrderedDict
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 import json
+from mindsdb.utilities import log
 
 
 class IntercomHandler(APIHandler):

@@ -6,6 +6,7 @@ import requests
 import pandas as pd
 from collections import OrderedDict
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+import json
 
 
 class IntercomHandler(APIHandler):
@@ -101,15 +102,13 @@ class IntercomHandler(APIHandler):
         if method.upper() in ('GET', 'POST', 'PUT', 'DELETE'):
 
             if method.upper() in ('POST', 'PUT', 'DELETE'):
-                response = requests.request(method, url, headers=self._headers, params=params, data=data)
+                response = requests.request(method, url, headers=self._headers, params=params, json=json.loads(data))
             else:
                 response = requests.get(url, headers=self._headers, params=params)
 
             if response.status_code == 200:
                 data = response.json()
-                return pd.DataFrame(data) if isinstance(data, list) else pd.DataFrame({
-                    'data': data
-                })
+                return pd.DataFrame([data])
             else:
                 raise Exception(f"Error connecting to Intercom API: {response.status_code} - {response.text}")
 

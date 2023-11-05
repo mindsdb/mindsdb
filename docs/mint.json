@@ -773,6 +773,7 @@
           "pages": [
             "integrations/app-integrations/binance",
             "integrations/app-integrations/confluence",
+            "integrations/app-integrations/dockerhub",
             "integrations/app-integrations/email",
             "integrations/app-integrations/github",
             "integrations/app-integrations/gmail",
@@ -782,6 +783,7 @@
             "integrations/app-integrations/microsoft-teams",
             "integrations/app-integrations/newsapi",
             "integrations/app-integrations/plaid",
+            "integrations/app-integrations/pypi",
             "integrations/app-integrations/reddit",
             "integrations/app-integrations/sendinblue",
             "integrations/app-integrations/shopify",
@@ -870,6 +872,7 @@
         {
           "group": "Large Language Models",
           "pages": [
+            "integrations/ai-engines/anthropic",
             "integrations/ai-engines/openai",
             "integrations/ai-engines/huggingface",
             "integrations/ai-engines/langchain",

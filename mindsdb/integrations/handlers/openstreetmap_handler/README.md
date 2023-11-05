@@ -62,8 +62,7 @@ This handler was implemented using [python_overpy](https://github.com/DinoTools/
 CREATE DATABASE openstreetmap_datasource
 WITH
 ENGINE='openstreetmap',
-parameters={
-};
+parameters={};
 ~~~~
 
 Use the established connection to query your database:
@@ -71,11 +70,11 @@ Use the established connection to query your database:
 ~~~~
 
 ```sql 
-SELECT * FROM openstreetmap_datasource.nodes ;
+SELECT * FROM openstreetmap_datasource.nodes WHERE id = 1;
 ```
 
 ```sql
-SELECT * FROM openstreetmap_datasource.nodes WHERE id = 1;
+SELECT * FROM openstreetmap_datasource.nodes WHERE area = 'your_area_value';
 ```
 
 ```sql

@@ -293,7 +293,9 @@ class RAGBaseParameters(BaseModel):
     summarize_context: bool = True
     summarization_prompt_template: str = DEFAULT_SUMMARIZATION_PROMPT_TEMPLATE
     vector_store_folder_name: str = DEFAULT_PERSISTED_VECTOR_STORE_FOLDER_NAME
-    vector_store_storage_path: str = None
+    vector_store_storage_path: str = Field(
+        default=None, title="don't use this field, it's for internal use only"
+    )
 
     class Config:
         extra = Extra.forbid

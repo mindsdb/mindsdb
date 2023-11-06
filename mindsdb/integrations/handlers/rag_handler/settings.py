@@ -16,7 +16,6 @@ from langchain.embeddings.base import Embeddings
 from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS, Chroma, VectorStore
 from pydantic import BaseModel, Extra, Field, validator
-from writer.models import shared
 
 from mindsdb.integrations.handlers.chromadb_handler.chromadb_handler import get_chromadb
 from mindsdb.integrations.handlers.rag_handler.exceptions import (
@@ -56,7 +55,6 @@ DEFAULT_CHUNK_SIZE = 500
 DEFAULT_CHUNK_OVERLAP = 50
 DEFAULT_VECTOR_STORE_NAME = "chroma"
 DEFAULT_VECTOR_STORE_COLLECTION_NAME = "collection"
-DEFAULT_PERSISTED_VECTOR_STORE_FOLDER_NAME = "vector_store_folder"
 
 chromadb = get_chromadb()
 

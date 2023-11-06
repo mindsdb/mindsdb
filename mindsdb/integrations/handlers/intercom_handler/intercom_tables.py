@@ -65,6 +65,8 @@ class Articles(APITable):
                 page_count = 1
 
             for page in range(1, page_count + 1):
+                if limit == 0:
+                    break
                 if limit:
                     # Calculate the page size for this request
                     current_page_size = min(page_size, limit)
@@ -132,4 +134,20 @@ class Articles(APITable):
         Returns:
             List[str]: available columns with `ignore` items removed from the list.
         """
-        return ["type", "id", "workspace_id", "title", "description", "body", "author_id", "state", "created_at", "updated_at", "url", "parent_id", "parent_ids", "parent_type", "statistics"]
+        return [
+            "type",
+            "id",
+            "workspace_id",
+            "title",
+            "description",
+            "body",
+            "author_id",
+            "state",
+            "created_at",
+            "updated_at",
+            "url",
+            "parent_id",
+            "parent_ids",
+            "parent_type",
+            "statistics"
+        ]

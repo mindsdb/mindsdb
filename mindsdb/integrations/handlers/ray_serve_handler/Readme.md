@@ -7,6 +7,12 @@ The `RayServeHandler` is a machine learning engine that integrates with Ray Serv
 
 ## Prerequisites
 
+To get started with Ray Serve, first, install Ray and its dependencies, including Ray Serve, using pip:
+
+```bash
+pip install "ray[serve]"
+```
+
 Before using the `RayServeHandler`, make sure you have the following prerequisites in place:
 
 - Ray Serve server should be running, as the engine relies on it to serve and deploy machine learning models as microservices.

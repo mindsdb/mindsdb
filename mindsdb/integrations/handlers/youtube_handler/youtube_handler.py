@@ -1,4 +1,8 @@
-from mindsdb.integrations.handlers.youtube_handler.youtube_tables import YoutubeCommentsTable, YoutubeChannelsTable, YoutubeVideosTable
+from mindsdb.integrations.handlers.youtube_handler.youtube_tables import (
+    YoutubeCommentsTable,
+    YoutubeChannelsTable,
+    YoutubeVideosTable,
+)
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -12,6 +16,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 from googleapiclient.discovery import build
 
 logger = get_log("integrations.youtube_handler")
+
 
 class YoutubeHandler(APIHandler):
     """Youtube handler implementation"""
@@ -33,7 +38,7 @@ class YoutubeHandler(APIHandler):
         self.connection = None
         self.is_connected = False
 
-        youtube_video_comments_data =YoutubeCommentsTable(self)
+        youtube_video_comments_data = YoutubeCommentsTable(self)
         self._register_table("comments", youtube_video_comments_data)
 
         youtube_channel_data = YoutubeChannelsTable(self)
@@ -52,7 +57,9 @@ class YoutubeHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        youtube = build('youtube', 'v3', developerKey=self.connection_data['youtube_api_token'])
+        youtube = build(
+            "youtube", "v3", developerKey=self.connection_data["youtube_api_token"]
+        )
         self.connection = youtube
 
         return self.connection
@@ -95,13 +102,11 @@ class YoutubeHandler(APIHandler):
 
 connection_args = OrderedDict(
     youtube_access_token={
-        'type': ARG_TYPE.STR,
-        'description': 'API Token for accessing Youtube Application API',
-        'required': True,
-        'label': 'Youtube access token',
-    }   
+        "type": ARG_TYPE.STR,
+        "description": "API Token for accessing Youtube Application API",
+        "required": True,
+        "label": "Youtube access token",
+    }
 )
 
-connection_args_example = OrderedDict(
-    youtube_api_token ='<your-youtube-api-token>'
-)
+connection_args_example = OrderedDict(youtube_api_token="<your-youtube-api-token>")

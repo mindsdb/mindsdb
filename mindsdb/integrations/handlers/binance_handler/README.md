@@ -87,7 +87,7 @@ FROM my_binance
   WHERE symbol = 'BTCUSDT'
   AND close_time < '2023-01-01'
   AND interval = '1m'
-  LIMIT 10000;
+  LIMIT 10000
 )
 
 PREDICT open_price

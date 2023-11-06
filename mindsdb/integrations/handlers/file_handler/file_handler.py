@@ -164,7 +164,7 @@ class FileHandler(DatabaseHandler):
 
         else:
             raise ValueError(
-                "Could not load file into any format, supported formats are csv, json, xls, xlsx"
+                "Could not load file into any format, supported formats are csv, json, xls, xlsx, pdf, txt"
             )
 
         header = df.columns.values.tolist()
@@ -223,7 +223,14 @@ class FileHandler(DatabaseHandler):
         data_str.seek(0)
         try:
             csv.Sniffer().sniff(sample)
-            return True
+            # Avoid a false-positive for json files
+            try:
+                json.loads(data_str.read())
+                data_str.seek(0)
+                return False
+            except json.decoder.JSONDecodeError:
+                data_str.seek(0)
+                return True
         except Exception:
             return False
 

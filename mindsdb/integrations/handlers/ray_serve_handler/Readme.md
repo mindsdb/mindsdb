@@ -1,3 +1,16 @@
+# RayServeHandler 
+This is the implementation of the RayServe for MindsDB.
+
+## RayServeHandler 
+
+The `RayServeHandler` is a machine learning engine that integrates with Ray Serve, a powerful Python library for building and deploying machine learning models as HTTP microservices. More information about this model can be found (here)[https://docs.ray.io/en/latest/serve/index.html].
+
+## Prerequisites
+
+Before using the `RayServeHandler`, make sure you have the following prerequisites in place:
+
+- Ray Serve server should be running, as the engine relies on it to serve and deploy machine learning models as microservices.
+
 ## Implementation
 
 The `RayServeHandler` is implemented using Python and relies on the Ray Serve library for creating and deploying machine learning models. Here are the key implementation details:

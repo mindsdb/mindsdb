@@ -60,7 +60,7 @@ tbc
 -- Create RAG engine NB you can provide api keys here or at create
 -- You only need to provide key of llm you intend to use
 
-create ML_Engine rag_handler_test1232144 from rag
+create ML_Engine rag from rag
 using
 openai_api_key="openai-api-key",
 writer_org_id="writer-org",
@@ -73,7 +73,7 @@ CREATE MODEL rag_handler_openai_test
 FROM mysql_demo_db (select * from demo_fda_context)
 PREDICT answer
 USING
-   engine="rag_handler",
+   engine="rag",
    top_k=4,
    llm_type="openai",
    vector_store_folder_name='rag_handler_openai_test',

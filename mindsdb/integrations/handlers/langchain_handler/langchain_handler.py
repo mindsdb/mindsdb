@@ -237,17 +237,22 @@ class LangChainHandler(BaseMLEngine):
         # use last message as prompt, remove other questions
         df.iloc[:-1, df.columns.get_loc(args['user_column'])] = ''
 
+        base_tokens_dir = "agent_tokens"
+        username = df["user"].iloc[-1]
+        gmail_token_path = os.path.join(base_tokens_dir, username, "gmail_token.json")
+        assert os.path.exists(gmail_token_path), f"Token file {gmail_token_path} does not exist"
         agent_name = AgentType.CONVERSATIONAL_REACT_DESCRIPTION
-        if df["user"].iloc[-1] == "Olly":
+        if df["user"].iloc[-1] in ["Olly", "Sam"]:
             DEFAULT_SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
             credentials = get_gmail_credentials(
-                token_file="token.json",
+                token_file=gmail_token_path,
                 scopes=DEFAULT_SCOPES,
                 )
             api_resource = build_resource_service(credentials=credentials)
             toolkit = GmailToolkit(api_resource=api_resource)
-            tools = toolkit.get_tools()
+            tools += toolkit.get_tools()
 
+        print(username, tools)
         agent = initialize_agent(
             tools,
             llm,

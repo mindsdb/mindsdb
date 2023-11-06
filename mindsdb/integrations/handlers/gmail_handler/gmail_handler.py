@@ -318,8 +318,6 @@ class GmailHandler(APIHandler):
 
     def back_office_config(self):
         tools = {
-            'connect': 'Connect to the gmail API. There is no input, just call the method.',
-            'call_agent': 'Calls langchain agent. This is useful when performing any email operations.',
         }
         return {'tools': tools}
     

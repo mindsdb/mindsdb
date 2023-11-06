@@ -62,14 +62,10 @@ class GmailAgentHandler(APIHandler):
         return {'tools': tools}
     
     def login(self, args={}):
-        credentials = get_gmail_credentials(
-            token_file="token.json",
-            scopes=DEFAULT_SCOPES,
-            )
-        self.api_resource = build_resource_service(credentials=credentials)
-        print("Logged in")
+        return ("Logged in")
 
     def call_agent(self, data):
+        return ("Agent called")
         if self.api_resource is None:
             self.login()
         openai_key = os.environ["OPENAI_API_KEY"]

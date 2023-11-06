@@ -66,19 +66,53 @@ openai_api_key="openai-api-key",
 writer_org_id="writer-org",
 writer_api_key="writer-api-key";
 
+--using DB table as input
 
-
--- Create a RAG model - OpenAI API and FAISS vectorDB with embeddings
-CREATE MODEL rag_handler_openai_test
+CREATE MODEL rag_handler_db_test
 FROM mysql_demo_db (select * from demo_fda_context limit 2)
 PREDICT answer
 USING
    engine="rag",
    llm_type="openai",
-   vector_store_folder_name='rag_handler_openai_test';
+   vector_store_folder_name='test_db';
 
--- Ask a question on your data using OpenAI LLM API
+select * from information_schema.models where name ="rag_handler_db_test" ;
+
+
 SELECT *
-FROM rag_handler_openai_test
+FROM rag_handler_db_test
 WHERE question='what product is best for treating a cold?';
+
+
+
+--using url as input
+
+CREATE MODEL rag_handler_url_test
+predict answer
+USING
+   engine="rag",
+   llm_type="openai",
+   url='https://docs.mindsdb.com/what-is-mindsdb',
+   vector_store_folder_name='test_url';
+
+
+SELECT *
+FROM rag_handler_url_test
+WHERE question='what ML use cases does mindsdb support?';
+
+
+--using .txt or .pdf as input (first upload file using UI)
+
+CREATE MODEL rag_handler_file_test
+predict answer
+from files (select * from uploaded_file;)
+USING
+   engine="rag",
+   llm_type="openai",
+   vector_store_folder_name='test_file';
+
+SELECT *
+FROM rag_handler_file_test
+WHERE question='what data types are supported?';
+
 ```

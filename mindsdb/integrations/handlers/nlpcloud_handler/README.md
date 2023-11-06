@@ -47,7 +47,7 @@ The list of models supported by nlpcloud can be found [here](https://docs.nlpclo
     - [x] Support ORDER BY
     - [x] Support column selection
 
-## TODO
+## Use cases To-Do
 
 - [ ] Code generation
 - [ ] Automatic Speech Recognition
@@ -55,6 +55,14 @@ The list of models supported by nlpcloud can be found [here](https://docs.nlpclo
 - [ ] Generation
 
 etc.. Find the list [here](https://docs.nlpcloud.com/#endpoints)
+
+## Use cases supported
+
+- Translation
+- Summarization
+- Sentiment_analysis
+- Language_detection
+- Named_entity_recognition
 
 ## Example Usage
 

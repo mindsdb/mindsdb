@@ -25,7 +25,6 @@ from sqlalchemy import func, null
 from sqlalchemy.sql.functions import coalesce
 
 from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.utilities.config import Config
 import mindsdb.interfaces.storage.db as db
@@ -145,9 +144,6 @@ class BaseMLEngineExec:
         """ Intakes a raw SQL query and returns the answer given by the ML engine. """
         query_ast = self.parser(query, dialect=self.dialect)
         return self.query(query_ast)
-
-    def query_(self, query: ASTNode) -> Response:
-        raise Exception('Should not be used')
 
     @profiler.profile()
     def learn(

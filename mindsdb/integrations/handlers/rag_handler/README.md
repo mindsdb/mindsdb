@@ -66,6 +66,7 @@ openai_api_key="openai-api-key",
 writer_org_id="writer-org",
 writer_api_key="writer-api-key";
 
+
 --using DB table as input
 
 CREATE MODEL rag_handler_db_test
@@ -82,7 +83,6 @@ select * from information_schema.models where name ="rag_handler_db_test" ;
 SELECT *
 FROM rag_handler_db_test
 WHERE question='what product is best for treating a cold?';
-
 
 
 --using url as input

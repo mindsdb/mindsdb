@@ -105,44 +105,32 @@ class FirestoreHandler(DatabaseHandler):
 
         return response
 
-    def native_query(self, query: dict) -> Response:
-        query_to_execute = self.connection
-        columns = list(self.get_columns(query['collection']).data_frame.Field)
-        requested_columns = None
-
-        for operation in query:
-            if operation == 'collection':
-                query_to_execute = query_to_execute.collection(query[operation])
-            elif operation == 'filters':
-                for filter in query[operation]:
-                    query_to_execute = query_to_execute.where(
-                        filter=filter
-                    )
-            elif operation == 'order_by':
-                if query[operation] is not None:
-                    for field, direction in query[operation].items():
-                        query_to_execute = query_to_execute.order_by(
-                            field,
-                            direction=direction,
-                        )
-            elif operation == 'limit':
-                query_to_execute = query_to_execute.limit(query[operation])
-            elif operation == 'selected_columns':
-                if query[operation] is not None:
-                    requested_columns = query[operation]
-
+    def native_query(self, query) -> Response:
         try:
-            query_result = query_to_execute.stream()
+            columns = list(self.get_columns(query['collection']).data_frame.Field)
+            query_result = query['query'].stream()
 
-            result = [row.to_dict() for row in query_result]
-            if len(result) > 0:
-                if requested_columns is not None:
-                    result = [{col: row.get(col) for col in requested_columns} for row in result]
-                else:
-                    result = [{col: row.get(col, None) for col in columns} for row in result]
-                df = pd.DataFrame(result)
+            if query.get('update_values') is not None:
+                for row in query_result:
+                    row.reference.update(query.get('update_values'))
+                return Response(
+                    RESPONSE_TYPE.OK,
+                )
             else:
-                df = pd.DataFrame([], columns=columns)
+                result = [row.to_dict() for row in query_result]
+                if len(result) > 0:
+                    if query.get('requested_columns') is not None:
+                        result = [{col: row.get(col) for col in query.get('requested_columns')} for row in result]
+                    else:
+                        result = [{col: row.get(col, None) for col in columns} for row in result]
+                    df = pd.DataFrame(result)
+                else:
+                    df = pd.DataFrame([], columns=columns)
+
+                return Response(
+                    RESPONSE_TYPE.TABLE,
+                    df
+                )
 
         except Exception as e:
             logger.error(f'Error running query: {query} on {query["collection"]}!')
@@ -151,16 +139,11 @@ class FirestoreHandler(DatabaseHandler):
                 error_message=str(e)
             )
 
-        return Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
-
     def query(self, query: ASTNode) -> Response:
         """
         Retrieve the data from the SQL statement.
         """
-        renderer = FirestoreRender()
+        renderer = FirestoreRender(connection=self.connection)
         firestore_query = renderer.to_firestore_query(query)
         return self.native_query(firestore_query)
 

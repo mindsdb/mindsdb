@@ -94,11 +94,11 @@ class ModelExecutor:
 
             if message.user != bot_username:
                 # create new message row
-                messages.append({question_col: text, answer_col: None})
+                messages.append({question_col: text, answer_col: None, 'user': message.user})
             else:
                 if len(messages) == 0:
                     # add empty row
-                    messages.append({question_col: None, answer_col: None})
+                    messages.append({question_col: None, answer_col: None, 'user': None})
 
                 # update answer in previous column
                 messages[-1][answer_col] = text

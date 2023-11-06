@@ -13,6 +13,8 @@ from langchain.agents import initialize_agent, create_sql_agent
 from langchain.prompts import PromptTemplate
 from langchain.agents.agent_toolkits import SQLDatabaseToolkit
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
+from langchain.tools.gmail.utils import build_resource_service, get_gmail_credentials
+from langchain.agents.agent_toolkits import GmailToolkit
 
 from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
@@ -236,11 +238,21 @@ class LangChainHandler(BaseMLEngine):
         df.iloc[:-1, df.columns.get_loc(args['user_column'])] = ''
 
         agent_name = AgentType.CONVERSATIONAL_REACT_DESCRIPTION
+        if df["user"].iloc[-1] == "Olly":
+            DEFAULT_SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+            credentials = get_gmail_credentials(
+                token_file="token.json",
+                scopes=DEFAULT_SCOPES,
+                )
+            api_resource = build_resource_service(credentials=credentials)
+            toolkit = GmailToolkit(api_resource=api_resource)
+            tools = toolkit.get_tools()
+
         agent = initialize_agent(
             tools,
             llm,
             memory=memory,
-            agent=agent_name,
+            agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
             max_iterations=pred_args.get('max_iterations', 3),
             verbose=pred_args.get('verbose', args.get('verbose', False)),
             handle_parsing_errors=False,

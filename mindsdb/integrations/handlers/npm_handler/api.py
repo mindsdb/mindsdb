@@ -22,5 +22,5 @@ class NPM:
             curr_root = curr_root[p]
         req_cols = {}
         for col in cols:
-            req_cols[col] = curr_root[col] if col in curr_root else ""
+            req_cols[col] = curr_root[col] if col in curr_root else {}
         return req_cols

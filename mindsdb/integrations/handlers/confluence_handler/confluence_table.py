@@ -174,7 +174,7 @@ class ConfluencePagesTable(APITable):
         for a_where in conditions:
             if a_where[1] == "space":
                 if a_where[0] != "=":
-                    raise ValueError("Unsupported where operation for type")
+                    raise ValueError("Unsupported where operation for space")
                 pages_kwargs["space"] = a_where[2]
             else:
                 raise ValueError(f"Unsupported where argument {a_where[1]}")

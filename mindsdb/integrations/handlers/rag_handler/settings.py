@@ -93,7 +93,7 @@ def get_available_writer_model_ids(args: dict) -> list:
     """Get available writer LLM model ids"""
 
     writer_client = writer.Writer(
-        security=shared.Security(api_key=args["writer_api_key"]),
+        api_key=args["writer_api_key"],
         organization_id=args["writer_org_id"],
     )
 

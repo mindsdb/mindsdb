@@ -60,7 +60,7 @@ tbc
 -- Create RAG engine NB you can provide api keys here or at create
 -- You only need to provide key of llm you intend to use
 
-create ML_Engine rag_handler_test1232144 from rag
+create ML_Engine rag from rag
 using
 openai_api_key="openai-api-key",
 writer_org_id="writer-org",
@@ -70,18 +70,12 @@ writer_api_key="writer-api-key";
 
 -- Create a RAG model - OpenAI API and FAISS vectorDB with embeddings
 CREATE MODEL rag_handler_openai_test
-FROM mysql_demo_db (select * from demo_fda_context)
+FROM mysql_demo_db (select * from demo_fda_context limit 2)
 PREDICT answer
 USING
-   engine="rag_handler",
-   top_k=4,
+   engine="rag",
    llm_type="openai",
-   vector_store_folder_name='rag_handler_openai_test',
-   embeddings_model_name="BAAI/bge-base-en",
-   prompt_template='Use the following pieces of context to answer the question at the end. If you do not know the answer, just say that you do not know, do not try to make up an answer.
-Context: {context}
-Question: {question}
-Helpful Answer:';
+   vector_store_folder_name='rag_handler_openai_test';
 
 -- Ask a question on your data using OpenAI LLM API
 SELECT *

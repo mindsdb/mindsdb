@@ -29,13 +29,7 @@ class IntercomHandler(APIHandler):
             "Accept": "application/json",
             "Authorization": f"Bearer {access_token}"
         }
-
-        _tables = [
-            Articles,
-        ]
-
-        for Table in _tables:
-            self._register_table(Table.name, Table(self))
+        self._register_table(Articles.name, Articles(self))
 
     def check_connection(self) -> StatusResponse:
         """checking the connection
@@ -94,26 +88,17 @@ class IntercomHandler(APIHandler):
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
 
-    def call_intercom_api(self, endpoint: str, method: str = 'GET', params: dict = None, data=None) -> pd.DataFrame:
-        if not params:
-            params = {}
-
+    def call_intercom_api(self, endpoint: str, method: str = 'GET', params: dict = {}, data=None) -> pd.DataFrame:
         url = f"{self._baseUrl}{endpoint}"
+        json_data = json.loads(data) if data else None
 
-        if method.upper() in ('GET', 'POST', 'PUT', 'DELETE'):
+        response = requests.request(method.upper(), url, headers=self._headers, params=params, json=json_data)
 
-            if method.upper() in ('POST', 'PUT', 'DELETE'):
-                response = requests.request(method, url, headers=self._headers, params=params, json=json.loads(data))
-            else:
-                response = requests.get(url, headers=self._headers, params=params)
-
-            if response.status_code == 200:
-                data = response.json()
-                return pd.DataFrame([data])
-            else:
-                raise Exception(f"Error connecting to Intercom API: {response.status_code} - {response.text}")
-
-        return pd.DataFrame()
+        if response.status_code == 200:
+            data = response.json()
+            return pd.DataFrame([data])
+        else:
+            raise requests.Response.raise_for_status(response)
 
 
 connection_args = OrderedDict(

@@ -5,6 +5,7 @@ from atlassian import Confluence
 from mindsdb_sql import parse_sql
 
 from mindsdb.integrations.handlers.confluence_handler.confluence_table import (
+    ConfluencePagesTable,
     ConfluenceSpacesTable,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -35,7 +36,10 @@ class ConfluenceHandler(APIHandler):
         self.connection = None
         self.is_connected = False
 
-        confluence_pages_data = ConfluenceSpacesTable(self)
+        confluence_spaces_data = ConfluenceSpacesTable(self)
+        confluence_pages_data = ConfluencePagesTable(self)
+
+        self._register_table("spaces", confluence_spaces_data)
         self._register_table("pages", confluence_pages_data)
 
     def connect(self):
@@ -90,93 +94,3 @@ class ConfluenceHandler(APIHandler):
         """
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
-
-    def create_page(self, space: str, title: str, body: str) -> StatusResponse:
-        """Create a new page.
-        Parameters
-        ----------
-        space : str
-            space key
-        title : str
-            page title
-        body : str
-            page body
-        Returns
-        -------
-        StatusResponse
-            Request status
-        """
-        response = StatusResponse(False)
-        try:
-            conn = self.connect()
-            conn.create_page(space, title, body)
-            response.success = True
-        except Exception as e:
-            logger.error(f"Error creating page: {e}!")
-            response.error_message = e
-        return response
-
-    def modify_page(
-        self, page_id: Union[str, int], title: str, body: str
-    ) -> StatusResponse:
-        """Modify an existing page.
-        Parameters
-        ----------
-        page_id : str
-            page id
-        title : str
-            page title
-        body : str
-            page body
-        Returns
-        -------
-        StatusResponse
-            Request status
-        """
-        response = StatusResponse(False)
-        try:
-            conn = self.connect()
-            conn.update_page(page_id, title, body)
-            response.success = True
-        except Exception as e:
-            logger.error(f"Error modifying page: {e}!")
-            response.error_message = e
-        return response
-
-    def delete_page(self, page_id: Union[str, int]) -> StatusResponse:
-        """Delete a page based on its id.
-        Parameters
-        ----------
-        content_id : str
-            content id
-        Returns
-        -------
-        StatusResponse
-            Request status
-        """
-        response = StatusResponse(False)
-        try:
-            conn = self.connect()
-            conn.remove_content(content_id=page_id)
-            response.success = True
-        except Exception as e:
-            logger.error(f"Error deleting page: {e}!")
-            response.error_message = e
-        return response
-
-    def get_content(self, content_id: Union[str, int]) -> dict:
-        """Get a piece of Content based on the id.
-        Parameters
-        ----------
-        content_id : str
-            page id
-        Returns
-        -------
-        dict
-            Content object
-        """
-        try:
-            conn = self.connect()
-            return conn.get_page_by_id(content_id)
-        except Exception as e:
-            logger.error(f"Error getting content: {e}!")

@@ -279,6 +279,7 @@ class RAGBaseParameters(BaseModel):
     """Base model parameters for RAG Handler"""
 
     llm_params: Any
+    vector_store_folder_name: str
     prompt_template: str = DEFAULT_QA_PROMPT_TEMPLATE
     chunk_size: int = DEFAULT_CHUNK_SIZE
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
@@ -292,7 +293,6 @@ class RAGBaseParameters(BaseModel):
     collection_name: str = DEFAULT_VECTOR_STORE_COLLECTION_NAME
     summarize_context: bool = True
     summarization_prompt_template: str = DEFAULT_SUMMARIZATION_PROMPT_TEMPLATE
-    vector_store_folder_name: str = DEFAULT_PERSISTED_VECTOR_STORE_FOLDER_NAME
     vector_store_storage_path: str = Field(
         default=None, title="don't use this field, it's for internal use only"
     )

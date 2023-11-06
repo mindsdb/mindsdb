@@ -44,12 +44,13 @@ No, fine-tuning is not supported.
 ## Are there any other noteworthy aspects to this handler?
 The handler has a number of default parameters set, the user only needs to pass:
 
-- `prompt_template: str`
 - `llm_type: str`
-- `open_ai_api_key: str` or `writer_api_key: str`
-- `model_id: str`
+- llm auth parameters - depending on the llm_type, one of the following:
+    - `open_ai_api_key: str`
+    - `writer_api_key: str` and `writer_org_id: str`
+- `vector_store_folder_name: str`
 
-The other parameters have default values, see settings.py for more details.
+The other parameters have default values, see `settings.py` for more details.
 
 ## Any directions for future work in subsequent versions of the handler?
 tbc

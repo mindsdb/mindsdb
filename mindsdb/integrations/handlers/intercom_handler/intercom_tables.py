@@ -76,7 +76,7 @@ class Articles(APITable):
                 df = pd.DataFrame(self.handler.call_intercom_api(endpoint='/articles', params={'page': page, 'per_page': current_page_size})['data'][0])
                 if len(df) == 0:
                     break
-                result_df = pd.concat([result_df, df], ignore_index=True)
+                result_df = pd.concat([result_df, df[selected_columns]], ignore_index=True)
                 if limit:
                     limit -= current_page_size
         return result_df

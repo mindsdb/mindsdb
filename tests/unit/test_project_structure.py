@@ -609,7 +609,7 @@ class TestProjectStructure(BaseExecutorDummyML):
                 SELECT m.*
                    FROM pg.tasks as t
                    JOIN task_model as m
-                   where t.a > last
+                   where t.a > last and t.b='b'
             )
           )  
           start now
@@ -641,7 +641,8 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert len(calls) == 1
         sql = calls[0][0][0].to_string()
         # getting next value, greater than max previous
-        assert ' t.a > 2' in sql
+        assert 't.a > 2' in sql
+        assert "t.b = 'b'" in sql
 
 class TestJobs(BaseExecutorDummyML):
 
@@ -754,6 +755,27 @@ class TestJobs(BaseExecutorDummyML):
         # check global history table
         ret = self.run_sql('select * from information_schema.jobs_history', database='proj2')
         assert len(ret) == 2  # was executed
+
+    def test_inactive_job(self, scheduler):
+
+        # create job
+        self.run_sql('create job j1 (select * from models)')
+
+        # check jobs table
+        ret = self.run_sql('select * from jobs')
+        assert len(ret) == 1, "should be 1 job"
+
+        # deactivate
+        job = self.db.Jobs.query.filter(self.db.Jobs.name == 'j1').first()
+        job.active = False
+        self.db.session.commit()
+
+        # run scheduler
+        scheduler.check_timetable()
+
+        ret = self.run_sql('select * from jobs_history')
+        # no history
+        assert len(ret) == 0
 
 
 class TestTriggers(BaseExecutorDummyML):

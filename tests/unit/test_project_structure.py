@@ -438,7 +438,7 @@ class TestProjectStructure(BaseExecutorDummyML):
                    t2.t1a t2t1a, t2.t3a t2t3a,
                    t3.c t3c, t3.a t3a
               FROM pg.tbl1 as t1
-              JOIN ( 
+              JOIN (
                   SELECT t1.a as t1a,  t3.a t3a
                   FROM pg.tbl1 as t1
                   JOIN pg.tbl2 as t2 on t1.c=t2.c
@@ -468,7 +468,7 @@ class TestProjectStructure(BaseExecutorDummyML):
                 '''
                     CREATE model task_model_x
                     PREDICT a
-                    using 
+                    using
                        engine='dummy_ml',
                        error=1
                 '''

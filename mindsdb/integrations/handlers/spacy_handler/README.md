@@ -27,10 +27,11 @@ FROM spacy__morphology__model
 WHERE review = '"Apple is looking at buying U.K. startup for $1 billion"';
 ```
 
-RESULT:
-| review | recognition |
-| ------ | ----------- |
-| "Apple is looking at buying U.K. startup for $1 billion" | {('Apple', 'Number=Sing'), ('U.K.', 'Number=Sing'), ('for', ''), ('"', 'PunctSide=Fin\|PunctType=Quot'), ('$', ''), ('"', 'PunctSide=Ini|PunctType=Quot'), ('1', 'NumType=Card'), ('startup', 'Number=Sing'), ('at', ''), ('buying', 'Aspect=Prog|Tense=Pres|VerbForm=Part'), ('looking', 'Aspect=Prog|Tense=Pres|VerbForm=Part'), ('billion', 'NumType=Card'), ('is', 'Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin')} |
+##### RESULT
+
+| review                                                   | recognition                                                                                                                              |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ---------- | ----------------------------------------- | ---------- | -------------------------------------------------------------- | ----------- | -------- | ---------- | --------------- |
+| "Apple is looking at buying U.K. startup for $1 billion" | {('Apple', 'Number=Sing'), ('U.K.', 'Number=Sing'), ('for', ''), ('"', 'PunctSide=Fin\|PunctType=Quot'), ('$', ''), ('"', 'PunctSide=Ini | PunctType=Quot'), ('1', 'NumType=Card'), ('startup', 'Number=Sing'), ('at', ''), ('buying', 'Aspect=Prog | Tense=Pres | VerbForm=Part'), ('looking', 'Aspect=Prog | Tense=Pres | VerbForm=Part'), ('billion', 'NumType=Card'), ('is', 'Mood=Ind | Number=Sing | Person=3 | Tense=Pres | VerbForm=Fin')} |
 
 ## Perform NLP on batch data
 
@@ -46,7 +47,7 @@ PARAMETERS = {
     };
 ```
 
-### With target column
+### 1. With target column
 
 ```sql
 SELECT input.review, output.recognition
@@ -55,12 +56,13 @@ JOIN spacy__morphology__model AS output
 LIMIT 5;
 ```
 
-RESULT:
-| review | recognition |
-| ------ | ----------- |
-| Late gift for my grandson. He is very happy with it. Easy for him (9yo ). | {('Late', 'Degree=Pos'), ('9yo', 'Number=Sing'), ('very', ''), ('it', 'Case=Acc\|Gender=Neut|Number=Sing|Person=3|PronType=Prs'), ('gift', 'Number=Sing'), ('with', ''), ('happy', 'Degree=Pos'), ('He', 'Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs'), ('for', ''), ('him', 'Case=Acc|Gender=Masc|Number=Sing|Person=3|PronType=Prs'), ('.', 'PunctType=Peri'), (')', 'PunctSide=Fin|PunctType=Brck'), ('grandson', 'Number=Sing'), ('(', 'PunctSide=Ini|PunctType=Brck'), ('my', 'Number=Sing|Person=1|Poss=Yes|PronType=Prs'), ('Easy', 'Degree=Pos'), ('is', 'Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin')} |
+##### RESULT
 
-### With attributes
+| review                                                                    | recognition                                                                                  |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ----------- | -------- | ------------------------------------------------------------------------------------------------ | ----------- | ----------- | -------- | ---------------------------------------------- | ----------- | ----------- | -------- | ------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------- | -------- | -------- | -------------------------------------------------------- | ----------- | -------- | ---------- | --------------- |
+| Late gift for my grandson. He is very happy with it. Easy for him (9yo ). | {('Late', 'Degree=Pos'), ('9yo', 'Number=Sing'), ('very', ''), ('it', 'Case=Acc\|Gender=Neut | Number=Sing | Person=3 | PronType=Prs'), ('gift', 'Number=Sing'), ('with', ''), ('happy', 'Degree=Pos'), ('He', 'Case=Nom | Gender=Masc | Number=Sing | Person=3 | PronType=Prs'), ('for', ''), ('him', 'Case=Acc | Gender=Masc | Number=Sing | Person=3 | PronType=Prs'), ('.', 'PunctType=Peri'), (')', 'PunctSide=Fin | PunctType=Brck'), ('grandson', 'Number=Sing'), ('(', 'PunctSide=Ini | PunctType=Brck'), ('my', 'Number=Sing | Person=1 | Poss=Yes | PronType=Prs'), ('Easy', 'Degree=Pos'), ('is', 'Mood=Ind | Number=Sing | Person=3 | Tense=Pres | VerbForm=Fin')} |
+
+### 2. With attributes
 
 ```sql
 CREATE MODEL model_spacy_ner
@@ -78,11 +80,12 @@ JOIN model_spacy_ner AS output
 LIMIT 2;
 ```
 
-RESULT:
-| review | label\_ | recognition | entity |
-| ------ | ------ | ----------- | ------ |
-| Late gift for my grandson. He is very happy with it. Easy for him (9yo ). | ["ORDINAL"] | {(67, 70, 'ORDINAL')} | ["9yo"] |
-| I'm not super thrilled with the proprietary OS on this unit, but it does work okay and does what I need it to do. Appearance is very nice, price is very good and I can't complain too much - just wish it were easier (or at least more obvious) to port new apps onto it. For now, it helps me see things that are too small on my phone while I'm traveling. I'm a happy buyer. | ["PERSON"] | {(114, 124, 'PERSON')} | ["Appearance"] |
+##### RESULT
+
+| review                                                                                                                                                                                                                                                                                                                                                                             | label\_     | recognition            | entity         |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------------------- | -------------- |
+| Late gift for my grandson. He is very happy with it. Easy for him (9yo ).                                                                                                                                                                                                                                                                                                          | ["ORDINAL"] | {(67, 70, 'ORDINAL')}  | ["9yo"]        |
+| I'm not super thrilled with the proprietary OS on this unit, but it does work okay and does what I need it to do. Appearance is very nice, price is very good and I can't complain too much - just wish it were easier (or at least more obvious) to port new apps onto it. For now, it helps me see things that are too small on my phone while I'm traveling. I'm a happy buyer. | ["PERSON"]  | {(114, 124, 'PERSON')} | ["Appearance"] |
 
 # Linguistic Features
 

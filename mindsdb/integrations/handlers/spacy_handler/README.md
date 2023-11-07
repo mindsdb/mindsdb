@@ -202,7 +202,7 @@ DF Format
 | I'm not super thrilled with the proprietary OS on this unit, but it does work okay and does what I need it to do. Appearance is very nice, price is very good and I can't complain too much - just wish it were easier (or at least more obvious) to port new apps onto it. For now, it helps me see things that are too small on my phone while I'm traveling. I'm a happy buyer. | ["PRP","VBP","RB","RB","JJ","IN","DT","JJ","NN","IN","DT","NN",",","CC","PRP","VBZ","VB","RB","CC","VBZ","WP","PRP","VBP","PRP","TO","VB",".","NN","VBZ","RB","JJ",",","NN","VBZ","RB","JJ","CC","PRP","MD","RB","VB","RB","RB",":","RB","VB","PRP","VBD","JJR","-LRB-","CC","IN","RBS","RBR","JJ","-RRB-","TO","VB","JJ","NNS","IN","PRP",".","IN","RB",",","PRP","VBZ","PRP","VB","NNS","WDT","VBP","RB","JJ","IN","PRP$","NN","IN","PRP","VBP","VBG",".","PRP","VBP","DT","JJ","NN","."] | ["PRON","AUX","PART","ADV","ADJ","ADP","DET","ADJ","NOUN","ADP","DET","NOUN","PUNCT","CCONJ","PRON","AUX","VERB","ADV","CCONJ","VERB","PRON","PRON","VERB","PRON","PART","VERB","PUNCT","NOUN","AUX","ADV","ADJ","PUNCT","NOUN","AUX","ADV","ADJ","CCONJ","PRON","AUX","PART","VERB","ADV","ADV","PUNCT","ADV","VERB","PRON","AUX","ADJ","PUNCT","CCONJ","ADP","ADV","ADV","ADJ","PUNCT","PART","VERB","ADJ","NOUN","ADP","PRON","PUNCT","ADP","ADV","PUNCT","PRON","VERB","PRON","VERB","NOUN","PRON","AUX","ADV","ADJ","ADP","PRON","NOUN","SCONJ","PRON","AUX","VERB","PUNCT","PRON","AUX","DET","ADJ","NOUN","PUNCT"] | ["X","'x","xxx","xxxx","xxxx","xxxx","xxx","xxxx","XX","xx","xxxx","xxxx",",","xxx","xx","xxxx","xxxx","xxxx","xxx","xxxx","xxxx","X","xxxx","xx","xx","xx",".","Xxxxx","xx","xxxx","xxxx",",","xxxx","xx","xxxx","xxxx","xxx","X","xx","x'x","xxxx","xxx","xxxx","-","xxxx","xxxx","xx","xxxx","xxxx","(","xx","xx","xxxx","xxxx","xxxx",")","xx","xxxx","xxx","xxxx","xxxx","xx",".","Xxx","xxx",",","xx","xxxx","xx","xxx","xxxx","xxxx","xxx","xxx","xxxx","xx","xx","xxxx","xxxx","X","'x","xxxx",".","X","'x","x","xxxx","xxxx","."] |
 | I purchased this Kindle Fire HD 8 was purchased for use by 5 and 8 yer old grandchildren. They basically use it to play Amazon games that you download. | ["PRP","VBD","DT","NNP","NNP","NNP","CD","VBD","VBN","IN","NN","IN","CD","CC","CD","NN","JJ","NNS",".","PRP","RB","VBP","PRP","TO","VB","NNP","NNS","IN","PRP","VBP","."] | ["PRON","VERB","DET","PROPN","PROPN","PROPN","NUM","AUX","VERB","ADP","NOUN","ADP","NUM","CCONJ","NUM","NOUN","ADJ","NOUN","PUNCT","PRON","ADV","VERB","PRON","PART","VERB","PROPN","NOUN","SCONJ","PRON","VERB","PUNCT"] | ["X","xxxx","xxxx","Xxxxx","Xxxx","XX","d","xxx","xxxx","xxx","xxx","xx","d","xxx","d","xxx","xxx","xxxx",".","Xxxx","xxxx","xxx","xx","xx","xxxx","Xxxxx","xxxx","xxxx","xxx","xxxx","."] |
 
-### Atributes
+### Attributes
 
 - text
 - lemma\_
@@ -217,7 +217,7 @@ DF Format
 
 Inflectional morphology is the process by which a root form of a word is modified by adding prefixes or suffixes that specify its grammatical function but do not change its part-of-speech. We say that a lemma (root form) is inflected (modified/combined) with one or more morphological features to create a surface form.
 
-### Atributes
+### Attributes
 
 - token
 - token.morph

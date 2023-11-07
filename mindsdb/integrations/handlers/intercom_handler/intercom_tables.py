@@ -119,10 +119,9 @@ class Articles(APITable):
         data = {}
         for key, value in query.update_columns.items():
             if isinstance(value, Constant):
-                if key == 'components':
-                    data[key] = json.loads(value.value)  # Convert 'components' value to a Python list
-                else:
-                    data[key] = value.value
+                data[key] = value.value
+            else:
+                data[key] = value
         self.handler.call_intercom_api(endpoint=f'/articles/{_id}', method='PUT', data=json.dumps(data))
 
     def get_columns(self, ignore: List[str] = []) -> List[str]:

@@ -143,7 +143,6 @@ class MLTaskConsumer(BaseRedisQueue):
                 return
 
             try:
-                raise RedisConnectionError
                 message = self.consumer_group.read(count=1, block=1000, consumer=TASKS_STREAM_CONSUMER_NAME)
             except RedisConnectionError as e:
                 print(f"Can't connect to Redis: {e}")

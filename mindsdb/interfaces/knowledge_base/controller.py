@@ -479,8 +479,10 @@ class KnowledgeBaseExecutor:
             )
 
     def plan_insert(self, query: Insert):
-        # TODO: to be implemented
-        raise NotImplementedError()
+        _ = SQLQuery(sql=query, session=self.session, execute=True)
+        return ExecuteAnswer(
+            answer_type=ANSWER_TYPE.OK
+        )
 
     def delete_from_kb(self, query: Delete):
         metadata = self._get_knowledge_base_metadata(query.table)

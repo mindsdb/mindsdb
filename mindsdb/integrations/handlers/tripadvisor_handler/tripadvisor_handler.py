@@ -5,7 +5,6 @@ import pandas as pd
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 
-
 from mindsdb.integrations.libs.api_handler import APIHandler
 
 from mindsdb.integrations.libs.response import (

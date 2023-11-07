@@ -1,7 +1,10 @@
 import os
-import zipfile
 import re
 import io
+import zipfile
+from typing import Union
+
+from sqlalchemy.orm.attributes import flag_modified
 
 import mindsdb.interfaces.storage.db as db
 
@@ -23,21 +26,67 @@ class ModelStorage:
 
     # -- fields --
 
+    def _get_model_record(self, model_id: int, check_exists: bool = False) -> Union[db.Predictor, None]:
+        """Get model record by id
+
+        Args:
+            model_id (int): model id
+            check_exists (bool): true if need to check that model exists
+
+        Returns:
+            Union[db.Predictor, None]: model record
+
+        Raises:
+            KeyError: if `check_exists` is True and model does not exists
+        """
+        model_record = db.Predictor.query.get(self.predictor_id)
+        if check_exists is True and model_record is None:
+            raise KeyError('Model does not exists')
+        return model_record
+
     def get_info(self):
-        rec = db.Predictor.query.get(self.predictor_id)
+        rec = self._get_model_record(self.predictor_id)
         return dict(status=rec.status,
                     to_predict=rec.to_predict,
                     data=rec.data)
 
+    def update_data(self, data: dict) -> None:
+        """update model 'data' field
+
+        Args:
+            data (dict): data to be merged with original model 'data' field
+        """
+        model_record = self._get_model_record(self.predictor_id, check_exists=True)
+        if isinstance(model_record.data, dict) is False:
+            model_record.data = data
+        else:
+            model_record.data.update(data)
+        flag_modified(model_record, 'data')
+        db.session.commit()
+
+    def update_learn_args(self, data: dict) -> None:
+        """update model 'learn_args' field
+
+        Args:
+            data (dict): data to be merged with original model 'learn_args' field
+        """
+        model_record = self._get_model_record(self.predictor_id, check_exists=True)
+        if isinstance(model_record.learn_args, dict) is False:
+            model_record.learn_args = data
+        else:
+            model_record.learn_args.update(data)
+        flag_modified(model_record, 'learn_args')
+        db.session.commit()
+
     def status_set(self, status, status_info=None):
-        rec = db.Predictor.query.get(self.predictor_id)
+        rec = self._get_model_record(self.predictor_id)
         rec.status = status
         if status_info is not None:
             rec.data = status_info
         db.session.commit()
 
     def training_state_set(self, current_state_num=None, total_states=None, state_name=None):
-        rec = db.Predictor.query.get(self.predictor_id)
+        rec = self._get_model_record(self.predictor_id)
         if current_state_num is not None:
             rec.training_phase_current = current_state_num
         if total_states is not None:
@@ -47,17 +96,17 @@ class ModelStorage:
         db.session.commit()
 
     def training_state_get(self):
-        rec = db.Predictor.query.get(self.predictor_id)
+        rec = self._get_model_record(self.predictor_id)
         return [rec.training_phase_current, rec.training_phase_total, rec.training_phase_name]
 
     def columns_get(self):
-        rec = db.Predictor.query.get(self.predictor_id)
+        rec = self._get_model_record(self.predictor_id)
         return rec.dtype_dict
 
     def columns_set(self, columns):
         # columns: {name: dtype}
 
-        rec = db.Predictor.query.get(self.predictor_id)
+        rec = self._get_model_record(self.predictor_id)
         rec.dtype_dict = columns
         db.session.commit()
 
@@ -159,6 +208,18 @@ class HandlerStorage:
     def get_connection_args(self):
         rec = db.Integration.query.get(self.integration_id)
         return rec.data
+
+    def update_connection_args(self, connection_args: dict) -> None:
+        """update integration connection args
+
+        Args:
+            connection_args (dict): new connection args
+        """
+        rec = db.Integration.query.get(self.integration_id)
+        if rec is None:
+            raise KeyError("Can't find integration")
+        rec.data = connection_args
+        db.session.commit()
 
     # files
 

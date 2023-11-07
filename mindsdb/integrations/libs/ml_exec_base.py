@@ -331,6 +331,9 @@ class BaseMLEngineExec:
         learn_args = base_predictor_record.learn_args
         learn_args['using'] = args if not learn_args.get('using', False) else {**learn_args['using'], **args}
 
+        if hasattr(self.handler_class, 'create_validation'):
+            self.handler_class.create_validation(base_predictor_record.to_predict, args=learn_args)
+
         predictor_record = db.Predictor(
             company_id=ctx.company_id,
             name=model_name,

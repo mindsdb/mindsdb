@@ -80,6 +80,18 @@ class BYOMHandler(BaseMLEngine):
             engine_version = 1
         return engine_version
 
+    @staticmethod
+    def create_validation(target: str, args: dict = None, **kwargs) -> None:
+        if isinstance(args, dict) is False:
+            return
+        using_args = args.get('using', {})
+        engine_version = using_args.get('engine_version')
+        if engine_version is not None:
+            engine_version = BYOMHandler.normalize_engine_version(engine_version)
+        else:
+            engine_version = max([int(x) for x in connection_args['versions'].keys()])
+            using_args['engine_version'] = engine_version
+
     def get_model_engine_version(self) -> int:
         """Return current model engine version
 

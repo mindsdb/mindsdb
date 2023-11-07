@@ -106,7 +106,7 @@ WHERE question='what ML use cases does mindsdb support?';
 
 CREATE MODEL rag_handler_file_test
 predict answer
-from files (select * from uploaded_file;)
+from files (select * from uploaded_file)
 USING
    engine="rag",
    llm_type="openai",

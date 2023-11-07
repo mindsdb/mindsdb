@@ -37,7 +37,6 @@ def get_exec_call_tool(llm, executor, model_kwargs) -> Callable:
         return data
     return mdb_exec_call_tool
 
-
 def get_exec_metadata_tool(llm, executor, model_kwargs) -> Callable:
     def mdb_exec_metadata_call(query: str) -> str:
         try:
@@ -80,7 +79,6 @@ def get_exec_metadata_tool(llm, executor, model_kwargs) -> Callable:
 
         return data
     return mdb_exec_metadata_call
-
 
 def get_mdb_write_tool(executor) -> Callable:
     def mdb_write_call(query: str) -> str:

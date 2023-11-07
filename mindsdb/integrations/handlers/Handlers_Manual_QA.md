@@ -47,3 +47,11 @@ google search Integration Test Failed: https://github.com/Sekhar-Kumar-Dash/Mind
 Reddit app integration Test Failed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Reddit/Reddit_QA.md
 (https://github.com/mindsdb/mindsdb/issues/8127)
 </br>
+Ray Serve integration Test Passed: https://github.com/Sekhar-Kumar-Dash/mindsdb_rayserve/tree/main/rayserve%20%20mindsdb
+</br>
+Strava app integration passed : https://github.com/Sekhar-Kumar-Dash/strava_mindsdb/blob/main/strava%20mindsdb/Starva_app_qa.md
+</br>
+Strava app integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/Strava/Strava_app_QA.md
+</br>
+Mendeley integration Test Passed: https://github.com/Sekhar-Kumar-Dash/mindsdb_mendeley/blob/main/mendeley_handler/mendeley_qa.md
+</br>

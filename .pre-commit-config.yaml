@@ -22,8 +22,3 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-merge-conflict
-  - repo: https://github.com/pre-commit/mirrors-isort
-    rev: v5.10.1
-    hooks:
-      - id: isort
-        args: ["--filter-files", "--profile", "black"]

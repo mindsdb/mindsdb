@@ -1,5 +1,5 @@
 group "default" {
-  targets = ["bare", "cloud"]
+  targets = ["builder", "bare", "cloud"]
 }
 
 variable "TAG" {

@@ -89,7 +89,6 @@ def test_get_tools_for_agent_error_logging(tool_fetcher, caplog, fake_os_path_ex
     Test that get_tools_for_agent logs an error when an exception is raised
     """
     fake_os_path_exists.side_effect = Exception('Boom!')
-    with patch('mindsdb.integrations.handlers.langchain_handler.agent_tool_fetcher.GmailHandler') as mock_gmail_handler:
-        tools = tool_fetcher.get_tools_for_agent('gmail', '/fake/base/dir', 'johndoe')
-        assert "Failed to get gmail tools" in caplog.text
-        assert tools == []
+    tools = tool_fetcher.get_tools_for_agent('gmail', '/fake/base/dir', 'johndoe')
+    assert "Failed to get gmail tools" in caplog.text
+    assert tools == []

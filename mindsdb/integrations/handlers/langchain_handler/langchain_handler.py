@@ -13,15 +13,14 @@ from langchain.agents import initialize_agent, create_sql_agent
 from langchain.prompts import PromptTemplate
 from langchain.agents.agent_toolkits import SQLDatabaseToolkit
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
-from langchain.tools.gmail.utils import build_resource_service, get_gmail_credentials
-from langchain.agents.agent_toolkits import GmailToolkit
 
 from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
-from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools
+from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools, get_gmail_tools
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.utilities import log
+from mindsdb.integrations.handlers.langchain_handler.permisions import USER_TOOL_PERMISIONS
 
 
 _DEFAULT_MODEL = 'gpt-3.5-turbo'
@@ -238,21 +237,19 @@ class LangChainHandler(BaseMLEngine):
         df.iloc[:-1, df.columns.get_loc(args['user_column'])] = ''
 
         base_tokens_dir = "agent_tokens"
-        username = df["user"].iloc[-1]
-        gmail_token_path = os.path.join(base_tokens_dir, username, "gmail_token.json")
-        assert os.path.exists(gmail_token_path), f"Token file {gmail_token_path} does not exist"
+        username_of_last_message = df["user"].iloc[-1]
+        gmail_token_path = os.path.join(base_tokens_dir, username_of_last_message, "gmail_token.json")
+        assert os.path.exists(gmail_token_path), f"Token file {gmail_token_path} for user {username_of_last_message} does not exist"
         agent_name = AgentType.CONVERSATIONAL_REACT_DESCRIPTION
-        if df["user"].iloc[-1] in ["Olly", "Sam"]:
-            DEFAULT_SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
-            credentials = get_gmail_credentials(
-                token_file=gmail_token_path,
-                scopes=DEFAULT_SCOPES,
-                )
-            api_resource = build_resource_service(credentials=credentials)
-            toolkit = GmailToolkit(api_resource=api_resource)
-            tools += toolkit.get_tools()
+        if username_of_last_message in USER_TOOL_PERMISIONS:
+            if "gmail" in USER_TOOL_PERMISIONS[username_of_last_message]:
+                try:
+                    gmail_tools = get_gmail_tools(gmail_token_path)
+                except Exception as e:
+                    log.logger.error(f"Failed to get gmail tools: {e}")
+                    gmail_tools = []
+                tools += gmail_tools
 
-        print(username, tools)
         agent = initialize_agent(
             tools,
             llm,

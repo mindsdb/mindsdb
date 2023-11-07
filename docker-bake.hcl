@@ -32,7 +32,7 @@ target "bare" {
 target "cloud" {
   inherits = ["_common"]
   args = {
-    EXTRAS = ".[lightwood,huggingface]"
+    EXTRAS = ".[lightwood] .[huggingface]"
   }
   tags = ["${REGISTRY}/mindsdb:${TAG}-cloud"]
 }

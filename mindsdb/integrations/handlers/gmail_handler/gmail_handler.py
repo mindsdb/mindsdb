@@ -339,7 +339,6 @@ class GmailHandler(APIHandler):
         if os.path.isfile(creds_file):
             creds = Credentials.from_authorized_user_file(creds_file, self.scopes)
 
-        self.creds = creds
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())

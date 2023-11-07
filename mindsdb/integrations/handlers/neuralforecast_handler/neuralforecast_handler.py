@@ -16,6 +16,12 @@ from neuralforecast.models import NHITS
 from neuralforecast.auto import AutoNHITS
 from ray.tune.search.hyperopt import HyperOptSearch
 
+# hierarchicalforecast is an optional dependency
+try:
+    from hierarchicalforecast.core import HierarchicalReconciliation
+except ImportError:
+    HierarchicalReconciliation = None
+
 DEFAULT_FREQUENCY = "D"
 DEFAULT_MODEL_NAME = "NHITS"
 DEFAULT_TRIALS = 20
@@ -70,7 +76,7 @@ class NeuralForecastHandler(BaseMLEngine):
 
         # Deal with hierarchy
         model_args["hierarchy"] = using_args["hierarchy"] if "hierarchy" in using_args else False
-        if model_args["hierarchy"]:
+        if model_args["hierarchy"] and HierarchicalReconciliation is not None:
             training_df, hier_df, hier_dict = get_hierarchy_from_df(df, model_args)
             self.model_storage.file_set("hier_dict", dill.dumps(hier_dict))
             self.model_storage.file_set("hier_df", dill.dumps(hier_df))
@@ -105,7 +111,7 @@ class NeuralForecastHandler(BaseMLEngine):
 
         neural = NeuralForecast.load(model_args["model_folder"])
         forecast_df = neural.predict()
-        if model_args["hierarchy"]:
+        if model_args["hierarchy"] and HierarchicalReconciliation is not None:
             training_df = dill.loads(self.model_storage.file_get("training_df"))
             hier_df = dill.loads(self.model_storage.file_get("hier_df"))
             hier_dict = dill.loads(self.model_storage.file_get("hier_dict"))

@@ -73,6 +73,7 @@ def import_string(code, module_name='model'):
     # sys.modules['my_module'] = module
     return module
 
+
 def find_model_class(module):
     # find the first class that contents predict and train methods
     for _, klass in inspect.getmembers(module, inspect.isclass):

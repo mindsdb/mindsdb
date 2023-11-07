@@ -1,0 +1,2 @@
+pyod>=1.1
+catboost>=1.2

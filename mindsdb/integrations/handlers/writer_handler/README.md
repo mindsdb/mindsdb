@@ -34,7 +34,7 @@ No, this integration doesn't support DESCRIBE syntax.
 No, fine-tuning is not supported.
 
 ## Are there any other noteworthy aspects to this handler?
-The handler has a number of default parameters set, the user only needs to pass  `prompt_template`, `writer_api_key` along with `writer_org_id` or alternatively with `base_url`.
+The handler has a number of default parameters set, the user only needs to pass  `vector_store_folder_name`, `writer_api_key` along with `writer_org_id` or alternatively with `base_url`.
 
 The other parameters have default values
 
@@ -42,7 +42,7 @@ Supported query parameters for USING syntax are as follows:
 
 ## For the Writer LLM API
 
-- `prompt_template` - this is the template that is used to generate the prompt. If not provided, the default is `DEFAULT_QA_PROMPT_TEMPLATE` (see settings.py in rag_handler for more details)
+- `prompt_template` - this is the template that is used to generate the prompt. If not provided, the default is `DEFAULT_QA_PROMPT_TEMPLATE` (see `settings.py` in `rag_handler` for more details)
 - `writer_api_key` - this is the API key that is used to authenticate with the Writer LLM API
 - `writer_org_id` - this is the organization ID that is used to authenticate with the Writer LLM API
 - `base_url` - this is the base URL that is used to authenticate with the Writer LLM API, optional, if not provided uses org_id and model_id
@@ -73,7 +73,7 @@ Supported query parameters for USING syntax are as follows:
 - `collection_name` - this is the name of the collection that is used to store the embeddings, the default is `collection`
 - `summarize_context` - this is a boolean that determines if the context is summarized, the default is True
 - `summarization_prompt_template` - this is the template that is used to summarize the context, the default is `SUMMARIZATION_PROMPT_TEMPLATE` (see settings.py in rag_handler for more details)
-- `vector_store_folder_name` - this is the name of the folder that is used to store the vector store, the default is `vector_store_folder`
+- `vector_store_folder_name` - this is the name of the folder that is used to store the vector store - it must be specified by user
 
 ## Any directions for future work in subsequent versions of the handler?
 tbc

@@ -3,7 +3,6 @@ from unittest.mock import patch, mock_open
 import pytest
 from mindsdb.integrations.handlers.langchain_handler.agent_tool_fetcher import AgentToolFetcher
 from mindsdb.integrations.handlers.frappe_handler.frappe_handler import FrappeHandler
-from mindsdb.integrations.handlers.gmail_handler.gmail_handler import GmailHandler
 
 
 @pytest.fixture

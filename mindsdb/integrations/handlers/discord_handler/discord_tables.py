@@ -16,7 +16,7 @@ from mindsdb.utilities.log import get_log
 
 logger = get_log("integrations.discord_handler")
 
-class DiscordTable(APITable):
+class MessagesTable(APITable):
     """The Discord Table implementation"""
 
     def get_columns(self):
@@ -167,7 +167,7 @@ class DiscordTable(APITable):
         self.send_message(message_data)
 
     def send_message(self, message_data: List[Dict[Text, Any]]) -> None:
-        """Sends messages to a Microsoft Teams Channel using the parsed message data.
+        """Sends messages to a Discord Channel using the parsed message data.
 
         Parameters
         ----------

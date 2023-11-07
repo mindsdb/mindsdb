@@ -2,7 +2,7 @@ import requests
 import asyncio
 import pandas as pd
 
-from mindsdb.integrations.handlers.discord_handler.discord_tables import DiscordTable
+from mindsdb.integrations.handlers.discord_handler.discord_tables import MessagesTable
 
 from mindsdb.utilities import log
 
@@ -39,7 +39,7 @@ class DiscordHandler(APIHandler):
 
         self.is_connected = False
 
-        messages = DiscordTable(self)
+        messages = MessagesTable(self)
         self._register_table('messages', messages)
 
     def connect(self):
@@ -99,9 +99,9 @@ class DiscordHandler(APIHandler):
         StatusResponse
             Request status
         """
-        method_name, params = FuncParser().from_string(query)
+        operation, params = FuncParser().from_string(query)
 
-        df = self.call_discord_api(method_name, params)
+        df = self.call_discord_api(operation, params)
 
         return Response(RESPONSE_TYPE.TABLE, data_frame=df)
     
@@ -119,7 +119,7 @@ class DiscordHandler(APIHandler):
         )
 
     def call_discord_api(
-            self, method_name: str, params: dict = None, filters: list = None
+            self, operation: str, params: dict = None, filters: list = None
         ):
         """
         Call a Discord API method.
@@ -130,7 +130,7 @@ class DiscordHandler(APIHandler):
             pd.DataFrame
         """
 
-        if method_name == 'get_messages':
+        if operation == 'get_messages':
             param_strings = {'limit': params['limit']}
             if 'after' in params:
                 param_strings['after'] = self.utc_to_snowflake(params['after'])
@@ -153,15 +153,16 @@ class DiscordHandler(APIHandler):
                 raise ValueError(f'Error calling Discord API: {result.json()}')
 
             json = result.json()
-            author = json[0].get('author')
-            if author is not None:
-                json[0]['author_id'] = author.get('id')
-                json[0]['author_username'] = author.get('username')
-                json[0]['author_global_name'] = author.get('global_name')
+            for message in json:
+                author = message.get('author')
+                if author is not None:
+                    message['author_id'] = author.get('id')
+                    message['author_username'] = author.get('username')
+                    message['author_global_name'] = author.get('global_name')
 
             df = pd.DataFrame.from_records(json)
             return df
-        elif method_name == 'send_message':
+        elif operation == 'send_message':
             url = (
                 f'https://discord.com/api/v10/channels/{params["channel_id"]}/messages'
             )
@@ -182,4 +183,4 @@ class DiscordHandler(APIHandler):
             df = pd.DataFrame.from_records([result.json()])
             return df
         else:
-            raise ValueError(f"Unsupported method: {method_name}")
+            raise ValueError(f"Unsupported method: {operation}")

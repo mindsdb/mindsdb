@@ -51,6 +51,17 @@ Here is the output:
 
 Let's create a model table to answer all questions from the input dataset:
 
+<Tip>
+Before creating an OpenAI model, please create an engine, providing your OpenAI API key:
+
+```sql
+CREATE ML_ENGINE openai_engine
+FROM openai
+USING
+	api_key = ‘your-openai-api-key’;
+```
+</Tip>
+
 ```sql
 CREATE MODEL question_answering_model
 PREDICT answer

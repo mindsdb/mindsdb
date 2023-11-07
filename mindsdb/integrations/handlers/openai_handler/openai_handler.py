@@ -55,14 +55,6 @@ class OpenAIHandler(BaseMLEngine):
         self.supported_ft_models = FINETUNING_LEGACY_MODELS  # base models compatible with finetuning  # TODO #7387: transition to new endpoint before 4/1/24. Useful reference: Anyscale handler. # noqa
         self.ft_cls = openai.FineTune
 
-        # user suffix for finetunes, set once
-        try:
-            self.engine_storage.json_get('ft-suffix')['ft-suffix']
-        except (KeyError, TypeError):
-            self.engine_storage.json_set(
-                'ft-suffix', {'ft-suffix': binascii.b2a_hex(os.urandom(15)).decode()}
-            )
-
     @staticmethod
     def create_validation(target, args=None, **kwargs):
         if 'using' not in args:

@@ -107,18 +107,22 @@ The default trained pipelines can identify a variety of named and numeric entiti
 
 A named entity is a “real-world object” that’s assigned a name – for example, a person, a country, a product or a book title. spaCy can recognize various types of named entities in a document, by asking the model for a prediction.
 
-### Creating an ML Engine
+### Example
+
+#### Creating an ML Engine
 
 The first step to make use of this handler is to create an ML Engine. This can be done using the following syntax,
 
 ```sql
-CREATE MODEL spacy_ner_model
+CREATE MODEL spacy_ner_fast
 PREDICT recognition
 USING
-    engine = 'spacy';
+engine = 'spacy',
+linguistic_feature = 'ner',
+target_column = 'review';
 ```
 
-### Using NER on random sentence
+#### Using NER on random sentence
 
 ```sql
 SELECT sentence, recognition
@@ -126,7 +130,12 @@ FROM spacy_ner_model
 WHERE sentence = '"Apple is looking at buying U.K. startup for $1 billion"';
 ```
 
-RESULT: {(28, 32, 'GPE'), (45, 55, 'MONEY'), (1, 6, 'ORG')}
+##### RESULT
+
+DF Format
+| review | recognition |
+| ------ | ----------- |
+| "Apple is looking at buying U.K. startup for $1 billion" | {(1, 6, 'ORG'), (45, 55, 'MONEY'), (28, 32, 'GPE')} |
 
 The first and the second values are indices in the string that indicate the location
 of the word in a sentence. The third value is a named entity.
@@ -162,6 +171,39 @@ Dependency parsing is a linguistic analysis technique used in natural language p
 
 spaCy can parse and tag a given Doc. This is where the trained pipeline and its statistical models come in, which enable spaCy to make predictions of which tag or label most likely applies in this context. A trained component includes binary data that is produced by showing a system enough examples for it to make predictions that generalize across the language – for example, a word following “the” in English is most likely a noun.
 
+### Example
+
+#### Creating an ML Engine
+
+```sql
+CREATE MODEL model_pos_tag_spacy
+PREDICT recognition
+USING
+engine = 'spacy',
+linguistic_feature = 'pos-tag',
+target_column = 'review';
+```
+
+#### Using pos-tag on batch data
+
+```sql
+SELECT input.review, output.tag_, output.pos_, output.shape_
+FROM mysql_demo_db.amazon_reviews AS input
+JOIN model_pos_tag_spacy AS output
+LIMIT 3;
+```
+
+##### RESULT
+
+DF Format
+| review | tag* | pos* | shape\_ |
+| ------ | ---- | ---- | ------ |
+| Late gift for my grandson. He is very happy with it. Easy for him (9yo ). | ["JJ","NN","IN","PRP$","NN",".","PRP","VBZ","RB","JJ","IN","PRP",".","JJ","IN","PRP","-LRB-","NN","-RRB-","."] | ["ADJ","NOUN","ADP","PRON","NOUN","PUNCT","PRON","AUX","ADV","ADJ","ADP","PRON","PUNCT","ADJ","ADP","PRON","PUNCT","NOUN","PUNCT","PUNCT"] | ["Xxxx","xxxx","xxx","xx","xxxx",".","Xx","xx","xxxx","xxxx","xxxx","xx",".","Xxxx","xxx","xxx","(","dxx",")","."] |
+| I'm not super thrilled with the proprietary OS on this unit, but it does work okay and does what I need it to do. Appearance is very nice, price is very good and I can't complain too much - just wish it were easier (or at least more obvious) to port new apps onto it. For now, it helps me see things that are too small on my phone while I'm traveling. I'm a happy buyer. | ["PRP","VBP","RB","RB","JJ","IN","DT","JJ","NN","IN","DT","NN",",","CC","PRP","VBZ","VB","RB","CC","VBZ","WP","PRP","VBP","PRP","TO","VB",".","NN","VBZ","RB","JJ",",","NN","VBZ","RB","JJ","CC","PRP","MD","RB","VB","RB","RB",":","RB","VB","PRP","VBD","JJR","-LRB-","CC","IN","RBS","RBR","JJ","-RRB-","TO","VB","JJ","NNS","IN","PRP",".","IN","RB",",","PRP","VBZ","PRP","VB","NNS","WDT","VBP","RB","JJ","IN","PRP$","NN","IN","PRP","VBP","VBG",".","PRP","VBP","DT","JJ","NN","."] | ["PRON","AUX","PART","ADV","ADJ","ADP","DET","ADJ","NOUN","ADP","DET","NOUN","PUNCT","CCONJ","PRON","AUX","VERB","ADV","CCONJ","VERB","PRON","PRON","VERB","PRON","PART","VERB","PUNCT","NOUN","AUX","ADV","ADJ","PUNCT","NOUN","AUX","ADV","ADJ","CCONJ","PRON","AUX","PART","VERB","ADV","ADV","PUNCT","ADV","VERB","PRON","AUX","ADJ","PUNCT","CCONJ","ADP","ADV","ADV","ADJ","PUNCT","PART","VERB","ADJ","NOUN","ADP","PRON","PUNCT","ADP","ADV","PUNCT","PRON","VERB","PRON","VERB","NOUN","PRON","AUX","ADV","ADJ","ADP","PRON","NOUN","SCONJ","PRON","AUX","VERB","PUNCT","PRON","AUX","DET","ADJ","NOUN","PUNCT"] | ["X","'x","xxx","xxxx","xxxx","xxxx","xxx","xxxx","XX","xx","xxxx","xxxx",",","xxx","xx","xxxx","xxxx","xxxx","xxx","xxxx","xxxx","X","xxxx","xx","xx","xx",".","Xxxxx","xx","xxxx","xxxx",",","xxxx","xx","xxxx","xxxx","xxx","X","xx","x'x","xxxx","xxx","xxxx","-","xxxx","xxxx","xx","xxxx","xxxx","(","xx","xx","xxxx","xxxx","xxxx",")","xx","xxxx","xxx","xxxx","xxxx","xx",".","Xxx","xxx",",","xx","xxxx","xx","xxx","xxxx","xxxx","xxx","xxx","xxxx","xx","xx","xxxx","xxxx","X","'x","xxxx",".","X","'x","x","xxxx","xxxx","."] |
+| I purchased this Kindle Fire HD 8 was purchased for use by 5 and 8 yer old grandchildren. They basically use it to play Amazon games that you download. | ["PRP","VBD","DT","NNP","NNP","NNP","CD","VBD","VBN","IN","NN","IN","CD","CC","CD","NN","JJ","NNS",".","PRP","RB","VBP","PRP","TO","VB","NNP","NNS","IN","PRP","VBP","."] | ["PRON","VERB","DET","PROPN","PROPN","PROPN","NUM","AUX","VERB","ADP","NOUN","ADP","NUM","CCONJ","NUM","NOUN","ADJ","NOUN","PUNCT","PRON","ADV","VERB","PRON","PART","VERB","PROPN","NOUN","SCONJ","PRON","VERB","PUNCT"] | ["X","xxxx","xxxx","Xxxxx","Xxxx","XX","d","xxx","xxxx","xxx","xxx","xx","d","xxx","d","xxx","xxx","xxxx",".","Xxxx","xxxx","xxx","xx","xx","xxxx","Xxxxx","xxxx","xxxx","xxx","xxxx","."] |
+
+### Atributes
+
 - text
 - lemma\_
 - pos\_
@@ -174,6 +216,8 @@ spaCy can parse and tag a given Doc. This is where the trained pipeline and its 
 ## Morphology
 
 Inflectional morphology is the process by which a root form of a word is modified by adding prefixes or suffixes that specify its grammatical function but do not change its part-of-speech. We say that a lemma (root form) is inflected (modified/combined) with one or more morphological features to create a surface form.
+
+### Atributes
 
 - token
 - token.morph

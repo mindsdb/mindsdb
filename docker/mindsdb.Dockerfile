@@ -1,11 +1,12 @@
 FROM python:3.10 as builder
 
-ARG EXTRAS
-
 COPY . /mindsdb
 WORKDIR /mindsdb
-RUN --mount=type=cache,target=/root/.cache/pip pip cache list
 RUN --mount=type=cache,target=/root/.cache/pip pip install "."
+
+
+FROM builder as extras
+ARG EXTRAS
 RUN --mount=type=cache,target=/root/.cache/pip if [ ! -z $EXTRAS ]; then pip install ${EXTRAS}; fi
 
 
@@ -20,7 +21,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     && apt update && apt-get upgrade -y \
     && apt-get install -y libmagic1 libpq5
 
-COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY --link --from=extras /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 
 ENV FLASK_DEBUG "1"
 

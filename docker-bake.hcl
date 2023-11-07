@@ -13,8 +13,15 @@ variable "REGISTRY" {
 
 
 target "_common" {
-    dockerfile = "docker/mindsdb.Dockerfile"
-    context = "."
+    dockerfile = "docker/mindsdb.Dockerfile" # If you change this, also change it in target:builder
+    contexts = {
+      builder = "target:builder" # Use a target to only perform base build steps once
+    }
+}
+
+target "builder" {
+  dockerfile = "docker/mindsdb.Dockerfile"
+  tags = ["${REGISTRY}/mindsdb:${TAG}-bare"]
 }
 
 target "bare" {

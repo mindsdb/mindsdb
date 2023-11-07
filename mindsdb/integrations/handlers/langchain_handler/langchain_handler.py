@@ -16,12 +16,12 @@ from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
 
 from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
-from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools, get_gmail_tools
+from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.utilities import log
 from mindsdb.integrations.handlers.langchain_handler.permisions import USER_TOOL_PERMISIONS
-
+from mindsdb.integrations.handlers.langchain_handler.agent_tool_fetcher import AgentToolFetcher
 
 _DEFAULT_MODEL = 'gpt-3.5-turbo'
 _DEFAULT_MAX_TOKENS = 2048  # requires more than vanilla OpenAI due to ongoing summarization and 3rd party input
@@ -238,19 +238,16 @@ class LangChainHandler(BaseMLEngine):
 
         base_tokens_dir = "agent_tokens"
         username_of_last_message = df["user"].iloc[-1]
-        gmail_token_path = os.path.join(base_tokens_dir, username_of_last_message, "gmail_token.json")
-        assert os.path.exists(gmail_token_path), f"Token file {gmail_token_path} for user {username_of_last_message} does not exist"
         agent_name = AgentType.CONVERSATIONAL_REACT_DESCRIPTION
-        if username_of_last_message in USER_TOOL_PERMISIONS:
-            if "gmail" in USER_TOOL_PERMISIONS[username_of_last_message]:
-                try:
-                    gmail_tools = get_gmail_tools(gmail_token_path)
-                except Exception as e:
-                    log.logger.error(f"Failed to get gmail tools: {e}")
-                    gmail_tools = []
-                tools += gmail_tools
+        agent_tool_fetcher = AgentToolFetcher()
 
-        print(tools)
+        for handler_name in USER_TOOL_PERMISIONS[username_of_last_message]:
+            try:
+                tools_for_agent = agent_tool_fetcher.get_tools_for_agent(handler_name, base_tokens_dir, username_of_last_message)
+                tools += tools_for_agent
+            except Exception as e:
+                log.logger.error(f"Failed to get {handler_name} tools: {e}")
+        
         agent = initialize_agent(
             tools,
             llm,

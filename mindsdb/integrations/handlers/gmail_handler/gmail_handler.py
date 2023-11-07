@@ -1,6 +1,8 @@
 import json
 from shutil import copyfile
 from collections import OrderedDict
+from langchain.tools.gmail.utils import build_resource_service, get_gmail_credentials
+from langchain.agents.agent_toolkits import GmailToolkit
 
 import requests
 
@@ -304,8 +306,8 @@ class GmailHandler(APIHandler):
         self.max_batch_size = 100
         self.service = None
         self.is_connected = False
-
-        self.handler_storage = kwargs['handler_storage']
+        if 'handler_storage' in kwargs:
+            self.handler_storage = kwargs['handler_storage']
 
         emails = EmailsTable(self)
         self.emails = emails
@@ -564,6 +566,20 @@ class GmailHandler(APIHandler):
         df = pd.DataFrame(data)
 
         return df
+    
+    def get_agent_tools(self, gmail_token_path):
+        """
+         Returns a list of tools that can be used by an agent
+        """
+        SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+        credentials = get_gmail_credentials(
+            token_file=gmail_token_path,
+            scopes=SCOPES,
+            )
+        api_resource = build_resource_service(credentials=credentials)
+        tools = GmailToolkit(api_resource=api_resource).get_tools() # Provided by langchain
+        return tools
+        
 
 
 connection_args = OrderedDict(

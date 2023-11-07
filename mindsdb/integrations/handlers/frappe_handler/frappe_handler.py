@@ -12,6 +12,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
+from langchain.tools import Tool
 
 
 class FrappeHandler(APIHandler):
@@ -48,11 +49,11 @@ class FrappeHandler(APIHandler):
 
     def back_office_config(self):
         tools = {
-            'register_sales_invoice': 'have to be used by assistant to register a sales invoice. Input is JSON object serialized as a string. Due date have to be passed in format: "yyyy-mm-dd".',
-            'check_company_exists': 'useful to check the company is exist. Input is company',
-            'check_expense_type': 'useful to check the expense_type is exist. Input is expense_type',
-            'check_customer':  'useful to check the customer is exist. Input is customer',
-            'check_item_code':  'have to be used to check the item code. Input is item_code',
+            'register_sales_invoice': 'useful to register a sales invoice. Input is JSON object serialized as a string. Due date have to be passed in format: "yyyy-mm-dd".',
+            'check_company_exists': 'useful to check the company exists. Input is company',
+            'check_expense_type': 'useful to check the expense_type exists. Input is expense_type',
+            'check_customer':  'useful to check the customer exists. Input is customer',
+            'check_item_code':  'useful to check the item code exists. Input is item_code',
         }
         return {
             'tools': tools,
@@ -206,3 +207,18 @@ class FrappeHandler(APIHandler):
         if method_name == 'create_document':
             return self._create_document(params)
         raise NotImplementedError('Method name {} not supported by Frappe API Handler'.format(method_name))
+
+    def get_agent_tools(self):
+        """
+        Returns a list of tools that can be used by an agent
+        """
+        tool_dict = self.back_office_config()['tools']
+        all_tools = []
+        for tool in tool_dict:
+            all_tools.append(Tool.from_function(
+                func=getattr(self, tool),
+                name=tool,
+                description=tool_dict[tool]
+            ))
+        return all_tools
+

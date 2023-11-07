@@ -11,8 +11,6 @@ from langchain.chains.llm import LLMChain
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains import ReduceDocumentsChain, MapReduceDocumentsChain
-from langchain.tools.gmail.utils import build_resource_service, get_gmail_credentials
-from langchain.agents.agent_toolkits import GmailToolkit
 
 
 # Individual tools
@@ -205,17 +203,3 @@ def summarize_if_overflowed(data, llm, max_tokens, budget_multiplier=0.8) -> str
         # run chain
         data = map_reduce_chain.run(split_docs)
     return data
-
-def get_gmail_tools(gmail_token_path):
-    """
-        This helper returns a list of tools for the gmail integration.
-    """
-    DEFAULT_SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
-    credentials = get_gmail_credentials(
-        token_file=gmail_token_path,
-        scopes=DEFAULT_SCOPES,
-        )
-    api_resource = build_resource_service(credentials=credentials)
-    toolkit = GmailToolkit(api_resource=api_resource)
-    return toolkit.get_tools()
-    

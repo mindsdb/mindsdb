@@ -250,6 +250,7 @@ class LangChainHandler(BaseMLEngine):
                     gmail_tools = []
                 tools += gmail_tools
 
+        print(tools)
         agent = initialize_agent(
             tools,
             llm,

@@ -264,7 +264,7 @@ Before creating an OpenAI model, please create an engine, providing your OpenAI 
 CREATE ML_ENGINE openai_engine
 FROM openai
 USING
-	api_key = ‘your-openai-api-key’;
+	api_key = 'your-openai-api-key';
 ```
 </Tip>
 
@@ -272,7 +272,7 @@ USING
 CREATE MODEL snoopstein_model
 PREDICT response
 USING
-engine = 'openai',
+engine = 'openai_engine',
 max_tokens = 300,
 temperature = 0.75,
 model_name = 'gpt-4', -- you can also use 'text-davinci-003' or 'gpt-3.5-turbo'

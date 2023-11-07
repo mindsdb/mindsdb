@@ -58,7 +58,7 @@ Before creating an OpenAI model, please create an engine, providing your OpenAI 
 CREATE ML_ENGINE openai_engine
 FROM openai
 USING
-	api_key = ‘your-openai-api-key’;
+	api_key = 'your-openai-api-key';
 ```
 </Tip>
 
@@ -66,7 +66,7 @@ USING
 CREATE MODEL text_summarization_model
 PREDICT highlights
 USING
-    engine = 'openai',              
+    engine = 'openai_engine',              
     prompt_template = 'provide an informative summary of the text text:{{article}} using full sentences';
 ```
 

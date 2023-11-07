@@ -42,7 +42,7 @@ Before creating an OpenAI model, please create an engine, providing your OpenAI 
 CREATE ML_ENGINE openai_engine
 FROM openai
 USING
-	api_key = ‘your-openai-api-key’;
+	api_key = 'your-openai-api-key';
 ```
 </Tip>
 
@@ -50,7 +50,7 @@ USING
 CREATE MODEL sentiment_classifier_model
 PREDICT sentiment
 USING
-    engine = 'openai',
+    engine = 'openai_engine',
     model_name = 'text-davinci-003',
     prompt_template = 'describe the user sentiment from the following conversation STRICTLY as positive or neutral or negative.\n###\n{{full_conversation}}     \n###\nSentiment [positive/neutral/negative]:';
 ```

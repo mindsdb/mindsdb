@@ -3,17 +3,14 @@ from typing import Text, List, Dict, Any
 
 from mindsdb_sql.parser import ast
 
-from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
+from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from mindsdb.integrations.utilities.date_utils import parse_utc_date
 
-from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-    RESPONSE_TYPE
+from mindsdb.integrations.libs.response import HandlerResponse as Response
+
+from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilities import (
+    INSERTQueryParser
 )
-
-from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilities import INSERTQueryParser
 
 from mindsdb.utilities.log import get_log
 
@@ -46,7 +43,7 @@ class DiscordTable(APITable):
             'nonce',
             'referenced_message',
         ]
-    
+
     def select(self, query: ast.Select) -> Response:
         """Selects data from the Discord channel.
 
@@ -60,7 +57,7 @@ class DiscordTable(APITable):
         Response
             Response object representing collected data from Discord.
         """
-        
+
         conditions = extract_comparison_conditions(query.where)
 
         params = {}
@@ -75,7 +72,9 @@ class DiscordTable(APITable):
                 elif op == '<':
                     params['before'] = arg2
                 else:
-                    raise NotImplementedError(f'Unsupported operator {op} for timestamp')
+                    raise NotImplementedError(
+                        f'Unsupported operator {op} for timestamp'
+                    )
             
             elif arg1 in ['author_id', 'author_username', 'author_global_name']:
                 if user_filter_flag:
@@ -109,7 +108,9 @@ class DiscordTable(APITable):
         if not channel_filter_flag:
             raise NotImplementedError('Channel filter is required')
         
-        result = self.handler.call_discord_api('get_messages', params=params, filters=filters)
+        result = self.handler.call_discord_api(
+            'get_messages', params=params, filters=filters
+        )
 
         # filter targets
         columns = []
@@ -138,7 +139,7 @@ class DiscordTable(APITable):
             # filter by columns
             result = result[columns]
         return result
-        
+
     def insert(self, query: ast.Insert) -> None:
         """Sends messages to a Discord channel.
 
@@ -160,26 +161,26 @@ class DiscordTable(APITable):
             query,
             supported_columns=['channel_id', 'text'],
             mandatory_columns=['channel_id', 'text'],
-            all_mandatory=False
+            all_mandatory=False,
         )
         message_data = insert_statement_parser.parse_query()
         self.send_message(message_data)
 
-    def send_message(self, message_data: List[Dict[Text, Any]]) -> None: 
+    def send_message(self, message_data: List[Dict[Text, Any]]) -> None:
         """Sends messages to a Microsoft Teams Channel using the parsed message data.
 
         Parameters
         ----------
         message_data : List[Dict[Text, Any]]
            List of dictionaries containing the messages to send.
-        
+
         Returns
         -------
         None
         """
         for message in message_data:
             try:
-                params = { 'channel_id': message['channel_id'], 'text': message['text'] }
+                params = {'channel_id': message['channel_id'], 'text': message['text']}
                 self.handler.call_discord_api('send_message', params=params)
                 logger.info(f"Message sent to Discord channel successfully.")
             except Exception as e:

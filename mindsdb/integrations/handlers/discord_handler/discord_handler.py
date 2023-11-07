@@ -5,18 +5,14 @@ import pandas as pd
 from mindsdb.integrations.handlers.discord_handler.discord_tables import DiscordTable
 
 from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
 
-from mindsdb_sql.parser import ast
-
-from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
+from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
 from mindsdb.integrations.utilities.date_utils import parse_utc_date
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE,
 )
 
 discord_bot = None
@@ -64,7 +60,7 @@ class DiscordHandler(APIHandler):
             headers={
                 'Authorization': f'Bot {self.connection_data["token"]}',
                 'Content-Type': 'application/json',
-            }, 
+            },
         )
 
         if result.status_code != 200:
@@ -107,10 +103,7 @@ class DiscordHandler(APIHandler):
 
         df = self.call_discord_api(method_name, params)
 
-        return Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=df
-        )
+        return Response(RESPONSE_TYPE.TABLE, data_frame=df)
     
     def utc_to_snowflake(self, utc_date: str) -> int:
         """
@@ -121,9 +114,13 @@ class DiscordHandler(APIHandler):
             int
         """
         # https://discord.com/developers/docs/reference#snowflakes
-        return str(int(parse_utc_date(utc_date).timestamp() * 1000 - 1420070400000) << 22)
+        return str(
+            int(parse_utc_date(utc_date).timestamp() * 1000 - 1420070400000) << 22
+        )
 
-    def call_discord_api(self, method_name: str, params: dict = None, filters: list = None):
+    def call_discord_api(
+            self, method_name: str, params: dict = None, filters: list = None
+        ):
         """
         Call a Discord API method.
         Args:
@@ -132,17 +129,19 @@ class DiscordHandler(APIHandler):
         Returns:
             pd.DataFrame
         """
-        
+
         if method_name == 'get_messages':
-            param_strings = { 'limit': params['limit'] }
+            param_strings = {'limit': params['limit']}
             if 'after' in params:
                 param_strings['after'] = self.utc_to_snowflake(params['after'])
             if 'before' in params:
                 param_strings['before'] = self.utc_to_snowflake(params['before'])
 
-            url = f'https://discord.com/api/v10/channels/{params["channel_id"]}/messages'
+            url = (
+                f'https://discord.com/api/v10/channels/{params["channel_id"]}/messages'
+            )
             result = requests.get(
-                url, 
+                url,
                 headers={
                     'Authorization': f'Bot {self.connection_data["token"]}',
                     'Content-Type': 'application/json',
@@ -163,18 +162,20 @@ class DiscordHandler(APIHandler):
             df = pd.DataFrame.from_records(json)
             return df
         elif method_name == 'send_message':
-            url = f'https://discord.com/api/v10/channels/{params["channel_id"]}/messages'
+            url = (
+                f'https://discord.com/api/v10/channels/{params["channel_id"]}/messages'
+            )
             result = requests.post(
                 url,
                 headers={
                     'Authorization': f'Bot {self.connection_data["token"]}',
                     'Content-Type': 'application/json',
-                }, 
+                },
                 json={
                     'content': params['text'],
                 },
             )
- 
+
             if result.status_code != 200:
                 raise ValueError(f'Error calling Discord API: {result.json()}')
 

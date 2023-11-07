@@ -45,14 +45,14 @@ VALUES (842979385837092867, 'Hello World!');
 Query messages with a SELECT statement, but remember to always include a channel id in the WHERE clause:
 
 ~~~~sql
-SELECT * FROM discord_datasource.messages 
+SELECT * FROM discord_datasource.messages
 WHERE channel_id = 842979385837092867;
 ~~~~
 
-Select only the rows you want: 
+Select only the rows you want:
 
 ~~~~sql
-SELECT author_username, content, timestamp FROM discord_datasource.messages 
+SELECT author_username, content, timestamp FROM discord_datasource.messages
 WHERE channel_id = 842979385837092867
 AND timestamp > '2023-10-28 3:50:01'
 LIMIT 25;

@@ -66,7 +66,8 @@ class BaseUnitTest:
             mp_patcher = mock.patch("torch.multiprocessing.get_context").__enter__()
             mp_patcher.side_effect = lambda x: dummy
         except Exception:
-            pass
+            mp_patcher = mock.patch("multiprocessing.get_context").__enter__()
+            mp_patcher.side_effect = lambda x: dummy
 
     @staticmethod
     def teardown_class(cls):

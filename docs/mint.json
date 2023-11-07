@@ -861,6 +861,12 @@
             "integrations/data-integrations/vitess",
             "integrations/data-integrations/yugabytedb"
           ]
+        },
+        {
+          "group": "Vector Databases",
+          "pages": [
+            "integrations/vector-db-integrations/chromadb"
+          ]
         }
       ]
     },

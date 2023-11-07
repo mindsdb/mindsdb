@@ -16,13 +16,13 @@ The GitLab handler is initialized with the following parameters:
 
 ## Implemented Features
 
- [x] GitHub Issues Table for a given Repository
+ [x] GitLab Issues Table for a given Repository
   - [x] Support SELECT
     - [x] Support LIMIT
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
-- [x] GitHub Merge Requests Table for a given Repository
+- [x] GitLab Merge Requests Table for a given Repository
   - [x] Support SELECT
     - [x] Support LIMIT
     - [x] Support WHERE

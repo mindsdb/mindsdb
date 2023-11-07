@@ -29,9 +29,10 @@ WHERE review = '"Apple is looking at buying U.K. startup for $1 billion"';
 
 ##### RESULT
 
-| review                                                   | recognition                                                                                                                              |
-| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ---------- | ----------------------------------------- | ---------- | -------------------------------------------------------------- | ----------- | -------- | ---------- | --------------- |
-| "Apple is looking at buying U.K. startup for $1 billion" | {('Apple', 'Number=Sing'), ('U.K.', 'Number=Sing'), ('for', ''), ('"', 'PunctSide=Fin\|PunctType=Quot'), ('$', ''), ('"', 'PunctSide=Ini | PunctType=Quot'), ('1', 'NumType=Card'), ('startup', 'Number=Sing'), ('at', ''), ('buying', 'Aspect=Prog | Tense=Pres | VerbForm=Part'), ('looking', 'Aspect=Prog | Tense=Pres | VerbForm=Part'), ('billion', 'NumType=Card'), ('is', 'Mood=Ind | Number=Sing | Person=3 | Tense=Pres | VerbForm=Fin')} |
+DF format
+| review | recognition |
+| ------ | ----------- |
+| "Apple is looking at buying U.K. startup for $1 billion" | {('Apple', 'Number=Sing'), ('U.K.', 'Number=Sing'), ('for', ''), ('"', 'PunctSide=Fin\|PunctType=Quot'), ('$', ''), ('"', 'PunctSide=Ini|PunctType=Quot'), ('1', 'NumType=Card'), ('startup', 'Number=Sing'), ('at', ''), ('buying', 'Aspect=Prog|Tense=Pres|VerbForm=Part'), ('looking', 'Aspect=Prog|Tense=Pres|VerbForm=Part'), ('billion', 'NumType=Card'), ('is', 'Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin')} |
 
 ## Perform NLP on batch data
 
@@ -53,14 +54,16 @@ PARAMETERS = {
 SELECT input.review, output.recognition
 FROM mysql_demo_db.amazon_reviews AS input
 JOIN spacy__morphology__model AS output
-LIMIT 5;
+LIMIT 1;
 ```
 
 ##### RESULT
 
-| review                                                                    | recognition                                                                                  |
-| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ----------- | -------- | ------------------------------------------------------------------------------------------------ | ----------- | ----------- | -------- | ---------------------------------------------- | ----------- | ----------- | -------- | ------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------- | -------- | -------- | -------------------------------------------------------- | ----------- | -------- | ---------- | --------------- |
-| Late gift for my grandson. He is very happy with it. Easy for him (9yo ). | {('Late', 'Degree=Pos'), ('9yo', 'Number=Sing'), ('very', ''), ('it', 'Case=Acc\|Gender=Neut | Number=Sing | Person=3 | PronType=Prs'), ('gift', 'Number=Sing'), ('with', ''), ('happy', 'Degree=Pos'), ('He', 'Case=Nom | Gender=Masc | Number=Sing | Person=3 | PronType=Prs'), ('for', ''), ('him', 'Case=Acc | Gender=Masc | Number=Sing | Person=3 | PronType=Prs'), ('.', 'PunctType=Peri'), (')', 'PunctSide=Fin | PunctType=Brck'), ('grandson', 'Number=Sing'), ('(', 'PunctSide=Ini | PunctType=Brck'), ('my', 'Number=Sing | Person=1 | Poss=Yes | PronType=Prs'), ('Easy', 'Degree=Pos'), ('is', 'Mood=Ind | Number=Sing | Person=3 | Tense=Pres | VerbForm=Fin')} |
+DF Format
+| review | recognition |
+| ------ | ----------- |
+| Late gift for my grandson. He is very happy with it. Easy for him (9yo ). | {('Late', 'Degree=Pos'), ('9yo', 'Number=Sing'), ('very', ''), ('gift', 'Number=Sing'), ('(', 'PunctSide=Ini\|PunctType=Brck'), ('it', 'Case=Acc|Gender=Neut|Number=Sing|Person=3|PronType=Prs'), ('with', ''), ('happy', 'Degree=Pos'), ('for', ''), ('him', 'Case=Acc|Gender=Masc|Number=Sing|Person=3|PronType=Prs'), ('.', 'PunctType=Peri'), (')', 'PunctSide=Fin|PunctType=Brck'), ('grandson', 'Number=Sing'), ('Easy', 'Degree=Pos'), ('my', 'Number=Sing|Person=1|Poss=Yes|PronType=Prs'), ('He', 'Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs'), ('is', 'Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin')} |
+| I'm not super thrilled with the proprietary OS on this unit, but it does work okay and does what I need it to do. Appearance is very nice, price is very good and I can't complain too much - just wish it were easier (or at least more obvious) to port new apps onto it. For now, it helps me see things that are too small on my phone while I'm traveling. I'm a happy buyer. | {('the', 'Definite=Def\|PronType=Art'), ('now', ''), ('nice', 'Degree=Pos'), ('least', 'Degree=Sup'), ('or', 'ConjType=Cmp'), ('see', 'VerbForm=Inf'), ('new', 'Degree=Pos'), ('wish', 'VerbForm=Inf'), ('phone', 'Number=Sing'), ('this', 'Number=Sing|PronType=Dem'), ('-', ''), ('at', ''), ('work', 'VerbForm=Inf'), ('is', 'Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin'), ('but', 'ConjType=Cmp'), ('very', ''), ('it', 'Case=Acc|Gender=Neut|Number=Sing|Person=3|PronType=Prs'), ('port', 'VerbForm=Inf'), ('not', 'Polarity=Neg'), ('to', ''), ('onto', ''), ('I', 'Case=Nom|Number=Sing|Person=1|PronType=Prs'), ('proprietary', 'Degree=Pos'), ('price', 'Number=Sing'), ('thrilled', 'Degree=Pos'), ("'m", 'Mood=Ind|Number=Sing|Person=1|Tense=Pres|VerbForm=Fin'), ('easier', 'Degree=Cmp'), ('For', ''), ('does', 'Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin'), ('too', ''), ('super', ''), ('me', 'Case=Acc|Number=Sing|Person=1|PronType=Prs'), ('that', 'PronType=Rel'), ('were', 'Mood=Ind|Tense=Past|VerbForm=Fin'), ('what', ''), ('with', ''), ('a', 'Definite=Ind|PronType=Art'), ('happy', 'Degree=Pos'), ('complain', 'VerbForm=Inf'), ('buyer', 'Number=Sing'), ("n't", 'Polarity=Neg'), ('and', 'ConjType=Cmp'), (')', 'PunctSide=Fin|PunctType=Brck'), ('it', 'Case=Nom|Gender=Neut|Number=Sing|Person=3|PronType=Prs'), ('small', 'Degree=Pos'), ('my', 'Number=Sing|Person=1|Poss=Yes|PronType=Prs'), ('do', 'VerbForm=Inf'), ('Appearance', 'Number=Sing'), ('more', 'Degree=Cmp'), ('are', 'Mood=Ind|Tense=Pres|VerbForm=Fin'), ('on', ''), ('need', 'Tense=Pres|VerbForm=Fin'), ('helps', 'Number=Sing|Person=3|Tense=Pres|VerbForm=Fin'), ('much', ''), ('just', ''), ('good', 'Degree=Pos'), ('OS', 'Number=Sing'), ('apps', 'Number=Plur'), ('traveling', 'Aspect=Prog|Tense=Pres|VerbForm=Part'), ('while', ''), ('.', 'PunctType=Peri'), ('okay', ''), ('obvious', 'Degree=Pos'), ('unit', 'Number=Sing'), (',', 'PunctType=Comm'), ('(', 'PunctSide=Ini|PunctType=Brck'), ('ca', 'VerbForm=Fin'), ('things', 'Number=Plur')} |
 
 ### 2. With attributes
 
@@ -82,10 +85,11 @@ LIMIT 2;
 
 ##### RESULT
 
-| review                                                                                                                                                                                                                                                                                                                                                                             | label\_     | recognition            | entity         |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------------------- | -------------- |
-| Late gift for my grandson. He is very happy with it. Easy for him (9yo ).                                                                                                                                                                                                                                                                                                          | ["ORDINAL"] | {(67, 70, 'ORDINAL')}  | ["9yo"]        |
-| I'm not super thrilled with the proprietary OS on this unit, but it does work okay and does what I need it to do. Appearance is very nice, price is very good and I can't complain too much - just wish it were easier (or at least more obvious) to port new apps onto it. For now, it helps me see things that are too small on my phone while I'm traveling. I'm a happy buyer. | ["PERSON"]  | {(114, 124, 'PERSON')} | ["Appearance"] |
+DF Format
+| review | label\_ | recognition | entity |
+| ------ | ------ | ----------- | ------ |
+| Late gift for my grandson. He is very happy with it. Easy for him (9yo ). | ["ORDINAL"] | {(67, 70, 'ORDINAL')} | ["9yo"] |
+| I'm not super thrilled with the proprietary OS on this unit, but it does work okay and does what I need it to do. Appearance is very nice, price is very good and I can't complain too much - just wish it were easier (or at least more obvious) to port new apps onto it. For now, it helps me see things that are too small on my phone while I'm traveling. I'm a happy buyer. | ["PERSON"] | {(114, 124, 'PERSON')} | ["Appearance"] |
 
 # Linguistic Features
 

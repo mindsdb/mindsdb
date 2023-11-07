@@ -121,7 +121,16 @@ _Generating a [Machine Learning model](https://docs.mindsdb.com/nlp/nlp-mindsdb-
 
 Here `gpt_model` represents our GPT-4 Model.
 
-_(OpenAI API is in HIGH demand and is rate limited, you might experience some delays in getting responses.)_
+<Tip>
+Before creating an OpenAI model, please create an engine, providing your OpenAI API key:
+
+```sql
+CREATE ML_ENGINE openai_engine
+FROM openai
+USING
+	api_key = ‘your-openai-api-key’;
+```
+</Tip>
 
 ```sql
 CREATE MODEL mindsdb.gpt_model
@@ -129,8 +138,7 @@ PREDICT response
 USING
 engine = 'openai',
 max_tokens = 300,
-api_key = '<your-api-token>',
-model_name = 'gpt-3.5-turbo',
+model_name = 'gpt-4',
 prompt_template = 'From input message: {{messages}}\
 write a short response to the user in the following format:\
 Hi, I am an automated bot here to help you, Can you please elaborate the issue which you are facing! ✨🚀 ';

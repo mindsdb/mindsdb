@@ -26,9 +26,18 @@ OpenAI supports fine-tuning of some of its models, including `davinci`, `curie`,
 
 ## How to Bring the OpenAI Model to MindsDB
 
-We use the [`CREATE MODEL`](/sql/create/model) statement to bring the OpenAI models to MindsDB.
+We use the [`CREATE ML_ENGINE`](/sql/create/ml-engine) and [`CREATE MODEL`](/sql/create/model) statement to bring the OpenAI models to MindsDB.
 
-Generally, it looks like this:
+We first create the openai engine by providing the api_key:
+
+```sql
+CREATE ML_ENGINE openai
+FROM openai
+USING
+  api_key= 'YOUR_OPENAI_API_KEY' - `OPENAI_API_KEY` ENVIRONMENT VARIABLE VALUE
+```
+
+Next, use this engine to create the model as:
 
 ```sql
 CREATE MODEL project_name.predictor_name        -- AI TABLE TO STORE THE MODEL
@@ -37,9 +46,7 @@ USING
   engine = 'openai',                            -- USING THE OPENAI ENGINE
   prompt_template = 'prompt/task
                     {{input_column}}',          -- PROMPT TEMPLATE WITH PLACEHOLDERS FOR INPUT COLUMNS
-  model_name = 'model_name',                    -- OPTIONAL, DEFAULT IS THE gpt-3.5-turbo MODEL
-  api_key = 'YOUR_OPENAI_API_KEY';              -- OPTIONAL, IF NOT PASSED MINDSDB FETCHES THE
-                                                -- `OPENAI_API_KEY` ENVIRONMENT VARIABLE VALUE
+  model_name = 'model_name',                    -- OPTIONAL, DEFAULT IS THE gpt-3.5-turbo MODEL                                                -- 
 ```
 
 <Note>

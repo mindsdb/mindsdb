@@ -755,6 +755,27 @@ class TestJobs(BaseExecutorDummyML):
         ret = self.run_sql('select * from information_schema.jobs_history', database='proj2')
         assert len(ret) == 2  # was executed
 
+    def test_inactive_job(self, scheduler):
+
+        # create job
+        self.run_sql('create job j1 (select * from models)')
+
+        # check jobs table
+        ret = self.run_sql('select * from jobs')
+        assert len(ret) == 1, "should be 1 job"
+
+        # deactivate
+        job = self.db.Jobs.query.filter(self.db.Jobs.name == 'j1').first()
+        job.active = False
+        self.db.session.commit()
+
+        # run scheduler
+        scheduler.check_timetable()
+
+        ret = self.run_sql('select * from jobs_history')
+        # no history
+        assert len(ret) == 0
+
 
 class TestTriggers(BaseExecutorDummyML):
     def test_triggers(self):

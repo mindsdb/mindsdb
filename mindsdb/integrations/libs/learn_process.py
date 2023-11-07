@@ -4,8 +4,8 @@ import traceback
 import datetime as dt
 from collections import UserDict
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import Identifier, Select, Star, NativeQuery
+from mindsdb.mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql.parser.ast import Identifier, Select, Star, NativeQuery
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery

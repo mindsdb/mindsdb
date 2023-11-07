@@ -1,6 +1,6 @@
 import time
 
-from mindsdb_sql.parser.ast import Identifier, Select, Insert
+from mindsdb.mindsdb_sql.parser.ast import Identifier, Select, Insert
 
 from mindsdb.utilities import log
 from mindsdb.utilities.context import context as ctx

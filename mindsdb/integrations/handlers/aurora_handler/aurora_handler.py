@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 import boto3
 
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler

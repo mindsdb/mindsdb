@@ -5,9 +5,9 @@ from psycopg.postgres import types
 from psycopg.pq import ExecStatus
 from pandas import DataFrame
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE

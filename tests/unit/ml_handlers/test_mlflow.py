@@ -5,7 +5,7 @@ import time
 import pytest
 from unittest.mock import patch
 
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 
 from tests.unit.executor_test_base import BaseExecutorTest
 from mindsdb.integrations.handlers.mlflow_handler.mlflow_handler import MLflowHandler

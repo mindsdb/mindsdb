@@ -10,9 +10,9 @@ from mindsdb.integrations.handlers.tripadvisor_handler.tripadvisor_table import 
     NearbyLocationTable,
 )
 
-from mindsdb_sql.parser import ast
-from mindsdb_sql.parser.ast.select.star import Star
-from mindsdb_sql.parser.ast.select.identifier import Identifier
+from mindsdb.mindsdb_sql.parser import ast
+from mindsdb.mindsdb_sql.parser.ast.select.star import Star
+from mindsdb.mindsdb_sql.parser.ast.select.identifier import Identifier
 
 from unittest.mock import Mock
 

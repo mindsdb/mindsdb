@@ -3,8 +3,8 @@ from collections import OrderedDict
 import pandas as pd
 from sqlalchemy import create_engine
 from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler

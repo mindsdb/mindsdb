@@ -4,7 +4,7 @@ from dateutil.relativedelta import relativedelta
 
 import sqlalchemy as sa
 
-from mindsdb_sql import parse_sql, ParsingException
+from mindsdb.mindsdb_sql import parse_sql, ParsingException
 
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController

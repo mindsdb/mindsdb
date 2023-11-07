@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Any, List, Optional
 
 import pandas as pd
-from mindsdb_sql.parser.ast import (
+from mindsdb.mindsdb_sql.parser.ast import (
     BinaryOperation,
     Constant,
     CreateTable,
@@ -16,7 +16,7 @@ from mindsdb_sql.parser.ast import (
     Tuple,
     Update,
 )
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse
 from mindsdb.utilities.log import get_log

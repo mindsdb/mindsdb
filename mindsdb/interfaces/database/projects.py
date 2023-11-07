@@ -5,8 +5,8 @@ from collections import OrderedDict
 import sqlalchemy as sa
 import numpy as np
 
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.mindsdb_sql import parse_sql
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config

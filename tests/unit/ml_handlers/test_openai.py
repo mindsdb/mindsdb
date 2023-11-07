@@ -3,7 +3,7 @@ import time
 import pytest
 import pandas as pd
 from unittest.mock import patch
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
 from ..executor_test_base import BaseExecutorTest
 

@@ -1,7 +1,7 @@
 import tiktoken
 
 from typing import Callable
-from mindsdb_sql import parse_sql, Insert
+from mindsdb.mindsdb_sql import parse_sql, Insert
 
 from langchain.utilities import GoogleSerperAPIWrapper
 from langchain.prompts import PromptTemplate

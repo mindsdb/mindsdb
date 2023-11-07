@@ -5,7 +5,7 @@ import pandas as pd
 
 import pytest
 from unittest.mock import Mock, patch
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 
 from tests.unit.executor_test_base import BaseExecutorTest
 from mindsdb.integrations.handlers.vertex_handler.vertex_client import VertexClient

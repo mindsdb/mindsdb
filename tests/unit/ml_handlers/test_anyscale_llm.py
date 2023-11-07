@@ -4,7 +4,7 @@ import pytest
 import contextlib
 import pandas as pd
 from unittest.mock import patch
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 from mindsdb.integrations.handlers.anyscale_endpoints_handler.anyscale_endpoints_handler import AnyscaleEndpointsHandler
 from ..executor_test_base import BaseExecutorTest
 

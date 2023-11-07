@@ -1,5 +1,5 @@
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Select
+from mindsdb.mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.mindsdb_sql.parser.ast import Select
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
@@ -11,7 +11,7 @@ from mindsdb.integrations.libs.response import (
 from .utils.helpers import *
 import requests
 import pandas as pd
-from mindsdb_sql import parse_sql, get_lexer_parser
+from mindsdb.mindsdb_sql import parse_sql, get_lexer_parser
 
 
 class EventStoreDB(DatabaseHandler):

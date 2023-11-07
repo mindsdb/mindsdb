@@ -3,7 +3,7 @@ from typing import List
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 from mindsdb.utilities.log import get_log
-from mindsdb_sql.parser import ast
+from mindsdb.mindsdb_sql.parser import ast
 
 logger = get_log("integrations.zipcodebase_handler")
 

@@ -1,6 +1,6 @@
-from mindsdb_sql.parser.ast import Identifier
+from mindsdb.mindsdb_sql.parser.ast import Identifier
 
-from mindsdb_sql import parse_sql, ParsingException
+from mindsdb.mindsdb_sql import parse_sql, ParsingException
 
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController

@@ -1,7 +1,7 @@
 from mindsdb.integrations.handlers.strapi_handler.strapi_tables import StrapiTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 from mindsdb.utilities import log
 import requests
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE

@@ -16,9 +16,9 @@ from mindsdb.interfaces.chatbot.types import ChatBotMessage
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 
-from mindsdb_sql.parser import ast
-from mindsdb_sql.parser.ast import ASTNode, Update, Delete
-from mindsdb_sql.planner.utils import query_traversal
+from mindsdb.mindsdb_sql.parser import ast
+from mindsdb.mindsdb_sql.parser.ast import ASTNode, Update, Delete
+from mindsdb.mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.integrations.libs.api_handler import APIChatHandler, APITable, FuncParser
 

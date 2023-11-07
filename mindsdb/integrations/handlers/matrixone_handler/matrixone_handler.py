@@ -3,9 +3,9 @@ from typing import Optional
 import pandas as pd
 import pymysql as matone
 from pymysql.cursors import DictCursor as dict
-from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler

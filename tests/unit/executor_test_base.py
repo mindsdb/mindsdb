@@ -10,7 +10,7 @@ from unittest import mock
 import duckdb
 import numpy as np
 import pandas as pd
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 
 def unload_module(path):

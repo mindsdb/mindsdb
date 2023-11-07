@@ -1,5 +1,5 @@
 import pandas as pd
-from mindsdb_sql.parser import ast
+from mindsdb.mindsdb_sql.parser import ast
 from typing import Text, List, Dict, Tuple
 
 from mindsdb.integrations.handlers.utilities.query_utilities.base_query_utilities import BaseQueryParser

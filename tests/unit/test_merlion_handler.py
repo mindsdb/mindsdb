@@ -3,7 +3,7 @@ import time
 from unittest.mock import patch
 import pandas as pd
 
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 
 # How to run:
 #   env PYTHONPATH=./ pytest tests/unit/test_merlion_handler.py

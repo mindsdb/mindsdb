@@ -1,7 +1,7 @@
 from typing import List
 
 import pandas as pd
-from mindsdb_sql.parser import ast
+from mindsdb.mindsdb_sql.parser import ast
 
 from mindsdb.integrations.handlers.utilities.query_utilities import (
     SELECTQueryExecutor,

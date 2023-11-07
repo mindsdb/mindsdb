@@ -3,8 +3,8 @@ import pandas as pd
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse, HandlerResponse, RESPONSE_TYPE
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.utilities import log
 
 

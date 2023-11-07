@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 from typing import Text, List, Dict, Any
 
-from mindsdb_sql.parser import ast
+from mindsdb.mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor

@@ -13,9 +13,9 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
-from mindsdb_sql.parser import ast
+from mindsdb.mindsdb_sql.parser import ast
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 from mindsdb.utilities.config import Config
 
 import os

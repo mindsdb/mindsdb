@@ -6,8 +6,8 @@ import re
 import duckdb
 # from sqlalchemy import create_engine
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql.parser.ast.base import ASTNode
 
 # from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler

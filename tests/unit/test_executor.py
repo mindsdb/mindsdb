@@ -6,8 +6,8 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype

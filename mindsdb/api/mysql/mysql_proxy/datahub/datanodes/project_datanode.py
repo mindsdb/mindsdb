@@ -1,7 +1,7 @@
 from copy import deepcopy
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import (
+from mindsdb.mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql.parser.ast import (
     BinaryOperation,
     Identifier,
     Constant

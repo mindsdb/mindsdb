@@ -7,8 +7,8 @@ import multipart
 from flask import request, send_file, abort, current_app as ca
 from flask_restx import Resource
 
-from mindsdb_sql.parser.ast import Identifier
-from mindsdb_sql.parser.dialects.mindsdb import CreateMLEngine
+from mindsdb.mindsdb_sql.parser.ast import Identifier
+from mindsdb.mindsdb_sql.parser.dialects.mindsdb import CreateMLEngine
 
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.handlers import ns_conf

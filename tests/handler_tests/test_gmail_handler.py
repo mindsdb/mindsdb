@@ -2,7 +2,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_
 from mindsdb.integrations.handlers.gmail_handler.gmail_handler import GmailHandler
 from mindsdb.integrations.handlers.gmail_handler.gmail_handler import EmailsTable
 from google.oauth2.credentials import Credentials
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 import unittest
 from unittest.mock import Mock, patch
 from unittest import mock

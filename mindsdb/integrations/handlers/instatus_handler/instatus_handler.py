@@ -2,7 +2,7 @@ from mindsdb.integrations.handlers.instatus_handler.instatus_tables import Statu
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 import requests
 import pandas as pd
 from collections import OrderedDict

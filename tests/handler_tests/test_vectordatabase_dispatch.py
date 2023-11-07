@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import pandas as pd
 import pytest
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 from pandas.testing import assert_frame_equal
 
 from mindsdb.integrations.libs.vectordatabase_handler import (

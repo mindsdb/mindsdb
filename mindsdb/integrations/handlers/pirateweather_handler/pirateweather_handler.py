@@ -4,8 +4,8 @@ from typing import Any
 
 import pandas as pd
 import requests
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser import ast
+from mindsdb.mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql.parser import ast
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor

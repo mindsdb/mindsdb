@@ -4,7 +4,7 @@ from ..slack_handler import SlackHandler
 import unittest
 from unittest.mock import patch
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 
 class SlackHandlerTest(unittest.TestCase):
 

@@ -7,7 +7,7 @@ from mindsdb.integrations.libs.response import (
 )
 
 from mindsdb.utilities.log import get_log
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 
 logger = get_log("integrations.gitlab_handler")
 

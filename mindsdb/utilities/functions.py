@@ -7,8 +7,8 @@ from cryptography.fernet import Fernet
 from collections.abc import Callable
 
 import requests
-from mindsdb_sql import get_lexer_parser
-from mindsdb_sql.parser.ast import Identifier
+from mindsdb.mindsdb_sql import get_lexer_parser
+from mindsdb.mindsdb_sql.parser.ast import Identifier
 
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark, set_process_mark
 

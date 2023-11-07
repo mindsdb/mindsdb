@@ -1,5 +1,5 @@
 import unittest
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 
 from mindsdb.integrations.handlers.mongodb_handler.utils.mongodb_render import MongodbRender
 from mindsdb.api.mongo.utilities.mongodb_parser import MongodbParser

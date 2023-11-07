@@ -8,8 +8,8 @@ from unittest.mock import patch
 import pandas
 import pytest
 import responses
-from mindsdb_sql.exceptions import ParsingException
-from mindsdb_sql.parser.ast import CreateTable, DropTables, Identifier, Select, Star
+from mindsdb.mindsdb_sql.exceptions import ParsingException
+from mindsdb.mindsdb_sql.parser.ast import CreateTable, DropTables, Identifier, Select, Star
 from pytest_lazyfixture import lazy_fixture
 
 from mindsdb.integrations.handlers.file_handler.file_handler import FileHandler

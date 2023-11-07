@@ -12,8 +12,8 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.storage.db import Predictor
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
+from mindsdb.mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
 
 
 @ns_conf.route('/<project_name>/models')

@@ -2,7 +2,7 @@ from datetime import timedelta
 from collections import OrderedDict
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.utilities import log
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.mindsdb_sql.parser.ast.base import ASTNode
 import pandas as pd
 
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE

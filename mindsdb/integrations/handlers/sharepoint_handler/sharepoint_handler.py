@@ -1,4 +1,4 @@
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 
 from mindsdb.integrations.handlers.sharepoint_handler.sharepoint_api import (
     SharepointAPI,

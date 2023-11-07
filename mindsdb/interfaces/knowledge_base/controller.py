@@ -1,8 +1,8 @@
 import copy
 from typing import List
 
-import mindsdb_sql.planner.utils as utils
-from mindsdb_sql.parser.ast import (
+import mindsdb.mindsdb_sql.planner.utils as utils
+from mindsdb.mindsdb_sql.parser.ast import (
     ASTNode,
     BinaryOperation,
     Constant,

@@ -2,10 +2,10 @@ import pyodbc
 
 from collections import OrderedDict
 import pandas as pd
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 from ingres_sa_dialect.base import IngresDialect
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.libs.base import DatabaseHandler
 
 from mindsdb.utilities import log

@@ -4,12 +4,12 @@ from collections import OrderedDict
 import pandas as pd
 from pydruid.db import connect
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base import DatabaseHandler
 from pydruid.db.sqlalchemy import DruidDialect
 
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (

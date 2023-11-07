@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import Mock
 
 import pandas as pd
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 
 from mindsdb.integrations.handlers.webz_handler.webz_handler import WebzHandler
 from mindsdb.integrations.handlers.webz_handler.webz_tables import (

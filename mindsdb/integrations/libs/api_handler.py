@@ -2,8 +2,8 @@ from typing import Any
 import ast as py_ast
 
 import pandas as pd
-from mindsdb_sql.parser.ast import ASTNode, Select, Insert, Update, Delete
-from mindsdb_sql.parser.ast.select.identifier import Identifier
+from mindsdb.mindsdb_sql.parser.ast import ASTNode, Select, Insert, Update, Delete
+from mindsdb.mindsdb_sql.parser.ast.select.identifier import Identifier
 
 from mindsdb.integrations.libs.base import BaseHandler
 from mindsdb.integrations.libs.api_handler_exceptions import TableAlreadyExists, TableNotFound

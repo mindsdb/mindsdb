@@ -18,8 +18,8 @@ import dateinfer
 import pandas as pd
 import numpy as np
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import (
+from mindsdb.mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql.parser.ast import (
     BinaryOperation,
     UnaryOperation,
     Identifier,
@@ -36,7 +36,7 @@ from mindsdb_sql.parser.ast import (
     Parameter,
     Tuple,
 )
-from mindsdb_sql.planner.steps import (
+from mindsdb.mindsdb_sql.planner.steps import (
     ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
     GetPredictorColumns,
@@ -59,10 +59,10 @@ from mindsdb_sql.planner.steps import (
     DataStep,
 )
 
-from mindsdb_sql.exceptions import PlanningException
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.planner import query_planner
-from mindsdb_sql.planner.utils import query_traversal
+from mindsdb.mindsdb_sql.exceptions import PlanningException
+from mindsdb.mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.mindsdb_sql.planner import query_planner
+from mindsdb.mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df, query_df_with_type_infer_fallback
 from mindsdb.interfaces.model.functions import (

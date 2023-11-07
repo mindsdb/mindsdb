@@ -6,7 +6,7 @@ import tempfile
 import psutil
 import pandas as pd
 import pytest
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 
 from ..unit.executor_test_base import BaseExecutorTest
 

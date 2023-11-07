@@ -1,8 +1,8 @@
 from functools import partial
 
 import pandas as pd
-from mindsdb_sql.parser.ast import BinaryOperation, Constant, Identifier, Select
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.mindsdb_sql.parser.ast import BinaryOperation, Constant, Identifier, Select
+from mindsdb.mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import get_all_tables
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import (

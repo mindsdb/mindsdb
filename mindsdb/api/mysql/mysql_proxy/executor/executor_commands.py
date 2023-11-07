@@ -6,8 +6,8 @@ from typing import Optional
 
 import pandas as pd
 from mindsdb_evaluator.accuracy.general import evaluate_accuracy
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import (
+from mindsdb.mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql.parser.ast import (
     Alter,
     ASTNode,
     BinaryOperation,
@@ -38,7 +38,7 @@ from mindsdb_sql.parser.ast import (
 )
 
 # typed models
-from mindsdb_sql.parser.dialects.mindsdb import (
+from mindsdb.mindsdb_sql.parser.dialects.mindsdb import (
     CreateAgent,
     CreateAnomalyDetectionModel,
     CreateChatBot,
@@ -66,8 +66,8 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     UpdateChatBot,
     UpdateSkill
 )
-from mindsdb_sql.parser.dialects.mysql import Variable
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.mindsdb_sql.parser.dialects.mysql import Variable
+from mindsdb.mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 import mindsdb.utilities.profiler as profiler
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import Column, SQLQuery

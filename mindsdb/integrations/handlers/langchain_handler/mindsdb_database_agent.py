@@ -4,7 +4,7 @@
 """
 import warnings
 from typing import Iterable, List, Optional
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 from langchain.sql_database import SQLDatabase
 
 

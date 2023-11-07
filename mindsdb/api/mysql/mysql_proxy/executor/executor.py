@@ -1,6 +1,6 @@
-import mindsdb_sql
-from mindsdb_sql import parse_sql
-from mindsdb_sql.planner import utils as planner_utils
+import mindsdb.mindsdb_sql
+from mindsdb.mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql.planner import utils as planner_utils
 
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import Column, SQLQuery
 from mindsdb.api.mysql.mysql_proxy.utilities import (
@@ -159,7 +159,7 @@ class Executor:
             # try parse or send raw sql
             try:
                 sql = parse_sql(sql, dialect="mindsdb")
-            except mindsdb_sql.exceptions.ParsingException:
+            except mindsdb.mindsdb_sql.exceptions.ParsingException:
                 pass
 
             result, column_info = datanode.query(sql)

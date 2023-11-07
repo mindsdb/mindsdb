@@ -16,7 +16,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
 )
 
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 
 _BASE_COINBASE_US_URL = 'https://api.exchange.coinbase.com'
 

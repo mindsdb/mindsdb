@@ -13,7 +13,7 @@ from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler i
     model_dict,
     get_insample_cv_results,
 )
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 from tests.unit.ml_handlers.test_time_series_utils import create_mock_df
 from tests.unit.executor_test_base import BaseExecutorTest
 

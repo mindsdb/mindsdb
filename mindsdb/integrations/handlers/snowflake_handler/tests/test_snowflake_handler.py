@@ -1,7 +1,7 @@
 from mindsdb.integrations.handlers.snowflake_handler.snowflake_handler import SnowflakeHandler
 import unittest
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 
 
 class SnowflakeHandlerTest(unittest.TestCase):

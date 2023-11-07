@@ -4,7 +4,7 @@ from typing import List
 
 from mindsdb.integrations.libs.api_handler import APITable
 
-from mindsdb_sql.parser import ast
+from mindsdb.mindsdb_sql.parser import ast
 
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 

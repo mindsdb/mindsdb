@@ -14,7 +14,7 @@ from mindsdb.integrations.libs.response import (
 
 from mindsdb.utilities.log import get_log
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 from collections import OrderedDict
 
 logger = get_log("integrations.paypal_handler")

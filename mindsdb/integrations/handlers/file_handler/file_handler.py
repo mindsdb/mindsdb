@@ -12,9 +12,9 @@ import magic
 import pandas as pd
 import requests
 from charset_normalizer import from_bytes
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import DropTables, Select
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql.parser.ast import DropTables, Select
+from mindsdb.mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.integrations.libs.base import DatabaseHandler

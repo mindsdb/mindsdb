@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pandas as pd
 import numpy as np
 
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 
 
 from mindsdb.integrations.handlers.autokeras_handler.autokeras_handler import (

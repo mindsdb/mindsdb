@@ -4,9 +4,9 @@ import pandas as pd
 import taosrest as td
 from taosrest import sqlalchemy as SA
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.utilities.log import get_log
 from mindsdb.integrations.libs.base import DatabaseHandler

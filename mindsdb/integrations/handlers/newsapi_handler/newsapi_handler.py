@@ -4,8 +4,8 @@ from collections import OrderedDict
 from typing import Any
 
 import pandas as pd
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser import ast
+from mindsdb.mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql.parser import ast
 from newsapi import NewsApiClient
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE

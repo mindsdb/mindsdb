@@ -10,8 +10,8 @@ from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProx
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from mindsdb_sql import parse_sql, ParsingException
-from mindsdb_sql.parser.ast import CreateTable, DropTables
+from mindsdb.mindsdb_sql import parse_sql, ParsingException
+from mindsdb.mindsdb_sql.parser.ast import CreateTable, DropTables
 
 
 @ns_conf.route('/')

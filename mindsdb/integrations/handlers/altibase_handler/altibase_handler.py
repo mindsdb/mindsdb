@@ -2,8 +2,8 @@ from collections import OrderedDict
 from typing import Any, Optional
 
 import jaydebeapi as jdbcconnector
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql.parser.ast.base import ASTNode
 import pandas as pd
 
 from mindsdb.integrations.libs.base import DatabaseHandler

@@ -1,8 +1,8 @@
 import pandas as pd
 
-from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor, CreateJob, RetrainPredictor, FinetunePredictor,\
+from mindsdb.mindsdb_sql.parser.dialects.mindsdb import CreatePredictor, CreateJob, RetrainPredictor, FinetunePredictor,\
     CreateMLEngine
-from mindsdb_sql.parser.ast import Identifier, OrderBy, Insert, TableColumn, Constant
+from mindsdb.mindsdb_sql.parser.ast import Identifier, OrderBy, Insert, TableColumn, Constant
 
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import Responder

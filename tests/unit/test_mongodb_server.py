@@ -8,7 +8,7 @@ import tempfile
 import os
 
 from pymongo import MongoClient
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mysql.mysql_proxy.executor.data_types import ExecuteAnswer, ANSWER_TYPE

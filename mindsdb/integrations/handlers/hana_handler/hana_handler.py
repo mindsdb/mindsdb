@@ -6,9 +6,9 @@ from pandas import DataFrame
 from hdbcli import dbapi
 import sqlalchemy_hana.dialect as hana_dialect
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.utilities import log
 

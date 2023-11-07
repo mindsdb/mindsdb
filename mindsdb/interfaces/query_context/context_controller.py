@@ -2,7 +2,7 @@ from typing import List
 
 import pandas as pd
 
-from mindsdb_sql.parser.ast import ASTNode
+from mindsdb.mindsdb_sql.parser.ast import ASTNode
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx

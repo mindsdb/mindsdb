@@ -6,7 +6,7 @@ import pytest
 
 import pandas as pd
 
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 
 from .executor_test_base import BaseExecutorDummyML
 

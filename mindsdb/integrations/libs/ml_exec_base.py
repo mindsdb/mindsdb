@@ -24,7 +24,7 @@ import pandas as pd
 from sqlalchemy import func, null
 from sqlalchemy.sql.functions import coalesce
 
-from mindsdb_sql import parse_sql
+from mindsdb.mindsdb_sql import parse_sql
 
 from mindsdb.utilities.config import Config
 import mindsdb.interfaces.storage.db as db

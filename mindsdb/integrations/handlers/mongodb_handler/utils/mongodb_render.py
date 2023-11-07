@@ -1,6 +1,6 @@
 import datetime as dt
 
-from mindsdb_sql.parser.ast import *
+from mindsdb.mindsdb_sql.parser.ast import *
 
 from mindsdb.api.mongo.utilities.mongodb_query import MongoQuery
 

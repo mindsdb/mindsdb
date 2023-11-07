@@ -1,6 +1,6 @@
 OPENAI_API_BASE = 'https://api.openai.com/v1'
 
-CHAT_MODELS = ('gpt-3.5-turbo', 'gpt-3.5-turbo-16k', 'gpt-3.5-turbo-instruct', 'gpt-4', 'gpt-4-32k')
+CHAT_MODELS = ('gpt-3.5-turbo', 'gpt-3.5-turbo-16k', 'gpt-3.5-turbo-instruct', 'gpt-4', 'gpt-4-32k', 'gpt-4-1106-preview')
 COMPLETION_MODELS = ('babbage-002', 'davinci-002')
 FINETUNING_MODELS = ('gpt-3.5-turbo', 'babbage-002', 'davinci-002')
 COMPLETION_LEGACY_BASE_MODELS = ('davinci', 'curie', 'babbage', 'ada')
@@ -17,4 +17,6 @@ EMBEDDING_MODELS = ('text-embedding-ada-002',) + \
                 tuple(f'code-search-{model}-text-001' for model in COMPLETION_LEGACY_BASE_MODELS) + \
                 tuple(f'code-search-{model}-code-001' for model in COMPLETION_LEGACY_BASE_MODELS)
 
-ALL_MODELS = list(set(CHAT_MODELS + COMPLETION_MODELS + COMPLETION_LEGACY_MODELS + EMBEDDING_MODELS))  # noqa
+IMAGE_MODELS = ('dall-e-3')
+
+ALL_MODELS = list(set(CHAT_MODELS + COMPLETION_MODELS + COMPLETION_LEGACY_MODELS + EMBEDDING_MODELS + IMAGE_MODELS))  # noqa

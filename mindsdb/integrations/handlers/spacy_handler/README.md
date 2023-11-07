@@ -51,12 +51,43 @@ PARAMETERS = {
     };
 ```
 
+### With target column
+
 ```sql
 SELECT input.review, output.recognition
 FROM mysql_demo_db.amazon_reviews AS input
 JOIN spacy__morphology__model AS output
 LIMIT 5;
 ```
+
+RESULT:
+| review | recognition |
+| ------ | ----------- |
+| Late gift for my grandson. He is very happy with it. Easy for him (9yo ). | {('Late', 'Degree=Pos'), ('9yo', 'Number=Sing'), ('very', ''), ('it', 'Case=Acc\|Gender=Neut|Number=Sing|Person=3|PronType=Prs'), ('gift', 'Number=Sing'), ('with', ''), ('happy', 'Degree=Pos'), ('He', 'Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs'), ('for', ''), ('him', 'Case=Acc|Gender=Masc|Number=Sing|Person=3|PronType=Prs'), ('.', 'PunctType=Peri'), (')', 'PunctSide=Fin|PunctType=Brck'), ('grandson', 'Number=Sing'), ('(', 'PunctSide=Ini|PunctType=Brck'), ('my', 'Number=Sing|Person=1|Poss=Yes|PronType=Prs'), ('Easy', 'Degree=Pos'), ('is', 'Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin')} |
+
+### With attributes
+
+```sql
+CREATE MODEL model_spacy_ner
+PREDICT recognition
+USING
+engine = 'spacy',
+linguistic_feature = 'ner',
+target_column = 'review';
+```
+
+```sql
+SELECT input.review, output.label_, output.recognition, output.entity
+FROM mysql_demo_db.amazon_reviews AS input
+JOIN model_spacy_ner AS output
+LIMIT 2;
+```
+
+RESULT:
+| review | label\_ | recognition | entity |
+| ------ | ------ | ----------- | ------ |
+| Late gift for my grandson. He is very happy with it. Easy for him (9yo ). | ["ORDINAL"] | {(67, 70, 'ORDINAL')} | ["9yo"] |
+| I'm not super thrilled with the proprietary OS on this unit, but it does work okay and does what I need it to do. Appearance is very nice, price is very good and I can't complain too much - just wish it were easier (or at least more obvious) to port new apps onto it. For now, it helps me see things that are too small on my phone while I'm traveling. I'm a happy buyer. | ["PERSON"] | {(114, 124, 'PERSON')} | ["Appearance"] |
 
 # Linguistic Features
 
@@ -98,18 +129,49 @@ RESULT: {(28, 32, 'GPE'), (45, 55, 'MONEY'), (1, 6, 'ORG')}
 The first and the second values are indices in the string that indicate the location
 of the word in a sentence. The third value is a named entity.
 
+### Attributes
+
+- entity
+- star_char
+- end_char
+- label\_
+
 ## Lemmatization
 
 Lemmatization in linguistics is the process of grouping together the inflected forms of a word so they can be analysed as a single item, identified by the word's lemma, or dictionary form.
+
+### Attributes
+
+- lemma\_
 
 ## Dependency parsing
 
 Dependency parsing is a linguistic analysis technique used in natural language processing to uncover grammatical relationships between words in a sentence.
 
+### Attributes
+
+- text
+- dep\_
+- head.text
+- head.pos\_
+- children
+
 ## Pos-tagging
 
 spaCy can parse and tag a given Doc. This is where the trained pipeline and its statistical models come in, which enable spaCy to make predictions of which tag or label most likely applies in this context. A trained component includes binary data that is produced by showing a system enough examples for it to make predictions that generalize across the language – for example, a word following “the” in English is most likely a noun.
 
+- text
+- lemma\_
+- pos\_
+- tag\_
+- dep\_
+- shape\_
+- is_alpha
+- is_stop
+
 ## Morphology
 
 Inflectional morphology is the process by which a root form of a word is modified by adding prefixes or suffixes that specify its grammatical function but do not change its part-of-speech. We say that a lemma (root form) is inflected (modified/combined) with one or more morphological features to create a surface form.
+
+- token
+- token.morph

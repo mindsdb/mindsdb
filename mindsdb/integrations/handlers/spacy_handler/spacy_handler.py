@@ -187,12 +187,8 @@ class SpacyHandler(BaseMLEngine):
                 predictions_whole.append(pred_whole)
                 predictions_attributes.append(pred_attributes)
 
-        # If output_parser is True, spread the prediction values into columns
         predictions_df = pd.DataFrame(predictions_attributes)
         df = pd.concat([df, predictions_df], axis=1)
-        print("TARGET: ", model_args["target"])
-        print(predictions_whole)
-        print(predictions_attributes)
         df[model_args["target"]] = predictions_whole
 
         return df

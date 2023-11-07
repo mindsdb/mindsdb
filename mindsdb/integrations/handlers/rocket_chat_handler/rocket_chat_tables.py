@@ -200,4 +200,3 @@ class UsersTable(APITable):
             'active',
             'type',
         ]
-

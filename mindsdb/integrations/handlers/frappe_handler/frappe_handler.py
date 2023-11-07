@@ -52,8 +52,8 @@ class FrappeHandler(APIHandler):
             'register_sales_invoice': 'useful to register a sales invoice. Input is JSON object serialized as a string. Due date have to be passed in format: "yyyy-mm-dd".',
             'check_company_exists': 'useful to check the company exists. Input is company',
             'check_expense_type': 'useful to check the expense_type exists. Input is expense_type',
-            'check_customer':  'useful to check the customer exists. Input is customer',
-            'check_item_code':  'useful to check the item code exists. Input is item_code',
+            'check_customer': 'useful to check the customer exists. Input is customer',
+            'check_item_code': 'useful to check the item code exists. Input is item_code',
         }
         return {
             'tools': tools,
@@ -221,4 +221,3 @@ class FrappeHandler(APIHandler):
                 description=tool_dict[tool]
             ))
         return all_tools
-

@@ -4,10 +4,12 @@ from mindsdb.integrations.handlers.gmail_handler.gmail_handler import GmailHandl
 import os
 import logging
 
+
 class AgentToolFetcher:
     """
     This class is responsible for fetching the tools that can be used by an agent
     """
+
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.handler_mapping = {

@@ -30,6 +30,7 @@ _DEFAULT_AGENT_TOOLS = ['python_repl', 'wikipedia']  # these require no addition
 _ANTHROPIC_CHAT_MODELS = {'claude-2', 'claude-instant-1'}
 _PARSING_ERROR_PREFIX = 'Could not parse LLM output: `'
 
+
 class LangChainHandler(BaseMLEngine):
     """
     This is a MindsDB integration for the LangChain library, which provides a unified interface for interacting with
@@ -84,7 +85,7 @@ class LangChainHandler(BaseMLEngine):
 
         args = args['using']
         args['target'] = target
-        
+
         available_models = {*OPEN_AI_CHAT_MODELS, *_ANTHROPIC_CHAT_MODELS}
         if not args.get('model_name'):
             args['model_name'] = self.default_model
@@ -247,7 +248,7 @@ class LangChainHandler(BaseMLEngine):
                 tools += tools_for_agent
             except Exception as e:
                 log.logger.error(f"Failed to get {handler_name} tools: {e}")
-        
+
         agent = initialize_agent(
             tools,
             llm,

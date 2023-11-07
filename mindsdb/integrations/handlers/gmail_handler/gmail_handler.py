@@ -41,8 +41,6 @@ DEFAULT_SCOPES = ['https://www.googleapis.com/auth/gmail.compose',
                   'https://www.googleapis.com/auth/gmail.modify']
 
 
-
-
 class EmailsTable(APITable):
     """Implementation for the emails table for Gmail"""
 
@@ -566,7 +564,7 @@ class GmailHandler(APIHandler):
         df = pd.DataFrame(data)
 
         return df
-    
+
     def get_agent_tools(self, gmail_token_path):
         """
          Returns a list of tools that can be used by an agent
@@ -575,11 +573,10 @@ class GmailHandler(APIHandler):
         credentials = get_gmail_credentials(
             token_file=gmail_token_path,
             scopes=SCOPES,
-            )
+        )
         api_resource = build_resource_service(credentials=credentials)
-        tools = GmailToolkit(api_resource=api_resource).get_tools() # Provided by langchain
+        tools = GmailToolkit(api_resource=api_resource).get_tools()  # Provided by langchain
         return tools
-        
 
 
 connection_args = OrderedDict(

@@ -7,7 +7,9 @@ from mindsdb_sql.parser.ast import (
     BinaryOperation,
     Identifier,
     Constant,
-    Update
+    Update,
+    Select,
+    Delete,
 )
 
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
@@ -71,83 +73,98 @@ class ProjectDataNode(DataNode):
             kb_table = session.kb_controller.get_table(query_table, self.project.id)
             if kb_table:
                 # this is the knowledge db
-                kb_table.update_query(query_table, query)
+                kb_table.update_query(query)
                 return pd.DataFrame(), []
 
             raise NotImplementedError(f"Can't update object: {query_table}")
 
-        # region is it query to 'models' or 'models_versions'?
-        query_table = query.from_table.parts[0].lower()
-        # region FIXME temporary fix to not broke queries to 'mindsdb.models'. Can be deleted it after 1.12.2022
-        if query_table == 'predictors':
-            query.from_table.parts[0] = 'models'
-            query_table = 'models'
-        # endregion
-        if query_table in ('models', 'models_versions', 'jobs', 'jobs_history', 'mdb_triggers', 'chatbots'):
-            new_query = deepcopy(query)
-            project_filter = BinaryOperation('=', args=[
-                Identifier('project'),
-                Constant(self.project.name)
-            ])
-            if new_query.where is None:
-                new_query.where = project_filter
-            else:
-                new_query.where = BinaryOperation('and', args=[
-                    new_query.where,
-                    project_filter
+        elif isinstance(query, Delete):
+            query_table = query.table.parts[0].lower()
+            kb_table = session.kb_controller.get_table(query_table, self.project.id)
+            if kb_table:
+                # this is the knowledge db
+                kb_table.delete_query(query)
+                return pd.DataFrame(), []
+
+            raise NotImplementedError(f"Can't delete object: {query_table}")
+
+        elif isinstance(query, Select):
+            # region is it query to 'models' or 'models_versions'?
+            query_table = query.from_table.parts[0].lower()
+            # region FIXME temporary fix to not broke queries to 'mindsdb.models'. Can be deleted it after 1.12.2022
+            if query_table == 'predictors':
+                query.from_table.parts[0] = 'models'
+                query_table = 'models'
+            # endregion
+            if query_table in ('models', 'models_versions', 'jobs', 'jobs_history', 'mdb_triggers', 'chatbots'):
+                new_query = deepcopy(query)
+                project_filter = BinaryOperation('=', args=[
+                    Identifier('project'),
+                    Constant(self.project.name)
                 ])
-            data, columns_info = self.information_schema.query(new_query)
-            return data, columns_info
-        # endregion
+                if new_query.where is None:
+                    new_query.where = project_filter
+                else:
+                    new_query.where = BinaryOperation('and', args=[
+                        new_query.where,
+                        project_filter
+                    ])
+                data, columns_info = self.information_schema.query(new_query)
+                return data, columns_info
+            # endregion
 
-        # other table from project
+            # other table from project
 
-        if self.project.get_view(query_table):
-            # this is the view
+            if self.project.get_view(query_table):
+                # this is the view
 
-            view_meta = self.project.query_view(query)
+                view_meta = self.project.query_view(query)
 
-            query_context_controller.set_context('view', view_meta['id'])
+                query_context_controller.set_context('view', view_meta['id'])
 
-            try:
-                sqlquery = SQLQuery(
-                    view_meta['query_ast'],
-                    session=session
-                )
-                result = sqlquery.fetch(view='dataframe')
+                try:
+                    sqlquery = SQLQuery(
+                        view_meta['query_ast'],
+                        session=session
+                    )
+                    result = sqlquery.fetch(view='dataframe')
 
-            finally:
-                query_context_controller.release_context('view', view_meta['id'])
+                finally:
+                    query_context_controller.release_context('view', view_meta['id'])
 
-            if result['success'] is False:
-                raise Exception(f"Cant execute view query: {view_meta['query_ast']}")
-            df = result['result']
+                if result['success'] is False:
+                    raise Exception(f"Cant execute view query: {view_meta['query_ast']}")
+                df = result['result']
 
-            df = query_df(df, query)
+                df = query_df(df, query)
 
-            columns_info = [
-                {
-                    'name': k,
-                    'type': v
-                }
-                for k, v in df.dtypes.items()
-            ]
+                columns_info = [
+                    {
+                        'name': k,
+                        'type': v
+                    }
+                    for k, v in df.dtypes.items()
+                ]
 
-            return df.to_dict(orient='records'), columns_info
+                return df.to_dict(orient='records'), columns_info
 
-        kb_table = session.kb_controller.get_table(query_table, self.project.id)
-        if kb_table:
-            # this is the knowledge db
-            df = kb_table.select_query(query)
-            columns_info = [
-                {
-                    'name': k,
-                    'type': v
-                }
-                for k, v in df.dtypes.items()
-            ]
+            kb_table = session.kb_controller.get_table(query_table, self.project.id)
+            if kb_table:
+                # this is the knowledge db
+                df = kb_table.select_query(query)
+                columns_info = [
+                    {
+                        'name': k,
+                        'type': v
+                    }
+                    for k, v in df.dtypes.items()
+                ]
 
-            return df.to_dict(orient='records'), columns_info
+                return df.to_dict(orient='records'), columns_info
+
+            raise Exception(f"Can't select from {query_table} in project")
+        else:
+            raise NotImplementedError(f"Query not supported {query}")
 
     def create_table(self, table_name: Identifier, result_set, is_replace=False, **kwargs):
         # is_create - create table

@@ -90,7 +90,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             if value['op'].lower() == 'in':
                 values = list(repr(i) for i in value['value'])
                 value['value'] = '({})'.format(', '.join(values))
-            where_clauses.append(f'{key} {value["op"]} {value["value"]}')
+            where_clauses.append(f'{key} {value["op"]} {repr(value["value"])}')
 
         if len(where_clauses) > 1:
             return f"WHERE{' AND '.join(where_clauses)}"
@@ -247,25 +247,12 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             self.connection.commit()
 
 
-        #         for key, value in col_map.items():
-        #             value.value = row[key]
-        #
-        #
-        # with self.connection.cursor() as cur:
-        #     for _, row in data.iterrows():
-        #         for key, value in col_map.items():
-        #             value.value = row[key]
-        #
-        #
-        #         cur.execute(query_str)
-        #     self.connection.commit()
-
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
     ):
 
         filter_conditions = self._translate_conditions(conditions)
-        search_vector = filter_conditions["embedding"]["value"]
+        where_clause = self._construct_where_clause(filter_conditions)
 
         with self.connection.cursor() as cur:
 
@@ -275,16 +262,10 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             # so we need to convert the string to a vector and also use a threshold (e.g. 0.5)
 
             query = (
-                f"DELETE FROM {table_name} WHERE embeddings <=> '{search_vector}'"
+                f"DELETE FROM {table_name} {where_clause}"
             )
             cur.execute(query)
             self.connection.commit()
-
-    # def get_tables(self) -> Response:
-    #     """
-    #     List all tables in PostgreSQL without the system tables information_schema and pg_catalog
-    #     """
-    #     return PostgresHandler.get_tables(self)
 
     def drop_table(self, table_name: str, if_exists=True):
         """
@@ -293,15 +274,6 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         with self.connection.cursor() as cur:
             cur.execute(f"DROP TABLE IF EXISTS {table_name}")
             self.connection.commit()
-
-    def get_columns(self, table_name: str) -> HandlerResponse:
-        """
-        get columns in a given table
-        """
-        return VectorStoreHandler.get_columns(table_name)
-
-    def query(self, query: ASTNode) -> HandlerResponse:
-        return VectorStoreHandler.query(self, query)
 
 
 connection_args = OrderedDict(

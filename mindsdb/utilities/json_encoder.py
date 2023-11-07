@@ -8,6 +8,8 @@ import pandas as pd
 
 class CustomJSONEncoder(JSONEncoder):
     def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
         if pd.isnull(obj):
             return None
         if isinstance(obj, timedelta):

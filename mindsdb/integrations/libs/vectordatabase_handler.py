@@ -286,7 +286,11 @@ class VectorStoreHandler(BaseHandler):
         """
         table_name = query.table.parts[-1]
 
-        row = query.update_columns
+        row = {}
+        for k, v in query.update_columns.items():
+            if isinstance(v, Constant):
+                v = v.value
+            row[k] = v
 
         filters = conditions_to_filter(query.where)
         row.update(filters)

@@ -861,6 +861,12 @@
             "integrations/data-integrations/vitess",
             "integrations/data-integrations/yugabytedb"
           ]
+        },
+        {
+          "group": "Vector Databases",
+          "pages": [
+            "integrations/vector-db-integrations/chromadb"
+          ]
         }
       ]
     },
@@ -871,6 +877,7 @@
         {
           "group": "Large Language Models",
           "pages": [
+            "integrations/ai-engines/anthropic",
             "integrations/ai-engines/openai",
             "integrations/ai-engines/huggingface",
             "integrations/ai-engines/langchain",

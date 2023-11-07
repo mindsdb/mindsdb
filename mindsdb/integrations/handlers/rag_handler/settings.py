@@ -1,14 +1,13 @@
 import json
 from dataclasses import dataclass
 from functools import lru_cache, partial
-from typing import Dict, List, Union
+from typing import Any, Dict, List, Union
 
 import html2text
 import openai
 import pandas as pd
 import requests
 import writer
-from chromadb import Settings
 from langchain import Writer
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.docstore.document import Document
@@ -17,8 +16,8 @@ from langchain.embeddings.base import Embeddings
 from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS, Chroma, VectorStore
 from pydantic import BaseModel, Extra, Field, validator
-from writer.models import shared
 
+from mindsdb.integrations.handlers.chromadb_handler.chromadb_handler import get_chromadb
 from mindsdb.integrations.handlers.rag_handler.exceptions import (
     InvalidOpenAIModel,
     InvalidPromptTemplate,
@@ -56,7 +55,8 @@ DEFAULT_CHUNK_SIZE = 500
 DEFAULT_CHUNK_OVERLAP = 50
 DEFAULT_VECTOR_STORE_NAME = "chroma"
 DEFAULT_VECTOR_STORE_COLLECTION_NAME = "collection"
-DEFAULT_PERSISTED_VECTOR_STORE_FOLDER_NAME = "vector_store_folder"
+
+chromadb = get_chromadb()
 
 
 def is_valid_store(name) -> bool:
@@ -82,22 +82,16 @@ class VectorStoreFactory:
             return Chroma
 
 
-def get_chroma_settings(persist_directory: str = "chromadb") -> Settings:
-    """Get chroma settings"""
-    return Settings(
-        chroma_db_impl="duckdb+parquet",
-        persist_directory=persist_directory,
-        anonymized_telemetry=False,
-    )
+def get_chroma_client(persist_directory: str) -> chromadb.PersistentClient:
+    """Get Chroma client"""
+    return chromadb.PersistentClient(path=persist_directory)
 
 
 def get_available_writer_model_ids(args: dict) -> list:
     """Get available writer LLM model ids"""
 
     writer_client = writer.Writer(
-        security=shared.Security(
-            api_key=args["writer_api_key"],
-        ),
+        api_key=args["writer_api_key"],
         organization_id=args["writer_org_id"],
     )
 
@@ -145,7 +139,9 @@ class PersistedVectorStoreSaver:
         getattr(self, method_name)(vector_store)
 
     def save_chroma(self, vector_store: Chroma):
-        vector_store.persist()
+        """Save Chroma vector store to disk"""
+        # no need to save chroma vector store to disk, auto save
+        pass
 
     def save_faiss(self, vector_store: FAISS):
         vector_store.save_local(
@@ -171,9 +167,7 @@ class PersistedVectorStoreLoader:
             return Chroma(
                 collection_name=self.config.collection_name,
                 embedding_function=self.config.embeddings_model,
-                client_settings=get_chroma_settings(
-                    persist_directory=self.config.persist_directory
-                ),
+                client=get_chroma_client(self.config.persist_directory),
             )
 
         elif vector_store == "faiss":
@@ -255,13 +249,13 @@ class WriterLLMParameters(LLMParameters):
 
 
 class LLMLoader(BaseModel):
-    llm_config: Union[WriterLLMParameters, OpenAIParameters]
+    llm_config: dict
     config_dict: dict = None
 
     def load_llm(self) -> Union[Writer, partial]:
         """Load LLM"""
-        method_name = f"load_{self.llm_config.llm_name}_llm"
-        self.config_dict = self.llm_config.dict()
+        method_name = f"load_{self.llm_config['llm_name']}_llm"
+        self.config_dict = self.llm_config.copy()
         self.config_dict.pop("llm_name")
         return getattr(self, method_name)()
 
@@ -271,35 +265,35 @@ class LLMLoader(BaseModel):
 
     def load_openai_llm(self) -> partial:
         """Load OpenAI LLM API interface"""
-        openai.api_key = self.llm_config.openai_api_key
-        config = self.config_dict
+        openai.api_key = self.config_dict["openai_api_key"]
+        config = self.config_dict.copy()
         config.pop("openai_api_key")
         config["model"] = config.pop("model_id")
 
         return partial(openai.Completion.create, **config)
 
 
-class RAGHandlerParameters(BaseModel):
-    """Model parameters for create model"""
+class RAGBaseParameters(BaseModel):
+    """Base model parameters for RAG Handler"""
 
-    llm_type: str
-    llm_params: LLMParameters
+    llm_params: Any
+    vector_store_folder_name: str
     prompt_template: str = DEFAULT_QA_PROMPT_TEMPLATE
     chunk_size: int = DEFAULT_CHUNK_SIZE
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
     url: Union[str, List[str]] = None
     run_embeddings: bool = True
-    external_index_name: str = None
     top_k: int = 4
     embeddings_model_name: str = DEFAULT_EMBEDDINGS_MODEL
     context_columns: Union[List[str], str] = None
     vector_store_name: str = DEFAULT_VECTOR_STORE_NAME
     vector_store: VectorStore = None
     collection_name: str = DEFAULT_VECTOR_STORE_COLLECTION_NAME
-    summarize_context: bool = False
+    summarize_context: bool = True
     summarization_prompt_template: str = DEFAULT_SUMMARIZATION_PROMPT_TEMPLATE
-    vector_store_folder_name: str = DEFAULT_PERSISTED_VECTOR_STORE_FOLDER_NAME
-    vector_store_storage_path: str = None
+    vector_store_storage_path: str = Field(
+        default=None, title="don't use this field, it's for internal use only"
+    )
 
     class Config:
         extra = Extra.forbid
@@ -315,12 +309,6 @@ class RAGHandlerParameters(BaseModel):
             )
         return v
 
-    @validator("llm_type")
-    def llm_type_must_be_supported(cls, v):
-        if v not in SUPPORTED_LLMS:
-            raise UnsupportedLLM(f"'llm_type' must be one of {SUPPORTED_LLMS}, got {v}")
-        return v
-
     @validator("vector_store_name")
     def name_must_be_lower(cls, v):
         return v.lower()
@@ -331,6 +319,19 @@ class RAGHandlerParameters(BaseModel):
             raise UnsupportedVectorStore(
                 f"currently we only support {', '.join(str(v) for v in SUPPORTED_VECTOR_STORES)} vector store"
             )
+        return v
+
+
+class RAGHandlerParameters(RAGBaseParameters):
+    """Model parameters for create model"""
+
+    llm_type: str
+    llm_params: LLMParameters
+
+    @validator("llm_type")
+    def llm_type_must_be_supported(cls, v):
+        if v not in SUPPORTED_LLMS:
+            raise UnsupportedLLM(f"'llm_type' must be one of {SUPPORTED_LLMS}, got {v}")
         return v
 
 

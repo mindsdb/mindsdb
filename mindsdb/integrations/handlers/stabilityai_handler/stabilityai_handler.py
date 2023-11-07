@@ -38,7 +38,9 @@ class StabilityAIHandler(BaseMLEngine):
             raise Exception("Stability AI Inference engine requires a USING clause! Refer to its documentation for more details.")
         self.generative = True
 
-        self.model_storage.json_set('args', args["using"])
+        args = args['using']
+        args['target'] = target
+        self.model_storage.json_set('args', args)
 
     def predict(self, df, args=None):
 

@@ -9,8 +9,8 @@ class WeaviateHandlerConfig(BaseModel):
     """
 
     persist_directory: str = None
-    url: str = None
-    api_key: str = None
+    weaviate_url: str = None
+    weaviate_api_key: str = None
 
     class Config:
         extra = Extra.forbid
@@ -37,23 +37,23 @@ class WeaviateHandlerConfig(BaseModel):
     def check_config(cls, values):
         """Check if config is valid."""
 
-        url = values.get("url")
-        api_key = values.get("api_key")
+        weaviate_url = values.get("weaviate_url")
+        weaviate_api_key = values.get("weaviate_api_key")
         persist_directory = values.get("persist_directory")
 
-        if bool(url) != bool(api_key):
+        if bool(weaviate_url) != bool(weaviate_api_key):
             raise ValueError(
-                "For the Weaviate handler - url and api_key must be provided together."
+                "For the Weaviate handler - weaviate_url and weaviate_api_key must be provided together."
             )
         
-        if (url and api_key) and persist_directory:
+        if (weaviate_url and weaviate_api_key) and persist_directory:
             raise ValueError(
-                "For the Weaviate handler - if url and api_key are provided, persist_directory should not be provided."
+                "For the Weaviate handler - if weaviate_url and weaviate_api_key are provided, persist_directory should not be provided."
             )
 
-        if persist_directory and (url or api_key):
+        if persist_directory and (weaviate_url or weaviate_api_key):
             raise ValueError(
-                "For the Weaviate handler - if persist_directory is provided, url, api_key should not be provided."
+                "For the Weaviate handler - if persist_directory is provided, weaviate_url, weaviate_api_key should not be provided."
             )
 
         return values

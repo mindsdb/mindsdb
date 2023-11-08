@@ -1,7 +1,6 @@
 import ast
 from enum import Enum
 from typing import Any, List, Optional
-import hashlib
 
 import pandas as pd
 from mindsdb_sql.parser.ast import (
@@ -17,6 +16,7 @@ from mindsdb_sql.parser.ast import (
     Update,
 )
 from mindsdb_sql.parser.ast.base import ASTNode
+from pydantic import BaseModel, Extra, root_validator
 
 from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse
 from mindsdb.utilities.log import get_log
@@ -92,6 +92,79 @@ class TableField(Enum):
     DISTANCE = "distance"
 
 
+class VectorStoreHandlerConfig(BaseModel):
+    """
+    Configuration for VectorStoreHandler.
+    """
+
+    vector_store: str
+    persist_directory: str = None
+    host: str = None
+    port: int = None
+    url: str = None
+
+    class Config:
+        extra = Extra.forbid
+
+    @root_validator(pre=True, allow_reuse=True)
+    def check_param_typos(cls, values):
+        """Check if there are any typos in the parameters."""
+
+        expected_params = cls.__fields__.keys()
+        for key in values.keys():
+            if key not in expected_params:
+                close_matches = difflib.get_close_matches(
+                    key, expected_params, cutoff=0.4
+                )
+                if close_matches:
+                    raise ValueError(
+                        f"Unexpected parameter '{key}'. Did you mean '{close_matches[0]}'?"
+                    )
+                else:
+                    raise ValueError(f"Unexpected parameter '{key}'.")
+        return values
+
+    @root_validator(allow_reuse=True)
+    def check_config(cls, values):
+        """Check if config is valid."""
+
+        vector_store = values.get("vector_store")
+        host = values.get("host")
+        port = values.get("port")
+        url = values.get("url")
+        persist_directory = values.get("persist_directory")
+
+        if host and not port:
+            raise ValueError(
+                f"For {vector_store} handler - if host is provided, port must also be provided."
+            )
+
+        if port and not host:
+            raise ValueError(
+                f"For {vector_store} handler - if port is provided, host must also be provided."
+            )
+
+        if port and host and (url or persist_directory):
+            raise ValueError(
+                f"For {vector_store} handler - if host and port are provided, "
+                f"url and persistence_folder should not be provided."
+            )
+
+        if url and (host or port or persist_directory):
+            raise ValueError(
+                f"For {vector_store} handler - if url is provided, host, port, "
+                f"persist_directory should not be provided."
+            )
+
+        if persist_directory and (url or host or port):
+            raise ValueError(
+                f"For {vector_store} handler - if persistence_folder is provided, "
+                f"url, host, port should not be provided."
+            )
+
+        return values
+
+
 class VectorStoreHandler(BaseHandler):
     """
     Base class for handlers associated to vector databases.
@@ -124,11 +197,131 @@ class VectorStoreHandler(BaseHandler):
 
         return NotImplementedError()
 
+    def __del__(self):
+        if self.is_connected is True:
+            self.disconnect()
+
+    def disconnect(self):
+        raise NotImplementedError()
+
     def _value_or_self(self, value):
         if isinstance(value, Constant):
             return value.value
         else:
             return value
+
+    def _prepare_insert_data(self, query: ASTNode, columns: List) -> pd.DataFrame:
+
+        if not self._is_columns_allowed(columns):
+            raise Exception(
+                f"Columns {columns} not allowed."
+                f"Allowed columns are {[col['name'] for col in self.SCHEMA]}"
+            )
+
+        # get id column if it is present
+        if "id" in columns:
+            id_col_index = columns.index("id")
+            ids = [self._value_or_self(row[id_col_index]) for row in query.values]
+        else:
+            ids = [uuid.uuid4().hex for _ in query.values]
+
+        # get content column if it is present
+        if TableField.CONTENT.value in columns:
+            content_col_index = columns.index("content")
+            content = [
+                self._value_or_self(row[content_col_index]) for row in query.values
+            ]
+        else:
+            content = None
+
+        # get embeddings column if it is present
+        if TableField.EMBEDDINGS.value in columns:
+            embeddings_col_index = columns.index("embeddings")
+            embeddings = [
+                ast.literal_eval(self._value_or_self(row[embeddings_col_index]))
+                for row in query.values
+            ]
+        else:
+            raise Exception("Embeddings column is required!")
+
+        if TableField.METADATA.value in columns:
+            metadata_col_index = columns.index("metadata")
+            metadata = [
+                ast.literal_eval(self._value_or_self(row[metadata_col_index]))
+                for row in query.values
+            ]
+        else:
+            metadata = None
+
+        # create dataframe
+        data = pd.DataFrame(
+            {
+                TableField.ID.value: ids,
+                TableField.CONTENT.value: content,
+                TableField.EMBEDDINGS.value: embeddings,
+                TableField.METADATA.value: metadata,
+            }
+        )
+
+        return data
+
+    def _prepare_update_data(self, update_map: dict) -> pd.DataFrame:
+
+        columns = list(update_map.keys())
+
+        if not self._is_columns_allowed(columns):
+            raise Exception(
+                f"Columns {columns} not allowed."
+                f"Allowed columns are {[col['name'] for col in self.SCHEMA]}"
+            )
+
+        # todo - I don't think we want user being able to update embedding or content in isolation?
+        if bool(TableField.EMBEDDINGS.value in columns) != bool(
+            TableField.CONTENT.value in columns
+        ):
+            raise Exception(
+                f"You cannot update {TableField.EMBEDDINGS.value} without updating {TableField.CONTENT.value}"
+            )
+
+        if TableField.ID.value in columns:
+            ids = [self._value_or_self(row) for row in update_map["id"]]
+        else:
+            raise Exception(
+                f"In order to update a row in {self.name} vectorDB, you must provide the ids to update"
+            )
+
+        # get content column if it is present
+        if TableField.CONTENT.value in columns:
+            content = [self._value_or_self(row) for row in update_map["content"]]
+        else:
+            content = None
+
+        # get embeddings column if it is present
+        if TableField.EMBEDDINGS.value in columns:
+            embeddings = [
+                ast.literal_eval(self._value_or_self(row))
+                for row in update_map["embeddings"]
+            ]
+        else:
+            embeddings = None
+
+        if TableField.METADATA.value in columns:
+            metadata = [row for row in update_map["metadata"]]
+
+        else:
+            metadata = None
+
+        # create dataframe
+        data = pd.DataFrame(
+            {
+                TableField.ID.value: ids,
+                TableField.CONTENT.value: content,
+                TableField.EMBEDDINGS.value: embeddings,
+                TableField.METADATA.value: metadata,
+            }
+        )
+
+        return data
 
     def _extract_conditions(self, where_statement) -> Optional[List[FilterCondition]]:
         conditions = []

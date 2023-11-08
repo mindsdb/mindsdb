@@ -38,8 +38,8 @@ class WeaviateDBHandler(VectorStoreHandler):
         config = self.validate_connection_parameters(**kwargs)
 
         self._client_config = {
-            "weaviate_url": config.host,
-            "weaviate_api_key": config.api_key,
+            "weaviate_url": config.weaviate_url,
+            "weaviate_api_key": config.weaviate_api_key,
             "persist_directory": config.persist_directory,
         }
 
@@ -55,7 +55,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         config = WeaviateHandlerConfig(**_config)
 
         if config.persist_directory and not self.handler_storage.is_temporal:
-            # get full persistence directory from handler storage
+            # get full persist directory from handler storage
             self.persist_directory = self.handler_storage.folder_get(
                 config.persist_directory
             )
@@ -67,7 +67,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         if client_config is None:
             raise Exception("Client config is not set!")
 
-        # decide the client type to be used, either persistent or httpclient
+        # decide the client type to be used, either embedded or httpclient
         if self._client_config.get("persist_directory"):
             self._embedded_options = EmbeddedOptions(
                 persistence_data_path=self._client_config.get("persist_directory")

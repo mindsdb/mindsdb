@@ -75,7 +75,9 @@ class RAGIngestor:
             # if user provides a dataframe, load documents from dataframe
             documents.extend(
                 df_to_documents(
-                    df=self.df, page_content_columns=self.args.context_columns
+                    df=self.df,
+                    page_content_columns=self.args.context_columns,
+                    url_column_name=self.args.url_column_name,
                 )
             )
 

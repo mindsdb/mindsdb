@@ -55,6 +55,7 @@ DEFAULT_CHUNK_SIZE = 500
 DEFAULT_CHUNK_OVERLAP = 50
 DEFAULT_VECTOR_STORE_NAME = "chroma"
 DEFAULT_VECTOR_STORE_COLLECTION_NAME = "collection"
+DEFAULT_URL_COLUMN_NAME = "url"
 
 chromadb = get_chromadb()
 
@@ -218,7 +219,7 @@ class OpenAIParameters(LLMParameters):
     model_id: str = Field(default="text-davinci-003", title="model name")
     n: int = Field(default=1, title="number of responses to return")
 
-    @validator("model_id")
+    @validator("model_id", allow_reuse=True)
     def openai_model_must_be_supported(cls, v, values):
         supported_models = get_available_openai_model_ids(values)
         if v not in supported_models:
@@ -238,7 +239,7 @@ class WriterLLMParameters(LLMParameters):
     callbacks: List[StreamingStdOutCallbackHandler] = [StreamingStdOutCallbackHandler()]
     verbose: bool = False
 
-    @validator("model_id")
+    @validator("model_id", allow_reuse=True)
     def writer_model_must_be_supported(cls, v, values):
         supported_models = get_available_writer_model_ids(values)
         if v not in supported_models:
@@ -282,6 +283,7 @@ class RAGBaseParameters(BaseModel):
     chunk_size: int = DEFAULT_CHUNK_SIZE
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
     url: Union[str, List[str]] = None
+    url_column_name: str = DEFAULT_URL_COLUMN_NAME
     run_embeddings: bool = True
     top_k: int = 4
     embeddings_model_name: str = DEFAULT_EMBEDDINGS_MODEL
@@ -300,7 +302,7 @@ class RAGBaseParameters(BaseModel):
         arbitrary_types_allowed = True
         use_enum_values = True
 
-    @validator("prompt_template")
+    @validator("prompt_template", allow_reuse=True)
     def prompt_format_must_be_valid(cls, v):
         if "{context}" not in v or "{question}" not in v:
             raise InvalidPromptTemplate(
@@ -309,11 +311,11 @@ class RAGBaseParameters(BaseModel):
             )
         return v
 
-    @validator("vector_store_name")
+    @validator("vector_store_name", allow_reuse=True)
     def name_must_be_lower(cls, v):
         return v.lower()
 
-    @validator("vector_store_name")
+    @validator("vector_store_name", allow_reuse=True)
     def vector_store_must_be_supported(cls, v):
         if not is_valid_store(v):
             raise UnsupportedVectorStore(
@@ -328,7 +330,7 @@ class RAGHandlerParameters(RAGBaseParameters):
     llm_type: str
     llm_params: LLMParameters
 
-    @validator("llm_type")
+    @validator("llm_type", allow_reuse=True)
     def llm_type_must_be_supported(cls, v):
         if v not in SUPPORTED_LLMS:
             raise UnsupportedLLM(f"'llm_type' must be one of {SUPPORTED_LLMS}, got {v}")
@@ -369,7 +371,7 @@ class DfLoader(DataFrameLoader):
 
 
 def df_to_documents(
-    df: pd.DataFrame, page_content_columns: Union[List[str], str]
+    df: pd.DataFrame, page_content_columns: Union[List[str], str], url_column_name: str
 ) -> List[Document]:
     """Converts a given dataframe to a list of documents"""
     documents = []
@@ -382,6 +384,9 @@ def df_to_documents(
             raise ValueError(
                 f"page_content_column {page_content_column} not in dataframe columns"
             )
+        if page_content_column == url_column_name:
+            documents.extend(url_to_documents(df[page_content_column].tolist()))
+            continue
 
         loader = DfLoader(data_frame=df, page_content_column=page_content_column)
         documents.extend(loader.load())

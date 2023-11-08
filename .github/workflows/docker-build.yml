@@ -22,3 +22,14 @@ jobs:
       run: |
         docker buildx create --name=remote-buildkit-agent --driver=remote --use tcp://remote-buildkit-agent.infrastructure.svc.cluster.local:80 || true # Create the builder (might already exist)
         TAG=${{ env.CI_SHA }} docker buildx bake --push --progress plain
+
+  trigger_deploy:
+    runs-on: [self-hosted, dev]
+    steps:
+      - uses: convictional/trigger-workflow-and-wait@v1.6.1
+        with:
+          owner: mindsdb
+          repo: INTERNAL-mindsdb-build-deploy-to-kubernetes
+          github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
+          workflow_file_name: deploy-dev.yml
+          ref: master

@@ -105,4 +105,5 @@ class EmailCampaignsTable(APITable):
                 email_campaigns_api_instance.delete_email_campaign(campaign_id)
                 logger.info(f'Email Campaign {campaign_id} deleted')
             except ApiException as e:
+                logger.error(f"Exception when calling EmailCampaignsApi->delete_email_campaign: {e}\n")
                 print(f"Exception when calling EmailCampaignsApi->delete_email_campaign: {e}\n")           

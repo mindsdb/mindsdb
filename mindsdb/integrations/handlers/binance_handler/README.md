@@ -17,7 +17,7 @@ WITH
 ```
 
 ### Select Data
-To see if the connection was succesful, try searching for the most recent trade data. By default, aggregate data (klines) from the latest 1000 trading intervals with a length of 1m each are returned.
+To see if the connection was successful, try searching for the most recent trade data. By default, aggregate data (klines) from the latest 1000 trading intervals with a length of 1m each are returned.
 
 ```
 SELECT *
@@ -87,7 +87,7 @@ FROM my_binance
   WHERE symbol = 'BTCUSDT'
   AND close_time < '2023-01-01'
   AND interval = '1m'
-  LIMIT 10000;
+  LIMIT 10000
 )
 
 PREDICT open_price

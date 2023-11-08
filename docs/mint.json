@@ -772,8 +772,10 @@
           "pages": [
             "integrations/app-integrations/binance",
             "integrations/app-integrations/confluence",
+            "integrations/app-integrations/dockerhub",
             "integrations/app-integrations/email",
             "integrations/app-integrations/github",
+            "integrations/app-integrations/gitlab",
             "integrations/app-integrations/gmail",
             "integrations/app-integrations/google-calendar",
             "integrations/app-integrations/hackernews",
@@ -781,6 +783,7 @@
             "integrations/app-integrations/microsoft-teams",
             "integrations/app-integrations/newsapi",
             "integrations/app-integrations/plaid",
+            "integrations/app-integrations/pypi",
             "integrations/app-integrations/reddit",
             "integrations/app-integrations/sendinblue",
             "integrations/app-integrations/shopify",
@@ -859,6 +862,12 @@
             "integrations/data-integrations/vitess",
             "integrations/data-integrations/yugabytedb"
           ]
+        },
+        {
+          "group": "Vector Databases",
+          "pages": [
+            "integrations/vector-db-integrations/chromadb"
+          ]
         }
       ]
     },
@@ -869,6 +878,7 @@
         {
           "group": "Large Language Models",
           "pages": [
+            "integrations/ai-engines/anthropic",
             "integrations/ai-engines/openai",
             "integrations/ai-engines/huggingface",
             "integrations/ai-engines/langchain",

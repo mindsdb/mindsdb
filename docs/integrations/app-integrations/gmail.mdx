@@ -78,9 +78,14 @@ You need a Google account in order to use this integration. Here is how to get t
     3.2 Click on the `Create Credentials` button and choose `OAuth client ID`.
 
     3.3 If you haven't configured the OAuth consent screen before, you'll be prompted to do so now. Make sure to choose `External` for User Type, and select the necessary scopes. Make sure to save the changes.
-    Now, create the OAuth client ID. Choose `Desktop app` for the Application Type and give it a name.
 
-    3.4 Click `Create`.
+    Now, create the OAuth client ID. Choose `Web application` for the Application Type and give it a name.
+
+    3.4 Add the following MindsDB URL to `Authorized JavaScript origins` and `Authorized redirect URIs` : 
+        - For local installation, add `http://localhost/verify-auth`
+        - For Cloud, add `http://cloud.mindsdb.com/verify-auth`.
+
+    3.5 Click `Create`.
 
 4. Download the JSON file:
 
@@ -119,11 +124,22 @@ Now you can use your Gmail data, like this:
 
 Now that we know how to pull emails into our database and write emails, we can make use of OpenAPI engine to write email replies.
 
+First, create an OpenAI engine, passing your OpenAI API key:
+
+```sql
+CREATE ML_ENGINE openai_engine
+FROM openai
+USING
+    api_key = 'your-openai-api-key';
+```
+
+Then, create a model using this engine:
+
 ```sql
 CREATE MODEL mindsdb.gpt_model
 PREDICT response
 USING
-    engine = 'openai',
+    engine = 'openai_engine',
     max_tokens = 500,
     api_key = 'your_api_key', 
     model_name = 'gpt-3.5-turbo',

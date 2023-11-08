@@ -44,7 +44,7 @@ class QueryStorage:
                     CREATE MODEL sentiment_classifier_gpt3
                     PREDICT sentiment
                     USING
-                    engine = 'openai',
+                    engine = 'openai2',
                     prompt_template = 'describe the sentiment of the reviews
                     strictly as "positive", "neutral", or "negative".
                     "I love the product":positive

@@ -221,7 +221,7 @@ class ChromaDBHandler(VectorStoreHandler):
         conditions: List[FilterCondition] = None,
         offset: int = None,
         limit: int = None,
-    ) -> HandlerResponse:
+    ) -> pd.DataFrame:
         collection = self._client.get_collection(table_name)
         filters = self._translate_metadata_condition(conditions)
 
@@ -298,12 +298,11 @@ class ChromaDBHandler(VectorStoreHandler):
         # always include distance
         if distances is not None:
             payload[TableField.DISTANCE.value] = distances
-        result_df = pd.DataFrame(payload)
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=result_df)
+        return pd.DataFrame(payload)
 
     def insert(
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
+    ):
         """
         Insert data into the ChromaDB database.
         """
@@ -323,15 +322,13 @@ class ChromaDBHandler(VectorStoreHandler):
             metadatas=data.get(TableField.METADATA.value),
         )
 
-        return Response(resp_type=RESPONSE_TYPE.OK)
-
     def update(
         self,
         table_name: str,
         data: pd.DataFrame,
         columns: List[str] = None,
         conditions: List[FilterCondition] = None,
-    ) -> HandlerResponse:
+    ):
         """
         Update data in the ChromaDB database.
         """
@@ -353,11 +350,9 @@ class ChromaDBHandler(VectorStoreHandler):
             metadatas=data.get(TableField.METADATA.value),
         )
 
-        return Response(resp_type=RESPONSE_TYPE.OK)
-
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
-    ) -> HandlerResponse:
+    ):
         filters = self._translate_metadata_condition(conditions)
         # get id filters
         id_filters = [
@@ -370,16 +365,14 @@ class ChromaDBHandler(VectorStoreHandler):
             raise Exception("Delete query must have at least one condition!")
         collection = self._client.get_collection(table_name)
         collection.delete(ids=id_filters, where=filters)
-        return Response(resp_type=RESPONSE_TYPE.OK)
 
-    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
+    def create_table(self, table_name: str, if_not_exists=True):
         """
         Create a collection with the given name in the ChromaDB database.
         """
         self._client.create_collection(table_name, get_or_create=if_not_exists)
-        return Response(resp_type=RESPONSE_TYPE.OK)
 
-    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
+    def drop_table(self, table_name: str, if_exists=True):
         """
         Delete a collection from the ChromaDB database.
         """
@@ -393,8 +386,6 @@ class ChromaDBHandler(VectorStoreHandler):
                     resp_type=RESPONSE_TYPE.ERROR,
                     error_message=f"Table {table_name} does not exist!",
                 )
-
-        return Response(resp_type=RESPONSE_TYPE.OK)
 
     def get_tables(self) -> HandlerResponse:
         """

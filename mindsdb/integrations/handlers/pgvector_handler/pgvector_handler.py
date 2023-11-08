@@ -204,7 +204,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             self.connection.commit()
 
     def update(
-        self, table_name: str, data: pd.DataFrame, key_column: str = None
+        self, table_name: str, data: pd.DataFrame, key_columns: str = None
     ):
         """
         Udate data into the pgvector table database.
@@ -212,17 +212,22 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
         where = None
         update_columns = {}
-        # col_map = {}
 
         for col in data.columns:
             value = Parameter('%s')
-            # col_map[col] = value
 
-            if col == key_column:
-                where = BinaryOperation(
+            if col in key_columns:
+                cond = BinaryOperation(
                     op='=',
-                    args=[Identifier(key_column), value]
+                    args=[Identifier(col), value]
                 )
+                if where is None:
+                    where = cond
+                else:
+                    where = BinaryOperation(
+                        op='AND',
+                        args=[where, cond]
+                    )
             else:
                 update_columns[col] = value
 
@@ -239,7 +244,8 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
                     record[col]
                     for col in update_columns.keys()
                 ]
-                row.append(record[key_column])
+                for key_column in key_columns:
+                    row.append(record[key_column])
                 transposed_data.append(row)
 
             query_str = self.renderer.get_string(query)

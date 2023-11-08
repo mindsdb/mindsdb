@@ -128,7 +128,7 @@ Before creating an OpenAI model, please create an engine, providing your OpenAI 
 CREATE ML_ENGINE openai_engine
 FROM openai
 USING
-	api_key = ‘your-openai-api-key’;
+	api_key = 'your-openai-api-key';
 ```
 </Tip>
 
@@ -136,7 +136,7 @@ USING
 CREATE MODEL mindsdb.gpt_model
 PREDICT response
 USING
-engine = 'openai',
+engine = 'openai_engine',
 max_tokens = 300,
 model_name = 'gpt-4',
 prompt_template = 'From input message: {{messages}}\
@@ -171,7 +171,7 @@ Now, let's make a model called `whizfizz_model` with a prompt template that give
 CREATE MODEL mindsdb.whizfizz_model
 PREDICT response
 USING
-engine = 'openai',
+engine = 'openai_engine',
 max_tokens = 300,
 api_key = 'your openai key,
 model_name = 'gpt-4', -- you can also use 'text-davinci-003' or ''

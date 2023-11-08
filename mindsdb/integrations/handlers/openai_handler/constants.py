@@ -28,4 +28,4 @@ EMBEDDING_MODELS = (
     + tuple(f'code-search-{model}-code-001' for model in COMPLETION_LEGACY_BASE_MODELS)
 )
 
-IMAGE_MODELS = ('dall-e-3',)
+IMAGE_MODELS = ('dall-e-2', 'dall-e-3')

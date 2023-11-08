@@ -35,23 +35,22 @@ class WeaviateDBHandler(VectorStoreHandler):
         self._embedded_options = None
         self.is_connected = False
 
-        config = self.validate_connection_parameters(name, **kwargs)
+        config = self.validate_connection_parameters(**kwargs)
 
         self._client_config = {
             "weaviate_url": config.host,
             "weaviate_api_key": config.api_key,
-            "persistence_directory": config.persistence_directory,
+            "persist_directory": config.persist_directory,
         }
 
         self.connect()
 
-    def validate_connection_parameters(self, name: str, **kwargs):
+    def validate_connection_parameters(self, **kwargs):
         """
         Validate the connection parameters.
         """
 
         _config = kwargs.get("connection_data")
-        _config["vector_store"] = name
 
         config = WeaviateHandlerConfig(**_config)
 
@@ -64,21 +63,17 @@ class WeaviateDBHandler(VectorStoreHandler):
         return config
 
     def _get_client(self) -> weaviate.Client:
-        if not (
-            self._client_config
-            and (
-                self._client_config.get("weaviate_url")
-                or self._client_config.get("persistence_directory")
-            )
-        ):
-            raise Exception("Client config is not set! or missing parameters")
+        client_config = self._client_config
+        if client_config is None:
+            raise Exception("Client config is not set!")
 
         # decide the client type to be used, either persistent or httpclient
-        if self._client_config.get("persistence_directory"):
+        if self._client_config.get("persist_directory"):
             self._embedded_options = EmbeddedOptions(
-                persistence_data_path=self._client_config.get("persistence_directory")
+                persistence_data_path=self._client_config.get("persist_directory")
             )
             return weaviate.Client(embedded_options=self._embedded_options)
+        
         if self._client_config.get("weaviate_api_key"):
             return weaviate.Client(
                 url=self._client_config["weaviate_url"],
@@ -687,7 +682,7 @@ connection_args = OrderedDict(
         "description": "weaviate API KEY",
         "required": False,
     },
-    persistence_directory={
+    persist_directory={
         "type": ARG_TYPE.STR,
         "description": "persistence directory for weaviate",
         "required": False,
@@ -697,5 +692,5 @@ connection_args = OrderedDict(
 connection_args_example = OrderedDict(
     weaviate_url="http://localhost:8080",
     weaviate_api_key="<api_key>",
-    persistence_directory="db_path",
+    persist_directory="db_path",
 )

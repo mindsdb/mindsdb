@@ -28,11 +28,22 @@ Let’s first see how simple it is to [create a machine learning model](https://
 
 _(Bear in mind that GPT-4 API is in HIGH demand and is rate limited, so can be slow. The following steps might each take a few seconds.)_
 
+First, create an OpenAI engine, passing your OpenAI API key:
+
+```sql
+CREATE ML_ENGINE openai_engine
+FROM openai
+USING
+    api_key = 'your-openai-api-key';
+```
+
+Then, create a model using this engine:
+
 ```sql
 CREATE MODEL mindsdb.gpt_model
 PREDICT response
 USING
-engine = 'openai',
+engine = 'openai_engine',
 api_key = 'your openai key',
 model_name = 'gpt-4', -- you can also use 'text-davinci-003' or 'gpt-3.5-turbo'
 prompt_template = 'respond to {{text}} by {{author_username}}'; 
@@ -69,7 +80,7 @@ Let's create a model called `snoopstein_model` with a prompt template that gives
 CREATE MODEL mindsdb.snoopstein_model
 PREDICT response
 USING
-engine = 'openai',
+engine = 'openai_engine',
 max_tokens = 300,
 api_key = 'your openai key,
 model_name = 'gpt-4', -- you can also use 'text-davinci-003' or 'gpt-3.5-turbo'

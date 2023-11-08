@@ -29,7 +29,7 @@ Create AI Engines (SQL) Test Passed - https://github.com/Better-Boy/mindsdb-QA/b
 </br>
 Create AI Tables (SQL) Test Passed - https://github.com/maarioos1308/mindsdb-Testing/tree/master/DynamoDB
 </br>
-
-
+Create AI Tables (SQL) Test Passed - https://github.com/maarioos1308/mindsdb-Testing
+</br>
 
 

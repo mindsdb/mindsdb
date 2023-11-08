@@ -67,9 +67,7 @@ MindsDB offers two primary benefits to its users.
 ----------------------------------------
 
 
-## Demo
 
-You can try MindsDB using our [demo environment](https://cloud.mindsdb.com/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) with sample data for the most popular use cases.
 
 ## Installation <a name="Installation"></a>
 

@@ -25,11 +25,12 @@ jobs:
 
   trigger_deploy:
     runs-on: [self-hosted, dev]
+    needs: [build]
     steps:
-      - uses: convictional/trigger-workflow-and-wait@v1.6.1
+      - uses: convictional/trigger-workflow-and-wait@v1.6.5
         with:
           owner: mindsdb
           repo: INTERNAL-mindsdb-build-deploy-to-kubernetes
           github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
-          workflow_file_name: deploy-dev.yml
+          workflow_file_name: dev-deploy.yml
           ref: master

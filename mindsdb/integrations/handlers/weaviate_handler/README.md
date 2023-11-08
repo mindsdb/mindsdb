@@ -14,7 +14,7 @@ The required arguments to establish a connection are:
 
 * `weaviate_url`: url of the weaviate database
 * `weaviate_api_key`: API key to authenticate with weaviate (in case of cloud instance).
-* `persistence_directory`: directory to be used in case of local storage
+* `persist_directory`: directory to be used in case of local storage
 
 
 ### Creating connection
@@ -42,7 +42,7 @@ CREATE DATABASE weaviate_datasource
 CREATE DATABASE weaviate_datasource
             WITH ENGINE = "weaviate",
             PARAMETERS = {
-                "persistence_directory" : "db_path",
+                "persist_directory" : "db_path",
 };
 ```
 

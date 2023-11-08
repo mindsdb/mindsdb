@@ -2,6 +2,7 @@ from typing import Dict, List
 
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
+from sqlalchemy.orm.attributes import flag_modified
 
 
 class SkillsController:
@@ -33,7 +34,7 @@ class SkillsController:
             db.Skills.project_id == project.id
         ).first()
 
-    def get_skills(self, project_name: str = 'mindsdb') -> List[dict]:
+    def get_skills(self, project_name: str) -> List[dict]:
         '''
         Gets all skills in a project.
 
@@ -46,7 +47,8 @@ class SkillsController:
         Raises:
             ValueError: If `project_name` does not exist
         '''
-
+        if project_name is None:
+            project_name = 'mindsdb'
         project = self.project_controller.get(name=project_name)
         return db.Skills.query.filter(
             db.Skills.project_id == project.id
@@ -96,7 +98,7 @@ class SkillsController:
     def update_skill(
             self,
             skill_name: str,
-            new_name: str,
+            new_name: str = None,
             project_name: str = 'mindsdb',
             type: str = None,
             params: Dict[str, str] = None):
@@ -132,6 +134,10 @@ class SkillsController:
             # Remove None values entirely.
             params = {k: v for k, v in existing_params.items() if v is not None}
             existing_skill.params = params
+            # Some versions of SQL Alchemy won't handle JSON updates correctly without this.
+            # See: https://docs.sqlalchemy.org/en/20/orm/session_api.html#sqlalchemy.orm.attributes.flag_modified
+            flag_modified(existing_skill, 'params')
+
         db.session.commit()
 
         return existing_skill

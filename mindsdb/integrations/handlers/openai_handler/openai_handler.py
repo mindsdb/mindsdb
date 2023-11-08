@@ -2,7 +2,6 @@ import os
 import math
 import json
 import shutil
-import binascii
 import tempfile
 import datetime
 import textwrap
@@ -24,6 +23,7 @@ from mindsdb.integrations.handlers.openai_handler.helpers import (
 )
 from mindsdb.integrations.handlers.openai_handler.constants import (
     CHAT_MODELS,
+    IMAGE_MODELS,
     FINETUNING_LEGACY_MODELS,
     OPENAI_API_BASE,
 )
@@ -201,7 +201,7 @@ class OpenAIHandler(BaseMLEngine):
             api_args = {
                 k: v for k, v in api_args.items() if v is not None
             }  # filter out non-specified api args
-            model_name = 'image'
+            model_name = args.get('model_name', 'dall-e-2')
 
             if args.get('question_column'):
                 prompts = list(df[args['question_column']].apply(lambda x: str(x)))
@@ -388,7 +388,7 @@ class OpenAIHandler(BaseMLEngine):
                 'api_key': api_key,
                 'organization': args.get('api_organization'),
             }
-            if model_name == 'image':
+            if model_name in IMAGE_MODELS:
                 return _submit_image_completion(kwargs, prompts, api_args)
             elif model_name == 'embedding':
                 return _submit_embedding_completion(kwargs, prompts, api_args)
@@ -534,7 +534,6 @@ class OpenAIHandler(BaseMLEngine):
                     for c in comp
                 ]
 
-            kwargs.pop('model')
             completions = [
                 openai.Image.create(**{'prompt': p, **kwargs, **api_args})['data']
                 for p in prompts

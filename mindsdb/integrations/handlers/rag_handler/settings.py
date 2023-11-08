@@ -55,7 +55,6 @@ DEFAULT_CHUNK_SIZE = 500
 DEFAULT_CHUNK_OVERLAP = 50
 DEFAULT_VECTOR_STORE_NAME = "chroma"
 DEFAULT_VECTOR_STORE_COLLECTION_NAME = "collection"
-DEFAULT_URL_COLUMN_NAME = "url"
 
 chromadb = get_chromadb()
 
@@ -283,7 +282,7 @@ class RAGBaseParameters(BaseModel):
     chunk_size: int = DEFAULT_CHUNK_SIZE
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
     url: Union[str, List[str]] = None
-    url_column_name: str = DEFAULT_URL_COLUMN_NAME
+    url_column_name: str = None
     run_embeddings: bool = True
     top_k: int = 4
     embeddings_model_name: str = DEFAULT_EMBEDDINGS_MODEL
@@ -371,7 +370,9 @@ class DfLoader(DataFrameLoader):
 
 
 def df_to_documents(
-    df: pd.DataFrame, page_content_columns: Union[List[str], str], url_column_name: str
+    df: pd.DataFrame,
+    page_content_columns: Union[List[str], str],
+    url_column_name: str = None,
 ) -> List[Document]:
     """Converts a given dataframe to a list of documents"""
     documents = []
@@ -384,7 +385,7 @@ def df_to_documents(
             raise ValueError(
                 f"page_content_column {page_content_column} not in dataframe columns"
             )
-        if page_content_column == url_column_name:
+        if url_column_name is not None and page_content_column == url_column_name:
             documents.extend(url_to_documents(df[page_content_column].tolist()))
             continue
 

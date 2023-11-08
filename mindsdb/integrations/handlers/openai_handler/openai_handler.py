@@ -38,6 +38,7 @@ class OpenAIHandler(BaseMLEngine):
         super().__init__(*args, **kwargs)
         self.generative = True
         self.default_model = 'gpt-3.5-turbo'
+        self.default_image_model = 'dall-e-2'
         self.default_mode = (
             'default'  # can also be 'conversational' or 'conversational-full'
         )
@@ -134,17 +135,20 @@ class OpenAIHandler(BaseMLEngine):
         api_key = get_api_key('openai', args, self.engine_storage)
         available_models = get_available_models(api_key)
 
-        if not args.get('model_name'):
-            args['model_name'] = self.default_model
-        elif args['model_name'] not in available_models:
-            raise Exception(f"Invalid model name. Please use one of {available_models}")
-
         if not args.get('mode'):
             args['mode'] = self.default_mode
         elif args['mode'] not in self.supported_modes:
             raise Exception(
                 f"Invalid operation mode. Please use one of {self.supported_modes}"
             )
+
+        if not args.get('model_name'):
+            if args['mode'] == 'image':
+                args['model_name'] = self.default_image_model
+            else:
+                args['model_name'] = self.default_model
+        elif args['model_name'] not in available_models:
+            raise Exception(f"Invalid model name. Please use one of {available_models}")
 
         self.model_storage.json_set('args', args)
 

@@ -6,7 +6,7 @@ import weaviate
 from weaviate.embedded import EmbeddedOptions
 import pandas as pd
 
-
+from mindsdb.integrations.handlers.weaviate_handler.settings import WeaviateHandlerConfig
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse
@@ -31,27 +31,37 @@ class WeaviateDBHandler(VectorStoreHandler):
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
         self.handler_storage = HandlerStorage(kwargs.get("integration_id"))
-
-        self._connection_data = kwargs.get("connection_data")
-
-        self._client_config = {
-            "weaviate_url": self._connection_data.get("weaviate_url"),
-            "weaviate_api_key": self._connection_data.get("weaviate_api_key"),
-            "persistence_directory": self._connection_data.get("persistence_directory"),
-        }
-
-        if not (
-            self._client_config.get("weaviate_url")
-            or self._client_config.get("persistence_directory")
-        ):
-            raise Exception(
-                "Either url or persist_directory is required for weaviate connection!"
-            )
-
         self._client = None
         self._embedded_options = None
         self.is_connected = False
+
+        config = self.validate_connection_parameters(name, **kwargs)
+
+        self._client_config = {
+            "weaviate_url": config.host,
+            "weaviate_api_key": config.api_key,
+            "persistence_directory": config.persistence_directory,
+        }
+
         self.connect()
+
+    def validate_connection_parameters(self, name: str, **kwargs):
+        """
+        Validate the connection parameters.
+        """
+
+        _config = kwargs.get("connection_data")
+        _config["vector_store"] = name
+
+        config = WeaviateHandlerConfig(**_config)
+
+        if config.persist_directory and not self.handler_storage.is_temporal:
+            # get full persistence directory from handler storage
+            self.persist_directory = self.handler_storage.folder_get(
+                config.persist_directory
+            )
+
+        return config
 
     def _get_client(self) -> weaviate.Client:
         if not (

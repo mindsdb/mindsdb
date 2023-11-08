@@ -23,26 +23,26 @@ In order to make use of this handler and connect to a Weaviate server in MindsDB
 
 ```sql
 CREATE DATABASE weaviate_datasource
-            WITH ENGINE = "weaviate",
-            PARAMETERS = {
-                "weaviate_url" : "https://sample.weaviate.network",
-                "weaviate_api_key": "api-key"
+WITH ENGINE = "weaviate",
+PARAMETERS = {
+    "weaviate_url" : "https://sample.weaviate.network",
+    "weaviate_api_key": "api-key"
 };
 ```
 
 ```sql
 CREATE DATABASE weaviate_datasource
-            WITH ENGINE = "weaviate",
-            PARAMETERS = {
-                "weaviate_url" : "https://localhost:8080",
+WITH ENGINE = "weaviate",
+PARAMETERS = {
+    "weaviate_url" : "https://localhost:8080"
 };
 ```
 
 ```sql
 CREATE DATABASE weaviate_datasource
-            WITH ENGINE = "weaviate",
-            PARAMETERS = {
-                "persist_directory" : "db_path",
+WITH ENGINE = "weaviate",
+PARAMETERS = {
+    "persist_directory" : "db_path"
 };
 ```
 

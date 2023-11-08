@@ -150,3 +150,159 @@ class Articles(APITable):
             "parent_type",
             "statistics"
         ]
+
+
+class Conversations(APITable):
+    name: str = "conversations"
+
+    def __init__(self, handler: APIHandler):
+        super().__init__(handler)
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """triggered at the SELECT query
+
+        Args:
+            query (ast.Select): user's entered query
+
+        Returns:
+            pd.DataFrame: the queried information
+        """
+        _id = None
+        selected_columns = []
+
+        # Get id from where clause, if available
+        conditions = extract_comparison_conditions(query.where)
+        for op, arg1, arg2 in conditions:
+            if arg1 == 'id' and op == '=':
+                _id = arg2
+            else:
+                raise ValueError("Unsupported condition in WHERE clause")
+
+        # Get selected columns from query
+        for target in query.targets:
+            if isinstance(target, ast.Star):
+                selected_columns = self.get_columns()
+                break
+            elif isinstance(target, ast.Identifier):
+                selected_columns.append(target.parts[-1])
+            else:
+                raise ValueError(f"Unknown query target {type(target)}")
+
+        # Initialize the result DataFrame
+        result_df = None
+
+        if _id is not None:
+            # Fetch data using the provided endpoint for the specific id
+            df = self.handler.call_intercom_api(endpoint=f'/conversations/{_id}')
+
+            if len(df) > 0:
+                result_df = df[selected_columns]
+        else:
+            # Fetch data without specifying an id
+            page_size = 100  # The page size you want to use for API requests
+            limit = query.limit.value if query.limit else None
+            result_df = pd.DataFrame(columns=selected_columns)
+
+            if limit:
+                # Calculate the number of pages required
+                page_count = (limit + page_size - 1) // page_size
+            else:
+                page_count = 1
+
+            for page in range(1, page_count + 1):
+                if limit == 0:
+                    break
+                if limit:
+                    # Calculate the page size for this request
+                    current_page_size = min(page_size, limit)
+                else:
+                    current_page_size = page_size
+
+                df = pd.DataFrame(self.handler.call_intercom_api(endpoint='/conversations', params={'page': page, 'per_page': current_page_size})['conversations'][0])
+                if len(df) == 0:
+                    break
+                result_df = pd.concat([result_df, df[selected_columns]], ignore_index=True)
+                if limit:
+                    limit -= current_page_size
+        return result_df
+
+    def insert(self, query: ast.Insert) -> None:
+        """insert
+
+        Args:
+            query (ast.Insert): user's entered query
+
+        Returns:
+            None
+        """
+        data = {
+            "from": {},
+            "body": ""
+        }
+        for column, value in zip(query.columns, query.values[0]):
+            if column.name == 'type' or column.name == 'id':
+                data['from'][column.name] = value
+            elif column.name == 'body':
+                data['body'] = value
+        self.handler.call_intercom_api(endpoint='/conversations', method='POST', data=json.dumps(data))
+
+    def update(self, query: ast.Update) -> None:
+        """update
+
+        Args:
+            query (ast.Update): user's entered query
+
+        Returns:
+            None
+        """
+        conditions = extract_comparison_conditions(query.where)
+        # Get page id from query
+        _id = None
+        for op, arg1, arg2 in conditions:
+            if arg1 == 'id' and op == '=':
+                _id = arg2
+            else:
+                raise NotImplementedError
+
+        data = {}
+        for key, value in query.update_columns.items():
+            if isinstance(value, Constant):
+                data[key] = value.value
+            else:
+                data[key] = value
+        self.handler.call_intercom_api(endpoint=f'/conversations/{_id}', method='PUT', data=json.dumps(data))
+
+    def get_columns(self, ignore: List[str] = []) -> List[str]:
+        """columns
+
+        Args:
+            ignore (List[str], optional): exclusion items. Defaults to [].
+
+        Returns:
+            List[str]: available columns with `ignore` items removed from the list.
+        """
+        return [
+            "type",
+            "id",
+            "title",
+            "created_at",
+            "updated_at",
+            "waiting_since",
+            "snoozed_until",
+            "open",
+            "state",
+            "read",
+            "priority",
+            "admin_assignee_id",
+            "team_assignee_id",
+            "tags",
+            "conversation_rating",
+            "source",
+            "contacts",
+            "teammates",
+            "custom_attributes",
+            "first_contact_reply",
+            "sla_applied",
+            "statistics",
+            "linked_objects"
+        ]

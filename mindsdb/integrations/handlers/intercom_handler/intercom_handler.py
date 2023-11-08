@@ -1,4 +1,4 @@
-from mindsdb.integrations.handlers.intercom_handler.intercom_tables import Articles
+from mindsdb.integrations.handlers.intercom_handler.intercom_tables import Articles, Conversations
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb_sql import parse_sql
@@ -30,6 +30,7 @@ class IntercomHandler(APIHandler):
             "Authorization": f"Bearer {access_token}"
         }
         self._register_table(Articles.name, Articles(self))
+        self._register_table(Conversations.name, Conversations(self))
 
     def check_connection(self) -> StatusResponse:
         """checking the connection

@@ -45,10 +45,10 @@ class WeaviateHandlerConfig(BaseModel):
             raise ValueError(
                 "For the Weaviate handler - weaviate_url and weaviate_api_key must be provided together."
             )
-        
+
         if (weaviate_url and weaviate_api_key) and persist_directory:
             raise ValueError(
-                "For the Weaviate handler - either weaviate_url and weaviate_api_key must be provided (together) or persist_directory must be provided. Not both." 
+                "For the Weaviate handler - either weaviate_url and weaviate_api_key must be provided (together) or persist_directory must be provided. Not both."
             )
 
         return values

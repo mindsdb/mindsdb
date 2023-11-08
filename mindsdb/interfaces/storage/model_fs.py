@@ -4,8 +4,6 @@ import io
 import zipfile
 from typing import Union
 
-from sqlalchemy.orm.attributes import flag_modified
-
 import mindsdb.interfaces.storage.db as db
 
 from .fs import RESOURCE_GROUP, FileStorageFactory, SERVICE_FILES_NAMES

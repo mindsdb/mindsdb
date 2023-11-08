@@ -18,6 +18,7 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
     TableField,
     VectorStoreHandler,
 )
+from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities import log
 from weaviate.util import generate_uuid5
 
@@ -29,6 +30,7 @@ class WeaviateDBHandler(VectorStoreHandler):
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
+        self.handler_storage = HandlerStorage(kwargs.get("integration_id"))
 
         self._connection_data = kwargs.get("connection_data")
 

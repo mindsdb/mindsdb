@@ -183,7 +183,6 @@ class ConfluencePagesTable(APITable):
             a_where[2], start=0, limit=total_results, expand="body.storage"
         )
         confluence_pages_df = pd.json_normalize(confluence_pages_records)
-        confluence_pages_df = confluence_pages_df[self.get_columns()]
 
         def extract_space(input_string):
             parts = input_string.split('/')
@@ -192,6 +191,8 @@ class ConfluencePagesTable(APITable):
         confluence_pages_df["space"] = confluence_pages_df["_expandable.space"].apply(
             extract_space
         )
+
+        confluence_pages_df = confluence_pages_df[self.get_columns()]
 
         if "space" in pages_kwargs:
             confluence_pages_df = confluence_pages_df[
@@ -237,6 +238,7 @@ class ConfluencePagesTable(APITable):
             "type",
             "status",
             "title",
+            "space",
             "body.storage.value",
             "_expandable.space",
             "_links.self",

@@ -1,14 +1,14 @@
-requests>=2.28.1
-charset-normalizer>=2.1.1
-protobuf<3.21.0 # for lightwood
+langchain==0.0.267
 SQLAlchemy
-chromadb~=0.4.8
-duckdb==0.7.1
+requests>=2.28.1
+openai>=0.27.0
+chromadb==0.4.8
 pydantic>=1.10.8
 sentence_transformers==2.2.2
-markupsafe == 2.0.1
+markupsafe==2.0.1
 faiss-cpu>=1.7.4 #todo check support for 'faiss-gpu'
 datasets>=2.14.4
 nltk>=3.8.1
 rouge-score>=0.1.2
-dill==0.3.6 #for lightwood
+html2text
+writerai>=0.25.3

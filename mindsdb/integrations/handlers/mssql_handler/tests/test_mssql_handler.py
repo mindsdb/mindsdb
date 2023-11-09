@@ -2,12 +2,14 @@ import pytest
 import pandas as pd
 from unittest.mock import MagicMock
 from mindsdb.integrations.handlers.mssql_handler.mssql_handler import SqlServerHandler
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE,
 )
+
 
 @pytest.fixture(scope="class")
 def sql_server_handler():
@@ -46,6 +48,17 @@ expected_data = {
 }
 
 
+def check_valid_response(res):
+    if res.resp_type == RESPONSE_TYPE.TABLE:
+        assert res.data_frame is not None, "expected to have some data, but got None"
+    assert (
+        res.error_code == 0
+    ), f"expected to have zero error_code, but got {res.error_code}"
+    assert (
+        res.error_message is None
+    ), f"expected to have None in error message, but got {res.error_message}"
+
+
 @pytest.mark.usefixtures("sql_server_handler", "database_connection_and_cursor")
 class TestMssqlHandlerConnect:
     def test_connect(self, sql_server_handler):
@@ -79,10 +92,9 @@ class TestMssqlHandlerGet:
 
 @pytest.mark.usefixtures("sql_server_handler", "database_connection_and_cursor")
 class TestMssqlHandlerQuery:
-    def test_native_query_select(self, sql_server_handler):
+    def test_select_native_query(self, sql_server_handler):
         query = "SELECT * FROM test"
         response = sql_server_handler.native_query(query)
-        print(response)
         assert type(response) is Response
         assert response.resp_type == RESPONSE_TYPE.TABLE
         expected_df = pd.DataFrame(expected_data)
@@ -90,5 +102,13 @@ class TestMssqlHandlerQuery:
             expected_df
         ), "response does not match 'expected_data'"
 
-
-# def test_query():
+    def test_select_query(self, sql_server_handler):
+        limit = 3
+        query = "SELECT * FROM test"
+        res = sql_server_handler.query(query)
+        check_valid_response(res)
+        got_rows = res.data_frame.shape[0]
+        want_rows = limit
+        assert (
+            got_rows == want_rows
+        ), f"expected to have {want_rows} rows in response but got: {got_rows}"

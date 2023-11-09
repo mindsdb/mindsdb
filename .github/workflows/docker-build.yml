@@ -27,6 +27,7 @@ jobs:
           echo "deploy-envs=${DEPLOY_ENVS,,}" >> "$GITHUB_OUTPUT" # Lowercase the whole list and output it
           echo "deploy-envs=${DEPLOY_ENVS,,}"
 
+
   build:
     runs-on: [self-hosted, dev]
     needs: [get-deploy-labels]

@@ -17,13 +17,10 @@ class ClipdropClient:
     def make_request(self, url, files={}, data={}):
         headers = {"x-api-key": self.api_key}
         resp = requests.post(url, headers=headers, files=files, data=data)
-        content = {}
         if resp.status_code == 200:
             saved_path = self.write_to_file(resp.content)
-            content = {'content': saved_path, 'code': resp.status_code}
-        else:
-            content = {'content': resp.text, 'code': resp.status_code}
-        return content
+            return saved_path
+        return resp.text
 
     def image_extension_check(self, url):
         ext = url.split(".")[-1]

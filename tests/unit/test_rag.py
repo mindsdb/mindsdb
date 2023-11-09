@@ -219,7 +219,7 @@ class TestRAG(BaseExecutorDummyLLM):
         # select with a valid where clause
         sql = """
             SELECT *
-            FROM test_kb
+            FROM test_rag
             WHERE
                 question = 'what is the answer?'
         """

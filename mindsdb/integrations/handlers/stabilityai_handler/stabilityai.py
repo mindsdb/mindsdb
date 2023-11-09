@@ -7,8 +7,7 @@ import requests
 
 class StabilityAPIClient:
 
-    def __init__(self, api_key, dir_to_save,
-                 engine="stable-diffusion-xl-1024-v1-0", upscale_engine="esrgan-v1-x2plus"):
+    def _init_(self, api_key, dir_to_save, engine="stable-diffusion-xl-1024-v1-0", upscale_engine="esrgan-v1-x2plus"):
         """Initialize the stability wrapper api client.
 
         Args:
@@ -131,9 +130,9 @@ class StabilityAPIClient:
         saved_images = self._process_artifacts(answers)
 
         return saved_images
-    
-    def image_to_image(self, image_url, prompt=None, 
-                       height=1024, width=1024, 
+
+    def image_to_image(self, image_url, prompt=None,
+                       height=1024, width=1024,
                        mask_image_url=None):
         """Image to Image inpainting + masking
 
@@ -142,35 +141,46 @@ class StabilityAPIClient:
             prompt: The given text
             height (int, optional): Height of the image. Defaults to 1024.
             width (int, optional): Width of the image. Defaults to 1024.
-            mask_image_url (_type_, optional): The mask image url for masking. Defaults to None.
+            mask_image_url (string, optional): The mask image url for masking. Defaults to None.
 
         Returns:
             The local saved paths of the generated images
         """
         img = self._read_image_url(image_url)
         mask_img = None if (mask_image_url is None) else self._read_image_url(mask_image_url)
-        answers = self.stability_api.generate(
-                        prompt=prompt,
-                        init_image=img,
-                        mask_image=mask_img,
-                        width=width,
-                        height=height
-                    )
-        
+        if prompt is None:
+            prompt = ""
+        answers = self.stability_api.generate(prompt=prompt, init_image=img, mask_image=mask_img, width=width, height=height)
+
         saved_images = self._process_artifacts(answers)
 
         return saved_images
-    
-    def image_upscaling(self, image_url, prompt=None,
-                        height=1024, width=1024):
+
+    def image_upscaling(self, image_url, height=None, width=None, prompt=None):
+        """Image upscaling
+
+        Args:
+            image_url: The image url
+            height (int, optional): Height of the image. Defaults to None.
+            width (int, optional): Width of the image. Defaults to None.
+            prompt: The given text
+
+        Returns:
+            The local saved paths of the generated images
+        """
         img = self._read_image_url(image_url)
-        answers = self.stability_api.upscale(
-                        init_image=img,
-                        height=height,
-                        width=width,
-                        prompt=prompt
-                    )
-        
+        if height is not None and width is not None:
+            raise Exception("Either height or width can be given. Refer - https://platform.stability.ai/docs/features/image-upscaling#initial-generation-parameters")
+
+        if height is None and width is None:
+            answers = self.stability_api.upscale(init_image=img, prompt=prompt)
+
+        if height is not None:
+            answers = self.stability_api.upscale(init_image=img, height=height, prompt=prompt)
+
+        if width is not None:
+            answers = self.stability_api.upscale(init_image=img, width=width, prompt=prompt)
+
         saved_images = self._process_artifacts(answers)
 
         return saved_images

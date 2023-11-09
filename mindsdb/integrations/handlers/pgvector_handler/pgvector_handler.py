@@ -1,7 +1,6 @@
 from collections import OrderedDict
 from typing import List
 
-import numpy as np
 import pandas as pd
 import psycopg
 from mindsdb_sql import ASTNode

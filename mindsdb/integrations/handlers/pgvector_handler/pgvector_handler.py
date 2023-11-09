@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import List
+from typing import List, Union
 
 import pandas as pd
 import psycopg
@@ -57,7 +57,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         return self.connection
 
     @staticmethod
-    def _translate_conditions(conditions: List[FilterCondition]) -> dict | None:
+    def _translate_conditions(conditions: List[FilterCondition]) -> Union[dict, None]:
         """
         Translate filter conditions to a dictionary
         """

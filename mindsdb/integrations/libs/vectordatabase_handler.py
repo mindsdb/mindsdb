@@ -116,9 +116,6 @@ class VectorStoreHandler(BaseHandler):
         },
     ]
 
-    def __init__(self, name: str):
-        super().__init__(name)
-
     def validate_connection_parameters(self, name, **kwargs):
         """Create validation for input parameters."""
 
@@ -319,25 +316,35 @@ class VectorStoreHandler(BaseHandler):
         return self.do_upsert(table_name, df)
 
     def do_upsert(self, table_name, df):
-        # find existing ids
-        # id is string TODO is it ok?
-        df['id'] = df['id'].apply(str)
+        # if handler supports it, call upsert method
 
+        id_col = TableField.ID.value
+
+        # id is string TODO is it ok?
+        df[id_col] = df[id_col].apply(str)
+
+        if hasattr(self, 'upsert'):
+            self.insert(table_name, df)
+            return
+
+        # find existing ids
         res = self.select(
             table_name,
-            columns=['id'],
+            columns=[id_col],
             conditions=[
-                FilterCondition(column='id', op=FilterOperator.IN, value=list(df['id']))
+                FilterCondition(column=id_col, op=FilterOperator.IN, value=list(df[id_col]))
             ]
         )
-        existed_ids = list(res['id'])
+        existed_ids = list(res[id_col])
 
         # update existed
-        df_update = df[df['id'].isin(existed_ids)]
-        df_insert = df[~df['id'].isin(existed_ids)]
+        df_update = df[df[id_col].isin(existed_ids)]
+        df_insert = df[~df[id_col].isin(existed_ids)]
 
-        self.update(table_name, df_update, 'id')
-        self.insert(table_name, df_insert)
+        if not df_update.empty:
+            self.update(table_name, df_update, [id_col])
+        if not df_insert.empty:
+            self.insert(table_name, df_insert)
 
     def _dispatch_delete(self, query: Delete):
         """

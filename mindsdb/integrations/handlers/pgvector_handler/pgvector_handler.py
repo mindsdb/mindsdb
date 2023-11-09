@@ -23,7 +23,7 @@ from mindsdb.utilities.profiler import profiler
 
 
 # todo Issue #7316 add support for different indexes and search algorithms e.g. cosine similarity or L2 norm
-class PgVectorHandler(PostgresHandler, VectorStoreHandler):
+class PgVectorHandler(VectorStoreHandler, PostgresHandler):
     """This handler handles connection and execution of the PostgreSQL with pgvector extension statements."""
 
     name = "pgvector"
@@ -204,7 +204,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             self.connection.commit()
 
     def update(
-        self, table_name: str, data: pd.DataFrame, key_columns: str = None
+        self, table_name: str, data: pd.DataFrame, key_columns: List[str] = None
     ):
         """
         Udate data into the pgvector table database.
@@ -251,7 +251,6 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             query_str = self.renderer.get_string(query)
             cur.executemany(query_str, transposed_data)
             self.connection.commit()
-
 
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None

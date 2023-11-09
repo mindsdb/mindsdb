@@ -234,7 +234,7 @@ class ChromaDBHandler(VectorStoreHandler):
             else [
                 condition
                 for condition in conditions
-                if condition.column == TableField.SEARCH_VECTOR.value
+                if condition.column == TableField.EMBEDDINGS.value
             ]
         )
 
@@ -242,13 +242,15 @@ class ChromaDBHandler(VectorStoreHandler):
             vector_filter = vector_filter[0]
         else:
             vector_filter = None
-        id_filters = None
+        id_filters = []
         if conditions is not None:
-            id_filters = [
-                condition.value
-                for condition in conditions
-                if condition.column == TableField.ID.value
-            ] or None
+            for condition in conditions:
+                if condition.column != TableField.ID.value:
+                    continue
+                if condition.op == FilterOperator.EQUAL:
+                    id_filters.append(condition.value)
+                elif condition.op == FilterOperator.IN:
+                    id_filters.extend(condition.value)
 
         if vector_filter is not None:
             # similarity search
@@ -300,9 +302,7 @@ class ChromaDBHandler(VectorStoreHandler):
             payload[TableField.DISTANCE.value] = distances
         return pd.DataFrame(payload)
 
-    def insert(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ):
+    def insert(self, table_name: str, data: pd.DataFrame):
         """
         Insert data into the ChromaDB database.
         """
@@ -322,19 +322,18 @@ class ChromaDBHandler(VectorStoreHandler):
             metadatas=data.get(TableField.METADATA.value),
         )
 
+    def upsert(self, table_name: str, data: pd.DataFrame):
+        return self.insert(table_name, data)
+
     def update(
         self,
         table_name: str,
         data: pd.DataFrame,
-        columns: List[str] = None,
-        conditions: List[FilterCondition] = None,
+        key_columns: List[str] = None,
     ):
         """
         Update data in the ChromaDB database.
         """
-        if conditions:
-            raise Exception("Chroma update query doesn't support where clause")
-
         collection = self._client.get_collection(table_name)
 
         # drop columns with all None values

@@ -291,7 +291,7 @@ class CustomersTable(APITable):
 
         Parameters
         ----------
-        query : ast.Delete
+        query : ast.Insert
            Given SQL DELETE query
 
         Returns
@@ -303,6 +303,7 @@ class CustomersTable(APITable):
         ValueError
             If the query contains an unsupported condition
         """
+
         delete_statement_parser = DELETEQueryParser(query)
         where_conditions = delete_statement_parser.parse_query()
 
@@ -317,6 +318,7 @@ class CustomersTable(APITable):
 
         customer_ids = customers_df['id'].tolist()
         self.delete_customers(customer_ids)
+
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_customers(limit=1)).columns.tolist()
@@ -355,8 +357,9 @@ class CustomersTable(APITable):
 
         for customer_id in customer_ids:
             customer = shopify.Customer.find(customer_id)
-            customer.delete()
+            customer.destroy()
             logger.info(f'Customer {customer_id} deleted')
+
 
 
 class OrdersTable(APITable):
@@ -406,6 +409,8 @@ class OrdersTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         orders = shopify.Order.find(**kwargs)
         return [order.to_dict() for order in orders]
+    
+    
 
 class InventoryLevelTable(APITable):
     """The Shopify Inventory Table implementation"""
@@ -596,7 +601,51 @@ class CustomerReviews(APITable):
         }
         json_response = requests.get(url, headers=headers).json()
         return [review for review in json_response['reviews']] if 'reviews' in json_response else []
+    def insert(self, query: ast.Insert) -> None:
+        """Inserts data into the Yotpo "POST /widget/reviews" API endpoint.
 
+        Parameters
+        ----------
+        query : ast.Insert
+        Given SQL INSERT query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        insert_statement_parser = INSERTQueryParser(
+            query,
+            supported_columns=[
+                'domain', 'sku', 'product_title', 'product_description',
+                'product_url', 'product_image_url', 'display_name',
+                'email', 'review_content', 'review_title', 'review_score'
+               
+            ],
+            mandatory_columns=['sku', 'product_title', 'product_url', 'display_name', 'email', 'review_content', 'review_title', 'review_score'],
+            all_mandatory=True
+        )
+        review_data = insert_statement_parser.parse_query()
+        self.create_review(review_data)
+
+def create_review(self, review_data: Dict[Text, Any]) -> None:
+    url = "https://api.yotpo.com/v1/widget/reviews"
+    headers = {
+        "accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    response = requests.post(url, headers=headers, json=review_data)
+    if response.status_code != 200:
+        raise Exception('Review creation failed', response.text)
+    else:
+        logger.info(f'Review created with data {review_data}')
+    
+      
+    
 class CarrierServiceTable(APITable):
     """The Shopify carrier service Table implementation. Example carrier services like usps, dhl etc."""
 
@@ -638,97 +687,6 @@ class CarrierServiceTable(APITable):
         carrier_service_df = select_statement_executor.execute_query()
 
         return carrier_service_df
-    
-    def insert(self, query: ast.Insert) -> None:
-        """Inserts data into the Shopify "POST /carrier_services" API endpoint.
-
-        Parameters
-        ----------
-        query : ast.Insert
-           Given SQL INSERT query
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-        insert_statement_parser = INSERTQueryParser(
-            query,
-            supported_columns=['name', 'callback_url', 'service_discovery'],
-            mandatory_columns=['name', 'callback_url', 'service_discovery'],
-            all_mandatory=True
-        )
-        carrier_service_data = insert_statement_parser.parse_query()
-        self.create_carrier_service(carrier_service_data)
-
-    def delete(self, query: ast.Delete) -> None:
-        """
-        Deletes data from the Shopify "DELETE /carrier_services" API endpoint.
-
-        Parameters
-        ----------
-        query : ast.Delete
-           Given SQL DELETE query
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-        delete_statement_parser = DELETEQueryParser(query)
-        where_conditions = delete_statement_parser.parse_query()
-
-        carrier_services_df = pd.json_normalize(self.get_carrier_service())
-
-        delete_query_executor = DELETEQueryExecutor(
-            carrier_services_df,
-            where_conditions
-        )
-
-        carrier_services_df = delete_query_executor.execute_query()
-
-        carrier_service_ids = carrier_services_df['id'].tolist()
-        self.delete_carrier_services(carrier_service_ids)
-
-
-    def update(self, query: ast.Update) -> None:
-        """Updates data from the Shopify "PUT /carrier_services" API endpoint.
-
-        Parameters
-        ----------
-        query : ast.Update
-           Given SQL UPDATE query
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-        update_statement_parser = UPDATEQueryParser(query)
-        values_to_update, where_conditions = update_statement_parser.parse_query()
-        carrier_services_df = pd.json_normalize(self.get_carrier_service())
-        update_query_executor = UPDATEQueryExecutor(
-            carrier_services_df,
-            where_conditions
-        )
-
-        carrier_services_df = update_query_executor.execute_query()
-        carrier_service_ids = carrier_services_df['id'].tolist()
-        self.update_carrier_service(carrier_service_ids, values_to_update)
-
-
 
     def get_columns(self) -> List[Text]:
         return ["id", "name", "active", "service_discovery", "carrier_service_type", "admin_graphql_api_id"]
@@ -738,38 +696,6 @@ class CarrierServiceTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         services = shopify.CarrierService.find()
         return [service.to_dict() for service in services]
-    
-    def create_carrier_service(self, carrier_service_data: List[Dict[Text, Any]]) -> None:
-        api_session = self.handler.connect()
-        shopify.ShopifyResource.activate_session(api_session)
-
-        for carrier_service in carrier_service_data:
-            created_carrier_service = shopify.CarrierService.create(carrier_service)
-            if 'id' not in created_carrier_service.to_dict():
-                raise Exception('Product creation failed')
-            else:
-                logger.info(f'Product {created_carrier_service.to_dict()["id"]} created')
-
-    def delete_carrier_services(self, carrier_service_ids: List[int]) -> None:
-        api_session = self.handler.connect()
-        shopify.ShopifyResource.activate_session(api_session)
-
-        for carrier_service_id in carrier_service_ids:
-            product = shopify.CarrierService.find(carrier_service_id)
-            product.destroy()
-            logger.info(f'Carrier Service {carrier_service_id} deleted')
-
-    def update_carrier_service(self, carrier_service_id: int, values_to_update: Dict[Text, Any]) -> None:
-        # Update the carrier service using the Shopify API
-        session = self.handler.connect()
-        shopify.ShopifyResource.activate_session(session)
-
-        carrier_service = shopify.CarrierService.find(carrier_service_id)
-        for key, value in values_to_update.items():
-            setattr(carrier_service, key, value)
-        carrier_service.save()
-        logger.info(f'Carrier Service {carrier_service_id} updated')
-
 
 
 class ShippingZoneTable(APITable):
@@ -884,3 +810,4 @@ class SalesChannelTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         sales_channels = shopify.Publication.find(**kwargs)
         return  [sales_channel.to_dict() for  sales_channel in sales_channels]
+    

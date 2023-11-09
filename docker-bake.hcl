@@ -21,12 +21,12 @@ target "_common" {
 
 target "builder" {
   dockerfile = "docker/mindsdb.Dockerfile"
-  tags = ["${REGISTRY}/mindsdb:${TAG}-bare"]
+  tags = ["${REGISTRY}/mindsdb:builder-${TAG}"]
 }
 
 target "bare" {
   inherits = ["_common"]
-  tags = ["${REGISTRY}/mindsdb:${TAG}-bare"]
+  tags = ["${REGISTRY}/mindsdb:bare-${TAG}"]
 }
 
 target "cloud" {
@@ -34,5 +34,5 @@ target "cloud" {
   args = {
     EXTRAS = ".[lightwood] .[huggingface]"
   }
-  tags = ["${REGISTRY}/mindsdb:${TAG}-cloud"]
+  tags = ["${REGISTRY}/mindsdb:cloud-${TAG}"]
 }

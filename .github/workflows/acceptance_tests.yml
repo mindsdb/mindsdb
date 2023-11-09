@@ -23,7 +23,7 @@ jobs:
         pip install boto3
         pip install --no-cache-dir .
         pip install -r requirements_test.txt
-        pip install 'openai >= 0.27.0'
+        pip install 'openai ~= 0.28.0'
         pip install 'tiktoken >= 0.3.0'
         pip install 'accelerate>=0.20.1'
         pip install 'datasets'

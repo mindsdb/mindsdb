@@ -1,6 +1,7 @@
 name: MindsDB Docker Build
 
 on:
+  push: # temp
   pull_request:
     types: [opened, reopened, synchronize, labeled]
 

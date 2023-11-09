@@ -71,10 +71,10 @@ jobs:
           # List of rules we can ignore for specific packages
           # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in this handler
           # We ignore mindsdb because we know it exists
-          MAIN_REQUIREMENTS_DEPS=`cat requirements/requirements.txt | tr ' ><=~[' '|' | cut -d '|' -f 1 | paste -sd\| -`
+          MAIN_REQUIREMENTS_DEPS=`cat requirements/requirements.txt requirements/requirements-test.txt | tr ' ><=~[' '|' | cut -d '|' -f 1 | paste -sd\| -`
           RULE_IGNORES=DEP002="${OPTIONAL_HANDLER_DEPS}|${MAIN_REQUIREMENTS_DEPS}"
 
-          deptry --requirements-txt $REQUIREMENTS_FILES --package-module-name-map $PACKAGE_MODULE_NAME_MAP --per-rule-ignores $RULE_IGNORES --extend-exclude ${HANDLER_DIR}/setup.py --known-first-party mindsdb ${HANDLER_DIR}
+          deptry --requirements-txt $REQUIREMENTS_FILES --package-module-name-map $PACKAGE_MODULE_NAME_MAP --per-rule-ignores $RULE_IGNORES --known-first-party mindsdb ${HANDLER_DIR}
         done
 
     - name: Check for duplicate requirements

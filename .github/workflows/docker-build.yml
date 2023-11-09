@@ -12,7 +12,7 @@ jobs:
       deploy-envs: ${{ steps.make-label-list.outputs.deploy-envs }}
     steps:
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/setup-env
+      - uses: FranzDiebold/github-env-vars-action@v2
       # Takes PR labels and turns them into env vars: https://github.com/marketplace/actions/pr-labels
       - name: Get PR labels
         id: pr-labels

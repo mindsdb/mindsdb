@@ -33,7 +33,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         self.connect()
 
     @profiler.profile()
-    def connect(self):
+    def connect(self) -> psycopg.connection:
         """
         Handles the connection to a PostgreSQL database instance.
         """

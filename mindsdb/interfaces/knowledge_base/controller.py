@@ -1,3 +1,4 @@
+import copy
 from typing import List
 
 import pandas as pd
@@ -10,6 +11,7 @@ from mindsdb_sql.parser.ast import (
     Select,
     Update,
     Delete,
+    Star
 )
 
 import mindsdb.interfaces.storage.db as db
@@ -30,6 +32,19 @@ class KnowledgeBaseTable:
         # set table name
         query.from_table = Identifier(parts=[self._kb.vector_database_table])
 
+        # remove embeddings from result
+        targets = []
+        for target in query.targets:
+            if isinstance(target, Star):
+                targets.extend([
+                    Identifier(TableField.ID.value),
+                    Identifier(TableField.CONTENT.value),
+                    Identifier(TableField.METADATA.value),
+                ])
+            elif isinstance(target, Identifier) and target.parts[-1].lower() != TableField.EMBEDDINGS.value:
+                targets.append(target)
+        query.targets = targets
+
         # send to vectordb
         db_handler = self._get_vector_db()
         resp = db_handler.query(query)
@@ -37,6 +52,8 @@ class KnowledgeBaseTable:
 
     def update_query(self, query: Update):
         # add embeddings to content in updated collumns
+        query = copy.deepcopy(query)
+
         emb_col = TableField.EMBEDDINGS.value
         cont_col = TableField.CONTENT.value
         if cont_col in query.update_columns:

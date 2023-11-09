@@ -11,8 +11,6 @@ To get started with the Intercom API, you need to initialize the API handler wit
 
 - `access_token`: Your Intercom access token for authentication.
 
-## Usage
-
 To create a database using the Intercom engine, you can use a SQL-like syntax as shown below:
 
 ```sql
@@ -24,7 +22,7 @@ WITH
   };
 ```
 
-### SELECT
+## Usage
 
 You can retrieve data from Intercom using a `SELECT` statement. For example:
 
@@ -33,8 +31,6 @@ SELECT *
 FROM myintercom.articles;
 ```
 
-### WHERE
-
 You can filter data based on specific criteria using a `WHERE` clause. Here's an example:
 
 ```sql
@@ -42,8 +38,6 @@ SELECT *
 FROM myintercom.articles
 WHERE id = <article-id>;
 ```
-
-### INSERT
 
 To create a new article in Intercom, you can use the `INSERT` statement. Here's an example:
 
@@ -59,8 +53,6 @@ VALUES (
   'collection'
 );
 ```
-
-### UPDATE
 
 You can update existing records in Intercom using the `UPDATE` statement. For instance:
 

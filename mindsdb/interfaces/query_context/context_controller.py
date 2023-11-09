@@ -95,7 +95,7 @@ class QueryContextController:
             if col_name not in df:
                 continue
 
-            column_values = df[col_name]
+            column_values = df[col_name].dropna()
             try:
                 value = max(column_values)
             except (TypeError, ValueError):

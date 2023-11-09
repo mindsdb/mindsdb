@@ -84,3 +84,26 @@ USING
 
 ## Use the model
 
+~~~~sql
+SELECT *
+FROM mindsdb.clipdrop_rt
+WHERE image_url = "https://onlinejpgtools.com/images/examples-onlinejpgtools/calm-body-of-water-with-quote.jpg";
+~~~~
+
+~~~~sql
+SELECT *
+FROM mindsdb.clipdrop_rb
+WHERE image_url = "https://static.clipdrop.co/web/apis/remove-background/input.jpg";
+~~~~
+
+~~~~sql
+SELECT *
+FROM mindsdb.clipdrop_reimagine
+WHERE image_url = "https://static.clipdrop.co/web/apis/remove-background/input.jpg";
+~~~~
+
+~~~~sql
+SELECT *
+FROM mindsdb.clipdrop_s2i
+WHERE image_url = "https://img.freepik.com/free-vector/hand-drawn-cat-outline-illustration_23-2149266368.jpg" AND text = "brown cat";
+~~~~

@@ -85,7 +85,7 @@ class ClipdropHandler(BaseMLEngine):
         client = self._get_clipdrop_client(args)
 
         return df[df.columns.intersection(supported_params)].apply(generate_remove_background, client=client, axis=1)
-    
+
     def _process_sketch_to_image(self, df, args):
 
         def generate_sketch_to_image(conds, client):
@@ -96,7 +96,7 @@ class ClipdropHandler(BaseMLEngine):
 
         if "image_url" not in df.columns:
             raise Exception("`image_url` column has to be given in the query.")
-        
+
         if "text" not in df.columns:
             raise Exception("`text` column has to be given in the query.")
 
@@ -107,7 +107,7 @@ class ClipdropHandler(BaseMLEngine):
         client = self._get_clipdrop_client(args)
 
         return df[df.columns.intersection(supported_params)].apply(generate_sketch_to_image, client=client, axis=1)
-    
+
     def _process_text_to_image(self, df, args):
 
         def generate_text_to_image(conds, client):
@@ -115,7 +115,7 @@ class ClipdropHandler(BaseMLEngine):
             return client.text_to_image(conds.get("text"))
 
         supported_params = set(["text"])
-        
+
         if "text" not in df.columns:
             raise Exception("`text` column has to be given in the query.")
 
@@ -126,7 +126,7 @@ class ClipdropHandler(BaseMLEngine):
         client = self._get_clipdrop_client(args)
 
         return df[df.columns.intersection(supported_params)].apply(generate_text_to_image, client=client, axis=1)
-    
+
     def _process_replace_background(self, df, args):
 
         def generate_replace_background(conds, client):
@@ -137,7 +137,7 @@ class ClipdropHandler(BaseMLEngine):
 
         if "image_url" not in df.columns:
             raise Exception("`image_url` column has to be given in the query.")
-        
+
         if "text" not in df.columns:
             raise Exception("`text` column has to be given in the query.")
 
@@ -148,7 +148,7 @@ class ClipdropHandler(BaseMLEngine):
         client = self._get_clipdrop_client(args)
 
         return df[df.columns.intersection(supported_params)].apply(generate_replace_background, client=client, axis=1)
-    
+
     def _process_reimagine(self, df, args):
 
         def generate_reimagine(conds, client):
@@ -156,7 +156,7 @@ class ClipdropHandler(BaseMLEngine):
             return client.reimagine(conds.get("text"))
 
         supported_params = set(["text"])
-        
+
         if "text" not in df.columns:
             raise Exception("`text` column has to be given in the query.")
 

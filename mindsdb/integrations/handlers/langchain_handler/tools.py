@@ -6,6 +6,7 @@ from mindsdb_sql import parse_sql, Insert
 from langchain.utilities import GoogleSerperAPIWrapper
 from langchain.prompts import PromptTemplate
 from langchain.agents import load_tools, Tool
+from langchain.tools import BaseTool
 
 from langchain.chains.llm import LLMChain
 from langchain.text_splitter import CharacterTextSplitter
@@ -116,14 +117,18 @@ def setup_tools(llm, model_kwargs, pred_args, executor, default_agent_tools, wri
     toolkit = pred_args['tools'] if pred_args['tools'] is not None else default_agent_tools
 
     standard_tools = []
+    function_tools = []
     custom_tools = []
 
     for tool in toolkit:
         if isinstance(tool, str):
             standard_tools.append(tool)
+        elif issubclass(tool, BaseTool):
+            # user defined custom tools
+            custom_tools.append(tool)
         else:
             # user defined custom functions
-            custom_tools.append(tool)
+            function_tools.append(tool)
 
     tools = load_tools(standard_tools)
     if model_kwargs.get('serper_api_key', False):
@@ -141,12 +146,13 @@ def setup_tools(llm, model_kwargs, pred_args, executor, default_agent_tools, wri
     if write_privileges:
         tools.append(mdb_write_tool)
 
-    for tool in custom_tools:
+    for tool in function_tools:
         tools.append(Tool(
             name=tool['name'],
             func=tool['func'],
             description=tool['description'],
         ))
+    tools = tools + custom_tools
 
     return tools
 

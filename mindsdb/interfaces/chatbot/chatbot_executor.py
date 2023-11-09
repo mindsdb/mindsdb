@@ -1,5 +1,6 @@
 from .model_executor import ModelExecutor
 from .types import Function, BotException
+from mindsdb.interfaces.skills.skill_tool import make_tool_from_skill
 
 
 class BotExecutor:
@@ -29,12 +30,28 @@ class BotExecutor:
                             callback=getattr(back_db, name)
                         ))
         return functions
+    
+    def _prepare_tools(self):
+        tools = []
+        if self.chat_task.agent_id is None:
+            return tools
+        # Check available skills and translate into a tool.
+        agent = self.chat_task.session.agents_controller.get_agent_by_id(
+            self.chat_task.agent_id,
+            project_name=self.chat_task.project_name
+        )
+        if agent is None:
+            return tools
+        for skill in agent.skills:
+            tools.append(make_tool_from_skill(skill))
+        return tools
 
     def process(self):
         functions = self._prepare_available_functions()
+        tools = self._prepare_tools()
 
         model_executor = self._get_model(self.chat_task.base_model_name)
-        model_output = model_executor.call(self.chat_memory.get_history(), functions)
+        model_output = model_executor.call(self.chat_memory.get_history(), functions, tools)
         return model_output
 
 
@@ -136,6 +153,7 @@ class MultiModeBotExecutor(BotExecutor):
         switched_to_mode = []
 
         functions_all = self._prepare_available_functions()
+        tools = self._prepare_tools()
 
         # Modes handling
         functions_all.append(self._mode_switching_function(switched_to_mode))
@@ -146,7 +164,7 @@ class MultiModeBotExecutor(BotExecutor):
         if self.chat_memory.get_mode() is None:
             self.chat_memory.hide_history(left_count=1)
 
-        model_output = model_executor.call(self.chat_memory.get_history(), functions)
+        model_output = model_executor.call(self.chat_memory.get_history(), functions, tools)
 
         if len(switched_to_mode) > 0:
             # mode changed:
@@ -158,6 +176,6 @@ class MultiModeBotExecutor(BotExecutor):
 
             model_executor, functions = self.enter_bot_mode(functions_all)
 
-            model_output = model_executor.call(self.chat_memory.get_history(), functions)
+            model_output = model_executor.call(self.chat_memory.get_history(), functions, tools)
 
         return model_output

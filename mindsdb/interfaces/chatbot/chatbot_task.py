@@ -21,6 +21,7 @@ class ChatBotTask(BaseTask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.bot_id = self.object_id
+        self.agent_id = None
 
         self.session = SessionController()
 
@@ -32,6 +33,7 @@ class ChatBotTask(BaseTask):
         bot_record = db.ChatBots.query.get(self.bot_id)
 
         self.base_model_name = bot_record.model_name
+        self.agent_id = bot_record.agent_id
         self.project_name = db.Project.query.get(bot_record.project_id).name
         self.project_datanode = self.session.datahub.get(self.project_name)
 
@@ -71,7 +73,10 @@ class ChatBotTask(BaseTask):
             self._on_message(chat_memory, message)
         except (SystemExit, KeyboardInterrupt):
             raise
-        except Exception:
+        except Exception as e:
+            print('UH OH SOMETHING WENT WRONG')
+            print(e)
+            traceback.print_exc()
             self.set_error(str(traceback.format_exc()))
 
     def _on_message(self, chat_memory, message: ChatBotMessage):

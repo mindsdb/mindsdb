@@ -485,6 +485,41 @@ class Agents(Base):
         }
 
 
+class RAG(Base):
+    __tablename__ = "RAG"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    project_id = Column(Integer, nullable=False)
+    params = Column(JSON)
+
+    knowledge_base_id = Column(
+        ForeignKey("integration.id", name="fk_rag_knowledge_base_id"),
+        doc="fk to the knowledge base integration",
+    )
+
+    knowledge_base = relationship(
+        "Integration",
+        foreign_keys=[knowledge_base_id],
+        doc="knowledge base integration",
+    )
+
+    llm_id = Column(
+        ForeignKey("predictor.id", name="fk_llm_id"),
+        doc="fk to the LLM",
+    )
+
+    llm = relationship("Predictor", foreign_keys=[llm_id], doc="LLM")
+
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    updated_at = Column(
+        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
+    )
+
+    __table_args__ = (
+        UniqueConstraint("name", "project_id", name="unique_rag_name_project_id"),
+    )
+
+
 class KnowledgeBase(Base):
     __tablename__ = "knowledge_base"
     id = Column(Integer, primary_key=True)

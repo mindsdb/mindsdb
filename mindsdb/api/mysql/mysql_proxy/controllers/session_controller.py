@@ -49,7 +49,12 @@ class SessionController:
 
         # to prevent circular imports
         from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
+
         self.kb_controller = KnowledgeBaseController(self)
+
+        from mindsdb.interfaces.rag.controller import RAGBaseController
+
+        self.rag_controller = RAGBaseController(self)
 
         self.datahub = init_datahub(self)
 
@@ -100,9 +105,13 @@ class ServerSessionContorller(SessionController):
         self.executor_url = os.environ.get("MINDSDB_EXECUTOR_URL", None)
         self.executor_host = os.environ.get("MINDSDB_EXECUTOR_SERVICE_HOST", None)
         self.executor_port = os.environ.get("MINDSDB_EXECUTOR_SERVICE_PORT", None)
-        if (self.executor_host is None or self.executor_port is None) and self.executor_url is None:
-            raise Exception(f"""{self.__class__.__name__} can be used only in modular mode of MindsDB.
-                            Use Executor as a service and specify MINDSDB_EXECUTOR_URL env variable""")
+        if (
+            self.executor_host is None or self.executor_port is None
+        ) and self.executor_url is None:
+            raise Exception(
+                f"""{self.__class__.__name__} can be used only in modular mode of MindsDB.
+                            Use Executor as a service and specify MINDSDB_EXECUTOR_URL env variable"""
+            )
         logger.info(
             "%s.__init__: executor url - %s", self.__class__.__name__, self.executor_url
         )

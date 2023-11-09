@@ -302,14 +302,9 @@ class InformationSchemaDataNode(DataNode):
             "LAST_ERROR",
         ],
         "KNOWLEDGE_BASES": ["NAME", "PROJECT", "MODEL", "STORAGE"],
+        "RAGS": ["NAME", "PROJECT", "LLM", "KNOWLEDGE_BASE"],
         "SKILLS": ["NAME", "PROJECT", "TYPE", "PARAMS"],
-        "AGENTS": [
-            "NAME",
-            "PROJECT",
-            "MODEL_NAME",
-            "SKILLS",
-            "PARAMS"
-        ]
+        "AGENTS": ["NAME", "PROJECT", "MODEL_NAME", "SKILLS", "PARAMS"],
     }
 
     def __init__(self, session):
@@ -346,7 +341,7 @@ class InformationSchemaDataNode(DataNode):
             "CHATBOTS": self._get_chatbots,
             "KNOWLEDGE_BASES": self._get_knowledge_bases,
             "SKILLS": self._get_skills,
-            "AGENTS": self._get_agents
+            "AGENTS": self._get_agents,
         }
         for table_name in self.information_schema:
             if table_name not in self.get_dataframe_funcs:
@@ -647,14 +642,15 @@ class InformationSchemaDataNode(DataNode):
 
     def _get_knowledge_bases(self, query: ASTNode = None):
         from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
+
         controller = KnowledgeBaseController(self.session)
         project_name = None
         if (
-                isinstance(query, Select)
-                and type(query.where) == BinaryOperation
-                and query.where.op == '='
-                and query.where.args[0].parts == ['project']
-                and isinstance(query.where.args[1], Constant)
+            isinstance(query, Select)
+            and type(query.where) == BinaryOperation
+            and query.where.op == '='
+            and query.where.args[0].parts == ['project']
+            and isinstance(query.where.args[1], Constant)
         ):
             project_name = query.where.args[1].value
 
@@ -671,8 +667,40 @@ class InformationSchemaDataNode(DataNode):
                 kb.name,
                 project_name,
                 kb.embedding_model.name,
-                kb.vector_database.name + '.' + kb.vector_database_table
-            ) for kb in kb_list
+                kb.vector_database.name + '.' + kb.vector_database_table,
+            )
+            for kb in kb_list
+        ]
+
+        return pd.DataFrame(data, columns=columns)
+
+    def _get_rags(self, query: ASTNode = None):
+        from mindsdb.interfaces.rag.controller import RAGBaseController
+
+        controller = RAGBaseController(self.session)
+        project_name = None
+
+        if (
+            isinstance(query, Select)
+            and type(query.where) == BinaryOperation
+            and query.where.op == '='
+            and query.where.args[0].parts == ['project']
+            and isinstance(query.where.args[1], Constant)
+        ):
+            project_name = query.where.args[1].value
+
+        # get the project id from the project name
+        project_controller = ProjectController()
+        project_id = project_controller.get(name=project_name).id
+        rag_list = controller.list(project_id=project_id)
+
+        columns = self.information_schema['RAGS']
+
+        # columns: NAME, PROJECT, LLM, KNOWLEDGE_BASE
+
+        data = [
+            (rag.name, project_name, rag.llm.name, rag.knowledge_base.name)
+            for rag in rag_list
         ]
 
         return pd.DataFrame(data, columns=columns)
@@ -681,11 +709,11 @@ class InformationSchemaDataNode(DataNode):
         skills_controller = SkillsController()
         project_name = None
         if (
-                isinstance(query, Select)
-                and type(query.where) == BinaryOperation
-                and query.where.op == '='
-                and query.where.args[0].parts == ['project']
-                and isinstance(query.where.args[1], Constant)
+            isinstance(query, Select)
+            and type(query.where) == BinaryOperation
+            and query.where.op == '='
+            and query.where.args[0].parts == ['project']
+            and isinstance(query.where.args[1], Constant)
         ):
             project_name = query.where.args[1].value
 
@@ -701,11 +729,11 @@ class InformationSchemaDataNode(DataNode):
         agents_controller = AgentsController()
         project_name = None
         if (
-                isinstance(query, Select)
-                and type(query.where) == BinaryOperation
-                and query.where.op == '='
-                and query.where.args[0].parts == ['project']
-                and isinstance(query.where.args[1], Constant)
+            isinstance(query, Select)
+            and type(query.where) == BinaryOperation
+            and query.where.op == '='
+            and query.where.args[0].parts == ['project']
+            and isinstance(query.where.args[1], Constant)
         ):
             project_name = query.where.args[1].value
 
@@ -714,7 +742,16 @@ class InformationSchemaDataNode(DataNode):
         columns = self.information_schema['AGENTS']
 
         # NAME, PROJECT, MODEL, SKILLS, PARAMS
-        data = [(a.name, project_name, a.model_name, list(map(lambda s: s.name, a.skills)), a.params) for a in all_agents]
+        data = [
+            (
+                a.name,
+                project_name,
+                a.model_name,
+                list(map(lambda s: s.name, a.skills)),
+                a.params,
+            )
+            for a in all_agents
+        ]
         return pd.DataFrame(data, columns=columns)
 
     def _get_databases(self, query: ASTNode = None):

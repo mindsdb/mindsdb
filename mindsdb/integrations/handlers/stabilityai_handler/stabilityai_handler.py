@@ -17,12 +17,17 @@ class StabilityAIHandler(BaseMLEngine):
     @staticmethod
     def create_validation(target, args=None, **kwargs):
         args = args['using']
+        
+        available_tasks = ["text-to-image", "image-to-image", "image-upscaling"]
 
         if 'api_key' not in args:
             raise Exception('api_key has to be specified')
-
-        if 'input_column' not in args:
-            raise Exception('input_column has to be specified')
+        
+        if 'task' not in args:
+            raise Exception('task has to be specified')
+        
+        if args['task'] not in available_tasks:
+            raise Exception('Unknown task specified. Available tasks are - ' + available_tasks)
 
         if 'local_directory_path' not in args:
             raise Exception('local_directory_path has to be specified')
@@ -41,25 +46,68 @@ class StabilityAIHandler(BaseMLEngine):
         args = args['using']
         args['target'] = target
         self.model_storage.json_set('args', args)
+        
+    def _get_stability_client(self, args):
+        api_key = self._get_stability_api_key(args)
+        
+        local_directory_path = args["local_directory_path"]
+        stability_engine_id = args.get('stability_engine_id', "stable-diffusion-xl-1024-v1-0")
+
+        return StabilityAPIClient(api_key=api_key, dir_to_save=local_directory_path, engine=stability_engine_id)
+        
+        
+    def _process_text_image(self, df, args):
+        
+        def generate_text_image(conds, client):
+            conds = conds.to_dict()
+            return client.text_to_image(prompt=conds.get("text"), height=conds.get("height", 1024), width=conds.get("width", 1024))
+    
+        supported_params = set(["text", "height", "width"])
+        
+        if "text" not in df.columns:
+            raise Exception("`text` column has to be given in the query.")
+        
+        for col in df.columns:
+            if col not in supported_params:
+                raise Exception(f"Unknown column {col}. Currently supported parameters for text to image - {supported_params}")
+        
+        client = self._get_stability_client(args)
+        
+        return df[df.columns.intersection(supported_params)].apply(generate_text_image, client=client, axis=1)
+    
+    def _process_image_image(self, df, args):
+        
+        def generate_image_image(conds, client):
+            conds = conds.to_dict()
+            return client.image_to_image(image_url=conds.get("image_url"), prompt=conds.get("text"), height=conds.get("height", 1024), width=conds.get("width", 1024))
+    
+        supported_params = set(["image_url", "text", "height", "width"])
+        
+        if "image_url" not in df.columns:
+            raise Exception("`image_url` column has to be given in the query.")
+        
+        for col in df.columns:
+            if col not in supported_params:
+                raise Exception(f"Unknown column {col}. Currently supported parameters for text to image - {supported_params}")
+        
+        client = self._get_stability_client(args)
+        
+        return df[df.columns.intersection(supported_params)].apply(generate_image_image, client=client, axis=1)
 
     def predict(self, df, args=None):
 
         args = self.model_storage.json_get('args')
-        api_key = self._get_stability_api_key(args)
-
-        input_column = args['input_column']
-
-        if input_column not in df.columns:
-            raise RuntimeError(f'Column "{input_column}" not found in input data')
-
-        local_directory_path = args["local_directory_path"]
-        stability_engine_id = args.get('stability_engine_id', "stable-diffusion-xl-1024-v1-0")
-
-        client = StabilityAPIClient(api_key=api_key, dir_to_save=local_directory_path, engine=stability_engine_id)
+        
+        if args["task"] == "text-to-image":
+            preds = self._process_text_image(df, args)
+        elif args["task"] == "image-to-image":
+            preds = self._process_image_image(df, args)
+        # elif args["task"] == "image-upscaling":
+        #     preds = self._process_image_upscaling(df, args)
 
         result_df = pd.DataFrame()
 
-        result_df['predictions'] = df[input_column].apply(self.generate_image, client=client)
+        result_df['predictions'] = preds
 
         result_df = result_df.rename(columns={'predictions': args['target']})
 
@@ -83,6 +131,3 @@ class StabilityAIHandler(BaseMLEngine):
 
         raise Exception("Missing API key 'api_key'. Either re-create this ML_ENGINE specifying the `api_key` parameter\
                  or re-create this model and pass the API key with `USING` syntax.")
-
-    def generate_image(self, text, client):
-        return client.text_to_image(prompt=text)

@@ -111,30 +111,66 @@ class StabilityAPIClient:
         """
         return Image.open(requests.get(image_url, stream=True).raw)
 
-    def text_to_image(self, prompt, seed=121245125,
-                      height=1024, width=1024,
-                      steps=50):
+    def text_to_image(self, prompt, height=1024, width=1024):
         """Converts the given text to image using stability API.
 
         Args:
             prompt: The given text
-            seed (int, optional): Random seed. Defaults to 121245125.
             height (int, optional): Height of the image. Defaults to 1024.
             width (int, optional): Width of the image. Defaults to 1024.
-            steps (int, optional): Number of steps. Defaults to 50.
 
         Returns:
             The local saved paths of the generated images
         """
         answers = self.stability_api.generate(
             prompt=prompt,
-            seed=seed,
             height=height,
-            width=width,
-            steps=steps,
-            sampler=generation.SAMPLER_K_DPMPP_2M
+            width=width
         )
 
+        saved_images = self._process_artifacts(answers)
+
+        return saved_images
+    
+    def image_to_image(self, image_url, prompt=None, 
+                       height=1024, width=1024, 
+                       mask_image_url=None):
+        """Image to Image inpainting + masking
+
+        Args:
+            image_url: The image url
+            prompt: The given text
+            height (int, optional): Height of the image. Defaults to 1024.
+            width (int, optional): Width of the image. Defaults to 1024.
+            mask_image_url (_type_, optional): The mask image url for masking. Defaults to None.
+
+        Returns:
+            The local saved paths of the generated images
+        """
+        img = self._read_image_url(image_url)
+        mask_img = None if (mask_image_url is None) else self._read_image_url(mask_image_url)
+        answers = self.stability_api.generate(
+                        prompt=prompt,
+                        init_image=img,
+                        mask_image=mask_img,
+                        width=width,
+                        height=height
+                    )
+        
+        saved_images = self._process_artifacts(answers)
+
+        return saved_images
+    
+    def image_upscaling(self, image_url, prompt=None,
+                        height=1024, width=1024):
+        img = self._read_image_url(image_url)
+        answers = self.stability_api.upscale(
+                        init_image=img,
+                        height=height,
+                        width=width,
+                        prompt=prompt
+                    )
+        
         saved_images = self._process_artifacts(answers)
 
         return saved_images

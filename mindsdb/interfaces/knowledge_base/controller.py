@@ -266,10 +266,12 @@ class KnowledgeBaseController:
                 raise Exception(f"Knowledge base does not exist: {name}")
 
         # drop table
-        database_name = db.Integration.query.get(kb.vector_database_id).name
-        self.session.datahub.get(database_name).integration_handler.drop_table(
-            kb.vector_database_table
-        )
+        vector_db = db.Integration.query.get(kb.vector_database_id)
+        if vector_db:
+            database_name = vector_db.name
+            self.session.datahub.get(database_name).integration_handler.drop_table(
+                kb.vector_database_table
+            )
 
         # kb exists
         db.session.delete(kb)

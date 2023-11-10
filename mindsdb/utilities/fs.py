@@ -71,20 +71,21 @@ def create_process_mark(folder="learn"):
 
 
 def set_process_mark(folder: str, mark: str) -> None:
-    """ touch new file which will be process mark
+    """touch new file which will be process mark
 
-        Args:
-            folder (str): where create the file
-            mark (str): file name
+    Args:
+        folder (str): where create the file
+        mark (str): file name
 
-        Returns:
-            str: process mark
+    Returns:
+        str: process mark
     """
     if os.name != "posix":
         return
     p = Path(tempfile.gettempdir()).joinpath(f"mindsdb/processes/{folder}/")
     p.mkdir(parents=True, exist_ok=True)
-    p.joinpath(f"{os.getpid()}-{threading.get_native_id()}-{mark}").touch()
+    mark = f"{os.getpid()}-{threading.get_native_id()}-{mark}"
+    p.joinpath(mark).touch()
     return mark
 
 
@@ -143,7 +144,7 @@ def clean_unlinked_process_marks():
                 except StopIteration:
                     from mindsdb.utilities.log import get_log
 
-                    get_log("main").warning(
+                    get_log(__name__).warning(
                         f"We have mark for process/thread {process_id}/{thread_id} but it does not exists"
                     )
                     file.unlink()
@@ -151,14 +152,14 @@ def clean_unlinked_process_marks():
             except psutil.AccessDenied:
                 from mindsdb.utilities.log import get_log
 
-                get_log("main").warning(f"access to {process_id} denied")
+                get_log(__name__).warning(f"access to process id: {process_id} denied")
 
                 continue
 
             except psutil.NoSuchProcess:
                 from mindsdb.utilities.log import get_log
 
-                get_log("main").warning(
+                get_log(__name__).warning(
                     f"We have mark for process/thread {process_id}/{thread_id} but it does not exists"
                 )
                 file.unlink()

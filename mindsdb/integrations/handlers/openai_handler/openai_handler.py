@@ -2,7 +2,6 @@ import os
 import math
 import json
 import shutil
-import binascii
 import tempfile
 import datetime
 import textwrap
@@ -17,9 +16,17 @@ import pandas as pd
 from mindsdb.utilities.hooks import before_openai_query, after_openai_query
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.integrations.handlers.openai_handler.helpers import retry_with_exponential_backoff, \
-    truncate_msgs_for_token_limit, get_available_models
-from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS, FINETUNING_LEGACY_MODELS, ALL_MODELS, OPENAI_API_BASE
+from mindsdb.integrations.handlers.openai_handler.helpers import (
+    retry_with_exponential_backoff,
+    truncate_msgs_for_token_limit,
+    get_available_models,
+)
+from mindsdb.integrations.handlers.openai_handler.constants import (
+    CHAT_MODELS,
+    IMAGE_MODELS,
+    FINETUNING_LEGACY_MODELS,
+    OPENAI_API_BASE,
+)
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.libs.llm_utils import get_completed_prompts
 
@@ -31,47 +38,65 @@ class OpenAIHandler(BaseMLEngine):
         super().__init__(*args, **kwargs)
         self.generative = True
         self.default_model = 'gpt-3.5-turbo'
-        self.default_mode = 'default'  # can also be 'conversational' or 'conversational-full'
-        self.supported_modes = ['default', 'conversational', 'conversational-full', 'image', 'embedding']
+        self.default_image_model = 'dall-e-2'
+        self.default_mode = (
+            'default'  # can also be 'conversational' or 'conversational-full'
+        )
+        self.supported_modes = [
+            'default',
+            'conversational',
+            'conversational-full',
+            'image',
+            'embedding',
+        ]
         self.rate_limit = 60  # requests per minute
         self.max_batch_size = 20
         self.default_max_tokens = 100
-        self.all_models = ALL_MODELS
         self.chat_completion_models = CHAT_MODELS
         self.supported_ft_models = FINETUNING_LEGACY_MODELS  # base models compatible with finetuning  # TODO #7387: transition to new endpoint before 4/1/24. Useful reference: Anyscale handler. # noqa
         self.ft_cls = openai.FineTune
 
-        # user suffix for finetunes, set once
-        try:
-            self.engine_storage.json_get('ft-suffix')['ft-suffix']
-        except (KeyError, TypeError):
-            self.engine_storage.json_set('ft-suffix', {'ft-suffix': binascii.b2a_hex(os.urandom(15)).decode()})
-
     @staticmethod
     def create_validation(target, args=None, **kwargs):
         if 'using' not in args:
-            raise Exception("OpenAI engine requires a USING clause! Refer to its documentation for more details.")
+            raise Exception(
+                "OpenAI engine requires a USING clause! Refer to its documentation for more details."
+            )
         else:
             args = args['using']
 
-        if len(set(args.keys()) & {'question_column', 'prompt_template', 'json_struct', 'prompt'}) == 0:
-            raise Exception('One of `question_column`, `prompt_template` or `json_struct` is required for this engine.')
+        if (
+            len(
+                set(args.keys())
+                & {'question_column', 'prompt_template', 'json_struct', 'prompt'}
+            )
+            == 0
+        ):
+            raise Exception(
+                'One of `question_column`, `prompt_template` or `json_struct` is required for this engine.'
+            )
 
         keys_collection = [
             ['prompt_template'],
             ['question_column', 'context_column'],
             ['prompt', 'user_column', 'assistant_column'],
-            ['json_struct']
+            ['json_struct'],
         ]
         for keys in keys_collection:
-            if keys[0] in args and any(x[0] in args for x in keys_collection if x != keys):
-                raise Exception(textwrap.dedent('''\
+            if keys[0] in args and any(
+                x[0] in args for x in keys_collection if x != keys
+            ):
+                raise Exception(
+                    textwrap.dedent(
+                        '''\
                     Please provide one of
                         1) a `prompt_template`
                         2) a `question_column` and an optional `context_column`
                         3) a `json_struct`
                         4) a `prompt' and 'user_column' and 'assistant_column`
-                '''))
+                '''
+                    )
+                )
 
         # for all args that are not expected, raise an error
         known_args = set()
@@ -108,26 +133,29 @@ class OpenAIHandler(BaseMLEngine):
         args = args['using']
         args['target'] = target
         api_key = get_api_key('openai', args, self.engine_storage)
-        ft_suffix = self.engine_storage.json_get('ft-suffix')['ft-suffix']
-        available_models = get_available_models(api_key, self.all_models, ft_suffix)
-
-        if not args.get('model_name'):
-            args['model_name'] = self.default_model
-        elif args['model_name'] not in available_models:
-            raise Exception(f"Invalid model name. Please use one of {available_models}")
+        available_models = get_available_models(api_key)
 
         if not args.get('mode'):
             args['mode'] = self.default_mode
         elif args['mode'] not in self.supported_modes:
-            raise Exception(f"Invalid operation mode. Please use one of {self.supported_modes}")
+            raise Exception(
+                f"Invalid operation mode. Please use one of {self.supported_modes}"
+            )
+
+        if not args.get('model_name'):
+            if args['mode'] == 'image':
+                args['model_name'] = self.default_image_model
+            else:
+                args['model_name'] = self.default_model
+        elif args['model_name'] not in available_models:
+            raise Exception(f"Invalid model name. Please use one of {available_models}")
 
         self.model_storage.json_set('args', args)
-
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         """
         If there is a prompt template, we use it. Otherwise, we use the concatenation of `context_column` (optional) and `question_column` to ask for a completion.
-        """ # noqa
+        """  # noqa
         # TODO: support for edits, embeddings and moderation
 
         pred_args = args['predict_params'] if args else {}
@@ -138,10 +166,14 @@ class OpenAIHandler(BaseMLEngine):
             if pred_args['mode'] in self.supported_modes:
                 args['mode'] = pred_args['mode']
             else:
-                raise Exception(f"Invalid operation mode. Please use one of {self.supported_modes}.")  # noqa
+                raise Exception(
+                    f"Invalid operation mode. Please use one of {self.supported_modes}."
+                )  # noqa
 
         if pred_args.get('prompt_template', False):
-            base_template = pred_args['prompt_template']  # override with predict-time template if available
+            base_template = pred_args[
+                'prompt_template'
+            ]  # override with predict-time template if available
         elif args.get('prompt_template', False):
             base_template = args['prompt_template']
         else:
@@ -151,12 +183,14 @@ class OpenAIHandler(BaseMLEngine):
         if args.get('mode', self.default_mode) == 'embedding':
             api_args = {
                 'question_column': pred_args.get('question_column', None),
-                'model': pred_args.get('model_name', 'text-embedding-ada-002')
+                'model': pred_args.get('model_name', 'text-embedding-ada-002'),
             }
             model_name = 'embedding'
             if args.get('question_column'):
                 prompts = list(df[args['question_column']].apply(lambda x: str(x)))
-                empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
+                empty_prompt_ids = np.where(
+                    df[[args['question_column']]].isna().all(axis=1).values
+                )[0]
             else:
                 raise Exception('Embedding mode needs a question_column')
 
@@ -168,30 +202,53 @@ class OpenAIHandler(BaseMLEngine):
                 'size': pred_args.get('size', None),
                 'response_format': pred_args.get('response_format', None),
             }
-            api_args = {k: v for k, v in api_args.items() if v is not None}  # filter out non-specified api args
-            model_name = 'image'
+            api_args = {
+                k: v for k, v in api_args.items() if v is not None
+            }  # filter out non-specified api args
+            model_name = args.get('model_name', 'dall-e-2')
 
             if args.get('question_column'):
                 prompts = list(df[args['question_column']].apply(lambda x: str(x)))
-                empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
+                empty_prompt_ids = np.where(
+                    df[[args['question_column']]].isna().all(axis=1).values
+                )[0]
             elif args.get('prompt_template'):
                 prompts, empty_prompt_ids = get_completed_prompts(base_template, df)
             else:
-                raise Exception('Image mode needs either `prompt_template` or `question_column`.')
+                raise Exception(
+                    'Image mode needs either `prompt_template` or `question_column`.'
+                )
 
         # Chat or normal completion mode
         else:
-            if args.get('question_column', False) and args['question_column'] not in df.columns:
-                raise Exception(f"This model expects a question to answer in the '{args['question_column']}' column.")
+            if (
+                args.get('question_column', False)
+                and args['question_column'] not in df.columns
+            ):
+                raise Exception(
+                    f"This model expects a question to answer in the '{args['question_column']}' column."
+                )
 
-            if args.get('context_column', False) and args['context_column'] not in df.columns:
-                raise Exception(f"This model expects context in the '{args['context_column']}' column.")
+            if (
+                args.get('context_column', False)
+                and args['context_column'] not in df.columns
+            ):
+                raise Exception(
+                    f"This model expects context in the '{args['context_column']}' column."
+                )
 
             # api argument validation
             model_name = args.get('model_name', self.default_model)
             api_args = {
-                'max_tokens': pred_args.get('max_tokens', args.get('max_tokens', self.default_max_tokens)),
-                'temperature': min(1.0, max(0.0, pred_args.get('temperature', args.get('temperature', 0.0)))),
+                'max_tokens': pred_args.get(
+                    'max_tokens', args.get('max_tokens', self.default_max_tokens)
+                ),
+                'temperature': min(
+                    1.0,
+                    max(
+                        0.0, pred_args.get('temperature', args.get('temperature', 0.0))
+                    ),
+                ),
                 'top_p': pred_args.get('top_p', None),
                 'n': pred_args.get('n', None),
                 'stop': pred_args.get('stop', None),
@@ -200,24 +257,43 @@ class OpenAIHandler(BaseMLEngine):
                 'best_of': pred_args.get('best_of', None),
                 'logit_bias': pred_args.get('logit_bias', None),
                 'user': pred_args.get('user', None),
-                'api_base': pred_args.get('api_base', args.get('api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)))  # noqa
+                'api_base': pred_args.get(
+                    'api_base',
+                    args.get(
+                        'api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
+                    ),
+                ),  # noqa
             }
 
-            if args.get('mode', self.default_mode) != 'default' and model_name not in self.chat_completion_models:
-                raise Exception(f"Conversational modes are only available for the following models: {', '.join(self.chat_completion_models)}")  # noqa
+            if (
+                args.get('mode', self.default_mode) != 'default'
+                and model_name not in self.chat_completion_models
+            ):
+                raise Exception(
+                    f"Conversational modes are only available for the following models: {', '.join(self.chat_completion_models)}"
+                )  # noqa
 
             if args.get('prompt_template', False):
                 prompts, empty_prompt_ids = get_completed_prompts(base_template, df)
 
             elif args.get('context_column', False):
-                empty_prompt_ids = np.where(df[[args['context_column'],
-                                               args['question_column']]].isna().all(axis=1).values)[0]
+                empty_prompt_ids = np.where(
+                    df[[args['context_column'], args['question_column']]]
+                    .isna()
+                    .all(axis=1)
+                    .values
+                )[0]
                 contexts = list(df[args['context_column']].apply(lambda x: str(x)))
                 questions = list(df[args['question_column']].apply(lambda x: str(x)))
-                prompts = [f'Context: {c}\nQuestion: {q}\nAnswer: ' for c, q in zip(contexts, questions)]
+                prompts = [
+                    f'Context: {c}\nQuestion: {q}\nAnswer: '
+                    for c, q in zip(contexts, questions)
+                ]
 
             elif args.get('json_struct', False):
-                empty_prompt_ids = np.where(df[[args['input_text']]].isna().all(axis=1).values)[0]
+                empty_prompt_ids = np.where(
+                    df[[args['input_text']]].isna().all(axis=1).values
+                )[0]
                 prompts = []
                 for i in df.index:
                     if 'json_struct' in df.columns:
@@ -231,19 +307,21 @@ class OpenAIHandler(BaseMLEngine):
                         for ind, val in enumerate(args['json_struct'].values()):
                             json_struct = json_struct + f'{ind + 1}. {val}\n'
 
-                    p = textwrap.dedent(f'''\
+                    p = textwrap.dedent(
+                        f'''\
                         Using text starting after 'The text is:', give exactly {len(args['json_struct'])} answers to the questions:
                         {{{{json_struct}}}}
-    
+
                         Answers should be in the same order as the questions.
                         Each answer should start with a question number.
                         Each answer must end with new line.
                         If there is no answer to the question in the text, put a -.
                         Answers should be as short as possible, ideally 1-2 words (unless otherwise specified).
-    
+
                         The text is:
                         {{{{{args['input_text']}}}}}
-                    ''')
+                    '''
+                    )
                     p = p.replace('{{json_struct}}', json_struct)
                     for column in df.columns:
                         if column == 'json_struct':
@@ -254,14 +332,18 @@ class OpenAIHandler(BaseMLEngine):
                 empty_prompt_ids = []
                 prompts = list(df[args['user_column']])
             else:
-                empty_prompt_ids = np.where(df[[args['question_column']]].isna().all(axis=1).values)[0]
+                empty_prompt_ids = np.where(
+                    df[[args['question_column']]].isna().all(axis=1).values
+                )[0]
                 prompts = list(df[args['question_column']].apply(lambda x: str(x)))
 
         # remove prompts without signal from completion queue
         prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
 
         api_key = get_api_key('openai', args, self.engine_storage)
-        api_args = {k: v for k, v in api_args.items() if v is not None}  # filter out non-specified api args
+        api_args = {
+            k: v for k, v in api_args.items() if v is not None
+        }  # filter out non-specified api args
         completion = self._completion(model_name, prompts, api_key, api_args, args, df)
 
         # add null completion for empty prompts
@@ -279,20 +361,19 @@ class OpenAIHandler(BaseMLEngine):
                     else:
                         json_keys = args['json_struct'].keys()
                     responses = pred_df[args['target']][i].split('\n')
-                    responses = [x[3:] for x in responses]      # del question index
+                    responses = [x[3:] for x in responses]  # del question index
 
                     pred_df[args['target']][i] = {
-                        key: val for key, val in zip(
-                            json_keys,
-                            responses
-                        )
+                        key: val for key, val in zip(json_keys, responses)
                     }
                 except Exception:
                     pred_df[args['target']][i] = None
 
         return pred_df
 
-    def _completion(self, model_name, prompts, api_key, api_args, args, df, parallel=True):
+    def _completion(
+        self, model_name, prompts, api_key, api_args, args, df, parallel=True
+    ):
         """
         Handles completion for an arbitrary amount of rows.
 
@@ -303,6 +384,7 @@ class OpenAIHandler(BaseMLEngine):
         Additionally, single completion calls are done with exponential backoff to guarantee all prompts are processed,
         because even with previous checks the tokens-per-minute limit may apply.
         """
+
         @retry_with_exponential_backoff()
         def _submit_completion(model_name, prompts, api_key, api_args, args, df):
             kwargs = {
@@ -310,12 +392,18 @@ class OpenAIHandler(BaseMLEngine):
                 'api_key': api_key,
                 'organization': args.get('api_organization'),
             }
-            if model_name == 'image':
+            if model_name in IMAGE_MODELS:
                 return _submit_image_completion(kwargs, prompts, api_args)
             elif model_name == 'embedding':
                 return _submit_embedding_completion(kwargs, prompts, api_args)
             elif model_name in self.chat_completion_models:
-                return _submit_chat_completion(kwargs, prompts, api_args, df, mode=args.get('mode', 'conversational'))
+                return _submit_chat_completion(
+                    kwargs,
+                    prompts,
+                    api_args,
+                    df,
+                    mode=args.get('mode', 'conversational'),
+                )
             else:
                 return _submit_normal_completion(kwargs, prompts, api_args)
 
@@ -359,7 +447,9 @@ class OpenAIHandler(BaseMLEngine):
             _log_api_call(kwargs, resp)
             return resp
 
-        def _submit_chat_completion(kwargs, prompts, api_args, df, mode='conversational'):
+        def _submit_chat_completion(
+            kwargs, prompts, api_args, df, mode='conversational'
+        ):
             def _tidy(comp):
                 tidy_comps = []
                 for c in comp['choices']:
@@ -369,29 +459,38 @@ class OpenAIHandler(BaseMLEngine):
 
             completions = []
             if mode != 'conversational':
-                initial_prompt = {"role": "system", "content": "You are a helpful assistant. Your task is to continue the chat."}  # noqa
+                initial_prompt = {
+                    "role": "system",
+                    "content": "You are a helpful assistant. Your task is to continue the chat.",
+                }  # noqa
             else:
                 # get prompt from model
-                initial_prompt = {"role": "system",  "content": args['prompt']}  # noqa
+                initial_prompt = {"role": "system", "content": args['prompt']}  # noqa
 
             kwargs['messages'] = [initial_prompt]
             last_completion_content = None
 
             for pidx in range(len(prompts)):
                 if mode != 'conversational':
-                    kwargs['messages'].append({'role': 'user', 'content': prompts[pidx]})
+                    kwargs['messages'].append(
+                        {'role': 'user', 'content': prompts[pidx]}
+                    )
                 else:
                     question = prompts[pidx]
                     if question:
                         kwargs['messages'].append({'role': 'user', 'content': question})
                     answer = df.iloc[pidx][args.get('assistant_column')]
                     if answer:
-                        kwargs['messages'].append({'role': 'assistant', 'content': answer})
+                        kwargs['messages'].append(
+                            {'role': 'assistant', 'content': answer}
+                        )
 
-                if mode == 'conversational-full' or (mode == 'conversational' and pidx == len(prompts) - 1):
-                    kwargs['messages'] = truncate_msgs_for_token_limit(kwargs['messages'],
-                                                                       kwargs['model'],
-                                                                       api_args['max_tokens'])
+                if mode == 'conversational-full' or (
+                    mode == 'conversational' and pidx == len(prompts) - 1
+                ):
+                    kwargs['messages'] = truncate_msgs_for_token_limit(
+                        kwargs['messages'], kwargs['model'], api_args['max_tokens']
+                    )
                     pkwargs = {**kwargs, **api_args}
 
                     before_openai_query(kwargs)
@@ -418,30 +517,37 @@ class OpenAIHandler(BaseMLEngine):
                         completions.extend([''])
 
                 if args.get('answer_column') in df.columns:
-                    kwargs['messages'].append({'role': 'assistant',
-                                               'content': df.iloc[pidx][args.get('answer_column')]})
+                    kwargs['messages'].append(
+                        {
+                            'role': 'assistant',
+                            'content': df.iloc[pidx][args.get('answer_column')],
+                        }
+                    )
                 elif last_completion_content:
                     # interleave assistant responses with user input
-                    kwargs['messages'].append({'role': 'assistant', 'content': last_completion_content[0]})
+                    kwargs['messages'].append(
+                        {'role': 'assistant', 'content': last_completion_content[0]}
+                    )
 
             return completions
 
         def _submit_image_completion(kwargs, prompts, api_args):
             def _tidy(comp):
-                return [c[0]['url'] if 'url' in c[0].keys() else c[0]['b64_json'] for c in comp]
-            kwargs.pop('model')
-            completions = [openai.Image.create(**{'prompt': p, **kwargs, **api_args})['data'] for p in prompts]
+                return [
+                    c[0]['url'] if 'url' in c[0].keys() else c[0]['b64_json']
+                    for c in comp
+                ]
+
+            completions = [
+                openai.Image.create(**{'prompt': p, **kwargs, **api_args})['data']
+                for p in prompts
+            ]
             return _tidy(completions)
 
         try:
             # check if simple completion works
             completion = _submit_completion(
-                model_name,
-                prompts,
-                api_key,
-                api_args,
-                args,
-                df
+                model_name, prompts, api_key, api_args, args, df
             )
             return completion
         except openai.error.InvalidRequestError as e:
@@ -449,19 +555,23 @@ class OpenAIHandler(BaseMLEngine):
             e = e.user_message
             if 'you can currently request up to at most a total of' in e:
                 pattern = 'a total of'
-                max_batch_size = int(e[e.find(pattern) + len(pattern):].split(').')[0])
+                max_batch_size = int(e[e.find(pattern) + len(pattern) :].split(').')[0])
             else:
-                max_batch_size = self.max_batch_size  # guards against changes in the API message
+                max_batch_size = (
+                    self.max_batch_size
+                )  # guards against changes in the API message
 
         if not parallel:
             completion = None
             for i in range(math.ceil(len(prompts) / max_batch_size)):
-                partial = _submit_completion(model_name,
-                                             prompts[i * max_batch_size:(i + 1) * max_batch_size],
-                                             api_key,
-                                             api_args,
-                                             args,
-                                             df)
+                partial = _submit_completion(
+                    model_name,
+                    prompts[i * max_batch_size : (i + 1) * max_batch_size],
+                    api_key,
+                    api_args,
+                    args,
+                    df,
+                )
                 if not completion:
                     completion = partial
                 else:
@@ -472,14 +582,18 @@ class OpenAIHandler(BaseMLEngine):
             promises = []
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 for i in range(math.ceil(len(prompts) / max_batch_size)):
-                    print(f'{i * max_batch_size}:{(i+1) * max_batch_size}/{len(prompts)}')
-                    future = executor.submit(_submit_completion,
-                                             model_name,
-                                             prompts[i * max_batch_size:(i + 1) * max_batch_size],
-                                             api_key,
-                                             api_args,
-                                             args,
-                                             df)
+                    print(
+                        f'{i * max_batch_size}:{(i+1) * max_batch_size}/{len(prompts)}'
+                    )
+                    future = executor.submit(
+                        _submit_completion,
+                        model_name,
+                        prompts[i * max_batch_size : (i + 1) * max_batch_size],
+                        api_key,
+                        api_args,
+                        args,
+                        df,
+                    )
                     promises.append({"choices": future})
             completion = None
             for p in promises:
@@ -506,18 +620,20 @@ class OpenAIHandler(BaseMLEngine):
             tables = ['args', 'metadata']
             return pd.DataFrame(tables, columns=['tables'])
 
-    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+    def finetune(
+        self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None
+    ) -> None:
         """
         Fine-tune OpenAI GPT models. Steps are roughly:
           - Analyze input data and modify it according to suggestions made by the OpenAI utility tool
           - Get a training and validation file
           - Determine base model to use
           - Submit a fine-tuning job via the OpenAI API
-          - Monitor progress with exponential backoff (which has been modified for greater control given a time budget in hours), 
+          - Monitor progress with exponential backoff (which has been modified for greater control given a time budget in hours),
           - Gather stats once fine-tuning finishes
           - Modify model metadata so that the new version triggers the fine-tuned version of the model (stored in the user's OpenAI account)
 
-        Caveats: 
+        Caveats:
           - As base fine-tuning models, OpenAI only supports the original GPT ones: `ada`, `babbage`, `curie`, `davinci`. This means if you fine-tune successively more than once, any fine-tuning other than the most recent one is lost.
           - A bunch of helper methods exist to be overridden in other handlers that follow the OpenAI API, e.g. Anyscale
         """  # noqa
@@ -533,18 +649,23 @@ class OpenAIHandler(BaseMLEngine):
         prev_model_name = self.base_model_storage.json_get('args').get('model_name', '')
 
         if prev_model_name not in self.supported_ft_models:
-            raise Exception(f"This model cannot be finetuned. Supported base models are {self.supported_ft_models}")
+            raise Exception(
+                f"This model cannot be finetuned. Supported base models are {self.supported_ft_models}"
+            )
 
         openai.api_key = get_api_key('openai', args, self.engine_storage)
-        openai.api_base = args.get('api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
-        ft_suffix = self.engine_storage.json_get('ft-suffix')['ft-suffix']
+        openai.api_base = args.get(
+            'api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
+        )
         finetune_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
         temp_storage_path = tempfile.mkdtemp()
         temp_file_name = f"ft_{finetune_time}"
         temp_model_storage_path = f"{temp_storage_path}/{temp_file_name}.jsonl"
 
-        file_names = self._prepare_ft_jsonl(df, temp_storage_path, temp_file_name, temp_model_storage_path)
+        file_names = self._prepare_ft_jsonl(
+            df, temp_storage_path, temp_file_name, temp_model_storage_path
+        )
 
         jsons = {k: None for k in file_names.keys()}
         for split, file_name in file_names.items():
@@ -552,7 +673,8 @@ class OpenAIHandler(BaseMLEngine):
                 jsons[split] = openai.File.create(
                     file=open(f"{temp_storage_path}/{file_name}", "rb"),
                     # api_base=openai.api_base,  # TODO: rm
-                    purpose='fine-tune')
+                    purpose='fine-tune',
+                )
 
         if type(jsons['train']) in (openai.File, openai.openai_object.OpenAIObject):
             train_file_id = jsons['train'].id
@@ -569,8 +691,6 @@ class OpenAIHandler(BaseMLEngine):
             'training_file': train_file_id,
             'validation_file': val_file_id,
             'model': self._get_ft_model_type(prev_model_name),
-            'suffix': f'{ft_suffix}',
-            # 'api_base': api_base,
         }
         ft_params = self._add_extra_ft_params(ft_params, using_args)
 
@@ -590,17 +710,23 @@ class OpenAIHandler(BaseMLEngine):
             # legacy endpoint
             train_stats = pd.read_csv(result_path)
             if 'validation_token_accuracy' in train_stats.columns:
-                train_stats = train_stats[train_stats['validation_token_accuracy'].notnull()]
+                train_stats = train_stats[
+                    train_stats['validation_token_accuracy'].notnull()
+                ]
             args['ft_api_info'] = ft_stats.to_dict_recursive()
             args['ft_result_stats'] = train_stats.to_dict()
 
         elif '.json' in name_extension:
-            train_stats = pd.read_json(path_or_buf=result_path, lines=True)  # new endpoint
+            train_stats = pd.read_json(
+                path_or_buf=result_path, lines=True
+            )  # new endpoint
             args['ft_api_info'] = args['ft_result_stats'] = train_stats.to_dict()
 
         args['model_name'] = ft_model_name
         args['runtime'] = runtime.total_seconds()
-        args['mode'] = self.base_model_storage.json_get('args').get('mode', self.default_mode)
+        args['mode'] = self.base_model_storage.json_get('args').get(
+            'mode', self.default_mode
+        )
 
         self.model_storage.json_set('args', args)
         shutil.rmtree(temp_storage_path)
@@ -610,7 +736,9 @@ class OpenAIHandler(BaseMLEngine):
         prompt_col, completion_col = cols
         for col in [prompt_col, completion_col]:
             if col not in set(df.columns):
-                raise Exception(f"To fine-tune this OpenAI model, please format your select data query to have a `{prompt_col}` column and a `{completion_col}` column first.")  # noqa
+                raise Exception(
+                    f"To fine-tune this OpenAI model, please format your select data query to have a `{prompt_col}` column and a `{completion_col}` column first."
+                )  # noqa
 
     def _prepare_ft_jsonl(self, df, _, temp_filename, temp_model_path):
         df.to_json(temp_model_path, orient='records', lines=True)
@@ -618,19 +746,24 @@ class OpenAIHandler(BaseMLEngine):
         # TODO avoid subprocess usage once OpenAI enables non-CLI access
         subprocess.run(
             [
-                "openai", "tools", "fine_tunes.prepare_data",
-                "-f", temp_model_path,  # from file
-                '-q'  # quiet mode (accepts all suggestions)
+                "openai",
+                "tools",
+                "fine_tunes.prepare_data",
+                "-f",
+                temp_model_path,  # from file
+                '-q',  # quiet mode (accepts all suggestions)
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             encoding="utf-8",
         )
 
-        file_names = {'original': f'{temp_filename}.jsonl',
-                      'base': f'{temp_filename}_prepared.jsonl',
-                      'train': f'{temp_filename}_prepared_train.jsonl',
-                      'val': f'{temp_filename}_prepared_valid.jsonl'}
+        file_names = {
+            'original': f'{temp_filename}.jsonl',
+            'base': f'{temp_filename}_prepared.jsonl',
+            'train': f'{temp_filename}_prepared_train.jsonl',
+            'val': f'{temp_filename}_prepared_valid.jsonl',
+        }
         return file_names
 
     @staticmethod
@@ -645,26 +778,37 @@ class OpenAIHandler(BaseMLEngine):
         extra_params = {
             'n_epochs': using_args.get('n_epochs', None),
             'batch_size': using_args.get('batch_size', None),
-            'learning_rate_multiplier': using_args.get('learning_rate_multiplier', None),
+            'learning_rate_multiplier': using_args.get(
+                'learning_rate_multiplier', None
+            ),
             'prompt_loss_weight': using_args.get('prompt_loss_weight', None),
-            'compute_classification_metrics': using_args.get('compute_classification_metrics', None),
-            'classification_n_classes': using_args.get('classification_n_classes', None),
-            'classification_positive_class': using_args.get('classification_positive_class', None),
+            'compute_classification_metrics': using_args.get(
+                'compute_classification_metrics', None
+            ),
+            'classification_n_classes': using_args.get(
+                'classification_n_classes', None
+            ),
+            'classification_positive_class': using_args.get(
+                'classification_positive_class', None
+            ),
             'classification_betas': using_args.get('classification_betas', None),
         }
         return {**ft_params, **extra_params}
 
     def _ft_call(self, ft_params, hour_budget):
         """
-            Separate method to account for both legacy and new endpoints.
-            Currently, `OpenAIHandler` uses the legacy endpoint.
-            Others, like `AnyscaleEndpointsHandler`, use the new endpoint.
+        Separate method to account for both legacy and new endpoints.
+        Currently, `OpenAIHandler` uses the legacy endpoint.
+        Others, like `AnyscaleEndpointsHandler`, use the new endpoint.
         """
-        ft_result = self.ft_cls.create(**{k: v for k, v in ft_params.items() if v is not None})
+        ft_result = self.ft_cls.create(
+            **{k: v for k, v in ft_params.items() if v is not None}
+        )
 
         @retry_with_exponential_backoff(
             hour_budget=hour_budget,
-            errors=(openai.error.RateLimitError, openai.error.OpenAIError))
+            errors=(openai.error.RateLimitError, openai.error.OpenAIError),
+        )
         def _check_ft_status(model_id):
             ft_retrieved = self.ft_cls.retrieve(id=model_id)
             if ft_retrieved['status'] in ('succeeded', 'failed', 'cancelled'):
@@ -676,7 +820,8 @@ class OpenAIHandler(BaseMLEngine):
 
         if ft_stats['status'] != 'succeeded':
             raise Exception(
-                f"Fine-tuning did not complete successfully (status: {ft_stats['status']}). Error message: {ft_stats['events'][-1]['message']}")  # noqa
+                f"Fine-tuning did not complete successfully (status: {ft_stats['status']}). Error message: {ft_stats['events'][-1]['message']}"
+            )  # noqa
 
         result_file_id = self.ft_cls.retrieve(id=ft_result.id)['result_files'][0]
         if hasattr(result_file_id, 'id'):

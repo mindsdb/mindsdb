@@ -153,18 +153,28 @@ class FileHandler(DatabaseHandler):
 
                 loader = TextLoader(file_path, encoding="utf8")
                 docs = text_splitter.split_documents(loader.load())
-                df = pd.DataFrame([{"text": doc.page_content} for doc in docs])
+                df = pd.DataFrame(
+                    [
+                        {"content": doc.page_content, "metadata": doc.metadata}
+                        for doc in docs
+                    ]
+                )
 
             elif fmt == "pdf":
-                from langchain.document_loaders import UnstructuredPDFLoader
+                from langchain.document_loaders import PyPDFLoader
 
-                loader = UnstructuredPDFLoader(file_path)
-                docs = text_splitter.split_documents(loader.load())
-                df = pd.DataFrame([{"text": doc.page_content} for doc in docs])
+                loader = PyPDFLoader(file_path)
+                docs = text_splitter.split_documents(loader.load_and_split())
+                df = pd.DataFrame(
+                    [
+                        {"content": doc.page_content, "metadata": doc.metadata}
+                        for doc in docs
+                    ]
+                )
 
         else:
             raise ValueError(
-                "Could not load file into any format, supported formats are csv, json, xls, xlsx"
+                "Could not load file into any format, supported formats are csv, json, xls, xlsx, pdf, txt"
             )
 
         header = df.columns.values.tolist()
@@ -223,7 +233,14 @@ class FileHandler(DatabaseHandler):
         data_str.seek(0)
         try:
             csv.Sniffer().sniff(sample)
-            return True
+            # Avoid a false-positive for json files
+            try:
+                json.loads(data_str.read())
+                data_str.seek(0)
+                return False
+            except json.decoder.JSONDecodeError:
+                data_str.seek(0)
+                return True
         except Exception:
             return False
 

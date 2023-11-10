@@ -118,7 +118,7 @@ We can ask questions to analyze the available data.
 ```sql
 SELECT input, completion
 FROM tool_based_agent
-WHERE input = 'I want to know the average number of beds in the downtown neighbourhood as per the `mysql_demo_db.home_rentals` table'
+WHERE input = 'I want to know the average number of beds in the downtown neighborhood as per the `mysql_demo_db.home_rentals` table'
 USING
     verbose = True,
     tools = [],
@@ -131,7 +131,7 @@ On execution, we get:
 +-----------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
 | input                                                                                                                 | completion                                                                                                     |
 +-----------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
-| I want to know the average number of beds in the downtown neighbourhood as per the `mysql_demo_db.home_rentals` table | The average number of beds in the downtown neighbourhood as per the `mysql_demo_db.home_rentals` table is 1.6. |
+| I want to know the average number of beds in the downtown neighborhood as per the `mysql_demo_db.home_rentals` table | The average number of beds in the downtown neighborhood as per the `mysql_demo_db.home_rentals` table is 1.6. |
 +-----------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
 ```
 
@@ -152,7 +152,7 @@ We can ask the model to retrieve specific data.
 ```sql
 SELECT input, completion
 FROM tool_based_agent
-WHERE input = 'There is a property in the south_side neighborhood with an initial price of 2543 the `mysql_demo_db.home_rentals` table. What are some other deatils of this listing?'
+WHERE input = 'There is a property in the south_side neighborhood with an initial price of 2543 the `mysql_demo_db.home_rentals` table. What are some other details of this listing?'
 USING
     verbose = True,
     tools = [],
@@ -165,7 +165,7 @@ On execution, we get:
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | input                                                                                                                                                                 | completion                                                                                                                                                                              |
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| There is a property in the south_side neighborhood with an initial price of 2543 the `mysql_demo_db.home_rentals` table. What are some other deatils of this listing? | The property in the south_side neighborhood with an initial price of 2543 has 1 bedroom, 1 bathroom, is 630 sqft, has been on the market for 11 days, and has a rental price of 2543.0. |
+| There is a property in the south_side neighborhood with an initial price of 2543 the `mysql_demo_db.home_rentals` table. What are some other details of this listing? | The property in the south_side neighborhood with an initial price of 2543 has 1 bedroom, 1 bathroom, is 630 sqft, has been on the market for 11 days, and has a rental price of 2543.0. |
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
@@ -174,7 +174,7 @@ Here, the model uses the Metadata tool again to fetch information about the tabl
 ```sql
 SELECT *
 FROM mysql_demo_db.home_rentals
-WHERE neightborhood = 'south_side'
+WHERE neighborhood = 'south_side'
 AND initial_price = 2543;
 ```
 

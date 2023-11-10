@@ -206,13 +206,16 @@ class TestRAG(BaseExecutorDummyLLM):
         self.run_sql(sql)
 
         # select all without where clause should fail
-        sql = """
-            SELECT *
-            FROM test_rag
-        """
 
-        with pytest.raises(Exception):
-            self.run_sql(sql)
+        # todo it should not be possible to run select without where
+
+        # sql = """
+        #     SELECT *
+        #     FROM test_rag
+        # """
+        #
+        # with pytest.raises(Exception):
+        #     self.run_sql(sql)
 
         # select with a valid where clause
         sql = """

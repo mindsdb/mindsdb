@@ -131,7 +131,9 @@ class RAGIngestor:
         )
 
         # Load embeddings model
-        embeddings_model = load_embeddings_model(self.embeddings_model_name)
+        embeddings_model = load_embeddings_model(
+            self.embeddings_model_name, self.args.use_gpu
+        )
 
         logger.info(f"Creating vectorstore from documents")
 

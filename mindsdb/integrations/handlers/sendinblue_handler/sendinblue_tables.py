@@ -1,7 +1,7 @@
 import sib_api_v3_sdk
 import pandas as pd
 
-from typing import List, Optional, Dict, Text
+from typing import List, Dict, Text
 from mindsdb.utilities.log import get_log
 from mindsdb.integrations.libs.api_handler import APITable
 logger = get_log("integrations.sendinblue_handler")
@@ -9,7 +9,7 @@ from mindsdb_sql.parser import ast
 from sib_api_v3_sdk.rest import ApiException
 from datetime import datetime
 
-from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor, UPDATEQueryExecutor, UPDATEQueryParser, DELETEQueryParser, DELETEQueryExecutor
+from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor, DELETEQueryParser, DELETEQueryExecutor
 
 
 class EmailCampaignsTable(APITable):
@@ -77,7 +77,7 @@ class EmailCampaignsTable(APITable):
 
         Raises
         ------
-        ApiException
+        RuntimeError
             If an error occurs when calling Sendinblue's API
         """
         # this  parses the DELETE statement to extract where conditions

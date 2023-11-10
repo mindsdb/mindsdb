@@ -70,7 +70,6 @@
     {"source": "/app-integrations/shopify","destination": "/integrations/app-integrations/shopify"},
     {"source": "/app-integrations/twitter","destination": "/integrations/app-integrations/twitter"},
     {"source": "/app-integrations/youtube","destination": "/integrations/app-integrations/youtube"},
-    {"source": "/app-integrations/strapi","destination": "/integrations/app-integrations/strapi"},
     {"source": "/data-integrations/all-data-integrations","destination": "/integrations/data-integrations/all-data-integrations"},
     {"source": "/data-integrations/airtable","destination": "/integrations/data-integrations/airtable"},
     {"source": "/data-integrations/amazon-aurora","destination": "/integrations/data-integrations/amazon-aurora"},

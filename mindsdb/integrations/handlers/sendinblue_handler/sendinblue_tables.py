@@ -80,6 +80,8 @@ class EmailCampaignsTable(APITable):
         ------
         ValueError
             If the query contains an unsupported condition
+        RuntimeError 
+            If an error occurs when calling Sendinblue's API
         """
         # this parse the UPDATE statement to extract the new values and the conditions for the update
         update_statement_parser = UPDATEQueryParser(query)
@@ -108,3 +110,4 @@ class EmailCampaignsTable(APITable):
                 logger.info(f'Email Campaign {campaign_id} updated')
             except ApiException as e:
                 logger.error(f"Exception when calling EmailCampaignsApi->update_email_campaign: {e}\n") 
+                raise RuntimeError(f"Failed to execute the update command for Email Campaign {campaign_id}") from e

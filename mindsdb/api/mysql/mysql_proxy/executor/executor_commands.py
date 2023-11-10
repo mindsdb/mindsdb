@@ -45,6 +45,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     CreateDatabase,
     CreateJob,
     CreateKnowledgeBase,
+    CreateRAG,
     CreateMLEngine,
     CreatePredictor,
     CreateSkill,
@@ -55,6 +56,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     DropDatasource,
     DropJob,
     DropKnowledgeBase,
+    DropRAG,
     DropMLEngine,
     DropPredictor,
     DropSkill,
@@ -64,7 +66,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     RetrainPredictor,
     UpdateAgent,
     UpdateChatBot,
-    UpdateSkill
+    UpdateSkill,
 )
 from mindsdb_sql.parser.dialects.mysql import Variable
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -437,7 +439,7 @@ class ExecuteCommands:
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
             elif "show create table" in sql_lower:
                 # SHOW CREATE TABLE `MINDSDB`.`predictors`
-                table = sql[sql.rfind(".") + 1:].strip(" .;\n\t").replace("`", "")
+                table = sql[sql.rfind(".") + 1 :].strip(" .;\n\t").replace("`", "")
                 return self.answer_show_create_table(table)
             elif sql_category in ("character set", "charset"):
                 new_statement = Select(
@@ -656,7 +658,11 @@ class ExecuteCommands:
         elif type(statement) == CreateKnowledgeBase:
             return self.answer_create_kb(statement)
         elif type(statement) == DropKnowledgeBase:
-            return self.anwser_drop_kb(statement)
+            return self.answer_drop_kb(statement)
+        elif type(statement) == CreateRAG:
+            return self.answer_create_rag(statement)
+        elif type(statement) == DropRAG:
+            return self.answer_drop_rag(statement)
         elif type(statement) == CreateSkill:
             return self.answer_create_skill(statement)
         elif type(statement) == DropSkill:
@@ -1379,7 +1385,7 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
-    def anwser_drop_kb(self, statement: DropKnowledgeBase):
+    def answer_drop_kb(self, statement: DropKnowledgeBase):
         name = statement.name.parts[-1]
         project_name = (
             statement.name.parts[0]
@@ -1404,6 +1410,103 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
+    def answer_create_rag(self, statement: CreateRAG):
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+        # get project id
+        try:
+            project = self.session.database_controller.get_project(project_name)
+        except ValueError:
+            raise SqlApiException(f"Project not found: {project_name}")
+        project_id = project.id
+
+        rag_name = statement.name.parts[-1]
+
+        # search for the model
+        # verify the model exists and get its id
+        model_identifier = statement.llm
+        try:
+            model_record = self._get_model_info(
+                identifier=model_identifier, except_absent=True
+            )
+
+        except PredictorRecordNotFound:
+            raise SqlApiException(f"Model not found: {model_identifier.to_string()}")
+
+        llm_model_id = model_record["model_record"].id
+
+        is_cloud = self.session.config.get("cloud", False)
+
+        if not statement.knowledge_base_store and is_cloud:
+            raise SqlApiException(
+                "No default vector database currently exists in MindsDB cloud. "
+                'Please specify one using the "storage" parameter'
+            )
+
+        # todo fix this by adding a default model to kb
+        if not statement.knowledge_base_store:
+            raise SqlApiException("No default knowledgebase currently exists")
+
+        kb_name = (
+            statement.knowledge_base_store.parts[-1]
+            if statement.knowledge_base_store
+            else "default_kb"
+        )
+
+        # verify the vector database exists and get its id
+        database_records = self.session.database_controller.get_dict()
+        is_database_exist = kb_name in database_records
+        if not is_database_exist:
+            raise SqlApiException(f"Database not found: {kb_name}")
+
+        kb_id = database_records[kb_name]["id"]
+
+        if statement.from_query is not None:
+            # TODO: implement this
+            raise SqlApiException("Create a RAG from a select is not supported yet")
+
+        params = statement.params
+
+        # create the knowledge base
+        _ = self.session.rag_controller.add(
+            name=rag_name,
+            project_id=project_id,
+            knowledge_base_id=kb_id,
+            llm_id=llm_model_id,
+            params=params,
+            if_not_exists=statement.if_not_exists,
+        )
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def answer_drop_rag(self, statement: DropRAG):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        # get project id
+        try:
+            project = self.session.database_controller.get_project(project_name)
+        except ValueError:
+            raise SqlApiException(f"Project not found: {project_name}")
+
+        project_id = project.id
+
+        # delete the knowledge base
+        self.session.rag_controller.delete(
+            name=name,
+            project_id=project_id,
+            if_exists=statement.if_exists,
+        )
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
     def answer_create_skill(self, statement):
         name = statement.name.parts[-1]
         project_name = (
@@ -1414,10 +1517,7 @@ class ExecuteCommands:
 
         try:
             _ = self.session.skills_controller.add_skill(
-                name,
-                project_name,
-                statement.type,
-                statement.params
+                name, project_name, statement.type, statement.params
             )
         except ValueError as e:
             # Project does not exist or skill already exists.
@@ -1452,10 +1552,7 @@ class ExecuteCommands:
         type = statement.params.pop('type', None)
         try:
             _ = self.session.skills_controller.update_skill(
-                name,
-                project_name=project_name,
-                type=type,
-                params=statement.params
+                name, project_name=project_name, type=type, params=statement.params
             )
         except ValueError as e:
             # Project does not exist or skill does not exist.
@@ -1474,11 +1571,7 @@ class ExecuteCommands:
         skills = statement.params.pop('skills', [])
         try:
             _ = self.session.agents_controller.add_agent(
-                name,
-                project_name,
-                statement.model,
-                skills,
-                statement.params
+                name, project_name, statement.model, skills, statement.params
             )
         except ValueError as e:
             # Project does not exist or agent already exists.
@@ -1520,7 +1613,7 @@ class ExecuteCommands:
                 model_name=model,
                 skills_to_add=skills_to_add,
                 skills_to_remove=skills_to_remove,
-                params=statement.params
+                params=statement.params,
             )
         except ValueError as e:
             # Project does not exist or agent does not exist.

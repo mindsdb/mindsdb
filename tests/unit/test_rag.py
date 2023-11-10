@@ -111,13 +111,11 @@ class TestRAG(BaseExecutorDummyLLM):
         llm_name = "llm_test"
 
         sql = f"""
-            '''
                 CREATE model {llm_name}
                 from pg (select * from df)
                 PREDICT answer
-                using engine='dummy_llm',
-            '''
-        """
+                using engine='dummy_llm'
+                """
 
         self.run_sql(sql)
 

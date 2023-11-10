@@ -135,6 +135,9 @@ class BaseUnitTest:
         r = db.Integration(name="pycaret", data={}, engine="pycaret")
         db.session.add(r)
 
+        r = db.Integration(name="dummy_llm", data={}, engine="dummy_llm")
+        db.session.add(r)
+
         r = db.Integration(name="vertex", data={}, engine="vertex")
         db.session.add(r)
 

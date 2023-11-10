@@ -220,6 +220,11 @@ class BaseExecutorTest(BaseUnitTest):
         self.mock_config = config_patch.__enter__()
         self.mock_config.side_effect = lambda x: None
 
+    def save_file(self, name, df):
+        file_path = tempfile.mktemp(prefix="mindsdb_file_")
+        df.to_parquet(file_path)
+        self.file_controller.save_file(name, file_path, name)
+
     def set_handler(self, mock_handler, name, tables, engine="postgres"):
         # integration
         # delete by name

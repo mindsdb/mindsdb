@@ -87,11 +87,16 @@ class StatusPages(APITable):
         """
         data = {}
         for column, value in zip(query.columns, query.values[0]):
-            if isinstance(value, Constant):
-                data[column.name] = value.value
-            else:
-                data[column.name] = value
-        self.handler.call_instatus_api(endpoint='/v1/pages', method='POST', data=json.dumps(data))
+            if isinstance(value, str):
+                try:
+                    value = json.loads(value)
+                except json.JSONDecodeError:
+                    if value == 'True':
+                        value = True
+                    elif value == 'False':
+                        value = False
+            data[column.name] = value
+        self.handler.call_instatus_api(endpoint='/v1/pages', method='POST', json_data=data)
 
     def update(self, query: ast.Update) -> None:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.
@@ -117,7 +122,11 @@ class StatusPages(APITable):
                     data[key] = json.loads(value.value)  # Convert 'components' value to a Python list
                 else:
                     data[key] = value.value
-        self.handler.call_instatus_api(endpoint=f'/v2/{_id}', method='PUT', data=json.dumps(data))
+        
+        if 'components' in data and isinstance(data['components'], str):
+            data['components'] = json.loads(data['components'])
+        
+        self.handler.call_instatus_api(endpoint=f'/v2/{_id}', method='PUT', json_data=data)
 
     def get_columns(self, ignore: List[str] = []) -> List[str]:
         """columns

@@ -37,7 +37,7 @@ class TestClipdrop(BaseMLAPITest):
         )
         with pytest.raises(Exception):
             self.wait_predictor("proj", "test_missing_task_argument")
-            
+
     def test_unknown_task_argument(self):
         """Test for unknown argument when creating a clipdrop model"""
         self.run_sql(

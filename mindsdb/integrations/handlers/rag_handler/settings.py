@@ -55,6 +55,7 @@ DEFAULT_CHUNK_SIZE = 500
 DEFAULT_CHUNK_OVERLAP = 50
 DEFAULT_VECTOR_STORE_NAME = "chroma"
 DEFAULT_VECTOR_STORE_COLLECTION_NAME = "collection"
+MAX_EMBEDDINGS_BATCH_SIZE = 2000
 
 chromadb = get_chromadb()
 
@@ -279,6 +280,7 @@ class RAGBaseParameters(BaseModel):
     llm_params: Any
     vector_store_folder_name: str
     use_gpu: bool = False
+    embeddings_batch_size: int = MAX_EMBEDDINGS_BATCH_SIZE
     prompt_template: str = DEFAULT_QA_PROMPT_TEMPLATE
     chunk_size: int = DEFAULT_CHUNK_SIZE
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP

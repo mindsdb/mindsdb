@@ -129,16 +129,18 @@ def initialize_log(config=None, logger_name='main', wrap_print=False):
     console_handler = logging.StreamHandler()
     console_handler.setLevel(config['log']['level'].get('console', logging.INFO))
     console_handler.setFormatter(formatter)
+    log.handlers.clear()
     log.addHandler(console_handler)
+    log.info(f"Handler set to {console_handler.level}.")
 
     # db_handler = DbHandler()
     # db_handler.setLevel(config['log']['level'].get('db', logging.WARNING))
     # db_handler.setFormatter(formatter)
     # log.addHandler(db_handler)
 
-    if wrap_print:
-        sys.stdout = LoggerWrapper([log.debug, log.info, log.warning, log.error], 1)
-        sys.stderr = LoggerWrapper([log.debug, log.info, log.warning, log.error], 3)
+    #if wrap_print:
+    #    sys.stdout = LoggerWrapper([log.debug, log.info, log.warning, log.error], 0)
+    #    sys.stderr = LoggerWrapper([log.debug, log.info, log.warning, log.error], 0)
 
     log.error = partial(log.error, exc_info=True)
     logger = log

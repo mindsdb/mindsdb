@@ -19,7 +19,6 @@ from mindsdb.utilities.log import get_log
 
 logger = get_log(__name__)
 
-
 def validate_document(doc) -> bool:
     """Check an individual document."""
     # Example checks
@@ -142,8 +141,10 @@ class RAGIngestor:
             chunk_size = 10000
             chunks = -(-len(documents) // chunk_size)
             db = self.create_db_from_documents(documents[:chunk_size], embeddings_model)
+            logger.info(f"Vector database created with initial chunk of {chunks} chunks.")
             for i in range(1, chunks):
                 db.add_documents(documents[i * chunk_size: (i + 1) * chunk_size])
+                logger.info(f"Vector database added chunk {i} of {chunks} chunks.")
         except Exception as e:
             logger.error(
                 f"Error loading using 'from_documents' method, trying 'from_text': {e}"

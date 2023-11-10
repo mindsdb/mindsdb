@@ -28,7 +28,7 @@ WITH
 
 ## Usage
 
-### Get a Status Pages
+To get a status page, use the `SELECT` statement:
 
 ```sql
 SELECT id, name, status, subdomain
@@ -37,16 +37,7 @@ WHERE id = '<status-page-id>'
 LIMIT 10;
 ```
 
-### Create a Status Page
-
 To create a new status page, use the `INSERT` statement:
-
-```sql
-INSERT INTO mindsdb_instatus.status_pages (column1, column2, column3, ...)
-VALUES (value1, value2, value3, ...);
-```
-
-Example:
 
 ```sql
 INSERT INTO mindsdb_instatus.status_pages (email, name, subdomain, components, logoUrl, faviconUrl, websiteUrl, language, useLargeHeader, brandColor, okColor, disruptedColor, degradedColor, downColor, noticeColor, unknownColor, googleAnalytics, subscribeBySms, smsService, twilioSid, twilioToken, twilioSender, nexmoKey, nexmoSecret, nexmoSender, htmlInMeta, htmlAboveHeader, htmlBelowHeader, htmlAboveFooter, htmlBelowFooter, htmlBelowSummary, cssGlobal, launchDate, dateFormat, dateFormatShort, timeFormat)
@@ -63,58 +54,16 @@ VALUES ('yourname@gmail.com', 'mindsdb', 'mindsdb-instatus', '["Website", "App",
 - Other fields are optional.
 </Tip>
 
-### Update a Status Page
-
 To update an existing status page, use the `UPDATE` statement:
-
-```sql
-UPDATE mindsdb_instatus.status_pages
-SET column1 = value1, column2 = value2, ...
-WHERE id = '<status-page-id>';
-```
-
-Example:
 
 ```sql
 UPDATE mindsdb_instatus.status_pages
 SET name = 'mindsdb',
     status = 'UP',
-    subdomain = 'mindsdb-slack',
     logoUrl = 'https://instatus.com/sample.png',
     faviconUrl = 'https://instatus.com/favicon-32x32.png',
     websiteUrl = 'https://instatus.com',
     language = 'en',
-    publicEmail = 'hello@nasa.gov',
-    useLargeHeader = true,
-    brandColor = '#111',
-    okColor = '#33B17E',
-    disruptedColor = '#FF8C03',
-    degradedColor = '#ECC94B',
-    downColor = '#DC123D',
-    noticeColor = '#70808F',
-    unknownColor = '#DFE0E1',
-    googleAnalytics = 'UA-00000000-1',
-    subscribeBySms = true,
-    smsService = 'twilio',
-    twilioSid = 'YOUR_TWILIO_SID',
-    twilioToken = 'YOUR_TWILIO_TOKEN',
-    twilioSender = 'YOUR_TWILIO_SENDER',
-    nexmoKey = null,
-    nexmoSecret = null,
-    nexmoSender = null,
-    htmlInMeta = null,
-    htmlAboveHeader = null,
-    htmlBelowHeader = null,
-    htmlAboveFooter = null,
-    htmlBelowFooter = null,
-    htmlBelowSummary = null,
-    cssGlobal = null,
-    launchDate = null,
-    dateFormat = 'MMMMMM d, yyyy',
-    dateFormatShort = 'MMM yyyy',
-    timeFormat = 'p',
-    private = false,
-    useAllowList = false,
     translations = '{
       "name": {
         "fr": "nasa"

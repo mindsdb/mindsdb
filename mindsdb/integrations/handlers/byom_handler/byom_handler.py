@@ -80,14 +80,31 @@ class BYOMHandler(BaseMLEngine):
             engine_version = 1
         return engine_version
 
+    @staticmethod
+    def create_validation(target: str, args: dict = None, **kwargs) -> None:
+        if isinstance(args, dict) is False:
+            return
+        using_args = args.get('using', {})
+        engine_version = using_args.get('engine_version')
+        if engine_version is not None:
+            engine_version = BYOMHandler.normalize_engine_version(engine_version)
+        else:
+            connection_args = kwargs['handler_storage'].get_connection_args()
+            versions = connection_args.get('versions')
+            if isinstance(versions, dict):
+                engine_version = max([int(x) for x in versions.keys()])
+            else:
+                engine_version = 1
+            using_args['engine_version'] = engine_version
+
     def get_model_engine_version(self) -> int:
         """Return current model engine version
 
         Returns:
             int: engine version
         """
-        engine_version = self.model_storage.get_info()['data'].get('engine_version')
-        engine_version = self.normalize_engine_version(engine_version)
+        engine_version = self.model_storage.get_info()['learn_args'].get('using', {}).get('engine_version')
+        engine_version = BYOMHandler.normalize_engine_version(engine_version)
         return engine_version
 
     def _get_model_proxy(self, version=None):
@@ -125,13 +142,6 @@ class BYOMHandler(BaseMLEngine):
     def create(self, target, df=None, args=None, **kwargs):
         using_args = args.get('using', {})
         engine_version = using_args.get('engine_version')
-        if engine_version is not None:
-            engine_version = self.normalize_engine_version(engine_version)
-        else:
-            connection_args = self.engine_storage.get_connection_args()
-            engine_version = max([int(x) for x in connection_args['versions'].keys()])
-            using_args['engine_version'] = engine_version
-            self.model_storage.update_learn_args({'using': using_args})
 
         model_proxy = self._get_model_proxy(engine_version)
         model_state = model_proxy.train(df, target, args)
@@ -155,7 +165,6 @@ class BYOMHandler(BaseMLEngine):
         }
 
         self.model_storage.columns_set(columns)
-        self.model_storage.update_data({'engine_version': engine_version})
 
     def predict(self, df, args=None):
         pred_args = args.get('predict_params', {})
@@ -252,16 +261,8 @@ class BYOMHandler(BaseMLEngine):
             raise e
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        # region get model version from 'using' or from model
         using_args = args.get('using', {})
         engine_version = using_args.get('engine_version')
-        if engine_version is not None:
-            engine_version = self.normalize_engine_version(engine_version)
-        if engine_version is None:
-            engine_version = self.get_model_engine_version()
-            using_args['engine_version'] = engine_version
-            self.model_storage.update_learn_args({'using': using_args})
-        # endregion
 
         model_storage = self.model_storage
         # TODO: should probably refactor at some point, as a bit of the logic is shared with lightwood's finetune logic

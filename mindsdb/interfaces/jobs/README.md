@@ -158,6 +158,7 @@ Contents information about current periodic tasks
 Columns:
 - name - name of the job defined by user
 - company_id, user_class - information about user
+- active - if not - job is not run
 - project_id - link to project, job with the same name can exist in different projects of the user
 - query_str - string of the query to execute inside the job
 - start_at - if specified, the date and time of first run of the job 

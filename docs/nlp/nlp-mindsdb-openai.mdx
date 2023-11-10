@@ -26,20 +26,27 @@ OpenAI supports fine-tuning of some of its models, including `davinci`, `curie`,
 
 ## How to Bring the OpenAI Model to MindsDB
 
-We use the [`CREATE MODEL`](/sql/create/model) statement to bring the OpenAI models to MindsDB.
+We use the [`CREATE ML_ENGINE`](/sql/create/ml-engine) and [`CREATE MODEL`](/sql/create/model) statement to bring the OpenAI models to MindsDB.
 
-Generally, it looks like this:
+We first create the openai engine by providing the api_key:
+
+```sql
+CREATE ML_ENGINE openai_engine
+FROM openai
+USING
+  api_key= 'YOUR_OPENAI_API_KEY';
+```
+
+Next, use this engine to create the model as:
 
 ```sql
 CREATE MODEL project_name.predictor_name        -- AI TABLE TO STORE THE MODEL
 PREDICT target_column                           -- NAME OF THE COLUMN TO STORE PREDICTED VALUES
 USING
-  engine = 'openai',                            -- USING THE OPENAI ENGINE
+  engine = 'openai_engine',                            -- USING THE OPENAI ENGINE
   prompt_template = 'prompt/task
                     {{input_column}}',          -- PROMPT TEMPLATE WITH PLACEHOLDERS FOR INPUT COLUMNS
-  model_name = 'model_name',                    -- OPTIONAL, DEFAULT IS THE gpt-3.5-turbo MODEL
-  api_key = 'YOUR_OPENAI_API_KEY';              -- OPTIONAL, IF NOT PASSED MINDSDB FETCHES THE
-                                                -- `OPENAI_API_KEY` ENVIRONMENT VARIABLE VALUE
+  model_name = 'model_name',                    -- OPTIONAL, DEFAULT IS THE gpt-3.5-turbo MODEL                                                -- 
 ```
 
 <Note>
@@ -61,7 +68,7 @@ Let's go through a sentiment classification example to understand better how to 
 CREATE MODEL mindsdb.sentiment_classifier
 PREDICT sentiment
 USING
-  engine = 'openai',
+  engine = 'openai_engine',
   prompt_template = 'predict the sentiment of the text:{{review}} exactly as either positive or negative or neutral';
 ```
 

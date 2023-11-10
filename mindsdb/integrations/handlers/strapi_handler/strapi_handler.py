@@ -25,10 +25,10 @@ class StrapiHandler(APIHandler):
             self._base_url = f"http://{args['host']}:{args['port']}"
         if 'api_token' in args:
             self._api_token = args['api_token']
-        if 'pluralApiIds' in args:
-            self._pluralApiIds = args['pluralApiIds']
+        if 'plural_api_ids' in args:
+            self._plural_api_ids = args['plural_api_ids']
         # Registers tables for each collections in strapi
-        for pluralApiId in self._pluralApiIds:
+        for pluralApiId in self._plural_api_ids:
             self._register_table(table_name=pluralApiId, table_class=StrapiTable(handler=self, name=pluralApiId))
 
     def check_connection(self) -> StatusResponse:
@@ -135,7 +135,7 @@ connection_args = OrderedDict(
         "required": True,
         "label": "Port",
     },
-    pluralApiIds={
+    plural_api_ids={
         "type": list,
         "description": "Plural API id to use for querying.",
         "required": True,
@@ -147,5 +147,5 @@ connection_args_example = OrderedDict(
     host="localhost",
     port=1337,
     api_token="c56c000d867e95848c",
-    pluralApiIds=["posts", "portfolios"],
+    plural_api_ids=["posts", "portfolios"],
 )

@@ -95,15 +95,19 @@ class QueryContextController:
             if col_name not in df:
                 continue
 
-            column_values = df[col_name]
+            column_values = df[col_name].dropna()
             try:
                 value = max(column_values)
             except (TypeError, ValueError):
                 try:
-                    # try to convert to str
-                    value = max(map(str, column_values))
+                    # try to convert to float
+                    value = max(map(float, column_values))
                 except (TypeError, ValueError):
-                    continue
+                    try:
+                        # try to convert to str
+                        value = max(map(str, column_values))
+                    except (TypeError, ValueError):
+                        continue
 
             if value is not None:
                 values[info['table_name']] = {info['column_name']: value}

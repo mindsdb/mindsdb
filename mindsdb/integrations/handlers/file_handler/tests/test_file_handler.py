@@ -278,8 +278,8 @@ def test_get_file_path_with_url(mock_fetch_url):
         (lazy_fixture("xlsx_file"), test_file_content[0]),
         (lazy_fixture("json_file"), test_file_content[0]),
         (lazy_fixture("parquet_file"), test_file_content[0]),
-        (lazy_fixture("pdf_file"), ["text"]),
-        (lazy_fixture("txt_file"), ["text"]),
+        (lazy_fixture("pdf_file"), ["content", "metadata"]),
+        (lazy_fixture("txt_file"), ["content", "metadata"]),
     ],
 )
 def test_handle_source(file_path, expected_columns):

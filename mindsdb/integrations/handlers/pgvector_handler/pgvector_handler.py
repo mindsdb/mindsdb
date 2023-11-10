@@ -111,6 +111,7 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
     def _build_select_query(
         self,
         table_name: str,
+        columns: List[str] = None,
         conditions: List[FilterCondition] = None,
         limit: int = None,
         offset: int = None,
@@ -135,19 +136,25 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
             where_clause, offset_clause, limit_clause
         )
 
+        if columns is None:
+            targets = '*'
+        else:
+            targets = ', '.join(columns)
+
+
         if filter_conditions:
 
             if embedding_search:
                 # if search vector, return similar rows, apply other filters after if any
                 search_vector = filter_conditions["embeddings"]["value"][0]
                 filter_conditions.pop("embeddings")
-                return f"SELECT * FROM {table_name} ORDER BY embeddings <=> '{search_vector}' {after_from_clause}"
+                return f"SELECT {targets} FROM {table_name} ORDER BY embeddings <=> '{search_vector}' {after_from_clause}"
             else:
                 # if filter conditions, return filtered rows
-                return f"SELECT * FROM {table_name} {after_from_clause}"
+                return f"SELECT {targets} FROM {table_name} {after_from_clause}"
         else:
             # if no filter conditions, return all rows
-            return f"SELECT * FROM {table_name} {after_from_clause}"
+            return f"SELECT {targets} FROM {table_name} {after_from_clause}"
 
     def select(
         self,
@@ -160,18 +167,20 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         """
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
         """
+        if columns is None:
+            columns = ["id", "content", "embeddings", "metadata"]
+
         with self.connection.cursor() as cur:
-            query = self._build_select_query(table_name, conditions, limit, offset)
+            query = self._build_select_query(table_name, columns, conditions, limit, offset)
             cur.execute(query)
 
             self.connection.commit()
             result = cur.fetchall()
 
-        result = pd.DataFrame(
-            result, columns=["id", "content", "embeddings", "metadata"]
-        )
+        result = pd.DataFrame(result, columns=columns)
         # ensure embeddings are returned as string so they can be parsed by mindsdb
-        result["embeddings"] = result["embeddings"].astype(str)
+        if "embeddings" in columns:
+            result["embeddings"] = result["embeddings"].astype(str)
 
         return result
 

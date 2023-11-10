@@ -90,7 +90,11 @@ class BYOMHandler(BaseMLEngine):
             engine_version = BYOMHandler.normalize_engine_version(engine_version)
         else:
             connection_args = kwargs['handler_storage'].get_connection_args()
-            engine_version = max([int(x) for x in connection_args['versions'].keys()])
+            versions = connection_args.get('versions')
+            if isinstance(versions, dict):
+                engine_version = max([int(x) for x in versions.keys()])
+            else:
+                engine_version = 1
             using_args['engine_version'] = engine_version
 
     def get_model_engine_version(self) -> int:

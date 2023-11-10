@@ -55,6 +55,7 @@ DEFAULT_CHUNK_SIZE = 500
 DEFAULT_CHUNK_OVERLAP = 50
 DEFAULT_VECTOR_STORE_NAME = "chroma"
 DEFAULT_VECTOR_STORE_COLLECTION_NAME = "collection"
+MAX_EMBEDDINGS_BATCH_SIZE = 2000
 
 chromadb = get_chromadb()
 
@@ -278,6 +279,8 @@ class RAGBaseParameters(BaseModel):
 
     llm_params: Any
     vector_store_folder_name: str
+    use_gpu: bool = False
+    embeddings_batch_size: int = MAX_EMBEDDINGS_BATCH_SIZE
     prompt_template: str = DEFAULT_QA_PROMPT_TEMPLATE
     chunk_size: int = DEFAULT_CHUNK_SIZE
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
@@ -412,10 +415,10 @@ def url_to_documents(urls: Union[List[str], str]) -> List[Document]:
 # todo issue#7361 hard coding device to cpu, add support for gpu later on
 # e.g. {"device": "gpu" if torch.cuda.is_available() else "cpu"}
 @lru_cache()
-def load_embeddings_model(embeddings_model_name):
+def load_embeddings_model(embeddings_model_name, use_gpu=False):
     """Load embeddings model from Hugging Face Hub"""
     try:
-        model_kwargs = {"device": "cpu"}
+        model_kwargs = dict(device="cuda" if use_gpu else "cpu")
         embedding_model = HuggingFaceEmbeddings(
             model_name=embeddings_model_name, model_kwargs=model_kwargs
         )

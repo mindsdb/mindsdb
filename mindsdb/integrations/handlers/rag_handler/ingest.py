@@ -1,4 +1,5 @@
 import time
+from typing import List
 
 import pandas as pd
 from langchain.schema import Document
@@ -122,33 +123,52 @@ class RAGIngestor:
             texts=texts, embedding=embeddings_model, metadatas=metadata
         )
 
+    @staticmethod
+    def create_batch_embeddings(documents: List[Document], embeddings_batch_size):
+        """
+        create batch of document embeddings
+        """
+
+        for i in range(0, len(documents), embeddings_batch_size):
+            yield documents[i : i + embeddings_batch_size]
+
     def embeddings_to_vectordb(self) -> None:
         """Create vectorstore from documents and store locally."""
 
         start_time = time.time()
 
-        # Load documents and splits in chunks (if not in evaluation_type mode)
+        # Load documents and splits in chunks and defines overlap
         documents = self.split_documents(
             chunk_size=self.args.chunk_size, chunk_overlap=self.args.chunk_overlap
         )
 
+        batches_documents = self.create_batch_embeddings(
+            documents, embeddings_batch_size=self.args.embeddings_batch_size
+        )
+
         # Load embeddings model
-        embeddings_model = load_embeddings_model(self.embeddings_model_name)
+        embeddings_model = load_embeddings_model(
+            self.embeddings_model_name, self.args.use_gpu
+        )
 
         logger.info(f"Creating vectorstore from documents")
 
         if not validate_documents(documents):
             raise ValueError("Invalid documents")
 
+        # todo get max_batch from chroma client
+
         try:
-            db = self.create_db_from_documents(documents, embeddings_model)
+            for batch_document in batches_documents:
+                db = self.create_db_from_documents(batch_document, embeddings_model)
         except Exception as e:
             logger.error(
                 f"Error loading using 'from_documents' method, trying 'from_text': {e}"
             )
             try:
-                db = self.create_db_from_texts(documents, embeddings_model)
-                logger.info(f"successfully loaded using 'from_text' method: {e}")
+                for batch_document in batches_documents:
+                    db = self.create_db_from_texts(batch_document, embeddings_model)
+                    logger.info(f"successfully loaded using 'from_text' method: {e}")
 
             except Exception as e:
                 logger.error(f"Error creating from texts: {e}")

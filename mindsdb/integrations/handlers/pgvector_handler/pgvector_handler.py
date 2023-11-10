@@ -90,7 +90,9 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
             if value['op'].lower() == 'in':
                 values = list(repr(i) for i in value['value'])
                 value['value'] = '({})'.format(', '.join(values))
-            where_clauses.append(f'{key} {value["op"]} {repr(value["value"])}')
+            else:
+                value['value'] = repr(value['value'])
+            where_clauses.append(f'{key} {value["op"]} {value["value"]}')
 
         if len(where_clauses) > 1:
             return f"WHERE{' AND '.join(where_clauses)}"

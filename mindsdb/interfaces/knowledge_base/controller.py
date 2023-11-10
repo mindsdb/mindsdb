@@ -80,6 +80,9 @@ class KnowledgeBaseTable:
         db_handler.query(query)
 
     def insert(self, df: pd.DataFrame):
+        if df.empty:
+            return
+
         # add embeddings
         df_emb = self._df_to_embeddings(df)
         df = pd.concat([df, df_emb], axis=1)
@@ -118,17 +121,20 @@ class KnowledgeBaseTable:
         if input_col is not None and input_col != TableField.CONTENT.value:
             df = df.rename(columns={TableField.CONTENT.value: input_col})
 
-        data = df.to_dict('records')
+        if df.empty:
+            df_out = pd.DataFrame([], columns=[TableField.EMBEDDINGS.value])
+        else:
+            data = df.to_dict('records')
 
-        df_out = project_datanode.predict(
-            model_name=model_rec.name,
-            data=data,
-        )
+            df_out = project_datanode.predict(
+                model_name=model_rec.name,
+                data=data,
+            )
 
-        target = model_rec.to_predict[0]
-        if target != TableField.EMBEDDINGS.value:
-            # adapt output for vectordb
-            df_out = df_out.rename(columns={target: TableField.EMBEDDINGS.value})
+            target = model_rec.to_predict[0]
+            if target != TableField.EMBEDDINGS.value:
+                # adapt output for vectordb
+                df_out = df_out.rename(columns={target: TableField.EMBEDDINGS.value})
 
         return df_out
 

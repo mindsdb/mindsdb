@@ -49,9 +49,9 @@ class RAGIngestor:
     """A class for converting a dataframe and/or url to a vectorstore embedded with a given embeddings model"""
 
     def __init__(
-        self,
-        args: RAGBaseParameters,
-        df: pd.DataFrame,
+            self,
+            args: RAGBaseParameters,
+            df: pd.DataFrame,
     ):
         self.args = args
         self.df = df
@@ -139,7 +139,11 @@ class RAGIngestor:
             raise ValueError("Invalid documents")
 
         try:
-            db = self.create_db_from_documents(documents, embeddings_model)
+            chunk_size = 10000
+            chunks = -(-len(documents) // chunk_size)
+            db = self.create_db_from_documents(documents[:chunk_size], embeddings_model)
+            for i in range(1, chunks):
+                db.add_documents(documents[i * chunk_size: (i + 1) * chunk_size])
         except Exception as e:
             logger.error(
                 f"Error loading using 'from_documents' method, trying 'from_text': {e}"

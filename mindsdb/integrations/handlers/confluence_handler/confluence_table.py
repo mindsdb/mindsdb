@@ -173,14 +173,15 @@ class ConfluencePagesTable(APITable):
 
         for a_where in conditions:
             if a_where[1] == "space":
+                space_name = a_where[2]
                 if a_where[0] != "=":
                     raise ValueError("Unsupported where operation for space")
-                pages_kwargs["space"] = a_where[2]
+                pages_kwargs["space"] = space_name
             else:
                 raise ValueError(f"Unsupported where argument {a_where[1]}")
 
         confluence_pages_records = self.handler.connect().get_all_pages_from_space(
-            a_where[2], start=0, limit=total_results, expand="body.storage"
+            space_name, start=0, limit=total_results, expand="body.storage"
         )
         confluence_pages_df = pd.json_normalize(confluence_pages_records)
 
@@ -190,6 +191,10 @@ class ConfluencePagesTable(APITable):
 
         confluence_pages_df["space"] = confluence_pages_df["_expandable.space"].apply(
             extract_space
+        )
+
+        confluence_pages_df.columns = confluence_pages_df.columns.str.replace(
+            "body.storage.value", "body"
         )
 
         confluence_pages_df = confluence_pages_df[self.get_columns()]
@@ -239,8 +244,7 @@ class ConfluencePagesTable(APITable):
             "status",
             "title",
             "space",
-            "body.storage.value",
-            "_expandable.space",
+            "body",
             "_links.self",
             "_links.webui",
         ]
@@ -259,15 +263,16 @@ class ConfluencePagesTable(APITable):
             If the query contains an unsupported condition
         """
 
-        new_page = {}
-        for i, column in enumerate(self.get_columns()):
-            new_page[column] = query.values[0][i]
+        columns = [col.name for col in query.columns]
 
-        self.handler.connect().create_page(
-            space=new_page["space"],
-            title=new_page["title"],
-            body=new_page["body.storage.value"],
-        )
+        for i, val in enumerate(query.values):
+            params = dict(zip(columns, val))
+
+            self.handler.connect().create_page(
+                space=params["space"],
+                title=params["title"],
+                body=params["body"],
+            )
 
     def update(self, query: ast.Update):
         """Updates a page in the Confluence space
@@ -282,16 +287,18 @@ class ConfluencePagesTable(APITable):
         ValueError
             If the query contains an unsupported condition
         """
+        params = extract_comparison_conditions(query.where)
+        title = query.update_columns["title"].get_string()
+        body = query.update_columns["body"].get_string()
 
-        update_page = {}
-        for i, column in enumerate(self.get_columns()):
-            update_page[column] = query.values[0][i]
-
-        self.handler.connect().update_page(
-            page_id=update_page["id"],
-            title=update_page["title"],
-            body=update_page["body.storage.value"],
-        )
+        for param in params:
+            if param[1] == "id":
+                id = param[2]
+                self.handler.connect().update_page(
+                    page_id=id,
+                    title=title,
+                    body=body,
+                )
 
     def delete(self, query: ast.Delete):
         """Deletes a page from the Confluence space
@@ -306,11 +313,10 @@ class ConfluencePagesTable(APITable):
         ValueError
             If the query contains an unsupported condition
         """
-
-        delete_page = {}
-        for i, column in enumerate(self.get_columns()):
-            delete_page[column] = query.values[0][i]
-
-        self.handler.connect().remove_page(
-            page_id=delete_page["id"],
-        )
+        params = extract_comparison_conditions(query.where)
+        for param in params:
+            if param[1] == "id":
+                id = param[2]
+                self.handler.connect().remove_page(
+                    page_id=id,
+                )

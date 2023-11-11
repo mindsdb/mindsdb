@@ -10,12 +10,11 @@ class InstatusHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.handler = InstatusHandler(name='mindsdb_instatus', connection_data={'api_key': os.environ.get('INSTATUS_API_KEY')})
-        
+
     def setUp(self):
         self.pageId = self.handler.call_instatus_api(endpoint='/v2/pages')['id'][0]
         self.componentId = self.handler.call_instatus_api(endpoint=f'/v1/{self.pageId}/components')['id'][0]
 
-        
     def test_0_check_connection(self):
         assert self.handler.check_connection()
 
@@ -52,7 +51,7 @@ class InstatusHandlerTest(unittest.TestCase):
             if "This subdomain is taken by another status page" in error_message:
                 print("Subdomain is already taken. Choose a different one.")
 
-    def test_7_update_status_pages(self):       
+    def test_7_update_status_pages(self):
         # update the row with the id obtained
         query = f'''UPDATE mindsdb_instatus.status_pages
                 SET logoUrl = 'https://instatus.com/sample.png',

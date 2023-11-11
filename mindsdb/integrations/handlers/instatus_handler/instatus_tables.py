@@ -122,10 +122,10 @@ class StatusPages(APITable):
                     data[key] = json.loads(value.value)
                 else:
                     data[key] = value.value
-        
+
         if 'components' in data and isinstance(data['components'], str):
             data['components'] = json.loads(data['components'])
-        
+
         self.handler.call_instatus_api(endpoint=f'/v2/{_id}', method='PUT', json_data=data)
 
     def get_columns(self, ignore: List[str] = []) -> List[str]:
@@ -176,6 +176,7 @@ class StatusPages(APITable):
             "createdAt",
             "updatedAt"
         ]
+
 
 class Components(APITable):
 
@@ -238,7 +239,7 @@ class Components(APITable):
                 if len(df) == 0 or (limit and limit <= 0) or limit == 0:
                     break
                 result_df = pd.concat([result_df, df[selected_columns]], ignore_index=True)
-                
+
                 if limit:
                     limit -= len(df)
 
@@ -284,7 +285,7 @@ class Components(APITable):
                 componentId = condition[2]
             else:
                 raise Exception("page_id and component_id both are required")
-        
+
         data = {}
         for key, value in query.update_columns.items():
             if isinstance(value, Constant):
@@ -334,4 +335,4 @@ class Components(APITable):
             "startDate",
             "group",
             "translations"
-            ]
+        ]

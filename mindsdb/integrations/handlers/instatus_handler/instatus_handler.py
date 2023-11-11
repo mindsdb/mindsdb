@@ -90,7 +90,7 @@ class InstatusHandler(APIHandler):
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
 
-    def call_instatus_api(self, endpoint: str, method: str = 'GET', params: dict = None, json_data:dict={}) -> pd.DataFrame:
+    def call_instatus_api(self, endpoint: str, method: str = 'GET', params: dict = None, json_data: dict = {}) -> pd.DataFrame:
         if not params:
             params = {}
 
@@ -109,6 +109,7 @@ class InstatusHandler(APIHandler):
                 raise Exception(f"Error connecting to Instatus API: {response.status_code} - {response.text}")
 
         return pd.DataFrame()
+
 
 connection_args = OrderedDict(
     api_key={

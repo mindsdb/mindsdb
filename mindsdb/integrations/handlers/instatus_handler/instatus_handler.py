@@ -1,4 +1,4 @@
-from mindsdb.integrations.handlers.instatus_handler.instatus_tables import StatusPages
+from mindsdb.integrations.handlers.instatus_handler.instatus_tables import StatusPages, Components
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.utilities import log
@@ -29,6 +29,7 @@ class InstatusHandler(APIHandler):
 
         _tables = [
             StatusPages,
+            Components
         ]
 
         for Table in _tables:
@@ -103,7 +104,7 @@ class InstatusHandler(APIHandler):
 
             if response.status_code == 200:
                 data = response.json()
-                return pd.DataFrame(data) if isinstance(data, list) else pd.DataFrame({'data': data})
+                return pd.DataFrame(data) if isinstance(data, list) else pd.DataFrame([data])
             else:
                 raise Exception(f"Error connecting to Instatus API: {response.status_code} - {response.text}")
 

@@ -119,7 +119,7 @@ class StatusPages(APITable):
         for key, value in query.update_columns.items():
             if isinstance(value, Constant):
                 if key == 'components':
-                    data[key] = json.loads(value.value)  # Convert 'components' value to a Python list
+                    data[key] = json.loads(value.value)
                 else:
                     data[key] = value.value
         
@@ -176,3 +176,162 @@ class StatusPages(APITable):
             "createdAt",
             "updatedAt"
         ]
+
+class Components(APITable):
+
+    # table name in the database
+    name = 'components'
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """Receive query as AST (abstract syntax tree) and act upon it.
+
+        Args:
+            query (ASTNode): SQL query represented as AST. Usually it should be ast.Select
+
+        Returns:
+            pd.DataFrame
+        """
+        conditions = extract_comparison_conditions(query.where)
+
+        if len(conditions) == 0:
+            raise Exception('WHERE clause is required')
+
+        # Get page id and component id from query
+        pageId = None
+        componentId = None
+        for condition in conditions:
+            if condition[1] == 'page_id' and condition[0] == '=':
+                pageId = condition[2]
+
+            if condition[1] == 'component_id' and condition[0] == '=':
+                componentId = condition[2]
+
+        # Get column names from query
+        selected_columns = []
+        for target in query.targets:
+            if isinstance(target, ast.Star):
+                selected_columns = self.get_columns()
+                break
+            elif isinstance(target, ast.Identifier):
+                selected_columns.append(target.parts[-1])
+            else:
+                raise ValueError(f"Unknown query target {type(target)}")
+
+        limit = query.limit.value if query.limit else None
+        if componentId:
+            # Call instatus API and get the response as pd.DataFrame
+            df = self.handler.call_instatus_api(endpoint=f'/v1/{pageId}/components/{componentId}')
+            result_df = df[selected_columns]
+        else:
+            # Call instatus API and get the response as pd.DataFrame
+            page_size = 100
+            # Calculate the number of pages required
+            page_count = (limit + page_size - 1) // page_size if limit else 1
+            result_df = pd.DataFrame(columns=selected_columns)
+
+            # Call instatus API and get the response as pd.DataFrame for each page
+            for page in range(1, page_count + 1):
+                current_page_size = min(page_size, limit) if limit else page_size
+
+                df = self.handler.call_instatus_api(endpoint=f'/v1/{pageId}/components', params={'page': page, 'per_page': current_page_size})
+                # Break if no more data is available or limit is reached
+                if len(df) == 0 or (limit and limit <= 0) or limit == 0:
+                    break
+                result_df = pd.concat([result_df, df[selected_columns]], ignore_index=True)
+                
+                if limit:
+                    limit -= len(df)
+
+        return result_df
+
+    def insert(self, query: ast.Insert) -> None:
+        """Receive query as AST (abstract syntax tree) and act upon it somehow.
+
+        Args:
+            query (ASTNode): sql query represented as AST. Usually it should be ast.Insert
+
+        Returns:
+            None
+        """
+        data = {}
+        for column, value in zip(query.columns, query.values[0]):
+            if isinstance(value, Constant):
+                if column.name == 'translations':
+                    data[column.name] = json.loads(value.value)
+                else:
+                    data[column.name] = value.value
+        pageId = data['page_id']
+        if 'page_id' in data:
+            del data['page_id']
+        self.handler.call_instatus_api(endpoint=f'/v1/{pageId}/components', method='POST', json_data=data)
+
+    def update(self, query: ast.Update) -> None:
+        """Receive query as AST (abstract syntax tree) and act upon it somehow.
+
+        Args:
+            query (ASTNode): sql query represented as AST. Usually it should be ast.Update
+        Returns:
+            None
+        """
+        conditions = extract_comparison_conditions(query.where)
+        # Get page id and component id from query
+        pageId = None
+        componentId = None
+        for condition in conditions:
+            if condition[1] == 'page_id' and condition[0] == '=':
+                pageId = condition[2]
+            elif condition[1] == 'component_id' and condition[0] == '=':
+                componentId = condition[2]
+            else:
+                raise Exception("page_id and component_id both are required")
+        
+        data = {}
+        for key, value in query.update_columns.items():
+            if isinstance(value, Constant):
+                if key == 'translations':
+                    data[key] = json.loads(value.value)
+                else:
+                    data[key] = value.value
+        self.handler.call_instatus_api(endpoint=f'/v1/{pageId}/components/{componentId}', method='PUT', json_data=data)
+
+    def get_columns(self, ignore: List[str] = []) -> List[str]:
+        """columns
+
+        Args:
+            ignore (List[str], optional): exclusion items. Defaults to [].
+
+        Returns:
+            List[str]: available columns with `ignore` items removed from the list.
+        """
+        return [
+            "id",
+            "name",
+            "nameTranslationId",
+            "description",
+            "descriptionTranslationId",
+            "status",
+            "order",
+            "showUptime",
+            "createdAt",
+            "updatedAt",
+            "archivedAt",
+            "siteId",
+            "uniqueEmail",
+            "oldGroup",
+            "groupId",
+            "isParent",
+            "isCollapsed",
+            "monitorId",
+            "nameHtml",
+            "nameHtmlTranslationId",
+            "descriptionHtml",
+            "descriptionHtmlTranslationId",
+            "isThirdParty",
+            "thirdPartyStatus",
+            "thirdPartyComponentId",
+            "thirdPartyComponentServiceId",
+            "importedFromStatuspage",
+            "startDate",
+            "group",
+            "translations"
+            ]

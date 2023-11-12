@@ -170,7 +170,7 @@ class FaunaDBHandler(DatabaseHandler):
             self.drop_table(collection_name)
         """
 
-        df = pd.DataFrame(result)
+        df = pd.json_normalize(result['data'])
         return Response(RESPONSE_TYPE.TABLE, df)
 
     def select(

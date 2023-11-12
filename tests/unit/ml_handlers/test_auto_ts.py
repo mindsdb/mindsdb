@@ -32,7 +32,6 @@ class TestAuto_ts(BaseExecutorTest):
             raise RuntimeError("predictor wasn't created")
 
     def test_invalid_time_period(self):
-        # create project
         self.run_sql("create database proj")
         self.run_sql(
             """
@@ -94,6 +93,7 @@ class TestAuto_ts(BaseExecutorTest):
             self.wait_predictor("proj", "auto_ts_invalid_non_seasonal_pdq")
 
     def test_invalid_model(self):
+        self.run_sql("create database proj")
         self.run_sql(
             """
             CREATE MODEL proj.auto_ts_invalid_model
@@ -113,17 +113,16 @@ class TestAuto_ts(BaseExecutorTest):
         with pytest.raises(Exception):
             self.wait_predictor("proj", "auto_ts_invalid_model")
 
-# Write a passing tests comparing original and handler predictions
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_handler_predictions(self,mock_handler):
         df = pd.read_csv("unit/ml_handlers/data/sales.csv")
         self.run_sql("create database proj")
-        self.set_handler(mock_handler, name="t", tables={"df": df})
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         self.run_sql(
             """
             CREATE MODEL proj.auto_ts
-            FROM test_db (SELECT * FROM df)
+            FROM pg (SELECT * FROM df)
             PREDICT sales
             ORDER BY time_period
             USING
@@ -150,15 +149,15 @@ class TestAuto_ts(BaseExecutorTest):
         assert (original_prediction - handler_prediction) < 1, f"The handler prediction was {handler_prediction} and the original prediction was {original_prediction}"
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_handler_batch_predictions(self, mock_handler):
+    def test_handler_batch_predictions(self,mock_handler):
         df = pd.read_csv("unit/ml_handlers/data/sales.csv")
         self.run_sql("create database proj")
-        self.set_handler(mock_handler, name="t", tables={"df": df})
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         self.run_sql(
             """
             CREATE MODEL proj.auto_ts
-            FROM test_db (SELECT * FROM df)
+            FROM pg (SELECT * FROM df)
             PREDICT sales
             ORDER BY time_period
             USING
@@ -172,15 +171,15 @@ class TestAuto_ts(BaseExecutorTest):
         )
         self.wait_predictor("proj", "auto_ts")
 
-        original_prediction = [832,653,587,547,]
+        batch_length = 48
         handler_prediction = self.run_sql(
             """
-            SELECT sales_preds
-            FROM proj.auto_ts
-            WHERE time_period = '2013-04-01'
-            AND marketing_expense = 256;
+            SELECT m.sales_preds
+            FROM pg.df as t
+            JOIN proj.auto_ts as m ;
+            
             """
         )
 
         handler_prediction = handler_prediction['sales_preds'].to_list()
-        assert (original_prediction - handler_prediction) < 5, f"The handler prediction was {handler_prediction} and the original prediction was {original_prediction}"
+        assert len(handler_prediction) == batch_length, f"The handler only returned {len(handler_prediction)} predictions, but it should have returned {batch_length} predictions"

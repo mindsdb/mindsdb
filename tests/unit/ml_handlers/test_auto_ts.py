@@ -1,5 +1,5 @@
 import time
-
+from unittest.mock import patch
 import pandas as pd
 import pytest
 from mindsdb_sql import parse_sql
@@ -31,42 +31,22 @@ class TestAuto_ts(BaseExecutorTest):
         if not done:
             raise RuntimeError("predictor wasn't created")
 
-    def test_missing_ts_column(self):
-        # create project
-        self.run_sql("create database proj")
-
-        self.run_sql(
-            """
-                CREATE MODEL proj.auto_ts_missing_ts_column
-                FROM files
-                    (SELECT * FROM Sales_and_Marketing)
-                PREDICT Sales
-                USING
-                   engine="auto_ts"
-                   score_type = 'rmse',
-                   non_seasonal_pdq = 'None',
-                   seasonal_period = 12;
-                   """
-        )
-        with pytest.raises(Exception):
-            self.wait_predictor("proj", "auto_ts_missing_ts_column")
-
     def test_invalid_time_period(self):
         # create project
         self.run_sql("create database proj")
         self.run_sql(
             """
             CREATE MODEL proj.auto_ts_invalid_time_period
-            FROM files
-                (SELECT * FROM Sales_and_Marketing)
+            FROM pg
+                (SELECT * FROM df)
             PREDICT Sales
+            ORDER BY Time_period
             USING
-               engine="auto_ts"
+               engine="auto_ts",
                score_type = 'rmse',
-               ts_columns = 'Time_period'
                non_seasonal_pdq = 'None',
                seasonal_period = 12,
-               time_period = 'invalid_time_period';
+               time_interval = 'invalid_time_period';
            """
         )
         with pytest.raises(Exception):
@@ -76,14 +56,15 @@ class TestAuto_ts(BaseExecutorTest):
         self.run_sql("create database proj")
         self.run_sql(
             """
-            CREATE MODEL proj.auto_ts_missing_ts_column
-            FROM files
-                (SELECT * FROM Sales_and_Marketing)
+            CREATE MODEL proj.auto_ts_invalid_score_type
+            FROM pg
+                (SELECT * FROM df)
             PREDICT Sales
+            ORDER BY Time_period
             USING
-               engine="auto_ts"
+               engine="auto_ts",
                score_type = 'invalid_score_type',
-               ts_columns = 'Time_period'
+               ts_columns = 'Time_period',
                non_seasonal_pdq = 'None',
                seasonal_period = 12,
                time_period = 'M';
@@ -97,13 +78,13 @@ class TestAuto_ts(BaseExecutorTest):
         self.run_sql(
             """
             CREATE MODEL proj.auto_ts_invalid_non_seasonal_pdq
-            FROM files
-                (SELECT * FROM Sales_and_Marketing)
+            FROM pg
+                (SELECT * FROM df)
             PREDICT Sales
+            ORDER BY Time_Period
             USING
-               engine="auto_ts"
+               engine="auto_ts",
                score_type = 'rmse',
-               ts_columns = 'Time_period'
                non_seasonal_pdq = 'invalid_non_seasonal_pdq',
                seasonal_period = 12,
                time_period = 'M';
@@ -113,18 +94,17 @@ class TestAuto_ts(BaseExecutorTest):
             self.wait_predictor("proj", "auto_ts_invalid_non_seasonal_pdq")
 
     def test_invalid_model(self):
-        self.run_sql("create database proj")
         self.run_sql(
             """
             CREATE MODEL proj.auto_ts_invalid_model
-            FROM files
-                (SELECT * FROM Sales_and_Marketing)
+            FROM pg
+                (SELECT * FROM df)
             PREDICT Sales
+            ORDER BY Time_Period
             USING
-               engine="auto_ts"
+               engine="auto_ts",
                score_type = 'rmse',
-               ts_columns = 'Time_period'
-               model = 'invalid_model',
+               model_type = 'invalid_model',
                non_seasonal_pdq = 'None',
                seasonal_period = 12,
                time_period = 'M';
@@ -133,22 +113,74 @@ class TestAuto_ts(BaseExecutorTest):
         with pytest.raises(Exception):
             self.wait_predictor("proj", "auto_ts_invalid_model")
 
-    def test_missing_target(self):
+# Write a passing tests comparing original and handler predictions
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_handler_predictions(self,mock_handler):
+        df = pd.read_csv("unit/ml_handlers/data/sales.csv")
         self.run_sql("create database proj")
+        self.set_handler(mock_handler, name="t", tables={"df": df})
+
         self.run_sql(
             """
-            CREATE MODEL proj.auto_ts_missing_target
-            FROM files
-                (SELECT * FROM Sales_and_Marketing)
-            PREDICT Sales
+            CREATE MODEL proj.auto_ts
+            FROM test_db (SELECT * FROM df)
+            PREDICT sales
+            ORDER BY time_period
             USING
-               engine="auto_ts"
+               engine="auto_ts",
+               time_period = 'M',
+               cv= 5,
                score_type = 'rmse',
-               ts_columns = 'Time_period'
                non_seasonal_pdq = 'None',
-               seasonal_period = 12,
-               time_period = 'M';
+               seasonal_period = 12;
                """
         )
-        with pytest.raises(Exception):
-            self.wait_predictor("proj", "auto_ts_missing_target")
+        self.wait_predictor("proj", "auto_ts")
+
+        original_prediction = 611
+        handler_prediction = self.run_sql(
+            """
+            SELECT sales_preds
+            FROM proj.auto_ts
+            WHERE time_period = '2013-04-01'
+            AND marketing_expense = 256;
+            """
+        )
+        handler_prediction = int(handler_prediction['sales_preds'][0])
+        assert (original_prediction - handler_prediction) < 1, f"The handler prediction was {handler_prediction} and the original prediction was {original_prediction}"
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_handler_batch_predictions(self, mock_handler):
+        df = pd.read_csv("unit/ml_handlers/data/sales.csv")
+        self.run_sql("create database proj")
+        self.set_handler(mock_handler, name="t", tables={"df": df})
+
+        self.run_sql(
+            """
+            CREATE MODEL proj.auto_ts
+            FROM test_db (SELECT * FROM df)
+            PREDICT sales
+            ORDER BY time_period
+            USING
+               engine="auto_ts",
+               time_period = 'M',
+               cv= 5,
+               score_type = 'rmse',
+               non_seasonal_pdq = 'None',
+               seasonal_period = 12;
+               """
+        )
+        self.wait_predictor("proj", "auto_ts")
+
+        original_prediction = [832,653,587,547,]
+        handler_prediction = self.run_sql(
+            """
+            SELECT sales_preds
+            FROM proj.auto_ts
+            WHERE time_period = '2013-04-01'
+            AND marketing_expense = 256;
+            """
+        )
+
+        handler_prediction = handler_prediction['sales_preds'].to_list()
+        assert (original_prediction - handler_prediction) < 5, f"The handler prediction was {handler_prediction} and the original prediction was {original_prediction}"

@@ -32,9 +32,7 @@ Almost all the inputs that Auto_TS takes can be passed via the USING syntax.
 ``` sql
 USING
     engine='auto_ts',
-    target = 'Sales',
-    ts_column = 'Time_Period',
-    time_period = 'M',
+    time_interval = 'M',
     cv = 5,
     score_type = 'rmse',
     non_seasonal_pdq = 'None',
@@ -69,12 +67,11 @@ And follow the below SQL query
 CREATE MODEL mindsdb.sales_model
 FROM files
   (SELECT * FROM Sales_and_Marketing)
-PREDICT Sales
+PREDICT sales
+ORDER BY time_period
 USING
     engine='auto_ts',
-    target = 'Sales',
-    ts_column = 'Time_Period',
-    time_period = 'M',
+    time_interval = 'M',
     cv = 5,
     score_type = 'rmse',
     non_seasonal_pdq = 'None',
@@ -83,17 +80,16 @@ USING
 The above query will create a model in mindsdb
 
 ``` sql
-SELECT m.* ,t.*
-FROM files.test_sales3 as t
-JOIN mindsdb.sales_model as m ;
-```
-This above query will predict the sales for the test data
-
-``` sql
-SELECT sales
-FROM mindsdb.sales_model21
-WHERE Time_Period = '2013-04-01'
-AND Marketing_Expense = 256;
+SELECT sales_preds
+FROM mindsdb.sales_model
+WHERE time_period = '2013-04-01'
+AND marketing_expense = 256;
 ```
 The above query will predict for single row
+
+```sql
+SELECT m.sales_preds
+FROM files.sales as t
+JOIN mindsdb.sale_model as m ;
+```
 

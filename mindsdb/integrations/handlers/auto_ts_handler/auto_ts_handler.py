@@ -24,6 +24,9 @@ class Auto_ts_Handler(BaseMLEngine):
                      'H', 'T,min', 'S', 'L,ms', 'U,us', 'N']
         model = ['best', 'prophet', 'stats', 'ARIMA', 'SARIMAX', 'VAR', 'ML']
 
+        if 'timeseries_settings' not in args:
+            raise Exception("timeseries column must be specified")
+
         if 'using' in args:
             args = args['using']
 
@@ -39,16 +42,12 @@ class Auto_ts_Handler(BaseMLEngine):
         if 'model_type' in args and args['model_type'] not in model:
             raise Exception(f"model_type must be one of {model}")
 
-        if 'ts_column' not in args:
-            raise Exception("Column containing time series must be defined")
-
-        if 'target' not in args:
-            raise Exception("target must be defined")
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
         """
         Creates Auto_ts model using the input df.
         """
+        ts_column = args['timeseries_settings']['order_by']
         args = args['using']
 
         score_type = args.get('score_type', 'rmse')
@@ -68,13 +67,12 @@ class Auto_ts_Handler(BaseMLEngine):
                     model_type=[model_type],
                     verbose=0)
 
-        ts_column = args['ts_column']
-        target = args['target']
-
-        # Drop rows with null values
+        # Drop rows with null values and convert to datetime
         df = df.dropna()
+        df[ts_column] = pd.to_datetime(df[ts_column])
         model.fit(traindata=df, target=target, ts_column=ts_column, cv=cv, sep=sep)
 
+        args['target'] = target
         self.model_storage.json_set('args', args)
         self.model_storage.file_set('model', dill.dumps(model))
 

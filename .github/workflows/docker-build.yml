@@ -29,6 +29,7 @@ jobs:
 
 
   build:
+    # Build our docker images based on our bake file
     runs-on: [self-hosted, dev]
     needs: [get-deploy-labels]
     if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
@@ -47,6 +48,7 @@ jobs:
         TAG=${{ env.CI_SHA }} docker buildx bake --push --progress plain
 
   trigger_deploy:
+    # Trigger private repo to deploy to dev envs
     runs-on: [self-hosted, dev]
     needs: [build, get-deploy-labels]
     if: needs.get-deploy-labels.outputs.deploy-envs != '[]'

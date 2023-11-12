@@ -1,18 +1,18 @@
+# Bare mindsdb with no extras is built as a separate stage for caching
 FROM python:3.10 as builder
-
 COPY . /mindsdb
 WORKDIR /mindsdb
 RUN --mount=type=cache,target=/root/.cache/pip pip install "."
 
 
+# Install extras on top of the bare mindsdb
 FROM builder as extras
 ARG EXTRAS
 RUN --mount=type=cache,target=/root/.cache/pip if [ ! -z $EXTRAS ]; then pip install ${EXTRAS}; fi
 
 
-
+# Copy installed pip packages and install only what we need
 FROM python:3.10-slim
-
 # "rm ... docker-clean" stops docker from removing packages from our cache
 # https://vsupalov.com/buildkit-cache-mount-dockerfile/
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \

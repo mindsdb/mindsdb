@@ -15,7 +15,6 @@ import datetime as dt
 from collections import defaultdict
 
 import dateinfer
-import duckdb
 import pandas as pd
 import numpy as np
 
@@ -64,9 +63,8 @@ from mindsdb_sql.exceptions import PlanningException
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner import query_planner
 from mindsdb_sql.planner.utils import query_traversal
-from mindsdb_sql.parser.ast.base import ASTNode
 
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df, query_df_with_type_infer_fallback
 from mindsdb.interfaces.model.functions import (
     get_model_records,
     get_predictor_project
@@ -78,6 +76,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErLogicError,
     ErSqlWrongArguments
 )
+from mindsdb.interfaces.query_context.context_controller import query_context_controller
 from mindsdb.utilities.cache import get_cache, json_checksum
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark
@@ -526,7 +525,7 @@ class SQLQuery():
             self.query,
             integrations=databases,
             predictor_metadata=predictor_metadata,
-            default_namespace=database
+            default_namespace=database,
         )
 
     def fetch(self, view='list'):
@@ -570,15 +569,15 @@ class SQLQuery():
 
             query_traversal(query, fill_params)
 
+            query, context_callback = query_context_controller.handle_db_context_vars(query, dn, self.session)
+
             data, columns_info = dn.query(
                 query=query,
                 session=self.session
             )
 
-        # if this is query: execute it
-        if isinstance(data, ASTNode):
-            subquery = SQLQuery(data, session=self.session)
-            return subquery.fetched_data
+            if context_callback:
+                context_callback(data, columns_info)
 
         result = ResultSet()
         for column in columns_info:
@@ -1017,8 +1016,8 @@ class SQLQuery():
             try:
                 left_data = steps_data[step.left.step_num]
                 right_data = steps_data[step.right.step_num]
-                df_a, names_a = left_data.to_df_cols(prefix='A')
-                df_b, names_b = right_data.to_df_cols(prefix='B')
+                table_a, names_a = left_data.to_df_cols(prefix='A')
+                table_b, names_b = right_data.to_df_cols(prefix='B')
 
                 if right_data.is_prediction or left_data.is_prediction:
                     # ignore join condition, use row_id
@@ -1059,17 +1058,14 @@ class SQLQuery():
                     join_condition = SqlalchemyRender('postgres').get_string(condition)
                     join_type = step.query.join_type
 
-                con = duckdb.connect(database=':memory:')
-                con.register('table_a', df_a)
-                con.register('table_b', df_b)
-
-                resp_df = con.execute(f"""
+                query = f"""
                     SELECT * FROM table_a {join_type} table_b
                     ON {join_condition}
-                """).fetchdf()
-                con.unregister('table_a')
-                con.unregister('table_b')
-                con.close()
+                """
+                resp_df, _description = query_df_with_type_infer_fallback(query, {
+                    'table_a': table_a,
+                    'table_b': table_b
+                })
 
                 resp_df = resp_df.replace({np.nan: None})
 
@@ -1556,7 +1552,7 @@ class SQLQuery():
                     if isinstance(arg, Constant) and isinstance(arg.value, str):
                         arg.value = fnc(arg.value)
 
-        if self.model_types.get(order_col) in ('date', 'datetime'):
+        if self.model_types.get(order_col) in ('date', 'datetime') or isinstance(predictor_data[0][order_col], pd.Timestamp):  # noqa
             # convert strings to date
             # it is making side effect on original data by changing it but let it be
 

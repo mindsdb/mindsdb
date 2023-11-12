@@ -42,14 +42,14 @@ WHERE symbol = 'BTCUSDT';
     where:
     * `symbol` - Trading pair (BTC to USDT in the above example)
     * `open_time` - Start time of interval in seconds since the Unix epoch (default interval is 1m)
-    * `open_price` - Price of base asset at beginning of trading interval
-    * `high_price` - Highest price of base asset during trading interval
-    * `low_price` - Lowest price of base asset during trading interval
-    * `close_price` - Price of base asset at end of trading interval
-    * `volume` - Total amount of base asset traded during interval
+    * `open_price` - Price of a base asset at the beginning of a trading interval
+    * `high_price` - The highest price of a base asset during trading interval
+    * `low_price` - Lowest price of a base asset during a trading interval
+    * `close_price` - Price of a base asset at the end of a trading interval
+    * `volume` - Total amount of base asset traded during an interval
     * `close_time` - End time of interval in seconds since the Unix epoch
-    * `quote_asset_volume` - Total amount of quote asset (USDT in above case) traded during interval
-    * `number_of_trades` - Total number of trades made during interval
+    * `quote_asset_volume` - Total amount of quote asset (USDT in the above case) traded during an interval
+    * `number_of_trades` - Total number of trades made during an interval
     * `taker_buy_base_asset_volume` - How much of the base asset volume is contributed by taker buy orders
     * `taker_buy_quote_asset_volume` - How much of the quote asset volume is contributed by taker buy orders
 </Accordion>
@@ -72,7 +72,7 @@ Supported intervals are [listed here](https://binance-docs.github.io/apidocs/spo
 
 ### Train a Model
 
-Here is how to create a time series model using 10000 trading intervals in the past with duration of 1m.
+Here is how to create a time series model using 10000 trading intervals in the past with a duration of 1m.
 
 ```sql
 CREATE MODEL mindsdb.btc_forecast_model
@@ -98,7 +98,7 @@ For more accuracy, the limit can be set to a higher value (e.g. 100,000)
 
 ### Making Predictions
 
-First let's make a view for the most recent BTCUSDT aggregate trade data:
+First, let's create a view for the most recent BTCUSDT aggregate trade data:
 
 ```sql
 CREATE VIEW recent_btcusdt_data AS (

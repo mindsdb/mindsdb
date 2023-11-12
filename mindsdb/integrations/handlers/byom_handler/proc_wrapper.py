@@ -25,6 +25,8 @@ import io
 
 import pandas as pd
 
+from .const import BYOM_METHOD
+
 
 def pd_encode(df):
     return df.to_parquet(engine='pyarrow')
@@ -71,6 +73,7 @@ def import_string(code, module_name='model'):
     # sys.modules['my_module'] = module
     return module
 
+
 def find_model_class(module):
     # find the first class that contents predict and train methods
     for _, klass in inspect.getmembers(module, inspect.isclass):
@@ -88,14 +91,14 @@ def main():
 
     params = get_input()
 
-    method = params['method']
+    method = BYOM_METHOD(params['method'])
     code = params['code']
 
     module = import_string(code)
 
     model_class = find_model_class(module)
 
-    if method == 'check':
+    if method == BYOM_METHOD.CHECK:
         model = model_class()
 
         if not hasattr(model, 'train'):
@@ -106,7 +109,7 @@ def main():
 
         return_output(True)
 
-    if method == 'train':
+    if method == BYOM_METHOD.TRAIN:
         df = pd_decode(params['df'])
         to_predict = params['to_predict']
         args = params['args']
@@ -123,7 +126,7 @@ def main():
         model_state = encode(data)
         return_output(model_state)
 
-    elif method == 'predict':
+    elif method == BYOM_METHOD.PREDICT:
         model_state = params['model_state']
         df = pd_decode(params['df'])
         args = params['args']
@@ -137,7 +140,7 @@ def main():
         res = model.predict(*call_args)
         return_output(pd_encode(res))
 
-    elif method == 'finetune':
+    elif method == BYOM_METHOD.FINETUNE:
         model_state = params['model_state']
         df = pd_decode(params['df'])
         args = params['args']
@@ -155,6 +158,16 @@ def main():
         data = model.__dict__
         model_state = encode(data)
         return_output(model_state)
+
+    elif method == BYOM_METHOD.DESCRIBE:
+        model_state = params['model_state']
+        model = model_class()
+        model.__dict__ = decode(model_state)
+        try:
+            df = model.describe(params.get('attribute'))
+        except Exception:
+            return_output(pd_encode(pd.DataFrame()))
+        return_output(pd_encode(df))
 
     raise NotImplementedError(method)
 

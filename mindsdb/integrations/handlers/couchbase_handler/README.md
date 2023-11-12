@@ -12,7 +12,10 @@ The required arguments to establish a connection are:
 * `bucket`: the bjcket name to use when connecting with the Couchbase server
 * `user`: the user to authenticate with the Couchbase server
 * `password`: the password to authenticate the user with the Couchbase server
-* `scope`:  scopes are a level of data organization within a bucket. If ommited, will default to `_default`
+* `scope`:  scopes are a level of data organization within a bucket. If omitted, will default to `_default`
+
+If you are using Couchbase Capella, the `host` should be the connection string for the cluster. When you navigate to your cluster, the connection string can be found under the Connect tab.
+It will also be required to whitelist the machine(s) that will be running MindsDB and database credentials will need to be created for the user. These steps can also be taken under the Connect tab.
 
 ## Usage
 

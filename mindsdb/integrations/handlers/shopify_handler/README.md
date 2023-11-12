@@ -51,13 +51,19 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+  - [x] Support UPDATE
+  - [x] Support Insert
+  - [x] Support DELETE
 - [x] Shopify Customers Table for a given Store
   - [x] Support SELECT
     - [x] Support LIMIT
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+  - [x] Support UPDATE
   - [x] Support INSERT
+  - [x] Support DELETE
+  - [x] Support WHERE
 - [x] Shopify Orders Table for a given Store
   - [x] Support SELECT
     - [x] Support LIMIT
@@ -65,6 +71,30 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
     - [x] Support ORDER BY
     - [x] Support column selection
 - [x] Shopify Customer Reviews Table for a given Store
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
+- [x] Shopify Inventory Level Table for a given Store
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
+- [x] Shopify Carrier Service Table for a given Store
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
+- [x] Shopify Shipping Zone Table for a given Store
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
+- [x] Shopify Sales Channel for a given Store
   - [x] Support SELECT
     - [x] Support LIMIT
     - [x] Support WHERE
@@ -78,7 +108,6 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
 - [ ] Shopify Payments table
 - [ ] Shopify Inventory table
 - [ ] Shopify Discounts table
-- [ ] Shopify Sales Channels table
 - [ ] Many more
 
 ## Example Usage
@@ -102,6 +131,14 @@ Use the established connection to query your database:
 SELECT * FROM shopify_datasource.products
 ~~~~
 
+~~~~sql
+SELECT * FROM shopify_datasource.carrier_service;
+~~~~
+
+~~~~sql
+SELECT * FROM shopify_datasource.shipping_zone;
+~~~~
+
 Run more advanced SELECT queries:
 
 ~~~~sql
@@ -112,7 +149,7 @@ ORDER BY id
 LIMIT 5
 ~~~~
 
-It is also possible to INSERT data into your Shopify store. At the moment, only the `customers` table supports INSERT:
+It is also possible to INSERT data into your Shopify store. At the moment, only the `customers` and `products` table supports INSERT:
 
 ~~~~sql
 INSERT INTO shopify_datasource.customers(first_name, last_name, email)
@@ -121,6 +158,16 @@ VALUES
 ~~~~
 
 A limited number of columns are supported for INSERT: 'first_name', 'last_name', 'email', 'phone', 'tags' and 'currency'. Of these either 'first_name', 'last_name', 'email' or 'phone' must be provided. 
+
+It is also possible to DELETE data into your Shopify store. At the moment, only the `customers` and `products` table supports DELETE:
+
+~~~~sql
+DELETE FROM shopify_datasource.customers
+WHERE first_name = 'John'
+AND last_name = 'Doe'
+AND email = 'john.doe@example.com';
+~~~~
+
 
 Inventory details for the products can be queried as follows:
 
@@ -151,4 +198,11 @@ FROM shopify_datasource.customer_reviews
 WHERE score=5
 ORDER BY id
 LIMIT 5
+~~~~
+
+For `customers` table, DELETE is supported too. You can delete the customers as follows:
+
+~~~~sql
+DELETE FROM shopify_datasource.customers
+WHERE verified_email = false;
 ~~~~

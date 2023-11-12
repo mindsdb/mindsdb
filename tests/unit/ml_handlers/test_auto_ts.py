@@ -114,7 +114,7 @@ class TestAuto_ts(BaseExecutorTest):
             self.wait_predictor("proj", "auto_ts_invalid_model")
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_handler_predictions(self,mock_handler):
+    def test_handler_predictions(self, mock_handler):
         df = pd.read_csv("unit/ml_handlers/data/sales.csv")
         self.run_sql("create database proj")
         self.set_handler(mock_handler, name="pg", tables={"df": df})
@@ -149,7 +149,7 @@ class TestAuto_ts(BaseExecutorTest):
         assert (original_prediction - handler_prediction) < 1, f"The handler prediction was {handler_prediction} and the original prediction was {original_prediction}"
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_handler_batch_predictions(self,mock_handler):
+    def test_handler_batch_predictions(self, mock_handler):
         df = pd.read_csv("unit/ml_handlers/data/sales.csv")
         self.run_sql("create database proj")
         self.set_handler(mock_handler, name="pg", tables={"df": df})
@@ -177,7 +177,6 @@ class TestAuto_ts(BaseExecutorTest):
             SELECT m.sales_preds
             FROM pg.df as t
             JOIN proj.auto_ts as m ;
-            
             """
         )
 

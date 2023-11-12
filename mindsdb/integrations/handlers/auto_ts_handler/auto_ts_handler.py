@@ -42,7 +42,6 @@ class Auto_ts_Handler(BaseMLEngine):
         if 'model_type' in args and args['model_type'] not in model:
             raise Exception(f"model_type must be one of {model}")
 
-
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
         """
         Creates Auto_ts model using the input df.

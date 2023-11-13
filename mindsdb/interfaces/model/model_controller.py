@@ -474,7 +474,7 @@ class ModelController():
         model_records = db.Predictor.query.filter(
             db.Predictor.name == model_record.name,
             db.Predictor.project_id == model_record.project_id,
-            db.Predictor.active is True,
+            db.Predictor.active == True,    # noqa
             db.Predictor.company_id == ctx.company_id,
             db.Predictor.id != model_record.id
         )

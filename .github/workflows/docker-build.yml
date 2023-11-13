@@ -27,7 +27,6 @@ jobs:
           echo "deploy-envs=${DEPLOY_ENVS,,}" >> "$GITHUB_OUTPUT" # Lowercase the whole list and output it
           echo "deploy-envs=${DEPLOY_ENVS,,}"
 
-
   build:
     # Build our docker images based on our bake file
     runs-on: [self-hosted, dev]

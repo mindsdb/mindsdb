@@ -324,7 +324,7 @@ class VectorStoreHandler(BaseHandler):
         df[id_col] = df[id_col].apply(str)
 
         if hasattr(self, 'upsert'):
-            self.insert(table_name, df)
+            self.upsert(table_name, df)
             return
 
         # find existing ids

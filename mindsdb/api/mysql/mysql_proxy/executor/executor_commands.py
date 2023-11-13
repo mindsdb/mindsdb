@@ -1451,6 +1451,7 @@ class ExecuteCommands:
         except EntityExistsError:
             if getattr(statement, "if_not_exists", False) is True:
                 return ExecuteAnswer(ANSWER_TYPE.OK)
+            raise
 
     def answer_show_columns(
         self,

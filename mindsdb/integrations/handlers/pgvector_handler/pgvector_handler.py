@@ -1,10 +1,9 @@
-from collections import OrderedDict, defaultdict
-from typing import List, Optional
+from collections import OrderedDict
+from typing import List, Union
 
-import numpy as np
 import pandas as pd
 import psycopg
-from mindsdb_sql import ASTNode, CreateTable, Insert, Select
+from mindsdb_sql import ASTNode
 from pgvector.psycopg import register_vector
 
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import (
@@ -16,8 +15,6 @@ from mindsdb.integrations.libs.response import HandlerResponse
 from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.libs.vectordatabase_handler import (
     FilterCondition,
-    FilterOperator,
-    TableField,
     VectorStoreHandler,
 )
 from mindsdb.utilities import log
@@ -36,7 +33,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         self.connect()
 
     @profiler.profile()
-    def connect(self):
+    def connect(self) -> psycopg.connection:
         """
         Handles the connection to a PostgreSQL database instance.
         """
@@ -60,7 +57,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         return self.connection
 
     @staticmethod
-    def _translate_conditions(conditions: List[FilterCondition]) -> dict | None:
+    def _translate_conditions(conditions: List[FilterCondition]) -> Union[dict, None]:
         """
         Translate filter conditions to a dictionary
         """

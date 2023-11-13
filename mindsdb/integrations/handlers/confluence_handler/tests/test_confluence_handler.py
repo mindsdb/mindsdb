@@ -50,18 +50,18 @@ class ConfluenceHandlerTest(unittest.TestCase):
     #     assert response.type is not RESPONSE_TYPE.ERROR
 
     def test_update_page(self):
-        query = '''
+        query = f'''
         UPDATE confluence_data.pages
         SET title='Title updated', body='Body updated'
-        WHERE id=983703
+        WHERE id={os.getenv('CONFLUENCE_TEST_PAGE_ID')}
         '''
         response = self.handler.native_query(query)
         assert response.type is not RESPONSE_TYPE.ERROR
 
     def test_delete_page(self):
-        query = '''
+        query = f'''
         DELETE FROM confluence_data.pages
-        WHERE id=983703
+        WHERE id={os.getenv('CONFLUENCE_TEST_PAGE_ID')}
         '''
         response = self.handler.native_query(query)
         assert response.type is not RESPONSE_TYPE.ERROR

@@ -41,14 +41,14 @@ WITH
 Use the established connection to query your database:
 
 ~~~~sql
-SELECT * FROM mindsdb_confluence.pages
+SELECT * FROM mindsdb_confluence.spaces
 ~~~~
 
 Advanced queries for the confluence handler
 
 ~~~~sql
 SELECT id,key,name,type
-FROM mindsdb_confluence.pages
+FROM mindsdb_confluence.spaces
 WHERE type="personal"
 ORDER BY id ASC, name DESC
 LIMIT 10
@@ -69,8 +69,8 @@ You need to specify the name of the space to view all the pages in that space.
 ~~~~sql
 INSERT INTO confluence_data.pages ('space', 'title', 'body')
 VALUES
-('DEMO', 'test title # 1', 'test body # 1')
-('DEMO', 'test title # 2', 'test body # 2')
+('DEMO', 'test title # 1', 'test body # 1'),
+('DEMO', 'test title # 2', 'test body # 2'),
 ('DEMO', 'test title # 3', 'test body # 3')
 ~~~~
 

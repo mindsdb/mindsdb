@@ -293,11 +293,22 @@ OpenAI supports fine-tuning of some of its models, including `davinci`, `curie`,
 
 Let's create a model to answer questions about MindsDB's custom SQL syntax.
 
+First, create an OpenAI engine, passing your OpenAI API key:
+
+```sql
+CREATE ML_ENGINE openai_engine
+FROM openai
+USING
+    api_key = 'your-openai-api-key';
+```
+
+Then, create a model using this engine:
+
 ```sql
 CREATE MODEL openai_davinci
 PREDICT completion
 USING
-    engine = 'openai',
+    engine = 'openai_engine',
     model_name = 'davinci',
     prompt_template = 'Return a valid SQL string for the following question about MindsDB in-database machine learning: {{prompt}}';
 ```

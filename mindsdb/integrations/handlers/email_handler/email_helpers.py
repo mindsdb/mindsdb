@@ -52,9 +52,7 @@ class EmailClient:
 
         if until_date is not None:
             until_date_str = until_date.strftime("%d-%b-%Y")
-        else:
-            until_date_str = datetime.today().strftime("%d-%b-%Y")
-        query_parts.append(f'(BEFORE "{until_date_str}")')
+            query_parts.append(f'(BEFORE "{until_date_str}")')
 
         if since_emailid is not None:
             query_parts.append(f'(UID {since_emailid}:*)')

@@ -18,8 +18,10 @@ from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.project_datanode import (
 )
 from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
+from mindsdb.interfaces.skills.skills_controller import SkillsController
 
 
 class InformationSchemaDataNode(DataNode):
@@ -300,6 +302,14 @@ class InformationSchemaDataNode(DataNode):
             "LAST_ERROR",
         ],
         "KNOWLEDGE_BASES": ["NAME", "PROJECT", "MODEL", "STORAGE"],
+        "SKILLS": ["NAME", "PROJECT", "TYPE", "PARAMS"],
+        "AGENTS": [
+            "NAME",
+            "PROJECT",
+            "MODEL_NAME",
+            "SKILLS",
+            "PARAMS"
+        ]
     }
 
     def __init__(self, session):
@@ -335,6 +345,8 @@ class InformationSchemaDataNode(DataNode):
             "MDB_TRIGGERS": self._get_triggers,
             "CHATBOTS": self._get_chatbots,
             "KNOWLEDGE_BASES": self._get_knowledge_bases,
+            "SKILLS": self._get_skills,
+            "AGENTS": self._get_agents
         }
         for table_name in self.information_schema:
             if table_name not in self.get_dataframe_funcs:
@@ -663,6 +675,46 @@ class InformationSchemaDataNode(DataNode):
             ) for kb in kb_list
         ]
 
+        return pd.DataFrame(data, columns=columns)
+
+    def _get_skills(self, query: ASTNode = None):
+        skills_controller = SkillsController()
+        project_name = None
+        if (
+                isinstance(query, Select)
+                and type(query.where) == BinaryOperation
+                and query.where.op == '='
+                and query.where.args[0].parts == ['project']
+                and isinstance(query.where.args[1], Constant)
+        ):
+            project_name = query.where.args[1].value
+
+        all_skills = skills_controller.get_skills(project_name)
+
+        columns = self.information_schema['SKILLS']
+
+        # NAME, PROJECT, TYPE, PARAMS
+        data = [(s.name, project_name, s.type, s.params) for s in all_skills]
+        return pd.DataFrame(data, columns=columns)
+
+    def _get_agents(self, query: ASTNode = None):
+        agents_controller = AgentsController()
+        project_name = None
+        if (
+                isinstance(query, Select)
+                and type(query.where) == BinaryOperation
+                and query.where.op == '='
+                and query.where.args[0].parts == ['project']
+                and isinstance(query.where.args[1], Constant)
+        ):
+            project_name = query.where.args[1].value
+
+        all_agents = agents_controller.get_agents(project_name)
+
+        columns = self.information_schema['AGENTS']
+
+        # NAME, PROJECT, MODEL, SKILLS, PARAMS
+        data = [(a.name, project_name, a.model_name, list(map(lambda s: s.name, a.skills)), a.params) for a in all_agents]
         return pd.DataFrame(data, columns=columns)
 
     def _get_databases(self, query: ASTNode = None):

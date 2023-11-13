@@ -96,7 +96,7 @@ In the SkySQL Console left-hand navigation pane, click **Workspace**> **Query Ed
 
 SQL to execute:
 
-```
+```sql
 CREATE DATABASE chatbotdb;
 USE chatbotdb;
 SET sql_mode='ANSI_QUOTES';
@@ -177,7 +177,7 @@ If you’re developing on a laptop, MariaDB SkySQL will automatically prompt you
 
 The easiest way to work with the MariaDB Enterprise Server is its DBaaS cloud service, SkySQL. In the MindsDB SQL editor, click **add > new datasource** button, and search/choose MariaDB SkySQL. This will open a new query window, and generate a MindsDB SQL template for making the MindsDB &lt;-> MariaDB connection:
 
-```
+```sql
 CREATE DATABASE skysql            --- display name for database.
 WITH ENGINE = 'mariadb',
 PARAMETERS = {
@@ -232,7 +232,7 @@ Click the **add > new datasource** button in the MindsDB console, and search/cho
 
 [Fill in the template](https://docs.mindsdb.com/app-integrations/twitter) with your Twitter API keys/tokens. Then, in the MindsDB SQL editor, select the SQL, and execute it by clicking **Run**.
 
-```
+```sql
 --- After you fill all the mandatory fields run the query with the top button or shift + enter.
    
 CREATE DATABASE my_twitter_bot
@@ -257,15 +257,25 @@ Nice job, you’re done with the setup! 🙌
 
 Here you use the <code>[CREATE MODEL](https://docs.mindsdb.com/sql/create/model)</code> command to create a predictor - for example’s sake, the ‘[Snoopstein](https://twitter.com/snoop_stein)’ model bot. Replace the <code>snoopstein_model </code>with your TwitterBot name, and come up with your [own prompt template](https://www.businessinsider.com/how-to-use-get-better-chatgpt-ai-prompt-guide) that makes sense for your scenario. 
 
+<Tip>
+Before creating an OpenAI model, please create an engine, providing your OpenAI API key:
+
+```sql
+CREATE ML_ENGINE openai_engine
+FROM openai
+USING
+	api_key = 'your-openai-api-key';
 ```
+</Tip>
+
+```sql
 CREATE MODEL snoopstein_model
 PREDICT response
 USING
-engine = 'openai',
+engine = 'openai_engine',
 max_tokens = 300,
 temperature = 0.75,
 model_name = 'gpt-4', -- you can also use 'text-davinci-003' or 'gpt-3.5-turbo'
-api_key = 'your OpenAI api key' -- optional. If unspecified, uses MindsDBs demo key
 prompt_template = '
 Your are a twitter bot, your name is Snoop Stein (@snoop_stein), and you are helping people with their questions, you are smart and hilarious at the same time.
 From input message: {{text}}\
@@ -282,7 +292,7 @@ After executing, the next step is to check the status of a predictor. If its val
 
 Write this code into the SQL editor, select the SQL, and execute it by clicking **Run**.  Replace the author_username with your own personal Twitter handle, for tweet copy that would include an ‘@’ mention. 
 
-```
+```sql
 SELECT response from snoopstein_model
 WHERE author_username = "@pieterhumphrey"
 AND text = '@snoop_stein, why is gravity so different on the sun?.';
@@ -306,7 +316,7 @@ Note that this is live data – so if there is no content on twitter matching th
 
 Write and then select the SQL below, and then execute it by clicking **Run**.
 
-```
+```sql
 ---- Job 1. Input tweets needing reply to MariaDB chatbot_input table
 INSERT INTO skysql.chatbot_input( 
        SELECT *
@@ -336,7 +346,7 @@ LIMIT 1
 
 Once you’ve posted some Tweets to match the criteria, let’s make sure it’s working before creating the job. Write and then select each separate SQL statement below one at a time, then execute each by clicking **Run** to ensure data is present.
 
-```
+```sql
 select * from skysql.chatbot_input;
 select * from skysql.chatbot_output;
 select * from to_reply_to;
@@ -347,7 +357,7 @@ select * from to_tweet;
 
 Jobs in MindsDB are similar to cron jobs in UNIX and Linux, running at regularly scheduled intervals. Write and then select the SQL below, and then execute it by clicking **Run**.
 
-```
+```sql
 CREATE JOB chatbot_job (
    -- Part 1
    INSERT INTO skysql.chatbot_input(
@@ -387,3 +397,9 @@ Use the MindsDB [JavaScript SDK](https://docs.mindsdb.com/sdk/javascript-sdk) or
 While this simple example uses Twitter, MindsDB will soon support Slack and perhaps one day,  Discord. Combined with the ability to <code>[FINETUNE](https://docs.mindsdb.com/sql/api/finetune)</code> existing, trained LLM models with your own data inside a relational database, a future where you can train chatbots to reason about data and/or content you provide doesn’t seem far off. Imagine a support bot that understands your digital assets and knowledge!  
 
 Explore more about how MariaDB Enterprise Server, MariaDB Columnstore, MaxScale Database proxy, and Xpand Distributed SQL can help your projects at [The MariaDB developer hub](https://mariadb.com/developers/), or get in touch with MariaDB experts on our [slack](https://mariadb-community.slack.com/).
+
+<Tip>
+Check out [another Twitter Chatbot tutorial](/sql/tutorials/twitter-chatbot) that offers an alternative way to simplify the process of fetching tweets with the `LAST` keyword.
+
+Want to talk to SnoopStein? Post a tweet with `@snoop_stein` and wait for the reply.
+</Tip>

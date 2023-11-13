@@ -1,207 +1,138 @@
-from typing import Optional, Dict
-import pandas as pd
 import nlpcloud
+from collections import OrderedDict
 
-from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.integrations.handlers.nlpcloud_handler.nlpcloud_tables import (
+    NLPCloudTranslationTable,
+    NLPCloudSummarizationTable,
+    NLPCloudSentimentTable,
+    NLPCloudLangDetectionTable,
+    NLPCloudNERTable
+)
+from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+)
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 from mindsdb.utilities.log import get_log
+from mindsdb_sql import parse_sql
 
 
 logger = get_log("integrations.nlpcloud_handler")
 
 
-class NLPCloudHandler(BaseMLEngine):
-    name = "nlpcloud"
-
-    @staticmethod
-    def create_validation(target, args=None, **kwargs):
-        args = args['using']
-
-        available_tasks = ["translation", "summarization", "sentiment", "paraphrasing", "langdetection", "ner"]
-
-        if 'api_key' not in args:
-            raise Exception('api_key has to be specified')
-        
-        if 'model' not in args:
-            raise Exception('model has to be specified')
-
-        if 'task' not in args:
-            raise Exception('task has to be specified. Available tasks are - ' + available_tasks)
-
-        if args['task'] not in available_tasks:
-            raise Exception('Unknown task specified. Available tasks are - ' + available_tasks)
-        
-        client = nlpcloud.Client(model=self.connection_data.get("model"), token=self.connection_data.get("token"), gpu=self.connection_data.get("gpu", False), lang=self.connection_data.get("lang", ""))
-
-    def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        if 'using' not in args:
-            raise Exception("NLPCloud AI Inference engine requires a USING clause! Refer to its documentation for more details.")
-        self.generative = True
-
-        args = args['using']
-        args['target'] = target
-        self.model_storage.json_set('args', args)
-
-    def _get_nlpcloud_client(self, args):
-        api_key = self._get_clipdrop_api_key(args)
-
-        local_directory_path = args["local_directory_path"]
-
-        return ClipdropClient(api_key=api_key, local_dir=local_directory_path)
-
-    def _process_remove_text(self, df, args):
-
-        def generate_remove_text(conds, client):
-            conds = conds.to_dict()
-            return client.remove_text(conds.get("image_url"))
-
-        supported_params = set(["image_url"])
-
-        if "image_url" not in df.columns:
-            raise Exception("`image_url` column has to be given in the query.")
-
-        for col in df.columns:
-            if col not in supported_params:
-                raise Exception(f"Unknown column {col}. Currently supported parameters for remove text - {supported_params}")
-
-        client = self._get_clipdrop_client(args)
-
-        return df[df.columns.intersection(supported_params)].apply(generate_remove_text, client=client, axis=1)
-
-    def _process_remove_background(self, df, args):
-
-        def generate_remove_background(conds, client):
-            conds = conds.to_dict()
-            return client.remove_background(conds.get("image_url"))
-
-        supported_params = set(["image_url"])
-
-        if "image_url" not in df.columns:
-            raise Exception("`image_url` column has to be given in the query.")
-
-        for col in df.columns:
-            if col not in supported_params:
-                raise Exception(f"Unknown column {col}. Currently supported parameters for remove background - {supported_params}")
-
-        client = self._get_clipdrop_client(args)
-
-        return df[df.columns.intersection(supported_params)].apply(generate_remove_background, client=client, axis=1)
-
-    def _process_sketch_to_image(self, df, args):
-
-        def generate_sketch_to_image(conds, client):
-            conds = conds.to_dict()
-            return client.sketch_to_image(conds.get("image_url"), conds.get("text"))
-
-        supported_params = set(["image_url", "text"])
-
-        if "image_url" not in df.columns:
-            raise Exception("`image_url` column has to be given in the query.")
-
-        if "text" not in df.columns:
-            raise Exception("`text` column has to be given in the query.")
-
-        for col in df.columns:
-            if col not in supported_params:
-                raise Exception(f"Unknown column {col}. Currently supported parameters for remove background - {supported_params}")
-
-        client = self._get_clipdrop_client(args)
-
-        return df[df.columns.intersection(supported_params)].apply(generate_sketch_to_image, client=client, axis=1)
-
-    def _process_text_to_image(self, df, args):
-
-        def generate_text_to_image(conds, client):
-            conds = conds.to_dict()
-            return client.text_to_image(conds.get("text"))
-
-        supported_params = set(["text"])
-
-        if "text" not in df.columns:
-            raise Exception("`text` column has to be given in the query.")
-
-        for col in df.columns:
-            if col not in supported_params:
-                raise Exception(f"Unknown column {col}. Currently supported parameters for remove background - {supported_params}")
-
-        client = self._get_clipdrop_client(args)
-
-        return df[df.columns.intersection(supported_params)].apply(generate_text_to_image, client=client, axis=1)
-
-    def _process_replace_background(self, df, args):
-
-        def generate_replace_background(conds, client):
-            conds = conds.to_dict()
-            return client.replace_background(conds.get("image_url"), conds.get("text"))
-
-        supported_params = set(["image_url", "text"])
-
-        if "image_url" not in df.columns:
-            raise Exception("`image_url` column has to be given in the query.")
-
-        if "text" not in df.columns:
-            raise Exception("`text` column has to be given in the query.")
-
-        for col in df.columns:
-            if col not in supported_params:
-                raise Exception(f"Unknown column {col}. Currently supported parameters for replace background - {supported_params}")
-
-        client = self._get_clipdrop_client(args)
-
-        return df[df.columns.intersection(supported_params)].apply(generate_replace_background, client=client, axis=1)
-
-    def _process_reimagine(self, df, args):
-
-        def generate_reimagine(conds, client):
-            conds = conds.to_dict()
-            return client.reimagine(conds.get("text"))
-
-        supported_params = set(["text"])
-
-        if "text" not in df.columns:
-            raise Exception("`text` column has to be given in the query.")
-
-        for col in df.columns:
-            if col not in supported_params:
-                raise Exception(f"Unknown column {col}. Currently supported parameters for reimagine - {supported_params}")
-
-        client = self._get_clipdrop_client(args)
-
-        return df[df.columns.intersection(supported_params)].apply(generate_reimagine, client=client, axis=1)
-
-    def predict(self, df, args=None):
-
-        args = self.model_storage.json_get('args')
-
-        if args["task"] == "remove_text":
-            preds = self._process_remove_text(df, args)
-        elif args["task"] == "remove_background":
-            preds = self._process_remove_background(df, args)
-        elif args["task"] == "sketch_to_image":
-            preds = self._process_sketch_to_image(df, args)
-        elif args["task"] == "text_to_image":
-            preds = self._process_text_to_image(df, args)
-        elif args["task"] == "replace_background":
-            preds = self._process_replace_background(df, args)
-        elif args["task"] == "reimagine":
-            preds = self._process_reimagine(df, args)
-
-        result_df = pd.DataFrame()
-
-        result_df['predictions'] = preds
-
-        result_df = result_df.rename(columns={'predictions': args['target']})
-
-        return result_df
-
-    def _get_clipdrop_api_key(self, args):
-        if 'api_key' in args:
-            return args['api_key']
-
-        connection_args = self.engine_storage.get_connection_args()
-
-        if 'api_key' in connection_args:
-            return connection_args['api_key']
-
-        raise Exception("Missing API key 'api_key'. Either re-create this ML_ENGINE specifying the `api_key` parameter\
-                 or re-create this model and pass the API key with `USING` syntax.")
+class NLPCloudHandler(APIHandler):
+    """The NLPCloud handler implementation"""
+
+    def __init__(self, name: str, **kwargs):
+        """Initialize the NLPCloud handler.
+
+        Parameters
+        ----------
+        name : str
+            name of a handler instance
+        """
+        super().__init__(name)
+
+        connection_data = kwargs.get("connection_data", {})
+        self.connection_data = connection_data
+        self.kwargs = kwargs
+        self.client = None
+
+        translation_data = NLPCloudTranslationTable(self)
+        self._register_table("translation", translation_data)
+
+        summarization_data = NLPCloudSummarizationTable(self)
+        self._register_table("summarization", summarization_data)
+
+        sentiment_data = NLPCloudSentimentTable(self)
+        self._register_table("sentiment_analysis", sentiment_data)
+
+        lang_detect_data = NLPCloudLangDetectionTable(self)
+        self._register_table("language_detection", lang_detect_data)
+
+        ner_data = NLPCloudNERTable(self)
+        self._register_table("named_entity_recognition", ner_data)
+
+    def connect(self) -> StatusResponse:
+        """Set up the connection required by the handler.
+
+        Returns
+        -------
+        StatusResponse
+            connection object
+        """
+        resp = StatusResponse(False)
+        self.client = nlpcloud.Client(model=self.connection_data.get("model"), token=self.connection_data.get("token"), gpu=self.connection_data.get("gpu", False), lang=self.connection_data.get("lang", ""))
+        try:
+            self.client.langdetection("hello mindsdb!!")
+            resp.success = True
+            return resp
+        except Exception as ex:
+            resp.success = False
+            resp.error_message = ex
+        self.is_connected = True
+        return resp
+
+    def check_connection(self) -> StatusResponse:
+        """Check connection to the handler.
+
+        Returns
+        -------
+        StatusResponse
+            Status confirmation
+        """
+        if self.is_connected:
+            return StatusResponse(True)
+        return self.connect()
+
+    def native_query(self, query: str) -> StatusResponse:
+        """Receive and process a raw query.
+
+        Parameters
+        ----------
+        query : str
+            query in a native format
+
+        Returns
+        -------
+        StatusResponse
+            Request status
+        """
+        ast = parse_sql(query, dialect="mindsdb")
+        return self.query(ast)
+
+
+connection_args = OrderedDict(
+    token={
+        "type": ARG_TYPE.STR,
+        "description": "NLPCloud API Toekn",
+        "required": True,
+        "label": "token",
+    },
+    model={
+        "type": ARG_TYPE.STR,
+        "description": "NLPCloud model",
+        "required": True,
+        "label": "model",
+    },
+    gpu={
+        "type": ARG_TYPE.BOOL,
+        "description": "NLPCloud use gpu",
+        "required": False,
+        "label": "gpu",
+    },
+    lang={
+        "type": ARG_TYPE.STR,
+        "description": "NLPCloud language",
+        "required": False,
+        "label": "lang",
+    }
+)
+
+connection_args_example = OrderedDict(
+    token="token",
+    model="model",
+    gpu=False,
+    lang="en"
+)

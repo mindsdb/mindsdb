@@ -1,12 +1,13 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
-from mindsdb.integrations.handlers.nlpcloud_handler.__about__ import (
-    __version__ as version,
-    __description__ as description,
-)
+from .__about__ import __version__ as version, __description__ as description
 
 try:
-    from .nlpcloud_handler import NLPCloudHandler as Handler
+    from .nlpcloud_handler import (
+        NLPCloudHandler as Handler,
+        connection_args_example,
+        connection_args,
+    )
 
     import_error = None
 except Exception as e:
@@ -15,7 +16,18 @@ except Exception as e:
 
 title = "NLPCloud"
 name = "nlpcloud"
-type = HANDLER_TYPE.ML
-permanent = True
+type = HANDLER_TYPE.DATA
+icon_path = "icon.svg"
 
-__all__ = ["Handler", "version", "name", "type", "title", "description", "import_error"]
+__all__ = [
+    "Handler",
+    "version",
+    "name",
+    "type",
+    "title",
+    "description",
+    "import_error",
+    "icon_path",
+    "connection_args_example",
+    "connection_args",
+]

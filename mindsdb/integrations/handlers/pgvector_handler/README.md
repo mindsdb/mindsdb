@@ -105,7 +105,7 @@ FROM pvec.embed
 Limit 5;
 
 SELECT *
-FROM pvec.items
+FROM pvec.itemstest
 Limit 5;
 ```
 

@@ -4,8 +4,6 @@ import io
 import zipfile
 from typing import Union
 
-from sqlalchemy.orm.attributes import flag_modified
-
 import mindsdb.interfaces.storage.db as db
 
 from .fs import RESOURCE_GROUP, FileStorageFactory, SERVICE_FILES_NAMES
@@ -48,35 +46,8 @@ class ModelStorage:
         rec = self._get_model_record(self.predictor_id)
         return dict(status=rec.status,
                     to_predict=rec.to_predict,
-                    data=rec.data)
-
-    def update_data(self, data: dict) -> None:
-        """update model 'data' field
-
-        Args:
-            data (dict): data to be merged with original model 'data' field
-        """
-        model_record = self._get_model_record(self.predictor_id, check_exists=True)
-        if isinstance(model_record.data, dict) is False:
-            model_record.data = data
-        else:
-            model_record.data.update(data)
-        flag_modified(model_record, 'data')
-        db.session.commit()
-
-    def update_learn_args(self, data: dict) -> None:
-        """update model 'learn_args' field
-
-        Args:
-            data (dict): data to be merged with original model 'learn_args' field
-        """
-        model_record = self._get_model_record(self.predictor_id, check_exists=True)
-        if isinstance(model_record.learn_args, dict) is False:
-            model_record.learn_args = data
-        else:
-            model_record.learn_args.update(data)
-        flag_modified(model_record, 'learn_args')
-        db.session.commit()
+                    data=rec.data,
+                    learn_args=rec.learn_args)
 
     def status_set(self, status, status_info=None):
         rec = self._get_model_record(self.predictor_id)

@@ -84,7 +84,8 @@ def set_process_mark(folder: str, mark: str) -> None:
         return
     p = Path(tempfile.gettempdir()).joinpath(f"mindsdb/processes/{folder}/")
     p.mkdir(parents=True, exist_ok=True)
-    p.joinpath(f"{os.getpid()}-{threading.get_native_id()}-{mark}").touch()
+    mark = f"{os.getpid()}-{threading.get_native_id()}-{mark}"
+    p.joinpath(mark).touch()
     return mark
 
 

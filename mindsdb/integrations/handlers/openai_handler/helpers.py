@@ -12,18 +12,18 @@ from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BA
 
 
 def retry_with_exponential_backoff(
-        initial_delay: float = 1,
-        hour_budget: float = 0.3,
-        jitter: bool = False,
-        exponential_base: int = 2,
-        errors: tuple = (openai.error.RateLimitError, openai.error.APIConnectionError),
+    initial_delay: float = 1,
+    hour_budget: float = 0.3,
+    jitter: bool = False,
+    exponential_base: int = 2,
+    errors: tuple = (openai.error.RateLimitError, openai.error.APIConnectionError),
 ):
     """
     Wrapper to enable optional arguments. It means this decorator always needs to be called with parenthesis:
-    
+
     > @retry_with_exponential_backoff()  # optional argument override here
     > def f(): [...]
-    
+
     """  # noqa
 
     @profiler.profile()
@@ -43,8 +43,9 @@ def retry_with_exponential_backoff(
             if isinstance(hour_budget, float) or isinstance(hour_budget, int):
                 try:
                     max_retries = round(
-                        (math.log((hour_budget * 3600) / initial_delay)) /
-                        math.log(exponential_base))
+                        (math.log((hour_budget * 3600) / initial_delay))
+                        / math.log(exponential_base)
+                    )
                 except ValueError:
                     max_retries = 10
             else:
@@ -56,13 +57,17 @@ def retry_with_exponential_backoff(
                     return func(*args, **kwargs)
                 except errors as e:
                     if e.error is not None:
-                        if e.error['type'] == 'invalid_request_error' and \
-                                'Too many parallel completions' in e.error['message'] or \
-                                'Please reduce the length of the messages' in e.error['message']:
+                        if (
+                            e.error['type'] == 'invalid_request_error'
+                            and 'Too many parallel completions' in e.error['message']
+                            or 'Please reduce the length of the messages'
+                            in e.error['message']
+                        ):
                             raise e  # InvalidRequestError triggers batched mode in the previous call
                         if e.error['type'] == 'insufficient_quota':
                             raise Exception(
-                                'API key has exceeded its quota, please try 1) increasing it or 2) using another key.')  # noqa
+                                'API key has exceeded its quota, please try 1) increasing it or 2) using another key.'
+                            )  # noqa
 
                     num_retries += 1
                     if num_retries > max_retries:
@@ -76,7 +81,8 @@ def retry_with_exponential_backoff(
                 except openai.error.OpenAIError as e:
                     if e.error is not None and e.error['type'] == 'insufficient_quota':
                         raise Exception(
-                            'API key has exceeded its quota, please try 1) increasing it or 2) using another key.')  # noqa
+                            'API key has exceeded its quota, please try 1) increasing it or 2) using another key.'
+                        )  # noqa
                     raise e
 
                 except Exception as e:
@@ -88,16 +94,18 @@ def retry_with_exponential_backoff(
 
 
 def truncate_msgs_for_token_limit(messages, model_name, max_tokens, truncate='first'):
-    """ 
+    """
     Truncates message list to fit within the token limit.
-    Note: first message for chat completion models are general directives with the system role, which will ideally be kept at all times. 
+    Note: first message for chat completion models are general directives with the system role, which will ideally be kept at all times.
     """  # noqa
     encoder = tiktoken.encoding_for_model(model_name)
     sys_priming = messages[0:1]
     n_tokens = count_tokens(messages, encoder, model_name)
     while n_tokens > max_tokens:
         if len(messages) == 2:
-            return messages[:-1]  # edge case: if limit is surpassed by just one input, we remove initial instruction
+            return messages[
+                :-1
+            ]  # edge case: if limit is surpassed by just one input, we remove initial instruction
         elif len(messages) == 1:
             return messages
 
@@ -111,11 +119,15 @@ def truncate_msgs_for_token_limit(messages, model_name, max_tokens, truncate='fi
 
 
 def count_tokens(messages, encoder, model_name='gpt-3.5-turbo-0301'):
-    """ Original token count implementation can be found in the OpenAI cookbook. """
-    if "gpt-3.5-turbo" in model_name:  # note: future models may deviate from this (only 0301 really complies)
+    """Original token count implementation can be found in the OpenAI cookbook."""
+    if (
+        "gpt-3.5-turbo" in model_name
+    ):  # note: future models may deviate from this (only 0301 really complies)
         num_tokens = 0
         for message in messages:
-            num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+            num_tokens += (
+                4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+            )
             for key, value in message.items():
                 num_tokens += len(encoder.encode(value))
                 if key == "name":  # if there's a name, the role is omitted
@@ -123,25 +135,17 @@ def count_tokens(messages, encoder, model_name='gpt-3.5-turbo-0301'):
         num_tokens += 2  # every reply is primed with <im_start>assistant
         return num_tokens
     else:
-        raise NotImplementedError(f"""_count_tokens() is not presently implemented for model {model_name}.""")
+        raise NotImplementedError(
+            f"""_count_tokens() is not presently implemented for model {model_name}."""
+        )
 
 
-def get_available_models(api_key: str, all_models: List, finetune_suffix: Optional[str] = None) -> List[str]:
+def get_available_models(api_key: str) -> List[str]:
     """
-        Helper method that returns available models for
-            - a given API key and
-            - a finetune suffix (which is unique per each MindsDB user)
+    Returns a list of available openai models for the given API key.
     """
-    def _get_user_fts(model: str) -> bool:
-        if ':ft-' in model and f':{finetune_suffix}' in model:  # follows legacy naming (should change with #7387)
-            return True
-        else:
-            return False
 
     api_base = os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
-    models = all_models
-    user_models = [m.openai_id for m in openai.Model.list(api_key=api_key, api_base=api_base).data]
-    if finetune_suffix is not None:
-        user_models = list(filter(_get_user_fts, user_models))
-        models.extend(user_models)
-    return models
+    res = openai.Model.list(api_key=api_key, api_base=api_base)
+
+    return [models["id"] for models in res.data]

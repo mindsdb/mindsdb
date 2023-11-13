@@ -4,6 +4,7 @@ on:
   pull_request:
     types: [opened, reopened, synchronize, labeled]
 
+
 jobs:
   get-deploy-labels:
     runs-on: [self-hosted, dev]

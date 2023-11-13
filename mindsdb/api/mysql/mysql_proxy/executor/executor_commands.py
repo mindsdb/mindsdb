@@ -697,10 +697,9 @@ class ExecuteCommands:
         try:
             jobs_controller.add(job_name, project_name, statement.query_str,
                                 statement.start_str, statement.end_str, statement.repeat_str)
-        except EntityExistsError as e:
-            if getattr(statement, "if_not_exists", False):
-                return ExecuteAnswer(ANSWER_TYPE.OK)
-            raise e
+        except EntityExistsError:
+            if getattr(statement, "if_not_exists", False) is False:
+                raise
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -1047,7 +1046,7 @@ class ExecuteCommands:
 
         integration = self.session.integration_controller.get(name)
         if integration is not None:
-            raise SqlApiException(f"Database '{name}' already exists.")
+            raise EntityExistsError('Database already exists', name)
 
         self.session.integration_controller.add(name, engine, connection_args)
 
@@ -1056,7 +1055,7 @@ class ExecuteCommands:
         integrations = self.session.integration_controller.get_all()
         if name in integrations:
             if not getattr(statement, "if_not_exists", False):
-                raise SqlApiException(f"Integration '{name}' already exists")
+                raise EntityExistsError('Integration already exists', name)
             else:
                 return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -1149,11 +1148,9 @@ class ExecuteCommands:
         else:
             try:
                 self._create_integration(database_name, engine, connection_args)
-            except SqlApiException as e:
-                # check if the error is name already exists
-                # we choose to raise the error depends if if_not_exists is True or False
-                if "already exists" not in str(e) or getattr(statement, "if_not_exists", False) is False:
-                    raise e
+            except EntityExistsError:
+                if getattr(statement, "if_not_exists", False) is False:
+                    raise
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -1163,10 +1160,9 @@ class ExecuteCommands:
         db_name = statement.name.parts[0]
         try:
             self.session.database_controller.delete(db_name)
-        except Exception as e:
-            if re.search(r"Database .* does not exists", str(e)) and statement.if_exists:
-                return ExecuteAnswer(ANSWER_TYPE.OK)
-            raise e
+        except EntityExistsError:
+            if statement.if_exists is not True:
+                raise
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_tables(self, statement):

@@ -1,14 +1,14 @@
 # Bare mindsdb with no extras is built as a separate stage for caching
-FROM python:3.10 as builder
+FROM python:3.10 as build
 COPY . /mindsdb
 WORKDIR /mindsdb
 RUN --mount=type=cache,target=/root/.cache/pip pip install "."
 
 
 # Install extras on top of the bare mindsdb
-FROM builder as extras
+FROM build as extras
 ARG EXTRAS
-RUN --mount=type=cache,target=/root/.cache/pip if [ ! -z $EXTRAS ]; then pip install ${EXTRAS}; fi
+RUN --mount=type=cache,target=/root/.cache/pip if [ -n "$EXTRAS" ]; then pip install $EXTRAS; fi
 
 
 # Copy installed pip packages and install only what we need

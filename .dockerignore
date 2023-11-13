@@ -5,7 +5,7 @@
 .pytest_cahce
 .deployment
 
-docker/
-var/
+docker
+var
 
-**/__pycache__/
+**/__pycache__

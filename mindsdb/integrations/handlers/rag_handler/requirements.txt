@@ -1,5 +1,5 @@
 langchain==0.0.267
-openai >= 0.28.0
+openai == 0.28.1
 pydantic>=1.10.8
 html2text
 writerai>=0.25.3

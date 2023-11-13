@@ -1290,9 +1290,8 @@ class ExecuteCommands:
             try:
                 project.drop_view(view_name)
             except EntityNotExistsError:
-                if statement.if_exists is True:
-                    return ExecuteAnswer(ANSWER_TYPE.OK)
-                raise
+                if statement.if_exists is not True:
+                    raise
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
@@ -1450,11 +1449,9 @@ class ExecuteCommands:
             ]
 
             return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
-        except Exception as e:
-            # check if the error is name already exists
-            if re.search(r"model .* already exists", str(e)) and getattr(statement, "if_not_exists", False):
+        except EntityExistsError:
+            if getattr(statement, "if_not_exists", False) is True:
                 return ExecuteAnswer(ANSWER_TYPE.OK)
-            raise e
 
     def answer_show_columns(
         self,

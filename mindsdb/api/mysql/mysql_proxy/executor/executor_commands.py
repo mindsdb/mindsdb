@@ -713,7 +713,8 @@ class ExecuteCommands:
         try:
             jobs_controller.delete(job_name, project_name)
         except EntityNotExistsError:
-            return ExecuteAnswer(ANSWER_TYPE.OK)
+            if statement.if_exists is False:
+                raise
         except Exception as e:
             raise e
 
@@ -1143,7 +1144,8 @@ class ExecuteCommands:
             try:
                 ProjectController().add(database_name)
             except EntityExistsError:
-                return ExecuteAnswer(ANSWER_TYPE.OK)
+                if statement.if_not_exists is False:
+                    raise
         else:
             try:
                 self._create_integration(database_name, engine, connection_args)
@@ -1273,10 +1275,9 @@ class ExecuteCommands:
         project = self.session.database_controller.get_project(project_name)
         try:
             project.create_view(view_name, query=query_str)
-        except Exception as e:
-            if "View already exists" in str(e) and getattr(statement, "if_not_exists", False):
-                return ExecuteAnswer(ANSWER_TYPE.OK)
-            raise e
+        except EntityExistsError:
+            if getattr(statement, "if_not_exists", False) is False:
+                raise
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
     def answer_drop_view(self, statement):
@@ -1292,9 +1293,10 @@ class ExecuteCommands:
 
             try:
                 project.drop_view(view_name)
-            except EntityNotExistsError as e:
-                if statement.if_exists is False:
-                    raise e
+            except EntityNotExistsError:
+                if statement.if_exists is True:
+                    return ExecuteAnswer(ANSWER_TYPE.OK)
+                raise
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 

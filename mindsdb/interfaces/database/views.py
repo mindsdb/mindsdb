@@ -1,7 +1,7 @@
 from mindsdb.interfaces.storage import db
-from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
+from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 
 class ViewController:
@@ -12,7 +12,7 @@ class ViewController:
         project_databases_dict = database_controller.get_dict(filter_type='project')
 
         if project_name not in project_databases_dict:
-            raise Exception(f"Can not find project: '{project_name}'")
+            raise EntityNotExistsError('Can not find project', project_name)
 
         project_id = project_databases_dict[project_name]['id']
         view_record = (
@@ -24,7 +24,7 @@ class ViewController:
             ).first()
         )
         if view_record is not None:
-            raise Exception(f'View already exists: {name}')
+            raise EntityExistsError('View already exists', name)
 
         view_record = db.View(
             name=name,

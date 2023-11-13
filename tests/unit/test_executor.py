@@ -1153,7 +1153,7 @@ class TestExecutionTools:
 
 class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
 
-    def setup_method(self):
+    def setup_method(self, method):
         super().setup_method()
         self.set_executor(mock_lightwood=True, mock_model_controller=True, import_dummy_ml=True)
 
@@ -1392,6 +1392,7 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
         assert ret.error_code is None
 
     def test_job(self):
+        from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
         # create a simple job
         sql = """
             CREATE JOB test_job (
@@ -1402,9 +1403,8 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
         assert ret.error_code is None
 
         # create the same job without if not exists throws an error
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(EntityExistsError):
             self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert 'already exists' in str(exc_info.value)
 
         # create the same job with if not exists doesn't throw an error
         sql = """
@@ -1436,9 +1436,8 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
         sql = """
             DROP JOB test_job2
         """
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(EntityNotExistsError):
             self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert 'does not exist' in str(exc_info.value)
 
         # drop again with if exists should not throw an error
         sql = """
@@ -1449,6 +1448,7 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_view(self, mock_handler):
+        from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
         df = pd.DataFrame([
             {'a': 1, 'b': 'one'},
             {'a': 2, 'b': 'two'},
@@ -1464,9 +1464,8 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
         assert ret.error_code is None
 
         # create the same view without if not exists throws an error
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(EntityExistsError):
             self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert 'already exists' in str(exc_info.value)
 
         # create the same view with if not exists doesn't throw an error
         sql = """
@@ -1516,9 +1515,8 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
         sql = """
             DROP VIEW test_view2
         """
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(EntityNotExistsError):
             self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert 'does not exist' in str(exc_info.value)
 
         # drop again with if exists should not throw an error
         sql = """

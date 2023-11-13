@@ -153,14 +153,24 @@ class FileHandler(DatabaseHandler):
 
                 loader = TextLoader(file_path, encoding="utf8")
                 docs = text_splitter.split_documents(loader.load())
-                df = pd.DataFrame([{"text": doc.page_content} for doc in docs])
+                df = pd.DataFrame(
+                    [
+                        {"content": doc.page_content, "metadata": doc.metadata}
+                        for doc in docs
+                    ]
+                )
 
             elif fmt == "pdf":
-                from langchain.document_loaders import UnstructuredPDFLoader
+                from langchain.document_loaders import PyPDFLoader
 
-                loader = UnstructuredPDFLoader(file_path)
-                docs = text_splitter.split_documents(loader.load())
-                df = pd.DataFrame([{"text": doc.page_content} for doc in docs])
+                loader = PyPDFLoader(file_path)
+                docs = text_splitter.split_documents(loader.load_and_split())
+                df = pd.DataFrame(
+                    [
+                        {"content": doc.page_content, "metadata": doc.metadata}
+                        for doc in docs
+                    ]
+                )
 
         else:
             raise ValueError(

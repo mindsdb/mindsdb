@@ -63,11 +63,19 @@ Let's create an OpenAI model.
 
 <Tabs>
     <Tab title="SQL">
+    Before creating an OpenAI model, please create an engine, providing your OpenAI API key:
+
+    ```sql
+    CREATE ML_ENGINE openai_engine
+    FROM openai
+    USING
+        api_key = 'your-openai-api-key';
+    ```
     ```sql
     CREATE MODEL mindsdb.nlp_model
     PREDICT json
     USING
-        engine = 'openai',
+        engine = 'openai_engine',
         json_struct = {
             'rental_price': 'rental price',
             'location': 'location',

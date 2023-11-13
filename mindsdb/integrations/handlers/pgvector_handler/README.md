@@ -62,6 +62,17 @@ WITH
 You can insert data into a new collection like so
 
 ```sql
+--- Public demo database
+CREATE DATABASE mysql_demo_db
+WITH ENGINE = "mysql",
+PARAMETERS = {
+   "user": "user",
+   "password": "MindsDBUser123!",
+   "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
+   "port": "3306",
+   "database": "public"
+   };
+
 CREATE TABLE pvec.embed
     (SELECT embeddings FROM mysql_demo_db.test_embeddings
 );
@@ -77,13 +88,13 @@ USING
   engine = 'openai',
   model_name='text-embedding-ada-002',    
   mode = 'embedding',    
-  question_column = 'your_database_column'; 
+  question_column = 'review'; 
 
-CREATE TABLE pvec.items
-    (SELECT embedding AS embeddings
-        FROM (SELECT * FROM mysql_demo_db.demo_fda_context
-        LIMIT 3) AS d
-join  openai_emb);
+create table pvec.itemstest (
+SELECT m.embedding AS embeddings, t.review content FROM  mysql_demo_db.amazon_reviews t
+  join openai_emb  m
+);
+
 ```
 
 You can query a collection within your PGVector as follows:

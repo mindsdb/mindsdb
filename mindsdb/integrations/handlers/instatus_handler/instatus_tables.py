@@ -255,16 +255,20 @@ class Components(APITable):
             None
         """
         data = {}
+
         for column, value in zip(query.columns, query.values[0]):
             if isinstance(value, Constant):
-                if column.name == 'translations':
-                    data[column.name] = json.loads(value.value)
-                else:
-                    data[column.name] = value.value
-        pageId = data['page_id']
-        if 'page_id' in data:
-            del data['page_id']
-        self.handler.call_instatus_api(endpoint=f'/v1/{pageId}/components', method='POST', json_data=data)
+                data[column.name] = json.loads(value.value) if column.name == 'translations' else value.value
+            elif isinstance(value, str):
+                try:
+                    data[column.name] = json.loads(value)
+                except json.JSONDecodeError:
+                    data[column.name] = True if value == 'True' else (False if value == 'False' else value)
+
+        page_id = data.pop('page_id', None)
+
+        if page_id is not None:
+            self.handler.call_instatus_api(endpoint=f'/v1/{page_id}/components', method='POST', json_data=data)
 
     def update(self, query: ast.Update) -> None:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.

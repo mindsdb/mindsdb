@@ -32,7 +32,7 @@ from mindsdb.utilities.log import get_log
 from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 import mindsdb.utilities.profiler as profiler
 
-logger = get_log()
+logger = get_log("integrations")
 
 
 class HandlersCache:

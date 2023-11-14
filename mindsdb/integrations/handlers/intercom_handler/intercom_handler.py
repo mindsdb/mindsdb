@@ -98,7 +98,7 @@ class IntercomHandler(APIHandler):
             data = response.json()
             return pd.DataFrame([data])
         else:
-            raise requests.Response.raise_for_status(response)
+            raise Exception(response.json()['errors'])
 
 
 connection_args = OrderedDict(

@@ -8,19 +8,17 @@ The Intercom API handler can be initialized with the following parameters:
 
 - [x] Articles
   - [x] Support SELECT
-    - [x] Support LIMIT
-    - [x] Support WHERE
-    - [x] Support column selection
   - [x] Support Insert
   - [x] Support UPDATE
-
+- [x] Conversations
+  - [x] Support SELECT
+  - [x] Support Insert
+  - [x] Support UPDATE
 ## TODO:
 
-- [ ] Implement `ORDER BY`, `DELETE` for Articles
 - [ ] Intercom Admins table (Follow: [Admins](https://developers.intercom.com/intercom-api-reference/reference#admins))
 - [ ] Intercom Companies table (Follow: [Companies](https://developers.intercom.com/docs/references/rest-api/api.intercom.io/Companies/))
 - [ ] Intercom Contacts table (Follow: [Contacts](https://developers.intercom.com/docs/references/rest-api/api.intercom.io/Contacts/))
-- [ ] Intercom Conversations table (Follow: [Conversations](https://developers.intercom.com/docs/references/rest-api/api.intercom.io/Conversations/))
 - [ ] Intercom Data Attributes table (Follow: [Data Attributes](https://developers.intercom.com/docs/references/rest-api/api.intercom.io/Data-Attributes/))
 - [ ] Intercom Data Events table (Follow: [Events](https://developers.intercom.com/docs/references/rest-api/api.intercom.io/Data-Events/))
 - [ ] Intercom Data Export table (Follow : [Data Export](https://developers.intercom.com/docs/references/rest-api/api.intercom.io/Data-Export/))
@@ -34,7 +32,7 @@ The Intercom API handler can be initialized with the following parameters:
 - [ ] Intercom Teams table (Follow: [Teams](https://developers.intercom.com/docs/references/rest-api/api.intercom.io/Teams/))
 - [ ] Intercom Visitors table (Follow: [Visitors](https://developers.intercom.com/docs/references/rest-api/api.intercom.io/Visitors/))
 
-## Usage
+## Connection
 
 To create a database with the Intercom engine, you can use SQL-like syntax:
 
@@ -46,10 +44,8 @@ WITH
     "access_token" : "<your-intercom-access-token>"
   };
 ```
-
+## Usage (Articles Table)
 ### SELECT
-
-You can retrieve data from Intercom using a `SELECT` statement:
 
 ```sql
 SELECT *
@@ -58,8 +54,6 @@ FROM myintercom.articles;
 
 ### WHERE
 
-You can filter data based on specific criteria using a `WHERE` clause:
-
 ```sql
 SELECT *
 FROM myintercom.articles
@@ -67,8 +61,6 @@ WHERE id = <article-id>;
 ```
 
 ### INSERT
-
-You can create new article in Intercom using the `INSERT` statement:
 
 ```sql
 INSERT INTO myintercom.articles (title, description, body, author_id, state, parent_id, parent_type)
@@ -85,11 +77,42 @@ VALUES (
 
 ### UPDATE
 
-You can update existing records in Intercom using the `UPDATE` statement:
-
 ```sql
 UPDATE myintercom.articles
 SET title = 'Christmas is here!',
     body = '<p>New gifts in store for the jolly season</p>'
 WHERE id = <article-id>;
+```
+
+## Usage (Conversations Table)
+### SELECT
+
+```sql
+SELECT *
+FROM myintercom.conversations;
+```
+
+### WHERE
+
+```sql
+SELECT *
+FROM myintercom.conversations
+WHERE id = <conversation-id>;
+```
+
+### INSERT
+
+```sql
+INSERT INTO myintercom.conversations (type, id, body)
+VALUES ('user', '6547130cf077c0c9a9003ef1', 'Hello there');
+```
+
+### UPDATE
+
+```sql
+UPDATE myintercom.conversations
+SET `read` = true,
+    issue_type = 'Billing',
+    priority = 'High'
+WHERE id = 5;
 ```

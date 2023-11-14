@@ -147,8 +147,7 @@ class Articles(APITable):
             "url",
             "parent_id",
             "parent_ids",
-            "parent_type",
-            "statistics"
+            "parent_type"
         ]
 
 
@@ -240,10 +239,16 @@ class Conversations(APITable):
             "body": ""
         }
         for column, value in zip(query.columns, query.values[0]):
-            if column.name == 'type' or column.name == 'id':
-                data['from'][column.name] = value
-            elif column.name == 'body':
-                data['body'] = value
+            if isinstance(value, Constant):
+                if column.name == 'type' or column.name == 'id':
+                    data['from'][column.name] = value.value
+                elif column.name == 'body':
+                    data['body'] = value.value
+            else:
+                if column.name == 'type' or column.name == 'id':
+                    data['from'][column.name] = value
+                elif column.name == 'body':
+                    data['body'] = value
         self.handler.call_intercom_api(endpoint='/conversations', method='POST', data=json.dumps(data))
 
     def update(self, query: ast.Update) -> None:
@@ -303,6 +308,5 @@ class Conversations(APITable):
             "custom_attributes",
             "first_contact_reply",
             "sla_applied",
-            "statistics",
             "linked_objects"
         ]

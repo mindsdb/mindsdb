@@ -2,12 +2,12 @@ from typing import Optional
 
 import dill
 import pandas as pd
-from integrations.handlers.sentence_transformer_handler.settings import (
+
+from mindsdb.integrations.handlers.sentence_transformer_handler.settings import (
     Parameters,
     df_to_documents,
     load_embeddings_model,
 )
-
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 

@@ -1,5 +1,7 @@
 from mindsdb.interfaces.storage import db
+from mindsdb.interfaces.query_context.context_controller import query_context_controller
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 
 class ViewController:
@@ -10,7 +12,7 @@ class ViewController:
         project_databases_dict = database_controller.get_dict(filter_type='project')
 
         if project_name not in project_databases_dict:
-            raise Exception(f"Can not find project: '{project_name}'")
+            raise EntityNotExistsError('Can not find project', project_name)
 
         project_id = project_databases_dict[project_name]['id']
         view_record = (
@@ -22,7 +24,7 @@ class ViewController:
             ).first()
         )
         if view_record is not None:
-            raise Exception(f'View already exists: {name}')
+            raise EntityExistsError('View already exists', name)
 
         view_record = db.View(
             name=name,
@@ -45,7 +47,7 @@ class ViewController:
             db.View.project_id == project_record.id
         ).first()
         if rec is None:
-            raise Exception(f'View not found: {name}')
+            raise EntityNotExistsError('View not found', name)
         rec.query = query
         db.session.commit()
 
@@ -61,12 +63,15 @@ class ViewController:
             db.View.project_id == project_record.id
         ).first()
         if rec is None:
-            raise Exception(f'View not found: {name}')
+            raise EntityNotExistsError('View not found', name)
         db.session.delete(rec)
         db.session.commit()
 
+        query_context_controller.drop_query_context('view', rec.id)
+
     def _get_view_record_data(self, record):
         return {
+            'id': record.id,
             'name': record.name,
             'query': record.query
         }
@@ -92,7 +97,7 @@ class ViewController:
         if len(records) == 0:
             if name is None:
                 name = f'id={id}'
-            raise Exception(f"Can't find view '{name}' in project '{project_name}'")
+            raise EntityNotExistsError("Can't find view", f'{project_name}.{name}')
         elif len(records) > 1:
             raise Exception(f"There are multiple views with name/id: {name}/{id}")
         record = records[0]

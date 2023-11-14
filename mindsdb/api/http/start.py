@@ -1,75 +1,52 @@
-import multiprocessing as mp
+import logging
 import os
+try:
+    import torch.multiprocessing as mp
+except Exception:
+    import multiprocessing as mp
 
 from waitress import serve
 
 from mindsdb.api.http.initialize import initialize_app
-from mindsdb.integrations.libs.ml_exec_base import process_cache
-from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import init_lexer_parsers
+from mindsdb.integrations.libs.ml_exec_base import process_cache
 
 logger = log.getLogger(__name__)
 
-
-def start(verbose, no_studio, with_nlp):
-    logger.info("HTTP API is starting..")
+def start(verbose, no_studio):
     config = Config()
-    is_cloud = config.get("cloud", False)
 
-    server = os.environ.get("MINDSDB_DEFAULT_SERVER", "waitress")
+    server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
     db.init()
     init_lexer_parsers()
-    app = initialize_app(config, no_studio, with_nlp)
 
-    port = config["api"]["http"]["port"]
-    host = config["api"]["http"]["host"]
+    app = initialize_app(config, no_studio)
 
-    # region preload ml handlers
-    preload_hendlers = {}
+    port = config['api']['http']['port']
+    host = config['api']['http']['host']
 
-    lightwood_handler = integration_controller.handler_modules["lightwood"]
-    if lightwood_handler.Handler is not None:
-        preload_hendlers[lightwood_handler.Handler] = 4 if is_cloud else 1
-
-    huggingface_handler = integration_controller.handler_modules["huggingface"]
-    if huggingface_handler.Handler is not None:
-        preload_hendlers[huggingface_handler.Handler] = 1 if is_cloud else 0
-
-    openai_handler = integration_controller.handler_modules["openai"]
-    if openai_handler.Handler is not None:
-        preload_hendlers[openai_handler.Handler] = 1 if is_cloud else 0
-
-    process_cache.init(preload_hendlers)
-    # endregion
+    process_cache.init()
 
     if server.lower() == "waitress":
         logger.debug("Serving HTTP app with waitress..")
         serve(
             app,
-            host="*" if host in ("", "0.0.0.0") else host,
+            host='*' if host in ('', '0.0.0.0') else host,
             port=port,
             threads=16,
             max_request_body_size=1073741824 * 10,
-            inbuf_overflow=1073741824 * 10,
+            inbuf_overflow=1073741824 * 10
         )
     elif server.lower() == "flask":
         logger.debug("Serving HTTP app with flask..")
         # that will 'disable access' log in console
-        # logger = log.getLogger("werkzeug")
+        logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
-        app.run(
-            debug=False,
-            port=port,
-            host=host,
-            use_reloader=True,
-            use_debugger=True,
-            passthrough_errors=True,
-        )
-    elif server.lower() == "gunicorn":
-        logger.debug("Serving HTTP app with gunicorn..")
+        app.run(debug=False, port=port, host=host)
+    elif server.lower() == 'gunicorn':
         try:
             from mindsdb.api.http.gunicorn_wrapper import StandaloneApplication
         except ImportError:
@@ -82,12 +59,12 @@ def start(verbose, no_studio, with_nlp):
             db.engine.dispose()
 
         options = {
-            "bind": f"{host}:{port}",
-            "workers": mp.cpu_count(),
-            "timeout": 600,
-            "reuse_port": True,
-            "preload_app": True,
-            "post_fork": post_fork,
-            "threads": 4,
+            'bind': f'{host}:{port}',
+            'workers': mp.cpu_count(),
+            'timeout': 600,
+            'reuse_port': True,
+            'preload_app': True,
+            'post_fork': post_fork,
+            'threads': 4
         }
         StandaloneApplication(app, options).run()

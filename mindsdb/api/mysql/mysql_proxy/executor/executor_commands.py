@@ -1,8 +1,8 @@
 import datetime
-from functools import reduce
 from pathlib import Path
 from textwrap import dedent
 from typing import Optional
+from functools import reduce
 
 import pandas as pd
 from mindsdb_evaluator.accuracy.general import evaluate_accuracy
@@ -36,23 +36,35 @@ from mindsdb_sql.parser.ast import (
     Update,
     Use,
 )
+
+# typed models
 from mindsdb_sql.parser.dialects.mindsdb import (
+    CreateAgent,
+    CreateAnomalyDetectionModel,
     CreateChatBot,
     CreateDatabase,
     CreateJob,
+    CreateKnowledgeBase,
     CreateMLEngine,
     CreatePredictor,
+    CreateSkill,
     CreateTrigger,
     CreateView,
+    DropAgent,
     DropChatBot,
     DropDatasource,
     DropJob,
+    DropKnowledgeBase,
     DropMLEngine,
     DropPredictor,
+    DropSkill,
     DropTrigger,
     Evaluate,
     FinetunePredictor,
     RetrainPredictor,
+    UpdateAgent,
+    UpdateChatBot,
+    UpdateSkill
 )
 from mindsdb_sql.parser.dialects.mysql import Variable
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -72,6 +84,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErSqlWrongArguments,
     ErTableExistError,
     SqlApiException,
+    log,
 )
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import download_file
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
@@ -84,18 +97,19 @@ from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.model.functions import (
+    PredictorRecordNotFound,
     get_model_record,
     get_model_records,
     get_predictor_integration,
 )
+from mindsdb.interfaces.query_context.context_controller import query_context_controller
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.interfaces.triggers.triggers_controller import TriggersController
-from mindsdb.utilities import log
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import mark_process, resolve_model_identifier
+from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 logger = log.getLogger(__name__)
-
 
 def _get_show_where(
     statement: ASTNode,
@@ -173,7 +187,7 @@ class ExecuteCommands:
 
             try:
                 project = self.session.database_controller.get_project(database_name)
-                project.drop_table(model_name)
+                project.drop_model(model_name)
             except Exception as e:
                 if not statement.if_exists:
                     raise e
@@ -425,11 +439,7 @@ class ExecuteCommands:
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
             elif "show create table" in sql_lower:
                 # SHOW CREATE TABLE `MINDSDB`.`predictors`
-                table = (
-                    sql[sql.rfind(".") + 1 :]  # noqa: E203
-                    .strip(" .;\n\t")
-                    .replace("`", "")
-                )
+                table = sql[sql.rfind(".") + 1:].strip(" .;\n\t").replace("`", "")
                 return self.answer_show_create_table(table)
             elif sql_category in ("character set", "charset"):
                 new_statement = Select(
@@ -496,6 +506,16 @@ class ExecuteCommands:
                     statement.like,
                     is_full=is_full,
                 )
+            elif sql_category == "knowledge_bases" or sql_category == "knowledge bases":
+                select_statement = Select(
+                    targets=[Star()],
+                    from_table=Identifier(
+                        parts=["information_schema", "knowledge_bases"]
+                    ),
+                    where=_get_show_where(statement, like_name="name"),
+                )
+                query = SQLQuery(select_statement, session=self.session)
+                return self.answer_select(query)
             else:
                 raise ErNotSupportedYet(f"Statement not implemented: {sql}")
         elif type(statement) in (
@@ -554,7 +574,10 @@ class ExecuteCommands:
             db_name = statement.value.parts[-1]
             self.change_default_db(db_name)
             return ExecuteAnswer(ANSWER_TYPE.OK)
-        elif type(statement) == CreatePredictor:
+        elif type(statement) in (
+            CreatePredictor,
+            CreateAnomalyDetectionModel,  # we may want to specialize these in the future
+        ):
             return self.answer_create_predictor(statement)
         elif type(statement) == CreateView:
             return self.answer_create_view(statement)
@@ -563,6 +586,9 @@ class ExecuteCommands:
         elif type(statement) == Delete:
             if statement.table.parts[-1].lower() == "models_versions":
                 return self.answer_delete_model_version(statement)
+            table_identifier = statement.table
+            if self.session.kb_controller.is_knowledge_base(table_identifier):
+                return self.session.kb_controller.execute_query(statement)
             if (
                 self.session.database != "mindsdb"
                 and statement.table.parts[0] != "mindsdb"
@@ -575,6 +601,10 @@ class ExecuteCommands:
             return ExecuteAnswer(ANSWER_TYPE.OK)
 
         elif type(statement) == Insert:
+            table_identifier = statement.table
+            if self.session.kb_controller.is_knowledge_base(table_identifier):
+                return self.session.kb_controller.execute_query(statement)
+
             SQLQuery(statement, session=self.session, execute=True)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Update:
@@ -593,6 +623,10 @@ class ExecuteCommands:
         elif type(statement) == Select:
             if statement.from_table is None:
                 return self.answer_single_row_select(statement)
+
+            table_identifier = statement.from_table
+            if self.session.kb_controller.is_knowledge_base(table_identifier):
+                return self.session.kb_controller.execute_query(statement)
 
             query = SQLQuery(statement, session=self.session)
             return self.answer_select(query)
@@ -614,11 +648,29 @@ class ExecuteCommands:
             return self.answer_create_trigger(statement)
         elif type(statement) == DropTrigger:
             return self.answer_drop_trigger(statement)
-        # -- chatbots --
+        # -- chatbots
         elif type(statement) == CreateChatBot:
             return self.answer_create_chatbot(statement)
+        elif type(statement) == UpdateChatBot:
+            return self.answer_update_chatbot(statement)
         elif type(statement) == DropChatBot:
             return self.answer_drop_chatbot(statement)
+        elif type(statement) == CreateKnowledgeBase:
+            return self.answer_create_kb(statement)
+        elif type(statement) == DropKnowledgeBase:
+            return self.anwser_drop_kb(statement)
+        elif type(statement) == CreateSkill:
+            return self.answer_create_skill(statement)
+        elif type(statement) == DropSkill:
+            return self.answer_drop_skill(statement)
+        elif type(statement) == UpdateSkill:
+            return self.answer_update_skill(statement)
+        elif type(statement) == CreateAgent:
+            return self.answer_create_agent(statement)
+        elif type(statement) == DropAgent:
+            return self.answer_drop_agent(statement)
+        elif type(statement) == UpdateAgent:
+            return self.answer_update_agent(statement)
         elif type(statement) == Evaluate:
             statement.data = parse_sql(statement.query_str, dialect="mindsdb")
             return self.answer_evaluate_metric(statement)
@@ -660,14 +712,12 @@ class ExecuteCommands:
         job_name = name.parts[-1]
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
 
-        jobs_controller.add(
-            job_name,
-            project_name,
-            statement.query_str,
-            statement.start_str,
-            statement.end_str,
-            statement.repeat_str,
-        )
+        try:
+            jobs_controller.add(job_name, project_name, statement.query_str,
+                                statement.start_str, statement.end_str, statement.repeat_str)
+        except EntityExistsError:
+            if getattr(statement, "if_not_exists", False) is False:
+                raise
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -677,7 +727,13 @@ class ExecuteCommands:
         name = statement.name
         job_name = name.parts[-1]
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
-        jobs_controller.delete(job_name, project_name)
+        try:
+            jobs_controller.delete(job_name, project_name)
+        except EntityNotExistsError:
+            if statement.if_exists is False:
+                raise
+        except Exception as e:
+            raise e
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -686,18 +742,56 @@ class ExecuteCommands:
 
         name = statement.name
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+        is_running = statement.params.pop("is_running", True)
 
         database = self.session.integration_controller.get(statement.database.parts[-1])
         if database is None:
             raise SqlApiException(f"Database not found: {statement.database}")
 
+        # Database ID cannot be null
+        database_id = database["id"] if database is not None else -1
+
         chatbot_controller.add_chatbot(
             name.parts[-1],
             project_name=project_name,
             model_name=statement.model.parts[-1],
-            database_id=database["id"],
+            database_id=database_id,
+            is_running=is_running,
             params=statement.params,
         )
+        return ExecuteAnswer(ANSWER_TYPE.OK)
+
+    def answer_update_chatbot(self, statement):
+        chatbot_controller = ChatBotController()
+
+        name = statement.name
+        name_no_project = name.parts[-1]
+        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+
+        # From SET keyword parameters
+        updated_name = statement.params.pop("name", None)
+        model_name = statement.params.pop("model", None)
+        database_name = statement.params.pop("database", None)
+        is_running = statement.params.pop("is_running", None)
+
+        database_id = None
+        if database_name is not None:
+            database = self.session.integration_controller.get(database_name)
+            if database is None:
+                raise SqlApiException(f"Database with name {database_name} not found")
+            database_id = database["id"]
+
+        updated_chatbot = chatbot_controller.update_chatbot(
+            name_no_project,
+            project_name=project_name,
+            name=updated_name,
+            model_name=model_name,
+            database_id=database_id,
+            is_running=is_running,
+            params=statement.params,
+        )
+        if updated_chatbot is None:
+            raise SqlApiException(f"Chatbot with name {name_no_project} not found")
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_chatbot(self, statement):
@@ -749,22 +843,36 @@ class ExecuteCommands:
         )
 
     def answer_describe_predictor(self, statement):
-
-        # try full name
-        attribute = None
-        model_info = self._get_model_info(statement.value, except_absent=False)
+        value = statement.value.parts.copy()
+        # project.model.version.?attrs
+        parts = value[:3]
+        attrs = value[3:]
+        model_info = self._get_model_info(Identifier(parts=parts), except_absent=False)
         if model_info is None:
-            parts = statement.value.parts.copy()
-            attribute = parts.pop(-1)
-            model_info = self._get_model_info(Identifier(parts=parts))
+            # project.model.?attrs
+            parts = value[:2]
+            attrs = value[2:]
+            model_info = self._get_model_info(Identifier(parts=parts), except_absent=False)
             if model_info is None:
-                raise SqlApiException(f"Model not found: {statement.value}")
+                # model.?attrs
+                parts = value[:1]
+                attrs = value[1:]
+                model_info = self._get_model_info(Identifier(parts=parts), except_absent=False)
+
+        if model_info is None:
+            raise SqlApiException(f"Model not found: {statement.value}")
+
+        if len(attrs) == 1:
+            attrs = attrs[0]
+        elif len(attrs) == 0:
+            attrs = None
 
         df = self.session.model_controller.describe_model(
             self.session,
             model_info["project_name"],
             model_info["model_record"].name,
-            attribute,
+            attribute=attrs,
+            version=model_info['model_record'].version
         )
 
         df_dict = df.to_dict("split")
@@ -823,7 +931,7 @@ class ExecuteCommands:
                 and shortest_training < datetime.timedelta(hours=1)
             ):
                 raise SqlApiException(
-                    f"Can't start {phase_name} process while predictor is in status 'training' or 'generating'"
+                    f"Can't start {phase_name} process while any other predictor is in status 'training' or 'generating'"
                 )
 
     def answer_retrain_predictor(self, statement):
@@ -918,7 +1026,7 @@ class ExecuteCommands:
                 raise SqlApiException(f"Handler '{engine}' can not be used")
 
             accept_connection_args = handler_meta.get("connection_args")
-            if accept_connection_args is not None:
+            if accept_connection_args is not None and connection_args is not None:
                 for arg_name, arg_value in connection_args.items():
                     if arg_name == "as_service":
                         continue
@@ -964,7 +1072,7 @@ class ExecuteCommands:
 
         integration = self.session.integration_controller.get(name)
         if integration is not None:
-            raise SqlApiException(f"Database '{name}' already exists.")
+            raise EntityExistsError('Database already exists', name)
 
         self.session.integration_controller.add(name, engine, connection_args)
 
@@ -972,7 +1080,10 @@ class ExecuteCommands:
         name = statement.name.parts[-1]
         integrations = self.session.integration_controller.get_all()
         if name in integrations:
-            raise SqlApiException(f"Integration '{name}' already exists")
+            if not getattr(statement, "if_not_exists", False):
+                raise EntityExistsError('Integration already exists', name)
+            else:
+                return ExecuteAnswer(ANSWER_TYPE.OK)
 
         handler_module_meta = (
             self.session.integration_controller.get_handlers_import_status().get(
@@ -1031,7 +1142,10 @@ class ExecuteCommands:
         name = statement.name.parts[-1]
         integrations = self.session.integration_controller.get_all()
         if name not in integrations:
-            raise SqlApiException(f"Integration '{name}' does not exists")
+            if not statement.if_exists:
+                raise SqlApiException(f"Integration '{name}' does not exists")
+            else:
+                return ExecuteAnswer(ANSWER_TYPE.OK)
         self.session.integration_controller.delete(name)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -1052,9 +1166,17 @@ class ExecuteCommands:
         connection_args = statement.parameters
 
         if engine == "mindsdb":
-            ProjectController().add(database_name)
+            try:
+                ProjectController().add(database_name)
+            except EntityExistsError:
+                if statement.if_not_exists is False:
+                    raise
         else:
-            self._create_integration(database_name, engine, connection_args)
+            try:
+                self._create_integration(database_name, engine, connection_args)
+            except EntityExistsError:
+                if getattr(statement, "if_not_exists", False) is False:
+                    raise
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -1062,7 +1184,11 @@ class ExecuteCommands:
         if len(statement.name.parts) != 1:
             raise Exception("Database name should contain only 1 part.")
         db_name = statement.name.parts[0]
-        self.session.database_controller.delete(db_name)
+        try:
+            self.session.database_controller.delete(db_name)
+        except EntityExistsError:
+            if statement.if_exists is not True:
+                raise
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_tables(self, statement):
@@ -1070,61 +1196,42 @@ class ExecuteCommands:
         Args:
             statement: ast
         """
-        if statement.if_exists is False:
-            for table in statement.tables:
-                if len(table.parts) > 1:
-                    db_name = table.parts[0]
-                else:
-                    db_name = self.session.database
-                table_name = table.parts[-1]
-
-                if db_name == "files":
-                    dn = self.session.datahub[db_name]
-                    if dn.has_table(table_name) is False:
-                        raise SqlApiException(
-                            f"Cannot delete a table from database '{db_name}': table does not exists"
-                        )
-                else:
-                    projects_dict = self.session.database_controller.get_dict(
-                        filter_type="project"
-                    )
-                    if db_name not in projects_dict:
-                        raise SqlApiException(
-                            f"Cannot delete a table from database '{db_name}'"
-                        )
-                    project = self.session.database_controller.get_project(db_name)
-                    project_tables = {
-                        key: val
-                        for key, val in project.get_tables().items()
-                        if val.get("deletable") is True
-                    }
-                    if table_name not in project_tables:
-                        raise SqlApiException(
-                            f"Cannot delete a table from database '{db_name}': table does not exists"
-                        )
 
         for table in statement.tables:
             if len(table.parts) > 1:
                 db_name = table.parts[0]
+                table = Identifier(parts=table.parts[1:])
             else:
                 db_name = self.session.database
-            table_name = table.parts[-1]
 
-            if db_name == "files":
-                dn = self.session.datahub[db_name]
-                if dn.has_table(table_name):
-                    self.session.datahub["files"].query(
-                        DropTables(tables=[Identifier(table_name)])
+            dn = self.session.datahub[db_name]
+            if db_name is not None:
+                dn.drop_table(table, if_exists=statement.if_exists)
+
+            elif db_name in self.session.database_controller.get_dict(filter_type="project"):
+                # TODO do we need feature: delete object from project via drop table?
+
+                project = self.session.database_controller.get_project(db_name)
+                project_tables = {
+                    key: val
+                    for key, val in project.get_tables().items()
+                    if val.get("deletable") is True
+                }
+                table_name = table.to_string()
+
+                if table_name in project_tables:
+                    self.session.model_controller.delete_model(
+                        table_name, project_name=db_name
+                    )
+                elif statement.if_exists is False:
+                    raise SqlApiException(
+                        f"Cannot delete a table from database '{db_name}': table does not exists"
                     )
             else:
-                projects_dict = self.session.database_controller.get_dict(
-                    filter_type="project"
+                raise SqlApiException(
+                    f"Cannot delete a table from database '{db_name}'"
                 )
-                if db_name not in projects_dict:
-                    continue
-                self.session.model_controller.delete_model(
-                    table_name, project_name=db_name
-                )
+
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_create_view(self, statement):
@@ -1156,12 +1263,24 @@ class ExecuteCommands:
             # check create view sql
             query.limit = Constant(1)
 
-            sqlquery = SQLQuery(query, session=self.session)
-            if sqlquery.fetch()["success"] is not True:
-                raise SqlApiException("Wrong view query")
+            query_context_controller.set_context(
+                query_context_controller.IGNORE_CONTEXT
+            )
+            try:
+                sqlquery = SQLQuery(query, session=self.session)
+                if sqlquery.fetch()["success"] is not True:
+                    raise SqlApiException("Wrong view query")
+            finally:
+                query_context_controller.release_context(
+                    query_context_controller.IGNORE_CONTEXT
+                )
 
         project = self.session.database_controller.get_project(project_name)
-        project.create_view(view_name, query=query_str)
+        try:
+            project.create_view(view_name, query=query_str)
+        except EntityExistsError:
+            if getattr(statement, "if_not_exists", False) is False:
+                raise
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
     def answer_drop_view(self, statement):
@@ -1174,20 +1293,273 @@ class ExecuteCommands:
             else:
                 db_name = self.session.database
             project = self.session.database_controller.get_project(db_name)
-            project.drop_table(view_name)
+
+            try:
+                project.drop_view(view_name)
+            except EntityNotExistsError:
+                if statement.if_exists is not True:
+                    raise
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def _create_persistent_chroma(self, kb_name, collection_name, engine="chromadb"):
+        """Create default vector database for knowledge base, if not specified"""
+
+        vector_store_name = f"{kb_name}_{engine}"
+
+        vector_store_folder_name = f"{vector_store_name}"
+        connection_args = {"persist_directory": vector_store_folder_name}
+        self._create_integration(vector_store_name, engine, connection_args)
+
+        self.session.datahub.get(vector_store_name).integration_handler.create_table(
+            collection_name
+        )
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK), vector_store_name
+
+    def answer_create_kb(self, statement: CreateKnowledgeBase):
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+        # get project id
+        try:
+            project = self.session.database_controller.get_project(project_name)
+        except ValueError:
+            raise SqlApiException(f"Project not found: {project_name}")
+        project_id = project.id
+
+        kb_name = statement.name.parts[-1]
+
+        # search for the model
+        # verify the model exists and get its id
+        model_identifier = statement.model
+        try:
+            model_record = self._get_model_info(
+                identifier=model_identifier, except_absent=True
+            )
+
+        except PredictorRecordNotFound:
+            raise SqlApiException(f"Model not found: {model_identifier.to_string()}")
+
+        embedding_model_id = model_record["model_record"].id
+
+        # search for the vector database table
+        if statement.storage and len(statement.storage.parts) < 2:
+            raise SqlApiException(
+                f"Invalid vectordatabase table name: {statement.storage}"
+                "Need the form 'database_name.table_name'"
+            )
+
+        is_cloud = self.session.config.get("cloud", False)
+
+        if not statement.storage and is_cloud:
+            raise SqlApiException(
+                "No default vector database currently exists in MindsDB cloud. "
+                'Please specify one using the "storage" parameter'
+            )
+
+        vector_table_name = (
+            statement.storage.parts[-1] if statement.storage else "default_collection"
+        )
+
+        vector_db_name = (
+            statement.storage.parts[0]
+            if statement.storage
+            else self._create_persistent_chroma(
+                kb_name, collection_name=vector_table_name
+            )[1]
+        )
+
+        # verify the vector database exists and get its id
+        database_records = self.session.database_controller.get_dict()
+        is_database_exist = vector_db_name in database_records
+        if not is_database_exist:
+            raise SqlApiException(f"Database not found: {vector_db_name}")
+
+        vector_database_id = database_records[vector_db_name]["id"]
+
+        if statement.from_query is not None:
+            # TODO: implement this
+            raise SqlApiException(
+                "Create a knowledge base from a select is not supported yet"
+            )
+
+        params = statement.params
+
+        # create the knowledge base
+        _ = self.session.kb_controller.add(
+            name=kb_name,
+            project_id=project_id,
+            vector_database_id=vector_database_id,
+            vector_database_table_name=vector_table_name,
+            embedding_model_id=embedding_model_id,
+            params=params,
+            if_not_exists=statement.if_not_exists,
+        )
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def anwser_drop_kb(self, statement: DropKnowledgeBase):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        # get project id
+        try:
+            project = self.session.database_controller.get_project(project_name)
+        except ValueError:
+            raise SqlApiException(f"Project not found: {project_name}")
+
+        project_id = project.id
+
+        # delete the knowledge base
+        self.session.kb_controller.delete(
+            name=name,
+            project_id=project_id,
+            if_exists=statement.if_exists,
+        )
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def answer_create_skill(self, statement):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        try:
+            _ = self.session.skills_controller.add_skill(
+                name,
+                project_name,
+                statement.type,
+                statement.params
+            )
+        except ValueError as e:
+            # Project does not exist or skill already exists.
+            raise SqlApiException(str(e))
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def answer_drop_skill(self, statement):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        try:
+            self.session.skills_controller.delete_skill(name, project_name)
+        except ValueError as e:
+            # Project does not exist or skill does not exist.
+            raise SqlApiException(str(e))
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def answer_update_skill(self, statement):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        type = statement.params.pop('type', None)
+        try:
+            _ = self.session.skills_controller.update_skill(
+                name,
+                project_name=project_name,
+                type=type,
+                params=statement.params
+            )
+        except ValueError as e:
+            # Project does not exist or skill does not exist.
+            raise SqlApiException(str(e))
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def answer_create_agent(self, statement):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        skills = statement.params.pop('skills', [])
+        try:
+            _ = self.session.agents_controller.add_agent(
+                name,
+                project_name,
+                statement.model,
+                skills,
+                statement.params
+            )
+        except ValueError as e:
+            # Project does not exist or agent already exists.
+            raise SqlApiException(str(e))
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def answer_drop_agent(self, statement):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        try:
+            self.session.agents_controller.delete_agent(name, project_name)
+        except ValueError as e:
+            # Project does not exist or agent does not exist.
+            raise SqlApiException(str(e))
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def answer_update_agent(self, statement):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        model = statement.params.pop('model', None)
+        skills_to_add = statement.params.pop('skills_to_add', [])
+        skills_to_remove = statement.params.pop('skills_to_remove', [])
+        try:
+            _ = self.session.agents_controller.update_agent(
+                name,
+                project_name=project_name,
+                model_name=model,
+                skills_to_add=skills_to_add,
+                skills_to_remove=skills_to_remove,
+                params=statement.params
+            )
+        except ValueError as e:
+            # Project does not exist or agent does not exist.
+            raise SqlApiException(str(e))
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
     @mark_process("learn")
     def answer_create_predictor(self, statement):
         integration_name = self.session.database
+
+        # allow creation in non-active projects, e.g. 'create mode proj.model' works whether `proj` is active or not
         if len(statement.name.parts) > 1:
             integration_name = statement.name.parts[0]
-        else:
-            statement.name.parts = [integration_name, statement.name.parts[-1]]
-        integration_name = integration_name.lower()
+        statement.name.parts = [integration_name.lower(), statement.name.parts[-1]]
 
-        ml_integration_name = "lightwood"
+        ml_integration_name = "lightwood"  # default
         if statement.using is not None:
             # repack using with lower names
             statement.using = {k.lower(): v for k, v in statement.using.items()}
@@ -1198,14 +1570,20 @@ class ExecuteCommands:
             ml_integration_name
         )
 
-        df = self.session.model_controller.create_model(statement, ml_handler)
-        resp_dict = df.to_dict(orient="split")
+        try:
+            df = self.session.model_controller.create_model(statement, ml_handler)
+            resp_dict = df.to_dict(orient='split')
 
-        columns = [Column(col) for col in resp_dict["columns"]]
+            columns = [
+                Column(col)
+                for col in resp_dict['columns']
+            ]
 
-        return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict["data"]
-        )
+            return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
+        except EntityExistsError:
+            if getattr(statement, "if_not_exists", False) is True:
+                return ExecuteAnswer(ANSWER_TYPE.OK)
+            raise
 
     def answer_show_columns(
         self,

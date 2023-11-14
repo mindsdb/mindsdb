@@ -9,7 +9,7 @@ from distutils.version import LooseVersion
 from pathlib import Path
 
 import requests
-from flask import Flask, make_response, request, send_from_directory, url_for
+from flask import Flask, url_for, make_response, request, send_from_directory
 from flask.json import dumps
 from flask_compress import Compress
 from flask_restx import Api
@@ -17,26 +17,26 @@ from werkzeug.exceptions import HTTPException
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.gui import update_static
+from mindsdb.api.http.utils import http_error
+from mindsdb.api.http.namespaces.agents import ns_conf as agents_ns
 from mindsdb.api.http.namespaces.analysis import ns_conf as analysis_ns
 from mindsdb.api.http.namespaces.auth import ns_conf as auth_ns
 from mindsdb.api.http.namespaces.chatbots import ns_conf as chatbots_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.namespaces.databases import ns_conf as databases_ns
-from mindsdb.api.http.namespaces.default import check_auth
-from mindsdb.api.http.namespaces.default import ns_conf as default_ns
+from mindsdb.api.http.namespaces.default import ns_conf as default_ns, check_auth
 from mindsdb.api.http.namespaces.file import ns_conf as file_ns
 from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
 from mindsdb.api.http.namespaces.models import ns_conf as models_ns
 from mindsdb.api.http.namespaces.projects import ns_conf as projects_ns
+from mindsdb.api.http.namespaces.skills import ns_conf as skills_ns
 from mindsdb.api.http.namespaces.sql import ns_conf as sql_ns
 from mindsdb.api.http.namespaces.tab import ns_conf as tab_ns
 from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
-from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
 from mindsdb.api.http.namespaces.views import ns_conf as views_ns
-from mindsdb.api.http.utils import http_error
-from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
-from mindsdb.interfaces.database.database import DatabaseController
+from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
 from mindsdb.interfaces.database.integrations import integration_controller
+from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
@@ -54,7 +54,6 @@ class Swagger_Api(Api):
     This is a modification of the base Flask Restplus Api class due to the issue described here
     https://github.com/noirbizarre/flask-restplus/issues/223
     """
-
     @property
     def specs_url(self):
         return url_for(self.endpoint("specs"), _external=False)
@@ -69,10 +68,7 @@ def custom_output_json(data, code, headers=None):
 def get_last_compatible_gui_version() -> LooseVersion:
     logger.debug("Getting last compatible frontend..")
     try:
-        res = requests.get(
-            "https://mindsdb-web-builds.s3.amazonaws.com/compatible-config.json",
-            timeout=5,
-        )
+        res = requests.get('https://mindsdb-web-builds.s3.amazonaws.com/compatible-config.json', timeout=5)
     except (ConnectionError, requests.exceptions.ConnectionError) as e:
         logger.error(f"Is no connection. {e}")
         return False
@@ -98,16 +94,13 @@ def get_last_compatible_gui_version() -> LooseVersion:
         gui_versions = {}
         max_mindsdb_lv = None
         max_gui_lv = None
-        for el in versions["mindsdb"]:
-            if el["mindsdb_version"] is None:
-                gui_lv = LooseVersion(el["gui_version"])
+        for el in versions['mindsdb']:
+            if el['mindsdb_version'] is None:
+                gui_lv = LooseVersion(el['gui_version'])
             else:
-                mindsdb_lv = LooseVersion(el["mindsdb_version"])
-                gui_lv = LooseVersion(el["gui_version"])
-                if (
-                    mindsdb_lv.vstring not in gui_versions
-                    or gui_lv > gui_versions[mindsdb_lv.vstring]
-                ):
+                mindsdb_lv = LooseVersion(el['mindsdb_version'])
+                gui_lv = LooseVersion(el['gui_version'])
+                if mindsdb_lv.vstring not in gui_versions or gui_lv > gui_versions[mindsdb_lv.vstring]:
                     gui_versions[mindsdb_lv.vstring] = gui_lv
                 if max_mindsdb_lv is None or max_mindsdb_lv < mindsdb_lv:
                     max_mindsdb_lv = mindsdb_lv
@@ -122,11 +115,7 @@ def get_last_compatible_gui_version() -> LooseVersion:
         elif current_mindsdb_lv > all_mindsdb_lv[-1]:
             gui_version_lv = max_gui_lv
         else:
-            lower_versions = {
-                key: value
-                for key, value in gui_versions.items()
-                if LooseVersion(key) < current_mindsdb_lv
-            }
+            lower_versions = {key: value for key, value in gui_versions.items() if LooseVersion(key) < current_mindsdb_lv}
             if len(lower_versions) == 0:
                 gui_version_lv = gui_versions[all_mindsdb_lv[0].vstring]
             else:
@@ -143,12 +132,12 @@ def get_last_compatible_gui_version() -> LooseVersion:
 def get_current_gui_version() -> LooseVersion:
     logger.debug("Getting current frontend version..")
     config = Config()
-    static_path = Path(config["paths"]["static"])
-    version_txt_path = static_path.joinpath("version.txt")
+    static_path = Path(config['paths']['static'])
+    version_txt_path = static_path.joinpath('version.txt')
 
     current_gui_version = None
     if version_txt_path.is_file():
-        with open(version_txt_path, "rt") as f:
+        with open(version_txt_path, 'rt') as f:
             current_gui_version = f.readline()
 
     current_gui_lv = (
@@ -164,7 +153,7 @@ def initialize_static():
     config = Config()
     last_gui_version_lv = get_last_compatible_gui_version()
     current_gui_version_lv = get_current_gui_version()
-    required_gui_version = config["gui"].get("version")
+    required_gui_version = config['gui'].get('version')
 
     if required_gui_version is not None:
         required_gui_version_lv = LooseVersion(required_gui_version)
@@ -189,16 +178,20 @@ def initialize_static():
     return success
 
 
-def initialize_app(config, no_studio, with_nlp):
-    static_root = config["paths"]["static"]
+def initialize_app(config, no_studio):
+    static_root = config['paths']['static']
     logger.debug(f"Static route: {static_root}")
-    gui_exists = Path(static_root).joinpath("index.html").is_file()
+    gui_exists = Path(static_root).joinpath('index.html').is_file()
     logger.debug(f"Does GUI already exist.. {'YES' if gui_exists else 'NO'}")
     init_static_thread = None
-    if no_studio is False and (
-        config["gui"]["autoupdate"] is True or gui_exists is False
+    if (
+        no_studio is False
+        and (
+            config['gui']['autoupdate'] is True
+            or gui_exists is False
+        )
     ):
-        init_static_thread = threading.Thread(target=initialize_static, name="GUI-Init")
+        init_static_thread = threading.Thread(target=initialize_static)
         init_static_thread.start()
 
     app, api = initialize_flask(config, init_static_thread, no_studio)
@@ -209,15 +202,15 @@ def initialize_app(config, no_studio, with_nlp):
         static_root = os.path.join(os.getcwd(), static_root)
     static_root = Path(static_root)
 
-    @app.route("/", defaults={"path": ""}, methods=["GET"])
-    @app.route("/<path:path>", methods=["GET"])
+    @app.route('/', defaults={'path': ''}, methods=['GET'])
+    @app.route('/<path:path>', methods=['GET'])
     def root_index(path):
-        if path.startswith("api/"):
-            return {"message": "wrong query"}, 400
+        if path.startswith('api/'):
+            return {'message': 'wrong query'}, 400
         if static_root.joinpath(path).is_file():
             return send_from_directory(static_root, path)
         else:
-            return send_from_directory(static_root, "index.html")
+            return send_from_directory(static_root, 'index.html')
 
     protected_namespaces = [
         tab_ns,
@@ -233,9 +226,9 @@ def initialize_app(config, no_studio, with_nlp):
         views_ns,
         models_ns,
         chatbots_ns,
+        skills_ns,
+        agents_ns
     ]
-    if with_nlp:
-        protected_namespaces.append(nlp_ns)
 
     for ns in protected_namespaces:
         api.add_namespace(ns)
@@ -263,22 +256,21 @@ def initialize_app(config, no_studio, with_nlp):
 
         # region routes where auth is required
         if (
-            config["auth"]["http_auth_enabled"] is True
-            and any(
-                request.path.startswith(f"/api{ns.path}") for ns in protected_namespaces
-            )
+            config['auth']['http_auth_enabled'] is True
+            and any(request.path.startswith(f'/api{ns.path}') for ns in protected_namespaces)
             and check_auth() is False
         ):
             return http_error(
-                403, "Forbidden", "Authorization is required to complete the request"
+                403, 'Forbidden',
+                'Authorization is required to complete the request'
             )
         # endregion
 
-        company_id = request.headers.get("company-id")
-        user_class = request.headers.get("user-class")
+        company_id = request.headers.get('company-id')
+        user_class = request.headers.get('user-class')
 
         try:
-            email_confirmed = int(request.headers.get("email-confirmed", 1))
+            email_confirmed = int(request.headers.get('email-confirmed', 1))
         except ValueError:
             email_confirmed = 1
 
@@ -317,13 +309,13 @@ def initialize_app(config, no_studio, with_nlp):
 def initialize_flask(config, init_static_thread, no_studio):
     logger.debug("Initializing flask..")
     # region required for windows https://github.com/mindsdb/mindsdb/issues/2526
-    mimetypes.add_type("text/css", ".css")
-    mimetypes.add_type("text/javascript", ".js")
+    mimetypes.add_type('text/css', '.css')
+    mimetypes.add_type('text/javascript', '.js')
     # endregion
 
     kwargs = {}
     if no_studio is not True:
-        static_path = os.path.join(config["paths"]["static"], "static/")
+        static_path = os.path.join(config['paths']['static'], 'static/')
         if os.path.isabs(static_path) is False:
             static_path = os.path.join(os.getcwd(), static_path)
         kwargs["static_url_path"] = "/static"
@@ -332,29 +324,35 @@ def initialize_flask(config, init_static_thread, no_studio):
 
     app = Flask(__name__, **kwargs)
 
-    app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
-    app.config["SESSION_COOKIE_NAME"] = "session"
-    app.config["PERMANENT_SESSION_LIFETIME"] = datetime.timedelta(days=31)
-    app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 60
-    app.config["SWAGGER_HOST"] = "http://localhost:8000/mindsdb"
+    app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', secrets.token_hex(32))
+    app.config['SESSION_COOKIE_NAME'] = 'session'
+    app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=31)
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
+    app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
     app.json_encoder = CustomJSONEncoder
 
-    authorizations = {"apikey": {"type": "session", "in": "query", "name": "session"}}
+    authorizations = {
+        'apikey': {
+            'type': 'session',
+            'in': 'query',
+            'name': 'session'
+        }
+    }
 
     logger.debug("Creating swagger API..")
     api = Swagger_Api(
         app,
         authorizations=authorizations,
-        security=["apikey"],
-        url_prefix=":8000",
-        prefix="/api",
-        doc="/doc/",
+        security=['apikey'],
+        url_prefix=':8000',
+        prefix='/api',
+        doc='/doc/'
     )
 
-    api.representations["application/json"] = custom_output_json
+    api.representations['application/json'] = custom_output_json
 
-    port = config["api"]["http"]["port"]
-    host = config["api"]["http"]["host"]
+    port = config['api']['http']['port']
+    host = config['api']['http']['host']
 
     # NOTE rewrite it, that hotfix to see GUI link
     if not no_studio:
@@ -365,12 +363,7 @@ def initialize_flask(config, init_static_thread, no_studio):
         logger.info(f" - GUI available at {url}")
 
         pid = os.getpid()
-        x = threading.Thread(
-            target=_open_webbrowser,
-            args=(url, pid, port, init_static_thread, config["paths"]["static"]),
-            daemon=True,
-            name="Browser-Opener",
-        )
+        x = threading.Thread(target=_open_webbrowser, args=(url, pid, port, init_static_thread, config['paths']['static']), daemon=True)
         x.start()
 
     return app, api

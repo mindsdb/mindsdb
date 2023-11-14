@@ -26,7 +26,6 @@ class NewsAPIArticleTable(APITable):
         params = {}
 
         for op, arg1, arg2 in conditions:
-
             if arg1 == "query":
                 params["q"] = urllib.parse.quote_plus(arg2)
             elif arg1 == "sources":
@@ -61,25 +60,28 @@ class NewsAPIArticleTable(APITable):
 
         if query.order_by:
             if len(query.order_by) == 1:
-                if str(query.order_by[0]) not in ["relevancy", "publishedAt"]:
+                order_column = str(query.order_by[0]).split('.')[-1]
+                if order_column not in ["relevancy", "publishedAt"]:
                     raise NotImplementedError("Not supported ordering by this field")
-                params["sort_by"] = str(query.order_by[0])
+                params["sort_by"] = order_column
             else:
                 raise ValueError(
                     "Multiple order by condition is not supported by the API"
                 )
 
+        selected_columns = []
+
         result = self.handler.call_application_api(params=params)
 
-        selected_columns = []
-        for target in query.targets:
-            if isinstance(target, ast.Star):
-                selected_columns = self.get_columns()
-                break
-            elif isinstance(target, ast.Identifier):
-                selected_columns.append(target.parts[-1])
-            else:
-                raise ValueError(f"Unknown query target {type(target)}")
+        if not result.empty:
+            for target in query.targets:
+                if isinstance(target, ast.Star):
+                    selected_columns = self.get_columns()
+                    break
+                elif isinstance(target, ast.Identifier):
+                    selected_columns.append(target.parts[-1])
+                else:
+                    raise ValueError(f"Unknown query target {type(target)}")
 
         return result[selected_columns]
 
@@ -173,7 +175,6 @@ class NewsAPIHandler(APIHandler):
         return response
 
     def native_query(self, query: Any):
-
         ast = parse_sql(query, dialect="mindsdb")
         table = self.get_table("article")
         data = table.select(ast)
@@ -187,12 +188,15 @@ class NewsAPIHandler(APIHandler):
         if self.is_connected is False:
             self.connect()
 
-        pages = params["page"]
+        pages = params.get("page", 1)
         data = []
 
         for page in range(1, pages + 1):
             params["page"] = page
-            result = self.api.get_everything(**params)
+            try:
+                result = self.api.get_everything(**params)
+            except Exception as e:
+                raise RuntimeError(f"API call failed: {e}") 
             articles = result["articles"]
             for article in articles:
                 article["source_id"] = article["source"]["id"]

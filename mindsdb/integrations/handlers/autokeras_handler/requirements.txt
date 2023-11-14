@@ -1,5 +1,2 @@
 tensorflow
 autokeras
-sklearn
-pandas
-numpy

@@ -2,11 +2,11 @@ from http import HTTPStatus
 
 from flask import request
 from flask_restx import Resource
-from sqlalchemy.exc import NoResultFound
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.api.http.utils import http_error
+from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.storage.db import Predictor
@@ -20,11 +20,13 @@ def create_chatbot(project_name, name, chatbot):
             'Missing "name" field for chatbot'
         )
 
-    if 'model_name' not in chatbot:
+    model_name = chatbot.get('model_name', None)
+    agent_name = chatbot.get('agent_name', None)
+    if model_name is None and agent_name is None:
         return http_error(
             HTTPStatus.BAD_REQUEST,
             'Missing field',
-            'Missing "model_name" field for chatbot'
+            'Must include either "model_name" or "agent_name" field for chatbot'
         )
 
     session_controller = SessionController()
@@ -51,7 +53,6 @@ def create_chatbot(project_name, name, chatbot):
     else:
         database_id = chatbot.get('database_id', None)
 
-    model_name = chatbot['model_name']
     is_running = chatbot.get('is_running', False)
     params = chatbot.get('params', {})
 
@@ -60,7 +61,14 @@ def create_chatbot(project_name, name, chatbot):
     # Chatbot can't already exist.
     # TODO all checks should be inside of controller
 
-    existing_chatbot = chatbot_controller.get_chatbot(name, project_name=project_name)
+    try:
+        existing_chatbot = chatbot_controller.get_chatbot(name, project_name=project_name)
+    except ValueError:
+        # Project must exist.
+        return http_error(
+            HTTPStatus.NOT_FOUND,
+            'Project not found',
+            f'Project with name {project_name} does not exist')
     if existing_chatbot is not None:
         return http_error(
             HTTPStatus.CONFLICT,
@@ -68,20 +76,32 @@ def create_chatbot(project_name, name, chatbot):
             f'Chatbot with name {name} already exists. Please use a different name'
         )
 
-    # Model needs to exist.
+    # Model and agent need to exist.
+    agents_controller = AgentsController()
+    if agent_name is not None:
+        agent = agents_controller.get_agent(agent_name, project_name)
+        if agent is None:
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Agent not found',
+                f'Agent with name {agent_name} not found'
+            )
+        model_name = agent.model_name
+
     model_name_no_version, version = Predictor.get_name_and_version(model_name)
     try:
         session_controller.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
     except PredictorRecordNotFound:
         return http_error(
-            HTTPStatus.BAD_REQUEST,
+            HTTPStatus.NOT_FOUND,
             'Model not found',
             f'Model with name {model_name} not found')
 
     created_chatbot = chatbot_controller.add_chatbot(
         name,
         project_name,
-        model_name,
+        model_name=model_name,
+        agent_name=agent_name,
         database_id=database_id,
         is_running=is_running,
         params=params
@@ -97,7 +117,7 @@ class ChatBotsResource(Resource):
         chatbot_controller = ChatBotController()
         try:
             all_bots = chatbot_controller.get_chatbots(project_name)
-        except NoResultFound:
+        except ValueError:
             # Project needs to exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,
@@ -139,8 +159,8 @@ class ChatBotResource(Resource):
                     'Chatbot not found',
                     f'Chatbot with name {chatbot_name} does not exist'
                 )
-            return existing_chatbot.as_dict()
-        except NoResultFound:
+            return existing_chatbot
+        except ValueError:
             # Project needs to exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,
@@ -161,10 +181,19 @@ class ChatBotResource(Resource):
             )
         chatbot_controller = ChatBotController()
 
-        existing_chatbot = chatbot_controller.get_chatbot(chatbot_name, project_name=project_name)
+        try:
+            existing_chatbot = chatbot_controller.get_chatbot(chatbot_name, project_name=project_name)
+        except ValueError:
+            # Project needs to exist.
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Project not found',
+                f'Project with name {project_name} does not exist'
+            )
 
         chatbot = request.json['chatbot']
         name = chatbot.get('name', None)
+        agent_name = chatbot.get('agent_name', None)
         model_name = chatbot.get('model_name', None)
         database_id = chatbot.get('database_id', None)
         is_running = chatbot.get('is_running', None)
@@ -181,6 +210,16 @@ class ChatBotResource(Resource):
                     HTTPStatus.NOT_FOUND,
                     'Model not found',
                     f'Model with name {model_name} not found')
+
+        # Agent needs to exist.
+        if agent_name is not None:
+            agents_controller = AgentsController()
+            agent = agents_controller.get_agent(agent_name, project_name)
+            if agent is None:
+                return http_error(
+                    HTTPStatus.NOT_FOUND,
+                    'Agent not found',
+                    f'Agent with name {agent_name} not found')
 
         # Chatbot must not exist with new name.
         if name is not None and name != chatbot_name:
@@ -209,13 +248,13 @@ class ChatBotResource(Resource):
 
             database_id = session_controller.integration_controller.add(db_name, chatbot['db_engine'],
                                                                         chatbot['db_params'])
-
         # Update
         updated_chatbot = chatbot_controller.update_chatbot(
             chatbot_name,
             project_name=project_name,
             name=name,
             model_name=model_name,
+            agent_name=agent_name,
             database_id=database_id,
             is_running=is_running,
             params=params
@@ -234,7 +273,7 @@ class ChatBotResource(Resource):
                     'Chatbot not found',
                     f'Chatbot with name {chatbot_name} does not exist'
                 )
-        except NoResultFound:
+        except ValueError:
             # Project needs to exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,

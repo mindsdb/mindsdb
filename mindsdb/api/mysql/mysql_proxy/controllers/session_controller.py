@@ -15,14 +15,16 @@ from uuid import uuid4
 import requests
 
 from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
+# from mindsdb.api.mysql.mysql_proxy.utilities import logger
+from mindsdb.utilities.config import Config
+from mindsdb.interfaces.agents.agents_controller import AgentsController
+from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.database.integrations import integration_controller
-from mindsdb.interfaces.model.model_controller import ModelController
+from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
 
 logger = log.getLogger(__name__)
-
 
 class SessionController:
     """
@@ -44,6 +46,12 @@ class SessionController:
         self.model_controller = ModelController()
         self.integration_controller = integration_controller
         self.database_controller = DatabaseController()
+        self.skills_controller = SkillsController()
+        self.agents_controller = AgentsController()
+
+        # to prevent circular imports
+        from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
+        self.kb_controller = KnowledgeBaseController(self)
 
         self.datahub = init_datahub(self)
 
@@ -94,13 +102,9 @@ class ServerSessionContorller(SessionController):
         self.executor_url = os.environ.get("MINDSDB_EXECUTOR_URL", None)
         self.executor_host = os.environ.get("MINDSDB_EXECUTOR_SERVICE_HOST", None)
         self.executor_port = os.environ.get("MINDSDB_EXECUTOR_SERVICE_PORT", None)
-        if (
-            self.executor_host is None or self.executor_port is None
-        ) and self.executor_url is None:
-            raise Exception(
-                f"""{self.__class__.__name__} can be used only in modular mode of MindsDB.
-                            Use Executor as a service and specify MINDSDB_EXECUTOR_URL env variable"""
-            )
+        if (self.executor_host is None or self.executor_port is None) and self.executor_url is None:
+            raise Exception(f"""{self.__class__.__name__} can be used only in modular mode of MindsDB.
+                            Use Executor as a service and specify MINDSDB_EXECUTOR_URL env variable""")
         logger.info(
             "%s.__init__: executor url - %s", self.__class__.__name__, self.executor_url
         )

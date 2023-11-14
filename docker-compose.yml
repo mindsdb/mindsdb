@@ -3,8 +3,6 @@ version: "3.2"
 services:
 
   mindsdb:
-    #image: 454861456664.dkr.ecr.us-east-2.amazonaws.com/mindsdb:latest
-    #image: 454861456664.dkr.ecr.ap-southeast-2.amazonaws.com/mindsdb:latest
     build:
       context: .
       dockerfile: docker/mindsdb.Dockerfile
@@ -15,7 +13,7 @@ services:
       - '47335:47335'
       - '47336:47336'
     # watchfiles will reload the app when python files are changed
-    command: bash -c "pip install watchfiles && watchfiles --filter python 'python -m mindsdb --api=http' ."
+    command: bash -c "watchfiles --filter python 'python -m mindsdb' ."
     environment:
       MINDSDB_DOCKER_ENV: "True"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"

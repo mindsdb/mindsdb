@@ -74,6 +74,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
         if self.is_cloud:
             # We already have a connection started through the gateway.
             started = True
+            self.handshake()
         else:
             started = self.start_connection()
         if started:
@@ -461,14 +462,16 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
     @staticmethod
     def startProxy():
         config = Config()
-        server = TcpServer(("localhost", 55432), PostgresProxyHandler)
+        host = config['api']['postgres']['host']
+        port = int(config['api']['postgres']['port'])
+        server = TcpServer((host, port), PostgresProxyHandler)
         server.connection_id = 0
         server.mindsdb_config = config
         server.check_auth = partial(check_auth, config=config)
         server.serve_forever()
 
 
-class TcpServer(socketserver.TCPServer):
+class TcpServer(socketserver.ThreadingTCPServer):
     allow_reuse_address = True
 
 

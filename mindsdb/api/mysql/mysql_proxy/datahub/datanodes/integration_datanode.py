@@ -1,20 +1,16 @@
 import numpy as np
-import pandas as pd
-from mindsdb_sql.parser.ast import (
-    CreateTable,
-    DropTables,
-    Identifier,
-    Insert,
-    TableColumn,
-)
 from numpy import dtype as np_dtype
+import pandas as pd
 from pandas.api import types as pd_types
-from sqlalchemy.types import Float, Integer, Text
+from sqlalchemy.types import (
+    Integer, Float, Text
+)
 
-import mindsdb.utilities.profiler as profiler
-from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
+from mindsdb_sql.parser.ast import Insert, Identifier, CreateTable, TableColumn, DropTables
+
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -25,15 +21,13 @@ class DBHandlerException(Exception):
 
 
 class IntegrationDataNode(DataNode):
-    type = "integration"
+    type = 'integration'
 
     def __init__(self, integration_name, ds_type, integration_controller):
         self.integration_name = integration_name
         self.ds_type = ds_type
         self.integration_controller = integration_controller
-        self.integration_handler = self.integration_controller.get_handler(
-            self.integration_name
-        )
+        self.integration_handler = self.integration_controller.get_handler(self.integration_name)
 
     def get_type(self):
         return self.type
@@ -41,7 +35,7 @@ class IntegrationDataNode(DataNode):
     def get_tables(self):
         response = self.integration_handler.get_tables()
         if response.type == RESPONSE_TYPE.TABLE:
-            result_dict = response.data_frame.to_dict(orient="records")
+            result_dict = response.data_frame.to_dict(orient='records')
             result = []
             for row in result_dict:
                 result.append(TablesRow.from_dict(row))
@@ -55,9 +49,16 @@ class IntegrationDataNode(DataNode):
     def get_table_columns(self, tableName):
         return []
 
-    def create_table(
-        self, table_name: Identifier, result_set, is_replace=False, is_create=False
-    ):
+    def drop_table(self, name: Identifier, if_exists=False):
+        drop_ast = DropTables(
+            tables=[name],
+            if_exists=if_exists
+        )
+        result = self.integration_handler.query(drop_ast)
+        if result.type == RESPONSE_TYPE.ERROR:
+            raise Exception(result.error_message)
+
+    def create_table(self, table_name: Identifier, result_set, is_replace=False, is_create=False):
         # is_create - create table
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert
@@ -73,12 +74,20 @@ class IntegrationDataNode(DataNode):
                 elif pd_types.is_numeric_dtype(col.type):
                     column_type = Float
 
-            table_columns.append(TableColumn(name=col.alias, type=column_type))
+            table_columns.append(
+                TableColumn(
+                    name=col.alias,
+                    type=column_type
+                )
+            )
             table_columns_meta[col.alias] = column_type
 
         if is_replace:
             # drop
-            drop_ast = DropTables(tables=[table_name], if_exists=True)
+            drop_ast = DropTables(
+                tables=[table_name],
+                if_exists=True
+            )
             result = self.integration_handler.query(drop_ast)
             if result.type == RESPONSE_TYPE.ERROR:
                 raise Exception(result.error_message)
@@ -86,7 +95,9 @@ class IntegrationDataNode(DataNode):
 
         if is_create:
             create_table_ast = CreateTable(
-                name=table_name, columns=table_columns, is_replace=True
+                name=table_name,
+                columns=table_columns,
+                is_replace=True
             )
 
             result = self.integration_handler.query(create_table_ast)
@@ -120,13 +131,15 @@ class IntegrationDataNode(DataNode):
             return
 
         insert_ast = Insert(
-            table=table_name, columns=insert_columns, values=formatted_data
+            table=table_name,
+            columns=insert_columns,
+            values=formatted_data
         )
 
         try:
             result = self.integration_handler.query(insert_ast)
         except Exception as e:
-            msg = f"[{self.ds_type}/{self.integration_name}]: {str(e)}"
+            msg = f'[{self.ds_type}/{self.integration_name}]: {str(e)}'
             raise DBHandlerException(msg) from e
 
         if result.type == RESPONSE_TYPE.ERROR:
@@ -142,13 +155,13 @@ class IntegrationDataNode(DataNode):
                 result = self.integration_handler.native_query(native_query)
         except Exception as e:
             msg = str(e).strip()
-            if msg == "":
+            if msg == '':
                 msg = e.__class__.__name__
-            msg = f"[{self.ds_type}/{self.integration_name}]: {msg}"
+            msg = f'[{self.ds_type}/{self.integration_name}]: {msg}'
             raise DBHandlerException(msg) from e
 
         if result.type == RESPONSE_TYPE.ERROR:
-            raise Exception(f"Error in {self.integration_name}: {result.error_message}")
+            raise Exception(f'Error in {self.integration_name}: {result.error_message}')
         if result.type == RESPONSE_TYPE.OK:
             return [], []
 
@@ -169,6 +182,12 @@ class IntegrationDataNode(DataNode):
             logger.error(f"Issue with clearing DF from NaN values: {e}")
         # endregion
 
-        columns_info = [{"name": k, "type": v} for k, v in df.dtypes.items()]
-        data = df.to_dict(orient="records")
+        columns_info = [
+            {
+                'name': k,
+                'type': v
+            }
+            for k, v in df.dtypes.items()
+        ]
+        data = df.to_dict(orient='records')
         return data, columns_info

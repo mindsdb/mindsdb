@@ -35,7 +35,7 @@ Additionally, the following optional parameters can be passed:
 - `smtp_port`: SMTP port to use for sending emails. Defaults to `587`.
 - `imap_server`: IMAP server to use for receiving emails. Defaults to `imap.gmail.com`.
 
-At the moment, the handler has only been tested with Gmail accounts.
+At the moment, the handler has only been tested with Gmail and Outlook accounts.
 
 ## Implemented Features
 
@@ -50,40 +50,75 @@ At the moment, the handler has only been tested with Gmail accounts.
 
 ## TODO
 
-- [ ] Test the handler for other email providers like Outlook, Yahoo, etc.
+- [ ] Test the handler for other email providers like Yahoo, etc.
 
-## Example Usage
 
-The first step is to create a database with the new `email` engine by passing in the required `email` and `password` parameters:
+### Connect to Gmail
 
-~~~~sql
+To connect your Gmail account to MindsDB, use the below `CREATE DATABASE` statement:
+
+```sql
 CREATE DATABASE email_datasource
 WITH ENGINE = 'email',
 PARAMETERS = {
   "email": "youremail@gmail.com",
   "password": "yourpassword"
 };
-~~~~
+```
 
-Use the established connection to query your emails:
+It creates a database that comes with the `emails` table. Now you can query for emails like this:
 
-~~~~sql
-SELECT * FROM email_datasource.emails
-~~~~
+```sql
+SELECT *
+FROM email_datasource.emails;
+```
 
-Run more advanced queries:
+And you can apply filters like this:
 
-~~~~sql
-SELECT  id, to, subject, body
+```sql
+SELECT id, to, subject, body
 FROM email_datasource.emails
 WHERE subject = 'MindsDB'
 ORDER BY id
-LIMIT 5
-~~~~
+LIMIT 5;
+```
 
-Send emails:
+Or, write emails like this:
 
-~~~~sql
+```sql
 INSERT INTO email_datasource.emails(to, subject, body)
-VALUES ("toemail@gmail.com", "MindsDB", "Hello from MindsDB!")
-~~~~
+VALUES ("toemail@email.com", "MindsDB", "Hello from MindsDB!");
+```
+
+### Connect to Outlook
+
+To connect your Outlook account to MindsDB, use the below `CREATE DATABASE` statement:
+
+```sql
+CREATE DATABASE email_datasource
+WITH ENGINE = 'email',
+PARAMETERS = {
+  "email": "youremail@gmail.com",
+  "password": "yourpassword",
+  "smtp_server": "smtp.office365.com", 
+  "smtp_port": "587", 
+  "imap_server": "outlook.office365.com" 
+};
+```
+
+It creates a database that comes with the `emails` table. Now you can query for emails like this:
+
+```sql
+SELECT *
+FROM email_datasource.emails;
+```
+
+And you can apply filters like this:
+
+```sql
+SELECT id, to, subject, body
+FROM email_datasource.emails
+WHERE subject = 'MindsDB'
+ORDER BY id
+LIMIT 5;
+```

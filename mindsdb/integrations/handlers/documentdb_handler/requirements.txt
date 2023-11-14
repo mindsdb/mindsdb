@@ -1,0 +1,1 @@
+-r mindsdb/integrations/handlers/mongodb_handler/requirements.txt

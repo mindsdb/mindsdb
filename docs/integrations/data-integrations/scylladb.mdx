@@ -5,28 +5,28 @@ sidebarTitle: ScyllaDB
 
 This is the implementation of the ScyllaDB data handler for MindsDB.
 
-[ScyllaDB](https://www.scylladb.com/) is an open-source distributed NoSQL wide-column data store. It was designed to be compatible with Apache Cassandra while achieving significantly higher throughputs and lower latencies.
+[ScyllaDB](https://www.scylladb.com/) is an open-source distributed NoSQL wide-column data store. It was purposefully designed to offer compatibility with Apache Cassandra while outperforming it with higher throughputs and reduced latencies. For a comprehensive understanding of ScyllaDB, visit ScyllaDB's official website.
 
-## Implementation
+### Implementation
 
-This handler is implemented using the `scylla-driver` Python library.
-
+The ScyllaDB handler for MindsDB was developed using the scylla-driver library for Python.
 The required arguments to establish a connection are as follows:
 
-* `host` is the host name or IP address of the ScyllaDB.
-* `port` is the port to use when connecting.
-* `user` is the user to authenticate.
-* `password` is the password to authenticate the user.
-* `keyspace` is the keyspace to connect to. It is a top level container for tables.
-* `protocol_version` is not required, and default to 4.
+* `host`: Host name or IP address of ScyllaDB.
+* `port`: Connection port.
+* `user`: Authentication username.
+* `password`: Authentication password.
+* `keyspace`: The specific keyspace (top-level container for tables) to connect to.
+* `protocol_version`: Optional. Defaults to 4.
+* `secure_connect_bundle`: Optional. Needed only for connections to DataStax Astra.
 
 <Tip>
 If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/scylla_handler) and run this command: `pip install -r requirements.txt`.
 </Tip>
 
-## Usage
+## Usage 
 
-In order to make use of this handler and connect to the ScyllaDB server in MindsDB, the following syntax can be used:
+To set up a connection between MindsDB and a Scylla server, utilize the following SQL syntax:
 
 ```sql
 CREATE DATABASE scylladb_datasource
@@ -35,14 +35,17 @@ WITH
   PARAMETERS = {
     "user": "user@mindsdb.com",
     "password": "pass",
-    "secure_connect_bundle": "/home/zoran/Downloads/secure-connect.zip"
+    "host": "127.0.0.1",
+    "port": "9042",
+    "keyspace": "test_data"
   };
 ```
+<Tip>
+The protocol version is set to 4 by default. Should you wish to modify it, simply include "protocol_version": 5 within the PARAMETERS dictionary in the query above.
+</Tip>
 
-You can use this established connection to query your table as follows:
+With the connection established, you can execute queries on your keyspace as demonstrated below:
 
 ```sql
-SELECT *
-FROM scylladb_datasource.keystore.example_table
-LIMIT 10;
+SELECT * FROM scylladb_datasource.keystore.example_table LIMIT 10;
 ```

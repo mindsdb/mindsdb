@@ -13,8 +13,8 @@ This handler is implemented using `boto3`, the AWS SDK for Python.
 
 The required arguments to establish a connection are as follows:
 
-* `aws_access_key_id` is the AWS access key.
-* `aws_secret_access_key` is the AWS secret access key.
+* `aws_access_key_id` is the AWS access key that identifies the user or IAM role.
+* `aws_secret_access_key` is the AWS secret access key that identifies the user or IAM role.
 * `region_name` is the AWS region.
 * `bucket` is the name of the S3 bucket.
 * `key` is the key of the object to be queried.
@@ -36,11 +36,11 @@ CREATE DATABASE s3_datasource
 WITH
     engine = 's3',
     parameters = {
-      "aws_access_key_id": "PCAQ2LJDOSWLNSQKOCPW",
-      "aws_secret_access_key": "U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i",
-      "region_name": "us-east-1",
-      "bucket": "mindsdb-bucket",
-      "key": "iris.csv",
+      "aws_access_key_id": "aws_access_key_id_value",
+      "aws_secret_access_key": "aws_secret_access_key_value",
+      "region_name": "region_name",
+      "bucket": "bucket_name",
+      "key": "fine_name.csv",
       "input_serialization": "{'CSV': {'FileHeaderInfo': 'NONE'}}"
     };
 ```

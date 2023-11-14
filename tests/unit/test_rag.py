@@ -1,6 +1,5 @@
 import tempfile
 import time
-from unittest.mock import patch
 
 import pandas as pd
 import pytest
@@ -36,8 +35,7 @@ class TestRAG(BaseExecutorDummyLLM):
         if not done:
             raise RuntimeError("predictor wasn't created")
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def setup_method(self, method, mock_handler):
+    def setup_method(self, method):
         super().setup_method()
 
         vector_database_name = "chroma_test"
@@ -68,7 +66,7 @@ class TestRAG(BaseExecutorDummyLLM):
             }
         )
 
-        self.set_handler(mock_handler, "pg", tables={"df": df})
+        self.save_file("df", df)
 
         # create the table
         vector_database_table_name = "test_table"

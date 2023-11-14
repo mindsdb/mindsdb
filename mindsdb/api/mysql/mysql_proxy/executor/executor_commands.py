@@ -1,8 +1,8 @@
 import datetime
-from functools import reduce
 from pathlib import Path
 from textwrap import dedent
 from typing import Optional
+from functools import reduce
 
 import pandas as pd
 from mindsdb_evaluator.accuracy.general import evaluate_accuracy
@@ -109,6 +109,7 @@ from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.interfaces.triggers.triggers_controller import TriggersController
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import mark_process, resolve_model_identifier
+from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 
 def _get_show_where(
@@ -439,7 +440,7 @@ class ExecuteCommands:
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
             elif "show create table" in sql_lower:
                 # SHOW CREATE TABLE `MINDSDB`.`predictors`
-                table = sql[sql.rfind(".") + 1 :].strip(" .;\n\t").replace("`", "")
+                table = sql[sql.rfind(".") + 1:].strip(" .;\n\t").replace("`", "")
                 return self.answer_show_create_table(table)
             elif sql_category in ("character set", "charset"):
                 new_statement = Select(
@@ -716,14 +717,12 @@ class ExecuteCommands:
         job_name = name.parts[-1]
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
 
-        jobs_controller.add(
-            job_name,
-            project_name,
-            statement.query_str,
-            statement.start_str,
-            statement.end_str,
-            statement.repeat_str,
-        )
+        try:
+            jobs_controller.add(job_name, project_name, statement.query_str,
+                                statement.start_str, statement.end_str, statement.repeat_str)
+        except EntityExistsError:
+            if getattr(statement, "if_not_exists", False) is False:
+                raise
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -733,7 +732,13 @@ class ExecuteCommands:
         name = statement.name
         job_name = name.parts[-1]
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
-        jobs_controller.delete(job_name, project_name)
+        try:
+            jobs_controller.delete(job_name, project_name)
+        except EntityNotExistsError:
+            if statement.if_exists is False:
+                raise
+        except Exception as e:
+            raise e
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -1064,7 +1069,7 @@ class ExecuteCommands:
 
         integration = self.session.integration_controller.get(name)
         if integration is not None:
-            raise SqlApiException(f"Database '{name}' already exists.")
+            raise EntityExistsError('Database already exists', name)
 
         self.session.integration_controller.add(name, engine, connection_args)
 
@@ -1072,7 +1077,10 @@ class ExecuteCommands:
         name = statement.name.parts[-1]
         integrations = self.session.integration_controller.get_all()
         if name in integrations:
-            raise SqlApiException(f"Integration '{name}' already exists")
+            if not getattr(statement, "if_not_exists", False):
+                raise EntityExistsError('Integration already exists', name)
+            else:
+                return ExecuteAnswer(ANSWER_TYPE.OK)
 
         handler_module_meta = (
             self.session.integration_controller.get_handlers_import_status().get(
@@ -1131,7 +1139,10 @@ class ExecuteCommands:
         name = statement.name.parts[-1]
         integrations = self.session.integration_controller.get_all()
         if name not in integrations:
-            raise SqlApiException(f"Integration '{name}' does not exists")
+            if not statement.if_exists:
+                raise SqlApiException(f"Integration '{name}' does not exists")
+            else:
+                return ExecuteAnswer(ANSWER_TYPE.OK)
         self.session.integration_controller.delete(name)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -1152,9 +1163,17 @@ class ExecuteCommands:
         connection_args = statement.parameters
 
         if engine == "mindsdb":
-            ProjectController().add(database_name)
+            try:
+                ProjectController().add(database_name)
+            except EntityExistsError:
+                if statement.if_not_exists is False:
+                    raise
         else:
-            self._create_integration(database_name, engine, connection_args)
+            try:
+                self._create_integration(database_name, engine, connection_args)
+            except EntityExistsError:
+                if getattr(statement, "if_not_exists", False) is False:
+                    raise
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -1162,7 +1181,11 @@ class ExecuteCommands:
         if len(statement.name.parts) != 1:
             raise Exception("Database name should contain only 1 part.")
         db_name = statement.name.parts[0]
-        self.session.database_controller.delete(db_name)
+        try:
+            self.session.database_controller.delete(db_name)
+        except EntityExistsError:
+            if statement.if_exists is not True:
+                raise
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_tables(self, statement):
@@ -1269,7 +1292,11 @@ class ExecuteCommands:
                 )
 
         project = self.session.database_controller.get_project(project_name)
-        project.create_view(view_name, query=query_str)
+        try:
+            project.create_view(view_name, query=query_str)
+        except EntityExistsError:
+            if getattr(statement, "if_not_exists", False) is False:
+                raise
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
     def answer_drop_view(self, statement):
@@ -1282,7 +1309,12 @@ class ExecuteCommands:
             else:
                 db_name = self.session.database
             project = self.session.database_controller.get_project(db_name)
-            project.drop_view(view_name)
+
+            try:
+                project.drop_view(view_name)
+            except EntityNotExistsError:
+                if statement.if_exists is not True:
+                    raise
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
@@ -1641,14 +1673,20 @@ class ExecuteCommands:
             ml_integration_name
         )
 
-        df = self.session.model_controller.create_model(statement, ml_handler)
-        resp_dict = df.to_dict(orient="split")
+        try:
+            df = self.session.model_controller.create_model(statement, ml_handler)
+            resp_dict = df.to_dict(orient='split')
 
-        columns = [Column(col) for col in resp_dict["columns"]]
+            columns = [
+                Column(col)
+                for col in resp_dict['columns']
+            ]
 
-        return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict["data"]
-        )
+            return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
+        except EntityExistsError:
+            if getattr(statement, "if_not_exists", False) is True:
+                return ExecuteAnswer(ANSWER_TYPE.OK)
+            raise
 
     def answer_show_columns(
         self,

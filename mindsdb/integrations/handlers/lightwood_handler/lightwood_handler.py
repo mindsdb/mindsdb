@@ -1,25 +1,25 @@
-import sys
-import json
 import copy
-from typing import Optional, Dict
+import json
+import sys
 from datetime import datetime
 from functools import lru_cache
+from typing import Dict, Optional
 
-import pandas as pd
-from type_infer.dtype import dtype
 import lightwood
 import numpy as np
+import pandas as pd
+from type_infer.dtype import dtype
 
 import mindsdb.interfaces.storage.db as db
+import mindsdb.utilities.profiler as profiler
+from mindsdb.integrations.libs.base import BaseMLEngine
 
-from mindsdb.utilities.functions import cast_row_types
 # from mindsdb.utilities.hooks import after_predict as after_predict_hook
 from mindsdb.interfaces.model.functions import get_model_record
 from mindsdb.interfaces.storage.json import get_json_storage
-from mindsdb.integrations.libs.base import BaseMLEngine
-import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.functions import cast_row_types
 
-from .functions import run_learn, run_finetune
+from .functions import run_finetune, run_learn
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -55,7 +55,10 @@ class LightwoodHandler(BaseMLEngine):
         if target.lower() not in columns:
             raise Exception(f"There is no column '{target}' in dataframe")
 
-        if 'timeseries_settings' in args and args['timeseries_settings'].get('is_timeseries') is True:
+        if (
+            'timeseries_settings' in args
+            and args['timeseries_settings'].get('is_timeseries') is True
+        ):
             tss = args['timeseries_settings']
             if 'order_by' in tss and tss['order_by'].lower() not in columns:
                 raise Exception(f"There is no column '{tss['order_by']}' in dataframe")
@@ -65,21 +68,22 @@ class LightwoodHandler(BaseMLEngine):
                         raise Exception(f"There is no column '{column}' in dataframe")
 
     @profiler.profile('LightwoodHandler.create')
-    def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+    def create(
+        self,
+        target: str,
+        df: Optional[pd.DataFrame] = None,
+        args: Optional[Dict] = None,
+    ) -> None:
         args['target'] = target
         run_learn(
-            df,
-            args,   # Problem definition and JsonAI override
-            self.model_storage
+            df, args, self.model_storage  # Problem definition and JsonAI override
         )
 
     @profiler.profile('LightwoodHandler.finetune')
-    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        run_finetune(
-            df,
-            args,
-            self.model_storage
-        )
+    def finetune(
+        self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None
+    ) -> None:
+        run_finetune(df, args, self.model_storage)
 
     @staticmethod
     @lru_cache(maxsize=5)
@@ -96,13 +100,19 @@ class LightwoodHandler(BaseMLEngine):
         self.model_storage.fileStorage.pull()
 
         with profiler.Context('load model'):
-            predictor_path = self.model_storage.fileStorage.folder_path / self.model_storage.fileStorage.folder_name
+            predictor_path = (
+                self.model_storage.fileStorage.folder_path
+                / self.model_storage.fileStorage.folder_name
+            )
             predictor = LightwoodHandler.get_predictor(predictor_path, predictor_code)
 
         dtype_dict = predictor.dtype_dict
 
         if hasattr(predictor.problem_definition, 'embedding_only'):
-            embedding_mode = predictor.problem_definition.embedding_only or pred_args.get('return_embedding', False)
+            embedding_mode = (
+                predictor.problem_definition.embedding_only
+                or pred_args.get('return_embedding', False)
+            )
         else:
             embedding_mode = False
 
@@ -135,21 +145,29 @@ class LightwoodHandler(BaseMLEngine):
                     'predicted_value': row['prediction'],
                     'confidence': row.get('confidence', None),
                     'anomaly': row.get('anomaly', None),
-                    'truth': row.get('truth', None)
+                    'truth': row.get('truth', None),
                 }
 
                 if predictor.supports_proba:
                     for cls in predictor.statistical_analysis.train_observed_classes:
                         if row.get(f'__mdb_proba_{cls}', False):
-                            values[f'probability_class_{cls}'] = round(row[f'__mdb_proba_{cls}'], 4)
+                            values[f'probability_class_{cls}'] = round(
+                                row[f'__mdb_proba_{cls}'], 4
+                            )
 
                 for block in predictor.analysis_blocks:
                     if type(block).__name__ == 'ShapleyValues':
                         cols = block.columns
-                        values['shap_base_response'] = round(row['shap_base_response'], 4)
-                        values['shap_final_response'] = round(row['shap_final_response'], 4)
+                        values['shap_base_response'] = round(
+                            row['shap_base_response'], 4
+                        )
+                        values['shap_final_response'] = round(
+                            row['shap_final_response'], 4
+                        )
                         for col in cols:
-                            values[f'shap_contribution_{col}'] = round(row[f'shap_contribution_{col}'], 4)
+                            values[f'shap_contribution_{col}'] = round(
+                                row[f'shap_contribution_{col}'], 4
+                            )
 
                 if 'lower' in row:
                     values['confidence_lower_bound'] = row.get('lower', None)
@@ -197,14 +215,19 @@ class LightwoodHandler(BaseMLEngine):
                     original_target_values[col + '_original'].append(row.get(col))
 
             # region transform ts predictions
-            timeseries_settings = learn_args.get('timeseries_settings', {'is_timeseries': False})
+            timeseries_settings = learn_args.get(
+                'timeseries_settings', {'is_timeseries': False}
+            )
 
             if timeseries_settings['is_timeseries'] is True:
                 # offset forecast if have __mdb_forecast_offset > 0
-                forecast_offset = any([
-                    row.get('__mdb_forecast_offset') is not None and row['__mdb_forecast_offset'] > 0
-                    for row in pred_dicts
-                ])
+                forecast_offset = any(
+                    [
+                        row.get('__mdb_forecast_offset') is not None
+                        and row['__mdb_forecast_offset'] > 0
+                        for row in pred_dicts
+                    ]
+                )
 
                 group_by = timeseries_settings.get('group_by', [])
                 order_by_column = timeseries_settings['order_by']
@@ -221,32 +244,29 @@ class LightwoodHandler(BaseMLEngine):
                         if isinstance(row[target], list) is False:
                             row[target] = [row[target]]
                     for row in explain_arr:
-                        for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
+                        for col in (
+                            'predicted_value',
+                            'confidence',
+                            'confidence_lower_bound',
+                            'confidence_upper_bound',
+                        ):
                             if isinstance(row[target][col], list) is False:
                                 row[target][col] = [row[target][col]]
                 # endregion
 
                 if len(group_by) == 0:
                     rows_by_groups = {
-                        (): {
-                            'rows': pred_dicts,
-                            'explanations': explain_arr
-                        }
+                        (): {'rows': pred_dicts, 'explanations': explain_arr}
                     }
                 else:
                     groups = set()
                     for row in pred_dicts:
-                        groups.add(
-                            tuple([row[x] for x in group_by])
-                        )
+                        groups.add(tuple([row[x] for x in group_by]))
 
                     # split rows by groups
                     rows_by_groups = {}
                     for group in groups:
-                        rows_by_groups[group] = {
-                            'rows': [],
-                            'explanations': []
-                        }
+                        rows_by_groups[group] = {'rows': [], 'explanations': []}
                         for row_index, row in enumerate(pred_dicts):
                             is_wrong_group = False
                             for i, group_by_key in enumerate(group_by):
@@ -255,7 +275,9 @@ class LightwoodHandler(BaseMLEngine):
                                     break
                             if not is_wrong_group:
                                 rows_by_groups[group]['rows'].append(row)
-                                rows_by_groups[group]['explanations'].append(explain_arr[row_index])
+                                rows_by_groups[group]['explanations'].append(
+                                    explain_arr[row_index]
+                                )
 
                 for group, data in rows_by_groups.items():
                     rows = data['rows']
@@ -281,8 +303,15 @@ class LightwoodHandler(BaseMLEngine):
 
                         rows[-2][order_by_column].append(rows[-1][order_by_column][-1])
                         rows[-2][target].append(rows[-1][target][-1])
-                        for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
-                            explanations[-2][target][col].append(explanations[-1][target][col][-1])
+                        for col in (
+                            'predicted_value',
+                            'confidence',
+                            'confidence_lower_bound',
+                            'confidence_upper_bound',
+                        ):
+                            explanations[-2][target][col].append(
+                                explanations[-1][target][col][-1]
+                            )
                         rows.pop()
                         explanations.pop()
                         # horizon = horizon + 1
@@ -293,9 +322,16 @@ class LightwoodHandler(BaseMLEngine):
                             rows[i][target] = rows[i][target][0]
                             if isinstance(rows[i][order_by_column], list):
                                 rows[i][order_by_column] = rows[i][order_by_column][0]
-                        for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
+                        for col in (
+                            'predicted_value',
+                            'confidence',
+                            'confidence_lower_bound',
+                            'confidence_upper_bound',
+                        ):
                             if row_horizon > 1 and col in explanations[i][target]:
-                                explanations[i][target][col] = explanations[i][target][col][0]
+                                explanations[i][target][col] = explanations[i][target][
+                                    col
+                                ][0]
 
                     last_row = rows.pop()
                     last_explanation = explanations.pop()
@@ -308,9 +344,16 @@ class LightwoodHandler(BaseMLEngine):
                             new_row['__mindsdb_row_id'] = None
 
                         new_explanation = copy.deepcopy(last_explanation)
-                        for col in ('predicted_value', 'confidence', 'confidence_lower_bound', 'confidence_upper_bound'):
+                        for col in (
+                            'predicted_value',
+                            'confidence',
+                            'confidence_lower_bound',
+                            'confidence_upper_bound',
+                        ):
                             if col in new_explanation[target]:
-                                new_explanation[target][col] = new_explanation[target][col][i]
+                                new_explanation[target][col] = new_explanation[target][
+                                    col
+                                ][i]
                         if i != 0:
                             new_explanation[target]['anomaly'] = None
                             new_explanation[target]['truth'] = None
@@ -326,16 +369,22 @@ class LightwoodHandler(BaseMLEngine):
 
                 original_target_values[f'{target}_original'] = []
                 for i in range(len(pred_dicts)):
-                    original_target_values[f'{target}_original'].append(explanations[i][target].get('truth', None))
+                    original_target_values[f'{target}_original'].append(
+                        explanations[i][target].get('truth', None)
+                    )
 
                 if dtype_dict[order_by_column] == dtype.date:
                     for row in pred_dicts:
                         if isinstance(row[order_by_column], (int, float)):
-                            row[order_by_column] = datetime.fromtimestamp(row[order_by_column]).date()
+                            row[order_by_column] = datetime.fromtimestamp(
+                                row[order_by_column]
+                            ).date()
                 elif dtype_dict[order_by_column] == dtype.datetime:
                     for row in pred_dicts:
                         if isinstance(row[order_by_column], (int, float)):
-                            row[order_by_column] = datetime.fromtimestamp(row[order_by_column])
+                            row[order_by_column] = datetime.fromtimestamp(
+                                row[order_by_column]
+                            )
 
                 explain_arr = explanations
             # endregion
@@ -372,7 +421,9 @@ class LightwoodHandler(BaseMLEngine):
                 explanation = explains[i]
                 for key in predicted_columns:
                     row[key + '_confidence'] = explanation[key]['confidence']
-                    row[key + '_explain'] = json.dumps(explanation[key], cls=NumpyJSONEncoder, ensure_ascii=False)
+                    row[key + '_explain'] = json.dumps(
+                        explanation[key], cls=NumpyJSONEncoder, ensure_ascii=False
+                    )
                     if 'anomaly' in explanation[key]:
                         row[key + '_anomaly'] = explanation[key]['anomaly']
                 for key in min_max_keys:
@@ -391,9 +442,7 @@ class LightwoodHandler(BaseMLEngine):
         predictor_record.code = lightwood.code_from_json_ai(json_ai)
         db.session.commit()
 
-        json_storage = get_json_storage(
-            resource_id=predictor_record.id
-        )
+        json_storage = get_json_storage(resource_id=predictor_record.id)
         json_storage.set('json_ai', json_ai.to_dict())
 
     def code_from_json_ai(self, json_ai: dict):
@@ -413,15 +462,15 @@ class LightwoodHandler(BaseMLEngine):
         predictor_record.code = code
         db.session.commit()
 
-        json_storage = get_json_storage(
-            resource_id=predictor_record.id
-        )
+        json_storage = get_json_storage(resource_id=predictor_record.id)
         json_storage.delete('json_ai')
 
     def _get_features_info(self):
         ai_info = self.model_storage.json_get('json_ai')
         if ai_info == {}:
-            raise Exception("predictor doesn't contain enough data to generate 'feature' attribute.")
+            raise Exception(
+                "predictor doesn't contain enough data to generate 'feature' attribute."
+            )
         data = []
         dtype_dict = ai_info["dtype_dict"]
         for column in dtype_dict:
@@ -448,7 +497,9 @@ class LightwoodHandler(BaseMLEngine):
 
         models_data = model_data.get("submodel_data", [])
         if models_data == []:
-            raise Exception("predictor doesn't contain enough data to generate 'model' attribute")
+            raise Exception(
+                "predictor doesn't contain enough data to generate 'model' attribute"
+            )
         data = []
 
         for model in models_data:
@@ -460,12 +511,23 @@ class LightwoodHandler(BaseMLEngine):
             m_data.append(accuracy_functions)
             data.append(m_data)
 
-        return pd.DataFrame(data, columns=['name', 'performance', 'training_time', 'selected', 'accuracy_functions'])
+        return pd.DataFrame(
+            data,
+            columns=[
+                'name',
+                'performance',
+                'training_time',
+                'selected',
+                'accuracy_functions',
+            ],
+        )
 
     def _get_ensemble_data(self):
         ai_info = self.model_storage.json_get('json_ai')
         if ai_info == {}:
-            raise Exception("predictor doesn't contain enough data to generate 'ensamble' attribute. Please wait until predictor is complete.")
+            raise Exception(
+                "predictor doesn't contain enough data to generate 'ensamble' attribute. Please wait until predictor is complete."
+            )
         ai_info_str = json.dumps(ai_info, indent=2)
 
         return pd.DataFrame([[ai_info_str]], columns=['ensemble'])
@@ -486,14 +548,18 @@ class LightwoodHandler(BaseMLEngine):
 
             if model_data.get('accuracies', None) is not None:
                 if len(model_data['accuracies']) > 0:
-                    model_data['accuracy'] = float(np.mean(list(model_data['accuracies'].values())))
+                    model_data['accuracy'] = float(
+                        np.mean(list(model_data['accuracies'].values()))
+                    )
 
             model_columns = self.model_storage.columns_get()
 
             model_description['accuracies'] = model_data['accuracies']
             model_description['column_importances'] = model_data['column_importances']
             model_description['outputs'] = [to_predict]
-            model_description['inputs'] = [col for col in model_columns if col not in model_description['outputs']]
+            model_description['inputs'] = [
+                col for col in model_columns if col not in model_description['outputs']
+            ]
 
             return pd.DataFrame([model_description])
 
@@ -513,5 +579,3 @@ class LightwoodHandler(BaseMLEngine):
         else:
             tables = ['info', 'features', 'model', 'jsonai']
             return pd.DataFrame(tables, columns=['tables'])
-
-

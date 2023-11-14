@@ -203,7 +203,7 @@ class YoutubeChannelsTable(APITable):
         channel_df = self.get_channel_details(channel_id)
 
         select_statement_executor = SELECTQueryExecutor(
-            channel_df, selected_columns, where_conditions, order_by_conditions
+            channel_df, selected_columns, where_conditions, order_by_conditions, result_limit
         )
 
         channel_df = select_statement_executor.execute_query()
@@ -270,7 +270,7 @@ class YoutubeVideosTable(APITable):
         video_df = self.get_video_details(video_id)
 
         select_statement_executor = SELECTQueryExecutor(
-            video_df, selected_columns, where_conditions, order_by_conditions
+            video_df, selected_columns, where_conditions, order_by_conditions, result_limit
         )
 
         video_df = select_statement_executor.execute_query()

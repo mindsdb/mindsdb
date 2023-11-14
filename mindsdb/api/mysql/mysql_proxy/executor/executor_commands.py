@@ -629,6 +629,9 @@ class ExecuteCommands:
             if self.session.kb_controller.is_knowledge_base(table_identifier):
                 return self.session.kb_controller.execute_query(statement)
 
+            if self.session.rag_controller.is_rag(table_identifier):
+                return self.session.rag_controller.execute_query(statement)
+
             query = SQLQuery(statement, session=self.session)
             return self.answer_select(query)
         elif type(statement) == Union:
@@ -1488,13 +1491,13 @@ class ExecuteCommands:
             else "default_kb"
         )
 
-        # verify the vector database exists and get its id
-        database_records = self.session.database_controller.get_dict()
-        is_database_exist = kb_name in database_records
-        if not is_database_exist:
+        # verify the kb exists and get its id
+        try:
+            kb_record = self.session.kb_controller.get(name=kb_name, project_id=project_id)
+        except Exception:
             raise SqlApiException(f"Database not found: {kb_name}")
 
-        kb_id = database_records[kb_name]["id"]
+        kb_id = kb_record.id
 
         if statement.from_query is not None:
             # TODO: implement this

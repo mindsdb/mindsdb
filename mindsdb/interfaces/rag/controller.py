@@ -1,9 +1,7 @@
 from typing import List
 
-import mindsdb_sql.planner.utils as utils
 from mindsdb_sql.parser.ast import (
     ASTNode,
-    BinaryOperation,
     Delete,
     Identifier,
     Insert,
@@ -14,7 +12,6 @@ from mindsdb_sql.parser.ast import (
 import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
 from mindsdb.api.mysql.mysql_proxy.executor.data_types import ANSWER_TYPE, ExecuteAnswer
-from mindsdb.integrations.libs.vectordatabase_handler import TableField
 
 
 class RAGBaseController:
@@ -229,14 +226,14 @@ class RAGBaseController:
             model_name=llm.name,
             attribute="args",
         )
-        args_df.set_index("key", inplace=True)
+        args_df.set_index("tables", inplace=True)
 
         # get the knowledge base id
         knowledge_base_id = rag.knowledge_base_id
 
         # get the knowledge_base object
         kb = (
-            db.session.query(db.Integration)
+            db.session.query(db.KnowledgeBase)
             .filter_by(
                 id=knowledge_base_id,
             )
@@ -260,7 +257,7 @@ class RAGBaseExecutor:
     RAG base executor handles all queries for RAGs
     """
 
-    KNOWLEDGE_BASE_FILED = "knowledge_base"
+    KNOWLEDGE_BASE_FIELD = "knowledge_base"
     LLM_FIELD = "llm"
 
     def __init__(self, session) -> None:
@@ -310,59 +307,24 @@ class RAGBaseExecutor:
             substitute the search query clause with a nested select
             from the underlying model query
         """
-        knowledge_base_metadata = self._get_rag_metadata(query.from_table)
-        vector_database_table = knowledge_base_metadata[self.STORAGE_FIELD]
-        model_name = knowledge_base_metadata[self.MODEL_FIELD]
+        rag_metadata = self._get_rag_metadata(query.from_table)
+        # llm = rag_metadata[self.LLM_FIELD]
+        kb = rag_metadata[self.KNOWLEDGE_BASE_FIELD]
 
-        CONTENT_FIELD = (
-            knowledge_base_metadata.get("content_field") or TableField.CONTENT.value
-        )
-        EMBEDDINGS_FIELD = (
-            knowledge_base_metadata.get("embeddings_field")
-            or TableField.EMBEDDINGS.value
-        )
-        SEARCH_VECTOR_FIELD = (
-            knowledge_base_metadata.get("search_vector_field")
-            or TableField.SEARCH_VECTOR.value
-        )
+        if not query.where and query.where.op != "=":
+            raise ValueError("query on a RAG must include a single where clause")
 
-        is_search_query_present = False
+        # rewrite the where clause
+        # search_query = 'some text'
+        # ->
+        # search_vector = (select embeddings from model_name where content = 'some text')
 
-        def find_search_query(node, **kwargs):
-            nonlocal is_search_query_present
-            if isinstance(node, Identifier) and node.parts[-1] == self.SEARCH_QUERY:
-                is_search_query_present = True
+        # dispatch to the underlying storage table
+        query.from_table = Identifier(kb.name)
 
-        # decide predictor is needed in the query
-        # by detecting if a where clause involving field SEARCH_QUERY is present
-        # if yes, then we need to add additional step to the plan
-        # to apply the predictor to the search query
-        utils.query_traversal(query.where, callback=find_search_query)
+        # todo fix query traversal rag --> kb
+        # todo fix query traveral kb --> llm
 
-        if not is_search_query_present:
-            # dispatch to the underlying storage table
-            query.from_table = Identifier(vector_database_table)
-        else:
-            # rewrite the where clause
-            # search_query = 'some text'
-            # ->
-            # search_vector = (select embeddings from model_name where content = 'some text')
-            def rewrite_search_query_clause(node, **kwargs):
-                if isinstance(node, BinaryOperation):
-                    if node.args[0] == Identifier(self.SEARCH_QUERY):
-                        node.args[0] = Identifier(SEARCH_VECTOR_FIELD)
-                        node.args[1] = Select(
-                            targets=[Identifier(EMBEDDINGS_FIELD)],
-                            from_table=Identifier(model_name),
-                            where=BinaryOperation(
-                                op="=", args=[Identifier(CONTENT_FIELD), node.args[1]]
-                            ),
-                        )
-
-            utils.query_traversal(query.where, callback=rewrite_search_query_clause)
-
-            # dispatch to the underlying storage table
-            query.from_table = Identifier(vector_database_table)
         sql_query = SQLQuery(sql=query, session=self.session, execute=True)
         data = sql_query.fetch()
 

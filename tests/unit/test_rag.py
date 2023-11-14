@@ -5,45 +5,37 @@ import pandas as pd
 import pytest
 from mindsdb_sql import parse_sql
 
-from mindsdb.interfaces.storage.db import RAG
+from mindsdb.interfaces.storage.db import RAG, KnowledgeBase
 
 from .executor_test_base import BaseExecutorDummyLLM
 
 
 class TestRAG(BaseExecutorDummyLLM):
-    def wait_predictor(self, project, name, filter=None):
-        # wait
-        done = False
-        for attempt in range(200):
-            sql = f"select * from {project}.models_versions where name='{name}'"
-            if filter is not None:
-                for k, v in filter.items():
-                    sql += f" and {k}='{v}'"
-            ret = self.run_sql(sql)
-            if not ret.empty:
-                if ret['STATUS'][0] == 'complete':
-                    done = True
-                    break
-                elif ret['STATUS'][0] == 'error':
-                    break
-            time.sleep(0.5)
-        if not done:
-            raise RuntimeError("predictor didn't created")
-
-    def run_sql(self, sql, throw_error=True, database='mindsdb'):
-        self.command_executor.session.database = database
-        ret = self.command_executor.execute_command(
-            parse_sql(sql, dialect='mindsdb')
-        )
-        if throw_error:
-            assert ret.error_code is None
+    def run_sql(self, sql):
+        ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
+        assert ret.error_code is None
         if ret.data is not None:
             columns = [
-                col.alias if col.alias is not None else col.name
-                for col in ret.columns
+                col.alias if col.alias is not None else col.name for col in ret.columns
             ]
             return pd.DataFrame(ret.data, columns=columns)
 
+    def wait_predictor(self, project, name):
+        # wait
+        done = False
+        for _ in range(200):
+            ret = self.run_sql(f"select * from {project}.models where name='{name}'")
+            if not ret.empty:
+                if ret["STATUS"][0] == "complete":
+                    done = True
+                    break
+                elif ret["STATUS"][0] == "error":
+                    break
+            time.sleep(0.5)
+        if not done:
+            raise RuntimeError("predictor wasn't created")
+
+    @pytest.fixture(autouse=True, scope="function")
     def setup_method(self):
 
         super().setup_method()
@@ -108,13 +100,14 @@ class TestRAG(BaseExecutorDummyLLM):
         sql = f"""
             CREATE KNOWLEDGE BASE {kb_name}
             USING
-            STORAGE = {vector_database_name}.{vector_database_table_name},
-            MODEL = {embedding_model_name}
+            MODEL = {embedding_model_name},
+            STORAGE = {vector_database_name}.{vector_database_table_name}
         """
 
         self.run_sql(sql)
 
-        self.wait_predictor("mindsdb", kb_name)
+        kb_obj = self.db.session.query(KnowledgeBase).filter_by(name=kb_name).first()
+        assert kb_obj is not None
 
         # create a llm
 
@@ -124,7 +117,7 @@ class TestRAG(BaseExecutorDummyLLM):
                 CREATE model {llm_name}
                 PREDICT answer
                 using engine='dummy_llm',
-                join_learn_process=true,
+                join_learn_process=true
                 """
 
         self.run_sql(sql)

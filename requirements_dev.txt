@@ -1,6 +1,0 @@
-black==23.3.0 #updating so it doesn't clash with lightwood
-flake8==5.0.4
-invoke>=1.7.1
-isort==5.10.1
-mypy>=0.971
-pre-commit>=2.16.0

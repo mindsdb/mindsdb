@@ -1,8 +1,9 @@
-
 from collections import OrderedDict
+
 from pymongo import MongoClient
+
+from mindsdb.integrations.handlers.mongodb_handler import Handler as MongoDBHandler
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
-from ..mongodb_handler import Handler as MongoDBHandler
 
 
 class DocumentDBHandler(MongoDBHandler):
@@ -35,9 +36,7 @@ class DocumentDBHandler(MongoDBHandler):
             kwargs['password'] = self.password
 
         connection = MongoClient(
-            host=self.host,
-            port=self.port,
-            **{**kwargs, **self.mykwargs}
+            host=self.host, port=self.port, **{**kwargs, **self.mykwargs}
         )
 
         self.is_connected = True
@@ -50,37 +49,37 @@ connection_args = OrderedDict(
         'type': ARG_TYPE.STR,
         'description': 'The user name used to authenticate with the DocumentDB server.',
         'required': True,
-        'label': 'User'
+        'label': 'User',
     },
     password={
         'type': ARG_TYPE.PWD,
         'description': 'The password to authenticate the user with the DocumentDB server.',
         'required': True,
-        'label': 'Password'
+        'label': 'Password',
     },
     database={
         'type': ARG_TYPE.STR,
         'description': 'The database name to use when connecting with the DocumentDB server.',
         'required': True,
-        'label': 'Database'
+        'label': 'Database',
     },
     host={
         'type': ARG_TYPE.STR,
         'description': 'The host name or IP address of the DocumentDB server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.',
         'required': True,
-        'label': 'Host'
+        'label': 'Host',
     },
     port={
         'type': ARG_TYPE.INT,
         'description': 'The TCP/IP port of the DocumentDB server. Must be an integer.',
         'required': True,
-        'label': 'Port'
+        'label': 'Port',
     },
     kwargs={
         'type': dict,
         'description': 'Additional parameters of DocumentDB same as MongoDB.',
         'required': False,
-        'label': 'Kwargs'
+        'label': 'Kwargs',
     },
 )
 
@@ -90,5 +89,5 @@ connection_args_example = OrderedDict(
     port=27017,
     username='documentdb',
     password='password',
-    database='database'
+    database='database',
 )

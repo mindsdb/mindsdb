@@ -124,7 +124,7 @@ class YoutubeCommentsTable(APITable):
             If the query contains an unsupported condition
         """
         
-        insert_query_parser = INSERTQueryParser(query, "comments", self.get_columns())
+        insert_query_parser = INSERTQueryParser(query, self.get_columns())
 
         values_to_insert = insert_query_parser.parse_query()
 

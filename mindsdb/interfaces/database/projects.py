@@ -13,6 +13,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.exception import EntityExistsError
 import mindsdb.utilities.profiler as profiler
 
 
@@ -34,7 +35,7 @@ class Project:
             & (db.Project.deleted_at == sa.null())
         ).first()
         if existing_record is not None:
-            raise Exception(f"Project with name '{name}' already exists")
+            raise EntityExistsError('Project already exists', name)
 
         record = db.Project(
             name=name,

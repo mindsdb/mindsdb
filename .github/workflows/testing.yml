@@ -20,7 +20,7 @@ jobs:
       - name: Install python deps
         run: |
           pip install .
-          pip install -r requirements_test.txt
+          pip install -r requirements/requirements-test.txt
       - uses: dorny/paths-filter@v2
         id: changes
         with:

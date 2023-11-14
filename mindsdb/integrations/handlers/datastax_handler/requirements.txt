@@ -1,1 +1,1 @@
-scylla-driver
+-r mindsdb/integrations/handlers/scylla_handler/requirements.txt

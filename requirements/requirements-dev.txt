@@ -1,0 +1,9 @@
+black==23.3.0 #updating so it doesn't clash with lightwood
+flake8==5.0.4
+isort==5.10.1
+pre-commit>=2.16.0
+watchfiles==0.19.0
+setuptools
+wheel
+deptry==0.12.0
+twine

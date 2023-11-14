@@ -864,6 +864,7 @@ class ExecuteCommands:
             model_info["project_name"],
             model_info["model_record"].name,
             attribute,
+            version=model_info['model_record'].version
         )
 
         df_dict = df.to_dict("split")

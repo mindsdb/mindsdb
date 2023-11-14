@@ -11,6 +11,7 @@ Callbacks enable the retrieval of a model's status when it transitions to either
     "version": 1,
     "active": true,
     "predictor_id": 123,
+    "project_name": "mindsdb",
     "predictor_created_at": "Fri, 09 Sep 2023 11:50:27 GMT",
     "old_status": "training",
     "new_status": "complete",
@@ -23,6 +24,7 @@ Let's break down each key:
  - `version`: version of the trained model
  - `active`: indicates whether the newly trained model is active
  - `predictor_id`: unique identifier for the trained model
+ - `project_name`: the name of the project in which the model was created
  - `predictor_created_at`: time at which the model was created
  - `old_status`: status the model had prior to receiving the `new_status`
  - `new_status`: current status of the model

@@ -61,8 +61,13 @@ class BaseUnitTest:
 
         from multiprocessing import dummy
 
-        mp_patcher = mock.patch("torch.multiprocessing.get_context").__enter__()
-        mp_patcher.side_effect = lambda x: dummy
+        # We might not have torch installed. So ignore any errors
+        try:
+            mp_patcher = mock.patch("torch.multiprocessing.get_context").__enter__()
+            mp_patcher.side_effect = lambda x: dummy
+        except Exception:
+            mp_patcher = mock.patch("multiprocessing.get_context").__enter__()
+            mp_patcher.side_effect = lambda x: dummy
 
     @staticmethod
     def teardown_class(cls):

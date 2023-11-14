@@ -35,7 +35,6 @@ from mindsdb.api.http.namespaces.tab import ns_conf as tab_ns
 from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
 from mindsdb.api.http.namespaces.views import ns_conf as views_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
-from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
 from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.file.file_controller import FileController
@@ -169,7 +168,7 @@ def initialize_static():
     return success
 
 
-def initialize_app(config, no_studio, with_nlp):
+def initialize_app(config, no_studio):
     static_root = config['paths']['static']
     gui_exists = Path(static_root).joinpath('index.html').is_file()
     init_static_thread = None
@@ -218,8 +217,6 @@ def initialize_app(config, no_studio, with_nlp):
         skills_ns,
         agents_ns
     ]
-    if with_nlp:
-        protected_namespaces.append(nlp_ns)
 
     for ns in protected_namespaces:
         api.add_namespace(ns)

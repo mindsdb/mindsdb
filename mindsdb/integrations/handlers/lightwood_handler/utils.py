@@ -1,8 +1,8 @@
 import gc
-import sys
 import json
-import dill
+import sys
 
+import dill
 from lightwood.api.high_level import _module_from_code
 
 
@@ -62,10 +62,7 @@ def brack_to_mod(ovr):
                         v = str_pair.split('=')[1].strip(' ')
                         args[k] = v
 
-                ovr = {
-                    'module': mod,
-                    'args': args
-                }
+                ovr = {'module': mod, 'args': args}
             elif '{' in ovr and '}' in ovr:
                 try:
                     ovr = json.loads(ovr)

@@ -132,7 +132,7 @@ class RAGIngestor:
         """
 
         for i in range(0, len(documents), embeddings_batch_size):
-            yield documents[i : i + embeddings_batch_size]
+            yield documents[i: i + embeddings_batch_size]
 
     def embeddings_to_vectordb(self) -> None:
         """Create vectorstore from documents and store locally."""
@@ -161,8 +161,19 @@ class RAGIngestor:
         # todo get max_batch from chroma client
 
         try:
-            for batch_document in batches_documents:
-                db = self.create_db_from_documents(batch_document, embeddings_model)
+            db = None
+            for i, batch_document in enumerate(batches_documents):
+                if db is None:
+                    db = self.create_db_from_documents(batch_document, embeddings_model)
+                    db.persist()
+                else:
+                    db.add_documents(batch_document)
+                    db.persist()
+
+                logger.info(f"Added batch {i + 1} of {len(batch_document)} batches to vector db")
+
+            logger.info(f"successfully loaded using 'from_documents' method")
+
         except Exception as e:
             logger.error(
                 f"Error loading using 'from_documents' method, trying 'from_text': {e}"
@@ -170,7 +181,7 @@ class RAGIngestor:
             try:
                 for batch_document in batches_documents:
                     db = self.create_db_from_texts(batch_document, embeddings_model)
-                    logger.info(f"successfully loaded using 'from_text' method: {e}")
+                    logger.info(f"successfully loaded using 'from_text' method")
 
             except Exception as e:
                 logger.error(f"Error creating from texts: {e}")

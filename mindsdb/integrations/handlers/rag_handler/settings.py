@@ -68,7 +68,7 @@ class VectorStoreFactory:
     """Factory class for vector stores"""
 
     @staticmethod
-    def get_vectorstore_class(name):
+    def get_vectorstore_class(name) -> Union[FAISS, Chroma, VectorStore]:
 
         if not isinstance(name, str):
             raise TypeError("name must be a string")
@@ -158,8 +158,8 @@ class PersistedVectorStoreLoader:
         self.config = config
 
     def load_vector_store_client(
-        self,
-        vector_store: str,
+            self,
+            vector_store: str,
     ):
         """Load vector store from the persisted vector store"""
 
@@ -373,9 +373,9 @@ class DfLoader(DataFrameLoader):
 
 
 def df_to_documents(
-    df: pd.DataFrame,
-    page_content_columns: Union[List[str], str],
-    url_column_name: str = None,
+        df: pd.DataFrame,
+        page_content_columns: Union[List[str], str],
+        url_column_name: str = None,
 ) -> List[Document]:
     """Converts a given dataframe to a list of documents"""
     documents = []
@@ -430,7 +430,7 @@ def load_embeddings_model(embeddings_model_name, use_gpu=False):
 
 
 def on_create_build_llm_params(
-    args: dict, llm_config_class: Union[WriterLLMParameters, OpenAIParameters]
+        args: dict, llm_config_class: Union[WriterLLMParameters, OpenAIParameters]
 ) -> Dict:
     """build llm params from create args"""
 

@@ -120,33 +120,28 @@ class YoutubeCommentsTable(APITable):
         )
 
         data = []
-
         while resource:
             comments = resource.execute()
-            for comment in comments["items"]:
-                user_id = comment["snippet"]["topLevelComment"]["snippet"]["authorChannelId"]["value"]
-                display_name = comment["snippet"]["topLevelComment"]["snippet"]["authorDisplayName"]
-                comment_text = comment["snippet"]["topLevelComment"]["snippet"]["textDisplay"]
 
+            for comment in comments["items"]:
                 replies = []
                 if 'replies' in comment:
-                    video_replies = comment["replies"]["comments"]
-
-                    for reply in video_replies:
-                        formatted_reply = {
-                            "reply_author": reply["snippet"]["authorDisplayName"],
-                            "user_id": reply["snippet"]["authorChannelId"]["value"],
-                            "reply": reply["snippet"]["textOriginal"],
-                        }
-                        replies.append(formatted_reply)
+                    for reply in comment["replies"]["comments"]:
+                        replies.append( 
+                            {
+                                "reply_author": reply["snippet"]["authorDisplayName"],
+                                "user_id": reply["snippet"]["authorChannelId"]["value"],
+                                "reply": reply["snippet"]["textOriginal"],
+                            }
+                        )
 
                 data.append(
                     {
                         "channel_id": comment["snippet"]["channelId"],
                         "video_id": comment["snippet"]["videoId"],
-                        "user_id": user_id,
-                        "display_name": display_name,
-                        "comment": comment_text,
+                        "user_id": comment["snippet"]["topLevelComment"]["snippet"]["authorChannelId"]["value"],
+                        "display_name": comment["snippet"]["topLevelComment"]["snippet"]["authorDisplayName"],
+                        "comment": comment["snippet"]["topLevelComment"]["snippet"]["textDisplay"],
                         "replies": replies,
                     }
                 )

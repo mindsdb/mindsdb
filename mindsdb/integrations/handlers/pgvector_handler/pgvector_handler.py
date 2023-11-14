@@ -63,7 +63,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         """
 
         if conditions is None:
-            return None
+            return {}
 
         return {
             condition.column.split(".")[-1]: {

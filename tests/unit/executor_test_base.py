@@ -6,6 +6,7 @@ import os
 import sys
 import tempfile
 from unittest import mock
+from pathlib import Path
 
 import duckdb
 import numpy as np
@@ -190,16 +191,11 @@ class BaseExecutorTest(BaseUnitTest):
         # self.mock_model_controller.get_models.side_effect = lambda: []
 
         if import_dummy_ml:
-            spec = importlib.util.spec_from_file_location(
-                "dummy_ml_handler", "./tests/unit/dummy_ml_handler/__init__.py"
-            )
-            foo = importlib.util.module_from_spec(spec)
-            sys.modules["dummy_ml_handler"] = foo
-            spec.loader.exec_module(foo)
+            test_handler_path = os.path.dirname(__file__)
+            sys.path.append(test_handler_path)
 
-            handler_module = sys.modules["dummy_ml_handler"]
-            handler_meta = integration_controller._get_handler_meta(handler_module)
-            integration_controller.handlers_import_status[handler_meta["name"]] = handler_meta
+            handler_dir = Path(test_handler_path) / 'dummy_ml_handler'
+            integration_controller.import_handler('tests.unit', handler_dir)
 
         if mock_lightwood:
             predict_patcher = mock.patch("mindsdb.integrations.libs.ml_exec_base.BaseMLEngineExec.predict")

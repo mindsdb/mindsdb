@@ -103,7 +103,7 @@ class YoutubeCommentsTable(APITable):
         List[str]
             List of columns
         """
-        return ["user_id", "display_name", "comment", "replies"]
+        return ['user_id', 'display_name', 'comment', 'replies.user_id', 'replies.reply_author', 'replies.reply']
 
     def call_youtube_comments_api(self, video_id):
         """Pulls all the records from the given youtube api end point and returns it select()
@@ -119,8 +119,6 @@ class YoutubeCommentsTable(APITable):
             .list(part="snippet, replies", videoId=video_id, textFormat="plainText")
         )
 
-        video_cols = self.get_columns()
-        all_youtube_comments_df = pd.DataFrame(columns=video_cols)
         data = []
 
         while resource:
@@ -141,16 +139,16 @@ class YoutubeCommentsTable(APITable):
                             "reply": reply["snippet"]["textOriginal"],
                         }
                         replies.append(formatted_reply)
-                data = pd.DataFrame(
+
+                data.append(
                     {
-                        "user_id": [user_id],
-                        "display_name": [display_name],
-                        "comment": [comment_text],
-                        "replies": [replies],
+                        "user_id": user_id,
+                        "display_name": display_name,
+                        "comment": comment_text,
+                        "replies": replies,
                     }
                 )
-                all_youtube_comments_df = pd.concat([all_youtube_comments_df, data], ignore_index=True)
-                
+
             if "nextPageToken" in comments:
                 resource = (
                     self.handler.connect()
@@ -165,7 +163,8 @@ class YoutubeCommentsTable(APITable):
             else:
                 break
 
-        return all_youtube_comments_df
+        youtube_comments_df = pd.json_normalize(data, 'replies', ['user_id', 'display_name', 'comment'], record_prefix='replies.')
+        return youtube_comments_df[['user_id', 'display_name', 'comment', 'replies.user_id', 'replies.reply_author', 'replies.reply']]
 
 
 class YoutubeChannelsTable(APITable):

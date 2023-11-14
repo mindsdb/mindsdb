@@ -308,18 +308,17 @@ class TestProjectStructure(BaseExecutorDummyML):
         ret = self.run_sql('select * from proj.models_versions')
         assert len(ret) == 0
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_view(self, data_handler):
+    def test_view(self):
         df = pd.DataFrame([
             {'a': 1, 'b': dt.datetime(2020, 1, 1)},
             {'a': 2, 'b': dt.datetime(2020, 1, 2)},
             {'a': 1, 'b': dt.datetime(2020, 1, 3)},
         ])
-        self.set_handler(data_handler, name='pg', tables={'tasks': df})
+        self.save_file('tasks', df)
 
         self.run_sql('''
             create view mindsdb.vtasks (
-                select * from pg.tasks where a=1
+                select * from files.tasks where a=1
             )
         ''')
 

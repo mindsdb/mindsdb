@@ -626,27 +626,30 @@ class IntegrationController:
         for handler_dir in handlers_path.iterdir():
             if handler_dir.is_dir() is False or handler_dir.name.startswith('__'):
                 continue
-            handler_folder_name = str(handler_dir.name)
+            self.import_handler('mindsdb.integrations.handlers.', handler_dir)
 
-            try:
-                handler_module = importlib.import_module(f'mindsdb.integrations.handlers.{handler_folder_name}')
-                handler_meta = self._get_handler_meta(handler_module)
-            except Exception as e:
-                handler_name = handler_folder_name
-                if handler_name.endswith('_handler'):
-                    handler_name = handler_name[:-8]
-                dependencies = self._read_dependencies(handler_dir)
-                handler_meta = {
-                    'import': {
-                        'success': False,
-                        'error_message': str(e),
-                        'folder': handler_folder_name,
-                        'dependencies': dependencies
-                    },
-                    'name': handler_name
-                }
+    def import_handler(self, base_import: str, handler_dir: Path):
+        handler_folder_name = str(handler_dir.name)
 
-            self.handlers_import_status[handler_meta['name']] = handler_meta
+        try:
+            handler_module = importlib.import_module(f'{base_import}{handler_folder_name}')
+            handler_meta = self._get_handler_meta(handler_module)
+        except Exception as e:
+            handler_name = handler_folder_name
+            if handler_name.endswith('_handler'):
+                handler_name = handler_name[:-8]
+            dependencies = self._read_dependencies(handler_dir)
+            handler_meta = {
+                'import': {
+                    'success': False,
+                    'error_message': str(e),
+                    'folder': handler_folder_name,
+                    'dependencies': dependencies
+                },
+                'name': handler_name
+            }
+
+        self.handlers_import_status[handler_meta['name']] = handler_meta
 
     def get_handlers_import_status(self):
         return self.handlers_import_status

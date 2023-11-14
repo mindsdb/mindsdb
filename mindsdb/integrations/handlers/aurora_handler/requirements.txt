@@ -1,3 +1,2 @@
-psycopg[binary]
-mysql-connector-python
-boto3
+-r mindsdb/integrations/handlers/mysql_handler/requirements.txt
+-r mindsdb/integrations/handlers/postgres_handler/requirements.txt

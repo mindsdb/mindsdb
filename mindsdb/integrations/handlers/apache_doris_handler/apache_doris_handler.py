@@ -1,4 +1,4 @@
-from ..mysql_handler import Handler as MySQLHandler
+from mindsdb.integrations.handlers.mysql_handler import Handler as MySQLHandler
 
 
 class ApacheDorisHandler(MySQLHandler):

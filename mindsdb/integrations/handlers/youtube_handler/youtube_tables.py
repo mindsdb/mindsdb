@@ -132,7 +132,7 @@ class YoutubeCommentsTable(APITable):
         List[str]
             List of columns
         """
-        return ['channel_id', 'video_id', 'user_id', 'display_name', 'comment', 'replies.user_id', 'replies.reply_author', 'replies.reply']
+        return ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', 'replies.user_id', 'replies.reply_author', 'replies.reply']
 
     def call_youtube_comments_api(self, video_id: str, channel_id: str):
         """Pulls all the records from the given youtube api end point and returns it select()
@@ -177,6 +177,7 @@ class YoutubeCommentsTable(APITable):
                         "channel_id": comment["snippet"]["channelId"],
                         "video_id": comment["snippet"]["videoId"],
                         "user_id": comment["snippet"]["topLevelComment"]["snippet"]["authorChannelId"]["value"],
+                        "comment_id": comment["snippet"]["topLevelComment"]["id"],
                         "display_name": comment["snippet"]["topLevelComment"]["snippet"]["authorDisplayName"],
                         "comment": comment["snippet"]["topLevelComment"]["snippet"]["textDisplay"],
                         "replies": replies,
@@ -198,8 +199,8 @@ class YoutubeCommentsTable(APITable):
             else:
                 break
 
-        youtube_comments_df = pd.json_normalize(data, 'replies', ['channel_id', 'video_id', 'user_id', 'display_name', 'comment'], record_prefix='replies.')
-        return youtube_comments_df[['channel_id', 'video_id', 'user_id', 'display_name', 'comment', 'replies.user_id', 'replies.reply_author', 'replies.reply']]
+        youtube_comments_df = pd.json_normalize(data, 'replies', ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment'], record_prefix='replies.')
+        return youtube_comments_df[['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', 'replies.user_id', 'replies.reply_author', 'replies.reply']]
 
 
 class YoutubeChannelsTable(APITable):

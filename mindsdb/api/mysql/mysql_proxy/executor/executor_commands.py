@@ -1187,61 +1187,42 @@ class ExecuteCommands:
         Args:
             statement: ast
         """
-        if statement.if_exists is False:
-            for table in statement.tables:
-                if len(table.parts) > 1:
-                    db_name = table.parts[0]
-                else:
-                    db_name = self.session.database
-                table_name = table.parts[-1]
-
-                if db_name == "files":
-                    dn = self.session.datahub[db_name]
-                    if dn.has_table(table_name) is False:
-                        raise SqlApiException(
-                            f"Cannot delete a table from database '{db_name}': table does not exists"
-                        )
-                else:
-                    projects_dict = self.session.database_controller.get_dict(
-                        filter_type="project"
-                    )
-                    if db_name not in projects_dict:
-                        raise SqlApiException(
-                            f"Cannot delete a table from database '{db_name}'"
-                        )
-                    project = self.session.database_controller.get_project(db_name)
-                    project_tables = {
-                        key: val
-                        for key, val in project.get_tables().items()
-                        if val.get("deletable") is True
-                    }
-                    if table_name not in project_tables:
-                        raise SqlApiException(
-                            f"Cannot delete a table from database '{db_name}': table does not exists"
-                        )
 
         for table in statement.tables:
             if len(table.parts) > 1:
                 db_name = table.parts[0]
+                table = Identifier(parts=table.parts[1:])
             else:
                 db_name = self.session.database
-            table_name = table.parts[-1]
 
-            if db_name == "files":
-                dn = self.session.datahub[db_name]
-                if dn.has_table(table_name):
-                    self.session.datahub["files"].query(
-                        DropTables(tables=[Identifier(table_name)])
+            dn = self.session.datahub[db_name]
+            if db_name is not None:
+                dn.drop_table(table, if_exists=statement.if_exists)
+
+            elif db_name in self.session.database_controller.get_dict(filter_type="project"):
+                # TODO do we need feature: delete object from project via drop table?
+
+                project = self.session.database_controller.get_project(db_name)
+                project_tables = {
+                    key: val
+                    for key, val in project.get_tables().items()
+                    if val.get("deletable") is True
+                }
+                table_name = table.to_string()
+
+                if table_name in project_tables:
+                    self.session.model_controller.delete_model(
+                        table_name, project_name=db_name
+                    )
+                elif statement.if_exists is False:
+                    raise SqlApiException(
+                        f"Cannot delete a table from database '{db_name}': table does not exists"
                     )
             else:
-                projects_dict = self.session.database_controller.get_dict(
-                    filter_type="project"
+                raise SqlApiException(
+                    f"Cannot delete a table from database '{db_name}'"
                 )
-                if db_name not in projects_dict:
-                    continue
-                self.session.model_controller.delete_model(
-                    table_name, project_name=db_name
-                )
+
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_create_view(self, statement):

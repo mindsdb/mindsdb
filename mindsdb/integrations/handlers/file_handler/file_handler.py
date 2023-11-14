@@ -15,6 +15,8 @@ from charset_normalizer import from_bytes
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import DropTables, Select
 from mindsdb_sql.parser.ast.base import ASTNode
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.document_loaders import TextLoader, PyPDFLoader
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -142,15 +144,11 @@ class FileHandler(DatabaseHandler):
             df = pd.json_normalize(json_doc, max_level=0)
 
         elif fmt == "txt" or fmt == "pdf":
-            from langchain.text_splitter import RecursiveCharacterTextSplitter
-
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=chunk_size, chunk_overlap=chunk_overlap
             )
 
             if fmt == "txt":
-                from langchain.document_loaders import TextLoader
-
                 loader = TextLoader(file_path, encoding="utf8")
                 docs = text_splitter.split_documents(loader.load())
                 df = pd.DataFrame(
@@ -161,8 +159,6 @@ class FileHandler(DatabaseHandler):
                 )
 
             elif fmt == "pdf":
-                from langchain.document_loaders import PyPDFLoader
-
                 loader = PyPDFLoader(file_path)
                 docs = text_splitter.split_documents(loader.load_and_split())
                 df = pd.DataFrame(

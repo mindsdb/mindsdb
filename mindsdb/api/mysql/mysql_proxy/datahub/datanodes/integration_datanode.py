@@ -47,6 +47,15 @@ class IntegrationDataNode(DataNode):
     def get_table_columns(self, tableName):
         return []
 
+    def drop_table(self, name: Identifier, if_exists=False):
+        drop_ast = DropTables(
+            tables=[name],
+            if_exists=if_exists
+        )
+        result = self.integration_handler.query(drop_ast)
+        if result.type == RESPONSE_TYPE.ERROR:
+            raise Exception(result.error_message)
+
     def create_table(self, table_name: Identifier, result_set, is_replace=False, is_create=False):
         # is_create - create table
         # is_replace - drop table if exists

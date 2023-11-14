@@ -8,6 +8,7 @@ from mindsdb_sql.parser import ast
 from mindsdb.integrations.handlers.utilities.query_utilities import (
     SELECTQueryParser,
     SELECTQueryExecutor,
+    INSERTQueryParser
 )
 
 import pandas as pd
@@ -104,6 +105,25 @@ class YoutubeCommentsTable(APITable):
             youtube_comments_df = youtube_comments_df.head(query.limit.value)
 
         return youtube_comments_df
+    
+    def insert(self, query: ast.Insert) -> None:
+        """Inserts data into the YouTube POST /commentThreads API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Insert
+            Given SQL INSERT query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        pass
 
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses

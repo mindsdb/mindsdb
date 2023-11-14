@@ -39,7 +39,6 @@ class YoutubeCommentsTable(APITable):
         conditions = extract_comparison_conditions(query.where)
 
         order_by_conditions = {}
-        clubs_kwargs = {}
 
         if query.order_by and len(query.order_by) > 0:
             order_by_conditions["columns"] = []
@@ -58,15 +57,25 @@ class YoutubeCommentsTable(APITable):
                 else:
                     raise ValueError(f"Order by unknown column {an_order.field.parts[1]}")
 
+        channel_id, video_id = None, None
         for a_where in conditions:
             if a_where[1] == "video_id":
                 if a_where[0] != "=":
-                    raise ValueError("Unsupported where operation for youtube video id")
-                clubs_kwargs["type"] = a_where[2]
+                    raise ValueError(f"Unsupported where operation for video_id")
+                else:
+                    video_id = a_where[2]
+            elif a_where[1] == "channel_id":
+                if a_where[0] != "=":
+                    raise ValueError(f"Unsupported where operation for channel_id")
+                else:
+                    channel_id = a_where[2]
             else:
                 raise ValueError(f"Unsupported where argument {a_where[1]}")
 
-        youtube_comments_df = self.call_youtube_comments_api(a_where[2])
+        if video_id and channel_id:
+            raise ValueError("Only one of video_id or channel_id can be present in where clause.")
+            
+        youtube_comments_df = self.call_youtube_comments_api(video_id=video_id, channel_id=channel_id)
 
         selected_columns = []
         for target in query.targets:
@@ -105,7 +114,7 @@ class YoutubeCommentsTable(APITable):
         """
         return ['channel_id', 'video_id', 'user_id', 'display_name', 'comment', 'replies.user_id', 'replies.reply_author', 'replies.reply']
 
-    def call_youtube_comments_api(self, video_id: str = None, channel_id: str = None):
+    def call_youtube_comments_api(self, video_id: str, channel_id: str):
         """Pulls all the records from the given youtube api end point and returns it select()
 
         Returns
@@ -116,7 +125,7 @@ class YoutubeCommentsTable(APITable):
         resource = (
             self.handler.connect()
             .commentThreads()
-            .list(part="snippet, replies", videoId=video_id, channelId=channel_id, textFormat="plainText")
+            .list(part="snippet, replies", videoId=video_id, allThreadsRelatedToChannelId=channel_id, textFormat="plainText")
         )
 
         data = []
@@ -153,6 +162,7 @@ class YoutubeCommentsTable(APITable):
                     .list(
                         part="snippet, replies",
                         videoId=video_id,
+                        allThreadsRelatedToChannelId=channel_id,
                         textFormat="plainText",
                         pageToken=comments["nextPageToken"],
                     )

@@ -1,23 +1,23 @@
+"""
+This module sets up logging when called in different threads.
+
+Each thread that imports this module will automatically create the top level mindsdb logger and configure it according
+to the config provided by Config(). Presumably Config() will provide the local config.
+
+The module also sets up telemetry.
+
+Finally, calling initialize_log will create a child logger for the caller which will be used to create children with the
+get log function. This allows the thread to establish a unique child logger.
+
+Absent a call to initialize_log, the default logger will be the root mindsdb logger.
+
+"""
+
 import os
 import logging
 
 from mindsdb.utilities.config import Config
 from functools import partial
-
-"""
-This module sets up logging when called in different threads. 
-
-Each thread that imports this module will automatically create the top level mindsdb logger and configure it according
-to the config provided by Config(). Presumably Config() will provide the local config. 
-
-The module also sets up telemetry.
-
-Finally, calling initialize_log will create a child logger for the caller which will be used to create children with the
-get log function. This allows the thread to establish a unique child logger. 
-
-Absent a call to initialize_log, the default logger will be the root mindsdb logger.  
-
-"""
 
 config = Config().get_all()
 

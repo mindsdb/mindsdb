@@ -73,7 +73,7 @@ class IntercomHandlerTest(unittest.TestCase):
         self.assertTrue(self.handler.native_query(query))
 
     def test_9_insert_conversations(self):
-        query = f'''INSERT INTO myintercom.conversations (type, id, body)
+        query = '''INSERT INTO myintercom.conversations (type, id, body)
                     VALUES ('user', '6547130cf077c0c9a9003ef1', 'Hello there');'''
         self.assertTrue(self.handler.native_query(query))
 

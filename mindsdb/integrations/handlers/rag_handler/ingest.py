@@ -19,6 +19,7 @@ from mindsdb.utilities.log import get_log
 
 logger = get_log(__name__)
 
+
 def validate_document(doc) -> bool:
     """Check an individual document."""
     # Example checks
@@ -93,16 +94,18 @@ class RAGIngestor:
         """Create DB from documents."""
 
         if self.args.vector_store_name == "chroma":
-
+            logger.info(f"Creating chroma db with persist location {self.args.vector_store_storage_path}")
             return self.vector_store.from_documents(
                 documents=documents,
                 embedding=embeddings_model,
+                persist_directory=self.args.vector_store_storage_path,  # required for cls.persist() to work
                 client=get_chroma_client(
                     persist_directory=self.args.vector_store_storage_path
                 ),
                 collection_name=self.args.collection_name,
             )
         else:
+            logger.info(f"Creating chroma db without persist")
             return self.vector_store.from_documents(
                 documents=documents,
                 embedding=embeddings_model,
@@ -141,10 +144,14 @@ class RAGIngestor:
             chunk_size = 10000
             chunks = -(-len(documents) // chunk_size)
             db = self.create_db_from_documents(documents[:chunk_size], embeddings_model)
-            logger.info(f"Vector database created with initial chunk of {chunks} chunks.")
+            logger.info(f"db persist directory after creation is {db._persist_directory}")
+            db.persist()  # underlying chroma client
+            logger.info(f"vector database created with initial chunk of {chunks} chunks.")
+
             for i in range(1, chunks):
                 db.add_documents(documents[i * chunk_size: (i + 1) * chunk_size])
-                logger.info(f"Vector database added chunk {i} of {chunks} chunks.")
+                db.persist()
+                logger.info(f"vector database added chunk {i + 1} of {chunks} chunks.")
         except Exception as e:
             logger.error(
                 f"Error loading using 'from_documents' method, trying 'from_text': {e}"
@@ -173,7 +180,7 @@ class RAGIngestor:
         elapsed_time = end_time - start_time
 
         logger.info(
-            "Fished creating vectorstore from documents. It took: {elapsed_time/60} minutes"
+            f"Fished creating vectorstore from documents. It took: {elapsed_time / 60} minutes"
         )
 
         logger.info("Finished creating vectorstore from documents.")

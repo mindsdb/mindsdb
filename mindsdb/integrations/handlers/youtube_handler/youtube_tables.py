@@ -126,18 +126,21 @@ class YoutubeCommentsTable(APITable):
         while resource:
             comments = resource.execute()
             for comment in comments["items"]:
-                video_replies = comment["replies"]["comments"]
                 user_id = comment["snippet"]["topLevelComment"]["snippet"]["authorChannelId"]["value"]
                 display_name = comment["snippet"]["topLevelComment"]["snippet"]["authorDisplayName"]
                 comment_text = comment["snippet"]["topLevelComment"]["snippet"]["textDisplay"]
+
                 replies = []
-                for reply in video_replies:
-                    formatted_reply = {
-                        "reply_author": reply["snippet"]["authorDisplayName"],
-                        "user_id": reply["snippet"]["authorChannelId"]["value"],
-                        "reply": reply["snippet"]["textOriginal"],
-                    }
-                    replies.append(formatted_reply)
+                if 'replies' in comment:
+                    video_replies = comment["replies"]["comments"]
+
+                    for reply in video_replies:
+                        formatted_reply = {
+                            "reply_author": reply["snippet"]["authorDisplayName"],
+                            "user_id": reply["snippet"]["authorChannelId"]["value"],
+                            "reply": reply["snippet"]["textOriginal"],
+                        }
+                        replies.append(formatted_reply)
                 data = pd.DataFrame(
                     {
                         "user_id": [user_id],
@@ -147,6 +150,7 @@ class YoutubeCommentsTable(APITable):
                     }
                 )
                 all_youtube_comments_df = pd.concat([all_youtube_comments_df, data], ignore_index=True)
+                
             if "nextPageToken" in comments:
                 resource = (
                     self.handler.connect()

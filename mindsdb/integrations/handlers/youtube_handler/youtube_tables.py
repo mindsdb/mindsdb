@@ -103,7 +103,7 @@ class YoutubeCommentsTable(APITable):
         List[str]
             List of columns
         """
-        return ['user_id', 'display_name', 'comment', 'replies.user_id', 'replies.reply_author', 'replies.reply']
+        return ['video_id', 'user_id', 'display_name', 'comment', 'replies.user_id', 'replies.reply_author', 'replies.reply']
 
     def call_youtube_comments_api(self, video_id):
         """Pulls all the records from the given youtube api end point and returns it select()
@@ -142,6 +142,7 @@ class YoutubeCommentsTable(APITable):
 
                 data.append(
                     {
+                        "video_id": video_id,
                         "user_id": user_id,
                         "display_name": display_name,
                         "comment": comment_text,
@@ -163,8 +164,8 @@ class YoutubeCommentsTable(APITable):
             else:
                 break
 
-        youtube_comments_df = pd.json_normalize(data, 'replies', ['user_id', 'display_name', 'comment'], record_prefix='replies.')
-        return youtube_comments_df[['user_id', 'display_name', 'comment', 'replies.user_id', 'replies.reply_author', 'replies.reply']]
+        youtube_comments_df = pd.json_normalize(data, 'replies', ['video_id', 'user_id', 'display_name', 'comment'], record_prefix='replies.')
+        return youtube_comments_df[['video_id', 'user_id', 'display_name', 'comment', 'replies.user_id', 'replies.reply_author', 'replies.reply']]
 
 
 class YoutubeChannelsTable(APITable):

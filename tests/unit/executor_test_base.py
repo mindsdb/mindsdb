@@ -197,6 +197,10 @@ class BaseExecutorTest(BaseUnitTest):
             handler_dir = Path(test_handler_path) / 'dummy_ml_handler'
             integration_controller.import_handler('tests.unit', handler_dir)
 
+            if not integration_controller.handlers_import_status['dummy_ml']['import']['success']:
+                error = integration_controller.handlers_import_status['dummy_ml']['import']['error_message']
+                raise Exception(f"Can not import: {str(handler_dir)}: {error}")
+
         if mock_lightwood:
             predict_patcher = mock.patch("mindsdb.integrations.libs.ml_exec_base.BaseMLEngineExec.predict")
             self.mock_predict = predict_patcher.__enter__()

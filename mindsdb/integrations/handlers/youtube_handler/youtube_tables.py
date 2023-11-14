@@ -103,9 +103,9 @@ class YoutubeCommentsTable(APITable):
         List[str]
             List of columns
         """
-        return ['video_id', 'user_id', 'display_name', 'comment', 'replies.user_id', 'replies.reply_author', 'replies.reply']
+        return ['channel_id', 'video_id', 'user_id', 'display_name', 'comment', 'replies.user_id', 'replies.reply_author', 'replies.reply']
 
-    def call_youtube_comments_api(self, video_id):
+    def call_youtube_comments_api(self, video_id: str = None, channel_id: str = None):
         """Pulls all the records from the given youtube api end point and returns it select()
 
         Returns
@@ -116,7 +116,7 @@ class YoutubeCommentsTable(APITable):
         resource = (
             self.handler.connect()
             .commentThreads()
-            .list(part="snippet, replies", videoId=video_id, textFormat="plainText")
+            .list(part="snippet, replies", videoId=video_id, channelId=channel_id, textFormat="plainText")
         )
 
         data = []
@@ -142,7 +142,8 @@ class YoutubeCommentsTable(APITable):
 
                 data.append(
                     {
-                        "video_id": video_id,
+                        "channel_id": comment["snippet"]["channelId"],
+                        "video_id": comment["snippet"]["videoId"],
                         "user_id": user_id,
                         "display_name": display_name,
                         "comment": comment_text,
@@ -164,8 +165,8 @@ class YoutubeCommentsTable(APITable):
             else:
                 break
 
-        youtube_comments_df = pd.json_normalize(data, 'replies', ['video_id', 'user_id', 'display_name', 'comment'], record_prefix='replies.')
-        return youtube_comments_df[['video_id', 'user_id', 'display_name', 'comment', 'replies.user_id', 'replies.reply_author', 'replies.reply']]
+        youtube_comments_df = pd.json_normalize(data, 'replies', ['channel_id', 'video_id', 'user_id', 'display_name', 'comment'], record_prefix='replies.')
+        return youtube_comments_df[['channel_id', 'video_id', 'user_id', 'display_name', 'comment', 'replies.user_id', 'replies.reply_author', 'replies.reply']]
 
 
 class YoutubeChannelsTable(APITable):

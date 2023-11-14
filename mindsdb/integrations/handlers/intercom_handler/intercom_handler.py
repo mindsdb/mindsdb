@@ -25,10 +25,12 @@ class IntercomHandler(APIHandler):
         args = kwargs.get('connection_data', {})
         if 'access_token' in args:
             access_token = args['access_token']
-        self._headers = {
-            "Accept": "application/json",
-            "Authorization": f"Bearer {access_token}"
-        }
+            self._headers = {
+                "Accept": "application/json",
+                "Authorization": f"Bearer {access_token}"
+            }
+        else:
+            raise Exception("Access token is missing")
         self._register_table(Articles.name, Articles(self))
         self._register_table(Conversations.name, Conversations(self))
 
@@ -56,22 +58,19 @@ class IntercomHandler(APIHandler):
         if self.is_connected and self.connection:
             return self.connection
 
-        if self._headers:
-            try:
-                response = requests.get(
-                    url=self._baseUrl,
-                    headers=self._headers
-                )
-                if response.status_code == 200:
-                    self.connection = response
-                    self.is_connected = True
-                    return StatusResponse(True)
-                else:
-                    raise Exception(f"Error connecting to Intercom API: {response.status_code} - {response.text}")
-            except requests.RequestException as e:
-                raise Exception(f"Request to Intercom API failed: {str(e)}")
-
-        raise Exception("Access token is missing")
+        try:
+            response = requests.get(
+                url=self._baseUrl + "/articles",
+                headers=self._headers
+            )
+            if response.status_code == 200:
+                self.connection = response
+                self.is_connected = True
+                return StatusResponse(True)
+            else:
+                raise Exception(response.json()['errors'])
+        except requests.RequestException as e:
+            raise Exception(f"Request to Intercom API failed: {str(e)}")
 
     def native_query(self, query: str) -> StatusResponse:
         """Receive and process a raw query.

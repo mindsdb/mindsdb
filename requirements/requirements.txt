@@ -37,3 +37,4 @@ sentry-sdk
 scikit-learn==1.3.2
 hierarchicalforecast==0.3.0
 protobuf==3.20.3
+nop

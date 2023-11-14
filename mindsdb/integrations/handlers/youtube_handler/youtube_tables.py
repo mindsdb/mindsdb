@@ -123,6 +123,25 @@ class YoutubeCommentsTable(APITable):
         ValueError
             If the query contains an unsupported condition
         """
+        
+        insert_query_parser = INSERTQueryParser(query, "comments", self.get_columns())
+
+        values_to_insert = insert_query_parser.parse_query()
+
+        for value in values_to_insert:
+            if not value.get('comment_id'):
+                if not value.get('comment'):
+                    raise ValueError(f"comment is mandatory for inserting a top-level comment.")
+                else:
+                    self.insert_comment(video_id=value['video_id'], text=value['comment'])
+
+            else:
+                if not value.get('reply'):
+                    raise ValueError(f"reply is mandatory for inserting a reply.")
+                else:
+                    self.insert_reply(comment_id=value['comment_id'], text=value['reply'])
+
+    def insert_comment(self, text, video_id: str = None, comment_id: str = None):
         pass
 
     def get_columns(self) -> List[str]:

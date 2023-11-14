@@ -14,5 +14,4 @@ repos:
       - id: check-yaml
         exclude: "^helm/"
         args: [--unsafe]
-      - id: trailing-whitespace
       - id: check-merge-conflict

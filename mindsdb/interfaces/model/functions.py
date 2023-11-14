@@ -128,7 +128,7 @@ def get_model_record(except_absent=False, ml_handler_name: Optional[str] = None,
     if project_name is not None:
         project_record = get_project_record(name=project_name)
         if project_record is None:
-            return []
+            return None
         kwargs['project_id'] = project_record.id
 
     if ml_handler_name is not None:

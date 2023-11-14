@@ -1,0 +1,7 @@
+docker >= 5.0.3
+netifaces >= 0.11.0
+pytest
+pytest-lazy-fixture~=0.6.3
+pytest-subtests
+lightwood  # This is required for tests/unit/test_executor.py. These tests need to be refactored.
+responses

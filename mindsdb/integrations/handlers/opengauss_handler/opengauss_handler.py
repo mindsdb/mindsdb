@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
-from ..postgres_handler import Handler as PostgresHandler
+from mindsdb.integrations.handlers.postgres_handler import Handler as PostgresHandler
 
 
 class OpenGaussHandler(PostgresHandler):

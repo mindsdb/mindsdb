@@ -6,6 +6,7 @@ import os
 import sys
 import tempfile
 from unittest import mock
+from pathlib import Path
 
 import duckdb
 import numpy as np
@@ -61,8 +62,13 @@ class BaseUnitTest:
 
         from multiprocessing import dummy
 
-        mp_patcher = mock.patch("torch.multiprocessing.get_context").__enter__()
-        mp_patcher.side_effect = lambda x: dummy
+        # We might not have torch installed. So ignore any errors
+        try:
+            mp_patcher = mock.patch("torch.multiprocessing.get_context").__enter__()
+            mp_patcher.side_effect = lambda x: dummy
+        except Exception:
+            mp_patcher = mock.patch("multiprocessing.get_context").__enter__()
+            mp_patcher.side_effect = lambda x: dummy
 
     @staticmethod
     def teardown_class(cls):
@@ -190,16 +196,15 @@ class BaseExecutorTest(BaseUnitTest):
         # self.mock_model_controller.get_models.side_effect = lambda: []
 
         if import_dummy_ml:
-            spec = importlib.util.spec_from_file_location(
-                "dummy_ml_handler", "./tests/unit/dummy_ml_handler/__init__.py"
-            )
-            foo = importlib.util.module_from_spec(spec)
-            sys.modules["dummy_ml_handler"] = foo
-            spec.loader.exec_module(foo)
+            test_handler_path = os.path.dirname(__file__)
+            sys.path.append(test_handler_path)
 
-            handler_module = sys.modules["dummy_ml_handler"]
-            handler_meta = integration_controller._get_handler_meta(handler_module)
-            integration_controller.handlers_import_status[handler_meta["name"]] = handler_meta
+            handler_dir = Path(test_handler_path) / 'dummy_ml_handler'
+            integration_controller.import_handler('', handler_dir)
+
+            if not integration_controller.handlers_import_status['dummy_ml']['import']['success']:
+                error = integration_controller.handlers_import_status['dummy_ml']['import']['error_message']
+                raise Exception(f"Can not import: {str(handler_dir)}: {error}")
 
         if mock_lightwood:
             predict_patcher = mock.patch("mindsdb.integrations.libs.ml_exec_base.BaseMLEngineExec.predict")
@@ -219,6 +224,11 @@ class BaseExecutorTest(BaseUnitTest):
         config_patch = mock.patch("mindsdb.utilities.cache.FileCache.get")
         self.mock_config = config_patch.__enter__()
         self.mock_config.side_effect = lambda x: None
+
+    def save_file(self, name, df):
+        file_path = tempfile.mktemp(prefix="mindsdb_file_")
+        df.to_parquet(file_path)
+        self.file_controller.save_file(name, file_path, name)
 
     def set_handler(self, mock_handler, name, tables, engine="postgres"):
         # integration

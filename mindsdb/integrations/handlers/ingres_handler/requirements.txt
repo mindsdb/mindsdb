@@ -1,3 +1,2 @@
 pyodbc
-sqlalchemy<2.0.0
-ingres_sa_dialect==0.3
+ingres_sa_dialect @ git+https://github.com/ActianCorp/ingres_sa_dialect

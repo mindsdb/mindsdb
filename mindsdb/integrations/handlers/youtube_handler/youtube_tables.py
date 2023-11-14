@@ -143,6 +143,14 @@ class YoutubeCommentsTable(APITable):
                                 "reply": reply["snippet"]["textOriginal"],
                             }
                         )
+                else:
+                    replies.append(
+                        {
+                            "reply_author": None,
+                            "user_id": None,
+                            "reply": None,
+                        }
+                    )
 
                 data.append(
                     {

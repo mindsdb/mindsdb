@@ -842,28 +842,36 @@ class ExecuteCommands:
         )
 
     def answer_describe_predictor(self, statement):
-
-        parts = statement.value.parts.copy()[:2]
+        value = statement.value.parts.copy()
+        # project.model.version.?attrs
+        parts = value[:3]
+        attrs = value[3:]
         model_info = self._get_model_info(Identifier(parts=parts), except_absent=False)
         if model_info is None:
-            parts.pop(-1)
-            attribute = statement.value.parts.copy()[1:]
-            model_info = self._get_model_info(Identifier(parts=parts))
+            # project.model.?attrs
+            parts = value[:2]
+            attrs = value[2:]
+            model_info = self._get_model_info(Identifier(parts=parts), except_absent=False)
             if model_info is None:
-                raise SqlApiException(f"Model not found: {statement.value}")
-        else:
-            attribute = statement.value.parts.copy()[2:]
+                # model.?attrs
+                parts = value[:1]
+                attrs = value[1:]
+                model_info = self._get_model_info(Identifier(parts=parts), except_absent=False)
 
-        if len(attribute) == 1:
-            attribute = attribute[0]
-        elif len(attribute) == 0:
-            attribute = None
+        if model_info is None:
+            raise SqlApiException(f"Model not found: {statement.value}")
+
+        if len(attrs) == 1:
+            attrs = attrs[0]
+        elif len(attrs) == 0:
+            attrs = None
 
         df = self.session.model_controller.describe_model(
             self.session,
             model_info["project_name"],
             model_info["model_record"].name,
-            attribute,
+            attribute=attrs,
+            version=model_info['model_record'].version
         )
 
         df_dict = df.to_dict("split")

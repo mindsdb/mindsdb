@@ -11,31 +11,41 @@ from .executor_test_base import BaseExecutorDummyLLM
 
 
 class TestRAG(BaseExecutorDummyLLM):
-    def run_sql(self, sql):
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
-        assert ret.error_code is None
-        if ret.data is not None:
-            columns = [
-                col.alias if col.alias is not None else col.name for col in ret.columns
-            ]
-            return pd.DataFrame(ret.data, columns=columns)
-
-    def wait_predictor(self, project, name):
+    def wait_predictor(self, project, name, filter=None):
         # wait
         done = False
-        for _ in range(200):
-            ret = self.run_sql(f"select * from {project}.models where name='{name}'")
+        for attempt in range(200):
+            sql = f"select * from {project}.models_versions where name='{name}'"
+            if filter is not None:
+                for k, v in filter.items():
+                    sql += f" and {k}='{v}'"
+            ret = self.run_sql(sql)
             if not ret.empty:
-                if ret["STATUS"][0] == "complete":
+                if ret['STATUS'][0] == 'complete':
                     done = True
                     break
-                elif ret["STATUS"][0] == "error":
+                elif ret['STATUS'][0] == 'error':
                     break
             time.sleep(0.5)
         if not done:
-            raise RuntimeError("predictor wasn't created")
+            raise RuntimeError("predictor didn't created")
 
-    def setup_method(self, method):
+    def run_sql(self, sql, throw_error=True, database='mindsdb'):
+        self.command_executor.session.database = database
+        ret = self.command_executor.execute_command(
+            parse_sql(sql, dialect='mindsdb')
+        )
+        if throw_error:
+            assert ret.error_code is None
+        if ret.data is not None:
+            columns = [
+                col.alias if col.alias is not None else col.name
+                for col in ret.columns
+            ]
+            return pd.DataFrame(ret.data, columns=columns)
+
+    def setup_method(self):
+
         super().setup_method()
 
         vector_database_name = "chroma_test"
@@ -73,7 +83,7 @@ class TestRAG(BaseExecutorDummyLLM):
         sql = f"""
                  CREATE TABLE chroma_test.{vector_database_table_name}
                  (
-                     SELECT * FROM pg.df
+                     SELECT * FROM files.df
                  )
              """
         self.run_sql(sql)
@@ -104,15 +114,17 @@ class TestRAG(BaseExecutorDummyLLM):
 
         self.run_sql(sql)
 
+        self.wait_predictor("mindsdb", kb_name)
+
         # create a llm
 
         llm_name = "llm_test"
 
         sql = f"""
                 CREATE model {llm_name}
-                from pg (select * from df)
                 PREDICT answer
-                using engine='dummy_llm'
+                using engine='dummy_llm',
+                join_learn_process=true,
                 """
 
         self.run_sql(sql)
@@ -127,22 +139,13 @@ class TestRAG(BaseExecutorDummyLLM):
         self.llm_name = llm_name
         self.database_path = tmp_directory
 
-    def teardown_method(self, method):
-        # drop the vector database, the llm and the knowledge base
-
-        self.run_sql(f"DROP Table {self.vector_database_table_name}")
-        self.run_sql(f"DROP DATABASE {self.vector_database_name}")
-        self.run_sql(f"DROP MODEL {self.embedding_model_name}")
-        self.run_sql(f"DROP MODEL {self.llm_name}")
-        self.run_sql(f"DROP KNOWLEDGE BASE {self.kb_name}")
-
     def test_create_rag(self):
         # create a RAG
         sql = f"""
             CREATE RAG test_rag
             USING
             llm = {self.llm_name},
-            knowledge_base = {self.kb_name}
+            knowledge_base_store = {self.kb_name}
         """
         self.run_sql(sql)
 
@@ -155,7 +158,7 @@ class TestRAG(BaseExecutorDummyLLM):
             CREATE RAG test_rag2
             USING
             llm = invalid_model_name,
-            knowledge_base = {self.kb_name}
+            knowledge_base_store = {self.kb_name}
         """
         with pytest.raises(Exception):
             self.run_sql(sql)
@@ -164,7 +167,7 @@ class TestRAG(BaseExecutorDummyLLM):
             CREATE RAG test_rag3
             USING
             LLM = {self.llm_name},
-            knowledge_base = invalid_storage_name
+            knowledge_base_store = invalid_storage_name
         """
         with pytest.raises(Exception):
             self.run_sql(sql)
@@ -175,7 +178,7 @@ class TestRAG(BaseExecutorDummyLLM):
             CREATE RAG test_rag
             USING
             llm = {self.llm_name},
-            knowledge_base = {self.kb_name}
+            knowledge_base_store = {self.kb_name}
         """
         self.run_sql(sql)
 
@@ -199,7 +202,7 @@ class TestRAG(BaseExecutorDummyLLM):
             CREATE RAG test_rag
             USING
             llm = {self.llm_name},
-            knowledge_base = {self.kb_name}
+            knowledge_base_store = {self.kb_name}
         """
         self.run_sql(sql)
 

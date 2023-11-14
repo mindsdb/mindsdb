@@ -112,6 +112,8 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="dummy_ml", data={}, engine="dummy_ml")
         db.session.add(r)
+        r = db.Integration(name="dummy_llm", data={}, engine="dummy_llm")
+        db.session.add(r)
         r = db.Integration(name="neuralforecast", data={}, engine="neuralforecast")
         db.session.add(r)
         r = db.Integration(name="popularity_recommender", data={}, engine="popularity_recommender")
@@ -213,18 +215,15 @@ class BaseExecutorTest(BaseUnitTest):
                 raise Exception(f"Can not import: {str(handler_dir)}: {error}")
 
         if import_dummy_llm:
-            spec = importlib.util.spec_from_file_location(
-                "dummy_llm_handler", "./tests/unit/dummy_llm_handler/__init__.py"
-            )
-            foo = importlib.util.module_from_spec(spec)
-            sys.modules["dummy_llm_handler"] = foo
-            spec.loader.exec_module(foo)
+            test_handler_path = os.path.dirname(__file__)
+            sys.path.append(test_handler_path)
 
-            handler_module = sys.modules["dummy_llm_handler"]
-            handler_meta = integration_controller._get_handler_meta(handler_module)
-            integration_controller.handlers_import_status[
-                handler_meta["name"]
-            ] = handler_meta
+            handler_dir = Path(test_handler_path) / 'dummy_llm_handler'
+            integration_controller.import_handler('', handler_dir)
+
+            if not integration_controller.handlers_import_status['dummy_llm']['import']['success']:
+                error = integration_controller.handlers_import_status['dummy_llm']['import']['error_message']
+                raise Exception(f"Can not import: {str(handler_dir)}: {error}")
 
         if mock_lightwood:
             predict_patcher = mock.patch("mindsdb.integrations.libs.ml_exec_base.BaseMLEngineExec.predict")

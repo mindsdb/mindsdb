@@ -195,7 +195,7 @@ class BaseExecutorTest(BaseUnitTest):
             sys.path.append(test_handler_path)
 
             handler_dir = Path(test_handler_path) / 'dummy_ml_handler'
-            integration_controller.import_handler('tests.unit', handler_dir)
+            integration_controller.import_handler('', handler_dir)
 
             if not integration_controller.handlers_import_status['dummy_ml']['import']['success']:
                 error = integration_controller.handlers_import_status['dummy_ml']['import']['error_message']

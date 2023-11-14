@@ -626,13 +626,13 @@ class IntegrationController:
         for handler_dir in handlers_path.iterdir():
             if handler_dir.is_dir() is False or handler_dir.name.startswith('__'):
                 continue
-            self.import_handler('mindsdb.integrations.handlers', handler_dir)
+            self.import_handler('mindsdb.integrations.handlers.', handler_dir)
 
     def import_handler(self, base_import: str, handler_dir: Path):
         handler_folder_name = str(handler_dir.name)
 
         try:
-            handler_module = importlib.import_module(f'{base_import}.{handler_folder_name}')
+            handler_module = importlib.import_module(f'{base_import}{handler_folder_name}')
             handler_meta = self._get_handler_meta(handler_module)
         except Exception as e:
             handler_name = handler_folder_name

@@ -142,7 +142,22 @@ class YoutubeCommentsTable(APITable):
                     self.insert_reply(comment_id=value['comment_id'], text=value['reply'])
 
     def insert_comment(self, text, video_id: str = None, comment_id: str = None):
-        pass
+        # define the request body for a top level comment
+        request_body = {
+            'snippet': {
+                'videoId': video_id,
+                'topLevelComment': {
+                    'snippet': {
+                        'textOriginal': text
+                    }
+                }
+            }
+        }
+
+        self.handler.connect().commentThreads().insert(
+            part='snippet',
+            body=request_body
+        ).execute()
 
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses

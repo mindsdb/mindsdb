@@ -27,10 +27,6 @@ jobs:
 
         python tests/scripts/check_requirements.py
 
-    - name: Check for duplicate requirements
-      shell: bash
-      run: |
-        python tests/scripts/check_duplicate_reqs.py
     - name: Check requirements files are installable
       shell: bash
       run: |

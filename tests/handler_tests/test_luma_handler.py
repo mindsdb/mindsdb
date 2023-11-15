@@ -37,8 +37,8 @@ class TestLumaHandler(BaseExecutorTest):
         """)
 
     def test_basic_select_from(self):
-        sql = "SELECT * FROM mindsdb_luma.list_events;"
+        sql = "SELECT * FROM mindsdb_luma.events;"
         self.run_sql(sql)
 
-        sql = 'SELECT * FROM mindsdb_luma.get_event where event_id = "evt-HQ36IFDwncocuGy";'
+        sql = 'SELECT * FROM mindsdb_luma.events where event_id = "evt-HQ36IFDwncocuGy";'
         assert self.run_sql(sql).shape[0] == 1

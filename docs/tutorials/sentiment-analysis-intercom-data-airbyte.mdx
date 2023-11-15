@@ -35,11 +35,22 @@ Follow [this instruction](https://docs.mindsdb.com/data-integrations/google-bigq
 
 Let's create a GPT model that we'll use to predict sentiment of Intercom conversations.
 
+<Tip>
+Before creating an OpenAI model, please create an engine, providing your OpenAI API key:
+
+```sql
+CREATE ML_ENGINE openai_engine
+FROM openai
+USING
+	api_key = 'your-openai-api-key';
+```
+</Tip>
+
 ```sql
 CREATE MODEL sentiment_classifier_model
 PREDICT sentiment
 USING
-    engine = 'openai',
+    engine = 'openai_engine',
     model_name = 'text-davinci-003',
     prompt_template = 'describe the user sentiment from the following conversation STRICTLY as positive or neutral or negative.\n###\n{{full_conversation}}     \n###\nSentiment [positive/neutral/negative]:';
 ```

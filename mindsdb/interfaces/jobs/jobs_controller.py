@@ -6,10 +6,11 @@ import sqlalchemy as sa
 
 from mindsdb_sql import parse_sql, ParsingException
 
+from mindsdb.utilities import log
+from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
-from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities import log
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
 
 
@@ -83,7 +84,7 @@ class JobsController:
             deleted_at=sa.null()
         ).first()
         if record is not None:
-            raise Exception(f'Job already exists: {name}')
+            raise EntityExistsError('Job already exists', name)
 
         if start_at is not None:
             start_at = self._parse_date(start_at)
@@ -153,7 +154,6 @@ class JobsController:
         return date
 
     def delete(self, name, project_name):
-
         project_controller = ProjectController()
         project = project_controller.get(name=project_name)
 
@@ -165,7 +165,7 @@ class JobsController:
             deleted_at=sa.null()
         ).first()
         if record is None:
-            raise Exception(f'Job not exists: {name}')
+            raise EntityNotExistsError('Job does not exist', name)
 
         self._delete_record(record)
         db.session.commit()
@@ -240,7 +240,8 @@ class JobsExecutor:
         # filter next_run < now
         query = db.session.query(db.Jobs).filter(
             db.Jobs.next_run_at < dt.datetime.now(),
-            db.Jobs.deleted_at == sa.null()
+            db.Jobs.deleted_at == sa.null(),
+            db.Jobs.active == True,  # noqa
         ).order_by(db.Jobs.next_run_at)
 
         return query.all()

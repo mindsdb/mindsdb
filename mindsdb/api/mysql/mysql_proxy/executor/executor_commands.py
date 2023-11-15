@@ -1,8 +1,8 @@
 import datetime
-from functools import reduce
 from pathlib import Path
 from textwrap import dedent
 from typing import Optional
+from functools import reduce
 
 import pandas as pd
 from mindsdb_evaluator.accuracy.general import evaluate_accuracy
@@ -39,6 +39,7 @@ from mindsdb_sql.parser.ast import (
 
 # typed models
 from mindsdb_sql.parser.dialects.mindsdb import (
+    CreateAgent,
     CreateAnomalyDetectionModel,
     CreateChatBot,
     CreateDatabase,
@@ -46,19 +47,24 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     CreateKnowledgeBase,
     CreateMLEngine,
     CreatePredictor,
+    CreateSkill,
     CreateTrigger,
     CreateView,
+    DropAgent,
     DropChatBot,
     DropDatasource,
     DropJob,
     DropKnowledgeBase,
     DropMLEngine,
     DropPredictor,
+    DropSkill,
     DropTrigger,
     Evaluate,
     FinetunePredictor,
     RetrainPredictor,
+    UpdateAgent,
     UpdateChatBot,
+    UpdateSkill
 )
 from mindsdb_sql.parser.dialects.mysql import Variable
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -101,6 +107,7 @@ from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.interfaces.triggers.triggers_controller import TriggersController
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import mark_process, resolve_model_identifier
+from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 
 def _get_show_where(
@@ -651,6 +658,18 @@ class ExecuteCommands:
             return self.answer_create_kb(statement)
         elif type(statement) == DropKnowledgeBase:
             return self.anwser_drop_kb(statement)
+        elif type(statement) == CreateSkill:
+            return self.answer_create_skill(statement)
+        elif type(statement) == DropSkill:
+            return self.answer_drop_skill(statement)
+        elif type(statement) == UpdateSkill:
+            return self.answer_update_skill(statement)
+        elif type(statement) == CreateAgent:
+            return self.answer_create_agent(statement)
+        elif type(statement) == DropAgent:
+            return self.answer_drop_agent(statement)
+        elif type(statement) == UpdateAgent:
+            return self.answer_update_agent(statement)
         elif type(statement) == Evaluate:
             statement.data = parse_sql(statement.query_str, dialect="mindsdb")
             return self.answer_evaluate_metric(statement)
@@ -692,14 +711,12 @@ class ExecuteCommands:
         job_name = name.parts[-1]
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
 
-        jobs_controller.add(
-            job_name,
-            project_name,
-            statement.query_str,
-            statement.start_str,
-            statement.end_str,
-            statement.repeat_str,
-        )
+        try:
+            jobs_controller.add(job_name, project_name, statement.query_str,
+                                statement.start_str, statement.end_str, statement.repeat_str)
+        except EntityExistsError:
+            if getattr(statement, "if_not_exists", False) is False:
+                raise
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -709,7 +726,13 @@ class ExecuteCommands:
         name = statement.name
         job_name = name.parts[-1]
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
-        jobs_controller.delete(job_name, project_name)
+        try:
+            jobs_controller.delete(job_name, project_name)
+        except EntityNotExistsError:
+            if statement.if_exists is False:
+                raise
+        except Exception as e:
+            raise e
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -819,28 +842,36 @@ class ExecuteCommands:
         )
 
     def answer_describe_predictor(self, statement):
-
-        parts = statement.value.parts.copy()[:2]
+        value = statement.value.parts.copy()
+        # project.model.version.?attrs
+        parts = value[:3]
+        attrs = value[3:]
         model_info = self._get_model_info(Identifier(parts=parts), except_absent=False)
         if model_info is None:
-            parts.pop(-1)
-            attribute = statement.value.parts.copy()[1:]
-            model_info = self._get_model_info(Identifier(parts=parts))
+            # project.model.?attrs
+            parts = value[:2]
+            attrs = value[2:]
+            model_info = self._get_model_info(Identifier(parts=parts), except_absent=False)
             if model_info is None:
-                raise SqlApiException(f"Model not found: {statement.value}")
-        else:
-            attribute = statement.value.parts.copy()[2:]
+                # model.?attrs
+                parts = value[:1]
+                attrs = value[1:]
+                model_info = self._get_model_info(Identifier(parts=parts), except_absent=False)
 
-        if len(attribute) == 1:
-            attribute = attribute[0]
-        elif len(attribute) == 0:
-            attribute = None
+        if model_info is None:
+            raise SqlApiException(f"Model not found: {statement.value}")
+
+        if len(attrs) == 1:
+            attrs = attrs[0]
+        elif len(attrs) == 0:
+            attrs = None
 
         df = self.session.model_controller.describe_model(
             self.session,
             model_info["project_name"],
             model_info["model_record"].name,
-            attribute,
+            attribute=attrs,
+            version=model_info['model_record'].version
         )
 
         df_dict = df.to_dict("split")
@@ -1040,7 +1071,7 @@ class ExecuteCommands:
 
         integration = self.session.integration_controller.get(name)
         if integration is not None:
-            raise SqlApiException(f"Database '{name}' already exists.")
+            raise EntityExistsError('Database already exists', name)
 
         self.session.integration_controller.add(name, engine, connection_args)
 
@@ -1048,7 +1079,10 @@ class ExecuteCommands:
         name = statement.name.parts[-1]
         integrations = self.session.integration_controller.get_all()
         if name in integrations:
-            raise SqlApiException(f"Integration '{name}' already exists")
+            if not getattr(statement, "if_not_exists", False):
+                raise EntityExistsError('Integration already exists', name)
+            else:
+                return ExecuteAnswer(ANSWER_TYPE.OK)
 
         handler_module_meta = (
             self.session.integration_controller.get_handlers_import_status().get(
@@ -1107,7 +1141,10 @@ class ExecuteCommands:
         name = statement.name.parts[-1]
         integrations = self.session.integration_controller.get_all()
         if name not in integrations:
-            raise SqlApiException(f"Integration '{name}' does not exists")
+            if not statement.if_exists:
+                raise SqlApiException(f"Integration '{name}' does not exists")
+            else:
+                return ExecuteAnswer(ANSWER_TYPE.OK)
         self.session.integration_controller.delete(name)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -1128,9 +1165,17 @@ class ExecuteCommands:
         connection_args = statement.parameters
 
         if engine == "mindsdb":
-            ProjectController().add(database_name)
+            try:
+                ProjectController().add(database_name)
+            except EntityExistsError:
+                if statement.if_not_exists is False:
+                    raise
         else:
-            self._create_integration(database_name, engine, connection_args)
+            try:
+                self._create_integration(database_name, engine, connection_args)
+            except EntityExistsError:
+                if getattr(statement, "if_not_exists", False) is False:
+                    raise
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -1138,7 +1183,11 @@ class ExecuteCommands:
         if len(statement.name.parts) != 1:
             raise Exception("Database name should contain only 1 part.")
         db_name = statement.name.parts[0]
-        self.session.database_controller.delete(db_name)
+        try:
+            self.session.database_controller.delete(db_name)
+        except EntityExistsError:
+            if statement.if_exists is not True:
+                raise
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_tables(self, statement):
@@ -1146,61 +1195,42 @@ class ExecuteCommands:
         Args:
             statement: ast
         """
-        if statement.if_exists is False:
-            for table in statement.tables:
-                if len(table.parts) > 1:
-                    db_name = table.parts[0]
-                else:
-                    db_name = self.session.database
-                table_name = table.parts[-1]
-
-                if db_name == "files":
-                    dn = self.session.datahub[db_name]
-                    if dn.has_table(table_name) is False:
-                        raise SqlApiException(
-                            f"Cannot delete a table from database '{db_name}': table does not exists"
-                        )
-                else:
-                    projects_dict = self.session.database_controller.get_dict(
-                        filter_type="project"
-                    )
-                    if db_name not in projects_dict:
-                        raise SqlApiException(
-                            f"Cannot delete a table from database '{db_name}'"
-                        )
-                    project = self.session.database_controller.get_project(db_name)
-                    project_tables = {
-                        key: val
-                        for key, val in project.get_tables().items()
-                        if val.get("deletable") is True
-                    }
-                    if table_name not in project_tables:
-                        raise SqlApiException(
-                            f"Cannot delete a table from database '{db_name}': table does not exists"
-                        )
 
         for table in statement.tables:
             if len(table.parts) > 1:
                 db_name = table.parts[0]
+                table = Identifier(parts=table.parts[1:])
             else:
                 db_name = self.session.database
-            table_name = table.parts[-1]
 
-            if db_name == "files":
-                dn = self.session.datahub[db_name]
-                if dn.has_table(table_name):
-                    self.session.datahub["files"].query(
-                        DropTables(tables=[Identifier(table_name)])
+            dn = self.session.datahub[db_name]
+            if db_name is not None:
+                dn.drop_table(table, if_exists=statement.if_exists)
+
+            elif db_name in self.session.database_controller.get_dict(filter_type="project"):
+                # TODO do we need feature: delete object from project via drop table?
+
+                project = self.session.database_controller.get_project(db_name)
+                project_tables = {
+                    key: val
+                    for key, val in project.get_tables().items()
+                    if val.get("deletable") is True
+                }
+                table_name = table.to_string()
+
+                if table_name in project_tables:
+                    self.session.model_controller.delete_model(
+                        table_name, project_name=db_name
+                    )
+                elif statement.if_exists is False:
+                    raise SqlApiException(
+                        f"Cannot delete a table from database '{db_name}': table does not exists"
                     )
             else:
-                projects_dict = self.session.database_controller.get_dict(
-                    filter_type="project"
+                raise SqlApiException(
+                    f"Cannot delete a table from database '{db_name}'"
                 )
-                if db_name not in projects_dict:
-                    continue
-                self.session.model_controller.delete_model(
-                    table_name, project_name=db_name
-                )
+
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_create_view(self, statement):
@@ -1245,7 +1275,11 @@ class ExecuteCommands:
                 )
 
         project = self.session.database_controller.get_project(project_name)
-        project.create_view(view_name, query=query_str)
+        try:
+            project.create_view(view_name, query=query_str)
+        except EntityExistsError:
+            if getattr(statement, "if_not_exists", False) is False:
+                raise
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
     def answer_drop_view(self, statement):
@@ -1258,7 +1292,12 @@ class ExecuteCommands:
             else:
                 db_name = self.session.database
             project = self.session.database_controller.get_project(db_name)
-            project.drop_view(view_name)
+
+            try:
+                project.drop_view(view_name)
+            except EntityNotExistsError:
+                if statement.if_exists is not True:
+                    raise
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
@@ -1386,6 +1425,130 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
+    def answer_create_skill(self, statement):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        try:
+            _ = self.session.skills_controller.add_skill(
+                name,
+                project_name,
+                statement.type,
+                statement.params
+            )
+        except ValueError as e:
+            # Project does not exist or skill already exists.
+            raise SqlApiException(str(e))
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def answer_drop_skill(self, statement):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        try:
+            self.session.skills_controller.delete_skill(name, project_name)
+        except ValueError as e:
+            # Project does not exist or skill does not exist.
+            raise SqlApiException(str(e))
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def answer_update_skill(self, statement):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        type = statement.params.pop('type', None)
+        try:
+            _ = self.session.skills_controller.update_skill(
+                name,
+                project_name=project_name,
+                type=type,
+                params=statement.params
+            )
+        except ValueError as e:
+            # Project does not exist or skill does not exist.
+            raise SqlApiException(str(e))
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def answer_create_agent(self, statement):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        skills = statement.params.pop('skills', [])
+        try:
+            _ = self.session.agents_controller.add_agent(
+                name,
+                project_name,
+                statement.model,
+                skills,
+                statement.params
+            )
+        except ValueError as e:
+            # Project does not exist or agent already exists.
+            raise SqlApiException(str(e))
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def answer_drop_agent(self, statement):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        try:
+            self.session.agents_controller.delete_agent(name, project_name)
+        except ValueError as e:
+            # Project does not exist or agent does not exist.
+            raise SqlApiException(str(e))
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
+    def answer_update_agent(self, statement):
+        name = statement.name.parts[-1]
+        project_name = (
+            statement.name.parts[0]
+            if len(statement.name.parts) > 1
+            else self.session.database
+        )
+
+        model = statement.params.pop('model', None)
+        skills_to_add = statement.params.pop('skills_to_add', [])
+        skills_to_remove = statement.params.pop('skills_to_remove', [])
+        try:
+            _ = self.session.agents_controller.update_agent(
+                name,
+                project_name=project_name,
+                model_name=model,
+                skills_to_add=skills_to_add,
+                skills_to_remove=skills_to_remove,
+                params=statement.params
+            )
+        except ValueError as e:
+            # Project does not exist or agent does not exist.
+            raise SqlApiException(str(e))
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+
     @mark_process("learn")
     def answer_create_predictor(self, statement):
         integration_name = self.session.database
@@ -1406,14 +1569,20 @@ class ExecuteCommands:
             ml_integration_name
         )
 
-        df = self.session.model_controller.create_model(statement, ml_handler)
-        resp_dict = df.to_dict(orient="split")
+        try:
+            df = self.session.model_controller.create_model(statement, ml_handler)
+            resp_dict = df.to_dict(orient='split')
 
-        columns = [Column(col) for col in resp_dict["columns"]]
+            columns = [
+                Column(col)
+                for col in resp_dict['columns']
+            ]
 
-        return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict["data"]
-        )
+            return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
+        except EntityExistsError:
+            if getattr(statement, "if_not_exists", False) is True:
+                return ExecuteAnswer(ANSWER_TYPE.OK)
+            raise
 
     def answer_show_columns(
         self,

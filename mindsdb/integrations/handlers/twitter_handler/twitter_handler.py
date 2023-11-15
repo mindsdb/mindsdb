@@ -151,26 +151,24 @@ class TweetsTable(APITable):
             # split long text over 280 symbols
             max_text_len = 280
             text = params['text']
-            if len(text) <= 280:
-                # Post image if column media_url is provided, only do this on last tweet
-                if 'media_url' in params:
-                    media_url = params['media_url']
 
-                    # create an in memory file
-                    resp = requests.get(media_url)
-                    img = io.BytesIO(resp.content)
+            # Post image if column media_url is provided, only do this on last tweet
+            media_ids = None
+            if 'media_url' in params:
+                media_url = params.pop('media_url')
 
-                    # upload media to twitter
-                    api_v1 = self.handler.create_connection(api_version=1)
-                    content_type = resp.headers['Content-Type']
-                    file_type = content_type.split('/')[-1]
-                    media = api_v1.media_upload(filename="img.{file_type}".format(file_type=file_type), file=img)
+                # create an in memory file
+                resp = requests.get(media_url)
+                img = io.BytesIO(resp.content)
 
-                    del params['media_url']
-                    params['media_ids'] = [media.media_id]
+                # upload media to twitter
+                api_v1 = self.handler.create_connection(api_version=1)
+                content_type = resp.headers['Content-Type']
+                file_type = content_type.split('/')[-1]
+                media = api_v1.media_upload(filename="img.{file_type}".format(file_type=file_type), file=img)
 
-                self.handler.call_twitter_api('create_tweet', params)
-                continue
+                media_ids = [media.media_id]
+
 
             words = re.split('( )', text)
 
@@ -197,6 +195,9 @@ class TweetsTable(APITable):
                     text += '...'
                 else:
                     text += ' '
+                    # publish media with the last message
+                    if media_ids is not None:
+                        params['media_ids'] = media_ids
 
                 text += f'({i + 1}/{len_messages})'
 

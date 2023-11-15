@@ -49,6 +49,10 @@ Read about creating a GitHub API key [here](https://docs.github.com/en/github/au
   - [x] Support INSERT
     - [x] Support title, body, assignee, milestone, and labels columns
 - [x] GitHub Pull Requests Table for a given Repository
+- [x] GitHub Commits Table for a given Repository
+- [x] GitHub Releases Table for a given Repository
+- [x] GitHub Branches Table for a given Repositorytory
+- [x] GitHub Projects Table for a given Repository
   - [x] Support SELECT
     - [x] Support LIMIT
     - [x] Support WHERE

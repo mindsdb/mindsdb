@@ -15,7 +15,7 @@ from mindsdb.utilities.functions import init_lexer_parsers
 from mindsdb.integrations.libs.ml_exec_base import process_cache
 
 
-def start(verbose, no_studio, with_nlp):
+def start(verbose, no_studio):
     config = Config()
 
     server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
@@ -24,7 +24,7 @@ def start(verbose, no_studio, with_nlp):
 
     init_lexer_parsers()
 
-    app = initialize_app(config, no_studio, with_nlp)
+    app = initialize_app(config, no_studio)
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']

@@ -16,7 +16,6 @@ from langchain.embeddings.base import Embeddings
 from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS, Chroma, VectorStore
 from pydantic import BaseModel, Extra, Field, validator
-from writer.models import shared
 
 from mindsdb.integrations.handlers.chromadb_handler.chromadb_handler import get_chromadb
 from mindsdb.integrations.handlers.rag_handler.exceptions import (
@@ -56,7 +55,6 @@ DEFAULT_CHUNK_SIZE = 500
 DEFAULT_CHUNK_OVERLAP = 50
 DEFAULT_VECTOR_STORE_NAME = "chroma"
 DEFAULT_VECTOR_STORE_COLLECTION_NAME = "collection"
-DEFAULT_PERSISTED_VECTOR_STORE_FOLDER_NAME = "vector_store_folder"
 
 chromadb = get_chromadb()
 
@@ -93,7 +91,7 @@ def get_available_writer_model_ids(args: dict) -> list:
     """Get available writer LLM model ids"""
 
     writer_client = writer.Writer(
-        security=shared.Security(api_key=args["writer_api_key"]),
+        api_key=args["writer_api_key"],
         organization_id=args["writer_org_id"],
     )
 
@@ -279,6 +277,7 @@ class RAGBaseParameters(BaseModel):
     """Base model parameters for RAG Handler"""
 
     llm_params: Any
+    vector_store_folder_name: str
     prompt_template: str = DEFAULT_QA_PROMPT_TEMPLATE
     chunk_size: int = DEFAULT_CHUNK_SIZE
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
@@ -292,8 +291,9 @@ class RAGBaseParameters(BaseModel):
     collection_name: str = DEFAULT_VECTOR_STORE_COLLECTION_NAME
     summarize_context: bool = True
     summarization_prompt_template: str = DEFAULT_SUMMARIZATION_PROMPT_TEMPLATE
-    vector_store_folder_name: str = DEFAULT_PERSISTED_VECTOR_STORE_FOLDER_NAME
-    vector_store_storage_path: str = None
+    vector_store_storage_path: str = Field(
+        default=None, title="don't use this field, it's for internal use only"
+    )
 
     class Config:
         extra = Extra.forbid

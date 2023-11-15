@@ -6,7 +6,6 @@ from mindsdb_sql import parse_sql
 
 from mindsdb.integrations.handlers.confluence_handler.confluence_table import (
     ConfluencePagesTable,
-    ConfluenceSpacesTable,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
@@ -36,10 +35,7 @@ class ConfluenceHandler(APIHandler):
         self.connection = None
         self.is_connected = False
 
-        confluence_spaces_data = ConfluenceSpacesTable(self)
         confluence_pages_data = ConfluencePagesTable(self)
-
-        self._register_table("spaces", confluence_spaces_data)
         self._register_table("pages", confluence_pages_data)
 
     def connect(self):

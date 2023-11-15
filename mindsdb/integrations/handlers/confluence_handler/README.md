@@ -41,16 +41,17 @@ WITH
 Use the established connection to query your database:
 
 ~~~~sql
-SELECT * FROM mindsdb_confluence.spaces
+SELECT * FROM mindsdb_confluence.pages
+WHERE space='space';
 ~~~~
 
 Advanced queries for the confluence handler
 
 ~~~~sql
-SELECT id,key,name,type
-FROM mindsdb_confluence.spaces
-WHERE type="personal"
-ORDER BY id ASC, name DESC
+SELECT id,title,body
+FROM mindsdb_confluence.pages
+WHERE space='space'
+ORDER BY id ASC, title DESC
 LIMIT 10
 ~~~~
 

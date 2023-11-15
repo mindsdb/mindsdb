@@ -350,10 +350,10 @@ class YoutubeVideosTable(APITable):
         if not video_id and not channel_id:
             raise NotImplementedError("Either video_id or channel_id has to be present in where clause.")
         
-        if channel_id:
-            video_df = self.get_videos_by_channel_id(channel_id)
-        else:
+        if video_id:
             video_df = self.get_video_details(video_id)
+        else:
+            video_df = self.get_videos_by_channel_id(channel_id)
 
         select_statement_executor = SELECTQueryExecutor(
             video_df, 

@@ -356,7 +356,11 @@ class YoutubeVideosTable(APITable):
             video_df = self.get_video_details(video_id)
 
         select_statement_executor = SELECTQueryExecutor(
-            video_df, selected_columns, where_conditions, order_by_conditions, result_limit
+            video_df, 
+            selected_columns, 
+            [where_condition for where_condition in where_conditions if where_condition[1] not in ['video_id', 'channel_id']], 
+            order_by_conditions, 
+            result_limit
         )
 
         video_df = select_statement_executor.execute_query()

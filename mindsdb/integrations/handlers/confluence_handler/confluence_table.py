@@ -63,13 +63,23 @@ class ConfluencePagesTable(APITable):
                 if a_where[0] != "=":
                     raise ValueError("Unsupported where operation for space")
                 pages_kwargs["space"] = space_name
-            else:
+            elif a_where[1] not in ["id", "space"]:
                 raise ValueError(f"Unsupported where argument {a_where[1]}")
 
         confluence_pages_records = self.handler.connect().get_all_pages_from_space(
             space_name, start=0, limit=total_results, expand="body.storage"
         )
         confluence_pages_df = pd.json_normalize(confluence_pages_records)
+
+        for a_where in conditions:
+            if a_where[1] == "id":
+                id = a_where[2]
+                if a_where[0] != "=":
+                    raise ValueError("Unsupported where operation for id")
+                confluence_pages_df = confluence_pages_df[
+                    confluence_pages_df.id == id
+                ]
+                
 
         def extract_space(input_string):
             parts = input_string.split('/')

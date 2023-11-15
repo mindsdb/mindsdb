@@ -76,7 +76,7 @@ class YoutubeCommentsTable(APITable):
         if video_id and channel_id:
             raise ValueError("Only one of video_id or channel_id can be present in where clause.")
             
-        youtube_comments_df = self.call_youtube_comments_api(video_id=video_id, channel_id=channel_id)
+        youtube_comments_df = self.get_comments(video_id=video_id, channel_id=channel_id)
 
         selected_columns = []
         for target in query.targets:
@@ -183,7 +183,7 @@ class YoutubeCommentsTable(APITable):
         """
         return ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', 'replies.user_id', 'replies.reply_author', 'replies.reply']
 
-    def call_youtube_comments_api(self, video_id: str, channel_id: str):
+    def get_comments(self, video_id: str, channel_id: str):
         """Pulls all the records from the given youtube api end point and returns it select()
 
         Returns

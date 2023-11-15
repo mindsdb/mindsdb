@@ -84,7 +84,6 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErSqlWrongArguments,
     ErTableExistError,
     SqlApiException,
-    log,
 )
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import download_file
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
@@ -108,6 +107,7 @@ from mindsdb.interfaces.triggers.triggers_controller import TriggersController
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import mark_process, resolve_model_identifier
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
+from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 

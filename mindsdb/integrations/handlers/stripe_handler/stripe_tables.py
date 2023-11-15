@@ -12,9 +12,9 @@ from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.handlers.utilities.query_utilities.select_query_utilities import SELECTQueryParser, SELECTQueryExecutor
 
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
-logger = get_log("integrations.stripe_handler")
+logger = log.getLogger(__name__)
 
 
 class CustomersTable(APITable):

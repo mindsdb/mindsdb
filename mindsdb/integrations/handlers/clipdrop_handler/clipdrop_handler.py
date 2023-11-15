@@ -5,10 +5,10 @@ from mindsdb.integrations.handlers.clipdrop_handler.clipdrop import ClipdropClie
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 
-logger = get_log("integrations.clipdrop_handler")
+logger = log.getLogger(__name__)
 
 
 class ClipdropHandler(BaseMLEngine):

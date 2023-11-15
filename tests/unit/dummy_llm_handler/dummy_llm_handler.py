@@ -18,7 +18,7 @@ class DummyHandler(BaseMLEngine):
     def predict(self, df, args=None):
         df['answer'] = "random text answer"
         df['predictor_id'] = self.model_storage.predictor_id
-        return df[['predicted', 'predictor_id']]
+        return df
 
     def describe(self, attribute=None):
         if attribute == 'info':

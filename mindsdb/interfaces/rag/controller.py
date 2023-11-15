@@ -11,6 +11,7 @@ from mindsdb_sql.parser.ast import (
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
+from mindsdb.integrations.libs.vectordatabase_handler import TableField
 from mindsdb.api.mysql.mysql_proxy.executor.data_types import ANSWER_TYPE, ExecuteAnswer
 
 
@@ -46,13 +47,13 @@ class RAGBaseController:
             raise NotImplementedError()
 
     def add(
-        self,
-        name: str,
-        project_id: str,
-        knowledge_base_id: str,
-        llm_id: str,
-        params: dict,
-        if_not_exists: bool = False,
+            self,
+            name: str,
+            project_id: str,
+            knowledge_base_id: str,
+            llm_id: str,
+            params: dict,
+            if_not_exists: bool = False,
     ) -> int:
         """
         Add a new RAG to the database
@@ -308,24 +309,31 @@ class RAGBaseExecutor:
             from the underlying model query
         """
         rag_metadata = self._get_rag_metadata(query.from_table)
-        # llm = rag_metadata[self.LLM_FIELD]
+        llm = rag_metadata[self.LLM_FIELD]
         kb = rag_metadata[self.KNOWLEDGE_BASE_FIELD]
 
         if not query.where and query.where.op != "=":
             raise ValueError("query on a RAG must include a single where clause")
 
-        # rewrite the where clause
-        # search_query = 'some text'
-        # ->
-        # search_vector = (select embeddings from model_name where content = 'some text')
+        input_where_left = query.where.args[0]
+        input_where_right = query.where.args[1]
 
-        # dispatch to the underlying storage table
+        vector_db_content = TableField.CONTENT.value
+
+        # build the search query for the underlying knowledge base
+        query.targets = [Identifier(vector_db_content)]
         query.from_table = Identifier(kb.name)
+        query.where.args[0] = Identifier("search_query")
 
-        # todo fix query traversal rag --> kb
-        # todo fix query traveral kb --> llm
+        # search knowledge base with the search query
+        kb_result = self.session.kb_controller.execute_query(query=query)
 
-        sql_query = SQLQuery(sql=query, session=self.session, execute=True)
+        content_data = ", ".join([data[0] for data in kb_result.data])
+
+        # pass retrieved data from knowledgebase to llm
+        llm_query = f"""select * from {llm.name} where {vector_db_content} ='{content_data}' and {input_where_left}={input_where_right}"""
+
+        sql_query = SQLQuery(sql=llm_query, session=self.session, execute=True)
         data = sql_query.fetch()
 
         return ExecuteAnswer(

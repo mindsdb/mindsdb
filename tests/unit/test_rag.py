@@ -200,16 +200,13 @@ class TestRAG(BaseExecutorDummyLLM):
         self.run_sql(sql)
 
         # select all without where clause should fail
+        sql = """
+            SELECT *
+            FROM test_rag
+        """
 
-        # todo it should not be possible to run select without where
-
-        # sql = """
-        #     SELECT *
-        #     FROM test_rag
-        # """
-        #
-        # with pytest.raises(Exception):
-        #     self.run_sql(sql)
+        with pytest.raises(Exception):
+            self.run_sql(sql)
 
         # select with a valid where clause
         sql = """
@@ -218,6 +215,7 @@ class TestRAG(BaseExecutorDummyLLM):
             WHERE
                 question = 'what is the answer?'
         """
+
         df = self.run_sql(sql)
         assert df.shape[0] == 1
 

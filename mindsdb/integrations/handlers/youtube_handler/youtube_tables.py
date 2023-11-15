@@ -333,19 +333,27 @@ class YoutubeVideosTable(APITable):
             result_limit,
         ) = select_statement_parser.parse_query()
 
-        video_id = None
+        video_id, channel_id = None, None
         for op, arg1, arg2 in where_conditions:
             if arg1 == "video_id":
                 if op == "=":
                     video_id = arg2
-                    break
                 else:
                     raise NotImplementedError("Only '=' operator is supported for video_id column.")
+                
+            elif arg1 == "channel_id":
+                if op == "=":
+                    channel_id = arg2
+                else:
+                    raise NotImplementedError("Only '=' operator is supported for channel_id column.")
 
-        if not video_id:
-            raise NotImplementedError("video_id has to be present in where clause.")
-
-        video_df = self.get_video_details(video_id)
+        if not video_id and not channel_id:
+            raise NotImplementedError("Either video_id or channel_id has to be present in where clause.")
+        
+        if channel_id:
+            video_df = self.get_videos_by_channel_id(channel_id)
+        else:
+            video_df = self.get_video_details(video_id)
 
         select_statement_executor = SELECTQueryExecutor(
             video_df, selected_columns, where_conditions, order_by_conditions, result_limit

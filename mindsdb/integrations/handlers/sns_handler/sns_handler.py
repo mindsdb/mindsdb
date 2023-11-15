@@ -4,11 +4,13 @@ from mindsdb.integrations.handlers.sns_handler.sns_tables import MessageTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb_sql import parse_sql
+from pandas import DataFrame
 from collections import OrderedDict
 from typing import Optional
 import boto3
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 import json as JSON
+from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
 from mindsdb.utilities import log
 
 
@@ -67,7 +69,8 @@ class SnsHandler(APIHandler):
         """
         if self.is_connected is True:
             return self.connection
-        if self.connection_data['endpoint_url'] is not None:
+        # todo test it
+        if 'endpoint_url' not in  self.connection_data:
             self.connection = boto3.client(
                 'sns',
                 aws_access_key_id=self.connection_data['aws_access_key_id'],
@@ -89,10 +92,12 @@ class SnsHandler(APIHandler):
         json_response = json_response.replace("\'", "\"")
         data = JSON.loads(str(json_response))
         return data["Topics"]
-    
+   
     def publish_message(self,  topic_arn = None, message = None):
-        self.connection.publish(TopicArn=topic_arn,Message=message)
-        
+        self.connection.publish(TopicArn = topic_arn,Message = message)
+    def publish_batch(self,  topic_arn = None, batch_request_entries = None):
+        self.connection.publish_batch(TopicArn = topic_arn,PublishBatchRequestEntries=batch_request_entries)
+                   
     def create_topic(self, name = None):
         self.connection.create_topic(Name=name)
         
@@ -109,10 +114,17 @@ class SnsHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query, dialect="mindsdb")
-        return self.query(ast)
+        method_name, params = FuncParser().from_string(query)
+        #
+        # 
+        # 
+        # df = self.call_application_api(method_name, params)
+        #ast = parse_sql(query, dialect="mindsdb")
+        #return self.query(ast)
+    
 
-
+    def call_application_api(self, method_name: str = None, params: dict = None) -> DataFrame:
+        print ("Test")
 connection_args = OrderedDict(
     aws_access_key_id={
         'type': ARG_TYPE.STR,

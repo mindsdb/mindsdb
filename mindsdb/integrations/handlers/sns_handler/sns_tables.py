@@ -3,13 +3,12 @@ from typing import List
 import pandas as pd
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilities import INSERTQueryParser
-
 from mindsdb.integrations.libs.api_handler import APITable, APIHandler
 
 
 class MessageTable(APITable):
     name: str = "messages"
-    columns: List[str] = ["TopicArn", "Message"]
+    columns: List[str] = ['message', 'topic_arn', 'id','subject','message_deduplication_id', 'message_group_id']
 
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
@@ -27,21 +26,51 @@ class MessageTable(APITable):
         super().__init__(handler)
         self.handler.connect()
 
-    def insert(self, query: ast.Insert) -> pd.DataFrame:
-    
+    def insert(self, query: ast.Insert) -> pd.DataFrame:    
+        supported_columns={'id','subject','message_deduplication_id', 'message_group_id', 'message', 'topic_arn', 'message_attributes'}
         insert_statement_parser = INSERTQueryParser(
             query,
-            mandatory_columns=['message', 'TopicArn'],
-            all_mandatory=True
+            mandatory_columns=['message', 'topic_arn'],
+            supported_columns=list(supported_columns),
+            all_mandatory=False
         )
+        columns = [col.name for col in query.columns]
+        if not set(columns).issubset(supported_columns):
+            unsupported_columns = set(columns).difference(supported_columns)
+            raise ValueError(
+                "Unsupported columns for publish message: "
+                + ", ".join(unsupported_columns)
+            )
+    
         message_rows = insert_statement_parser.parse_query()
-        #message = message_data[0]['message']
-        #topic_arn = message_data[0]['TopicArn']
-        for  message_row in message_rows:
-            message = message_row['message']
-            topic_arn = message_row['TopicArn']
-            self.handler.publish_message(topic_arn=topic_arn, message=message)
-        # todo check insert in mysql how works currently return 0
+        if 'id' not in  message_rows[0]:
+           for  message_row in message_rows:
+               message = message_row['message']
+               topic_arn = message_row['topic_arn']
+               self.handler.publish_message(topic_arn=topic_arn, message=message)
+        else:
+            request_entries = []
+            topic_arn = ""
+            for message_row in message_rows:
+                message = message_row['message']
+                topic_arn = message_row['topic_arn']
+                message_id = message_row['id']
+                subject = str()
+                message_group_id = str()
+                message_deduplication_id = str()
+                message_attributes = {}
+                if 'subject' in message_row:
+                   subject = message_row['subject']
+                if 'message_deduplication_id' in message_row:
+                   message_deduplication_id = message_row['message_deduplication_id']
+                if 'message_group_id' in message_row:
+                   message_group_id = message_row['message_group_id']
+                if 'message_attributes' in message_row:
+                    message_attributes = message_row['message_attributes']
+                # check uniq ids ?    
+                request_entry={'Id': message_id, 'Message': message, 'Subject': subject, 'MessageDeduplicationId': message_deduplication_id, 'MessageGroupId': message_group_id, 'MessageAttributes': message_attributes }
+                request_entries.append(request_entry)             
+            self.handler.publish_batch(topic_arn=topic_arn, batch_request_entries=request_entries)
         
 
 
@@ -63,23 +92,31 @@ class TopicTable(APITable):
             pd.DataFrame: the queried information
         """
         topics = self.handler.topic_list()
-        index_list = []
+        ids_list = []
         topics_arn_list = []
-        i = 1
+        id = 1
         for topic in topics:
-            index_list.append(i)
+            ids_list.append(id)
             topics_arn_list.append(topic["TopicArn"])
-            i += 1
-        data = {'index': index_list, 'topic_arn': topics_arn_list}
+            id += 1
+        data = {'id': ids_list, 'topic_arn': topics_arn_list}
         df = pd.DataFrame(data=data)
         return df
 
     def insert(self, query: ast.Insert) -> pd.DataFrame:
+        mandatory_columns = {'name'}
         insert_statement_parser = INSERTQueryParser(
             query,
-            mandatory_columns=['Name'],
+            mandatory_columns=list(mandatory_columns),
             all_mandatory=True
         )
+        columns = [col.name for col in query.columns]
+        if not set(columns).issubset(mandatory_columns):
+            unsupported_columns = set(columns).difference(mandatory_columns)
+            raise ValueError(
+                "Unsupported columns for create topic: "
+                + ", ".join(unsupported_columns)
+            )
         topic_names = insert_statement_parser.parse_values()
         for topic_name in topic_names:
             self.handler.create_topic(name=topic_name[0])

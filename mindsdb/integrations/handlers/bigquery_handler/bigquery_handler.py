@@ -19,6 +19,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class BigQueryHandler(DatabaseHandler):
     """
     This handler handles connection and exectuin of Google BigQuery statements

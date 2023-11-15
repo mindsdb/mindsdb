@@ -19,6 +19,7 @@ from crate.client.sqlalchemy.dialect import CrateDialect
 
 logger = log.getLogger(__name__)
 
+
 class CrateHandler(DatabaseHandler):
     name = "crate"
 

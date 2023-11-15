@@ -20,6 +20,7 @@ from ibm_db_sa.ibm_db import DB2Dialect_ibm_db as DB2Dialect
 
 logger = log.getLogger(__name__)
 
+
 class DB2Handler(DatabaseHandler):
     name = "DB2"
 

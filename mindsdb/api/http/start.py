@@ -16,6 +16,7 @@ from mindsdb.integrations.libs.ml_exec_base import process_cache
 
 logger = log.getLogger(__name__)
 
+
 def start(verbose, no_studio):
     config = Config()
 

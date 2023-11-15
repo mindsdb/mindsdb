@@ -20,6 +20,7 @@ from couchbase.exceptions import KeyspaceNotFoundException, CouchbaseException
 
 logger = log.getLogger(__name__)
 
+
 class CouchbaseHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Couchbase statements.

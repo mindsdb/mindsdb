@@ -20,6 +20,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 logger = log.getLogger(__name__)
 
+
 class AirtableHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Airtable statements.

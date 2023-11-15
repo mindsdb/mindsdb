@@ -26,6 +26,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class InformationSchemaDataNode(DataNode):
     type = "INFORMATION_SCHEMA"
 

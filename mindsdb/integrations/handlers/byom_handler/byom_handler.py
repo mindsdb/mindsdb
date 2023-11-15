@@ -33,6 +33,7 @@ BYOM_TYPE = Enum('BYOM_TYPE', ['SAFE', 'UNSAFE'])
 
 logger = log.getLogger(__name__)
 
+
 class BYOMHandler(BaseMLEngine):
 
     name = 'byom'

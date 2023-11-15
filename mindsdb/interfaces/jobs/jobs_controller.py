@@ -7,13 +7,14 @@ import sqlalchemy as sa
 from mindsdb_sql import parse_sql, ParsingException
 
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
+from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
+
 
 def split_sql(sql):
     # split sql by ';' ignoring delimiter in quotes

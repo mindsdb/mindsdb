@@ -20,6 +20,7 @@ from mindsdb.api.http.utils import http_error
 
 logger = log.getLogger(__name__)
 
+
 @ns_conf.route('/logs')
 @ns_conf.param('name', 'Get logs')
 class GetLogs(Resource):

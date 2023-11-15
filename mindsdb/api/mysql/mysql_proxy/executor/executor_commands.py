@@ -111,6 +111,7 @@ from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 logger = log.getLogger(__name__)
 
+
 def _get_show_where(
     statement: ASTNode,
     from_name: Optional[str] = None,

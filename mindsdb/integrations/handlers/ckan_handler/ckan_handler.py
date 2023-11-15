@@ -9,6 +9,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class CkanHandler(DatabaseHandler):
     """
     This handler handles connection and consumption of the CKAN API.

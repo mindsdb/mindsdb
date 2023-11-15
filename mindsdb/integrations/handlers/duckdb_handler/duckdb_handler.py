@@ -20,6 +20,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class DuckDBHandler(DatabaseHandler):
     """This handler handles connection and execution of the DuckDB statements."""
 

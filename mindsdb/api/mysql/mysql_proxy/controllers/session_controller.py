@@ -26,6 +26,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class SessionController:
     """
     This class manages the server session

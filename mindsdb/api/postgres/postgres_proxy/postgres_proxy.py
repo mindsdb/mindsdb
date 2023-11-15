@@ -8,7 +8,8 @@ import struct
 import sys
 from functools import partial
 import socket
-from typing import Callable, Dict, Type, Any, Iterable, Sequence
+if False:
+    from typing import Callable, Dict, Type, Any, Iterable, Sequence
 
 from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
 from mindsdb.api.postgres.postgres_proxy.executor import Executor

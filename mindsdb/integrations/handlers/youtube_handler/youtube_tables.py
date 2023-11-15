@@ -351,7 +351,7 @@ class YoutubeVideosTable(APITable):
             raise NotImplementedError("Either video_id or channel_id has to be present in where clause.")
         
         if video_id:
-            video_df = self.get_videos_by_video_ids(video_id)
+            video_df = self.get_videos_by_video_ids([video_id])
         else:
             video_df = self.get_videos_by_channel_id(channel_id)
 
@@ -410,7 +410,7 @@ class YoutubeVideosTable(APITable):
                     "transcript": self.get_captions_by_video_id(item["id"]),
                     "video_id": item["id"],
                     "view_count": item["statistics"]["viewCount"],
-                    "duration_str": self.parse_duration(item["contentDetails"]["duration"]),
+                    "duration_str": self.parse_duration(item["id"], item["contentDetails"]["duration"]),
                 }
             )
 
@@ -426,14 +426,18 @@ class YoutubeVideosTable(APITable):
             logger.error(f"Encountered an error while fetching transcripts for video ${video_id}: ${e}"),
             return "Transcript not available for this video"
         
-    def parse_duration(self, duration):
-        parsed_duration = re.search(f"PT(\d+H)?(\d+M)?(\d+S)", duration).groups()
-        duration_str = ""
-        for d in parsed_duration:
-            if d:
-                duration_str += f"{d[:-1]}:"
-        
-        return duration_str.strip(":")
+    def parse_duration(self, video_id, duration):
+        try:
+            parsed_duration = re.search(f"PT(\d+H)?(\d+M)?(\d+S)", duration).groups()
+            duration_str = ""
+            for d in parsed_duration:
+                if d:
+                    duration_str += f"{d[:-1]}:"
+            
+            return duration_str.strip(":")
+        except Exception as e:
+            logger.error(f"Encountered an error while parsing duration for video ${video_id}: ${e}"),
+            return "Duration not available for this video"
 
     def get_columns(self) -> List[str]:
         return [

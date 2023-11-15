@@ -75,6 +75,7 @@ jobs:
       run: |
         pip install --no-cache-dir .
         pip install -r requirements/requirements-test.txt
+        pip install .[lightwood]  # TODO: for now some tests rely on lightwood
       shell: bash
     - name: Run integration api and flow tests
       run: |

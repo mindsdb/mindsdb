@@ -22,6 +22,9 @@ from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.skills.skills_controller import SkillsController
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 class InformationSchemaDataNode(DataNode):
@@ -535,7 +538,7 @@ class InformationSchemaDataNode(DataNode):
                     row.TABLE_SCHEMA = ds_name
                     data.append(row.to_list())
             except Exception:
-                print(f"Can't get tables from '{ds_name}'")
+                logger.error(f"Can't get tables from '{ds_name}'")
 
         for project_name in self.get_projects_names():
             if target_table is not None and target_table != project_name:

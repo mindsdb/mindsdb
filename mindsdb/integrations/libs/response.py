@@ -1,13 +1,12 @@
 import json
 from pandas import DataFrame
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb_sql.parser.ast import ASTNode
 
 
-logger = get_log("main")
-
+logger = log.getLogger(__name__)
 
 class HandlerResponse:
     def __init__(self, resp_type: RESPONSE_TYPE, data_frame: DataFrame = None,

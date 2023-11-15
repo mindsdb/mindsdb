@@ -248,11 +248,6 @@ if __name__ == '__main__':
     else:  # The user has provided a list of APIs to start
         api_arr = args.api.split(',')
 
-    with_nlp = False
-    if 'nlp' in api_arr:
-        with_nlp = True
-        api_arr.remove('nlp')
-
     apis = {
         api: {
             'port': config['api'][api]['port'],
@@ -298,7 +293,7 @@ if __name__ == '__main__':
         try:
             process_args = (args.verbose,)
             if api_name == 'http':
-                process_args = (args.verbose, args.no_studio, with_nlp)
+                process_args = (args.verbose, args.no_studio)
             p = ctx.Process(target=start_functions[api_name], args=process_args, name=api_name)
             p.start()
             api_data['process'] = p

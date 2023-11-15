@@ -1,0 +1,67 @@
+---
+title: GitLab
+sidebarTitle: GitLab
+---
+
+In this section, we present how to connect GitLab repository to MindsDB.
+[GitLab](https://about.gitlab.com/) is a DevSecOps Platform. Data from GitLab, including issues and MRs, can be utilized within MindsDB to make relevant predictions or automate the issue/MR creation.
+
+
+## Connection
+
+This handler was implemented using the [python-gitlab](https://github.com/python-gitlab/python-gitlab) library.
+python-gitlab is a Python library that wraps GitLab API.
+
+The GitLab handler is initialized with the following parameters:
+
+* `repository`: a required name of a GitLab repository to connect to.
+* `api_key`: an optional GitLab API key to use for authentication.
+
+Here is how to connect MindsDB to a GitLab repository:
+
+```sql
+CREATE DATABASE mindsdb_gitlab
+WITH ENGINE = 'gitlab',
+PARAMETERS = {
+  "repository": "gitlab-org/gitlab",
+  "api_key": "api_key",    -- optional GitLab API key
+};
+```
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/github_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+The `mindsdb_gitlab` connection contains two tables: `issues` and `merge_requests`.
+
+Now, you can use this established connection to query this table as:
+
+```sql
+SELECT * FROM mindsdb_gitlab.issues;
+```
+
+You can run more advanced queries to fetch specific issues in a defined order:
+
+```sql
+SELECT number, state, creator, assignee, title, created, labels 
+  FROM mindsdb_gitlab.issues
+  WHERE state="opened"
+  ORDER BY created ASC, creator DESC
+  LIMIT 10;
+```
+
+And the same goes for merge requests:
+
+```sql
+SELECT number, state, creator, reviewers, title, created, has_conflicts
+  FROM mindsdb_gitlab.merge_requests
+  WHERE state="merged"
+  ORDER BY created ASC, creator DESC
+  LIMIT 10;
+```
+
+<Info>
+For more information about available actions and development plans, visit [this page](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/gitlab_handler/README.md).
+</Info> 

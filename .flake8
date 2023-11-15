@@ -53,7 +53,6 @@ exclude =
   mindsdb/integrations/handlers/dockerhub_handler/*
   mindsdb/integrations/libs/response.py
   mindsdb/integrations/utilities/utils.py
-  mindsdb/interfaces/model/model_controller.py
   mindsdb/migrations/env.py
   tests/handler_tests/test_storage_handler.py
   tests/integration_tests/flows/test_mysql_bin_api.py
@@ -107,6 +106,7 @@ exclude =
   mindsdb/integrations/handlers/google_fit_handler/*
   mindsdb/integrations/handlers/altibase_handler/*
   mindsdb/integrations/handlers/ms_teams_handler/*
+  mindsdb/integrations/handlers/discord_handler/*
   mindsdb/integrations/handlers/hana_handler/*
   mindsdb/integrations/handlers/sheets_handler/*
   mindsdb/integrations/handlers/autosklearn_handler/*

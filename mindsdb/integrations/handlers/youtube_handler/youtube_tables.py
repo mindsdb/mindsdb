@@ -281,7 +281,11 @@ class YoutubeChannelsTable(APITable):
         channel_df = self.get_channel_details(channel_id)
 
         select_statement_executor = SELECTQueryExecutor(
-            channel_df, selected_columns, where_conditions, order_by_conditions, result_limit
+            channel_df, 
+            selected_columns, 
+            [where_condition for where_condition in where_conditions if where_condition[1] == 'channel_id'], 
+            order_by_conditions, 
+            None
         )
 
         channel_df = select_statement_executor.execute_query()

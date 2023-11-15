@@ -354,6 +354,33 @@ class YoutubeVideosTable(APITable):
         video_df = select_statement_executor.execute_query()
 
         return video_df
+    
+    def get_videos_by_channel_id(self, channel_id):
+        videos = []
+        resource = (
+            self.handler.connect()
+            .search()
+            .list(part="snippet", channelId=channel_id, type="video")
+        )
+        while resource:
+            response = resource.execute()
+            for item in response["items"]:
+                videos.append(item["id"]["videoId"])
+            if "nextPageToken" in response:
+                resource = (
+                    self.handler.connect()
+                    .search()
+                    .list(
+                        part="snippet",
+                        channelId=channel_id,
+                        type="video",
+                        pageToken=response["nextPageToken"],
+                    )
+                )
+            else:
+                break
+
+        return self.get_video_details(",".join(videos))
 
     def get_video_details(self, video_id):
         details = self.handler.connect().videos().list(part="statistics,snippet,contentDetails", id=video_id).execute()

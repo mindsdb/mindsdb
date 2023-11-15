@@ -1,8 +1,7 @@
 from collections import OrderedDict
 
 from mindsdb.integrations.handlers.luma_handler.luma_tables import (
-    LumaListEventsTable,
-    LumaGetEventTable
+    LumaEventsTable
 )
 from mindsdb.integrations.handlers.luma_handler.luma import LumaClient
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -37,11 +36,8 @@ class LumaHandler(APIHandler):
         self.luma_client = None
         self.is_connected = False
 
-        events_data = LumaListEventsTable(self)
-        self._register_table("list_events", events_data)
-
-        event_data = LumaGetEventTable(self)
-        self._register_table("get_event", event_data)
+        events_data = LumaEventsTable(self)
+        self._register_table("events", events_data)
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.

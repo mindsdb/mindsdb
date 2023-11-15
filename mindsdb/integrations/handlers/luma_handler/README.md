@@ -37,12 +37,12 @@ Read about creating an API key [here](https://docs.lu.ma/reference/getting-start
 
 - [x] LUMA List Events
 - [ ] LUMA Get an event
-- [ ] LUMA Create an event
 
 ## TODO Features
 
 - [ ] Get Event Guest List - This needs actual guests to be enrolled
 - [ ] Update Event Guest Status - This needs actual guests to be enrolled
+- [ ] LUMA Create an event - Need to implement it in handler and tables
 
 ## Example Usage
 
@@ -59,10 +59,10 @@ PARAMETERS = {
 Use the established connection to query your database:
 
 ~~~~sql
-SELECT * FROM mindsdb_luma.list_events;
+SELECT * FROM mindsdb_luma.events;
 ~~~~
 
 ~~~~sql
-SELECT * FROM mindsdb_luma.get_event where event_id="evt-HQ36IFDwncocuGy";
+SELECT * FROM mindsdb_luma.events where event_id="evt-HQ36IFDwncocuGy";
 ~~~~
 

@@ -348,7 +348,7 @@ class YoutubeVideosTable(APITable):
                     raise NotImplementedError("Only '=' operator is supported for channel_id column.")
 
         if not video_id and not channel_id:
-            raise NotImplementedError("Either video_id or channel_id has to be present in where clause.")
+            raise ValueError("Either video_id or channel_id has to be present in where clause.")
         
         if video_id:
             video_df = self.get_videos_by_video_ids([video_id])

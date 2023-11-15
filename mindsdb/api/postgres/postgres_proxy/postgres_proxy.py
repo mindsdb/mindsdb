@@ -8,7 +8,7 @@ import struct
 import sys
 from functools import partial
 import socket
-if False:
+if False:  # Only used in type checking through mypy
     from typing import Callable, Dict, Type, Any, Iterable, Sequence
 
 from mindsdb.api.mysql.mysql_proxy.controllers import SessionController

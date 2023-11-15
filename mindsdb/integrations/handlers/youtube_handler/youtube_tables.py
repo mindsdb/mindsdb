@@ -351,7 +351,7 @@ class YoutubeVideosTable(APITable):
             raise NotImplementedError("Either video_id or channel_id has to be present in where clause.")
         
         if video_id:
-            video_df = self.get_video_details(video_id)
+            video_df = self.get_videos_by_video_ids(video_id)
         else:
             video_df = self.get_videos_by_channel_id(channel_id)
 
@@ -368,7 +368,7 @@ class YoutubeVideosTable(APITable):
         return video_df
     
     def get_videos_by_channel_id(self, channel_id):
-        videos = []
+        video_ids = []
         resource = (
             self.handler.connect()
             .search()
@@ -377,7 +377,7 @@ class YoutubeVideosTable(APITable):
         while resource:
             response = resource.execute()
             for item in response["items"]:
-                videos.append(item["id"]["videoId"])
+                video_ids.append(item["id"]["videoId"])
             if "nextPageToken" in response:
                 resource = (
                     self.handler.connect()
@@ -392,36 +392,31 @@ class YoutubeVideosTable(APITable):
             else:
                 break
 
-        return self.get_video_details(",".join(videos))
+        return self.get_videos_by_video_ids(video_ids)
 
-    def get_video_details(self, video_id):
-        details = self.handler.connect().videos().list(part="statistics,snippet,contentDetails", id=video_id).execute()
-        items = details.get("items")[0]
-        snippet = items["snippet"]
-        statistics = items["statistics"]
-        content_details = items["contentDetails"]
-        transcript = self.get_captions(video_id)
-        data = {
-            "channel_title": snippet["channelTitle"],
-            "comment_count": statistics["commentCount"],
-            "description": snippet["description"],
-            "like_count": statistics["likeCount"],
-            "publish_time": snippet["publishedAt"],
-            "title": snippet["title"],
-            "transcript": transcript,
-            "video_id": video_id,
-            "view_count": statistics["viewCount"],
-        }
-        duration = content_details["duration"]
-        parsed_duration = re.search(f"PT(\d+H)?(\d+M)?(\d+S)", duration).groups()
-        duration_str = ""
-        for d in parsed_duration:
-            if d:
-                duration_str += f"{d[:-1]}:"
-        data["duration_str"] = duration_str.strip(":")
+    def get_videos_by_video_ids(self, video_ids):
+        resource = self.handler.connect().videos().list(part="statistics,snippet,contentDetails", id=",".join(video_ids)).execute()
+
+        data = []
+        for item in resource["items"]:
+            data.append(
+                {
+                    "channel_title": item["snippet"]["channelTitle"],
+                    "comment_count": item["statistics"]["commentCount"],
+                    "description": item["snippet"]["description"],
+                    "like_count": item["statistics"]["likeCount"],
+                    "publish_time": item["snippet"]["publishedAt"],
+                    "title": item["snippet"]["title"],
+                    "transcript": self.get_captions_by_video_id(item["id"]),
+                    "video_id": item["id"],
+                    "view_count": item["statistics"]["viewCount"],
+                    "duration_str": self.parse_duration(item["contentDetails"]["duration"]),
+                }
+            )
+
         return pd.json_normalize(data)
 
-    def get_captions(self, video_id):
+    def get_captions_by_video_id(self, video_id):
         try:
             transcript_response = YouTubeTranscriptApi.get_transcript(video_id, preserve_formatting=True)
             json_formatted_transcript = JSONFormatter().format_transcript(transcript_response, indent=2)
@@ -430,6 +425,15 @@ class YoutubeVideosTable(APITable):
         except Exception as e:
             logger.error(f"Encountered an error while fetching transcripts for video ${video_id}: ${e}"),
             return "Transcript not available for this video"
+        
+    def parse_duration(self, duration):
+        parsed_duration = re.search(f"PT(\d+H)?(\d+M)?(\d+S)", duration).groups()
+        duration_str = ""
+        for d in parsed_duration:
+            if d:
+                duration_str += f"{d[:-1]}:"
+        
+        return duration_str.strip(":")
 
     def get_columns(self) -> List[str]:
         return [

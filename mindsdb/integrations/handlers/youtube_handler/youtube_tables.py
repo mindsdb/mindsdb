@@ -62,16 +62,16 @@ class YoutubeCommentsTable(APITable):
         for a_where in conditions:
             if a_where[1] == "video_id":
                 if a_where[0] != "=":
-                    raise ValueError(f"Unsupported where operation for video_id")
+                    raise NotImplementedError("Only '=' operator is supported for video_id column.")
                 else:
                     video_id = a_where[2]
             elif a_where[1] == "channel_id":
                 if a_where[0] != "=":
-                    raise ValueError(f"Unsupported where operation for channel_id")
+                    raise NotImplementedError("Only '=' operator is supported for channel_id column.")
                 else:
                     channel_id = a_where[2]
             else:
-                raise ValueError(f"Unsupported where argument {a_where[1]}")
+                raise NotImplementedError(f"Unsupported where condition {a_where}")
 
         if video_id and channel_id:
             raise ValueError("Only one of video_id or channel_id can be present in where clause.")

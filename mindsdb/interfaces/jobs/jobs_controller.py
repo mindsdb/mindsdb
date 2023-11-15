@@ -7,7 +7,7 @@ import sqlalchemy as sa
 from mindsdb_sql import parse_sql, ParsingException
 
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.exception import EntityNotExistsError
+from mindsdb.utilities.exception import EntityNotExistsError, EntityExistsError
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
@@ -86,7 +86,7 @@ class JobsController:
             deleted_at=sa.null()
         ).first()
         if record is not None:
-            raise Exception(f'Job already exists: {name}')
+            raise EntityExistsError(f'Job already exists: {name}')
 
         if start_at is not None:
             start_at = self._parse_date(start_at)

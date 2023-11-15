@@ -360,7 +360,7 @@ class YoutubeVideosTable(APITable):
             selected_columns, 
             [where_condition for where_condition in where_conditions if where_condition[1] not in ['video_id', 'channel_id']], 
             order_by_conditions, 
-            result_limit
+            None
         )
 
         video_df = select_statement_executor.execute_query()
@@ -401,6 +401,7 @@ class YoutubeVideosTable(APITable):
         for item in resource["items"]:
             data.append(
                 {
+                    "channel_id": item["snippet"]["channelId"],
                     "channel_title": item["snippet"]["channelTitle"],
                     "comment_count": item["statistics"]["commentCount"],
                     "description": item["snippet"]["description"],
@@ -441,6 +442,7 @@ class YoutubeVideosTable(APITable):
 
     def get_columns(self) -> List[str]:
         return [
+            "channel_id",
             "channel_title",
             "title",
             "description",

@@ -41,8 +41,6 @@ DEFAULT_SCOPES = ['https://www.googleapis.com/auth/gmail.compose',
 logger = log.getLogger(__name__)
 
 
-
-
 class EmailsTable(APITable):
     """Implementation for the emails table for Gmail"""
 
@@ -340,7 +338,6 @@ class GmailHandler(APIHandler):
 
         # Get the current dir, we'll check for Token & Creds files in this dir
         curr_dir = self.handler_storage.folder_get('config')
-        logger.info(f"credential files to be saved at {curr_dir}")
 
         creds_file = os.path.join(curr_dir, 'creds.json')
         secret_file = os.path.join(curr_dir, 'secret.json')
@@ -349,8 +346,7 @@ class GmailHandler(APIHandler):
             creds = Credentials.from_authorized_user_file(creds_file, self.scopes)
 
         if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
+            logger.debug("Credentials do not exist or are invalid, attempting to authorize again")
 
             if self._download_secret_file(secret_file):
                 # save to storage
@@ -358,12 +354,16 @@ class GmailHandler(APIHandler):
             else:
                 raise ValueError('No valid Gmail Credentials filepath or S3 url found.')
 
-            creds = google_auth_flow(secret_file, self.scopes, self.connection_args.get('code'))
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+                logger.debug("Credentials refreshed successfully")
+            else:
+                creds = google_auth_flow(secret_file, self.scopes, self.connection_args.get('code'))
+                logger.debug("New credentials obtained")
 
             save_creds_to_file(creds, creds_file)
-            logger.info(f"saved session credentials to {creds_file}")
+            logger.debug(f"saved session credentials to {creds_file}")
             self.handler_storage.folder_sync('config')
-
 
         return build('gmail', 'v1', credentials=creds)
 

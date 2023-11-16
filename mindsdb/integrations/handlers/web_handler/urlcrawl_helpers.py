@@ -1,6 +1,5 @@
 import concurrent.futures
 import io
-import logging
 import re
 import traceback
 from threading import Lock
@@ -10,9 +9,9 @@ import fitz  # PyMuPDF
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
+from mindsdb.utilities import log
 
-logging.basicConfig(level=logging.INFO)
-
+logger = log.getLogger(__name__)
 
 def pdf_to_markdown(response):
     # Download the PDF from the given URL
@@ -79,14 +78,14 @@ def parallel_get_all_website_links(urls):
             try:
                 url_contents[url] = future.result()
             except Exception as exc:
-                logging.error(f"{url} generated an exception: {exc}")
-
+                logger.error(f'{url} generated an exception: {exc}')
+   
     return url_contents
 
 
 # this crawls one individual website
 def get_all_website_links(url):
-    logging.info("crawling: {url} ...".format(url=url))
+    logger.info("crawling: {url} ...".format(url=url))
     urls = set()
 
     domain_name = urlparse(url).netloc
@@ -138,7 +137,7 @@ def get_all_website_links(url):
 
     except Exception as e:
         error_message = traceback.format_exc().splitlines()[-1]
-        logging.error("An exception occurred: %s", str(e))
+        logger.error("An exception occurred: %s", str(e))
         return {
             "url": url,
             "urls": urls,
@@ -196,7 +195,7 @@ def get_all_website_links_rec(url, reviewd_urls, limit=None):
             reviewd_urls[url] = get_all_website_links(url)
         except Exception as e:
             error_message = traceback.format_exc().splitlines()[-1]
-            logging.error("An exception occurred: %s", str(e))
+            logger.error("An exception occurred: %s", str(e))
             reviewd_urls[url] = {
                 "url": url,
                 "urls": [],

@@ -4,13 +4,13 @@ from typing import List
 
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.handlers.utilities.query_utilities.select_query_utilities import SELECTQueryParser, SELECTQueryExecutor
 
 
-logger = get_log("integrations.InfluxDB_handler")
+logger = log.getLogger(__name__)
 
 class InfluxDBTables(APITable):
     """InfluxDB Tables implementation"""

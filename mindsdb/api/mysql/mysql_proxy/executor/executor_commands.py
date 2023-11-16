@@ -84,7 +84,6 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErSqlWrongArguments,
     ErTableExistError,
     SqlApiException,
-    log,
 )
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import download_file
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
@@ -108,6 +107,9 @@ from mindsdb.interfaces.triggers.triggers_controller import TriggersController
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import mark_process, resolve_model_identifier
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 def _get_show_where(
@@ -494,7 +496,7 @@ class ExecuteCommands:
                 #     table_name = expression.parts[-1]
                 if table_name is None:
                     err_str = f"Can't determine table name in query: {sql}"
-                    log.logger.warning(err_str)
+                    logger.warning(err_str)
                     raise ErTableExistError(err_str)
                 return self.answer_show_table_status(table_name)
             elif sql_category == "columns":
@@ -552,7 +554,7 @@ class ExecuteCommands:
                 self.charset = statement.arg.parts[0]
                 self.charset_text_type = charsets.get(self.charset)
                 if self.charset_text_type is None:
-                    log.logger.warning(
+                    logger.warning(
                         f"Unknown charset: {self.charset}. Setting up 'utf8_general_ci' as charset text type."
                     )
                     self.charset_text_type = CHARSET_NUMBERS["utf8_general_ci"]
@@ -565,7 +567,7 @@ class ExecuteCommands:
                     ],
                 )
             else:
-                log.logger.warning(
+                logger.warning(
                     f"SQL statement is not processable, return OK package: {sql}"
                 )
                 return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -674,7 +676,7 @@ class ExecuteCommands:
             statement.data = parse_sql(statement.query_str, dialect="mindsdb")
             return self.answer_evaluate_metric(statement)
         else:
-            log.logger.warning(f"Unknown SQL statement: {sql}")
+            logger.warning(f"Unknown SQL statement: {sql}")
             raise ErNotSupportedYet(f"Unknown SQL statement: {sql}")
 
     def answer_create_trigger(self, statement):
@@ -1109,7 +1111,7 @@ class ExecuteCommands:
                     pip install mindsdb[{handler_module_meta['name']}]
                 """
                 )
-            log.logger.info(msg)
+            logger.info(msg)
             raise SqlApiException(msg)
 
         integration_id = self.session.integration_controller.add(
@@ -1652,7 +1654,7 @@ class ExecuteCommands:
                 column_alias = target.alias or column_name
                 result = SERVER_VARIABLES.get(column_name)
                 if result is None:
-                    log.logger.error(f"Unknown variable: {column_name}")
+                    logger.error(f"Unknown variable: {column_name}")
                     raise Exception(f"Unknown variable '{var_name}'")
                 else:
                     result = result[0]

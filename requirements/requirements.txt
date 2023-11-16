@@ -13,7 +13,6 @@ psutil
 sqlalchemy >= 2.0.0, < 3.0.0
 psycopg2-binary  # This is required for using sqlalchemy with postgres
 alembic >= 1.3.3
-sentry-sdk
 redis >=5.0.0, < 6.0.0
 walrus==0.9.3
 flask-compress >= 1.0.0
@@ -33,7 +32,6 @@ boto3
 python-dateutil
 gunicorn
 grpcio-tools
-sentry-sdk
 scikit-learn==1.3.2
 hierarchicalforecast==0.3.0
 protobuf==3.20.3

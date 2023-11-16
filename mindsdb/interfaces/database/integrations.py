@@ -28,11 +28,11 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 from mindsdb.integrations.handlers_client.db_client_factory import DBClient
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 import mindsdb.utilities.profiler as profiler
 
-logger = get_log()
+logger = log.getLogger(__name__)
 
 
 class HandlersCache:
@@ -186,8 +186,6 @@ class IntegrationController:
                     arg_name in accept_connection_args
                     and accept_connection_args[arg_name]['type'] == ARG_TYPE.PATH
                 ):
-                    if arg_value is None or arg_value == '':
-                        continue
                     if files_dir is None:
                         files_dir = tempfile.mkdtemp(prefix='mindsdb_files_')
                     shutil.copy(arg_value, files_dir)

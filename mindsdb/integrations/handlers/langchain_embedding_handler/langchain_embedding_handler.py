@@ -7,9 +7,9 @@ from langchain.embeddings.base import Embeddings
 from pandas import DataFrame
 
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
-LOG = get_log("langchain_embedding")
+logger = log.getLogger(__name__)
 
 # construct the embedding model name to the class mapping
 # we try to import all embedding models from langchain.embeddings
@@ -67,7 +67,7 @@ def construct_model_from_args(args: Dict) -> Embeddings:
     target = args.pop("target", None)
     class_name = args.pop("class", LangchainEmbeddingHandler.DEFAULT_EMBEDDING_CLASS)
     if class_name in EMBEDDING_MODELS:
-        LOG.info(
+        logger.info(
             f"Mapping the user friendly name {class_name} to the class name: {EMBEDDING_MODELS[class_name]}"
         )
         class_name = EMBEDDING_MODELS[class_name]

@@ -1,4 +1,5 @@
-from typing import List, Dict, Text, Any
+if False:  # Only used by mypy
+    from typing import List, Dict, Text, Any
 
 import pandas as pd
 from hubspot.crm.objects import (
@@ -24,9 +25,9 @@ from mindsdb.integrations.handlers.utilities.query_utilities import (
 )
 
 from mindsdb.integrations.libs.api_handler import APITable
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
-logger = get_log("integrations.hubspot_handler")
+logger = log.getLogger(__name__)
 
 
 class CompaniesTable(APITable):

@@ -15,9 +15,9 @@ from mindsdb.integrations.handlers.rag_handler.settings import (
     load_embeddings_model,
     url_to_documents,
 )
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
-logger = get_log(__name__)
+logger = log.getLogger(__name__)
 
 
 def validate_document(doc) -> bool:

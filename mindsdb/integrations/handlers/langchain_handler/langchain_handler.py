@@ -239,7 +239,7 @@ class LangChainHandler(BaseMLEngine):
             memory=memory,
             agent=agent_name,
             max_iterations=pred_args.get('max_iterations', 3),
-            verbose=True,
+            verbose=pred_args.get('verbose', args.get('verbose', False)),
             handle_parsing_errors=False,
         )
 
@@ -409,6 +409,6 @@ class LangChainHandler(BaseMLEngine):
         agent = create_sql_agent(
             llm=llm,
             toolkit=toolkit,
-            verbose=True
+            verbose=pred_args.get('verbose', args.get('verbose', False))
         )
         return agent, df

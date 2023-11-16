@@ -30,8 +30,7 @@ class BaseQueryParser(ABC):
         Parses the WHERE clause of the query.
         """
         where_conditions = extract_comparison_conditions(self.query.where)
-        # TODO: check if this is correct
-        return [where_condition for where_condition in where_conditions if where_condition[0] != 'is not']
+        return where_conditions
     
 
 class BaseQueryExecutor():

@@ -68,6 +68,8 @@ class YoutubeHandler(APIHandler):
             elif secret_url:
                 self.credentials_url = secret_url
 
+        self.youtube_api_token = self.connection_data.get('youtube_api_token', None)
+
         self.scopes = self.connection_data.get('scopes', DEFAULT_SCOPES)
 
         youtube_video_comments_data = YoutubeCommentsTable(self)
@@ -92,7 +94,7 @@ class YoutubeHandler(APIHandler):
         creds = self._get_oauth2_credentials()
 
         youtube = build(
-            "youtube", "v3", developerKey=self.connection_data["youtube_api_token"], credentials=creds
+            "youtube", "v3", developerKey=self.youtube_api_token, credentials=creds
         )
         self.connection = youtube
 
@@ -107,29 +109,33 @@ class YoutubeHandler(APIHandler):
         """
         creds = None
 
-        # Get the current dir, we'll check for Token & Creds files in this dir
-        curr_dir = self.handler_storage.folder_get('config')
+        if self.credentials_file or self.credentials_url:
+            try:
+                # Get the current dir, we'll check for Token & Creds files in this dir
+                curr_dir = self.handler_storage.folder_get('config')
 
-        creds_file = os.path.join(curr_dir, 'creds.json')
-        secret_file = os.path.join(curr_dir, 'secret.json')
+                creds_file = os.path.join(curr_dir, 'creds.json')
+                secret_file = os.path.join(curr_dir, 'secret.json')
 
-        if os.path.isfile(creds_file):
-            creds = Credentials.from_authorized_user_file(creds_file, self.scopes)
+                if os.path.isfile(creds_file):
+                    creds = Credentials.from_authorized_user_file(creds_file, self.scopes)
 
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
+                if not creds or not creds.valid:
+                    if creds and creds.expired and creds.refresh_token:
+                        creds.refresh(Request())
 
-            if self._download_secret_file(secret_file):
-                # save to storage
-                self.handler_storage.folder_sync('config')
-            else:
-                raise ValueError('No valid Gmail Credentials filepath or S3 url found.')
+                    if self._download_secret_file(secret_file):
+                        # save to storage
+                        self.handler_storage.folder_sync('config')
+                    else:
+                        raise ValueError('No valid Gmail Credentials filepath or S3 url found.')
 
-            creds = google_auth_flow(secret_file, self.scopes, self.connection_data.get('code'))
+                    creds = google_auth_flow(secret_file, self.scopes, self.connection_data.get('code'))
 
-            save_creds_to_file(creds, creds_file)
-            self.handler_storage.folder_sync('config')
+                    save_creds_to_file(creds, creds_file)
+                    self.handler_storage.folder_sync('config')
+            except Exception as e:
+                logger.error(f"OAuth2 credentials not available: {e}!")
 
         return creds        
     

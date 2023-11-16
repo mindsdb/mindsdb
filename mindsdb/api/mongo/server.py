@@ -14,13 +14,13 @@ import datetime as dt
 
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import RespondersCollection, Session
-from mindsdb.api.mongo.utilities import logger
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities import log
 
 OP_REPLY = 1
 OP_UPDATE = 2001
@@ -35,6 +35,8 @@ BYTE = '<b'
 INT = '<i'
 UINT = '<I'
 LONG = '<q'
+
+logger = log.getLogger(__name__)
 
 
 class NPIntCodec(TypeCodec):

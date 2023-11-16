@@ -240,7 +240,7 @@ def run_finetune(df: DataFrame, args: dict, model_storage):
         logger.error(e)
         predictor_id = model_storage.predictor_id
         predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
         error_message = format_exception_error(e)
         predictor_record.data = {"error": error_message}
         predictor_record.status = PREDICTOR_STATUS.ERROR

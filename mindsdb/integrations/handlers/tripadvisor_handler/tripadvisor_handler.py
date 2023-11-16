@@ -259,8 +259,6 @@ class TripAdvisorHandler(APIHandler):
         locations = self.api.getTripAdvisorData(TripAdvisorAPICall.NEARBY_SEARCH, **params)
         result = []
 
-        print("RESULT: ", result)
-
         for loc in locations:
             data = {
                 "location_id": loc.get("location_id"),

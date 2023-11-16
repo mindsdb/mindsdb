@@ -58,7 +58,7 @@ Before creating an OpenAI model, please create an engine, providing your OpenAI 
 CREATE ML_ENGINE openai_engine
 FROM openai
 USING
-	api_key = ‘your-openai-api-key’;
+	api_key = 'your-openai-api-key';
 ```
 </Tip>
 
@@ -66,7 +66,7 @@ USING
 CREATE MODEL question_answering_model
 PREDICT answer
 USING
-    engine = 'openai',
+    engine = 'openai_engine',
     prompt_template = 'answer the question of text:{{question}} about text:{{article_title}}';
 ```
 

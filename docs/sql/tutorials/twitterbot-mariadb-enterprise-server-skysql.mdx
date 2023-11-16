@@ -264,7 +264,7 @@ Before creating an OpenAI model, please create an engine, providing your OpenAI 
 CREATE ML_ENGINE openai_engine
 FROM openai
 USING
-	api_key = ‘your-openai-api-key’;
+	api_key = 'your-openai-api-key';
 ```
 </Tip>
 
@@ -272,7 +272,7 @@ USING
 CREATE MODEL snoopstein_model
 PREDICT response
 USING
-engine = 'openai',
+engine = 'openai_engine',
 max_tokens = 300,
 temperature = 0.75,
 model_name = 'gpt-4', -- you can also use 'text-davinci-003' or 'gpt-3.5-turbo'
@@ -397,3 +397,9 @@ Use the MindsDB [JavaScript SDK](https://docs.mindsdb.com/sdk/javascript-sdk) or
 While this simple example uses Twitter, MindsDB will soon support Slack and perhaps one day,  Discord. Combined with the ability to <code>[FINETUNE](https://docs.mindsdb.com/sql/api/finetune)</code> existing, trained LLM models with your own data inside a relational database, a future where you can train chatbots to reason about data and/or content you provide doesn’t seem far off. Imagine a support bot that understands your digital assets and knowledge!  
 
 Explore more about how MariaDB Enterprise Server, MariaDB Columnstore, MaxScale Database proxy, and Xpand Distributed SQL can help your projects at [The MariaDB developer hub](https://mariadb.com/developers/), or get in touch with MariaDB experts on our [slack](https://mariadb-community.slack.com/).
+
+<Tip>
+Check out [another Twitter Chatbot tutorial](/sql/tutorials/twitter-chatbot) that offers an alternative way to simplify the process of fetching tweets with the `LAST` keyword.
+
+Want to talk to SnoopStein? Post a tweet with `@snoop_stein` and wait for the reply.
+</Tip>

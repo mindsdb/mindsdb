@@ -74,6 +74,7 @@ class NPMMetadataTable(CustomAPITable):
             ["collected", "metadata"],
             ["name", "scope", "version", "description", "author", "publisher", "repository", "license", "releases"]
         )
+        print('aaaaa', metadata["author"])
         metadata["author_email"] = metadata["author"].get("email", "")
         metadata["author"] = metadata["author"].get("name", "")
         rename_key(metadata, "author_name", "author")

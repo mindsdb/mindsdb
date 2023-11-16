@@ -15,5 +15,6 @@ run_mindsdb:
 
 check:
 	python tests/scripts/check_requirements.py
+	python tests/scripts/check_code.py
 
 .PHONY: install_mindsdb precommit install_handler run_mindsdb check

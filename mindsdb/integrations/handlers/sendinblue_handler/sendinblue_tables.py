@@ -3,10 +3,9 @@ import pandas as pd
 
 
 from typing import List, Optional, Dict
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from mindsdb.integrations.libs.api_handler import APITable
 
-logger = get_log("integrations.sendinblue_handler")
 from mindsdb_sql.parser import ast
 from sib_api_v3_sdk.rest import ApiException
 from datetime import datetime
@@ -20,6 +19,8 @@ from mindsdb.integrations.handlers.utilities.query_utilities import (
     DELETEQueryParser,
     DELETEQueryExecutor,
 )
+
+logger = log.getLogger(__name__)
 
 
 class EmailCampaignsTable(APITable):

@@ -8,11 +8,18 @@ from mindsdb.integrations.handlers.confluence_handler.confluence_table import (
     ConfluencePagesTable,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
-from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+)
 from mindsdb.utilities.log import get_log
+from mindsdb_sql import parse_sql
+from mindsdb.utilities import log
 
-logger = get_log("integrations.confluence_handler")
+from atlassian import Confluence
+from typing import Optional
+import requests
 
+logger = log.getLogger(__name__)
 
 class ConfluenceHandler(APIHandler):
     """Confluence handler implementation"""

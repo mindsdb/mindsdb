@@ -31,6 +31,8 @@ from .__about__ import __version__
 
 BYOM_TYPE = Enum('BYOM_TYPE', ['SAFE', 'UNSAFE'])
 
+logger = log.getLogger(__name__)
+
 
 class BYOMHandler(BaseMLEngine):
 
@@ -391,13 +393,13 @@ class ModelWrapperSafe:
 
             # create
             virtualenv.cli_run(['-p', sys.executable, str(self.env_path)])
-            log.logger.info(f"Created new environment: {self.env_path}")
+            logger.info(f"Created new environment: {self.env_path}")
 
             if len(modules) > 0:
                 self.install_modules(modules)
         except Exception:
             # DANGER !!! VENV MUST BE CREATED
-            log.logger.info("Can't create virtual environment. venv module should be installed")
+            logger.info("Can't create virtual environment. venv module should be installed")
 
             self.python_path = Path(sys.executable)
 

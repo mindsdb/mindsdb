@@ -68,7 +68,6 @@ class MindsDBSQL(SQLDatabase):
                             usable_tables.append(table_name)
                 except Exception as e:
                     logger.warning('Unable to get tables for %s: %s', db, str(e))
-                    pass
                 finally:
                     _ = self._call_engine([f'use {original_db};'])
         return usable_tables

@@ -331,7 +331,11 @@ class RAGBaseExecutor:
         content_data = ", ".join([data[0] for data in kb_result.data])
 
         # pass retrieved data from knowledgebase to llm
-        llm_query = f"""select * from {llm.name} where {vector_db_content} ='{content_data}' and {input_where_left}={input_where_right}"""
+        llm_query = f"""
+        select * from {llm.name} 
+        where {vector_db_content}='{content_data}' 
+        and {input_where_left}={input_where_right}
+        """
 
         sql_query = SQLQuery(sql=llm_query, session=self.session, execute=True)
         data = sql_query.fetch()

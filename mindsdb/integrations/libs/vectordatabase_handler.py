@@ -24,7 +24,7 @@ from mindsdb.utilities.log import get_log
 from ..utilities.sql_utils import query_traversal
 from .base import BaseHandler
 
-LOG = get_log("VectorStoreHandler")
+LOG = get_log(__name__)
 
 
 class FilterOperator(Enum):

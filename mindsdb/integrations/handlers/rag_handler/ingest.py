@@ -170,6 +170,7 @@ class RAGIngestor:
             logger.error(
                 f"Error loading using 'from_documents' method, trying 'from_text': {e}"
             )
+
             try:
                 for i, batch_document in enumerate(batches_documents):
                     db = self.create_db_from_texts(batch_document, embeddings_model)

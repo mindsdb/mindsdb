@@ -46,17 +46,15 @@ class YoutubeCommentsTable(APITable):
             order_by_conditions["ascending"] = []
 
             for an_order in query.order_by:
-                if an_order.field.parts[0] != "id":
-                    next
-                if an_order.field.parts[1] in self.get_columns():
-                    order_by_conditions["columns"].append(an_order.field.parts[1])
+                if an_order.field.parts[-1] in self.get_columns():
+                    order_by_conditions["columns"].append(an_order.field.parts[-1])
 
                     if an_order.direction == "ASC":
                         order_by_conditions["ascending"].append(True)
                     else:
                         order_by_conditions["ascending"].append(False)
                 else:
-                    raise ValueError(f"Order by unknown column {an_order.field.parts[1]}")
+                    raise ValueError(f"Order by unknown column {an_order.field.parts[-1]}")
 
         channel_id, video_id = None, None
         for a_where in conditions:

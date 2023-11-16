@@ -1,0 +1,26 @@
+name: MindsDB Code Checks
+
+on:
+  pull_request:
+    branches: [stable, staging]
+    
+jobs:
+  check_requirements:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3.5.3
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v4.7.0
+      with:
+        python-version: 3.9
+    - name: Check main requirements
+      shell: bash
+      run: |
+        pip install -r requirements/requirements-dev.txt
+
+        python tests/scripts/check_requirements.py
+
+    - name: Check requirements files are installable
+      shell: bash
+      run: |
+        pip install --dry-run --ignore-installed . # Install only the default handlers. We can expand this to all handlers later with: .[all_handlers_extras]

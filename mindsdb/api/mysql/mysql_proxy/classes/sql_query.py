@@ -925,6 +925,11 @@ class SQLQuery():
 
                 where_data = data.get_records()
 
+                # add constants from where
+                if step.row_dict is not None:
+                    for record in where_data:
+                        record.update(step.row_dict)
+
                 predictor_metadata = {}
                 for pm in self.predictor_metadata:
                     if pm['name'] == predictor_name and pm['integration_name'].lower() == project_name:

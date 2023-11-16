@@ -888,6 +888,8 @@ class ExecuteCommands:
             identifier.parts = [self.session.database, identifier.parts[0]]
 
         database_name, model_name, model_version = resolve_model_identifier(identifier)
+        if database_name is None:
+            database_name = self.session.database
 
         if model_name is None:
             if except_absent:

@@ -61,9 +61,6 @@ class YoutubeCommentsTable(APITable):
 
         if not video_id and not channel_id:
             raise ValueError("Either video_id or channel_id has to be present in where clause.")
-
-        if video_id and channel_id:
-            raise ValueError("Only one of video_id or channel_id can be present in where clause.")
             
         comments_df = self.get_comments(video_id=video_id, channel_id=channel_id)
 
@@ -163,6 +160,9 @@ class YoutubeCommentsTable(APITable):
         -------
         pd.DataFrame of all the records of the "commentThreads()" API end point
         """
+
+        if video_id and channel_id:
+            channel_id = None
 
         resource = (
             self.handler.connect()

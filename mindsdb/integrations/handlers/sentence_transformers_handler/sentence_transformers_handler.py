@@ -3,19 +3,23 @@ from typing import Optional
 import dill
 import pandas as pd
 
-from mindsdb.integrations.handlers.sentence_transformer_handler.settings import (
-    Parameters,
-    df_to_documents,
-    load_embeddings_model,
-)
+from mindsdb.integrations.handlers.sentence_transformers_handler.settings import Parameters
+
+from mindsdb.integrations.handlers.rag_handler.settings import load_embeddings_model, df_to_documents
+
+
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 
 logger = log.get_log(__name__)
 
 
-class SentenceTransformerHandler(BaseMLEngine):
-    name = "sentence transformer"
+class SentenceTransformersHandler(BaseMLEngine):
+    name = "sentence transformers"
+
+    def __init__(self, model_storage, engine_storage, **kwargs) -> None:
+        super().__init__(model_storage, engine_storage, **kwargs)
+        self.generative = True
 
     def create(self, target, df=None, args=None, **kwargs):
         """creates embeddings model and persists"""
@@ -24,6 +28,7 @@ class SentenceTransformerHandler(BaseMLEngine):
 
         valid_args = Parameters(**args)
 
+        # todo add gpu support
         model = load_embeddings_model(valid_args.embeddings_model_name)
 
         self.model_storage.file_set("model", dill.dumps(model))

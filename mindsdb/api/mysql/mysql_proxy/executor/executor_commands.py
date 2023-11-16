@@ -1321,7 +1321,7 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
-    def _create_persistent_chroma(self, kb_name, collection_name, engine="chromadb"):
+    def _create_persistent_vectordb(self, kb_name, collection_name, engine="chromadb"):
         """Create default vector database for knowledge base, if not specified"""
 
         vector_store_name = f"{kb_name}_{engine}"
@@ -1335,6 +1335,20 @@ class ExecuteCommands:
         )
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK), vector_store_name
+
+    def _create_default_embedding_model(self, kb_name, engine="sentence_transformers"):
+        """create a default embedding model for knowledge base, if not specified"""
+        model_name = f"{kb_name}_default_model"
+
+        statement = CreatePredictor(
+            name=Identifier(parts=[model_name]),
+            using={"engine": engine},
+            targets=[Identifier(parts=["text"])],
+        )
+
+        self.answer_create_predictor(statement)
+
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK), model_name
 
     def answer_create_kb(self, statement: CreateKnowledgeBase):
         project_name = (
@@ -1351,9 +1365,20 @@ class ExecuteCommands:
 
         kb_name = statement.name.parts[-1]
 
+        is_cloud = self.session.config.get("cloud", False)
+
+        if not statement.model and is_cloud:
+            raise SqlApiException(
+                "No default model currently exists in MindsDB cloud. "
+                'Please specify one using the "model" parameter'
+            )
+
+        model_identifier = (
+            statement.model if statement.model else self._create_default_embedding_model(kb_name)[1]
+        )
+
         # search for the model
         # verify the model exists and get its id
-        model_identifier = statement.model
         try:
             model_record = self._get_model_info(
                 identifier=model_identifier, except_absent=True
@@ -1371,8 +1396,6 @@ class ExecuteCommands:
                 "Need the form 'database_name.table_name'"
             )
 
-        is_cloud = self.session.config.get("cloud", False)
-
         if not statement.storage and is_cloud:
             raise SqlApiException(
                 "No default vector database currently exists in MindsDB cloud. "
@@ -1386,9 +1409,7 @@ class ExecuteCommands:
         vector_db_name = (
             statement.storage.parts[0]
             if statement.storage
-            else self._create_persistent_chroma(
-                kb_name, collection_name=vector_table_name
-            )[1]
+            else self._create_persistent_vectordb(kb_name, collection_name=vector_table_name)[1]
         )
 
         # verify the vector database exists and get its id

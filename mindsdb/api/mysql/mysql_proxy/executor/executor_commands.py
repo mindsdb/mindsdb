@@ -1020,6 +1020,7 @@ class ExecuteCommands:
             connection_args = {}
         status = HandlerStatusResponse(success=False)
 
+        storage = None
         try:
             handlers_meta = (
                 self.session.integration_controller.get_handlers_import_status()
@@ -1067,6 +1068,8 @@ class ExecuteCommands:
                 handler_type=engine, connection_data=connection_args
             )
             status = handler.check_connection()
+            if status.copy_storage:
+                storage = handler.handler_storage.export_files()
         except Exception as e:
             status.error_message = str(e)
 
@@ -1078,6 +1081,9 @@ class ExecuteCommands:
             raise EntityExistsError('Database already exists', name)
 
         self.session.integration_controller.add(name, engine, connection_args)
+        if storage:
+            handler = self.session.integration_controller.get_handler(name)
+            handler.handler_storage.import_files(storage)
 
     def answer_create_ml_engine(self, statement: ASTNode):
         name = statement.name.parts[-1]

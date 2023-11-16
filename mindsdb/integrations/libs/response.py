@@ -46,10 +46,15 @@ class HandlerResponse:
             )
 
 class HandlerStatusResponse:
-    def __init__(self, success: bool = True, error_message: str = None, redirect_url: str = None) -> None:
+    def __init__(self, success: bool = True,
+                 error_message: str = None,
+                 redirect_url: str = None,
+                 copy_storage: str = None
+    ) -> None:
         self.success = success
         self.error_message = error_message
         self.redirect_url = redirect_url
+        self.copy_storage = copy_storage
 
     def to_json(self):
         data = {"success": self.success, "error": self.error_message}

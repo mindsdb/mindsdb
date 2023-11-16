@@ -190,7 +190,7 @@ class ModelController():
                 version=version,
             )
         if len(predictors_records) == 0:
-            raise Exception(f"Model '{model_name}' does not exist")
+            raise EntityNotExistsError('Model does not exist', model_name)
 
         is_cloud = self.config.get('cloud', False)
         if is_cloud:

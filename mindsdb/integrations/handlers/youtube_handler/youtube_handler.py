@@ -1,3 +1,7 @@
+import os
+import requests
+from shutil import copyfile
+
 from mindsdb.integrations.handlers.youtube_handler.youtube_tables import (
     YoutubeCommentsTable,
     YoutubeChannelsTable,
@@ -11,9 +15,19 @@ from mindsdb.utilities.log import get_log
 from mindsdb_sql import parse_sql
 
 from collections import OrderedDict
+from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 from googleapiclient.discovery import build
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from mindsdb.integrations.handlers.gmail_handler.utils import google_auth_flow, save_creds_to_file
+
+DEFAULT_SCOPES = [
+	'https://www.googleapis.com/auth/youtube',
+	'https://www.googleapis.com/auth/youtube.force-ssl',
+	'https://www.googleapis.com/auth/youtubepartner'
+]
 
 logger = get_log("integrations.youtube_handler")
 
@@ -38,6 +52,24 @@ class YoutubeHandler(APIHandler):
         self.connection = None
         self.is_connected = False
 
+        self.handler_storage = kwargs['handler_storage']
+
+        self.credentials_url = self.connection_data.get('credentials_url', None)
+        self.credentials_file = self.connection_data.get('credentials_file', None)
+        if self.connection_data.get('credentials'):
+            self.credentials_file = self.connection_data.pop('credentials')
+        if not self.credentials_file and not self.credentials_url:
+            # try to get from config
+            yt_config = Config().get('handlers', {}).get('youtube', {})
+            secret_file = yt_config.get('credentials_file')
+            secret_url = yt_config.get('credentials_url')
+            if secret_file:
+                self.credentials_file = secret_file
+            elif secret_url:
+                self.credentials_url = secret_url
+
+        self.scopes = self.connection_data.get('scopes', DEFAULT_SCOPES)
+
         youtube_video_comments_data = YoutubeCommentsTable(self)
         self._register_table("comments", youtube_video_comments_data)
 
@@ -46,6 +78,22 @@ class YoutubeHandler(APIHandler):
 
         youtube_video_data = YoutubeVideosTable(self)
         self._register_table("videos", youtube_video_data)
+
+    def _download_secret_file(self, secret_file):
+        # Giving more priority to the S3 file
+        if self.credentials_url:
+            response = requests.get(self.credentials_url)
+            if response.status_code == 200:
+                with open(secret_file, 'w') as creds:
+                    creds.write(response.text)
+                return True
+            else:
+                logger.error("Failed to get credentials from S3", response.status_code)
+
+        if self.credentials_file and os.path.isfile(self.credentials_file):
+            copyfile(self.credentials_file, secret_file)
+            return True
+        return False
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.
@@ -56,9 +104,35 @@ class YoutubeHandler(APIHandler):
         """
         if self.is_connected is True:
             return self.connection
+        
+        creds = None
+
+        # Get the current dir, we'll check for Token & Creds files in this dir
+        curr_dir = self.handler_storage.folder_get('config')
+
+        creds_file = os.path.join(curr_dir, 'creds.json')
+        secret_file = os.path.join(curr_dir, 'secret.json')
+
+        if os.path.isfile(creds_file):
+            creds = Credentials.from_authorized_user_file(creds_file, self.scopes)
+
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+
+            if self._download_secret_file(secret_file):
+                # save to storage
+                self.handler_storage.folder_sync('config')
+            else:
+                raise ValueError('No valid Gmail Credentials filepath or S3 url found.')
+
+            creds = google_auth_flow(secret_file, self.scopes, self.connection_data.get('code'))
+
+            save_creds_to_file(creds, creds_file)
+            self.handler_storage.folder_sync('config')
 
         youtube = build(
-            "youtube", "v3", developerKey=self.connection_data["youtube_api_token"]
+            "youtube", "v3", developerKey=self.connection_data["youtube_api_token"], credentials=creds
         )
         self.connection = youtube
 

@@ -1077,6 +1077,9 @@ class SQLQuery():
                 names_a.update(names_b)
                 data = ResultSet().from_df_cols(resp_df, col_names=names_a)
 
+                for col in data.find_columns('__mindsdb_row_id'):
+                    data.del_column(col)
+
             except Exception as e:
                 raise SqlApiUnknownError(f'error in join step: {e}') from e
 

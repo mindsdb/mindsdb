@@ -300,7 +300,7 @@ class BYOMHandler(BaseMLEngine):
             db.session.commit()
 
         except Exception as e:
-            log.logger.error(e)
+            logger.error(e)
             predictor_id = model_storage.predictor_id
             predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
             logger.error(traceback.format_exc())

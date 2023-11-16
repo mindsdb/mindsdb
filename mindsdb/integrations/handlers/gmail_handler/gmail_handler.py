@@ -287,9 +287,13 @@ class GmailHandler(APIHandler):
         self.connection_args = kwargs.get('connection_data', {})
 
         self.credentials_url = self.connection_args.get('credentials_url', None)
+        logger.info(f"gmail credentials url: {self.credentials_url}")
+
         self.credentials_file = self.connection_args.get('credentials_file', None)
         if self.connection_args.get('credentials'):
             self.credentials_file = self.connection_args.pop('credentials')
+        logger.info(f"gmail credentials file: {self.credentials_file}")
+
         if not self.credentials_file and not self.credentials_url:
             # try to get from config
             gm_config = Config().get('handlers', {}).get('gmail', {})
@@ -301,6 +305,8 @@ class GmailHandler(APIHandler):
                 self.credentials_url = secret_url
 
         self.scopes = self.connection_args.get('scopes', DEFAULT_SCOPES)
+        logger.info(f"gmail scopes: {self.scopes}")
+
         self.token_file = None
         self.max_page_size = 500
         self.max_batch_size = 100
@@ -334,6 +340,7 @@ class GmailHandler(APIHandler):
 
         # Get the current dir, we'll check for Token & Creds files in this dir
         curr_dir = self.handler_storage.folder_get('config')
+        logger.info(f"credential files to be saved at {curr_dir}")
 
         creds_file = os.path.join(curr_dir, 'creds.json')
         secret_file = os.path.join(curr_dir, 'secret.json')
@@ -354,7 +361,9 @@ class GmailHandler(APIHandler):
             creds = google_auth_flow(secret_file, self.scopes, self.connection_args.get('code'))
 
             save_creds_to_file(creds, creds_file)
+            logger.info(f"saved session credentials to {creds_file}")
             self.handler_storage.folder_sync('config')
+
 
         return build('gmail', 'v1', credentials=creds)
 
@@ -367,9 +376,11 @@ class GmailHandler(APIHandler):
             The authenticated Gmail API service object.
         """
         if self.is_connected and self.service is not None:
+            logger.debug("gmail service already created")
             return self.service
 
         self.service = self.create_connection()
+        logger.debug("gmail service successfully created")
 
         self.is_connected = True
         return self.service
@@ -392,7 +403,9 @@ class GmailHandler(APIHandler):
 
             if result and result.get('emailAddress', None) is not None:
                 response.success = True
+                logger.info("gmail API connection is alive")
         except AuthException as error:
+            logger.info("gmail API connection requires authentication")
             response.error_message = str(error)
             response.redirect_url = error.auth_url
             return response

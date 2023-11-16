@@ -2,7 +2,7 @@ import datetime as dt
 
 import json
 
-from google_auth_oauthlib.flow import Flow
+from google_auth_oauthlib.flow import Flow, InstalledAppFlow
 
 
 def credentials_to_dict(credentials):
@@ -23,23 +23,20 @@ class AuthException(Exception):
 
 
 def google_auth_flow(secret_file, scopes, code=None):
-    # initialise flow
-    flow = Flow.from_client_secrets_file(secret_file, scopes)
-
-    # get host url from flask
-    from flask import request
-    flow.redirect_uri = request.headers['ORIGIN'] + '/verify-auth'
 
     if code:
+        flow = Flow.from_client_secrets_file(secret_file, scopes)
         flow.fetch_token(code=code)
         creds = flow.credentials
-        return creds
     else:
-        auth_url = flow.authorization_url()[0]
-        raise AuthException(f'Authorisation required. Please follow the url: {auth_url}', auth_url=auth_url)
+        flow = InstalledAppFlow.from_client_secrets_file(secret_file, scopes)
+        creds = flow.run_local_server(port=9999)
+
+    return creds
 
 
 def save_creds_to_file(creds, file_path):
     with open(file_path, 'w') as token:
         data = credentials_to_dict(creds)
         token.write(json.dumps(data))
+

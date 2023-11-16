@@ -5,5 +5,5 @@ __description__ = "MindsDB handler for the CoinBase API"
 __author__ = 'Bustedware LLC'
 __github__ = 'https://github.com/bustedware'
 __pypi__ = 'https://pypi.org/project/mindsdb/'
-__license__ = 'GPL-3.0'
+__license__ = 'MIT'
 __copyright__ = 'Copyright 2023 - mindsdb'

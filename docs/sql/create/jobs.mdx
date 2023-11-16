@@ -12,7 +12,7 @@ The `CREATE JOB` statement lets you schedule the execution of queries by providi
 Here is the syntax:
 
 ```sql
-CREATE JOB [project_name.]job_name [AS] (
+CREATE JOB [IF NOT EXISTS] [project_name.]job_name [AS] (
    <mindsdb_sql_query_1>[; <mindsdb_sql_query_2>]
 )
 [START <date>]

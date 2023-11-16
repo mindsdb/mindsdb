@@ -1,7 +1,7 @@
 import ast
-import uuid
 from enum import Enum
 from typing import Any, List, Optional
+import hashlib
 
 import pandas as pd
 from mindsdb_sql.parser.ast import (
@@ -19,12 +19,13 @@ from mindsdb_sql.parser.ast import (
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
+from mindsdb.integrations.utilities.sql_utils import conditions_to_filter
 
 from ..utilities.sql_utils import query_traversal
 from .base import BaseHandler
 
-LOG = get_log("VectorStoreHandler")
+LOG = log.getLogger(__name__)
 
 
 class FilterOperator(Enum):
@@ -215,7 +216,7 @@ class VectorStoreHandler(BaseHandler):
             self.drop_table(table_name, if_exists=if_exists)
         return HandlerResponse(resp_type=RESPONSE_TYPE.OK)
 
-    def _dispatch_insert(self, query: Insert) -> HandlerResponse:
+    def _dispatch_insert(self, query: Insert):
         """
         Dispatch insert query to the appropriate method.
         """
@@ -229,13 +230,6 @@ class VectorStoreHandler(BaseHandler):
                 f"Allowed columns are {[col['name'] for col in self.SCHEMA]}"
             )
 
-        # get id column if it is present
-        if "id" in columns:
-            id_col_index = columns.index("id")
-            ids = [self._value_or_self(row[id_col_index]) for row in query.values]
-        else:
-            ids = [uuid.uuid4().hex for _ in query.values]
-
         # get content column if it is present
         if TableField.CONTENT.value in columns:
             content_col_index = columns.index("content")
@@ -244,6 +238,16 @@ class VectorStoreHandler(BaseHandler):
             ]
         else:
             content = None
+
+        # get id column if it is present
+        if TableField.ID.value in columns:
+            id_col_index = columns.index("id")
+            ids = [self._value_or_self(row[id_col_index]) for row in query.values]
+        elif TableField.CONTENT.value is not None:
+            # use hashed value
+            ids = [hashlib.md5(str(val).encode()).hexdigest() for val in content]
+        else:
+            raise Exception("Content or id is required!")
 
         # get embeddings column if it is present
         if TableField.EMBEDDINGS.value in columns:
@@ -274,14 +278,55 @@ class VectorStoreHandler(BaseHandler):
             }
         )
 
-        # dispatch insert
-        return self.insert(table_name, data, columns=columns)
+        return self._do_upsert(table_name, data)
 
-    def _dispatch_update(self, query: Update) -> HandlerResponse:
+    def _dispatch_update(self, query: Update):
         """
         Dispatch update query to the appropriate method.
         """
-        raise NotImplementedError("Update query is not supported!")
+        table_name = query.table.parts[-1]
+
+        row = query.update_columns
+
+        filters = conditions_to_filter(query.where)
+        row.update(filters)
+
+        # checks
+        if TableField.EMBEDDINGS.value not in row:
+            raise Exception("Embeddings column is required!")
+
+        if TableField.ID.value not in row:
+            if TableField.CONTENT.value in row:
+                value = row[TableField.CONTENT.value]
+                row[TableField.ID.value] = hashlib.md5(str(value).encode()).hexdigest()
+            else:
+                raise Exception("Content or id is required!")
+
+        # store
+        df = pd.DataFrame([row])
+
+        return self._do_upsert(table_name, df)
+
+    def _do_upsert(self, table_name, df):
+        # find existing ids
+        # id is string TODO is it ok?
+        df['id'] = df['id'].apply(str)
+
+        res = self.select(
+            table_name,
+            columns=['id'],
+            conditions=[
+                FilterCondition(column='id', op=FilterOperator.IN, value=list(df['id']))
+            ]
+        )
+        existed_ids = list(res['id'])
+
+        # update existed
+        df_update = df[df['id'].isin(existed_ids)]
+        df_insert = df[~df['id'].isin(existed_ids)]
+
+        self.update(table_name, df_update, 'id')
+        self.insert(table_name, df_insert)
 
     def _dispatch_delete(self, query: Delete) -> HandlerResponse:
         """
@@ -343,7 +388,15 @@ class VectorStoreHandler(BaseHandler):
             Select: self._dispatch_select,
         }
         if type(query) in dispatch_router:
-            return dispatch_router[type(query)](query)
+            resp = dispatch_router[type(query)](query)
+            if resp is not None:
+                return HandlerResponse(
+                    resp_type=RESPONSE_TYPE.TABLE,
+                    data_frame=resp
+                )
+            else:
+                return HandlerResponse(resp_type=RESPONSE_TYPE.OK)
+
         else:
             raise NotImplementedError(f"Query type {type(query)} not implemented.")
 
@@ -385,7 +438,7 @@ class VectorStoreHandler(BaseHandler):
         raise NotImplementedError()
 
     def insert(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
+        self, table_name: str, data: pd.DataFrame
     ) -> HandlerResponse:
         """Insert data into table
 
@@ -400,8 +453,8 @@ class VectorStoreHandler(BaseHandler):
         raise NotImplementedError()
 
     def update(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
+        self, table_name: str, data: pd.DataFrame, key_column: str = None
+    ):
         """Update data in table
 
         Args:
@@ -435,7 +488,7 @@ class VectorStoreHandler(BaseHandler):
         conditions: List[FilterCondition] = None,
         offset: int = None,
         limit: int = None,
-    ) -> HandlerResponse:
+    ) -> pd.DataFrame:
         """Select data from table
 
         Args:
@@ -453,5 +506,6 @@ class VectorStoreHandler(BaseHandler):
         data = pd.DataFrame(self.SCHEMA)
         data.columns = ["COLUMN_NAME", "DATA_TYPE"]
         return HandlerResponse(
+            resp_type=RESPONSE_TYPE.DATA,
             data_frame=data,
         )

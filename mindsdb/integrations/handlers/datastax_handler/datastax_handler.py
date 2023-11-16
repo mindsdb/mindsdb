@@ -1,4 +1,4 @@
-from ..scylla_handler import Handler as ScyllaHandler
+from mindsdb.integrations.handlers.scylla_handler import Handler as ScyllaHandler
 
 
 class DatastaxHandler(ScyllaHandler):

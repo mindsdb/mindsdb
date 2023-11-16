@@ -10,11 +10,11 @@ from mindsdb.integrations.handlers.rag_handler.settings import (
     build_llm_params,
 )
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 # these require no additional arguments
 
-logger = get_log(logger_name=__name__)
+logger = log.getLogger(__name__)
 
 
 class RAGHandler(BaseMLEngine):

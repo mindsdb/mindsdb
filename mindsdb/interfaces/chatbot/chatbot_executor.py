@@ -29,7 +29,7 @@ class BotExecutor:
                             callback=getattr(back_db, name)
                         ))
         return functions
-    
+
     def _prepare_skills(self):
         skills = []
         if self.chat_task.agent_id is None:

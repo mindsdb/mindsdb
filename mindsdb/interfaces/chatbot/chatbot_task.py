@@ -73,7 +73,7 @@ class ChatBotTask(BaseTask):
             self._on_message(chat_memory, message)
         except (SystemExit, KeyboardInterrupt):
             raise
-        except Exception as e:
+        except Exception:
             self.set_error(str(traceback.format_exc()))
 
     def _on_message(self, chat_memory, message: ChatBotMessage):

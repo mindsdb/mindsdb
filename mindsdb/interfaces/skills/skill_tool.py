@@ -7,6 +7,7 @@ from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent impo
 
 from typing import List
 
+
 def _make_text_to_sql_tools(skill: db.Skills, llm: BaseLanguageModel, executor) -> List[BaseTool]:
     database = skill.params['database']
     tables = skill.params['tables']
@@ -18,14 +19,15 @@ def _make_text_to_sql_tools(skill: db.Skills, llm: BaseLanguageModel, executor) 
     )
     return SQLDatabaseToolkit(db=db, llm=llm).get_tools()
 
+
 def make_tools_from_skill(skill: db.Skills, llm: BaseLanguageModel, executor) -> List[BaseTool]:
     """Makes Langchain compatible tools from a skill
-    
+
     Args:
         skill (Skills): Skill to make a tool from
         llm (BaseLanguageModel): LLM to use if the skill requires one
         executor (ExecuteCommands): MindsDB executor to use if the skill requires one
-    
+
     Returns:
         tools (List[BaseTool]): List of tools for the given skill
     """

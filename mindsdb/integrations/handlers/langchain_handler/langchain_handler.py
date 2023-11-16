@@ -27,7 +27,7 @@ _DEFAULT_MAX_TOKENS = 2048  # requires more than vanilla OpenAI due to ongoing s
 _DEFAULT_AGENT_MODEL = 'zero-shot-react-description'
 _DEFAULT_AGENT_TOOLS = ['python_repl', 'wikipedia']  # these require no additional arguments
 _ANTHROPIC_CHAT_MODELS = {'claude-2', 'claude-instant-1'}
-_PARSING_ERROR_PREFIX = 'Could not parse LLM output: `'
+_PARSING_ERROR_PREFIX = 'An output parsing error occurred'
 
 class LangChainHandler(BaseMLEngine):
     """
@@ -58,7 +58,6 @@ class LangChainHandler(BaseMLEngine):
         self.default_max_tokens = _DEFAULT_MAX_TOKENS
         self.default_agent_model = _DEFAULT_AGENT_MODEL
         self.default_agent_tools = _DEFAULT_AGENT_TOOLS
-        self.write_privileges = False  # if True, this agent is able to write into other active mindsdb integrations
 
     # TODO (ref #7496): modify handler_utils.get_api_key to check for prefix in all sources, update usage in all handlers, deprecate  # noqa
     def _get_serper_api_key(self, args, strict=True):
@@ -78,7 +77,6 @@ class LangChainHandler(BaseMLEngine):
                  or re-create this model and pass the API key with `USING` syntax.')  # noqa
 
     def create(self, target, args=None, **kwargs):
-        self.write_privileges = args.get('using', {}).get('writer', self.write_privileges)
         self.default_agent_tools = args.get('tools', self.default_agent_tools)
 
         args = args['using']
@@ -205,8 +203,7 @@ class LangChainHandler(BaseMLEngine):
                             model_kwargs,
                             pred_args,
                             args['executor'],
-                            self.default_agent_tools,
-                            self.write_privileges)
+                            self.default_agent_tools)
 
         memory = ConversationSummaryBufferMemory(llm=llm,
                                                  max_token_limit=max_tokens,
@@ -242,7 +239,7 @@ class LangChainHandler(BaseMLEngine):
             memory=memory,
             agent=agent_name,
             max_iterations=pred_args.get('max_iterations', 3),
-            verbose=pred_args.get('verbose', args.get('verbose', False)),
+            verbose=True,
             handle_parsing_errors=False,
         )
 
@@ -281,8 +278,7 @@ class LangChainHandler(BaseMLEngine):
                             model_kwargs,
                             pred_args,
                             args['executor'],
-                            self.default_agent_tools,
-                            self.write_privileges)
+                            self.default_agent_tools)
 
         # langchain agent setup
         memory = ConversationSummaryBufferMemory(llm=llm, max_token_limit=max_tokens)
@@ -351,7 +347,8 @@ class LangChainHandler(BaseMLEngine):
                     completions.append('')
                     continue
                 try:
-                    completions.append(agent.run(prompt))
+                    result = agent.run(prompt)
+                    completions.append(result)
                 except ValueError as e:
                     # Handle parsing errors ourselves instead of using handle_parsing_errors=True in initialize_agent.
                     response = str(e)
@@ -364,8 +361,11 @@ class LangChainHandler(BaseMLEngine):
                         # As a somewhat dirty workaround, we accept the output formatted incorrectly and use it as a response.
                         #
                         # Ideally, in the future, we would write a parser that is more robust and flexible than the one Langchain uses.
-                        response = response.lstrip(_PARSING_ERROR_PREFIX).rstrip('`')
+                        # Response is wrapped in ``
                         log.logger.info(f"Agent failure, salvaging response...")
+                        response_output = response.split('`')
+                        if len(response_output) >= 2:
+                            response = response_output[-2]
                         completions.append(response)
                 except Exception as e:
                     completions.append(f'agent failed with error:\n{str(e)}...')

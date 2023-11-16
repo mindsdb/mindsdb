@@ -29,7 +29,7 @@ class ModelExecutor:
         # redefined prompt
         self.prompt = None
 
-    def call(self, history, functions, tools):
+    def call(self, history, functions, skills):
         model_info = self.model_info
 
         if model_info['mode'] != 'conversational':
@@ -38,7 +38,7 @@ class ModelExecutor:
         messages = self._chat_history_to_conversation(history, model_info)
         if model_info['engine'] == 'langchain':
 
-            all_tools = tools
+            all_tools = []
             for function in functions:
                 all_tools.append({
                     'name': function.name,
@@ -53,7 +53,7 @@ class ModelExecutor:
             context = '\n'.join(context_list)
 
             # call model
-            params = {'tools': all_tools, 'context': context, 'prompt': self.prompt}
+            params = {'tools': all_tools, 'skills': skills, 'context': context, 'prompt': self.prompt}
 
             predictions = self.chat_task.project_datanode.predict(
                 model_name=model_info['model_name'],

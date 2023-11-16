@@ -191,10 +191,24 @@ class YoutubeHandler(APIHandler):
 connection_args = OrderedDict(
     youtube_access_token={
         "type": ARG_TYPE.STR,
-        "description": "API Token for accessing Youtube Application API",
-        "required": True,
-        "label": "Youtube access token",
-    }
+        "description": "API Key",
+        "label": "API Key",
+    },
+    credentials_url={
+        'type': ARG_TYPE.STR,
+        'description': 'URL to OAuth2 Credentials',
+        'label': 'URL to OAuth2 Credentials',
+    },
+    credentials_file={
+        'type': ARG_TYPE.STR,
+        'description': 'Location of OAuth2 Credentials',
+        'label': 'Location of OAuth2 Credentials',
+    },
+    credentials={
+        'type': ARG_TYPE.PATH,
+        'description': 'OAuth2 Credentials',
+        'label': 'Upload OAuth2 Credentials',
+    },
 )
 
 connection_args_example = OrderedDict(youtube_api_token="<your-youtube-api-token>")

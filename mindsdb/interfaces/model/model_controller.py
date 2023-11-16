@@ -22,7 +22,7 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import resolve_model_identifier
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
-import mindsdb.utilities as log
+from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 

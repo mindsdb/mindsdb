@@ -1,13 +1,10 @@
 import os
 import unittest
-from dotenv import load_dotenv
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.integrations.handlers.confluence_handler.confluence_handler import (
     ConfluenceHandler,
 )
-
-load_dotenv()
 
 
 class ConfluenceHandlerTest(unittest.TestCase):

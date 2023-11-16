@@ -74,9 +74,6 @@ class ChatBotTask(BaseTask):
         except (SystemExit, KeyboardInterrupt):
             raise
         except Exception as e:
-            print('UH OH SOMETHING WENT WRONG')
-            print(e)
-            traceback.print_exc()
             self.set_error(str(traceback.format_exc()))
 
     def _on_message(self, chat_memory, message: ChatBotMessage):

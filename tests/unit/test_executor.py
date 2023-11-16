@@ -6,7 +6,6 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
@@ -539,22 +538,18 @@ class Test(BaseExecutorMockPredictor):
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_drop_database(self, mock_handler):
+        from mindsdb.utilities.exception import EntityNotExistsError
         self.set_handler(mock_handler, name='pg', tables={})
 
         # remove existing
-        ret = self.execute("drop database pg")
+        self.execute("drop database pg")
 
         # try one more time
-        try:
-            ret = self.execute("drop database pg")
-        except Exception as e:
-            assert 'not exists' in str(e)
-        else:
-            raise Exception('SqlApiException expected')
+        with pytest.raises(EntityNotExistsError):
+            self.execute("drop database pg")
 
         # try if exists
-        ret = self.execute("drop database if exists pg")
-        assert ret.error_code is None
+        self.execute("drop database if exists pg")
 
         # try files
         try:
@@ -1135,16 +1130,19 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
         self.set_executor(mock_lightwood=True, mock_model_controller=True, import_dummy_ml=True)
 
     def test_ml_engine(self):
-        # create an ml engine
-        self.execute("""
+        from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
+
+        sql = """
             CREATE ML_ENGINE test_engine
             FROM lightwood
-        """)
+        """
+
+        # create an ml engine
+        self.execute(sql)
 
         # create the same ml engine without if not exists throws an error
-        with pytest.raises(Exception) as exc_info:
-            self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert 'already exists' in str(exc_info.value)
+        with pytest.raises(EntityExistsError):
+            self.execute(sql)
 
         # create the same ml engine with if not exists doesn't throw an error
         self.execute("""
@@ -1176,176 +1174,126 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
         assert len(ret.data) == 0
 
         # drop again without if exists should throw an error
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(EntityNotExistsError):
             self.execute('DROP ML_ENGINE test_engine2')
-        assert 'does not exist' in str(exc_info.value)
 
         # drop again with if exists should not throw an error
         self.execute('DROP ML_ENGINE IF EXISTS test_engine2')
 
     def test_predictor(self):
+        from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
         # create a predictor from dummy ml handler
         sql = """
             CREATE MODEL test_predictor
             PREDICT target
             USING
                 engine = 'dummy_ml'
-            """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        """
+        self.execute(sql)
 
         # create the same predictor without if not exists throws an error
-        with pytest.raises(Exception) as exc_info:
-            self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert 'already exists' in str(exc_info.value)
+        with pytest.raises(EntityExistsError):
+            self.execute(sql)
 
         # create the same predictor with if not exists doesn't throw an error
-        sql = """
+        self.execute("""
             CREATE MODEL IF NOT EXISTS test_predictor
             PREDICT target
             USING
                 engine = 'dummy_ml'
-            """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        """)
 
         # create a predictor with if not exists should indeed create a new predictor
-        sql = """
+        self.execute("""
             CREATE MODEL IF NOT EXISTS test_predictor2
             PREDICT target
             USING
                 engine = 'dummy_ml'
-            """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        """)
 
         # check that the predictor was indeed created
-        sql = """
+        ret = self.execute("""
             SHOW MODELS
             WHERE name = 'test_predictor2'
-        """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        """)
         assert len(ret.data) == 1
 
         # drop the predictor
-        sql = """
-            DROP MODEL test_predictor2
-        """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        self.execute('DROP MODEL test_predictor2')
 
         # check that the predictor was indeed dropped
-        sql = """
+        self.execute("""
             SHOW MODELS
             WHERE name = 'test_predictor2'
-        """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        """)
 
         # drop again without if exists should throw an error
-        sql = """
-            DROP MODEL test_predictor2
-        """
-        with pytest.raises(Exception) as exc_info:
-            self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert 'does not exist' in str(exc_info.value)
+        with pytest.raises(EntityNotExistsError):
+            self.execute('DROP MODEL test_predictor2')
 
         # drop again with if exists should not throw an error
-        sql = """
-            DROP MODEL IF EXISTS test_predictor2
-        """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        self.execute('DROP MODEL IF EXISTS test_predictor2')
 
     def test_project(self):
-        sql = """
-            CREATE PROJECT another_test_project
-        """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        from mindsdb.utilities.exception import EntityExistsError
 
+        sql = 'CREATE PROJECT another_test_project'
+        self.execute(sql)
         # create the same project without if not exists throws an error
-        with pytest.raises(Exception) as exc_info:
-            self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert 'already exists' in str(exc_info.value)
+        with pytest.raises(EntityExistsError):
+            self.execute(sql)
 
         # create the same project with if not exists doesn't throw an error
-        sql = """
-            CREATE PROJECT IF NOT EXISTS another_test_project
-        """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        self.execute('CREATE PROJECT IF NOT EXISTS another_test_project')
 
     def test_database_integration(self):
+        from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
+
         sql = """
             CREATE DATABASE test_database
             WITH engine = 'mindsdb'
         """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        self.execute(sql)
 
         # create the same database without if not exists throws an error
-        with pytest.raises(Exception) as exc_info:
-            self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert 'already exists' in str(exc_info.value)
+        with pytest.raises(EntityExistsError):
+            self.execute(sql)
 
         # create the same database with if not exists doesn't throw an error
-        sql = """
+        self.execute("""
             CREATE DATABASE IF NOT EXISTS test_database
             WITH engine = 'mindsdb'
-        """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        """)
 
         # create a database with if not exists should indeed create a new database
-        sql = """
+        self.execute("""
             CREATE DATABASE IF NOT EXISTS test_database2
             WITH engine = 'mindsdb'
-        """
-
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        """)
 
         # check that the database was indeed created
-        sql = """
+        ret = self.execute("""
             SHOW DATABASES
             WHERE name = 'test_database2'
-        """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        """)
         assert len(ret.data) == 1
 
         # drop the database
-        sql = """
-            DROP DATABASE test_database2
-        """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        self.execute('DROP DATABASE test_database2')
 
         # check that the database was indeed dropped
-        sql = """
+        ret = self.execute("""
             SHOW DATABASES
             WHERE name = 'test_database2'
-        """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        """)
         assert len(ret.data) == 0
 
         # drop again without if exists should throw an error
-        sql = """
-            DROP DATABASE test_database2
-        """
-        with pytest.raises(Exception) as exc_info:
-            self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert 'does not exist' in str(exc_info.value)
+        with pytest.raises(EntityNotExistsError):
+            self.execute('DROP DATABASE test_database2')
 
         # drop again with if exists should not throw an error
-        sql = """
-            DROP DATABASE IF EXISTS test_database2
-        """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        self.execute('DROP DATABASE IF EXISTS test_database2')
 
     def test_job(self):
         from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
@@ -1355,52 +1303,36 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
                 SELECT 1
             )
         """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        self.execute(sql)
 
         # create the same job without if not exists throws an error
         with pytest.raises(EntityExistsError):
-            self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
+            self.execute(sql)
 
         # create the same job with if not exists doesn't throw an error
-        sql = """
+        self.execute("""
             CREATE JOB IF NOT EXISTS test_job (
                 SELECT 1
             )
-        """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        """)
 
         # create a job with if not exists should indeed create a new job
-        sql = """
+        self.execute("""
             CREATE JOB IF NOT EXISTS test_job2 (
                 SELECT 1
             )
-        """
-
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        """)
 
         # drop the job
-        sql = """
-            DROP JOB test_job2
-        """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        sql = 'DROP JOB test_job2'
+        self.execute(sql)
 
         # drop again without if exists should throw an error
-        sql = """
-            DROP JOB test_job2
-        """
         with pytest.raises(EntityNotExistsError):
-            self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
+            self.execute(sql)
 
         # drop again with if exists should not throw an error
-        sql = """
-            DROP JOB IF EXISTS test_job2
-        """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        self.execute('DROP JOB IF EXISTS test_job2')
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_view(self, mock_handler):
@@ -1416,55 +1348,41 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
             SELECT * FROM pg.tasks
             )
         """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        self.execute(sql)
 
         # create the same view without if not exists throws an error
         with pytest.raises(EntityExistsError):
-            self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
+            self.execute(sql)
 
         # create the same view with if not exists doesn't throw an error
-        sql = """
+        self.execute("""
             CREATE VIEW IF NOT EXISTS test_view AS (
             SELECT * FROM pg.tasks
             )
-        """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        """)
 
         # create a view with if not exists should indeed create a new view
-        sql = """
+        self.execute("""
             CREATE VIEW IF NOT EXISTS test_view2 AS (
             SELECT * FROM pg.tasks
             )
-        """
-
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        """)
 
         # check that the view was indeed created
-        sql = """
+        ret = self.execute("""
             SHOW FULL TABLES
             WHERE tables_in_mindsdb = 'test_view2'
-        """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        """)
         assert len(ret.data) == 1
 
         # drop the view
-        sql = """
-            DROP VIEW test_view2
-        """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        self.execute('DROP VIEW test_view2')
 
         # check that the view was indeed dropped
-        sql = """
+        ret = self.execute("""
             SHOW FULL TABLES
             WHERE tables_in_mindsdb = 'test_view2'
-        """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        """)
         assert len(ret.data) == 0
 
         # drop again without if exists should throw an error
@@ -1472,11 +1390,7 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
             DROP VIEW test_view2
         """
         with pytest.raises(EntityNotExistsError):
-            self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
+            self.execute('DROP VIEW test_view2')
 
         # drop again with if exists should not throw an error
-        sql = """
-            DROP VIEW IF EXISTS test_view2
-        """
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
-        assert ret.error_code is None
+        self.execute('DROP VIEW IF EXISTS test_view2')

@@ -1146,7 +1146,7 @@ class ExecuteCommands:
         integrations = self.session.integration_controller.get_all()
         if name not in integrations:
             if not statement.if_exists:
-                raise SqlApiException(f"Integration '{name}' does not exists")
+                raise EntityNotExistsError('Integration does not exists', name)
             else:
                 return ExecuteAnswer(ANSWER_TYPE.OK)
         self.session.integration_controller.delete(name)
@@ -1189,7 +1189,7 @@ class ExecuteCommands:
         db_name = statement.name.parts[0]
         try:
             self.session.database_controller.delete(db_name)
-        except EntityExistsError:
+        except EntityNotExistsError:
             if statement.if_exists is not True:
                 raise
         return ExecuteAnswer(ANSWER_TYPE.OK)

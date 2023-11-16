@@ -283,7 +283,7 @@ class YoutubeChannelsTable(APITable):
             selected_columns, 
             [where_condition for where_condition in where_conditions if where_condition[1] == 'channel_id'], 
             order_by_conditions, 
-            result_limit if result_limit else None
+            result_limit if query.limit else None
         )
 
         channel_df = select_statement_executor.execute_query()
@@ -362,7 +362,7 @@ class YoutubeVideosTable(APITable):
             selected_columns, 
             [where_condition for where_condition in where_conditions if where_condition[1] not in ['video_id', 'channel_id']], 
             order_by_conditions, 
-            result_limit if result_limit else None
+            result_limit if query.limit else None
         )
 
         video_df = select_statement_executor.execute_query()

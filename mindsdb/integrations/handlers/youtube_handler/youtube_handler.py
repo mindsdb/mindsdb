@@ -79,22 +79,6 @@ class YoutubeHandler(APIHandler):
         youtube_video_data = YoutubeVideosTable(self)
         self._register_table("videos", youtube_video_data)
 
-    def _download_secret_file(self, secret_file):
-        # Giving more priority to the S3 file
-        if self.credentials_url:
-            response = requests.get(self.credentials_url)
-            if response.status_code == 200:
-                with open(secret_file, 'w') as creds:
-                    creds.write(response.text)
-                return True
-            else:
-                logger.error("Failed to get credentials from S3", response.status_code)
-
-        if self.credentials_file and os.path.isfile(self.credentials_file):
-            copyfile(self.credentials_file, secret_file)
-            return True
-        return False
-
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.
         Returns
@@ -105,6 +89,22 @@ class YoutubeHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
         
+        creds = self._get_oauth2_credentials()
+
+        youtube = build(
+            "youtube", "v3", developerKey=self.connection_data["youtube_api_token"], credentials=creds
+        )
+        self.connection = youtube
+
+        return self.connection
+    
+    def _get_oauth2_credentials(self):
+        """Get OAuth2 credentials for the handler.
+        Returns
+        -------
+        Credentials
+            OAuth2 credentials
+        """
         creds = None
 
         # Get the current dir, we'll check for Token & Creds files in this dir
@@ -131,12 +131,23 @@ class YoutubeHandler(APIHandler):
             save_creds_to_file(creds, creds_file)
             self.handler_storage.folder_sync('config')
 
-        youtube = build(
-            "youtube", "v3", developerKey=self.connection_data["youtube_api_token"], credentials=creds
-        )
-        self.connection = youtube
+        return creds        
+    
+    def _download_secret_file(self, secret_file):
+        # Giving more priority to the S3 file
+        if self.credentials_url:
+            response = requests.get(self.credentials_url)
+            if response.status_code == 200:
+                with open(secret_file, 'w') as creds:
+                    creds.write(response.text)
+                return True
+            else:
+                logger.error("Failed to get credentials from S3", response.status_code)
 
-        return self.connection
+        if self.credentials_file and os.path.isfile(self.credentials_file):
+            copyfile(self.credentials_file, secret_file)
+            return True
+        return False
 
     def check_connection(self) -> StatusResponse:
         """Check connection to the handler.

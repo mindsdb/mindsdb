@@ -347,8 +347,7 @@ class LangChainHandler(BaseMLEngine):
                     completions.append('')
                     continue
                 try:
-                    result = agent.run(prompt)
-                    completions.append(result)
+                    completions.append(agent.run(prompt))
                 except ValueError as e:
                     # Handle parsing errors ourselves instead of using handle_parsing_errors=True in initialize_agent.
                     response = str(e)

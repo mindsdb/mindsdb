@@ -20,9 +20,22 @@ class DummyHandler(BaseMLEngine):
         df['predictor_id'] = self.model_storage.predictor_id
         return df[['predicted', 'predictor_id']]
 
+    def _get_model_verison(self):
+        return self.model_storage._get_model_record(
+            self.model_storage.predictor_id
+        ).version
+
     def describe(self, attribute=None):
         if attribute == 'info':
-            return pd.DataFrame([['dummy', 0]], columns=['type', 'version'])
+            return pd.DataFrame(
+                [['dummy', self._get_model_verison()]],
+                columns=['type', 'version']
+            )
+        elif isinstance(attribute, list):
+            return pd.DataFrame(
+                [['.'.join(attribute), self._get_model_verison()]],
+                columns=['attribute', 'version']
+            )
         else:
             tables = ['info']
             return pd.DataFrame(tables, columns=['tables'])

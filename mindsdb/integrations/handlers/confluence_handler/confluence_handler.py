@@ -1,10 +1,18 @@
-from mindsdb.integrations.handlers.confluence_handler.confluence_table import ConfluenceSpacesTable
+from typing import Optional, Union
+
+import requests
+from atlassian import Confluence
+from mindsdb_sql import parse_sql
+
+from mindsdb.integrations.handlers.confluence_handler.confluence_table import (
+    ConfluencePagesTable,
+)
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
-from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
+from mindsdb.utilities import log
 
 from atlassian import Confluence
 from typing import Optional
@@ -23,9 +31,9 @@ class ConfluenceHandler(APIHandler):
             name of a handler instance
         """
         super().__init__(name)
-        
+
         connection_data = kwargs.get("connection_data", {})
-        
+
         self.parser = parse_sql
         self.dialect = 'confluence'
         self.connection_data = connection_data
@@ -33,7 +41,7 @@ class ConfluenceHandler(APIHandler):
         self.connection = None
         self.is_connected = False
 
-        confluence_pages_data = ConfluenceSpacesTable(self)
+        confluence_pages_data = ConfluencePagesTable(self)
         self._register_table("pages", confluence_pages_data)
 
     def connect(self):
@@ -45,7 +53,11 @@ class ConfluenceHandler(APIHandler):
         """
         if self.is_connected is True:
             return self.connection
-        conf = Confluence(url= self.connection_data.get('url'), username = self.connection_data.get('username'), password = self.connection_data.get('password'))
+        conf = Confluence(
+            url=self.connection_data.get('url'),
+            username=self.connection_data.get('username'),
+            password=self.connection_data.get('password'),
+        )
         self.connection = conf
         self.is_connected = True
         return self.connection
@@ -59,7 +71,7 @@ class ConfluenceHandler(APIHandler):
         """
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
-        
+
         try:
             self.connect()
             response.success = True

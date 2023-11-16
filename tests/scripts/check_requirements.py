@@ -151,6 +151,66 @@ def check_for_requirements_duplicates():
                 success = False
 
 
+def check_relative_reqs():
+    global success
+    # regex for finding relative imports of handlers like "from ..file_handler import FileHandler"
+    relative_import_pattern = re.compile("(?:\s|^)(?:from|import) \.\.\w+_handler")  # noqa: W605
+
+    def get_relative_reqs(files):
+        for file in files:
+            with open(file, 'r') as fh:
+                for line in fh.readlines():
+                    line = line.lower().strip()
+                    if line.startswith("-r mindsdb/integrations/handlers/"):
+                        yield line.split("mindsdb/integrations/handlers/")[1].split("/")[0]  # just return the handler name
+
+    for handler_dir in glob.glob("mindsdb/integrations/handlers/*/"):
+        handler_name = handler_dir.split("/")[-2].split("_handler")[0]
+        # regex for finding imports of other handlers like "from mindsdb.integrations.handlers.file_handler import FileHandler"
+        import_pattern = re.compile(f"(?:\s|^)(?:from|import) mindsdb\.integrations\.handlers\.(?!{handler_name})\w+_handler")  # noqa: W605
+        # requirements entries for this handler that point to another handler's requirements file
+        required_handlers = [r for r in get_relative_reqs([file for file in HANDLER_REQS_PATHS if file.startswith(handler_dir)])]
+        all_imported_handlers = []
+
+        # for every python file in this handler's code
+        for file in glob.glob(f"{handler_dir}/**/*.py", recursive=True):
+            errors = []
+
+            # find all of the imports of handlers
+            with open(file, "r") as f:
+                file_content = f.read()
+                relative_imported_handlers = [match.strip() for match in re.findall(relative_import_pattern, file_content)]
+                handler_import_lines = [match.strip() for match in re.findall(import_pattern, file_content)]
+
+            imported_handlers = {line: line.split("_handler")[0].split(".")[-1] + "_handler" for line in handler_import_lines}
+            all_imported_handlers += imported_handlers.values()
+
+            # Report on relative imports (like "from ..file_handler import FileHandler")
+            for line in relative_imported_handlers:
+                errors.append(f"{line} <- Relative import of handler. Use absolute import instead")
+
+            # Report on imports of other handlers that are missing a corresponding requirements.txt entry
+            for line, imported_handler_name in imported_handlers.items():
+                if imported_handler_name not in required_handlers:
+                    errors.append(f"{line} <- {imported_handler_name} not in handler requirements.txt. Add it like: \"-r mindsdb/integrations/handlers/{imported_handler_name}/requirements.txt\"")
+
+            if len(errors) > 0:
+                success = False
+                print(f"- {file}")
+                for error in errors:
+                    print("    " + error)
+                print()
+
+        # Report on requirements.txt entries that point to a handler that isn't used
+        requirements_errors = [required_handler_name for required_handler_name in required_handlers if required_handler_name not in all_imported_handlers]
+        if requirements_errors:
+            success = False
+            print(f"- {handler_dir}")
+            for required_handler_name in requirements_errors:
+                print(f"    -r mindsdb/integrations/handlers/{required_handler_name}/requirements.txt <- {required_handler_name} is in requirements.txt but not used in code")
+            print()
+
+
 def check_requirements_imports():
 
     global success
@@ -187,6 +247,9 @@ print()
 
 print("--- Checking that requirements match imports ---")
 check_requirements_imports()
+print()
 
+print("--- Checking handlers that require other handlers ---")
+check_relative_reqs()
 
 sys.exit(0 if success else 1)

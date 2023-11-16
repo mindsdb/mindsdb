@@ -61,18 +61,21 @@ class SELECTQueryParser(BaseQueryParser):
             order_by_conditions["ascending"] = []
 
             for an_order in self.query.order_by:
-                if an_order.field.parts[0] == self.table:
-                    if an_order.field.parts[1] in self.columns:
-                        order_by_conditions["columns"].append(an_order.field.parts[1])
+                if len(an_order.field.parts) > 1:
+                    if an_order.field.parts[0] == self.table:
+                        raise ValueError("Invalid table name in order by clause")
+                
+                if an_order.field.parts[-1] in self.columns:
+                    order_by_conditions["columns"].append(an_order.field.parts[-1])
 
-                        if an_order.direction == "ASC":
-                            order_by_conditions["ascending"].append(True)
-                        else:
-                            order_by_conditions["ascending"].append(False)
+                    if an_order.direction == "ASC":
+                        order_by_conditions["ascending"].append(True)
                     else:
-                        raise ValueError(
-                            f"Order by unknown column {an_order.field.parts[1]}"
-                        )
+                        order_by_conditions["ascending"].append(False)
+                else:
+                    raise ValueError(
+                        f"Order by unknown column {an_order.field.parts[-1]}"
+                    )
 
         return order_by_conditions
 

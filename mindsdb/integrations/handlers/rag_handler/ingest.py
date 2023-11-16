@@ -101,7 +101,6 @@ class RAGIngestor:
             return self.vector_store.from_documents(
                 documents=documents,
                 embedding=embeddings_model,
-                persist_directory=self.args.vector_store_storage_path,  # required for cls.persist() to work
                 client=get_chroma_client(
                     persist_directory=self.args.vector_store_storage_path
                 ),
@@ -161,15 +160,8 @@ class RAGIngestor:
         # todo get max_batch from chroma client
 
         try:
-            db = None
             for i, batch_document in enumerate(batches_documents):
-                if db is None:
-                    db = self.create_db_from_documents(batch_document, embeddings_model)
-                    db.persist()
-                else:
-                    db.add_documents(batch_document)
-                    db.persist()
-
+                db = self.create_db_from_documents(batch_document, embeddings_model)
                 logger.info(f"Added batch {i + 1} of {len(batch_document)} batches to vector db")
 
             logger.info(f"successfully loaded using 'from_documents' method")
@@ -179,9 +171,11 @@ class RAGIngestor:
                 f"Error loading using 'from_documents' method, trying 'from_text': {e}"
             )
             try:
-                for batch_document in batches_documents:
+                for i, batch_document in enumerate(batches_documents):
                     db = self.create_db_from_texts(batch_document, embeddings_model)
-                    logger.info(f"successfully loaded using 'from_text' method")
+                    logger.info(f"Added batch {i + 1} of {len(batch_document)} batches to vector db")
+
+                logger.info(f"successfully loaded using 'from_text' method")
 
             except Exception as e:
                 logger.error(f"Error creating from texts: {e}")
@@ -199,6 +193,7 @@ class RAGIngestor:
         vector_store_saver.save_vector_store(db)
 
         db = None  # Free up memory
+
         end_time = time.time()
         elapsed_time = end_time - start_time
 
@@ -206,5 +201,3 @@ class RAGIngestor:
             f"Fished creating vectorstore from documents. It took: {elapsed_time / 60} minutes"
         )
 
-        logger.info("Finished creating vectorstore from documents.")
-        logger.info(f"Elapsed time: {round(elapsed_time / 60)} minutes")

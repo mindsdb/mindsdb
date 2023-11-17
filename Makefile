@@ -13,4 +13,7 @@ precommit:
 run_mindsdb:
 	python -m mindsdb
 
-.PHONY: install_mindsdb precommit install_handler  run_mindsdb
+check:
+	python tests/scripts/check_requirements.py
+
+.PHONY: install_mindsdb precommit install_handler run_mindsdb check

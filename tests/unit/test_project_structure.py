@@ -63,6 +63,7 @@ class TestProjectStructure(BaseExecutorDummyML):
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_version_managing(self, data_handler):
+        from mindsdb.utilities.exception import EntityNotExistsError
         # set up
 
         df = pd.DataFrame([
@@ -192,11 +193,10 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert models[model_id].label == 'third'
 
         # check exception: not existing version
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(EntityNotExistsError) as exc_info:
             self.run_sql(
                 'SELECT * from proj.task_model.4 where a=1 and b=2',
             )
-        assert 'does not exists' in str(exc_info.value)
 
         # ===================== one-line with 'use database'=======================
 
@@ -263,11 +263,10 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert 'second' not in ret['TAG']
 
         # try to use deleted version
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(EntityNotExistsError) as exc_info:
             self.run_sql(
                 'SELECT * from proj.task_model.2 where a=1',
             )
-        assert 'does not exists' in str(exc_info.value)
 
         # exception with deleting active version
         with pytest.raises(Exception) as exc_info:
@@ -308,18 +307,17 @@ class TestProjectStructure(BaseExecutorDummyML):
         ret = self.run_sql('select * from proj.models_versions')
         assert len(ret) == 0
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_view(self, data_handler):
+    def test_view(self):
         df = pd.DataFrame([
             {'a': 1, 'b': dt.datetime(2020, 1, 1)},
             {'a': 2, 'b': dt.datetime(2020, 1, 2)},
             {'a': 1, 'b': dt.datetime(2020, 1, 3)},
         ])
-        self.set_handler(data_handler, name='pg', tables={'tasks': df})
+        self.save_file('tasks', df)
 
         self.run_sql('''
             create view mindsdb.vtasks (
-                select * from pg.tasks where a=1
+                select * from files.tasks where a=1
             )
         ''')
 

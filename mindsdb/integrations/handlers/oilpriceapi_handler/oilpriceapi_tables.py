@@ -2,10 +2,10 @@ import pandas as pd
 from typing import List
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from mindsdb_sql.parser import ast
 
-logger = get_log("integrations.oilpriceapi_handler")
+logger = log.getLogger(__name__)
 
 
 class OilPriceLatestTable(APITable):

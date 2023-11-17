@@ -1,8 +1,9 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 from .__about__ import __version__ as version, __description__ as description
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
-log = get_log()
+logger = log.getLogger(__name__)
+
 try:
     from .notion_handler import NotionHandler as Handler
 

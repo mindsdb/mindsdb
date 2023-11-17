@@ -28,7 +28,7 @@ from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_packets impor
 from mindsdb.api.postgres.postgres_proxy.utilities import strip_null_byte
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from mindsdb.api.mysql.mysql_proxy.external_libs.mysql_scramble import scramble as scramble_func
 
 
@@ -37,7 +37,7 @@ class PostgresProxyHandler(socketserver.StreamRequestHandler):
     user_parameters: Dict[bytes, bytes]
 
     def __init__(self, request, client_address, server):
-        self.logger = get_log("postgres_proxy")
+        self.logger = log.getLogger(__name__)
         self.charset = 'utf8'
         self.charset_text_type = CHARSET_NUMBERS['utf8_general_ci']
         self.session = None

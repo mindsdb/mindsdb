@@ -1,1 +1,2 @@
 stability-sdk
+pillow

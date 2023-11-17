@@ -3,7 +3,7 @@ from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
 from atlassian import Jira
@@ -11,8 +11,7 @@ from typing import Optional
 import requests
 
 
-log = get_log("integrations.jira_handler")
-
+logger = log.getLogger(__name__)
 
 class JiraHandler(APIHandler):
     """

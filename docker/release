@@ -118,6 +118,7 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==23.1.2 &
     pip install --prefer-binary --no-cache-dir 'tensorflow' 'autokeras' || true && \
     pip install --prefer-binary --no-cache-dir 'praw' || true && \
     pip install --prefer-binary --no-cache-dir 'google-generativeai' || true && \
+    pip install --prefer-binary --no-cache-dir 'mlflow' || true && \
 
 ARG VERSION=
 RUN pip install --no-cache-dir mindsdb${VERSION:+"==$VERSION"}

@@ -1,7 +1,3 @@
-import os
-import requests
-from shutil import copyfile
-
 from mindsdb.integrations.handlers.youtube_handler.youtube_tables import (
     YoutubeCommentsTable,
     YoutubeChannelsTable,
@@ -19,9 +15,8 @@ from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 from googleapiclient.discovery import build
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from mindsdb.integrations.handlers.gmail_handler.utils import google_auth_flow, save_creds_to_file
+
+from mindsdb.integrations.handlers.utilities.auth_utilities import GoogleOAuth2Manager
 
 DEFAULT_SCOPES = [
 	'https://www.googleapis.com/auth/youtube',
@@ -91,7 +86,8 @@ class YoutubeHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
         
-        creds = self._get_oauth2_credentials()
+        google_oauth2_manager = GoogleOAuth2Manager(self.handler_storage, self.scopes, self.credentials_file, self.credentials_url, self.connection_data.get('code'))
+        creds = google_oauth2_manager.get_oauth2_credentials()
 
         youtube = build(
             "youtube", "v3", developerKey=self.youtube_api_token, credentials=creds
@@ -99,58 +95,6 @@ class YoutubeHandler(APIHandler):
         self.connection = youtube
 
         return self.connection
-    
-    def _get_oauth2_credentials(self):
-        """Get OAuth2 credentials for the handler.
-        Returns
-        -------
-        Credentials
-            OAuth2 credentials
-        """
-        creds = None
-
-        if self.credentials_file or self.credentials_url:
-            # Get the current dir, we'll check for Token & Creds files in this dir
-            curr_dir = self.handler_storage.folder_get('config')
-
-            creds_file = os.path.join(curr_dir, 'creds.json')
-            secret_file = os.path.join(curr_dir, 'secret.json')
-
-            if os.path.isfile(creds_file):
-                creds = Credentials.from_authorized_user_file(creds_file, self.scopes)
-
-            if not creds or not creds.valid:
-                if creds and creds.expired and creds.refresh_token:
-                    creds.refresh(Request())
-
-                if self._download_secret_file(secret_file):
-                    # save to storage
-                    self.handler_storage.folder_sync('config')
-                else:
-                    raise ValueError('No valid Gmail Credentials filepath or S3 url found.')
-
-                creds = google_auth_flow(secret_file, self.scopes, self.connection_data.get('code'))
-
-                save_creds_to_file(creds, creds_file)
-                self.handler_storage.folder_sync('config')
-
-        return creds        
-    
-    def _download_secret_file(self, secret_file):
-        # Giving more priority to the S3 file
-        if self.credentials_url:
-            response = requests.get(self.credentials_url)
-            if response.status_code == 200:
-                with open(secret_file, 'w') as creds:
-                    creds.write(response.text)
-                return True
-            else:
-                logger.error("Failed to get credentials from S3", response.status_code)
-
-        if self.credentials_file and os.path.isfile(self.credentials_file):
-            copyfile(self.credentials_file, secret_file)
-            return True
-        return False
 
     def check_connection(self) -> StatusResponse:
         """Check connection to the handler.

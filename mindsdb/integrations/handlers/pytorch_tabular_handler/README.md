@@ -28,7 +28,7 @@ Currently the handler is able to handle all the parameters available [here](http
 ```
 CREATE MODEL mindsdb.housing_tabular
 FROM files (
-SELECT FROM California_Housing
+SELECT * FROM California_Housing
 )
 PREDICT median_house_value
 USING

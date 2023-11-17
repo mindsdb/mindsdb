@@ -38,7 +38,7 @@ class TestPytorchTabular(BaseExecutorTest):
             """
             CREATE MODEL proj.invalid_task
             FROM files (
-            SELECT FROM California_Housing
+            SELECT * FROM California_Housing
             )
             PREDICT median_house_value
             USING
@@ -61,7 +61,7 @@ class TestPytorchTabular(BaseExecutorTest):
             """
             CREATE MODEL proj.invalid_initialization
             FROM files (
-            SELECT FROM California_Housing
+            SELECT * FROM California_Housing
             )
             PREDICT median_house_value
             USING

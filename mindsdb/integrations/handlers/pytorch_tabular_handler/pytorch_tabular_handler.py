@@ -47,8 +47,6 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
         if continuous_columns is not None and isinstance(continuous_columns, str):
             continuous_columns = ast.literal_eval(continuous_columns)
 
-        print(categorical_columns)
-        print(continuous_columns)
         dropout = float(args.get('drop_out', 0.0))
         epochs = int(args.get('epochs', 3))
         batch_size = args.get('batch_size', 32)

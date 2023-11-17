@@ -22,6 +22,9 @@ from .utils.mongodb_render import MongodbRender
 from mindsdb.api.mongo.utilities.mongodb_query import MongoQuery
 from mindsdb.api.mongo.utilities.mongodb_parser import MongodbParser
 
+
+logger = log.getLogger(__name__)
+
 class MongoDBHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the MongoDB statements.
@@ -128,7 +131,7 @@ class MongoDBHandler(DatabaseHandler):
             con.server_info()
             result.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to MongoDB {self.database}, {e}!')
+            logger.error(f'Error connecting to MongoDB {self.database}, {e}!')
             result.error_message = str(e)
 
         if result.success is True and need_to_close:
@@ -191,7 +194,7 @@ class MongoDBHandler(DatabaseHandler):
             )
 
         except Exception as e:
-            log.logger.error(f'Error running query: {query} on {self.database}.{collection}!')
+            logger.error(f'Error running query: {query} on {self.database}.{collection}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)

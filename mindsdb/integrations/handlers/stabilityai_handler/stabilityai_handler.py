@@ -5,10 +5,10 @@ from mindsdb.integrations.handlers.stabilityai_handler.stabilityai import Stabil
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 
-logger = get_log("integrations.stabilityai_handler")
+logger = log.getLogger(__name__)
 
 
 class StabilityAIHandler(BaseMLEngine):

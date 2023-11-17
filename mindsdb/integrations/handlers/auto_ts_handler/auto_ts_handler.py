@@ -13,7 +13,7 @@ class Auto_ts_Handler(BaseMLEngine):
     name = 'auto_ts'
 
     @staticmethod
-    def create_validation(self, args):
+    def create_validation(self, args=None, **kwargs):
         """
         Create validation set from training set
         """

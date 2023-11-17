@@ -11,11 +11,11 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
 
-logger = get_log("integrations.oilpriceapi_handler")
+logger = log.getLogger(__name__)
 
 
 class OilPriceAPIHandler(APIHandler):

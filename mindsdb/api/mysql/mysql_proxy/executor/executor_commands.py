@@ -86,7 +86,6 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErSqlWrongArguments,
     ErTableExistError,
     SqlApiException,
-    log,
 )
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import download_file
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
@@ -110,6 +109,9 @@ from mindsdb.interfaces.triggers.triggers_controller import TriggersController
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import mark_process, resolve_model_identifier
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 def _get_show_where(
@@ -496,7 +498,7 @@ class ExecuteCommands:
                 #     table_name = expression.parts[-1]
                 if table_name is None:
                     err_str = f"Can't determine table name in query: {sql}"
-                    log.logger.warning(err_str)
+                    logger.warning(err_str)
                     raise ErTableExistError(err_str)
                 return self.answer_show_table_status(table_name)
             elif sql_category == "columns":
@@ -554,7 +556,7 @@ class ExecuteCommands:
                 self.charset = statement.arg.parts[0]
                 self.charset_text_type = charsets.get(self.charset)
                 if self.charset_text_type is None:
-                    log.logger.warning(
+                    logger.warning(
                         f"Unknown charset: {self.charset}. Setting up 'utf8_general_ci' as charset text type."
                     )
                     self.charset_text_type = CHARSET_NUMBERS["utf8_general_ci"]
@@ -567,7 +569,7 @@ class ExecuteCommands:
                     ],
                 )
             else:
-                log.logger.warning(
+                logger.warning(
                     f"SQL statement is not processable, return OK package: {sql}"
                 )
                 return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -683,7 +685,7 @@ class ExecuteCommands:
             statement.data = parse_sql(statement.query_str, dialect="mindsdb")
             return self.answer_evaluate_metric(statement)
         else:
-            log.logger.warning(f"Unknown SQL statement: {sql}")
+            logger.warning(f"Unknown SQL statement: {sql}")
             raise ErNotSupportedYet(f"Unknown SQL statement: {sql}")
 
     def answer_create_trigger(self, statement):
@@ -851,28 +853,36 @@ class ExecuteCommands:
         )
 
     def answer_describe_predictor(self, statement):
-
-        parts = statement.value.parts.copy()[:2]
+        value = statement.value.parts.copy()
+        # project.model.version.?attrs
+        parts = value[:3]
+        attrs = value[3:]
         model_info = self._get_model_info(Identifier(parts=parts), except_absent=False)
         if model_info is None:
-            parts.pop(-1)
-            attribute = statement.value.parts.copy()[1:]
-            model_info = self._get_model_info(Identifier(parts=parts))
+            # project.model.?attrs
+            parts = value[:2]
+            attrs = value[2:]
+            model_info = self._get_model_info(Identifier(parts=parts), except_absent=False)
             if model_info is None:
-                raise SqlApiException(f"Model not found: {statement.value}")
-        else:
-            attribute = statement.value.parts.copy()[2:]
+                # model.?attrs
+                parts = value[:1]
+                attrs = value[1:]
+                model_info = self._get_model_info(Identifier(parts=parts), except_absent=False)
 
-        if len(attribute) == 1:
-            attribute = attribute[0]
-        elif len(attribute) == 0:
-            attribute = None
+        if model_info is None:
+            raise SqlApiException(f"Model not found: {statement.value}")
+
+        if len(attrs) == 1:
+            attrs = attrs[0]
+        elif len(attrs) == 0:
+            attrs = None
 
         df = self.session.model_controller.describe_model(
             self.session,
             model_info["project_name"],
             model_info["model_record"].name,
-            attribute,
+            attribute=attrs,
+            version=model_info['model_record'].version
         )
 
         df_dict = df.to_dict("split")
@@ -889,6 +899,8 @@ class ExecuteCommands:
             identifier.parts = [self.session.database, identifier.parts[0]]
 
         database_name, model_name, model_version = resolve_model_identifier(identifier)
+        if database_name is None:
+            database_name = self.session.database
 
         if model_name is None:
             if except_absent:
@@ -1108,7 +1120,7 @@ class ExecuteCommands:
                     pip install mindsdb[{handler_module_meta['name']}]
                 """
                 )
-            log.logger.info(msg)
+            logger.info(msg)
             raise SqlApiException(msg)
 
         integration_id = self.session.integration_controller.add(
@@ -1143,7 +1155,7 @@ class ExecuteCommands:
         integrations = self.session.integration_controller.get_all()
         if name not in integrations:
             if not statement.if_exists:
-                raise SqlApiException(f"Integration '{name}' does not exists")
+                raise EntityNotExistsError('Integration does not exists', name)
             else:
                 return ExecuteAnswer(ANSWER_TYPE.OK)
         self.session.integration_controller.delete(name)
@@ -1186,7 +1198,7 @@ class ExecuteCommands:
         db_name = statement.name.parts[0]
         try:
             self.session.database_controller.delete(db_name)
-        except EntityExistsError:
+        except EntityNotExistsError:
             if statement.if_exists is not True:
                 raise
         return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -1196,61 +1208,42 @@ class ExecuteCommands:
         Args:
             statement: ast
         """
-        if statement.if_exists is False:
-            for table in statement.tables:
-                if len(table.parts) > 1:
-                    db_name = table.parts[0]
-                else:
-                    db_name = self.session.database
-                table_name = table.parts[-1]
-
-                if db_name == "files":
-                    dn = self.session.datahub[db_name]
-                    if dn.has_table(table_name) is False:
-                        raise SqlApiException(
-                            f"Cannot delete a table from database '{db_name}': table does not exists"
-                        )
-                else:
-                    projects_dict = self.session.database_controller.get_dict(
-                        filter_type="project"
-                    )
-                    if db_name not in projects_dict:
-                        raise SqlApiException(
-                            f"Cannot delete a table from database '{db_name}'"
-                        )
-                    project = self.session.database_controller.get_project(db_name)
-                    project_tables = {
-                        key: val
-                        for key, val in project.get_tables().items()
-                        if val.get("deletable") is True
-                    }
-                    if table_name not in project_tables:
-                        raise SqlApiException(
-                            f"Cannot delete a table from database '{db_name}': table does not exists"
-                        )
 
         for table in statement.tables:
             if len(table.parts) > 1:
                 db_name = table.parts[0]
+                table = Identifier(parts=table.parts[1:])
             else:
                 db_name = self.session.database
-            table_name = table.parts[-1]
 
-            if db_name == "files":
-                dn = self.session.datahub[db_name]
-                if dn.has_table(table_name):
-                    self.session.datahub["files"].query(
-                        DropTables(tables=[Identifier(table_name)])
+            dn = self.session.datahub[db_name]
+            if db_name is not None:
+                dn.drop_table(table, if_exists=statement.if_exists)
+
+            elif db_name in self.session.database_controller.get_dict(filter_type="project"):
+                # TODO do we need feature: delete object from project via drop table?
+
+                project = self.session.database_controller.get_project(db_name)
+                project_tables = {
+                    key: val
+                    for key, val in project.get_tables().items()
+                    if val.get("deletable") is True
+                }
+                table_name = table.to_string()
+
+                if table_name in project_tables:
+                    self.session.model_controller.delete_model(
+                        table_name, project_name=db_name
+                    )
+                elif statement.if_exists is False:
+                    raise SqlApiException(
+                        f"Cannot delete a table from database '{db_name}': table does not exists"
                     )
             else:
-                projects_dict = self.session.database_controller.get_dict(
-                    filter_type="project"
+                raise SqlApiException(
+                    f"Cannot delete a table from database '{db_name}'"
                 )
-                if db_name not in projects_dict:
-                    continue
-                self.session.model_controller.delete_model(
-                    table_name, project_name=db_name
-                )
+
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_create_view(self, statement):
@@ -1778,7 +1771,7 @@ class ExecuteCommands:
                 column_alias = target.alias or column_name
                 result = SERVER_VARIABLES.get(column_name)
                 if result is None:
-                    log.logger.error(f"Unknown variable: {column_name}")
+                    logger.error(f"Unknown variable: {column_name}")
                     raise Exception(f"Unknown variable '{var_name}'")
                 else:
                     result = result[0]

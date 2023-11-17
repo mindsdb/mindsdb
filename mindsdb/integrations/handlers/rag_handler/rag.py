@@ -10,9 +10,9 @@ from mindsdb.integrations.handlers.rag_handler.settings import (
     RAGHandlerParameters,
     load_embeddings_model,
 )
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
-logger = get_log(logger_name=__name__)
+logger = log.getLogger(__name__)
 
 
 class RAGQuestionAnswerer:

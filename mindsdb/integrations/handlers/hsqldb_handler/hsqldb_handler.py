@@ -15,6 +15,8 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
+logger = log.getLogger(__name__)
+
 class HSQLDBHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the HyperSQL statements.
@@ -88,7 +90,7 @@ class HSQLDBHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to SQLite, {e}!')
+            logger.error(f'Error connecting to SQLite, {e}!')
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -127,7 +129,7 @@ class HSQLDBHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
                     connection.commit()
             except Exception as e:
-                log.logger.error(f'Error running query: {query}!')
+                logger.error(f'Error running query: {query}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e)

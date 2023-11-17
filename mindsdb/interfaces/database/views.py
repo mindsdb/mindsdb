@@ -97,7 +97,7 @@ class ViewController:
         if len(records) == 0:
             if name is None:
                 name = f'id={id}'
-            raise Exception(f"Can't find view '{name}' in project '{project_name}'")
+            raise EntityNotExistsError("Can't find view", f'{project_name}.{name}')
         elif len(records) > 1:
             raise Exception(f"There are multiple views with name/id: {name}/{id}")
         record = records[0]

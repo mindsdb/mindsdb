@@ -11,7 +11,7 @@ from mindsdb.integrations.handlers.rag_handler.settings import load_embeddings_m
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 
-logger = log.get_log(__name__)
+logger = log.getLogger(__name__)
 
 
 class SentenceTransformersHandler(BaseMLEngine):

@@ -1,5 +1,3 @@
-import logging
-
 import pandas as pd
 
 from mindsdb_sql.parser import ast
@@ -100,7 +98,3 @@ class WebHandler(APIHandler):
             RESPONSE_TYPE.TABLE,
             data_frame=df
         )
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)

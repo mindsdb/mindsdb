@@ -105,14 +105,11 @@ class MindsDBSQL(SQLDatabase):
     def _get_single_table_info(self, table_str: str) -> str:
         controller = self._metadata
         integration, table_name = table_str.split('.')
-
-        tables = controller.get_handler(integration).get_tables().data_frame
-        tbl_name, n_rows, tbl_type = tables[tables['TABLE_NAME'] == table_name].iloc[0].to_list()
         cols_df = controller.get_handler(integration).get_columns(table_name).data_frame
         fields = cols_df['Field'].to_list()
         dtypes = cols_df['Type'].to_list()
 
-        info = f'Table named `{tbl_name}`, type `{tbl_type}`, row count: {n_rows}.\n'
+        info = f'Table named `{table_name}`\n'
         info += f"\n/* Sample with first {self._sample_rows_in_table_info} rows from table `{table_str}`:\n"
         info += "\t".join([field for field in fields])
         info += self._get_sample_rows(table_str, fields) + "\n*/"

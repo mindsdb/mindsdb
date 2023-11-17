@@ -6,9 +6,11 @@ sidebarTitle: Grafana
 [Grafana](https://grafana.com/) is an open-source analytics and interactive visualization web application
 that allows users to ingest data from various sources, query this data, and display it on customizable charts for easy analysis. 
 
-## Data Source Grafana Setup
+## How to Connect
 
-First, Go to the `Connections` section click on `Add new connection` and Choose the `MySQL` plugin
+To begin, set up Grafana by following one of the methods outlined in the [Grafana Installation Documentation](https://grafana.com/docs/grafana/latest/setup-grafana/installation/#supported-operating-systems).
+
+Once Grafana is successfully set up in your environment, navigate to the Connections section, click on Add new connection, and select the MySQL plugin
 , as shown below.
 
 <p align="center">
@@ -71,10 +73,12 @@ On success, you should see the message, as below.
   <img src="/assets/sql/grafana_3.png" />
 </p>
 
-## Let's Run Some Queries 
+## Examples 
 
-To finally make sure that our MindsDB database connection works, 
-you can querying data in the Explore view. To work around this, use the text edit mode to write your queries.
+### Querying
+
+To verify the functionality of our MindsDB database connection, 
+you can query data in the Explore view. Use the text edit mode to compose your queries.
 
 ```sql
 SHOW FULL DATABASES;
@@ -86,7 +90,7 @@ On execution, we get:
   <img src="/assets/sql/grafana_4.png" />
 </p>
 
-## Visual Query Builder
+### Visual Query Builder
 
 Now you can build a dashboard with a MindsDB database connection.
 Example query :

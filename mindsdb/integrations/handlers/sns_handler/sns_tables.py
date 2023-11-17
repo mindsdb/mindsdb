@@ -51,6 +51,7 @@ class MessageTable(APITable):
         else:
             request_entries = []
             topic_arn = ""
+            message_ids_set = set()
             for message_row in message_rows:
                 message = message_row['message']
                 topic_arn = message_row['topic_arn']
@@ -67,7 +68,10 @@ class MessageTable(APITable):
                    message_group_id = message_row['message_group_id']
                 if 'message_attributes' in message_row:
                     message_attributes = message_row['message_attributes']
-                # check uniq ids ?    
+                # check uniq ids ?
+                if message_id in message_ids_set:
+                    raise ValueError("Two or more batch entries in the request have the same Id")
+                message_ids_set.add(message_id)                      
                 request_entry={'Id': message_id, 'Message': message, 'Subject': subject, 'MessageDeduplicationId': message_deduplication_id, 'MessageGroupId': message_group_id, 'MessageAttributes': message_attributes }
                 request_entries.append(request_entry)             
             self.handler.publish_batch(topic_arn=topic_arn, batch_request_entries=request_entries)

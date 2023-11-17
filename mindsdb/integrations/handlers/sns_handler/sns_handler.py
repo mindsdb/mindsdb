@@ -70,13 +70,13 @@ class SnsHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
         # todo test it
-        if 'endpoint_url' not in  self.connection_data:
+        if 'endpoint_url' in self.connection_data:
             self.connection = boto3.client(
                 'sns',
                 aws_access_key_id=self.connection_data['aws_access_key_id'],
                 aws_secret_access_key=self.connection_data['aws_secret_access_key'],
                 region_name=self.connection_data['region_name'],
-                endpoint_url="http://localstack:4566"
+                endpoint_url=self.connection_data['endpoint_url']
             )
         else:
             self.connection = boto3.client(
@@ -114,17 +114,18 @@ class SnsHandler(APIHandler):
         StatusResponse
             Request status
         """
-        method_name, params = FuncParser().from_string(query)
-        #
-        # 
-        # 
-        # df = self.call_application_api(method_name, params)
-        #ast = parse_sql(query, dialect="mindsdb")
-        #return self.query(ast)
+        ast = parse_sql(query_string, dialect="mindsdb")
+        return self.query(ast)
     
 
     def call_application_api(self, method_name: str = None, params: dict = None) -> DataFrame:
-        print ("Test")
+        if method_name == 'create_topic':
+            return self.create_topic(params)
+        elif method_name == 'topic_list':
+            return self.get_volumes(params)
+        
+        else:
+            raise NotImplementedError(f'Unknown method {method_name}')
 connection_args = OrderedDict(
     aws_access_key_id={
         'type': ARG_TYPE.STR,

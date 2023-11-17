@@ -74,6 +74,10 @@ class MongoDBHandler(DatabaseHandler):
             port=self.port,
             **kwargs
         )
+        # detect database from connection
+        if self.database is None:
+            self.database = connection.get_database().name
+
         self.is_connected = True
         self.connection = connection
         return self.connection

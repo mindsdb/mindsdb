@@ -1,13 +1,15 @@
 import pandas as pd
+
 from typing import List
+
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
+
 from mindsdb_sql.parser import ast
 
-logger = get_log("integrations.github_handler")
-
+logger = log.getLogger(__name__)
 
 class GithubIssuesTable(APITable):
     """The GitHub Issue Table implementation"""
@@ -702,7 +704,7 @@ class GithubCommitsTable(APITable):
         """
 
         return ["sha", "author", "date", "message"]
-      
+
 class GithubReleasesTable(APITable):
     """The GitHub Releases Table implementation"""
 
@@ -818,7 +820,7 @@ class GithubReleasesTable(APITable):
             "url",
             "zipball_url"
         ]
-     
+
 class GithubBranchesTable(APITable):
     """The GitHub Branches Table implementation"""
 
@@ -964,7 +966,7 @@ class GithubContributorsTable(APITable):
             try:
 
                 for contributor in self.handler.connection.get_repo(self.handler.repository).get_contributors()[start: start + 10]:
-                    
+
                     raw_data = contributor.raw_data
                     github_contributors_df = pd.concat(
                         [
@@ -1059,7 +1061,7 @@ class GithubContributorsTable(APITable):
             "created_at",
             "updated_at"
         ]
-        
+
 class GithubProjectsTable(APITable):
     """The GitHub Projects Table implementation"""
 
@@ -1103,7 +1105,7 @@ class GithubProjectsTable(APITable):
             try:
 
                 for project in self.handler.connection.get_repo(self.handler.repository).get_projects()[start: start + 10]:
-                    
+
                     raw_data = project.raw_data
                     github_projects_df = pd.concat(
                         [
@@ -1112,16 +1114,16 @@ class GithubProjectsTable(APITable):
                                 [
                                     {
                                         "owner_url": self.check_none(raw_data["owner_url"]),
-                                        "url": self.check_none(raw_data["url"]), 
+                                        "url": self.check_none(raw_data["url"]),
                                         "html_url": self.check_none(raw_data["html_url"]),
-                                        "columns_url": self.check_none(raw_data["columns_url"]), 
-                                        "id": self.check_none(raw_data["id"]), 
-                                        "node_id": self.check_none(raw_data["node_id"]), 
-                                        "name": self.check_none(raw_data["name"]), 
-                                        "body": self.check_none(raw_data["body"]), 
-                                        "number": self.check_none(raw_data["number"]), 
-                                        "state": self.check_none(raw_data["state"]), 
-                                        "created_at": self.check_none(raw_data["created_at"]), 
+                                        "columns_url": self.check_none(raw_data["columns_url"]),
+                                        "id": self.check_none(raw_data["id"]),
+                                        "node_id": self.check_none(raw_data["node_id"]),
+                                        "name": self.check_none(raw_data["name"]),
+                                        "body": self.check_none(raw_data["body"]),
+                                        "number": self.check_none(raw_data["number"]),
+                                        "state": self.check_none(raw_data["state"]),
+                                        "created_at": self.check_none(raw_data["created_at"]),
                                         "updated_at": self.check_none(raw_data["updated_at"]),
                                         "creator_login": self.check_none(raw_data["creator"]["login"]),
                                         "creator_id": self.check_none(raw_data["creator"]["id"]),
@@ -1168,25 +1170,25 @@ class GithubProjectsTable(APITable):
         """
 
         return [
-            "owner_url", 
+            "owner_url",
             "url",
-            "html_url", 
-            "columns_url", 
-            "id", 
+            "html_url",
+            "columns_url",
+            "id",
             "node_id",
-            "name", 
-            "body", 
-            "number", 
-            "state", 
+            "name",
+            "body",
+            "number",
+            "state",
             "created_at",
-            "updated_at", 
-            "creator_login", 
-            "creator_id", 
+            "updated_at",
+            "creator_login",
+            "creator_id",
             "creator_url",
-            "creator_html_url", 
+            "creator_html_url",
             "creator_site_admin"
         ]
-      
+
 class GithubMilestonesTable(APITable):
     """The GitHub Milestones Table implementation"""
 
@@ -1230,7 +1232,7 @@ class GithubMilestonesTable(APITable):
             try:
 
                 for milestone in self.handler.connection.get_repo(self.handler.repository).get_milestones()[start: start + 10]:
-                    
+
                     raw_data = milestone.raw_data
                     github_milestones_df = pd.concat(
                         [
@@ -1249,7 +1251,7 @@ class GithubMilestonesTable(APITable):
                                         "creator": self.check_none(raw_data["creator"]),
                                         "open_issues": self.check_none(raw_data["open_issues"]),
                                         "closed_issues": self.check_none(raw_data["closed_issues"]),
-                                        "state": self.check_none(raw_data["state"]), 
+                                        "state": self.check_none(raw_data["state"]),
                                         "created_at": self.check_none(raw_data["created_at"]),
                                         "updated_at": self.check_none(raw_data["updated_at"]),
                                         "due_on": self.check_none(raw_data["due_on"]),
@@ -1294,20 +1296,20 @@ class GithubMilestonesTable(APITable):
         """
 
         return [
-            "url", 
-            "html_url", 
-            "labels_url", 
-            "id", 
-            "node_id", 
-            "number", 
-            "title", 
-            "description", 
-            "creator", 
-            "open_issues", 
-            "closed_issues", 
-            "state", 
-            "created_at", 
-            "updated_at", 
-            "due_on", 
+            "url",
+            "html_url",
+            "labels_url",
+            "id",
+            "node_id",
+            "number",
+            "title",
+            "description",
+            "creator",
+            "open_issues",
+            "closed_issues",
+            "state",
+            "created_at",
+            "updated_at",
+            "due_on",
             "closed_at"
         ]

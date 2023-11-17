@@ -23,6 +23,7 @@ from mindsdb.utilities import log
 
 
 _DEFAULT_MODEL = 'gpt-3.5-turbo'
+_DEFAULT_MAX_ITERATIONS = 10
 _DEFAULT_MAX_TOKENS = 2048  # requires more than vanilla OpenAI due to ongoing summarization and 3rd party input
 _DEFAULT_AGENT_MODEL = 'zero-shot-react-description'
 _DEFAULT_AGENT_TOOLS = ['python_repl', 'wikipedia']  # these require no additional arguments
@@ -238,7 +239,7 @@ class LangChainHandler(BaseMLEngine):
             llm,
             memory=memory,
             agent=agent_name,
-            max_iterations=pred_args.get('max_iterations', 3),
+            max_iterations=pred_args.get('max_iterations', args.get('max_iterations', _DEFAULT_MAX_ITERATIONS)),
             verbose=pred_args.get('verbose', args.get('verbose', False)),
             handle_parsing_errors=False,
         )
@@ -288,7 +289,7 @@ class LangChainHandler(BaseMLEngine):
             llm,
             memory=memory,
             agent=agent_name,
-            max_iterations=pred_args.get('max_iterations', 3),
+            max_iterations=pred_args.get('max_iterations', args.get('max_iterations', _DEFAULT_MAX_ITERATIONS)),
             verbose=pred_args.get('verbose', args.get('verbose', False)),
             handle_parsing_errors=False,
         )

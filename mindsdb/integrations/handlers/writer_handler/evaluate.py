@@ -15,11 +15,11 @@ from scipy.spatial import distance
 from mindsdb.integrations.handlers.writer_handler.settings import (
     WriterHandlerParameters,
 )
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 # todo use polars for this for speed
 
-logger = get_log(logger_name=__name__)
+logger = log.getLogger(__name__)
 
 
 class WriterEvaluator:

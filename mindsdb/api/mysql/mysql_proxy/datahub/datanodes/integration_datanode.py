@@ -11,7 +11,10 @@ from mindsdb_sql.parser.ast import Insert, Identifier, CreateTable, TableColumn,
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
-import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities import log
+from mindsdb.utilities.profiler import profiler
+
+logger = log.getLogger(__name__)
 
 
 class DBHandlerException(Exception):
@@ -172,12 +175,12 @@ class IntegrationDataNode(DataNode):
         try:
             df = df.replace(np.NaN, pd.NA)
         except Exception as e:
-            print(f'Issue with clearing DF from NaN values: {e}')
+            logger.error(f"Issue with clearing DF from NaN values: {e}")
 
         try:
             df = df.where(pd.notnull(df), None)
         except Exception as e:
-            print(f'Issue with clearing DF from NaN values: {e}')
+            logger.error(f"Issue with clearing DF from NaN values: {e}")
         # endregion
 
         columns_info = [

@@ -882,6 +882,7 @@
           "group": "Large Language Models",
           "pages": [
             "integrations/ai-engines/anthropic",
+            "integrations/ai-engines/cohere",
             "integrations/ai-engines/openai",
             "integrations/ai-engines/huggingface",
             "integrations/ai-engines/langchain",

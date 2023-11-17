@@ -115,6 +115,7 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==23.1.2 &
     pip install --prefer-binary --no-cache-dir 'openbb==4.0.0a3' 'openbb_provider==0.1.0a4' || true && \
     pip install --prefer-binary --no-cache-dir 'ludwig[distributed]>=0.5.2' 'ray==2.0.1' 'dask' || true && \
     pip install --prefer-binary --no-cache-dir 'auto-sklearn' 'type-infer' || true && \
+    pip install --prefer-binary --no-cache-dir 'tensorflow' 'autokeras' || true && \
 
 ARG VERSION=
 RUN pip install --no-cache-dir mindsdb${VERSION:+"==$VERSION"}

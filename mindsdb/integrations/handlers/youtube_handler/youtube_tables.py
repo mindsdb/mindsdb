@@ -106,10 +106,10 @@ class YoutubeCommentsTable(APITable):
                     self.insert_comment(video_id=value['video_id'], text=value['comment'])
 
             else:
-                if not value.get('reply'):
+                if not value.get('replies.reply'):
                     raise ValueError(f"reply is mandatory for inserting a reply.")
                 else:
-                    self.insert_reply(comment_id=value['comment_id'], text=value['reply'])
+                    self.insert_comment(comment_id=value['comment_id'], text=value['replies.reply'])
 
     def insert_comment(self, text, video_id: str = None, comment_id: str = None):
         # if comment_id is provided, define the request body for a reply and insert it
@@ -130,16 +130,16 @@ class YoutubeCommentsTable(APITable):
         elif video_id:
             request_body = {
                 'snippet': {
-                    'videoId': video_id,
                     'topLevelComment': {
                         'snippet': {
+                            'videoId': video_id,
                             'textOriginal': text
                         }
                     }
                 }
             }
 
-            self.handler.connect().comments().insert(
+            self.handler.connect().commentThreads().insert(
                 part='snippet',
                 body=request_body
             ).execute()

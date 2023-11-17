@@ -151,7 +151,7 @@ class YoutubeCommentsTable(APITable):
         List[str]
             List of columns
         """
-        return ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', 'replies.user_id', 'replies.reply_author', 'replies.reply']
+        return ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at", 'replies.user_id', 'replies.reply_author', 'replies.reply']
 
     def get_comments(self, video_id: str, channel_id: str):
         """Pulls all the records from the given youtube api end point and returns it select()
@@ -202,6 +202,8 @@ class YoutubeCommentsTable(APITable):
                         "comment_id": comment["snippet"]["topLevelComment"]["id"],
                         "display_name": comment["snippet"]["topLevelComment"]["snippet"]["authorDisplayName"],
                         "comment": comment["snippet"]["topLevelComment"]["snippet"]["textDisplay"],
+                        "published_at": comment["snippet"]["topLevelComment"]["snippet"]["publishedAt"],
+                        "updated_at": comment["snippet"]["topLevelComment"]["snippet"]["updatedAt"],
                         "replies": replies,
                     }
                 )
@@ -221,8 +223,8 @@ class YoutubeCommentsTable(APITable):
             else:
                 break
 
-        youtube_comments_df = pd.json_normalize(data, 'replies', ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment'], record_prefix='replies.')
-        return youtube_comments_df[['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', 'replies.user_id', 'replies.reply_author', 'replies.reply']]
+        youtube_comments_df = pd.json_normalize(data, 'replies', ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at"], record_prefix='replies.')
+        return youtube_comments_df[['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at", 'replies.user_id', 'replies.reply_author', 'replies.reply']]
 
 
 class YoutubeChannelsTable(APITable):

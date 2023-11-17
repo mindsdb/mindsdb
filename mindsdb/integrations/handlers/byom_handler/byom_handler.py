@@ -1,3 +1,13 @@
+""" BYOM: Bring Your Own Model
+
+env vars to contloll BYOM:
+ - MINDSDB_BYOM_ENABLED - can BYOM be uysed or not. Locally enabled by default.
+ - MINDSDB_BYOM_INHOUSE_ENABLED - enable or disable 'inhouse' BYOM usage. Locally enabled by default.
+ - MINDSDB_BYOM_DEFAULT_TYPE - [inhouse|venv] default byom type. Locally it is 'venv' by default.
+ - MINDSDB_BYOM_TYPE - [safe|unsafe] - obsolete, same as above.
+"""
+
+
 import os
 import re
 import sys
@@ -29,7 +39,7 @@ from .const import BYOM_METHOD
 from .__about__ import __version__
 
 
-BYOM_TYPE = Enum('BYOM_TYPE', ['SAFE', 'UNSAFE'])
+BYOM_TYPE = Enum('BYOM_TYPE', ['INHOUSE', 'VENV'])
 
 logger = log.getLogger(__name__)
 
@@ -49,16 +59,35 @@ class BYOMHandler(BaseMLEngine):
 
         self.model_wrapper = None
 
-        # region read MINDSDB_BYOM_TYPE
+        self.inhouse_model_wrapper = None
+        self.venv_model_wrappers = {}
+        self.model_wrappers = {}
+
+        # region read and save set default byom type
         try:
-            self._byom_type = BYOM_TYPE[
-                os.environ.get(
-                    'MINDSDB_BYOM_TYPE',
-                    BYOM_TYPE.UNSAFE.name
-                ).upper()
-            ]
+            self._default_byom_type = BYOM_TYPE.VENV
+            if os.environ.get('MINDSDB_BYOM_DEFAULT_TYPE') is not None:
+                self._default_byom_type = BYOM_TYPE[
+                    os.environ.get('MINDSDB_BYOM_DEFAULT_TYPE').upper()
+                ]
+            else:
+                env_var = os.environ.get('MINDSDB_BYOM_DEFAULT_TYPE')
+                if env_var == 'SAVE':
+                    self._default_byom_type = BYOM_TYPE['VENV']
+                elif env_var == 'UNSAVE':
+                    self._default_byom_type = BYOM_TYPE['INHOUSE']
+                else:
+                    raise KeyError
         except KeyError:
-            self._byom_type = BYOM_TYPE.SAFE
+            self._default_byom_type = BYOM_TYPE.VENV
+        # endregion
+
+        # region check if 'inhouse' BYOM is enabled
+        env_var = os.environ.get('MINDSDB_BYOM_INHOUSE_ENABLED')
+        if env_var is None:
+            self._inhouse_enabled = False if is_cloud else True
+        else:
+            self._inhouse_enabled = env_var.lower() in ('true', '1')
         # endregion
 
         super().__init__(model_storage, engine_storage, **kwargs)
@@ -109,10 +138,20 @@ class BYOMHandler(BaseMLEngine):
         engine_version = BYOMHandler.normalize_engine_version(engine_version)
         return engine_version
 
+    def normalize_byom_type(self, byom_type: Optional[str]) -> BYOM_TYPE:
+        if byom_type is not None:
+            byom_type = BYOM_TYPE[byom_type.upper()]
+        else:
+            byom_type = self._default_byom_type
+        if byom_type == BYOM_TYPE.INHOUSE and self._inhouse_enabled is False:
+            raise Exception("'Inhouse' BYOM engine type can not be used")
+        return byom_type
+
     def _get_model_proxy(self, version=None):
         version_mark = ''
         if version is not None and int(version) > 1:
             version_mark = f'_{version}'
+        version_str = str(version or 1)
 
         self.engine_storage.fileStorage.pull()
         try:
@@ -121,19 +160,36 @@ class BYOMHandler(BaseMLEngine):
         except FileNotFoundError:
             raise Exception(f"Engine version '{version}' does not exists")
 
-        if self.model_wrapper is None:
-            if self._byom_type == BYOM_TYPE.UNSAFE:
-                WrapperClass = ModelWrapperUnsafe
-            elif self._byom_type == BYOM_TYPE.SAFE:
-                WrapperClass = ModelWrapperSafe
+        if version_str not in self.model_wrappers:
+            connection_args = self.engine_storage.get_connection_args()
+            version_meta = connection_args['versions'][version_str]
 
-            self.model_wrapper = WrapperClass(
-                code=code,
-                modules_str=modules_str,
-                engine_id=self.engine_storage.integration_id
-            )
+            try:
+                engine_version_type = BYOM_TYPE[
+                    version_meta.get('type', self._default_byom_type.name).upper()
+                ]
+            except KeyError:
+                raise Exception('Unknown BYOM engine type')
+            if engine_version_type == BYOM_TYPE.INHOUSE:
+                if self._inhouse_enabled is False:
+                    raise Exception("'Inhouse' BYOM engine type can not be used")
+                if self.inhouse_model_wrapper is None:
+                    self.inhouse_model_wrapper = ModelWrapperUnsafe(
+                        code=code,
+                        modules_str=modules_str,
+                        engine_id=self.engine_storage.integration_id,
+                        engine_version=version
+                    )
+                self.model_wrappers[version_str] = self.inhouse_model_wrapper
+            elif engine_version_type == BYOM_TYPE.VENV:
+                self.model_wrappers[version_str] = ModelWrapperSafe(
+                    code=code,
+                    modules_str=modules_str,
+                    engine_id=self.engine_storage.integration_id,
+                    engine_version=version
+                )
 
-        return self.model_wrapper
+        return self.model_wrappers[version_str]
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         engine_version = self.get_model_engine_version()
@@ -203,7 +259,10 @@ class BYOMHandler(BaseMLEngine):
             'versions': {
                 '1': {
                     'code': code_path.name,
-                    'requirements': requirements_path.name
+                    'requirements': requirements_path.name,
+                    'type': self.normalize_byom_type(
+                        connection_args.get('type')
+                    ).name.lower()
                 }
             }
         })
@@ -231,7 +290,10 @@ class BYOMHandler(BaseMLEngine):
                 'versions': {
                     '1': {
                         'code': 'code.py',
-                        'requirements': 'requirements.txt'
+                        'requirements': 'requirements.txt',
+                        'type': self.normalize_byom_type(
+                            connection_args.get('type')
+                        ).name.lower()
                     }
                 }
             }
@@ -320,7 +382,7 @@ class ModelWrapperUnsafe:
     """ Model wrapper that executes learn/predict in current process
     """
 
-    def __init__(self, code, modules_str, engine_id):
+    def __init__(self, code, modules_str, engine_id, engine_version: int):
         module = import_string(code)
         model_class = find_model_class(module)
         self.model_class = model_class
@@ -365,14 +427,14 @@ class ModelWrapperSafe:
     """ Model wrapper that executes learn/predict in venv
     """
 
-    def __init__(self, code, modules_str, engine_id):
+    def __init__(self, code, modules_str, engine_id, engine_version: int):
         self.code = code
         modules = self.parse_requirements(modules_str)
 
         self.env_path = None
-        self.prepare_env(modules, engine_id)
+        self.prepare_env(modules, engine_id, engine_version)
 
-    def prepare_env(self, modules, engine_id):
+    def prepare_env(self, modules, engine_id, engine_version: int):
         config = Config()
 
         try:
@@ -383,7 +445,10 @@ class ModelWrapperSafe:
                 # create in root path
                 base_path = Path(config.paths['root']) / 'venvs'
 
-            self.env_path = base_path / f'env_{engine_id}'
+            env_folder_name = f'env_{engine_id}'
+            if isinstance(engine_version, int) and engine_version > 1:
+                env_folder_name = f'{env_folder_name}_{engine_version}'
+            self.env_path = base_path / env_folder_name
 
             self.python_path = self.env_path / 'bin' / 'python'
 

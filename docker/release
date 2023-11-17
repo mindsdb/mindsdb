@@ -110,7 +110,8 @@ RUN python -m pip install --prefer-binary --no-cache-dir --upgrade pip==23.1.2 &
     pip install --prefer-binary --no-cache-dir python-gitlab || true && \
     pip install --prefer-binary --no-cache-dir 'chromadb~=0.4.8' 'pysqlite3-binary' || true && \
     pip install --prefer-binary --no-cache-dir 'cohere==4.5.1' || true && \
-    pip install --prefer-binary --no-cache-dir 'polars' || true
+    pip install --prefer-binary --no-cache-dir 'polars' || true && \
+    pip install --prefer-binary --no-cache-dir 'lightfm==1.17' 'dataprep_ml>=0.0.15' 'scipy>=1.10.1' 'pydantic~=1.10.8' || true
 
 ARG VERSION=
 RUN pip install --no-cache-dir mindsdb${VERSION:+"==$VERSION"}

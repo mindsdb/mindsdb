@@ -16,7 +16,7 @@ connection parameters specific per integration. You can find more in the
 Let's review the syntax for the `CREATE DATABASE` command.
 
 ```sql
-CREATE DATABASE datasource_name
+CREATE DATABASE [IF NOT EXISTS] datasource_name
 [WITH] [ENGINE [=] engine_name] [,]
 [PARAMETERS [=] {
   "key": "value",

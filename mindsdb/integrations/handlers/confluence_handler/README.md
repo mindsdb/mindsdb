@@ -67,6 +67,12 @@ WHERE space='space';
 
 You need to specify the name of the space to view all the pages in that space.
 
+To select a single page, you can use the `id` column:
+~~~~sql
+SELECT * FROM mindsdb_confluence.pages
+WHERE space='space' AND id=123456;
+~~~~
+
 ~~~~sql
 INSERT INTO confluence_data.pages ('space', 'title', 'body')
 VALUES

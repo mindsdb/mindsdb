@@ -1,6 +1,1 @@
 auto-ts
-dask[distributed]
-seaborn
-lightgbm
-prophet
-xlrd

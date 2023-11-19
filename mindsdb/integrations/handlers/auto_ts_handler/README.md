@@ -80,7 +80,7 @@ USING
 The above query will create a model in mindsdb
 
 ``` sql
-SELECT sales_preds
+SELECT sales
 FROM mindsdb.sales_model
 WHERE time_period = '2013-04-01'
 AND marketing_expense = 256;
@@ -88,7 +88,7 @@ AND marketing_expense = 256;
 The above query will predict for single row
 
 ```sql
-SELECT m.sales_preds
+SELECT m.sales
 FROM files.sales as t
 JOIN mindsdb.sale_model as m ;
 ```

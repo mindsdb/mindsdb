@@ -40,27 +40,28 @@ class LumaEventsTable(APITable):
 
         search_params = {}
         subset_where_conditions = []
+        filter_flag = False
         for op, arg1, arg2 in where_conditions:
             if arg1 == 'event_id':
                 if op == '=':
                     search_params["event_id"] = arg2
+                    filter_flag = True
                 else:
                     raise NotImplementedError("Only '=' operator is supported for event_id column.")
             elif arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
 
-        filter_flag = ("event_id" in search_params)
-
-        df = pd.DataFrame(columns=self._get_columns(filter_flag))
+        df = pd.DataFrame(columns=self.get_columns())
 
         if filter_flag:
             response = self.handler.luma_client.get_event(search_params["event_id"])
-            content = response["content"]
-            df = pd.json_normalize(content)
+            event = response["content"]["event"]
+            df = pd.json_normalize(event)
         else:
             response = self.handler.luma_client.list_events()
             content = response["content"]["entries"]
-            df = pd.json_normalize(content)
+            events_only = [event["event"] for event in content]
+            df = pd.json_normalize(events_only)
 
         select_statement_executor = SELECTQueryExecutor(
             df,
@@ -75,72 +76,31 @@ class LumaEventsTable(APITable):
         return df
 
     def get_columns(self) -> list:
-        pass
-
-    def _get_columns(self, filter_flag) -> List[str]:
-        """Gets all columns to be returned in pandas DataFrame responses
-
-        Returns
-        -------
-        List[str]
-            List of columns
-        """
-        if filter_flag:
-            return [
-                "hosts",
-                "event.api_id",
-                "event.cover_url",
-                "event.name",
-                "event.description",
-                "event.series_api_id",
-                "event.start_at",
-                "event.duration_interval",
-                "event.end_at",
-                "event.geo_address_json.city",
-                "event.geo_address_json.type",
-                "event.geo_address_json.region",
-                "event.geo_address_json.address",
-                "event.geo_address_json.country",
-                "event.geo_address_json.latitude",
-                "event.geo_address_json.place_id",
-                "event.geo_address_json.longitude",
-                "event.geo_address_json.city_state",
-                "event.geo_address_json.description",
-                "event.geo_address_json.full_address",
-                "event.geo_latitude",
-                "event.geo_longitude",
-                "event.url",
-                "event.timezone",
-                "event.event_type",
-                "event.user_api_id",
-                "event.visibility"
-            ]
         return [
-            "api_id",
-            "event.api_id",
-            "event.cover_url",
-            "event.name",
-            "event.description",
-            "event.series_api_id",
-            "event.start_at",
-            "event.duration_interval",
-            "event.end_at",
-            "event.geo_address_json.city",
-            "event.geo_address_json.type",
-            "event.geo_address_json.region",
-            "event.geo_address_json.address",
-            "event.geo_address_json.country",
-            "event.geo_address_json.latitude",
-            "event.geo_address_json.place_id",
-            "event.geo_address_json.longitude",
-            "event.geo_address_json.city_state",
-            "event.geo_address_json.description",
-            "event.geo_address_json.full_address",
-            "event.geo_latitude",
-            "event.geo_longitude",
-            "event.url",
-            "event.timezone",
-            "event.event_type",
-            "event.user_api_id",
-            "event.visibility"
-        ]
+                "api_id",
+                "cover_url",
+                "name",
+                "description",
+                "series_api_id",
+                "start_at",
+                "duration_interval",
+                "end_at",
+                "geo_latitude",
+                "geo_longitude",
+                "url",
+                "timezone",
+                "event_type",
+                "user_api_id",
+                "visibility",
+                "geo_address_json.city",
+                "geo_address_json.type",
+                "geo_address_json.region",
+                "geo_address_json.address",
+                "geo_address_json.country",
+                "geo_address_json.latitude",
+                "geo_address_json.place_id",
+                "geo_address_json.longitude",
+                "geo_address_json.city_state",
+                "geo_address_json.description",
+                "geo_address_json.full_address"
+            ]

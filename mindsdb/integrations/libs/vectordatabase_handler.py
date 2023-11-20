@@ -19,13 +19,13 @@ from mindsdb_sql.parser.ast import (
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from mindsdb.integrations.utilities.sql_utils import conditions_to_filter
 
 from ..utilities.sql_utils import query_traversal
 from .base import BaseHandler
 
-LOG = get_log("VectorStoreHandler")
+LOG = log.getLogger(__name__)
 
 
 class FilterOperator(Enum):

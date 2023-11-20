@@ -24,6 +24,7 @@ from mindsdb.utilities.functions import mark_process
 
 from .utils import brack_to_mod, rep_recur, unpack_jsonai_old_args
 
+logger = log.getLogger(__name__)
 
 def create_learn_mark():
     if os.name == 'posix':
@@ -236,7 +237,7 @@ def run_finetune(df: DataFrame, args: dict, model_storage):
         db.session.commit()
 
     except Exception as e:
-        log.logger.error(e)
+        logger.error(e)
         predictor_id = model_storage.predictor_id
         predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
         print(traceback.format_exc())

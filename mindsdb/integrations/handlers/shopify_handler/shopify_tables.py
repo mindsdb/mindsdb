@@ -11,9 +11,9 @@ from mindsdb.integrations.handlers.utilities.query_utilities import INSERTQueryP
 from mindsdb.integrations.handlers.utilities.query_utilities import DELETEQueryParser, DELETEQueryExecutor
 from mindsdb.integrations.handlers.utilities.query_utilities import UPDATEQueryParser, UPDATEQueryExecutor
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
-logger = get_log("integrations.shopify_handler")
+logger = log.getLogger(__name__)
 
 
 class ProductsTable(APITable):

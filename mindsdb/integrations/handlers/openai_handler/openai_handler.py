@@ -30,6 +30,7 @@ from mindsdb.integrations.handlers.openai_handler.constants import (
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.libs.llm_utils import get_completed_prompts
 
+logger = log.getLogger(__name__)
 
 class OpenAIHandler(BaseMLEngine):
     name = 'openai'
@@ -413,7 +414,7 @@ class OpenAIHandler(BaseMLEngine):
             params2 = params.copy()
             params2.pop('api_key', None)
             params2.pop('user', None)
-            log.logger.debug(f'>>>openai call: {params2}:\n{response}')
+            logger.debug(f'>>>openai call: {params2}:\n{response}')
 
         def _submit_normal_completion(kwargs, prompts, api_args):
             def _tidy(comp):

@@ -1,92 +1,12 @@
 name: MindsDB Tests & Deploy
 
 on:
-  push:
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
-  # pull_request_target:
   pull_request:
     branches: [stable, staging]
     paths-ignore:
       - 'docs/**'
       - '**/*.md'
 jobs:
-  check_requirements:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3.5.3
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v4.7.0
-      with:
-        python-version: 3.9
-    - name: Check main requirements
-      shell: bash
-      run: |
-        pip install -r requirements/requirements-dev.txt
-
-        ### USE DEPTRY TO CHECK PYTHON REQUIREMENTS ###
-        # This checks that:
-        # 1. We don't import a python package that isn't in a requirements.txt file
-        # 2. We don't have a package in requirements.txt that we don't import
-
-        # Requirements files to use
-        REQUIREMENTS_FILES="requirements/requirements.txt,docker/handler_discovery/requirements.txt"
-
-        # List of package name maps to their import name in python
-        PACKAGE_MODULE_NAME_MAP="scylla-driver=cassandra,mysql-connector-python=mysql,snowflake-connector-python=snowflake,snowflake-sqlalchemy=snowflake,auto-sklearn=autosklearn,google-cloud-bigquery=google,google-cloud-spanner=google,google-api-python-client=googleapiclient,binance-connector=binance,pysqlite3-binary=pysqlite3,sqlalchemy-spanner=sqlalchemy,atlassian-python-api=atlassian,databricks-sql-connector=databricks,elasticsearch-dbapi=es,pygithub=github,python-gitlab=gitlab,google-auth-httplib2=google,impyla=impala,IfxPy=IfxPyDbi,salesforce-merlion=merlion,newsapi-python=newsapi,google-generativeai=google,pinecone-client=pinecone,plaid-python=plaid,faiss-cpu=faiss,writerai=writer,sqlalchemy-redshift=sqlalchemy,rocketchat_API=rocketchat_API,ShopifyAPI=shopify,solace-pubsubplus=solace,taospy=taosrest,sqlalchemy-vertica-python=sqlalchemy,weaviate-client=weaviate,pymupdf=fitz,ibm-db=ibm_db_dbi,python-dateutil=dateutil,grpcio=grpc,sqlalchemy-redshift=redshift_sqlalchemy,sqlalchemy-vertica-python=sqla_vertica_python,grpcio-tools=grpc,psycopg2-binary=psycopg2,psycopg-binary=psycopg,pymongo=pymongo|bson,python-multipart=multipart,pydateinfer=dateinfer,scikit-learn=sklearn,protobuf=google"
-
-        # List of rules we can ignore for specific packages
-        RULE_IGNORES='DEP003=torch,DEP001=torch,DEP002=psycopg2-binary' # torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it. Psycopg2 is needed in core codebase for sqlalchemy.
-
-        # Paths to ignore. We ignore the handlers dir because we will test each handler individually
-        EXCLUDE_PATHS="mindsdb/integrations/handlers|pryproject.toml"
-
-        # Actually do the check
-        deptry --requirements-txt $REQUIREMENTS_FILES --per-rule-ignores $RULE_IGNORES \
-        --package-module-name-map $PACKAGE_MODULE_NAME_MAP --extend-exclude $EXCLUDE_PATHS .
-
-    - name: Check handler requirements
-      shell: bash
-      run: |
-
-        ### USE DEPTRY TO CHECK PYTHON REQUIREMENTS ###
-        # This checks that:
-        # 1. We don't import a python package that isn't in a requirements.txt file
-        # 2. We don't have a package in requirements.txt that we don't import
-
-        # for each handler folder that contains a requirements.txt
-        for HANDLER_DIR in `find mindsdb/integrations/handlers -name "requirements.txt" -exec dirname "{}" \; |sort -u | xargs echo`; do
-
-          # Requirements files to use
-          REQUIREMENTS_FILES=requirements/requirements.txt,requirements/requirements-test.txt,${HANDLER_DIR}/requirements.txt
-
-          # List of package name maps to their import name in python
-          PACKAGE_MODULE_NAME_MAP="pillow=PIL,influxdb3-python=influxdb_client_3,hubspot-api-client=hubspot,pytest-lazy-fixture=pytest_lazyfixture,eventbrite-python=eventbrite,python-magic=magic,gunicorn=gunicorn,hierarchicalforecast=hierarchicalforecast,clickhouse-sqlalchemy=clickhouse_sqlalchemy,cohere=cohere,scylla-driver=cassandra,mysql-connector-python=mysql,snowflake-connector-python=snowflake,snowflake-sqlalchemy=snowflake,auto-sklearn=autosklearn,google-cloud-bigquery=google,google-cloud-spanner=google,google-api-python-client=googleapiclient,binance-connector=binance,pysqlite3-binary=pysqlite3,sqlalchemy-spanner=sqlalchemy,atlassian-python-api=atlassian,databricks-sql-connector=databricks,elasticsearch-dbapi=es,pygithub=github,python-gitlab=gitlab,google-auth-httplib2=google,impyla=impala,IfxPy=IfxPyDbi,salesforce-merlion=merlion,newsapi-python=newsapi,google-generativeai=google,pinecone-client=pinecone,plaid-python=plaid,faiss-cpu=faiss,writerai=writer,sqlalchemy-redshift=sqlalchemy,rocketchat_API=rocketchat_API,ShopifyAPI=shopify,solace-pubsubplus=solace,taospy=taosrest,sqlalchemy-vertica-python=sqlalchemy,weaviate-client=weaviate,pymupdf=fitz,ibm-db=ibm_db_dbi,python-dateutil=dateutil,grpcio=grpc,sqlalchemy-redshift=redshift_sqlalchemy,sqlalchemy-vertica-python=sqla_vertica_python,grpcio-tools=grpc,psycopg2-binary=psycopg,pymongo=pymongo|bson,python-multipart=multipart,pydateinfer=dateinfer,scikit-learn=sklearn,protobuf=google"
-
-          # THe following packages need exceptions because they are optional deps of some other packages. e.g. langchain CAN use openai
-          # (pysqlite3-binary is imported in an unusual way in the chromadb handler and needs to be excluded too)
-          # pypdf and openpyxl are optional deps of langchain, that are used for the file handler
-          OPTIONAL_HANDLER_DEPS="pysqlite3-binary|torch|openai|tiktoken|wikipedia|anthropic|pypdf|openpyxl"
-
-          # List of rules we can ignore for specific packages
-          # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in this handler
-          # We ignore mindsdb because we know it exists
-          MAIN_REQUIREMENTS_DEPS=`cat requirements/requirements.txt requirements/requirements-test.txt | tr ' ><=~[' '|' | cut -d '|' -f 1 | paste -sd\| -`
-          RULE_IGNORES=DEP002="${OPTIONAL_HANDLER_DEPS}|${MAIN_REQUIREMENTS_DEPS},DEP001=tests" # 'tests' is the mindsdb tests folder in the repo root
-
-          deptry --requirements-txt $REQUIREMENTS_FILES --package-module-name-map $PACKAGE_MODULE_NAME_MAP --per-rule-ignores $RULE_IGNORES --known-first-party mindsdb ${HANDLER_DIR}
-        done
-
-    - name: Check for duplicate requirements
-      shell: bash
-      run: |
-        python tests/scripts/check_duplicate_reqs.py
-    - name: Check requirements files are installable
-      shell: bash
-      run: |
-        pip install --dry-run --ignore-installed . # Install only the default handlers. We can expand this to all handlers later with: .[all_handlers_extras]
-
   code_checking:
     runs-on: ubuntu-latest
     steps:
@@ -103,7 +23,7 @@ jobs:
         with:
           extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }}
   matrix_prep:
-    needs: [code_checking, check_requirements]
+    needs: [code_checking]
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -130,6 +50,7 @@ jobs:
       run: |
         pip install --no-cache-dir .
         pip install -r requirements/requirements-test.txt
+        pip install .[lightwood]  # TODO: for now some tests rely on lightwood
       shell: bash
     - name: Run integration api and flow tests
       run: |

@@ -7,10 +7,10 @@ import pandas as pd
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.base import BaseMLEngine
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 
-logger = get_log("integrations.cohere_handler")
+logger = log.getLogger(__name__)
 
 class CohereHandler(BaseMLEngine):
     """

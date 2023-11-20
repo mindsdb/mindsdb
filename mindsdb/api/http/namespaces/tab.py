@@ -7,11 +7,11 @@ from flask_restx import Resource
 
 from mindsdb.interfaces.storage.fs import FileStorageFactory, RESOURCE_GROUP
 from mindsdb.api.http.namespaces.configs.tabs import ns_conf
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from mindsdb.utilities.context import context as ctx
 from mindsdb.api.http.utils import http_error
 
-logger = get_log("main")
+logger = log.getLogger(__name__)
 
 
 TABS_FILENAME = 'tabs'

@@ -87,19 +87,19 @@ class SnsHandler(APIHandler):
         self.is_connected = True
         return self.connection
 
-    def topic_list(self):
+    def topic_list(self, params: Dict = None):
         json_response = str(self.connection.list_topics())
         json_response = json_response.replace("\'", "\"")
         data = JSON.loads(str(json_response))
         return data["Topics"]
    
-    def publish_message(self,  topic_arn = None, message = None):
-        self.connection.publish(TopicArn = topic_arn,Message = message)
-    def publish_batch(self,  topic_arn = None, batch_request_entries = None):
-        self.connection.publish_batch(TopicArn = topic_arn,PublishBatchRequestEntries=batch_request_entries)
+    def publish_message(self,  params):
+        self.connection.publish(TopicArn = params['topic_arn'], message = params['message'])
+    def publish_batch(self,  params):
+        self.connection.publish_batch(TopicArn = params['topic_arn'],PublishBatchRequestEntries=params['batch_request_entries'])
                    
-    def create_topic(self, name = None):
-        self.connection.create_topic(Name=name)
+    def create_topic(self, params):
+        self.connection.create_topic(params['name'])
         
     def native_query(self, query_string: str = None) -> StatusResponse:
         """Receive and process a raw query.
@@ -118,11 +118,13 @@ class SnsHandler(APIHandler):
         return self.query(ast)
     
 
-    def call_application_api(self, method_name: str = None, params: dict = None) -> DataFrame:
+    def call_sns_api(self, method_name: str = None, params: dict = None) -> DataFrame:
         if method_name == 'create_topic':
             return self.create_topic(params)
         elif method_name == 'topic_list':
-            return self.get_volumes(params)      
+            return self.topic_list(params)
+        elif method_name == 'publish_batch':
+            return self.publish_message(params)    
         else:
             raise NotImplementedError(f'Unknown method {method_name}')
 connection_args = OrderedDict(

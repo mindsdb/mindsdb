@@ -1,7 +1,7 @@
 import ast
+import hashlib
 from enum import Enum
 from typing import Any, List, Optional
-import hashlib
 
 import pandas as pd
 from mindsdb_sql.parser.ast import (
@@ -116,13 +116,17 @@ class VectorStoreHandler(BaseHandler):
         },
     ]
 
-    def __init__(self, name: str):
-        super().__init__(name)
-
     def validate_connection_parameters(self, name, **kwargs):
         """Create validation for input parameters."""
 
         return NotImplementedError()
+
+    def __del__(self):
+        if self.is_connected is True:
+            self.disconnect()
+
+    def disconnect(self):
+        raise NotImplementedError()
 
     def _value_or_self(self, value):
         if isinstance(value, Constant):
@@ -196,7 +200,7 @@ class VectorStoreHandler(BaseHandler):
             else:
                 return False
 
-    def _dispatch_create_table(self, query: CreateTable) -> HandlerResponse:
+    def _dispatch_create_table(self, query: CreateTable):
         """
         Dispatch create table query to the appropriate method.
         """
@@ -205,7 +209,7 @@ class VectorStoreHandler(BaseHandler):
         if_not_exists = getattr(query, "if_not_exists", False)
         return self.create_table(table_name, if_not_exists=if_not_exists)
 
-    def _dispatch_drop_table(self, query: DropTables) -> HandlerResponse:
+    def _dispatch_drop_table(self, query: DropTables):
         """
         Dispatch drop table query to the appropriate method.
         """
@@ -278,7 +282,7 @@ class VectorStoreHandler(BaseHandler):
             }
         )
 
-        return self._do_upsert(table_name, data)
+        return self.do_upsert(table_name, data)
 
     def _dispatch_update(self, query: Update):
         """
@@ -286,7 +290,11 @@ class VectorStoreHandler(BaseHandler):
         """
         table_name = query.table.parts[-1]
 
-        row = query.update_columns
+        row = {}
+        for k, v in query.update_columns.items():
+            if isinstance(v, Constant):
+                v = v.value
+            row[k] = v
 
         filters = conditions_to_filter(query.where)
         row.update(filters)
@@ -305,30 +313,40 @@ class VectorStoreHandler(BaseHandler):
         # store
         df = pd.DataFrame([row])
 
-        return self._do_upsert(table_name, df)
+        return self.do_upsert(table_name, df)
 
-    def _do_upsert(self, table_name, df):
-        # find existing ids
+    def do_upsert(self, table_name, df):
+        # if handler supports it, call upsert method
+
+        id_col = TableField.ID.value
+
         # id is string TODO is it ok?
-        df['id'] = df['id'].apply(str)
+        df[id_col] = df[id_col].apply(str)
 
+        if hasattr(self, 'upsert'):
+            self.upsert(table_name, df)
+            return
+
+        # find existing ids
         res = self.select(
             table_name,
-            columns=['id'],
+            columns=[id_col],
             conditions=[
-                FilterCondition(column='id', op=FilterOperator.IN, value=list(df['id']))
+                FilterCondition(column=id_col, op=FilterOperator.IN, value=list(df[id_col]))
             ]
         )
-        existed_ids = list(res['id'])
+        existed_ids = list(res[id_col])
 
         # update existed
-        df_update = df[df['id'].isin(existed_ids)]
-        df_insert = df[~df['id'].isin(existed_ids)]
+        df_update = df[df[id_col].isin(existed_ids)]
+        df_insert = df[~df[id_col].isin(existed_ids)]
 
-        self.update(table_name, df_update, 'id')
-        self.insert(table_name, df_insert)
+        if not df_update.empty:
+            self.update(table_name, df_update, [id_col])
+        if not df_insert.empty:
+            self.insert(table_name, df_insert)
 
-    def _dispatch_delete(self, query: Delete) -> HandlerResponse:
+    def _dispatch_delete(self, query: Delete):
         """
         Dispatch delete query to the appropriate method.
         """
@@ -340,7 +358,7 @@ class VectorStoreHandler(BaseHandler):
         # dispatch delete
         return self.delete(table_name, conditions=conditions)
 
-    def _dispatch_select(self, query: Select) -> HandlerResponse:
+    def _dispatch_select(self, query: Select):
         """
         Dispatch select query to the appropriate method.
         """
@@ -453,14 +471,14 @@ class VectorStoreHandler(BaseHandler):
         raise NotImplementedError()
 
     def update(
-        self, table_name: str, data: pd.DataFrame, key_column: str = None
+        self, table_name: str, data: pd.DataFrame, key_columns: List[str] = None
     ):
         """Update data in table
 
         Args:
             table_name (str): table name
             data (pd.DataFrame): data to update
-            columns (List[str]): columns to update
+            key_columns (List[str]): key to  to update
 
         Returns:
             HandlerResponse

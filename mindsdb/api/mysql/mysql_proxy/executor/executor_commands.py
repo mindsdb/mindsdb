@@ -1341,7 +1341,7 @@ class ExecuteCommands:
 
         self.answer_create_predictor(statement)
 
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK), model_name
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK), Identifier(model_name)
 
     def answer_create_kb(self, statement: CreateKnowledgeBase):
         project_name = (
@@ -1489,33 +1489,36 @@ class ExecuteCommands:
 
         is_cloud = self.session.config.get("cloud", False)
 
-        if not statement.knowledge_base_store and is_cloud:
-            raise SqlApiException(
-                "No default vector database currently exists in MindsDB cloud. "
-                'Please specify one using the "storage" parameter'
-            )
-
-        # todo fix this by adding a default model to kb
-        if not statement.knowledge_base_store:
-            raise SqlApiException("No default knowledgebase currently exists")
+        # todo if kb not found, create one with name given in statement
 
         kb_name = (
             statement.knowledge_base_store.parts[-1]
             if statement.knowledge_base_store
-            else "default_kb"
+            else f'{rag_name}_{llm_model_id}_default_kb'
         )
+
+        if not statement.knowledge_base_store:
+            if is_cloud:
+                raise SqlApiException(
+                    "No default knowledge base currently exists in MindsDB cloud. "
+                    'Please specify one using the "storage" parameter'
+                )
+
+            else:
+                name = Identifier(kb_name)
+                _ = self.answer_create_kb(CreateKnowledgeBase(name=name))
 
         # verify the kb exists and get its id
         try:
             kb_record = self.session.kb_controller.get(name=kb_name, project_id=project_id)
         except Exception:
-            raise SqlApiException(f"Database not found: {kb_name}")
-
-        kb_id = kb_record.id
+            raise SqlApiException(f"knowledge base {kb_name} not found")
 
         if statement.from_query is not None:
             # TODO: implement this
             raise SqlApiException("Create a RAG from a select is not supported yet")
+
+        kb_id = kb_record.id
 
         params = statement.params
 

@@ -136,6 +136,10 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="rag", data={}, engine="rag")
         db.session.add(r)
+
+        r = db.Integration(name="sentence_transformers", data={}, engine="sentence_transformers")
+        db.session.add(r)
+
         r = db.Integration(name="pycaret", data={}, engine="pycaret")
         db.session.add(r)
 

@@ -25,7 +25,7 @@ from mindsdb.integrations.utilities.sql_utils import conditions_to_filter
 from ..utilities.sql_utils import query_traversal
 from .base import BaseHandler
 
-LOG = log.getLogger(__name__)
+logger = log.getLogger(__name__)
 
 
 class FilterOperator(Enum):
@@ -316,7 +316,7 @@ class VectorStoreHandler(BaseHandler):
             table_name,
             columns=['id'],
             conditions=[
-                FilterCondition(column='id', op=FilterOperator.IN, value=list(df['id']))
+                FilterCondition(column='id', op=FilterOperator.IN, value=df['id'].tolist())
             ]
         )
         existed_ids = list(res['id'])

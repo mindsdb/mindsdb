@@ -18,6 +18,8 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
+
 
 def get_chromadb():
     """
@@ -32,7 +34,7 @@ def get_chromadb():
         __import__("pysqlite3")
         sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
     except ImportError:
-        log.logger.error(
+        logger.warn(
             "[Chromadb-handler] pysqlite3 is not installed, this is not a problem for local usage"
         )  # noqa: E501
 
@@ -141,7 +143,7 @@ class ChromaDBHandler(VectorStoreHandler):
             self._client.heartbeat()
             response_code.success = True
         except Exception as e:
-            log.logger.error(f"Error connecting to ChromaDB , {e}!")
+            logger.error(f"Error connecting to ChromaDB , {e}!")
             response_code.error_message = str(e)
         finally:
             if response_code.success is True and need_to_close:
@@ -230,36 +232,36 @@ class ChromaDBHandler(VectorStoreHandler):
         conditions: List[FilterCondition] = None,
         offset: int = None,
         limit: int = None,
-    ) -> HandlerResponse:
+    ) -> pd.DataFrame:
         collection = self._client.get_collection(table_name)
         filters = self._translate_metadata_condition(conditions)
         # check if embedding vector filter is present
-        vector_filter = (
-            []
-            if conditions is None
-            else [
-                condition
-                for condition in conditions
-                if condition.column == TableField.SEARCH_VECTOR.value
-            ]
-        )
-        if len(vector_filter) > 0:
-            vector_filter = vector_filter[0]
-        else:
-            vector_filter = None
-        id_filters = None
+
         if conditions is not None:
-            id_filters = [
-                condition.value
-                for condition in conditions
-                if condition.column == TableField.ID.value
-            ] or None
+            condition_columns = [condition.column for condition in conditions]
+            vector_filter = None if TableField.SEARCH_VECTOR.value not in condition_columns else []
+            id_filters = None if TableField.ID.value not in condition_columns else []
+
+            for condition in conditions:
+
+                if condition.column == TableField.SEARCH_VECTOR.value:
+                    vector_filter.append(condition.value)
+
+                    if len(vector_filter) > 0:
+                        logger.warn("multiple search vectors are not supported, using first one")
+                        vector_filter = vector_filter[0]
+
+                if condition.column == TableField.ID.value:
+                    if condition.op == FilterOperator.IN:
+                        id_filters = condition.value
+                    else:
+                        id_filters.append(condition.value)
 
         if vector_filter is not None:
             # similarity search
             query_payload = {
                 "where": filters,
-                "query_embeddings": vector_filter.value
+                "query_embeddings": vector_filter
                 if vector_filter is not None
                 else None,
                 "include": ["metadatas", "documents", "distances"],
@@ -303,7 +305,7 @@ class ChromaDBHandler(VectorStoreHandler):
         if distances is not None:
             payload[TableField.DISTANCE.value] = distances
         result_df = pd.DataFrame(payload)
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=result_df)
+        return result_df
 
     def insert(
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None
@@ -336,7 +338,7 @@ class ChromaDBHandler(VectorStoreHandler):
         Update data in the ChromaDB database.
         TODO: not implemented yet
         """
-        return super().update(table_name, data, columns)
+        ...
 
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None

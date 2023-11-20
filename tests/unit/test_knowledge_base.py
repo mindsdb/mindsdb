@@ -156,7 +156,6 @@ class TestKnowledgeBase(BaseExecutorTest):
         with pytest.raises(Exception):
             self.run_sql(sql)
 
-        # todo this is to be supported - currently it throws an exception, waiting for the fix to be merged
         # create a knowledge base without a storage name, default should be used
 
         sql = f"""
@@ -169,6 +168,20 @@ class TestKnowledgeBase(BaseExecutorTest):
 
         # verify the knowledge base is created
         kb_obj = self.db.session.query(KnowledgeBase).filter_by(name="test_kb5").first()
+        assert kb_obj is not None
+
+        # create a knowledge base without specifying storage and model, defaults should be used
+
+        sql = f"""
+            CREATE KNOWLEDGE BASE test_kb6
+            USING
+            MODEL = {self.embedding_model_name}
+        """
+
+        self.run_sql(sql)
+
+        # verify the knowledge base is created
+        kb_obj = self.db.session.query(KnowledgeBase).filter_by(name="test_kb6").first()
         assert kb_obj is not None
 
     def test_drop_kb(self):

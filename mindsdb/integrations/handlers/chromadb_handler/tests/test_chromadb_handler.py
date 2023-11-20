@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 from mindsdb_sql import parse_sql
 
-from ..unit.executor_test_base import BaseExecutorTest
+from tests.unit.executor_test_base import BaseExecutorTest
 
 try:
     importlib.import_module("chromadb")

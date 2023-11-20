@@ -132,6 +132,15 @@ class TestRAG(BaseExecutorDummyLLM):
         self.llm_name = llm_name
         self.database_path = tmp_directory
 
+    @pytest.fixture(autouse=True, scope="function")
+    def teardown_method(self):
+
+        self.run_sql(f"DROP MODEL {self.llm_name}")
+        self.run_sql(f"DROP TABLE {self.vector_database_name}.{self.vector_database_table_name}")
+        self.run_sql(f"DROP DATABASE {self.vector_database_name}")
+        self.run_sql(f"DROP MODEL {self.embedding_model_name}")
+        self.run_sql(f"DROP KNOWLEDGE BASE {self.kb_name}")
+
     def test_create_rag(self):
         # create a RAG
         sql = f"""
@@ -146,9 +155,22 @@ class TestRAG(BaseExecutorDummyLLM):
         rag_obj = self.db.session.query(RAG).filter_by(name="test_rag").first()
         assert rag_obj is not None
 
-        # create a RAG with invalid llm and knowledge base should throw an exception
+        # create a RAG without knowledge_base_store, default should be used
+
         sql = f"""
             CREATE RAG test_rag2
+            USING
+            llm = {self.llm_name}
+        """
+        self.run_sql(sql)
+
+        # verify the RAG is created
+        rag_obj = self.db.session.query(RAG).filter_by(name="test_rag2").first()
+        assert rag_obj is not None
+
+        # create a RAG with invalid llm and knowledge base should throw an exception
+        sql = f"""
+            CREATE RAG test_rag3
             USING
             llm = invalid_model_name,
             knowledge_base_store = {self.kb_name}
@@ -157,7 +179,7 @@ class TestRAG(BaseExecutorDummyLLM):
             self.run_sql(sql)
 
         sql = f"""
-            CREATE RAG test_rag3
+            CREATE RAG test_rag4
             USING
             LLM = {self.llm_name},
             knowledge_base_store = invalid_storage_name

@@ -21,7 +21,7 @@ from mindsdb.utilities.profiler import profiler
 
 
 # todo Issue #7316 add support for different indexes and search algorithms e.g. cosine similarity or L2 norm
-class PgVectorHandler(PostgresHandler, VectorStoreHandler):
+class PgVectorHandler(VectorStoreHandler, PostgresHandler):
     """This handler handles connection and execution of the PostgreSQL with pgvector extension statements."""
 
     name = "pgvector"
@@ -88,6 +88,8 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             if value['op'].lower() == 'in':
                 values = list(repr(i) for i in value['value'])
                 value['value'] = '({})'.format(', '.join(values))
+            else:
+                value['value'] = repr(value['value'])
             where_clauses.append(f'{key} {value["op"]} {value["value"]}')
 
         if len(where_clauses) > 1:
@@ -109,6 +111,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
     def _build_select_query(
         self,
         table_name: str,
+        columns: List[str] = None,
         conditions: List[FilterCondition] = None,
         limit: int = None,
         offset: int = None,
@@ -133,19 +136,25 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             where_clause, offset_clause, limit_clause
         )
 
+        if columns is None:
+            targets = '*'
+        else:
+            targets = ', '.join(columns)
+
+
         if filter_conditions:
 
             if embedding_search:
                 # if search vector, return similar rows, apply other filters after if any
                 search_vector = filter_conditions["embeddings"]["value"][0]
                 filter_conditions.pop("embeddings")
-                return f"SELECT * FROM {table_name} ORDER BY embeddings <=> '{search_vector}' {after_from_clause}"
+                return f"SELECT {targets} FROM {table_name} ORDER BY embeddings <=> '{search_vector}' {after_from_clause}"
             else:
                 # if filter conditions, return filtered rows
-                return f"SELECT * FROM {table_name} {after_from_clause}"
+                return f"SELECT {targets} FROM {table_name} {after_from_clause}"
         else:
             # if no filter conditions, return all rows
-            return f"SELECT * FROM {table_name} {after_from_clause}"
+            return f"SELECT {targets} FROM {table_name} {after_from_clause}"
 
     def select(
         self,
@@ -158,18 +167,20 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         """
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
         """
+        if columns is None:
+            columns = ["id", "content", "embeddings", "metadata"]
+
         with self.connection.cursor() as cur:
-            query = self._build_select_query(table_name, conditions, limit, offset)
+            query = self._build_select_query(table_name, columns, conditions, limit, offset)
             cur.execute(query)
 
             self.connection.commit()
             result = cur.fetchall()
 
-        result = pd.DataFrame(
-            result, columns=["id", "content", "embeddings", "metadata"]
-        )
+        result = pd.DataFrame(result, columns=columns)
         # ensure embeddings are returned as string so they can be parsed by mindsdb
-        result["embeddings"] = result["embeddings"].astype(str)
+        if "embeddings" in columns:
+            result["embeddings"] = result["embeddings"].astype(str)
 
         return result
 
@@ -202,7 +213,7 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             self.connection.commit()
 
     def update(
-        self, table_name: str, data: pd.DataFrame, key_column: str = None
+        self, table_name: str, data: pd.DataFrame, key_columns: List[str] = None
     ):
         """
         Udate data into the pgvector table database.
@@ -210,17 +221,22 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
 
         where = None
         update_columns = {}
-        # col_map = {}
 
         for col in data.columns:
             value = Parameter('%s')
-            # col_map[col] = value
 
-            if col == key_column:
-                where = BinaryOperation(
+            if col in key_columns:
+                cond = BinaryOperation(
                     op='=',
-                    args=[Identifier(key_column), value]
+                    args=[Identifier(col), value]
                 )
+                if where is None:
+                    where = cond
+                else:
+                    where = BinaryOperation(
+                        op='AND',
+                        args=[where, cond]
+                    )
             else:
                 update_columns[col] = value
 
@@ -237,33 +253,20 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
                     record[col]
                     for col in update_columns.keys()
                 ]
-                row.append(record[key_column])
+                for key_column in key_columns:
+                    row.append(record[key_column])
                 transposed_data.append(row)
 
             query_str = self.renderer.get_string(query)
             cur.executemany(query_str, transposed_data)
             self.connection.commit()
 
-
-        #         for key, value in col_map.items():
-        #             value.value = row[key]
-        #
-        #
-        # with self.connection.cursor() as cur:
-        #     for _, row in data.iterrows():
-        #         for key, value in col_map.items():
-        #             value.value = row[key]
-        #
-        #
-        #         cur.execute(query_str)
-        #     self.connection.commit()
-
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
     ):
 
         filter_conditions = self._translate_conditions(conditions)
-        search_vector = filter_conditions["embedding"]["value"]
+        where_clause = self._construct_where_clause(filter_conditions)
 
         with self.connection.cursor() as cur:
 
@@ -273,16 +276,10 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
             # so we need to convert the string to a vector and also use a threshold (e.g. 0.5)
 
             query = (
-                f"DELETE FROM {table_name} WHERE embeddings <=> '{search_vector}'"
+                f"DELETE FROM {table_name} {where_clause}"
             )
             cur.execute(query)
             self.connection.commit()
-
-    # def get_tables(self) -> Response:
-    #     """
-    #     List all tables in PostgreSQL without the system tables information_schema and pg_catalog
-    #     """
-    #     return PostgresHandler.get_tables(self)
 
     def drop_table(self, table_name: str, if_exists=True):
         """
@@ -291,15 +288,6 @@ class PgVectorHandler(PostgresHandler, VectorStoreHandler):
         with self.connection.cursor() as cur:
             cur.execute(f"DROP TABLE IF EXISTS {table_name}")
             self.connection.commit()
-
-    def get_columns(self, table_name: str) -> HandlerResponse:
-        """
-        get columns in a given table
-        """
-        return VectorStoreHandler.get_columns(table_name)
-
-    def query(self, query: ASTNode) -> HandlerResponse:
-        return VectorStoreHandler.query(self, query)
 
 
 connection_args = OrderedDict(

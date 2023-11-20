@@ -87,7 +87,7 @@ class SnsHandler(APIHandler):
         self.is_connected = True
         return self.connection
 
-    def topic_list(self, params: dict = None):
+    def topic_list(self):
         json_response = str(self.connection.list_topics())
         json_response = json_response.replace("\'", "\"")
         data = JSON.loads(str(json_response))
@@ -101,7 +101,7 @@ class SnsHandler(APIHandler):
     def create_topic(self, name = None):
         self.connection.create_topic(Name=name)
         
-    def native_query(self, query: str) -> StatusResponse:
+    def native_query(self, query_string: str = None) -> StatusResponse:
         """Receive and process a raw query.
 
         Parameters
@@ -122,8 +122,7 @@ class SnsHandler(APIHandler):
         if method_name == 'create_topic':
             return self.create_topic(params)
         elif method_name == 'topic_list':
-            return self.get_volumes(params)
-        
+            return self.get_volumes(params)      
         else:
             raise NotImplementedError(f'Unknown method {method_name}')
 connection_args = OrderedDict(

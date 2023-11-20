@@ -35,7 +35,7 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers", "pryproject.toml"]
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
     "DEP001": ["torch"],
-    "DEP002": ["psycopg2-binary"],
+    "DEP002": ["psycopg2-binary", "pyarrow"],
 }  # torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it. Psycopg2 is needed in core codebase for sqlalchemy.
 
 

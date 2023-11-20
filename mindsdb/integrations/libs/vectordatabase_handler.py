@@ -282,6 +282,9 @@ class VectorStoreHandler(BaseHandler):
             }
         )
 
+        # remove duplicated ids
+        data = data.drop_duplicates([TableField.ID.value])
+
         return self.do_upsert(table_name, data)
 
     def _dispatch_update(self, query: Update):
@@ -292,8 +295,15 @@ class VectorStoreHandler(BaseHandler):
 
         row = {}
         for k, v in query.update_columns.items():
+            k = k.lower()
             if isinstance(v, Constant):
                 v = v.value
+            if k == TableField.EMBEDDINGS.value and isinstance(v, str):
+                # it could be embeddings in string
+                try:
+                    v = eval(v)
+                except Exception:
+                    pass
             row[k] = v
 
         filters = conditions_to_filter(query.where)
@@ -303,12 +313,12 @@ class VectorStoreHandler(BaseHandler):
         if TableField.EMBEDDINGS.value not in row:
             raise Exception("Embeddings column is required!")
 
+        if TableField.CONTENT.value not in row:
+            raise Exception("Content is required!")
+
         if TableField.ID.value not in row:
-            if TableField.CONTENT.value in row:
-                value = row[TableField.CONTENT.value]
-                row[TableField.ID.value] = hashlib.md5(str(value).encode()).hexdigest()
-            else:
-                raise Exception("Content or id is required!")
+            value = row[TableField.CONTENT.value]
+            row[TableField.ID.value] = hashlib.md5(str(value).encode()).hexdigest()
 
         # store
         df = pd.DataFrame([row])

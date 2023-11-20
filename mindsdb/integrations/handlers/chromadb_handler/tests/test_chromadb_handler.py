@@ -181,7 +181,7 @@ class TestChromaDBHandler(BaseExecutorTest):
                 content,metadata,embeddings
             )
             VALUES (
-                'this is a test', '{"test": "test"}', '[1.0, 2.0, 3.0]'
+                'this is a test 0', '{"test": "test"}', '[1.0, 2.0, 3.0]'
             )
         """
         self.run_sql(sql)
@@ -208,7 +208,7 @@ class TestChromaDBHandler(BaseExecutorTest):
             SELECT * FROM chroma_test.test_table
         """
         ret = self.run_sql(sql)
-        assert ret.shape[0] == num_record * 2 + 2
+        assert ret.shape[0] == num_record + 3  # only one unique record was added
 
         # insert into a table with a select statement, but wrong columns
         with pytest.raises(Exception):

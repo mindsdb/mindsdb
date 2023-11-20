@@ -35,7 +35,7 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers", "pryproject.toml"]
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
     "DEP001": ["torch"],
-    "DEP002": ["psycopg2-binary", "pyarrow"],
+    "DEP002": ["psycopg2-binary"],
 }  # torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it. Psycopg2 is needed in core codebase for sqlalchemy.
 
 
@@ -48,8 +48,10 @@ OPTIONAL_HANDLER_DEPS = ["pysqlite3-binary", "torch", "openai", "tiktoken", "wik
 # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in a given handler
 MAIN_REQUIREMENTS_DEPS = get_reqs_from_file("requirements/requirements.txt") + get_reqs_from_file("requirements/requirements-test.txt")
 
+BYOM_HANLDER_DEPS = ["pyarrow"]
+
 HANDLER_RULE_IGNORES = {
-    "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS,
+    "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS,
     "DEP001": ["tests"]  # 'tests' is the mindsdb tests folder in the repo root
 }
 

@@ -208,7 +208,7 @@ class TestChromaDBHandler(BaseExecutorTest):
             SELECT * FROM chroma_test.test_table
         """
         ret = self.run_sql(sql)
-        assert ret.shape[0] == num_record + 3 # only one unique record was added
+        assert ret.shape[0] == num_record + 3  # only one unique record was added
 
         # insert into a table with a select statement, but wrong columns
         with pytest.raises(Exception):

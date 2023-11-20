@@ -12,6 +12,7 @@ from mindsdb_sql.parser.ast import (
     Delete,
 )
 
+from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
@@ -162,7 +163,7 @@ class ProjectDataNode(DataNode):
 
                 return df.to_dict(orient='records'), columns_info
 
-            raise Exception(f"Can't select from {query_table} in project")
+            raise EntityNotExistsError(f"Can't select from {query_table} in project")
         else:
             raise NotImplementedError(f"Query not supported {query}")
 

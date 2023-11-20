@@ -29,7 +29,7 @@ Please note that in the process of contributing new ML engines, ML engines and/o
 If you find the ML handler of your interest, then you can create an ML engine using this command:
 
 ```sql
-CREATE ML_ENGINE ml_engine_name
+CREATE ML_ENGINE [IF NOT EXISTS] ml_engine_name
 FROM handler_name
 [USING argument_key = argument_value];
 ```

@@ -23,6 +23,10 @@ from mindsdb.integrations.libs.response import (
 
 SCOPES = ['https://www.googleapis.com/auth/fitness.activity.read']
 DATE_FORMAT = '%Y-%m-%d'
+
+logger = log.getLogger(__name__)
+
+
 class GoogleFitHandler(APIHandler):
 
     def __init__(self, name: str = None, **kwargs):
@@ -85,7 +89,7 @@ class GoogleFitHandler(APIHandler):
             response.success = True
 
         except Exception as e:
-            log.logger.error(f'Error connecting to Google Fit API: {e}!')
+            logger.error(f'Error connecting to Google Fit API: {e}!')
             response.error_message = e
 
         self.is_connected = response.success

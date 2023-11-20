@@ -1,0 +1,7 @@
+transformers==4.33.2
+datasets
+evaluate
+nltk
+huggingface-hub
+# Needs to be installed with `pip install --extra-index-url https://download.pytorch.org/whl/ .[huggingface_cpu]`
+torch==2.0.1+cpu

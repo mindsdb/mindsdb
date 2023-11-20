@@ -51,11 +51,22 @@ Here is the output:
 
 Let's create a model table to summarize all articles from the input dataset:
 
+<Tip>
+Before creating an OpenAI model, please create an engine, providing your OpenAI API key:
+
+```sql
+CREATE ML_ENGINE openai_engine
+FROM openai
+USING
+	api_key = 'your-openai-api-key';
+```
+</Tip>
+
 ```sql
 CREATE MODEL text_summarization_model
 PREDICT highlights
 USING
-    engine = 'openai',              
+    engine = 'openai_engine',              
     prompt_template = 'provide an informative summary of the text text:{{article}} using full sentences';
 ```
 

@@ -11,7 +11,7 @@ from mindsdb.integrations.handlers.sentence_transformer_handler.settings import 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 
-logger = log.get_log(__name__)
+logger = log.getLogger(__name__)
 
 
 class SentenceTransformerHandler(BaseMLEngine):

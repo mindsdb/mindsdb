@@ -16,15 +16,28 @@ from mindsdb_sql.parser.ast import (
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
+from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 
 class KnowledgeBaseTable:
+    """
+    Knowledge base table interface
+    Handlers requests to KB table and modifies data in linked vector db table
+    """
+
     def __init__(self, kb: db.KnowledgeBase, session):
         self._kb = kb
         self._vector_db = None
         self.session = session
 
-    def select_query(self, query: Select):
+    def select_query(self, query: Select) -> pd.DataFrame:
+        """
+        Handles select from KB table.
+        Replaces content values with embeddings in where clause. Sends query to vector db
+        :param query: query to KB table
+        :return: dataframe with the result table
+        """
+
         # replace content with embeddings
 
         utils.query_traversal(query.where, self._replace_query_content)
@@ -51,6 +64,12 @@ class KnowledgeBaseTable:
         return resp.data_frame
 
     def update_query(self, query: Update):
+        """
+        Handles update query to KB table.
+        Replaces content values with embeddings in SET clause. Sends query to vector db
+        :param query: query to KB table
+        """
+
         # add embeddings to content in updated collumns
         query = copy.deepcopy(query)
 
@@ -67,9 +86,14 @@ class KnowledgeBaseTable:
 
         # send to vectordb
         db_handler = self._get_vector_db()
-        return db_handler.query(query)
+        db_handler.query(query)
 
     def delete_query(self, query: Delete):
+        """
+        Handles delete query to KB table.
+        Replaces content values with embeddings in WHERE clause. Sends query to vector db
+        :param query: query to KB table
+        """
         utils.query_traversal(query.where, self._replace_query_content)
 
         # set table name
@@ -79,7 +103,21 @@ class KnowledgeBaseTable:
         db_handler = self._get_vector_db()
         db_handler.query(query)
 
+    def clear(self):
+        """
+        Clear data in KB table
+        Sends delete to vector db table
+        """
+        db_handler = self._get_vector_db()
+        db_handler.delete(self._kb.vector_database_table)
+
     def insert(self, df: pd.DataFrame):
+        """
+        Insert dataframe to KB table
+        Adds embedding column to dataframe and calls .upsert method of vector db
+        :param df: input dataframe
+
+        """
         if df.empty:
             return
 
@@ -101,12 +139,23 @@ class KnowledgeBaseTable:
                     node.args[1].value = [self._content_to_embeddings(node.args[1].value)]
 
     def _get_vector_db(self):
+        """
+        helper to get vector db handler
+        """
         if self._vector_db is None:
             database_name = db.Integration.query.get(self._kb.vector_database_id).name
             self._vector_db = self.session.integration_controller.get_handler(database_name)
         return self._vector_db
 
-    def _df_to_embeddings(self, df):
+    def _df_to_embeddings(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Returns embeddings for input dataframe.
+        Uses model embedding model to convert content to embeddings.
+        Automatically detects input and output of model using model description
+        :param df:
+        :return: dataframe with embeddings
+        """
+
         model_id = self._kb.embedding_model_id
         # get the input columns
         model_rec = db.session.query(db.Predictor).filter_by(id=model_id).first()
@@ -138,8 +187,12 @@ class KnowledgeBaseTable:
 
         return df_out
 
-    def _content_to_embeddings(self, content):
-
+    def _content_to_embeddings(self, content: str) -> List[float]:
+        """
+        Converts string to embeddings
+        :param content: input string
+        :return: embeddings
+        """
         df = pd.DataFrame([[content]], columns=[TableField.CONTENT.value])
         res = self._df_to_embeddings(df)
         return res[TableField.EMBEDDINGS.value][0]
@@ -147,8 +200,8 @@ class KnowledgeBaseTable:
 
 class KnowledgeBaseController:
     """
-    Knowledge bae controller handles all
-    db related operations for knowledge bases
+    Knowledge base controller handles all
+    manages knowledge bases
     """
 
     def __init__(self, session) -> None:
@@ -162,7 +215,7 @@ class KnowledgeBaseController:
         storage: Identifier,
         params: dict,
         if_not_exists: bool = False,
-    ):
+    ) -> db.KnowledgeBase:
         """
         Add a new knowledge base to the database
         """
@@ -181,8 +234,7 @@ class KnowledgeBaseController:
         if kb is not None:
             if if_not_exists:
                 return kb
-            else:
-                raise Exception(f"Knowledge base already exists: {name}")
+            raise EntityExistsError("Knowledge base already exists", name)
 
         # model
         model_name = embedding_model.parts[-1]
@@ -208,7 +260,7 @@ class KnowledgeBaseController:
                 name
             )
         elif len(storage.parts) != 2:
-            raise Exception('Storage param has to be vector db with table')
+            raise ValueError('Storage param has to be vector db with table')
         else:
             vector_db_name, vector_table_name = storage.parts
 
@@ -253,7 +305,7 @@ class KnowledgeBaseController:
         try:
             project = self.session.database_controller.get_project(project_name)
         except ValueError:
-            raise Exception(f"Project not found: {project_name}")
+            raise ValueError(f"Project not found: {project_name}")
         project_id = project.id
 
         # check if knowledge base exists
@@ -263,7 +315,7 @@ class KnowledgeBaseController:
             if if_exists:
                 return
             else:
-                raise Exception(f"Knowledge base does not exist: {name}")
+                raise EntityNotExistsError("Knowledge base does not exist", name)
 
         # drop table
         vector_db = db.Integration.query.get(kb.vector_database_id)
@@ -277,7 +329,7 @@ class KnowledgeBaseController:
         db.session.delete(kb)
         db.session.commit()
 
-    def get(self, name: str, project_id: str):
+    def get(self, name: str, project_id: str) -> db.KnowledgeBase:
         """
         Get a knowledge base from the database
         by name + project_id
@@ -292,7 +344,13 @@ class KnowledgeBaseController:
         )
         return kb
 
-    def get_table(self, name: str, project_id: str):
+    def get_table(self, name: str, project_id: str) -> KnowledgeBaseTable:
+        """
+        Returns kb table object
+        :param name: table name
+        :param project_id: project id
+        :return: kb table object
+        """
         kb = self.get(name, project_id)
         if kb is not None:
             return KnowledgeBaseTable(kb, self.session)
@@ -313,6 +371,6 @@ class KnowledgeBaseController:
 
     def update(self, name: str, project_id: str, **kwargs) -> db.KnowledgeBase:
         """
-        Update a knowledge base from the database
+        Update a knowledge base record
         """
         raise NotImplementedError()

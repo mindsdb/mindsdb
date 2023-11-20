@@ -1315,7 +1315,7 @@ class ExecuteCommands:
         kb_name = statement.name.parts[-1]
 
         # create the knowledge base
-        self.session.kb_controller.add(
+        _ = self.session.kb_controller.add(
             name=kb_name,
             project_name=project_name,
             embedding_model=statement.model,

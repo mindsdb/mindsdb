@@ -179,8 +179,7 @@ class ProjectDataNode(DataNode):
         if kb_table:
             # this is the knowledge db
             if is_replace:
-                # TODO clear table?
-                ...
+                kb_table.clear()
 
             df = result_set.to_df()
             return kb_table.insert(df)

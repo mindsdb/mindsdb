@@ -18,6 +18,8 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
+
 
 def get_chromadb():
     """
@@ -32,7 +34,7 @@ def get_chromadb():
         __import__("pysqlite3")
         sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
     except ImportError:
-        log.logger.error(
+        logger.error(
             "[Chromadb-handler] pysqlite3 is not installed, this is not a problem for local usage"
         )  # noqa: E501
 
@@ -111,7 +113,7 @@ class ChromaDBHandler(VectorStoreHandler):
             self.is_connected = True
             return self._client
         except Exception as e:
-            log.logger.error(f"Error connecting to ChromaDB client, {e}!")
+            logger.error(f"Error connecting to ChromaDB client, {e}!")
             self.is_connected = False
 
     def disconnect(self):
@@ -132,7 +134,7 @@ class ChromaDBHandler(VectorStoreHandler):
             self._client.heartbeat()
             response_code.success = True
         except Exception as e:
-            log.logger.error(f"Error connecting to ChromaDB , {e}!")
+            logger.error(f"Error connecting to ChromaDB , {e}!")
             response_code.error_message = str(e)
         finally:
             if response_code.success is True and need_to_close:

@@ -228,11 +228,11 @@ if __name__ == '__main__':
         import_meta = handler_meta.get("import", {})
         dependencies = import_meta.get("dependencies")
         if import_meta.get("success", False) is not True:
-            logger.info(
+            logger.debug(
                 f"Dependencies for the handler '{handler_name}' are not installed by default."
             )
-            logger.info(
-                f'If you want to use "{handler_name}" please install "{dependencies}"'
+            logger.debug(
+                f'If you want to use "{handler_name}" please "pip install mindsdb[{handler_name}]"'
             )
 
     # from mindsdb.utilities.fs import get_marked_processes_and_threads

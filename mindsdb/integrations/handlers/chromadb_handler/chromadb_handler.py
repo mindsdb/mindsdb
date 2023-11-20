@@ -235,36 +235,42 @@ class ChromaDBHandler(VectorStoreHandler):
     ) -> pd.DataFrame:
         collection = self._client.get_collection(table_name)
         filters = self._translate_metadata_condition(conditions)
+
+        include = ["metadatas", "documents", "embeddings"]
+
         # check if embedding vector filter is present
+        vector_filter = (
+            []
+            if conditions is None
+            else [
+                condition
+                for condition in conditions
+                if condition.column == TableField.EMBEDDINGS.value
+            ]
+        )
 
+        if len(vector_filter) > 0:
+            vector_filter = vector_filter[0]
+        else:
+            vector_filter = None
+        id_filters = []
         if conditions is not None:
-            condition_columns = [condition.column for condition in conditions]
-            vector_filter = None if TableField.SEARCH_VECTOR.value not in condition_columns else []
-            id_filters = None if TableField.ID.value not in condition_columns else []
-
             for condition in conditions:
-
-                if condition.column == TableField.SEARCH_VECTOR.value:
-                    vector_filter.append(condition.value)
-
-                    if len(vector_filter) > 0:
-                        logger.warn("multiple search vectors are not supported, using first one")
-                        vector_filter = vector_filter[0]
-
-                if condition.column == TableField.ID.value:
-                    if condition.op == FilterOperator.IN:
-                        id_filters = condition.value
-                    else:
-                        id_filters.append(condition.value)
+                if condition.column != TableField.ID.value:
+                    continue
+                if condition.op == FilterOperator.EQUAL:
+                    id_filters.append(condition.value)
+                elif condition.op == FilterOperator.IN:
+                    id_filters.extend(condition.value)
 
         if vector_filter is not None:
             # similarity search
             query_payload = {
                 "where": filters,
-                "query_embeddings": vector_filter
+                "query_embeddings": vector_filter.value
                 if vector_filter is not None
                 else None,
-                "include": ["metadatas", "documents", "distances"],
+                "include": include + ["distances"],
             }
             if limit is not None:
                 query_payload["n_results"] = limit
@@ -274,6 +280,8 @@ class ChromaDBHandler(VectorStoreHandler):
             documents = result["documents"][0]
             metadatas = result["metadatas"][0]
             distances = result["distances"][0]
+            embeddings = result["embeddings"][0]
+
         else:
             # general get query
             result = collection.get(
@@ -281,10 +289,12 @@ class ChromaDBHandler(VectorStoreHandler):
                 where=filters,
                 limit=limit,
                 offset=offset,
+                include=include,
             )
             ids = result["ids"]
             documents = result["documents"]
             metadatas = result["metadatas"]
+            embeddings = result["embeddings"]
             distances = None
 
         # project based on columns
@@ -292,24 +302,18 @@ class ChromaDBHandler(VectorStoreHandler):
             TableField.ID.value: ids,
             TableField.CONTENT.value: documents,
             TableField.METADATA.value: metadatas,
+            TableField.EMBEDDINGS.value: embeddings,
         }
 
         if columns is not None:
-            payload = {
-                column: payload[column]
-                for column in columns
-                if column != TableField.EMBEDDINGS.value
-            }
+            payload = {column: payload[column] for column in columns}
 
         # always include distance
         if distances is not None:
             payload[TableField.DISTANCE.value] = distances
-        result_df = pd.DataFrame(payload)
-        return result_df
+        return pd.DataFrame(payload)
 
-    def insert(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
+    def insert(self, table_name: str, data: pd.DataFrame):
         """
         Insert data into the ChromaDB database.
         """
@@ -322,27 +326,43 @@ class ChromaDBHandler(VectorStoreHandler):
 
         data = data.to_dict(orient="list")
 
-        collection.add(
+        collection.upsert(
             ids=data[TableField.ID.value],
             documents=data.get(TableField.CONTENT.value),
             embeddings=data[TableField.EMBEDDINGS.value],
             metadatas=data.get(TableField.METADATA.value),
         )
 
-        return Response(resp_type=RESPONSE_TYPE.OK)
+    def upsert(self, table_name: str, data: pd.DataFrame):
+        return self.insert(table_name, data)
 
     def update(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
+        self,
+        table_name: str,
+        data: pd.DataFrame,
+        key_columns: List[str] = None,
+    ):
         """
         Update data in the ChromaDB database.
-        TODO: not implemented yet
         """
-        ...
+        collection = self._client.get_collection(table_name)
+
+        # drop columns with all None values
+
+        data.dropna(axis=1, inplace=True)
+
+        data = data.to_dict(orient="list")
+
+        collection.update(
+            ids=data[TableField.ID.value],
+            documents=data.get(TableField.CONTENT.value),
+            embeddings=data[TableField.EMBEDDINGS.value],
+            metadatas=data.get(TableField.METADATA.value),
+        )
 
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
-    ) -> HandlerResponse:
+    ):
         filters = self._translate_metadata_condition(conditions)
         # get id filters
         id_filters = [
@@ -355,16 +375,14 @@ class ChromaDBHandler(VectorStoreHandler):
             raise Exception("Delete query must have at least one condition!")
         collection = self._client.get_collection(table_name)
         collection.delete(ids=id_filters, where=filters)
-        return Response(resp_type=RESPONSE_TYPE.OK)
 
-    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
+    def create_table(self, table_name: str, if_not_exists=True):
         """
         Create a collection with the given name in the ChromaDB database.
         """
         self._client.create_collection(table_name, get_or_create=if_not_exists)
-        return Response(resp_type=RESPONSE_TYPE.OK)
 
-    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
+    def drop_table(self, table_name: str, if_exists=True):
         """
         Delete a collection from the ChromaDB database.
         """
@@ -378,8 +396,6 @@ class ChromaDBHandler(VectorStoreHandler):
                     resp_type=RESPONSE_TYPE.ERROR,
                     error_message=f"Table {table_name} does not exist!",
                 )
-
-        return Response(resp_type=RESPONSE_TYPE.OK)
 
     def get_tables(self) -> HandlerResponse:
         """

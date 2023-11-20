@@ -589,9 +589,6 @@ class ExecuteCommands:
         elif type(statement) == Delete:
             if statement.table.parts[-1].lower() == "models_versions":
                 return self.answer_delete_model_version(statement)
-            table_identifier = statement.table
-            if self.session.kb_controller.is_knowledge_base(table_identifier):
-                return self.session.kb_controller.execute_query(statement)
             if (
                 self.session.database != "mindsdb"
                 and statement.table.parts[0] != "mindsdb"
@@ -604,10 +601,6 @@ class ExecuteCommands:
             return ExecuteAnswer(ANSWER_TYPE.OK)
 
         elif type(statement) == Insert:
-            table_identifier = statement.table
-            if self.session.kb_controller.is_knowledge_base(table_identifier):
-                return self.session.kb_controller.execute_query(statement)
-
             SQLQuery(statement, session=self.session, execute=True)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Update:
@@ -626,14 +619,6 @@ class ExecuteCommands:
         elif type(statement) == Select:
             if statement.from_table is None:
                 return self.answer_single_row_select(statement)
-
-            table_identifier = statement.from_table
-            if self.session.kb_controller.is_knowledge_base(table_identifier):
-                return self.session.kb_controller.execute_query(statement)
-
-            if self.session.rag_controller.is_rag(table_identifier):
-                return self.session.rag_controller.execute_query(statement)
-
             query = SQLQuery(statement, session=self.session)
             return self.answer_select(query)
         elif type(statement) == Union:
@@ -1442,18 +1427,10 @@ class ExecuteCommands:
             else self.session.database
         )
 
-        # get project id
-        try:
-            project = self.session.database_controller.get_project(project_name)
-        except ValueError:
-            raise SqlApiException(f"Project not found: {project_name}")
-
-        project_id = project.id
-
         # delete the knowledge base
         self.session.kb_controller.delete(
             name=name,
-            project_id=project_id,
+            project_name=project_name,
             if_exists=statement.if_exists,
         )
 
@@ -1569,7 +1546,10 @@ class ExecuteCommands:
 
         try:
             _ = self.session.skills_controller.add_skill(
-                name, project_name, statement.type, statement.params
+                name,
+                project_name,
+                statement.type,
+                statement.params
             )
         except ValueError as e:
             # Project does not exist or skill already exists.
@@ -1604,7 +1584,10 @@ class ExecuteCommands:
         type = statement.params.pop('type', None)
         try:
             _ = self.session.skills_controller.update_skill(
-                name, project_name=project_name, type=type, params=statement.params
+                name,
+                project_name=project_name,
+                type=type,
+                params=statement.params
             )
         except ValueError as e:
             # Project does not exist or skill does not exist.
@@ -1623,7 +1606,11 @@ class ExecuteCommands:
         skills = statement.params.pop('skills', [])
         try:
             _ = self.session.agents_controller.add_agent(
-                name, project_name, statement.model, skills, statement.params
+                name,
+                project_name,
+                statement.model,
+                skills,
+                statement.params
             )
         except ValueError as e:
             # Project does not exist or agent already exists.
@@ -1665,7 +1652,7 @@ class ExecuteCommands:
                 model_name=model,
                 skills_to_add=skills_to_add,
                 skills_to_remove=skills_to_remove,
-                params=statement.params,
+                params=statement.params
             )
         except ValueError as e:
             # Project does not exist or agent does not exist.

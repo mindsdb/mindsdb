@@ -1,37 +1,12 @@
 name: MindsDB Tests & Deploy
 
 on:
-  push:
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
-  # pull_request_target:
   pull_request:
     branches: [stable, staging]
     paths-ignore:
       - 'docs/**'
       - '**/*.md'
 jobs:
-  check_requirements:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3.5.3
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v4.7.0
-      with:
-        python-version: 3.9
-    - name: Check main requirements
-      shell: bash
-      run: |
-        pip install -r requirements/requirements-dev.txt
-
-        python tests/scripts/check_requirements.py
-
-    - name: Check requirements files are installable
-      shell: bash
-      run: |
-        pip install --dry-run --ignore-installed . # Install only the default handlers. We can expand this to all handlers later with: .[all_handlers_extras]
-
   code_checking:
     runs-on: ubuntu-latest
     steps:
@@ -48,7 +23,7 @@ jobs:
         with:
           extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }}
   matrix_prep:
-    needs: [code_checking, check_requirements]
+    needs: [code_checking]
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}

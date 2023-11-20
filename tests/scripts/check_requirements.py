@@ -53,7 +53,7 @@ MAIN_REQUIREMENTS_DEPS = get_reqs_from_file(MAIN_REQS_PATH) + get_reqs_from_file
 
 HANDLER_RULE_IGNORES = {
     "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS,
-    "DEP001": ["tests"]  # 'tests' is the mindsdb tests folder in the repo root
+    "DEP001": ["tests", "hierarchicalforecast"]  # 'tests' is the mindsdb tests folder in the repo root
 }
 
 PACKAGE_NAME_MAP = {

@@ -5,7 +5,7 @@ from sklearn.metrics import r2_score
 
 # handle optional dependency
 try:
-    import hierarchicalforecast
+    import hierarchicalforecast  # noqa: F401
     from hierarchicalforecast.core import HierarchicalReconciliation
     from hierarchicalforecast.methods import BottomUp
     from hierarchicalforecast.utils import aggregate
@@ -157,7 +157,6 @@ def get_hierarchy_from_df(df, model_args):
         return nixtla_df, hier_df, hier_dict
     else:
         log.logger.warning("HierarchicalForecast is not installed, but `get_hierarchy_from_df` has been called. This should never happen.")  # noqa
-
 
 
 def reconcile_forecasts(nixtla_df, forecast_df, hierarchy_df, hierarchy_dict):

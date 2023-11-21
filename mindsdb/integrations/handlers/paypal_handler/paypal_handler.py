@@ -4,19 +4,20 @@ from mindsdb.integrations.handlers.paypal_handler.paypal_tables import (
     InvoicesTable,
     PaymentsTable,
     SubscriptionsTable,
-    OrdersTable
+    OrdersTable,
+    PayoutsTable
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
   HandlerStatusResponse as StatusResponse,
 )
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb_sql import parse_sql
 from collections import OrderedDict
 
-logger = get_log("integrations.paypal_handler")
+logger = log.getLogger(__name__)
 
 
 class PayPalHandler(APIHandler):
@@ -53,6 +54,9 @@ class PayPalHandler(APIHandler):
 
         orders_data = OrdersTable(self)
         self._register_table("orders", orders_data)
+
+        payouts_data = PayoutsTable(self)
+        self._register_table("payouts", payouts_data)
 
     def connect(self):
         """

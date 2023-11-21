@@ -7,6 +7,8 @@ from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
+
 
 class CkanHandler(DatabaseHandler):
     """
@@ -58,7 +60,7 @@ class CkanHandler(DatabaseHandler):
                 return response
 
         except Exception as e:
-            log.logger.error(f'Error connecting to CKAN: {e}!')
+            logger.error(f'Error connecting to CKAN: {e}!')
             self.is_connected = False
             response.error_message = e
 

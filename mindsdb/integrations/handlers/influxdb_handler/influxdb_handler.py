@@ -1,16 +1,15 @@
+from influxdb_client_3 import InfluxDBClient3
 from mindsdb.integrations.handlers.influxdb_handler.influxdb_tables import InfluxDBTables
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
-import requests
-import pandas as pd
-import io
 
-logger = get_log("integrations.influxdb_handler")
+
+logger = log.getLogger(__name__)
 
 class InfluxDBHandler(APIHandler):
     """InfluxDB handler implementation"""
@@ -35,6 +34,7 @@ class InfluxDBHandler(APIHandler):
 
         influxdb_tables_data = InfluxDBTables(self)
         self._register_table("tables", influxdb_tables_data)
+        
 
     def connect(self):
         """Set up the connection required by the handler.
@@ -44,16 +44,16 @@ class InfluxDBHandler(APIHandler):
 
         Raises Expection if ping check fails
         """
+        
         if self.is_connected is True:
             return self.connection
+        
+        self.connection=InfluxDBClient3(host=self.connection_data['influxdb_url'],token=self.connection_data['influxdb_token'],org=self.connection_data.get('org'))
 
-        url = f"{self.connection_data['influxdb_url']}/ping"
-        response = requests.request("GET",url)
 
-        if response.status_code == 204:
-            self.connection = response
-        else:
-            raise Expection
+        self.is_connected = True
+
+        return self.connection
         
 
     def check_connection(self) -> StatusResponse:
@@ -64,7 +64,6 @@ class InfluxDBHandler(APIHandler):
             Status confirmation
         """
         response = StatusResponse(False)
-        need_to_close = self.is_connected is False
 
         try:
             self.connect()
@@ -91,25 +90,16 @@ class InfluxDBHandler(APIHandler):
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
 
-    def call_influxdb_tables(self):
+    def call_influxdb_tables(self,query):
         """Pulls all the records from the given  InfluxDB table and returns it select()
     
         Returns
         -------
         pd.DataFrame of all the records of the particular InfluxDB 
         """
-        url = f"{self.connection_data['influxdb_url']}/query"
-
-        params = {
-            ('db',f"{self.connection_data['influxdb_db_name']}"),
-            ('q','SELECT * FROM '+ f"{self.connection_data['influxdb_table_name']}" )
-        }
-        headers = {
-            "Authorization": f"Token {self.connection_data['influxdb_token']}",
-            "Accept": "application/csv",
-        }
-
-        response = requests.request("GET",url,params=params,headers=headers)
-        influxdb_df = pd.read_csv(io.StringIO(response.text))
-
-        return influxdb_df
+        influx_connection=self.connect()
+        if query is None:
+            query='SELECT * FROM '+ f"{self.connection_data['influxdb_table_name']}"
+        
+        table=influx_connection.query(query=query,database=self.connection_data['influxdb_db_name'], language='sql')
+        return table.to_pandas()

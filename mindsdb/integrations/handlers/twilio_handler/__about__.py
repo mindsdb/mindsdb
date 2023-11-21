@@ -5,5 +5,5 @@ __description__ = "MindsDB handler for Twilio"
 __author__ = 'Lizzie Siegle'
 __github__ = 'https://github.com/elizabethsiegle'
 __pypi__ = 'https://pypi.org/project/mindsdb/'
-__license__ = 'GPL-3.0'
+__license__ = 'MIT'
 __copyright__ = 'Copyright 2023- mindsdb'

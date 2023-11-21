@@ -181,3 +181,94 @@ class OrdersTable(APITable):
                 continue
             orders.append(order.to_dict())
         return orders
+
+
+class PayoutsTable(APITable):
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """
+        Pulls PayPal payouts data.
+        Parameters
+        ----------
+        query : ast.Select
+            Given SQL SELECT query
+        Returns
+        -------
+        pd.DataFrame
+            PayPal payouts matching the query
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'payouts',
+            self.get_columns()
+        )
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        conditions = extract_comparison_conditions(query.where)
+
+        payout_batch_id = ""
+
+        for a_where in conditions:
+            if a_where[1] == "payout_batch_id":
+                if a_where[0] != "=":
+                    raise ValueError("Unsupported where operation for state")
+
+                payout_batch_id = a_where[2]
+
+        payouts_data = self.get_payout(payout_batch_id)  # Get the data
+        payouts_df = pd.DataFrame(payouts_data)  # Create a DataFrame
+
+        select_statement_executor = SELECTQueryExecutor(
+            payouts_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions
+        )
+
+        payouts_df = select_statement_executor.execute_query()
+
+        return payouts_df
+
+    def get_columns(self) -> List[Text]:
+        return [
+            "payout_batch_id",
+            "batch_status",
+            "time_created",
+            "time_completed",
+            "sender_batch_id",
+            "email_subject",
+            "email_message",
+            "funding_source",
+            "amount_currency",
+            "amount_value",
+            "fees_currency",
+            "fees_value",
+        ]
+
+    def get_payout(self, payout_batch_id:str) -> List[Dict]:
+        connection = self.handler.connect()
+        endpoint = f"v1/payments/payouts/{payout_batch_id}"
+        payout = connection.get(endpoint)
+
+        payout_data = {
+            "payout_batch_id": payout['batch_header']['payout_batch_id'],
+            "batch_status": payout['batch_header']['batch_status'],
+            "time_created": payout['batch_header']['time_created'],
+            "time_completed": payout['batch_header']['time_completed'],
+            "sender_batch_id": payout['batch_header']['sender_batch_header']['sender_batch_id'],
+            "email_subject": payout['batch_header']['sender_batch_header']['email_subject'],
+            "email_message": payout['batch_header']['sender_batch_header']['email_message'],
+            "funding_source": payout['batch_header']['funding_source'],
+            "amount_currency": payout['batch_header']['amount']['currency'],
+            "amount_value": payout['batch_header']['amount']['value'],
+            "fees_currency": payout['batch_header']['fees']['currency'],
+            "fees_value": payout['batch_header']['fees']['value'],
+        }
+
+        return [payout_data]
+

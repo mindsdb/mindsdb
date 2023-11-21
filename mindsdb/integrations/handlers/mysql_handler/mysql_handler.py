@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 import pandas as pd
 import mysql.connector
+from urllib.parse import urlparse
 from sqlalchemy import create_engine
 
 from mindsdb_sql import parse_sql
@@ -17,6 +18,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
+logger = log.getLogger(__name__)
 
 class MySQLHandler(DatabaseHandler):
     """
@@ -40,22 +42,86 @@ class MySQLHandler(DatabaseHandler):
         if self.is_connected is True:
             self.disconnect()
 
+    def _unpack_config(self):
+        """
+        Unpacks the config from the connection_data.
+
+        The connection_data must include either the old style of dictionary
+        attriutes (host, optional port, user, password, database) OR have
+        a url connection string with username and password optionally supplied
+        in the dictionary itself.
+
+        Arguments:
+        - conection_data is the dictionary parsed from the JSON payload
+
+        Exceptions thrown:
+        - ValueError if data validation rules fail with a description as the sole
+        argument
+
+        Returns a dictionary with the relevant config info:
+        - host
+        - port
+        - user
+        - password
+        - database
+        """
+        url = self.connection_data.get('url')
+        if url:
+            urlfields = urlparse(url)
+            if urlfields.scheme != 'mysql':
+                raise ValueError(
+                      "If using a URL to connect to MySQL, the URL needs to start with 'mysql://'"
+                )
+            if urlfields.username and self.connection_data.get('user'):
+                raise ValueError(
+                      "Cannot specify a user in both the URL and elsewhere"
+                )
+            if urlfields.username and self.connection_data.get('password'):
+                raise ValueError(
+                      "Cannot specify a password in both the URL and elsewhere"
+                )
+            if not urlfields.host:
+                raise ValueError(
+                      "Connection URL does not include hostname"
+                )
+            if not urlfields.path:
+                raise ValueError(
+                      "Connection URL does not include database"
+                )
+            config = {
+                'host'    : urlfields.host,
+                'port'    : urlfields.port or  3306,
+                'user'    : urlfields.username or self.connection_data.get('user'),
+                'password': urlfields.password or self.connection_data.get('password'),
+                'database': urlfields.path,
+            }
+
+        else:
+            config = {
+                'host': self.connection_data.get('host'),
+                'port': self.connection_data.get('port') or 3306,
+                'user': self.connection_data.get('user'),
+                'password': self.connection_data.get('password'),
+                'database': self.connection_data.get('database')
+            }
+
+            if not config.get('host'):
+                raise ValueError("Must supply a host")
+            if not config.get('database'):
+                raise ValueError("Must supply a database name")
+
+        if not config.get('user'):
+            raise ValueError('Must supply a user')
+        if not config.get('password'):
+            raise ValueError('Must supply a password for connections')
+        return config
+
     def connect(self):
         if self.is_connected is True:
             return self.connection
 
-        port = self.connection_data.get('port')
-        if port is None:
-            port = 3306
+        config = self._unpack_config();
 
-        config = {
-            'host': self.connection_data.get('host'),
-            'port': port,
-            'user': self.connection_data.get('user'),
-            'password': self.connection_data.get('password'),
-            'database': self.connection_data.get('database')
-        }
-        
         if 'conn_attrs' in self.connection_data:
             config['conn_attrs'] = self.connection_data['conn_attrs']
 
@@ -97,7 +163,7 @@ class MySQLHandler(DatabaseHandler):
             connection = self.connect()
             result.success = connection.is_connected()
         except Exception as e:
-            log.logger.error(f'Error connecting to MySQL {self.connection_data["database"]}, {e}!')
+            logger.error(f'Error connecting to MySQL {self.connection_data["database"]}, {e}!')
             result.error_message = str(e)
 
         if result.success is True and need_to_close:
@@ -133,7 +199,7 @@ class MySQLHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
                 connection.commit()
             except Exception as e:
-                log.logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
+                logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e)

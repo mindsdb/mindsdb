@@ -1,19 +1,15 @@
-import random
-import time
 import datetime as dt
-
-import threading
 import queue
-
-from mindsdb.utilities.config import Config
-from mindsdb.utilities.log import initialize_log
-from mindsdb.utilities import log
-from mindsdb.interfaces.storage import db
+import random
+import threading
+import time
 
 from mindsdb.interfaces.jobs.jobs_controller import JobsExecutor
+from mindsdb.interfaces.storage import db
+from mindsdb.utilities import log
+from mindsdb.utilities.config import Config
 
-
-logger = log.get_log('jobs')
+logger = log.getLogger(__name__)
 
 
 def execute_async(q_in, q_out):
@@ -21,11 +17,11 @@ def execute_async(q_in, q_out):
     while True:
         task = q_in.get()
 
-        if task['type'] != 'task':
+        if task["type"] != "task":
             return
 
-        record_id = task['record_id']
-        history_id = task['history_id']
+        record_id = task["record_id"]
+        history_id = task["history_id"]
 
         executor = JobsExecutor()
         try:
@@ -46,23 +42,23 @@ class Scheduler:
 
         self.q_in = queue.Queue()
         self.q_out = queue.Queue()
-        self.work_thread = threading.Thread(target=execute_async, args=(self.q_in, self.q_out))
+        self.work_thread = threading.Thread(
+            target=execute_async, args=(self.q_in, self.q_out)
+        )
         self.work_thread.start()
 
     def __del__(self):
         self.stop_thread()
 
     def stop_thread(self):
-        self.q_in.put({
-            'type': 'exit'
-        })
+        self.q_in.put({"type": "exit"})
 
     def scheduler_monitor(self):
-        check_interval = self.config.get('jobs', {}).get('check_interval', 30)
+        check_interval = self.config.get("jobs", {}).get("check_interval", 30)
 
         while True:
 
-            logger.debug('Scheduler check timetable')
+            logger.debug("Scheduler check timetable")
             try:
                 self.check_timetable()
             except (SystemExit, KeyboardInterrupt):
@@ -77,10 +73,10 @@ class Scheduler:
     def check_timetable(self):
         executor = JobsExecutor()
 
-        exec_method = self.config.get('jobs', {}).get('executor', 'local')
+        exec_method = self.config.get("jobs", {}).get("executor", "local")
 
         for record in executor.get_next_tasks():
-            logger.info(f'Job execute: {record.name}({record.id})')
+            logger.info(f"Job execute: {record.name}({record.id})")
             self.execute_task(record.id, exec_method)
 
         db.session.remove()
@@ -88,20 +84,22 @@ class Scheduler:
     def execute_task(self, record_id, exec_method):
 
         executor = JobsExecutor()
-        if exec_method == 'local':
+        if exec_method == "local":
             history_id = executor.lock_record(record_id)
             if history_id is None:
                 # db.session.remove()
-                logger.info(f'Unable create history record for {record_id}, is locked?')
+                logger.info(f"Unable create history record for {record_id}, is locked?")
                 return
 
             # run in thread
 
-            self.q_in.put({
-                'type': 'task',
-                'record_id': record_id,
-                'history_id': history_id,
-            })
+            self.q_in.put(
+                {
+                    "type": "task",
+                    "record_id": record_id,
+                    "history_id": history_id,
+                }
+            )
 
             while True:
                 try:
@@ -121,10 +119,9 @@ class Scheduler:
 
         config = Config()
         db.init()
-        initialize_log(config, 'jobs', wrap_print=True)
         self.config = config
 
-        logger.info('Scheduler starts')
+        logger.info("Scheduler starts")
 
         try:
             self.scheduler_monitor()
@@ -135,10 +132,11 @@ class Scheduler:
 
 
 def start(verbose=False):
+    logger.info("Jobs API is starting..")
     scheduler = Scheduler()
 
     scheduler.start()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     start()

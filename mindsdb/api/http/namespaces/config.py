@@ -18,6 +18,8 @@ from mindsdb.utilities.log_controller import get_logs
 from mindsdb.utilities.config import Config
 from mindsdb.api.http.utils import http_error
 
+logger = log.getLogger(__name__)
+
 
 @ns_conf.route('/logs')
 @ns_conf.param('name', 'Get logs')
@@ -177,7 +179,7 @@ class Integration(Resource):
                 handler.handler_storage.import_files(export)
 
         except Exception as e:
-            log.logger.error(str(e))
+            logger.error(str(e))
             if temp_dir is not None:
                 shutil.rmtree(temp_dir)
             abort(500, f'Error during config update: {str(e)}')
@@ -194,9 +196,9 @@ class Integration(Resource):
         try:
             ca.integration_controller.delete(name)
         except Exception as e:
-            log.logger.error(str(e))
-            abort(500, f'Error during integration delete: {str(e)}')
-        return '', 200
+            logger.error(str(e))
+            abort(500, f"Error during integration delete: {str(e)}")
+        return "", 200
 
     @ns_conf.doc('modify_integration')
     def post(self, name):
@@ -216,9 +218,9 @@ class Integration(Resource):
             ca.integration_controller.modify(name, params)
 
         except Exception as e:
-            log.logger.error(str(e))
-            abort(500, f'Error during integration modifycation: {str(e)}')
-        return '', 200
+            logger.error(str(e))
+            abort(500, f"Error during integration modifycation: {str(e)}")
+        return "", 200
 
 
 @ns_conf.route('/integrations/<name>/check')

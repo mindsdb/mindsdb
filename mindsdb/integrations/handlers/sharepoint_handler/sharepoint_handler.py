@@ -16,7 +16,6 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 from mindsdb.utilities import log
 from collections import OrderedDict
 
-
 logger = log.getLogger(__name__)
 
 
@@ -98,7 +97,7 @@ class SharepointHandler(APIHandler):
             connection = self.connect()
             response.success = connection.check_bearer_token_validity()
         except Exception as e:
-            log.logger.error("Error connecting to Sharepoint! " + str(e))
+            logger.error("Error connecting to Sharepoint! " + str(e))
             response.error_message = str(e)
 
         self.is_connected = response.success

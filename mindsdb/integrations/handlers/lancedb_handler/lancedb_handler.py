@@ -21,6 +21,8 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 )
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
+
 
 class LanceDBHandler(VectorStoreHandler):
     """This handler handles connection and execution of the LanceDB statements."""
@@ -71,7 +73,7 @@ class LanceDBHandler(VectorStoreHandler):
             self._client = self._get_client()
             self.is_connected = True
         except Exception as e:
-            log.logger.error(f"Error connecting to LanceDB client, {e}!")
+            logger.error(f"Error connecting to LanceDB client, {e}!")
             self.is_connected = False
 
     def disconnect(self):
@@ -89,7 +91,7 @@ class LanceDBHandler(VectorStoreHandler):
             self._client.table_names()
             response_code.success = True
         except Exception as e:
-            log.logger.error(f"Error connecting to LanceDB , {e}!")
+            logger.error(f"Error connecting to LanceDB , {e}!")
             response_code.error_message = str(e)
         finally:
             if response_code.success is True and need_to_close:

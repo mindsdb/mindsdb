@@ -15,6 +15,8 @@ from .chatbot_executor import MultiModeBotExecutor, BotExecutor
 
 from .types import ChatBotMessage
 
+logger = log.getLogger(__name__)
+
 
 class ChatBotTask(BaseTask):
 
@@ -79,7 +81,7 @@ class ChatBotTask(BaseTask):
         # TODO move it to realtime pooling
         chat_memory.add_to_history(message)
 
-        log.logger.debug(f'>>chatbot {chat_memory.chat_id} in: {message.text}')
+        logger.debug(f'>>chatbot {chat_memory.chat_id} in: {message.text}')
 
         # process
         bot_executor = self.bot_executor_cls(self, chat_memory)
@@ -98,7 +100,7 @@ class ChatBotTask(BaseTask):
 
         # send to chat adapter
         self.chat_pooling.send_message(response_message)
-        log.logger.debug(f'>>chatbot {chat_id} out: {response_message.text}')
+        logger.debug(f'>>chatbot {chat_id} out: {response_message.text}')
 
         # send to history
         chat_memory.add_to_history(response_message)

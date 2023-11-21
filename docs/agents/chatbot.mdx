@@ -1,0 +1,70 @@
+---
+title: Chatbot
+sidebarTitle: Chatbot
+---
+
+Within MindsDB, chatbots are [agents](/agents/agent) connected to some messaging interface.
+
+Creating a chatbot requires the following parameters:
+
+1. An [AI agent](/agents/agent) that comes with a model with a defined set of skills.
+2. A connection to a chat app, like [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams).
+
+## How to work with chatbots
+
+A chatbot can be created, deleted, queried, and updated using MindsDB SQL and REST API endpoints.
+
+<Tabs>
+
+<Tab title="MindsDB SQL">
+
+Here is how to interact with chatbots using MindsDB SQL:
+
+* creating a chatbot:
+
+    ```sql
+    CREATE CHATBOT my_chatbot
+    USING
+        database = my_slack,
+        agent = customer_support_agent,
+        included_channels = ['support', 'help'],    -- Default is ALL
+        excluded_channels = [],                     -- Default is none
+        enable_dms = true,
+        running = true;
+    ```
+
+    The parameter include:
+
+    * `database` stores connection to a chat app (like [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams)) that should be created with the `CREATE DATABASE` statement.
+    * `agent` is an [AI agent](/agents/agent) created with the `CREATE AGENT` command. It consists of an AI model trained for the specific use case.
+    * `included_channels` and `excluded_channels` are optional and store channel names where the bot will or will not respond.
+    * `enable_dms` is the initially supported mode of talking to a chatbot. A chatbot responds to direct messages.
+    * `running` indicates whether or not to start the chatbot upon creation.
+
+* deleting an chatbot:
+
+    ```sql
+    DROP CHATBOT my_chatbot;
+    ```
+
+You can query all chatbots using these commands:
+
+```sql
+SELECT * FROM chatbots;
+```
+
+</Tab>
+
+<Tab title="REST API">
+
+Here is how to interact with agents using REST API endpoints:
+
+* `GET /projects/<project_name>/chatbots` - gets all chatbots created by the user.
+* `GET /projects/<project_name>/chatbots/<chatbot_name>` - gets a chatbot by name.
+* `PUT /projects/<project_name>/chatbots/<chatbot_name>` - updates a chatbot with new settings, creating it if it doesn't exist.
+* `POST /projects/<project_name>/chatbots` - creates a new chatbot.
+* `DELETE /projects/<project_name>/chatbots/<chatbot_name>` - deletes a chatbot by name.
+
+</Tab>
+
+</Tabs>

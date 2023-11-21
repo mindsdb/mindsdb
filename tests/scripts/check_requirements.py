@@ -23,6 +23,7 @@ def get_reqs_from_file(path):
 MAIN_REQS_PATH = "requirements/requirements.txt"
 DEV_REQS_PATH = "requirements/requirements-dev.txt"
 TEST_REQS_PATH = "requirements/requirements-test.txt"
+GRPC_REQS_PATH = "requirements/requirements-grpc.txt"
 DOCKER_REQS_PATH = "docker/handler_discovery/requirements.txt"
 
 HANDLER_REQS_PATHS = list(
@@ -32,12 +33,14 @@ HANDLER_REQS_PATHS = list(
 
 MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers", "pryproject.toml"]
 
+# torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it.
+# Psycopg2 is needed in core codebase for sqlalchemy.
+# hierarchicalforecast is an optional dep of neural/statsforecast
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
-    "DEP001": ["torch"],
+    "DEP001": ["torch", "hierarchicalforecast"],
     "DEP002": ["psycopg2-binary"],
-}  # torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it. Psycopg2 is needed in core codebase for sqlalchemy.
-
+}
 
 # THe following packages need exceptions because they are optional deps of some other packages. e.g. langchain CAN use openai
 # (pysqlite3-binary is imported in an unusual way in the chromadb handler and needs to be excluded too)
@@ -46,11 +49,11 @@ OPTIONAL_HANDLER_DEPS = ["pysqlite3-binary", "torch", "openai", "tiktoken", "wik
 
 # List of rules we can ignore for specific packages
 # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in a given handler
-MAIN_REQUIREMENTS_DEPS = get_reqs_from_file("requirements/requirements.txt") + get_reqs_from_file("requirements/requirements-test.txt")
+MAIN_REQUIREMENTS_DEPS = get_reqs_from_file(MAIN_REQS_PATH) + get_reqs_from_file(TEST_REQS_PATH) + get_reqs_from_file(GRPC_REQS_PATH)
 
 HANDLER_RULE_IGNORES = {
     "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS,
-    "DEP001": ["tests"]  # 'tests' is the mindsdb tests folder in the repo root
+    "DEP001": ["tests", "hierarchicalforecast"]  # 'tests' is the mindsdb tests folder in the repo root
 }
 
 PACKAGE_NAME_MAP = {
@@ -155,7 +158,7 @@ def check_requirements_imports():
 
     global success
     errors = run_deptry(
-        ','.join([MAIN_REQS_PATH, DOCKER_REQS_PATH]),
+        ','.join([MAIN_REQS_PATH, GRPC_REQS_PATH, DOCKER_REQS_PATH]),
         get_ignores_str(MAIN_RULE_IGNORES),
         ".",
         f"--extend-exclude \"{'|'.join(MAIN_EXCLUDE_PATHS)}\"",

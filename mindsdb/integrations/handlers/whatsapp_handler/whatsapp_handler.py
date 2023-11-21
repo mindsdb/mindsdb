@@ -105,7 +105,6 @@ class WhatsAppMessagesTable(APITable):
     def insert(self, query: ast.Insert):
         
         columns = [col.name for col in query.columns]
-        print("Testing")
         
         ret = []
         

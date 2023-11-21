@@ -33,12 +33,14 @@ HANDLER_REQS_PATHS = list(
 
 MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers", "pryproject.toml"]
 
+# torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it.
+# Psycopg2 is needed in core codebase for sqlalchemy.
+# hierarchicalforecast is an optional dep of neural/statsforecast
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
-    "DEP001": ["torch"],
+    "DEP001": ["torch", "hierarchicalforecast"],
     "DEP002": ["psycopg2-binary"],
-}  # torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it. Psycopg2 is needed in core codebase for sqlalchemy.
-
+}
 
 # THe following packages need exceptions because they are optional deps of some other packages. e.g. langchain CAN use openai
 # (pysqlite3-binary is imported in an unusual way in the chromadb handler and needs to be excluded too)
@@ -51,7 +53,7 @@ MAIN_REQUIREMENTS_DEPS = get_reqs_from_file(MAIN_REQS_PATH) + get_reqs_from_file
 
 HANDLER_RULE_IGNORES = {
     "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS,
-    "DEP001": ["tests"]  # 'tests' is the mindsdb tests folder in the repo root
+    "DEP001": ["tests", "hierarchicalforecast"]  # 'tests' is the mindsdb tests folder in the repo root
 }
 
 PACKAGE_NAME_MAP = {

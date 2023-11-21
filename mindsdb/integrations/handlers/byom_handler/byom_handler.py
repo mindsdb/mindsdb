@@ -61,7 +61,6 @@ class BYOMHandler(BaseMLEngine):
         self.model_wrapper = None
 
         self.inhouse_model_wrapper = None
-        self.venv_model_wrappers = {}
         self.model_wrappers = {}
 
         # region read and save set default byom type

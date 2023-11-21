@@ -89,6 +89,20 @@ your machine.
       python -m mindsdb --api=http,mongodb,mysql
       ```
 
+## Dependencies
+
+The dependencies for many of the data or ML integrations are not installed by default.
+
+If you want to use a data or ML integration whose dependencies are not available by default, install it by running this command:
+
+```
+pip install .[handler_name]
+```
+
+<Tip>
+You can find all available [handlers here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers).
+</Tip>
+
 ## Troubleshooting
 
 ### Pip and Python Versions

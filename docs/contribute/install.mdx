@@ -79,6 +79,20 @@ mindsdb: http API: started on 47334
 
 You can access the MindsDB Editor at `localhost:47334`.
 
+## Dependencies
+
+The dependencies for many of the data or ML integrations are not installed by default.
+
+If you want to use a data or ML integration whose dependencies are not available by default, install it by running this command:
+
+```
+pip install .[handler_name]
+```
+
+<Tip>
+You can find all available [handlers here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers).
+</Tip>
+
 ## What's Next?
 
 Now that you are all set, we recommend you check out our **Tutorials** and

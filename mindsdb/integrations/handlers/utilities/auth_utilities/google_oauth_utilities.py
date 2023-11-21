@@ -2,14 +2,17 @@ import os
 import json
 import requests
 import datetime as dt
+from flask import request
 from shutil import copyfile
 
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-
-from google_auth_oauthlib.flow import Flow, InstalledAppFlow
-
 from mindsdb.utilities import log
+
+from .exceptions import AuthException
+
+from google_auth_oauthlib.flow import Flow
+
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 
 logger = log.getLogger(__name__)
 
@@ -76,15 +79,17 @@ class GoogleOAuth2Manager:
         return False
     
     def _execute_google_auth_flow(self, secret_file, scopes, code=None):
+        flow = Flow.from_client_secrets_file(secret_file, scopes)
+
+        flow.redirect_uri = request.headers['ORIGIN'] + '/verify-auth'
+
         if code:
-            flow = Flow.from_client_secrets_file(secret_file, scopes)
             flow.fetch_token(code=code)
             creds = flow.credentials
+            return creds
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(secret_file, scopes)
-            creds = flow.run_local_server(port=0)
-
-        return creds
+            auth_url = flow.authorization_url()[0]
+            raise AuthException(f'Authorisation required. Please follow the url: {auth_url}', auth_url=auth_url)
     
     def _save_credentials_to_file(self, creds, file_path):
         with open(file_path, 'w') as token:

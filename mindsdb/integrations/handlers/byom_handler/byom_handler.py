@@ -33,9 +33,10 @@ from mindsdb.integrations.utilities.utils import format_exception_error
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 import mindsdb.utilities.profiler as profiler
 
-from .proc_wrapper import pd_decode, pd_encode, encode, decode
-from .proc_wrapper import import_string, find_model_class
-from .const import BYOM_METHOD
+from .proc_wrapper import (
+    pd_decode, pd_encode, encode, decode, BYOM_METHOD,
+    import_string, find_model_class
+)
 from .__about__ import __version__
 
 
@@ -291,9 +292,7 @@ class BYOMHandler(BaseMLEngine):
                     '1': {
                         'code': 'code.py',
                         'requirements': 'requirements.txt',
-                        'type': self.normalize_byom_type(
-                            connection_args.get('type')
-                        ).name.lower()
+                        'type': self._default_byom_type.name.lower()
                     }
                 }
             }
@@ -301,7 +300,10 @@ class BYOMHandler(BaseMLEngine):
 
         connection_args['versions'][new_version] = {
             'code': code_path.name,
-            'requirements': requirements_path.name
+            'requirements': requirements_path.name,
+            'type': self.normalize_byom_type(
+                connection_args.get('type')
+            ).name.lower()
         }
 
         self.engine_storage.fileStorage.file_set(
@@ -531,16 +533,15 @@ class ModelWrapperSafe:
         return ret
 
     def check(self):
-
         params = {
-            'method': BYOM_METHOD.CHECK,
+            'method': BYOM_METHOD.CHECK.value,
             'code': self.code,
         }
         return self._run_command(params)
 
     def train(self, df, target, args):
         params = {
-            'method': BYOM_METHOD.TRAIN,
+            'method': BYOM_METHOD.TRAIN.value,
             'code': self.code,
             'df': pd_encode(df),
             'to_predict': target,
@@ -553,7 +554,7 @@ class ModelWrapperSafe:
     def predict(self, df, model_state, args):
 
         params = {
-            'method': BYOM_METHOD.PREDICT,
+            'method': BYOM_METHOD.PREDICT.value,
             'code': self.code,
             'model_state': model_state,
             'df': pd_encode(df),
@@ -564,7 +565,7 @@ class ModelWrapperSafe:
 
     def finetune(self, df, model_state, args):
         params = {
-            'method': BYOM_METHOD.FINETUNE,
+            'method': BYOM_METHOD.FINETUNE.value,
             'code': self.code,
             'model_state': model_state,
             'df': pd_encode(df),
@@ -576,7 +577,7 @@ class ModelWrapperSafe:
 
     def describe(self, model_state, attribute: Optional[str] = None) -> pd.DataFrame:
         params = {
-            'method': BYOM_METHOD.DESCRIBE,
+            'method': BYOM_METHOD.DESCRIBE.value,
             'code': self.code,
             'model_state': model_state,
             'attribute': attribute

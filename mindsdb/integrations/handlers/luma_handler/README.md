@@ -36,7 +36,7 @@ Read about creating an API key [here](https://docs.lu.ma/reference/getting-start
 ## Implemented Features
 
 - [x] LUMA List Events
-- [ ] LUMA Get an event
+- [x] LUMA Get an event
 
 ## TODO Features
 

@@ -144,7 +144,7 @@ class SlackChannelsTable(APITable):
                 break
             elif isinstance(target, ast.Identifier):
                 columns.append(target.parts[-1])
-                log.logger.warning(target)
+                logger.warning(target)
             else:
                 raise NotImplementedError
 

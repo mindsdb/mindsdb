@@ -368,5 +368,5 @@ class HuggingFaceHandler(BaseMLEngine):
 
         except Exception as e:
             err_str = f"Finetune failed with error: {str(e)}"
-            log.logger.debug(err_str)
+            logger.debug(err_str)
             raise Exception(err_str)

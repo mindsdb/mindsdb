@@ -21,6 +21,7 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 _DEFAULT_MODEL = 'gpt-3.5-turbo'
 _DEFAULT_MAX_TOKENS = 2048  # requires more than vanilla OpenAI due to ongoing summarization and 3rd party input
@@ -365,7 +366,7 @@ class LangChainHandler(BaseMLEngine):
                         #
                         # Ideally, in the future, we would write a parser that is more robust and flexible than the one Langchain uses.
                         response = response.lstrip(_PARSING_ERROR_PREFIX).rstrip('`')
-                        log.logger.info(f"Agent failure, salvaging response...")
+                        logger.info(f"Agent failure, salvaging response...")
                         completions.append(response)
                 except Exception as e:
                     completions.append(f'agent failed with error:\n{str(e)}...')

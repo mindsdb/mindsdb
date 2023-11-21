@@ -15,6 +15,8 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE,
 )
 
+logger = log.getLogger(__name__)
+
 discord_bot = None
 
 class DiscordHandler(APIHandler):
@@ -82,7 +84,7 @@ class DiscordHandler(APIHandler):
             response.success = True
         except Exception as e:
             response.error_message = e
-            log.logger.error(f'Error connecting to Discord: {response.error_message}')
+            logger.error(f'Error connecting to Discord: {response.error_message}')
 
         self.is_connected = response.success
 

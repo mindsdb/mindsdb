@@ -12,6 +12,8 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.libs.llm_utils import get_completed_prompts
 
+logger = log.getLogger(__name__)
+
 CHAT_MODELS = (
     "models/chat-bison-001",
     "models/embedding-gecko-001",
@@ -304,7 +306,7 @@ class PalmHandler(BaseMLEngine):
             params2 = params.copy()
             params2.pop("api_key", None)
             params2.pop("user", None)
-            log.logger.debug(f">>>palm call: {params2}:\n{response}")
+            logger.debug(f">>>palm call: {params2}:\n{response}")
 
         def _submit_normal_completion(kwargs, prompts, api_args):
             def _tidy(comp):
@@ -440,7 +442,7 @@ class PalmHandler(BaseMLEngine):
             return completion
         except Exception as e:
             completion = []
-            log.logger.exception(e)
+            logger.exception(e)
             completion.extend({"error": str(e)})
 
         return completion

@@ -124,11 +124,22 @@ Now you can use your Gmail data, like this:
 
 Now that we know how to pull emails into our database and write emails, we can make use of OpenAPI engine to write email replies.
 
+First, create an OpenAI engine, passing your OpenAI API key:
+
+```sql
+CREATE ML_ENGINE openai_engine
+FROM openai
+USING
+    api_key = 'your-openai-api-key';
+```
+
+Then, create a model using this engine:
+
 ```sql
 CREATE MODEL mindsdb.gpt_model
 PREDICT response
 USING
-    engine = 'openai',
+    engine = 'openai_engine',
     max_tokens = 500,
     api_key = 'your_api_key', 
     model_name = 'gpt-3.5-turbo',

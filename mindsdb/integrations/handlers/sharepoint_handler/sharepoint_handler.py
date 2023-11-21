@@ -11,14 +11,13 @@ from mindsdb.integrations.handlers.sharepoint_handler.sharepoint_tables import (
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
-from mindsdb.utilities import log
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from collections import OrderedDict
 
 
-logger = get_log("integrations.github_handler")
+logger = log.getLogger(__name__)
 
 
 class SharepointHandler(APIHandler):

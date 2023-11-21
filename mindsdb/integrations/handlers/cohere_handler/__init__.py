@@ -1,7 +1,7 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
-logger = get_log()
+logger = log.getLogger(__name__)
 
 from .__about__ import __version__ as version, __description__ as description
 try:

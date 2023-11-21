@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
-from ..mysql_handler import Handler as MySQLHandler
+from mindsdb.integrations.handlers.mysql_handler import Handler as MySQLHandler
 
 
 class TiDBHandler(MySQLHandler):

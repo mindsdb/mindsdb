@@ -27,7 +27,7 @@
   ],
   "topbarCtaButton": {
     "name": "Get Started",
-    "url": "https://cloud.mindsdb.com"
+    "url": "https://github.com/mindsdb/mindsdb"
   },
   "anchors": [
     {
@@ -187,7 +187,8 @@
             "sql/tutorials/llm-chatbot-ui",
             "sql/tutorials/create-chatbot",
             "sql/tutorials/slack-chatbot",
-            "sql/tutorials/twitterbot-mariadb-enterprise-server-skysql"
+            "sql/tutorials/twitterbot-mariadb-enterprise-server-skysql",
+            "sql/tutorials/twilio-chatbot"
           ]
         },
         {
@@ -760,6 +761,13 @@
               ]
             }
           ]
+        },
+        {
+          "group": "Agents and Chatbots",
+          "pages": [
+            "agents/agent",
+            "agents/chatbot"
+          ]
         }
       ]
     },
@@ -775,6 +783,7 @@
             "integrations/app-integrations/dockerhub",
             "integrations/app-integrations/email",
             "integrations/app-integrations/github",
+            "integrations/app-integrations/gitlab",
             "integrations/app-integrations/gmail",
             "integrations/app-integrations/google-calendar",
             "integrations/app-integrations/hackernews",
@@ -787,6 +796,7 @@
             "integrations/app-integrations/sendinblue",
             "integrations/app-integrations/shopify",
             "integrations/app-integrations/slack",
+            "integrations/app-integrations/strapi",
             "integrations/app-integrations/stripe",
             "integrations/app-integrations/twitter",
             "integrations/app-integrations/web-crawler",
@@ -861,6 +871,12 @@
             "integrations/data-integrations/vitess",
             "integrations/data-integrations/yugabytedb"
           ]
+        },
+        {
+          "group": "Vector Databases",
+          "pages": [
+            "integrations/vector-db-integrations/chromadb"
+          ]
         }
       ]
     },
@@ -871,6 +887,8 @@
         {
           "group": "Large Language Models",
           "pages": [
+            "integrations/ai-engines/anthropic",
+            "integrations/ai-engines/cohere",
             "integrations/ai-engines/openai",
             "integrations/ai-engines/huggingface",
             "integrations/ai-engines/langchain",

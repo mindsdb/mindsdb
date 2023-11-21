@@ -1,4 +1,3 @@
-from functools import wraps
 from unittest.mock import patch
 import datetime as dt
 import time
@@ -64,6 +63,7 @@ class TestProjectStructure(BaseExecutorDummyML):
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_version_managing(self, data_handler):
+        from mindsdb.utilities.exception import EntityNotExistsError
         # set up
 
         df = pd.DataFrame([
@@ -193,11 +193,10 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert models[model_id].label == 'third'
 
         # check exception: not existing version
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(EntityNotExistsError) as exc_info:
             self.run_sql(
                 'SELECT * from proj.task_model.4 where a=1 and b=2',
             )
-        assert 'does not exists' in str(exc_info.value)
 
         # ===================== one-line with 'use database'=======================
 
@@ -205,7 +204,6 @@ class TestProjectStructure(BaseExecutorDummyML):
         ret = self.run_sql('SELECT * from task_model where a=1 and b=2', database='proj')
         model_id = ret.predictor_id[0]
         assert models[model_id].label == 'second'
-
 
         # inactive
         ret = self.run_sql('SELECT * from task_model.3 where a=1 and b=2', database='proj')
@@ -241,9 +239,9 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         # Set active selected version
         self.run_sql('''
-           update proj.models_versions 
+           update proj.models_versions
            set active=1
-           where version=1 and name='task_model' 
+           where version=1 and name='task_model'
         ''')
 
         # get active version
@@ -254,8 +252,8 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         # Delete specific version
         self.run_sql('''
-           delete from proj.models_versions 
-           where version=2 
+           delete from proj.models_versions
+           where version=2
            and name='task_model'
         ''')
 
@@ -265,17 +263,16 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert 'second' not in ret['TAG']
 
         # try to use deleted version
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(EntityNotExistsError) as exc_info:
             self.run_sql(
                 'SELECT * from proj.task_model.2 where a=1',
             )
-        assert 'does not exists' in str(exc_info.value)
 
         # exception with deleting active version
         with pytest.raises(Exception) as exc_info:
             self.run_sql('''
-               delete from proj.models_versions 
-               where version=1 
+               delete from proj.models_versions
+               where version=1
                and name='task_model'
             ''')
         assert "Can't remove active version" in str(exc_info.value)
@@ -283,8 +280,8 @@ class TestProjectStructure(BaseExecutorDummyML):
         # exception with deleting non-existing version
         with pytest.raises(Exception) as exc_info:
             self.run_sql('''
-               delete from proj.models_versions 
-               where version=11 
+               delete from proj.models_versions
+               where version=11
                and name='task_model'
             ''')
         assert "is not found" in str(exc_info.value)
@@ -310,18 +307,17 @@ class TestProjectStructure(BaseExecutorDummyML):
         ret = self.run_sql('select * from proj.models_versions')
         assert len(ret) == 0
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_view(self, data_handler):
+    def test_view(self):
         df = pd.DataFrame([
             {'a': 1, 'b': dt.datetime(2020, 1, 1)},
             {'a': 2, 'b': dt.datetime(2020, 1, 2)},
             {'a': 1, 'b': dt.datetime(2020, 1, 3)},
         ])
-        self.set_handler(data_handler, name='pg', tables={'tasks': df})
+        self.save_file('tasks', df)
 
         self.run_sql('''
             create view mindsdb.vtasks (
-                select * from pg.tasks where a=1
+                select * from files.tasks where a=1
             )
         ''')
 
@@ -345,7 +341,6 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         assert len(ret) == 2
         assert ret.predicted[0] == 42
-
 
     def test_empty_df(self):
         # -- create model --
@@ -441,7 +436,7 @@ class TestProjectStructure(BaseExecutorDummyML):
                    t2.t1a t2t1a, t2.t3a t2t3a,
                    t3.c t3c, t3.a t3a
               FROM pg.tbl1 as t1
-              JOIN ( 
+              JOIN (
                   SELECT t1.a as t1a,  t3.a t3a
                   FROM pg.tbl1 as t1
                   JOIN pg.tbl2 as t2 on t1.c=t2.c
@@ -466,13 +461,13 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert row['t3a'] == 6
 
     def test_create_validation(self):
-        with pytest.raises(RuntimeError) as exc_info:
+        with pytest.raises(RuntimeError):
             self.run_sql(
                 '''
-                    CREATE model task_model_x 
+                    CREATE model task_model_x
                     PREDICT a
-                    using 
-                       engine='dummy_ml', 
+                    using
+                       engine='dummy_ml',
                        error=1
                 '''
             )
@@ -611,7 +606,7 @@ class TestProjectStructure(BaseExecutorDummyML):
                    JOIN task_model as m
                    where t.a > last and t.b='b'
             )
-          )  
+          )
           start now
           every hour
         ''')
@@ -643,6 +638,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         # getting next value, greater than max previous
         assert 't.a > 2' in sql
         assert "t.b = 'b'" in sql
+
 
 class TestJobs(BaseExecutorDummyML):
 
@@ -688,7 +684,7 @@ class TestJobs(BaseExecutorDummyML):
 
         # create job with start time and schedule
         self.run_sql('''
-            create job proj2.j2 ( 
+            create job proj2.j2 (
                 select * from pg.tbl1 where b>'{{PREVIOUS_START_DATETIME}}'
             )
             start now
@@ -739,7 +735,6 @@ class TestJobs(BaseExecutorDummyML):
         # job wasn't executed
         ret = self.run_sql('select * from jobs_history', database='proj2')
         assert len(ret) == 1
-        prev_run = ret.RUN_START[0] - dt.timedelta(seconds=60)
 
         # shift 'next run' and run once again
         job = self.db.Jobs.query.filter(self.db.Jobs.name == 'j2').first()
@@ -756,11 +751,29 @@ class TestJobs(BaseExecutorDummyML):
         ret = self.run_sql('select * from information_schema.jobs_history', database='proj2')
         assert len(ret) == 2  # was executed
 
+    def test_inactive_job(self, scheduler):
+
+        # create job
+        self.run_sql('create job j1 (select * from models)')
+
+        # check jobs table
+        ret = self.run_sql('select * from jobs')
+        assert len(ret) == 1, "should be 1 job"
+
+        # deactivate
+        job = self.db.Jobs.query.filter(self.db.Jobs.name == 'j1').first()
+        job.active = False
+        self.db.session.commit()
+
+        # run scheduler
+        scheduler.check_timetable()
+
+        ret = self.run_sql('select * from jobs_history')
+        # no history
+        assert len(ret) == 0
+
 
 class TestTriggers(BaseExecutorDummyML):
     def test_triggers(self):
         # TODO
         ...
-
-
-

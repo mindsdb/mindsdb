@@ -6,9 +6,9 @@ from mindsdb.integrations.libs.api_handler import APITable
 
 from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilities import INSERTQueryParser
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
-logger = get_log("integrations.ms_teams_handler")
+logger = log.getLogger(__name__)
 
 
 class MessagesTable(APITable):

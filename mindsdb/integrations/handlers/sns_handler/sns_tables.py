@@ -47,7 +47,9 @@ class MessageTable(APITable):
            for  message_row in message_rows:
                message = message_row['message']
                topic_arn = message_row['topic_arn']
-               self.handler.publish_message(topic_arn=topic_arn, message=message)
+               param = {"message": message_row['message'], "topic_arn": message_row['topic_arn']  }
+               self.handler.call_sns_api("publish_message", param)
+               #self.handler.publish_message(topic_arn=topic_arn, message=message)
         else:
             request_entries = []
             topic_arn = ""

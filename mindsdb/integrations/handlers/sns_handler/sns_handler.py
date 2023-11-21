@@ -8,6 +8,7 @@ from pandas import DataFrame
 from collections import OrderedDict
 from typing import Optional
 import boto3
+from typing import Dict
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 import json as JSON
 from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
@@ -88,18 +89,26 @@ class SnsHandler(APIHandler):
         return self.connection
 
     def topic_list(self, params: Dict = None):
-        json_response = str(self.connection.list_topics())
+        response = self.connection.list_topics()
+        json_response = str(response)
+        if params is not None and 'topic_name' in params:
+            name = params["topic_name"]
+            for topic_arn_row in response['Topics']:
+                topic_arn_name = topic_arn_row['TopicArn']
+                if name in topic_arn_name:
+                    return topic_arn_name
         json_response = json_response.replace("\'", "\"")
         data = JSON.loads(str(json_response))
         return data["Topics"]
    
-    def publish_message(self,  params):
+    def publish_message(self,  params: Dict = None):
         self.connection.publish(TopicArn = params['topic_arn'], message = params['message'])
-    def publish_batch(self,  params):
+    def publish_batch(self,  params: Dict = None):
         self.connection.publish_batch(TopicArn = params['topic_arn'],PublishBatchRequestEntries=params['batch_request_entries'])
                    
-    def create_topic(self, params):
-        self.connection.create_topic(params['name'])
+    def create_topic(self, params: Dict = None):
+        name = params["name"]
+        self.connection.create_topic(Name=name)
         
     def native_query(self, query_string: str = None) -> StatusResponse:
         """Receive and process a raw query.
@@ -124,7 +133,9 @@ class SnsHandler(APIHandler):
         elif method_name == 'topic_list':
             return self.topic_list(params)
         elif method_name == 'publish_batch':
-            return self.publish_message(params)    
+            return self.publish_message(params)
+        elif method_name == 'publish_batch':
+            return self.publish_batch(params)
         else:
             raise NotImplementedError(f'Unknown method {method_name}')
 connection_args = OrderedDict(

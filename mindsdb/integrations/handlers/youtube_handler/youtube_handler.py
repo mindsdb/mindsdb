@@ -109,6 +109,7 @@ class YoutubeHandler(APIHandler):
         try:
             self.connect()
             response.success = True
+            response.copy_storage = True
         except Exception as e:
             logger.error(f"Error connecting to Youtube API: {e}!")
             response.error_message = e

@@ -23,6 +23,7 @@ def get_reqs_from_file(path):
 MAIN_REQS_PATH = "requirements/requirements.txt"
 DEV_REQS_PATH = "requirements/requirements-dev.txt"
 TEST_REQS_PATH = "requirements/requirements-test.txt"
+GRPC_REQS_PATH = "requirements/requirements-grpc.txt"
 DOCKER_REQS_PATH = "docker/handler_discovery/requirements.txt"
 
 HANDLER_REQS_PATHS = list(
@@ -46,7 +47,7 @@ OPTIONAL_HANDLER_DEPS = ["pysqlite3-binary", "torch", "openai", "tiktoken", "wik
 
 # List of rules we can ignore for specific packages
 # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in a given handler
-MAIN_REQUIREMENTS_DEPS = get_reqs_from_file("requirements/requirements.txt") + get_reqs_from_file("requirements/requirements-test.txt")
+MAIN_REQUIREMENTS_DEPS = get_reqs_from_file(MAIN_REQS_PATH) + get_reqs_from_file(TEST_REQS_PATH) + get_reqs_from_file(GRPC_REQS_PATH)
 
 HANDLER_RULE_IGNORES = {
     "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS,
@@ -155,7 +156,7 @@ def check_requirements_imports():
 
     global success
     errors = run_deptry(
-        ','.join([MAIN_REQS_PATH, DOCKER_REQS_PATH]),
+        ','.join([MAIN_REQS_PATH, GRPC_REQS_PATH, DOCKER_REQS_PATH]),
         get_ignores_str(MAIN_RULE_IGNORES),
         ".",
         f"--extend-exclude \"{'|'.join(MAIN_EXCLUDE_PATHS)}\"",

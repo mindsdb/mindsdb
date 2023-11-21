@@ -1,10 +1,4 @@
-import time
-import os
-import shutil
-import tarfile
-
 import pytest
-import docker
 import pandas as pd
 from unittest.mock import MagicMock
 

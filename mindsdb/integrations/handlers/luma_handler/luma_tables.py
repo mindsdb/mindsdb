@@ -1,5 +1,4 @@
 import pandas as pd
-from typing import List
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 from mindsdb.utilities.log import get_log
@@ -76,8 +75,7 @@ class LumaEventsTable(APITable):
         return df
 
     def get_columns(self) -> list:
-        return [
-                "api_id",
+        return ["api_id",
                 "cover_url",
                 "name",
                 "description",
@@ -102,5 +100,4 @@ class LumaEventsTable(APITable):
                 "geo_address_json.longitude",
                 "geo_address_json.city_state",
                 "geo_address_json.description",
-                "geo_address_json.full_address"
-            ]
+                "geo_address_json.full_address"]

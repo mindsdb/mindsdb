@@ -761,6 +761,13 @@
               ]
             }
           ]
+        },
+        {
+          "group": "Agents and Chatbots",
+          "pages": [
+            "agents/agent",
+            "agents/chatbot"
+          ]
         }
       ]
     },

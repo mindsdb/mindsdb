@@ -9,6 +9,8 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 import json
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
+
 
 class IntercomHandler(APIHandler):
     def __init__(self, name: str, **kwargs) -> None:
@@ -43,7 +45,7 @@ class IntercomHandler(APIHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Intercom API: {e}!')
+            logger.error(f'Error connecting to Intercom API: {e}!')
             response.error_message = e
 
         self.is_connected = response.success

@@ -45,19 +45,30 @@ installed.
    source mindsdb-venv/bin/activate
    ```
 
-5. Install dependencies:
+5. Install MindsDB with its local development dependencies and start it:
+
+   Install dependencies:
 
    ```bash
    cd mindsdb
    pip install -e .
    pip install -r requirements/requirements-dev.txt
    ```
-
-6. Start MindsDB:
-
+   
+   And start MindsDB:
+   
    ```bash
    python -m mindsdb
    ```
+   
+   <Tip>
+   Alternatively, you can use a makefile to install dependencies and start MindsDB:
+  
+    ```bash
+    make install_mindsdb
+    make run_mindsdb
+    ```
+   </Tip>
 
 By default, MindsDB will always start the `http` and `mysql` APIs. If you want to use Mongo API, you will need to provide that as a parameter to `--api`. You can do it as follows:
 

@@ -2,6 +2,7 @@ import pandas as pd
 from mindsdb_sql.parser import ast
 from typing import Text, List, Dict, Tuple
 
+from mindsdb_sql.parser import ast
 from mindsdb.integrations.utilities.sql_utils import sort_dataframe
 
 from mindsdb.integrations.handlers.utilities.query_utilities.base_query_utilities import BaseQueryParser
@@ -91,7 +92,7 @@ class SELECTQueryExecutor(BaseQueryExecutor):
     result_limit : int
         Number of results to return.
     """
-    def __init__(self, df: pd.DataFrame, selected_columns: List[Text], where_conditions: List[List[Text]], order_by_conditions: Dict[Text, List[Text]], result_limit: int = None):
+    def __init__(self, df: pd.DataFrame, selected_columns: List[Text], where_conditions: List[List[Text]], order_by_conditions: List[ast.select.order_by.OrderBy], result_limit: int = None):
         super().__init__(df, where_conditions)
         self.selected_columns = selected_columns
         self.order_by_conditions = order_by_conditions

@@ -19,6 +19,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class SolaceHandler(DatabaseHandler):
 
     def __init__(self, name: str = None, **kwargs):
@@ -46,16 +47,16 @@ class SolaceHandler(DatabaseHandler):
             "solace.messaging.authentication.scheme.basic.password": self.connection_args.get('password')
         }
 
-        self.messaging_service = MessagingService\
-            .builder()\
+        self.messaging_service = MessagingService \
+            .builder() \
             .from_properties(broker_props) \
             .with_reconnection_retry_strategy(RetryStrategy.parametrized_retry(20, 3)) \
             .build()
 
         self.messaging_service.connect()
 
-        self.direct_publisher = self.messaging_service\
-            .create_direct_message_publisher_builder()\
+        self.direct_publisher = self.messaging_service \
+            .create_direct_message_publisher_builder() \
             .build()
         self.direct_publisher.start()
 
@@ -155,9 +156,9 @@ class SolaceHandler(DatabaseHandler):
         topic_name = '/'.join(table.parts)
 
         topics = [TopicSubscription.of(topic_name)]
-        direct_receiver = self.messaging_service\
-            .create_direct_message_receiver_builder()\
-            .with_subscriptions(topics)\
+        direct_receiver = self.messaging_service \
+            .create_direct_message_receiver_builder() \
+            .with_subscriptions(topics) \
             .build()
 
         direct_receiver.start()

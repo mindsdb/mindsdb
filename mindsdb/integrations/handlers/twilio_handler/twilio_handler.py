@@ -18,6 +18,7 @@ from mindsdb_sql.parser import ast
 
 logger = log.getLogger(__name__)
 
+
 class PhoneNumbersTable(APITable):
 
     def select(self, query: ast.Select) -> Response:

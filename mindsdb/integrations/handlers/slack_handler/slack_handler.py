@@ -12,7 +12,6 @@ from slack_sdk.socket_mode.response import SocketModeResponse
 
 from mindsdb.interfaces.chatbot.types import ChatBotMessage
 
-
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 
@@ -32,6 +31,7 @@ from mindsdb.integrations.libs.response import (
 
 logger = log.getLogger(__name__)
 
+
 class SlackChannelsTable(APITable):
     def __init__(self, handler):
         """
@@ -50,6 +50,7 @@ class SlackChannelsTable(APITable):
         Returns:
             conversation_history
         """
+
         # override the default function
         def parse_utc_date(date_str):
             date_obj = datetime.fromisoformat(date_str).replace(tzinfo=timezone.utc)
@@ -58,14 +59,14 @@ class SlackChannelsTable(APITable):
         # Get the channels list and ids
         channels = self.client.conversations_list(types="public_channel,private_channel")['channels']
         channel_ids = {c['name']: c['id'] for c in channels}
-        
+
         # Extract comparison conditions from the query
         conditions = extract_comparison_conditions(query.where)
         channel_name = conditions[0][2]
         filters = []
         params = {}
         order_by_conditions = {}
-        
+
         # Build the filters and parameters for the query
         for op, arg1, arg2 in conditions:
             if arg1 == 'channel':
@@ -75,7 +76,7 @@ class SlackChannelsTable(APITable):
                     raise ValueError(f"Channel '{arg2}' not found")
 
             elif arg1 == 'limit':
-                if op == '=': 
+                if op == '=':
                     params['limit'] = int(arg2)
                 else:
                     raise NotImplementedError(f'Unknown op: {op}')
@@ -125,19 +126,19 @@ class SlackChannelsTable(APITable):
             if isinstance(target, ast.Star):
                 columns = [
                     'channel',
-                    'client_msg_id', 
+                    'client_msg_id',
                     'type',
                     'subtype',
                     'ts',
                     'created_at',
-                    'user', 
-                    'text', 
-                    'attachments', 
+                    'user',
+                    'text',
+                    'attachments',
                     'files',
                     'reactions',
-                    'thread_ts', 
-                    'reply_count', 
-                    'reply_users_count', 
+                    'thread_ts',
+                    'reply_count',
+                    'reply_users_count',
                     'latest_reply',
                     'reply_users'
                 ]
@@ -156,7 +157,7 @@ class SlackChannelsTable(APITable):
 
         # Remove null rows from the result
         result = result[result['text'].notnull()]
-            
+
         # add absent columns
         for col in set(columns) & set(result.columns) ^ set(columns):
             result[col] = None
@@ -187,7 +188,7 @@ class SlackChannelsTable(APITable):
         # Limit the result based on the query limit
         if query.limit:
             result = result.head(query.limit.value)
-            
+
         # Alias the target column based on the query
         for target in query.targets:
             if target.alias:
@@ -204,7 +205,7 @@ class SlackChannelsTable(APITable):
             channel_name
             message
         """
-    
+
         # get column names and values from the query
         columns = [col.name for col in query.columns]
         for row in query.values:
@@ -222,7 +223,7 @@ class SlackChannelsTable(APITable):
                 )
             except SlackApiError as e:
                 raise Exception(f"Error posting message to Slack channel '{params['channel']}': {e.response['error']}")
-            
+
             inserted_id = response['ts']
             params['ts'] = inserted_id
 
@@ -257,7 +258,7 @@ class SlackChannelsTable(APITable):
                     raise ValueError(f"Channel '{arg2}' not found")
 
             if keys[0] == 'text':
-                params['text'] =  str(query.update_columns['text'])
+                params['text'] = str(query.update_columns['text'])
             else:
                 raise ValueError(f"Message '{arg2}' not found")
 
@@ -271,7 +272,8 @@ class SlackChannelsTable(APITable):
 
         # check if required parameters are provided
         if 'channel' not in params or 'ts' not in params or 'text' not in params:
-            raise Exception("To update a message in Slack, you need to provide the 'channel', 'ts', and 'text' parameters.")
+            raise Exception(
+                "To update a message in Slack, you need to provide the 'channel', 'ts', and 'text' parameters.")
 
         # update message in Slack channel
         try:
@@ -281,9 +283,9 @@ class SlackChannelsTable(APITable):
                 text=params['text'].strip()
             )
         except SlackApiError as e:
-            raise Exception(f"Error updating message in Slack channel '{params['channel']}' with timestamp '{params['ts']}' and message '{params['text']}': {e.response['error']}")
+            raise Exception(
+                f"Error updating message in Slack channel '{params['channel']}' with timestamp '{params['ts']}' and message '{params['text']}': {e.response['error']}")
 
-    
     def delete(self, query: ASTNode):
         """
         Deletes the message in the Slack Channel
@@ -328,9 +330,11 @@ class SlackChannelsTable(APITable):
                 channel=params['channel'],
                 ts=params['ts']
             )
-            
+
         except SlackApiError as e:
-            raise Exception(f"Error deleting message from Slack channel '{params['channel']}' with timestamp '{params['ts']}': {e.response['error']}")
+            raise Exception(
+                f"Error deleting message from Slack channel '{params['channel']}' with timestamp '{params['ts']}': {e.response['error']}")
+
 
 class SlackHandler(APIChatHandler):
     """
@@ -357,7 +361,7 @@ class SlackHandler(APIChatHandler):
                 self.connection_args[k] = handler_config[k]
         self.api = None
         self.is_connected = False
-        
+
         channels = SlackChannelsTable(self)
         self._register_table('channels', channels)
 
@@ -434,7 +438,6 @@ class SlackHandler(APIChatHandler):
 
         self._socket_mode_client.close()
 
-
     def create_connection(self):
         """
         Creates a WebClient object to connect to the Slack API token stored in the connection_args attribute.
@@ -442,7 +445,7 @@ class SlackHandler(APIChatHandler):
 
         client = WebClient(token=self.connection_args['token'])
         return client
-    
+
     def connect(self):
         """
         Authenticate with the Slack API using the token stored in the `token` attribute.
@@ -473,7 +476,7 @@ class SlackHandler(APIChatHandler):
                 )
                 socket_client.connect()
                 socket_client.disconnect()
-            
+
             response.success = True
         except SlackApiError as e:
             response.error_message = f'Error connecting to Slack Api: {e.response["error"]}. Check token.'

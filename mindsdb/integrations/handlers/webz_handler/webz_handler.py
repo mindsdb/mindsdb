@@ -19,6 +19,7 @@ from mindsdb.utilities.config import Config
 
 logger = log.getLogger(__name__)
 
+
 class WebzHandler(APIHandler):
     """A class for handling connections and interactions with the Webz API."""
 
@@ -111,7 +112,7 @@ class WebzHandler(APIHandler):
         return {field.replace(".", "__"): dotted_item[field] for field in output_colums}
 
     def call_webz_api(
-        self, method_name: str = None, params: Dict = None
+            self, method_name: str = None, params: Dict = None
     ) -> pd.DataFrame:
         """Calls the API method with the given params.
 

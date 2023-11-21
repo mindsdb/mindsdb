@@ -6,7 +6,6 @@ import weaviate
 from weaviate.embedded import EmbeddedOptions
 import pandas as pd
 
-
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse
@@ -22,6 +21,7 @@ from mindsdb.utilities import log
 from weaviate.util import generate_uuid5
 
 logger = log.getLogger(__name__)
+
 
 class WeaviateDBHandler(VectorStoreHandler):
     """This handler handles connection and execution of the Weaviate statements."""
@@ -40,8 +40,8 @@ class WeaviateDBHandler(VectorStoreHandler):
         }
 
         if not (
-            self._client_config.get("weaviate_url")
-            or self._client_config.get("persistence_directory")
+                self._client_config.get("weaviate_url")
+                or self._client_config.get("persistence_directory")
         ):
             raise Exception(
                 "Either url or persist_directory is required for weaviate connection!"
@@ -54,11 +54,11 @@ class WeaviateDBHandler(VectorStoreHandler):
 
     def _get_client(self) -> weaviate.Client:
         if not (
-            self._client_config
-            and (
-                self._client_config.get("weaviate_url")
-                or self._client_config.get("persistence_directory")
-            )
+                self._client_config
+                and (
+                        self._client_config.get("weaviate_url")
+                        or self._client_config.get("persistence_directory")
+                )
         ):
             raise Exception("Client config is not set! or missing parameters")
 
@@ -179,10 +179,10 @@ class WeaviateDBHandler(VectorStoreHandler):
         return value_type
 
     def _translate_condition(
-        self,
-        table_name: str,
-        conditions: List[FilterCondition] = None,
-        meta_conditions: List[FilterCondition] = None,
+            self,
+            table_name: str,
+            conditions: List[FilterCondition] = None,
+            meta_conditions: List[FilterCondition] = None,
     ) -> Optional[dict]:
         """
         Translate a list of FilterCondition objects a dict that can be used by Weaviate.
@@ -262,12 +262,12 @@ class WeaviateDBHandler(VectorStoreHandler):
         return all_conditions
 
     def select(
-        self,
-        table_name: str,
-        columns: List[str] = None,
-        conditions: List[FilterCondition] = None,
-        offset: int = None,
-        limit: int = None,
+            self,
+            table_name: str,
+            columns: List[str] = None,
+            conditions: List[FilterCondition] = None,
+            offset: int = None,
+            limit: int = None,
     ) -> HandlerResponse:
         table_name = table_name.capitalize()
         # columns which we will always provide in the result
@@ -277,8 +277,8 @@ class WeaviateDBHandler(VectorStoreHandler):
                 condition
                 for condition in conditions
                 if not condition.column.startswith(TableField.METADATA.value)
-                and condition.column != TableField.SEARCH_VECTOR.value
-                and condition.column != TableField.EMBEDDINGS.value
+                   and condition.column != TableField.SEARCH_VECTOR.value
+                   and condition.column != TableField.EMBEDDINGS.value
             ]
             metadata_conditions = [
                 condition
@@ -299,7 +299,7 @@ class WeaviateDBHandler(VectorStoreHandler):
                 condition
                 for condition in conditions
                 if condition.column == TableField.SEARCH_VECTOR.value
-                or condition.column == TableField.EMBEDDINGS.value
+                   or condition.column == TableField.EMBEDDINGS.value
             ]
         )
 
@@ -379,7 +379,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=result_df)
 
     def insert(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
+            self, table_name: str, data: pd.DataFrame, columns: List[str] = None
     ) -> HandlerResponse:
         """
         Insert data into the Weaviate database.
@@ -417,7 +417,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         return Response(resp_type=RESPONSE_TYPE.OK)
 
     def update(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
+            self, table_name: str, data: pd.DataFrame, columns: List[str] = None
     ) -> HandlerResponse:
         """
         Update data in the weaviate database.
@@ -464,15 +464,15 @@ class WeaviateDBHandler(VectorStoreHandler):
         return Response(resp_type=RESPONSE_TYPE.OK)
 
     def delete(
-        self, table_name: str, conditions: List[FilterCondition] = None
+            self, table_name: str, conditions: List[FilterCondition] = None
     ) -> HandlerResponse:
         table_name = table_name.capitalize()
         non_metadata_conditions = [
             condition
             for condition in conditions
             if not condition.column.startswith(TableField.METADATA.value)
-            and condition.column != TableField.SEARCH_VECTOR.value
-            and condition.column != TableField.EMBEDDINGS.value
+               and condition.column != TableField.SEARCH_VECTOR.value
+               and condition.column != TableField.EMBEDDINGS.value
         ]
         metadata_conditions = [
             condition
@@ -537,8 +537,8 @@ class WeaviateDBHandler(VectorStoreHandler):
                         {"dataType": ["text"], "name": prop["name"]}
                         for prop in self.SCHEMA
                         if prop["name"] != "id"
-                        and prop["name"] != "embeddings"
-                        and prop["name"] != "metadata"
+                           and prop["name"] != "embeddings"
+                           and prop["name"] != "metadata"
                     ],
                     "vectorIndexType": "hnsw",
                 }

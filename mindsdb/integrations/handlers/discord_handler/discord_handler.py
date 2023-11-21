@@ -19,6 +19,7 @@ logger = log.getLogger(__name__)
 
 discord_bot = None
 
+
 class DiscordHandler(APIHandler):
     """
     The Discord handler implementation.
@@ -106,7 +107,7 @@ class DiscordHandler(APIHandler):
         df = self.call_discord_api(operation, params)
 
         return Response(RESPONSE_TYPE.TABLE, data_frame=df)
-    
+
     def utc_to_snowflake(self, utc_date: str) -> int:
         """
         Convert a UTC date to a Snowflake date.
@@ -122,7 +123,7 @@ class DiscordHandler(APIHandler):
 
     def call_discord_api(
             self, operation: str, params: dict = None, filters: list = None
-        ):
+    ):
         """
         Call a Discord API method.
         Args:

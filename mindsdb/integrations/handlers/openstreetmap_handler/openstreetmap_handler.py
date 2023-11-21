@@ -1,7 +1,8 @@
 import overpy
 
 from mindsdb.integrations.handlers.openstreetmap_handler.openstreetmap_tables import (OpenStreetMapNodeTable,
-                                                                                      OpenStreetMapWayTable, OpenStreetMapRelationTable)
+                                                                                      OpenStreetMapWayTable,
+                                                                                      OpenStreetMapRelationTable)
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -11,6 +12,7 @@ from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
 logger = log.getLogger(__name__)
+
 
 class OpenStreetMapHandler(APIHandler):
     """The OpenStreetMap handler implementation."""

@@ -10,6 +10,8 @@ import json
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
+
+
 class IntercomHandler(APIHandler):
     def __init__(self, name: str, **kwargs) -> None:
         """initializer method

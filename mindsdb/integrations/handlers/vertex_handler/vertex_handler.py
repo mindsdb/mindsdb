@@ -6,6 +6,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class VertexHandler(BaseMLEngine):
     """Handler for the Vertex Google AI cloud API"""
 

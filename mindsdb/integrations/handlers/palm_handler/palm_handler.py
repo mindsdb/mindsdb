@@ -81,8 +81,8 @@ class PalmHandler(BaseMLEngine):
         args_model = PalmHandlerArgs(**args)
 
         if (
-            len(set(args.keys()) & {"question_column", "prompt_template", "prompt"})
-            == 0
+                len(set(args.keys()) & {"question_column", "prompt_template", "prompt"})
+                == 0
         ):
             raise Exception(
                 "One of `question_column` or `prompt_template` is required for this engine."
@@ -96,7 +96,7 @@ class PalmHandler(BaseMLEngine):
         ]
         for keys in keys_collection:
             if keys[0] in args and any(
-                x[0] in args for x in keys_collection if x != keys
+                    x[0] in args for x in keys_collection if x != keys
             ):
                 raise Exception(
                     textwrap.dedent(
@@ -179,16 +179,16 @@ class PalmHandler(BaseMLEngine):
         # Chat or normal completion mode
         else:
             if (
-                args_model.question_column
-                and args_model.question_column not in df.columns
+                    args_model.question_column
+                    and args_model.question_column not in df.columns
             ):
                 raise Exception(
                     f"This model expects a question to answer in the '{args_model.question_column}' column."
                 )
 
             if (
-                args_model.context_column
-                and args_model.context_column not in df.columns
+                    args_model.context_column
+                    and args_model.context_column not in df.columns
             ):
                 raise Exception(
                     f"This model expects context in the '{args_model.context_column}' column."
@@ -211,8 +211,8 @@ class PalmHandler(BaseMLEngine):
             }
 
             if (
-                args_model.mode != "default"
-                and model_name not in self.chat_completion_models
+                    args_model.mode != "default"
+                    and model_name not in self.chat_completion_models
             ):
                 raise Exception(
                     f"Conversational modes are only available for the following models: {', '.join(self.chat_completion_models)}"
@@ -349,7 +349,7 @@ class PalmHandler(BaseMLEngine):
             return resp
 
         def _submit_chat_completion(
-            kwargs, prompts, api_args, df, mode="conversational"
+                kwargs, prompts, api_args, df, mode="conversational"
         ):
             def _tidy(comp):
                 tidy_comps = []
@@ -384,7 +384,7 @@ class PalmHandler(BaseMLEngine):
                     )
 
                 if mode == "conversational-full" or (
-                    mode == "conversational" and pidx == len(prompts) - 1
+                        mode == "conversational" and pidx == len(prompts) - 1
                 ):
                     pkwargs = {**kwargs, **api_args}
                     pkwargs["candidate_count"] = 3

@@ -7,7 +7,7 @@ from databend_sqlalchemy import connector
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base import DatabaseHandler
-from databend_sqlalchemy.databend_dialect import DatabendDialect    
+from databend_sqlalchemy.databend_dialect import DatabendDialect
 
 from mindsdb_sql.parser.ast.base import ASTNode
 
@@ -20,6 +20,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 logger = log.getLogger(__name__)
+
 
 class DatabendHandler(DatabaseHandler):
     """
@@ -65,7 +66,7 @@ class DatabendHandler(DatabaseHandler):
         self.is_connected = True
 
         return self.connection
-    
+
     def disconnect(self):
         """
         Close any existing connections.
@@ -101,7 +102,7 @@ class DatabendHandler(DatabaseHandler):
                 self.is_connected = False
 
         return response
-    
+
     def native_query(self, query: str) -> StatusResponse:
         """
         Receive raw query and act upon it somehow.
@@ -142,7 +143,7 @@ class DatabendHandler(DatabaseHandler):
             self.disconnect()
 
         return response
-    
+
     def query(self, query: ASTNode) -> StatusResponse:
         """
         Receive query as AST (abstract syntax tree) and act upon it somehow.
@@ -173,7 +174,7 @@ class DatabendHandler(DatabaseHandler):
         result.data_frame = df.rename(columns={f'Tables_in_{self.connection_data["database"]}': 'table_name'})
 
         return result
-    
+
     def get_columns(self, table_name: str) -> StatusResponse:
         """
         Returns a list of entity columns.
@@ -189,9 +190,12 @@ class DatabendHandler(DatabaseHandler):
         result = self.native_query(query)
         df = result.data_frame
 
-        result.data_frame = df.rename(columns={'Field': 'column_name', 'Type': 'data_type', 'Null': 'is_nullable', 'Default': 'default_value', 'Extra': 'extra'})
+        result.data_frame = df.rename(
+            columns={'Field': 'column_name', 'Type': 'data_type', 'Null': 'is_nullable', 'Default': 'default_value',
+                     'Extra': 'extra'})
 
         return result
+
 
 connection_args = OrderedDict(
     user={

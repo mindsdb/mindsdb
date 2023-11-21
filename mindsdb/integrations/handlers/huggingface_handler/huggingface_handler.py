@@ -10,6 +10,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class HuggingFaceHandler(BaseMLEngine):
     name = "huggingface"
 
@@ -299,12 +300,12 @@ class HuggingFaceHandler(BaseMLEngine):
                         continue
                     elif truncation_policy == "left":
                         tokens = tokens[
-                            -max_tokens + 1 : -1
-                        ]  # cut 2 empty tokens from left and right
+                                 -max_tokens + 1: -1
+                                 ]  # cut 2 empty tokens from left and right
                     else:
                         tokens = tokens[
-                            1 : max_tokens - 1
-                        ]  # cut 2 empty tokens from left and right
+                                 1: max_tokens - 1
+                                 ]  # cut 2 empty tokens from left and right
 
                     item = pipeline.tokenizer.decode(tokens)
 
@@ -336,7 +337,7 @@ class HuggingFaceHandler(BaseMLEngine):
             return pd.DataFrame(tables, columns=["tables"])
 
     def finetune(
-        self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None
+            self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None
     ) -> None:
         finetune_args = args if args else {}
         args = self.base_model_storage.json_get("args")

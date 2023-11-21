@@ -9,10 +9,12 @@ from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse
 from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
-from mindsdb.integrations.libs.vectordatabase_handler import FilterCondition, FilterOperator, TableField, VectorStoreHandler
+from mindsdb.integrations.libs.vectordatabase_handler import FilterCondition, FilterOperator, TableField, \
+    VectorStoreHandler
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
+
 
 class MilvusHandler(VectorStoreHandler):
     """This handler handles connection and execution of the Milvus statements."""
@@ -126,7 +128,8 @@ class MilvusHandler(VectorStoreHandler):
             raise Exception(f"Operator {operator} is not supported by Milvus!")
         return mapping[operator]
 
-    def _translate_conditions(self, conditions: Optional[List[FilterCondition]], exclude_id: bool = True) -> Optional[str]:
+    def _translate_conditions(self, conditions: Optional[List[FilterCondition]], exclude_id: bool = True) -> Optional[
+        str]:
         """
         Translate a list of FilterCondition objects a string that can be used by Milvus.
         E.g.,
@@ -151,7 +154,8 @@ class MilvusHandler(VectorStoreHandler):
         filtered_conditions = [
             condition
             for condition in conditions
-            if condition.column.startswith(TableField.METADATA.value) or condition.column.startswith(TableField.ID.value)
+            if
+            condition.column.startswith(TableField.METADATA.value) or condition.column.startswith(TableField.ID.value)
         ]
         if len(filtered_conditions) == 0:
             return None
@@ -160,17 +164,18 @@ class MilvusHandler(VectorStoreHandler):
         for condition in filtered_conditions:
             if isinstance(condition.value, str):
                 condition.value = f"'{condition.value}'"
-            milvus_conditions.append(f"({condition.column.split('.')[-1]} {self._get_milvus_operator(condition.op)} {condition.value})")
+            milvus_conditions.append(
+                f"({condition.column.split('.')[-1]} {self._get_milvus_operator(condition.op)} {condition.value})")
         # Combine all metadata conditions into a single string and return
         return " and ".join(milvus_conditions) if milvus_conditions else None
 
     def select(
-        self,
-        table_name: str,
-        columns: List[str] = None,
-        conditions: List[FilterCondition] = None,
-        offset: int = None,
-        limit: int = None,
+            self,
+            table_name: str,
+            columns: List[str] = None,
+            conditions: List[FilterCondition] = None,
+            offset: int = None,
+            limit: int = None,
     ) -> HandlerResponse:
         # Load collection table
         collection = Collection(table_name)
@@ -306,7 +311,7 @@ class MilvusHandler(VectorStoreHandler):
         return Response(resp_type=RESPONSE_TYPE.OK)
 
     def insert(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
+            self, table_name: str, data: pd.DataFrame, columns: List[str] = None
     ) -> HandlerResponse:
         """Insert data into the Milvus collection."""
         collection = None
@@ -333,7 +338,7 @@ class MilvusHandler(VectorStoreHandler):
         return Response(resp_type=RESPONSE_TYPE.OK)
 
     def delete(
-        self, table_name: str, conditions: List[FilterCondition] = None
+            self, table_name: str, conditions: List[FilterCondition] = None
     ) -> HandlerResponse:
         # delete only supports IN operator
         for condition in conditions:
@@ -376,7 +381,8 @@ class MilvusHandler(VectorStoreHandler):
             )
         try:
             field_names = {field["name"] for field in collection.schema.fields}
-            schema = [mindsdb_schema_field for mindsdb_schema_field in self.SCHEMA if mindsdb_schema_field["name"] in field_names]
+            schema = [mindsdb_schema_field for mindsdb_schema_field in self.SCHEMA if
+                      mindsdb_schema_field["name"] in field_names]
             data = pd.DataFrame(schema)
             data.columns = ["COLUMN_NAME", "DATA_TYPE"]
             return HandlerResponse(data_frame=data)

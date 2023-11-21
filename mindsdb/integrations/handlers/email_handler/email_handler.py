@@ -12,6 +12,7 @@ from mindsdb.integrations.handlers.email_handler.email_helpers import EmailClien
 
 logger = log.getLogger(__name__)
 
+
 class EmailHandler(APIHandler):
     """A class for handling connections and interactions with Email (send and search).
 
@@ -81,4 +82,3 @@ class EmailHandler(APIHandler):
         """
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
-

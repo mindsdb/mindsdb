@@ -20,6 +20,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class QdrantHandler(VectorStoreHandler):
     """Handles connection and execution of the Qdrant statements."""
 
@@ -124,7 +125,7 @@ class QdrantHandler(VectorStoreHandler):
         return super().get_columns(table_name)
 
     def insert(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
+            self, table_name: str, data: pd.DataFrame, columns: List[str] = None
     ) -> HandlerResponse:
         """Handler for the insert query
 
@@ -136,7 +137,8 @@ class QdrantHandler(VectorStoreHandler):
         Returns:
             HandlerResponse: The common query handler response
         """
-        assert len(data[TableField.ID.value]) == len(data[TableField.EMBEDDINGS.value]), "Number of ids and embeddings must be equal"
+        assert len(data[TableField.ID.value]) == len(
+            data[TableField.EMBEDDINGS.value]), "Number of ids and embeddings must be equal"
 
         # Qdrant doesn't have a distinction between documents and metadata
         # Any data that is to be stored should be placed in the "payload" field
@@ -224,7 +226,7 @@ class QdrantHandler(VectorStoreHandler):
             raise Exception(f"Operator {operator} is not supported by Qdrant!")
 
     def _translate_filter_conditions(
-        self, conditions: List[FilterCondition]
+            self, conditions: List[FilterCondition]
     ) -> Optional[dict]:
         """
         Translate a list of FilterCondition objects a dict that can be used by Qdrant.
@@ -277,7 +279,7 @@ class QdrantHandler(VectorStoreHandler):
         return models.Filter(must=qdrant_filters) if qdrant_filters else None
 
     def update(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
+            self, table_name: str, data: pd.DataFrame, columns: List[str] = None
     ) -> HandlerResponse:
         """
         Update data in the Qdrant database.
@@ -286,7 +288,9 @@ class QdrantHandler(VectorStoreHandler):
         """
         return super().update(table_name, data, columns)
 
-    def select(self, table_name: str, columns: Optional[List[str]] = None, conditions: Optional[List[FilterCondition]] = None, offset: int = 0, limit: int = 10,) -> HandlerResponse:
+    def select(self, table_name: str, columns: Optional[List[str]] = None,
+               conditions: Optional[List[FilterCondition]] = None, offset: int = 0,
+               limit: int = 10, ) -> HandlerResponse:
         """Select query handler
            Eg: SELECT * FROM qdrant.test_table
 
@@ -312,7 +316,8 @@ class QdrantHandler(VectorStoreHandler):
             return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=payload)
 
         # Filter conditions
-        vector_filter = [condition.value for condition in conditions if condition.column == TableField.SEARCH_VECTOR.value]
+        vector_filter = [condition.value for condition in conditions if
+                         condition.column == TableField.SEARCH_VECTOR.value]
         id_filters = [condition.value for condition in conditions if condition.column == TableField.ID.value]
         query_filters = self._translate_filter_conditions(conditions)
 
@@ -322,7 +327,8 @@ class QdrantHandler(VectorStoreHandler):
         # Followed by the search_vector value
         elif vector_filter:
             # Perform a similarity search with the first vector filter
-            results = self._client.search(table_name, query_vector=vector_filter[0], query_filter=query_filters or None, limit=limit, offset=offset)
+            results = self._client.search(table_name, query_vector=vector_filter[0], query_filter=query_filters or None,
+                                          limit=limit, offset=offset)
         elif query_filters:
             results = self._client.scroll(table_name, scroll_filter=query_filters, limit=limit, offset=offset)[0]
 
@@ -373,7 +379,7 @@ class QdrantHandler(VectorStoreHandler):
         return pd.DataFrame(payload)
 
     def delete(
-        self, table_name: str, conditions: List[FilterCondition] = None
+            self, table_name: str, conditions: List[FilterCondition] = None
     ) -> HandlerResponse:
         """Delete query handler
 
@@ -390,10 +396,10 @@ class QdrantHandler(VectorStoreHandler):
         filters = self._translate_filter_conditions(conditions)
         # Get id filters
         ids = [
-            condition.value
-            for condition in conditions
-            if condition.column == TableField.ID.value
-        ] or None
+                  condition.value
+                  for condition in conditions
+                  if condition.column == TableField.ID.value
+              ] or None
 
         if filters is None and ids is None:
             raise Exception("Delete query must have at least one condition!")

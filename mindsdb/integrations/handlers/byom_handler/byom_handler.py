@@ -28,14 +28,12 @@ from .proc_wrapper import import_string, find_model_class
 from .const import BYOM_METHOD
 from .__about__ import __version__
 
-
 BYOM_TYPE = Enum('BYOM_TYPE', ['SAFE', 'UNSAFE'])
 
 logger = log.getLogger(__name__)
 
 
 class BYOMHandler(BaseMLEngine):
-
     name = 'byom'
 
     def __init__(self, model_storage, engine_storage, **kwargs) -> None:
@@ -277,7 +275,8 @@ class BYOMHandler(BaseMLEngine):
             predictor_id = model_storage.predictor_id
             predictor_record = db.Predictor.query.get(predictor_id)
 
-            predictor_record.data = {'training_log': 'training'}  # TODO move to ModelStorage (don't work w/ db directly)
+            predictor_record.data = {
+                'training_log': 'training'}  # TODO move to ModelStorage (don't work w/ db directly)
             predictor_record.training_start_at = datetime.now()
             predictor_record.status = PREDICTOR_STATUS.FINETUNING  # TODO: parallel execution block
             db.session.commit()

@@ -16,6 +16,7 @@ from .eventbrite_tables import EventbriteEventsTable
 
 logger = log.getLogger(__name__)
 
+
 class EventbriteHandler(APIHandler):
     """A class for handling connections and interactions with the Eventbrite API.
 

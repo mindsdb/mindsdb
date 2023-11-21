@@ -20,6 +20,7 @@ from .notion_table import (
 
 logger = log.getLogger(__name__)
 
+
 class NotionHandler(APIHandler):
     name = "notion"
 
@@ -123,7 +124,7 @@ class NotionHandler(APIHandler):
         return data2
 
     def call_notion_api(
-        self, method_name: str = None, params: dict = None, filters: list = None
+            self, method_name: str = None, params: dict = None, filters: list = None
     ):
         # method > table > columns
         expansions_map = {
@@ -202,9 +203,9 @@ class NotionHandler(APIHandler):
 
             data.extend(chunk)
             if (
-                count_results is not None
-                and hasattr(resp, "meta")
-                and "next_token" in resp.meta
+                    count_results is not None
+                    and hasattr(resp, "meta")
+                    and "next_token" in resp.meta
             ):
                 params["next_token"] = resp.meta["next_token"]
             else:

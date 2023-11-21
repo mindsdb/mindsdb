@@ -10,6 +10,7 @@ import pandas as pd
 
 logger = log.getLogger(__name__)
 
+
 class StrapiHandler(APIHandler):
     def __init__(self, name: str, **kwargs) -> None:
         """initializer method

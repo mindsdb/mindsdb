@@ -11,6 +11,7 @@ from mindsdb_sql import parse_sql
 
 logger = log.getLogger(__name__)
 
+
 class MSTeamsHandler(APIHandler):
     """
     The Microsoft Teams handler implementation.

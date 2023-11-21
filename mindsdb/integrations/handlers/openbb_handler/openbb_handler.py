@@ -14,6 +14,7 @@ from mindsdb_sql import parse_sql
 
 logger = log.getLogger(__name__)
 
+
 class OpenBBHandler(APIHandler):
     """A class for handling connections and interactions with the OpenBB Platform.
 
@@ -126,8 +127,10 @@ class OpenBBHandler(APIHandler):
             # Ensure that the cmd provided is a valid OpenBB command
             available_cmds = [f"obb{cmd}" for cmd in list(obb.coverage.commands.keys())]
             if cmd not in available_cmds:
-                logger.error(f"The command provided is not supported by OpenBB! Choose one of the following: {', '.join(available_cmds)}")
-                raise Exception(f"The command provided is not supported by OpenBB! Choose one of the following: {', '.join(available_cmds)}")
+                logger.error(
+                    f"The command provided is not supported by OpenBB! Choose one of the following: {', '.join(available_cmds)}")
+                raise Exception(
+                    f"The command provided is not supported by OpenBB! Choose one of the following: {', '.join(available_cmds)}")
 
             args = ""
             # If there are parameters create arguments as a string
@@ -166,7 +169,7 @@ class OpenBBHandler(APIHandler):
         return self.query(ast)
 
     def call_openbb_api(
-        self, method_name: str = None, params: Dict = None
+            self, method_name: str = None, params: Dict = None
     ) -> pd.DataFrame:
         """Calls the OpenBB Platform method with the given params.
 

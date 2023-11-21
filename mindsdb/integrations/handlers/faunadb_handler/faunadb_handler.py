@@ -21,6 +21,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class FaunaDBHandler(DatabaseHandler):
     """This handler handles connection and execution of the FaunaDB statements."""
 
@@ -175,12 +176,12 @@ class FaunaDBHandler(DatabaseHandler):
         return Response(RESPONSE_TYPE.TABLE, df)
 
     def select(
-        self,
-        table_name: str,
-        columns: List[str] = None,
-        conditions: List[str] = None,
-        offset: int = None,
-        limit: int = None,
+            self,
+            table_name: str,
+            columns: List[str] = None,
+            conditions: List[str] = None,
+            offset: int = None,
+            limit: int = None,
     ) -> dict:
         # select * from db_name.collection_name
         if len(columns) > 0 and isinstance(columns[0], Star):

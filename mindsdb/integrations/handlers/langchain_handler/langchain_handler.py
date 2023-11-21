@@ -8,7 +8,8 @@ import pandas as pd
 from langchain.schema import SystemMessage
 from langchain.agents import AgentType
 from langchain.llms import OpenAI
-from langchain.chat_models import ChatAnthropic, ChatOpenAI  # GPT-4 fails to follow the output langchain requires, avoid using for now
+from langchain.chat_models import ChatAnthropic, \
+    ChatOpenAI  # GPT-4 fails to follow the output langchain requires, avoid using for now
 from langchain.agents import initialize_agent, create_sql_agent
 from langchain.prompts import PromptTemplate
 from langchain.agents.agent_toolkits import SQLDatabaseToolkit
@@ -29,6 +30,7 @@ _DEFAULT_AGENT_MODEL = 'zero-shot-react-description'
 _DEFAULT_AGENT_TOOLS = ['python_repl', 'wikipedia']  # these require no additional arguments
 _ANTHROPIC_CHAT_MODELS = {'claude-2', 'claude-instant-1'}
 _PARSING_ERROR_PREFIX = 'Could not parse LLM output: `'
+
 
 class LangChainHandler(BaseMLEngine):
     """
@@ -84,7 +86,7 @@ class LangChainHandler(BaseMLEngine):
 
         args = args['using']
         args['target'] = target
-        
+
         available_models = {*OPEN_AI_CHAT_MODELS, *_ANTHROPIC_CHAT_MODELS}
         if not args.get('model_name'):
             args['model_name'] = self.default_model
@@ -300,7 +302,7 @@ class LangChainHandler(BaseMLEngine):
 
         # setup model description
         description = {
-            'allowed_tools': [agent.agent.allowed_tools],   # packed as list to avoid additional rows
+            'allowed_tools': [agent.agent.allowed_tools],  # packed as list to avoid additional rows
             'agent_type': agent_name,
             'max_iterations': agent.max_iterations,
             'memory_type': memory.__class__.__name__,
@@ -314,7 +316,7 @@ class LangChainHandler(BaseMLEngine):
     def run_agent(self, df, agent, args, pred_args):
         # TODO abstract prompt templating into a common utility method, this is also used in vanilla OpenAI
         if 'prompt_template' in pred_args:
-            base_template = pred_args['prompt_template']   # override with predict-time template if available
+            base_template = pred_args['prompt_template']  # override with predict-time template if available
         elif 'prompt_template' in args:
             base_template = args['prompt_template']  # use create-time template if not
         else:

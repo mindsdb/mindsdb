@@ -15,6 +15,7 @@ from mindsdb.integrations.libs.response import (
 
 logger = log.getLogger(__name__)
 
+
 class LindormHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Apache Phoenix statements.
@@ -58,7 +59,8 @@ class LindormHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        lindorm_connection_data = {'lindorm_user': self.connection_data['lindorm_user'], 'lindorm_password': self.connection_data['lindorm_password']}
+        lindorm_connection_data = {'lindorm_user': self.connection_data['lindorm_user'],
+                                   'lindorm_password': self.connection_data['lindorm_password']}
 
         self.connection = phoenixdb.connect(
             url=self.connection_data['url'],

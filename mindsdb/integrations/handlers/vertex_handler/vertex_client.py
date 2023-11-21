@@ -4,6 +4,8 @@ from google.oauth2 import service_account
 import pandas as pd
 
 logger = log.getLogger(__name__)
+
+
 class VertexClient:
     """A class to interact with Vertex AI"""
 

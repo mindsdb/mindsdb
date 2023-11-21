@@ -21,6 +21,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class XataHandler(VectorStoreHandler):
     """This handler handles connection and execution of the Xata statements."""
 
@@ -289,7 +290,8 @@ class XataHandler(VectorStoreHandler):
                     filters = {**filters, **original_filter}
         return filters if filters else None
 
-    def select(self, table_name: str, columns: List[str] = None, conditions: List[FilterCondition] = None, offset: int = None, limit: int = None) -> HandlerResponse:
+    def select(self, table_name: str, columns: List[str] = None, conditions: List[FilterCondition] = None,
+               offset: int = None, limit: int = None) -> HandlerResponse:
         """Run general query or a vector similarity search and return results."""
         if not columns:
             columns = [col["name"] for col in self.SCHEMA]

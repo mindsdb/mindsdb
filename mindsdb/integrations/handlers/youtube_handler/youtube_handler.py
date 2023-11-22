@@ -154,6 +154,11 @@ connection_args = OrderedDict(
         'description': 'OAuth2 Credentials',
         'label': 'Upload OAuth2 Credentials',
     },
+    code={
+        'type': ARG_TYPE.STR,
+        'description': 'Authentication Code',
+        'label': 'Authentication Code',
+    }
 )
 
 connection_args_example = OrderedDict(youtube_api_token="<your-youtube-api-token>")

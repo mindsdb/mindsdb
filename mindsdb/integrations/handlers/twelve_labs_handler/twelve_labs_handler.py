@@ -2,6 +2,7 @@ import os
 import time
 import requests
 from typing import Optional, Dict, List
+from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 import pandas as pd
 from mindsdb.utilities import log
@@ -256,6 +257,30 @@ class TwelveLabsHandler(BaseMLEngine):
             raise Exception(f"Method {method} not supported yet.")
 
         return response
+
+    def _submit_multi_part_request(self, endpoint: str, headers: Dict = None, data: Dict = None, method: str = "POST") -> Dict:
+        """
+        Submit a multi-part request to the Twelve Labs API.
+
+        """
+        url = f"{BASE_URL}/{endpoint}"
+
+        headers = headers if headers else self._get_headers(api_key=self.model_storage.json_get('args')['api_key'])
+
+        multipart_data = MultipartEncoder(fields=data
+        headers['Content-Type'] = multipart_data.content_type)
+
+        if method == "POST":
+            response = requests.post(
+                url=url,
+                headers=headers,
+                data=multipart_data if multipart_data else {},
+            )
+
+        else:
+            raise Exception(f"Method {method} not supported yet.")
+
+        return response        
 
     def _get_headers(self, api_key: str) -> Dict:
         return {

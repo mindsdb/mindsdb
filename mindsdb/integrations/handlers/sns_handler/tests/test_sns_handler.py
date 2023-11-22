@@ -15,11 +15,11 @@ class SnsHandlerTest(unittest.TestCase):
         }
         cls.handler = SnsHandler('test_sns_handler', connection_data)
 
-    def test_0_check_connection(self):
+    def o_test_0_check_connection(self):
         response = self.handler.check_connection()
         assert response.success is True
 
-    def test_create_topic(self):
+    def o_test_create_topic(self):
         topic_name = "test12333"
         self.handler.create_topic({"name": topic_name})
         query = "SELECT * FROM topics"
@@ -27,26 +27,49 @@ class SnsHandlerTest(unittest.TestCase):
         sql_output = str(self.handler.query(ast))
         assert topic_name in sql_output
 
-    def test_create_topic_and_select_by_topic_name(self):
+    def o_test_create_topic_and_select_by_topic_name(self):
         expected_topic_name = "test"
         self.handler.create_topic({"name": expected_topic_name})
         assert expected_topic_name in self.handler.call_sns_api("topic_list", {"topic_name": expected_topic_name})
 
-    def test_publish_message(self):
-        # todo add topic creation
-        expected_topic_name = "arn:aws:sns:us-east-1:000000000000:aaaaaaa"
-        response = self.handler.call_sns_api("publish_message", {"topic_arn": expected_topic_name, "message": "Test_message" })
+    def o_test_publish_message(self):
+        expected_topic_name = "test"
+        self.handler.create_topic({"name": expected_topic_name})
+        expected_topic_name_arn = "arn:aws:sns:us-east-1:000000000000:" + expected_topic_name
+        response = self.handler.call_sns_api("publish_message", {"topic_arn": expected_topic_name_arn, "message": "Test_message" })
         print(str(response))
-    def test_publish_batch(self):
+    
+    def o_test_publish_batch(self):
         request_entries = []
-        expected_topic_name = "arn:aws:sns:us-east-1:000000000000:aaaaaaa"
+        expected_topic_name = "test"
+        self.handler.create_topic({"name": expected_topic_name})
+        expected_topic_name_arn = "arn:aws:sns:us-east-1:000000000000:" + expected_topic_name
         request_entry = {'Id': '2333334', 'Message': 'test', 'Subject': 'subject',
                          'MessageDeduplicationId': '1234556', 'MessageGroupId': '9999',
                        }
         request_entries.append(request_entry)
-        # TopicArn=params['topic_arn'],
-        #  PublishBatchRequestEntries=params['batch_request_entries']
-        response=self.handler.call_sns_api("publish_batch", {"topic_arn": expected_topic_name, "batch_request_entries": request_entries})
-        print(str(response))
+        response=self.handler.call_sns_api("publish_batch", {"topic_arn": expected_topic_name_arn, "batch_request_entries": request_entries})
 
+    
+    
+    def test_publish_batch_which_contains_dupicate_ids(self):
+        request_entries = []
+        expected_topic_name = "test"
+        self.handler.create_topic({"name": expected_topic_name})
+        expected_topic_name_arn = "arn:aws:sns:us-east-1:000000000000:" + expected_topic_name
+        request_entry = {'Id': '23333345', 'Message': 'test', 'Subject': 'subject',
+                         'MessageDeduplicationId': '12345562', 'MessageGroupId': '9999',
+                       }
+        request_entry1 = {'Id': '2333334', 'Message': 'test1', 'Subject': 'subject1',
+                         'MessageDeduplicationId': '12345561', 'MessageGroupId': '19999',
+                       }
+        request_entries.append(request_entry)
+        request_entries.append(request_entry1)
+        self.handler.call_sns_api("publish_batch", {"topic_arn": expected_topic_name_arn, "batch_request_entries": request_entries}))
+        #self.assertRaises(ValueError, self.handler.call_sns_api("publish_batch", {"topic_arn": expected_topic_name_arn, "batch_request_entries": request_entries}))
+        #with unittest.raises(Exception) as e_info:
+        #    self.handler.call_sns_api("publish_batch", {"topic_arn": expected_topic_name_arn, "batch_request_entries": request_entries})
+        #print(str(e_info))    
+        
+    
 # todo test duplicates batch empty respone

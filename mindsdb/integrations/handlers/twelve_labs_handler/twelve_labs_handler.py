@@ -179,7 +179,7 @@ class TwelveLabsHandler(BaseMLEngine):
             data=body,
         )
         
-        if response.status_code == 200:
+        if response.status_code == 201:
             logger.info(f"Created video indexing task {task_id} for {video_url if video_url else video_file} successfully.")
             task_id = response.json()['_id']
             return task_id

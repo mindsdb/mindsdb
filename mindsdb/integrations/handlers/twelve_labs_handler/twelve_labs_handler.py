@@ -47,12 +47,24 @@ class TwelveLabsHandler(BaseMLEngine):
         self.model_storage.json_set('args', args)
 
     def _create_index(self, index_name: str, engine_id: str, index_options: List[str]) -> str:
+        """
+        Create an index.
+        
+        """
         pass
 
     def _create_video_indexing_task(self, index_id: str, video_url: str, video_file: str) -> str:
+        """
+        Create a video indexing task.
+
+        """
         pass
 
     def _get_video_indexing_task(self, task_id: str) -> Dict:
+        """
+        Get a video indexing task.
+
+        """
         pass
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:

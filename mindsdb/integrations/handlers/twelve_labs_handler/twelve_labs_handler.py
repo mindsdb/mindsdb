@@ -45,7 +45,6 @@ class TwelveLabsHandler(BaseMLEngine):
         headers = self._get_headers(api_key=api_key)
 
         # get index if it exists
-        # TODO: implement _get_index_by_name
         index = self._get_index_by_name(index_name=args['index_name'])
         index_id = index['id'] if index else None
 
@@ -67,7 +66,6 @@ class TwelveLabsHandler(BaseMLEngine):
         )
 
         # poll for video indexing tasks to complete
-        # TODO: implement _poll_for_video_indexing_tasks
         self._poll_for_video_indexing_tasks(task_ids=task_ids)
 
         # store args in model_storage

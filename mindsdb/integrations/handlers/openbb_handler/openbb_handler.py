@@ -13,7 +13,7 @@ from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
 logger = log.getLogger(__name__)
-
+from functools import reduce
 
 class OpenBBHandler(APIHandler):
     """A class for handling connections and interactions with the OpenBB Platform.
@@ -43,26 +43,13 @@ class OpenBBHandler(APIHandler):
 
         self._register_table("openbb_fetcher", OpenBBtable(self))
 
-        equity_price_historical = create_table_class(
-            params_metadata=obb.coverage.command_model[".equity.price.historical"]["openbb"]["QueryParams"],
-            response_metadata=obb.coverage.command_model[".equity.price.historical"]["openbb"]["Data"],
-            obb_function=self.obb.equity.price.historical
-        )
-        self._register_table("equity_price_historical", equity_price_historical(self))
-
-        crypto_price_historical = create_table_class(
-            params_metadata=obb.coverage.command_model[".crypto.price.historical"]["openbb"]["QueryParams"],
-            response_metadata=obb.coverage.command_model[".crypto.price.historical"]["openbb"]["Data"],
-            obb_function=self.obb.equity.price.historical
-        )
-        self._register_table("crypto_price_historical", crypto_price_historical(self))
-
-        # crypto_table_class = create_table_class(
-        #     params_metadata=standard_models.crypto_historical.CryptoHistoricalQueryParams.model_json_schema(),
-        #     response_metadata=standard_models.crypto_historical.CryptoHistoricalData.model_json_schema(),
-        #     obb_function=self.obb.crypto.load
-        # )
-        # self._register_table("crypto_historical", crypto_table_class(self))
+        for cmd in list(obb.coverage.command_model.keys()):
+            table_class = create_table_class(
+                params_metadata=obb.coverage.command_model[cmd]["openbb"]["QueryParams"],
+                response_metadata=obb.coverage.command_model[cmd]["openbb"]["Data"],
+                obb_function=reduce(getattr, cmd[1:].split('.'), self.obb)
+            )
+            self._register_table(cmd.replace('.', '_')[1:], table_class(self))
 
     def connect(self) -> bool:
         """Connects with OpenBB account through personal access token (PAT).

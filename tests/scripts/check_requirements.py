@@ -51,8 +51,10 @@ OPTIONAL_HANDLER_DEPS = ["pysqlite3-binary", "torch", "openai", "tiktoken", "wik
 # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in a given handler
 MAIN_REQUIREMENTS_DEPS = get_requirements_from_file(MAIN_REQS_PATH) + get_requirements_from_file(TEST_REQS_PATH) + get_requirements_from_file(GRPC_REQS_PATH)
 
+BYOM_HANLDER_DEPS = ["pyarrow"]
+
 HANDLER_RULE_IGNORES = {
-    "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS,
+    "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS,
     "DEP001": ["tests", "hierarchicalforecast"]  # 'tests' is the mindsdb tests folder in the repo root
 }
 

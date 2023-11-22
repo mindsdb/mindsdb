@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 from mindsdb_sql import parse_sql
 
-from ..unit.executor_test_base import BaseExecutorTest
+from tests.unit.executor_test_base import BaseExecutorTest
 
 try:
     importlib.import_module("chromadb")
@@ -181,7 +181,7 @@ class TestChromaDBHandler(BaseExecutorTest):
                 content,metadata,embeddings
             )
             VALUES (
-                'this is a test', '{"test": "test"}', '[1.0, 2.0, 3.0]'
+                'this is a test 0', '{"test": "test"}', '[1.0, 2.0, 3.0]'
             )
         """
         self.run_sql(sql)
@@ -208,7 +208,7 @@ class TestChromaDBHandler(BaseExecutorTest):
             SELECT * FROM chroma_test.test_table
         """
         ret = self.run_sql(sql)
-        assert ret.shape[0] == num_record * 2 + 2
+        assert ret.shape[0] == num_record + 3  # only one unique record was added
 
         # insert into a table with a select statement, but wrong columns
         with pytest.raises(Exception):
@@ -334,87 +334,100 @@ class TestChromaDBHandler(BaseExecutorTest):
         ret = self.run_sql(sql)
         assert ret.shape[0] == 2
 
-    @pytest.mark.xfail(reason="upsert for vectordatabase is not implemented")
-    def test_update(self):
-        # update a table with a metadata filter
-        sql = """
-            UPDATE chroma_test.test_table
-            SET `metadata.test` = 'test2'
-            WHERE `metadata.test` = 'test'
-        """
-        self.run_sql(sql)
-        # check if the data is updated
-        sql = """
-            SELECT * FROM chroma_test.test_table
-            WHERE `metadata.test` = 'test2'
-        """
-        ret = self.run_sql(sql)
-        assert ret.shape[0] == 2
+    # @pytest.mark.xfail(reason="upsert for vectordatabase is not implemented")
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_update(self, postgres_handler_mock):
 
-        # update the embeddings
+        df = pd.DataFrame(
+            {
+                "id": ["id1", "id2"],
+                "content": ["this is a test", "this is a test"],
+                "metadata": [{"ext_id": "1"}, {"ext_id": "2"}],
+                "embeddings": [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]],
+            }
+        )
+        self.set_handler(postgres_handler_mock, "pg", tables={"test_table": df})
+
+        # create a table
+        sql = """
+                    CREATE TABLE chroma_test.test_table (
+                        SELECT * FROM pg.df
+                    )
+                """
+        self.run_sql(sql)
+
+        # updating the collection with only embeddings and not content is not allowed
         sql = """
             UPDATE chroma_test.test_table
-            SET embedding = [3.0, 2.0, 1.0]
-            WHERE `metadata.test` = 'test2'
+            SET embeddings = '[3.0, 2.0, 1.0]',
+             id = 'id1'
         """
-        self.run_sql(sql)
-        # check if the data is updated
+
+        with pytest.raises(Exception):
+            self.run_sql(sql)
+
+        # updating the collection with only content and not embeddings is not allowed
         sql = """
-            SELECT * FROM chroma_test.test_table
-            WHERE `metadata.test` = 'test2'
+            UPDATE chroma_test.test_table
+            SET content = 'blah blah',
+             id = 'id1'
         """
-        ret = self.run_sql(sql)
-        assert ret.shape[0] == 2
-        assert ret.embedding[0] == [3.0, 2.0, 1.0]
+
+        with pytest.raises(Exception):
+            self.run_sql(sql)
 
         # update multiple columns
         sql = """
             UPDATE chroma_test.test_table
-            SET `metadata.test` = 'test3',
-                embedding = [1.0, 2.0, 3.0]
+            SET id = 'id1',
+                embeddings = '[1.0, 2.0, 3.0]',
                 content = 'this is a test'
-            WHERE `metadata.test` = 'test2'
         """
         self.run_sql(sql)
         # check if the data is updated
         sql = """
             SELECT * FROM chroma_test.test_table
-            WHERE `metadata.test` = 'test3'
+            WHERE id = 'id1'
         """
         ret = self.run_sql(sql)
-        assert ret.shape[0] == 2
-        assert ret.embedding[0] == [1.0, 2.0, 3.0]
+        assert ret.shape[0] == 1
+        assert ret.embeddings[0] == [1.0, 2.0, 3.0]
         assert ret.content[0] == "this is a test"
 
-        # update a table with a search vector filter is not allowed
+        # update a table with a where clause is not allowed
         sql = """
             UPDATE chroma_test.test_table
-            SET `metadata.test = 'test2'
+            SET `metadata.test` = 'test2'
             WHERE search_vector = [1.0, 2.0, 3.0]
         """
         with pytest.raises(Exception):
             self.run_sql(sql)
 
-        # update a table without any filters is allowed
+        # update a table with all columns
         sql = """
-            UPDATE chroma_test.test_table
-            SET metadata.test = 'test3'
-        """
+                UPDATE chroma_test.test_table
+                SET id = 'id1',
+                    embeddings = '[1.0, 2.0, 3.0]',
+                    content = 'this is a test',
+                    `metadata.ext_id` = '1'
+                """
         self.run_sql(sql)
         # check if the data is updated
         sql = """
             SELECT * FROM chroma_test.test_table
-            WHERE `metadata.test` = 'test3'
+            WHERE id = 'id1'
         """
         ret = self.run_sql(sql)
-        assert ret.shape[0] == 2
+        assert ret.shape[0] == 1
+        assert ret.embeddings[0] == [1.0, 2.0, 3.0]
+        assert ret.content[0] == "this is a test"
+        assert ret.metadata[0] == {"ext_id": "1"}
 
-        # update a table with a search vector filter and a metadata filter is not allowed
+        # update a table without providing a id is not allowed
         sql = """
             UPDATE chroma_test.test_table
             SET metadata.test = 'test3'
-            WHERE metadata.test = 'test2'
-            AND search_vector = [1.0, 2.0, 3.0]
+
         """
         with pytest.raises(Exception):
             self.run_sql(sql)

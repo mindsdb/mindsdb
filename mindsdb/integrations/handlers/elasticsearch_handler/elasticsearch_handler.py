@@ -79,13 +79,13 @@ class ElasticsearchHandler(DatabaseHandler):
             self.is_connected = True
             return StatusResponse(True)
         except ConnectionError as conn_error:
-            log.logger.error(f'Connection error when connecting to Elasticsearch: {conn_error}')
+            logger.error(f'Connection error when connecting to Elasticsearch: {conn_error}')
             return StatusResponse(False, error_message=str(conn_error))
         except AuthenticationException as auth_error:
-            log.logger.error(f'Authentication error when connecting to Elasticsearch: {auth_error}')
+            logger.error(f'Authentication error when connecting to Elasticsearch: {auth_error}')
             return StatusResponse(False, error_message=str(auth_error))
         except Exception as e:
-            log.logger.error(f'Error connecting to Elasticsearch: {e}')
+            logger.error(f'Error connecting to Elasticsearch: {e}')
             return StatusResponse(False, error_message=str(e))
 
     def disconnect(self):

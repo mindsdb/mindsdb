@@ -1,6 +1,6 @@
 install_mindsdb:
 	pip install -e .
-	pip install -r requirements_dev.txt
+	pip install -r requirements/requirements-dev.txt
 	pre-commit install
 
 install_handler:
@@ -15,5 +15,6 @@ run_mindsdb:
 
 check:
 	python tests/scripts/check_requirements.py
+	python tests/scripts/check_code.py
 
 .PHONY: install_mindsdb precommit install_handler run_mindsdb check

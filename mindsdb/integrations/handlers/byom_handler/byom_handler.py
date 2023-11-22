@@ -283,9 +283,9 @@ class BYOMHandler(BaseMLEngine):
         code_path = Path(connection_args['code'])
         requirements_path = Path(connection_args['modules'])
 
-        connection_args = self.engine_storage.get_connection_args()
-        if isinstance(connection_args, dict) is False or 'handler_version' not in connection_args:
-            connection_args = {
+        engine_connection_args = self.engine_storage.get_connection_args()
+        if isinstance(engine_connection_args, dict) is False or 'handler_version' not in engine_connection_args:
+            engine_connection_args = {
                 'handler_version': __version__,
                 'versions': {
                     '1': {
@@ -295,9 +295,9 @@ class BYOMHandler(BaseMLEngine):
                     }
                 }
             }
-        new_version = str(max([int(x) for x in connection_args['versions'].keys()]) + 1)
+        new_version = str(max([int(x) for x in engine_connection_args['versions'].keys()]) + 1)
 
-        connection_args['versions'][new_version] = {
+        engine_connection_args['versions'][new_version] = {
             'code': code_path.name,
             'requirements': requirements_path.name,
             'type': self.normalize_byom_type(
@@ -316,7 +316,7 @@ class BYOMHandler(BaseMLEngine):
         )
         self.engine_storage.fileStorage.push()
 
-        self.engine_storage.update_connection_args(connection_args)
+        self.engine_storage.update_connection_args(engine_connection_args)
 
         model_proxy = self._get_model_proxy(new_version)
         try:

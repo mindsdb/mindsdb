@@ -270,7 +270,7 @@ class TwelveLabsHandler(BaseMLEngine):
 
         headers = headers if headers else self._get_headers(api_key=self.model_storage.json_get('args')['api_key'])
 
-        multipart_data = MultipartEncoder(fields=data
+        multipart_data = MultipartEncoder(fields=data)
         headers['Content-Type'] = multipart_data.content_type)
 
         if method == "POST":

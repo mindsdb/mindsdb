@@ -51,7 +51,7 @@ class OpenBBtable(APITable):
 def create_table_class(params_metadata, response_metadata, obb_function):
 
     mandatory_fields = params_metadata['required'] if 'required' in params_metadata else []
-    response_columns = list(response_metadata['properties'].keys())
+    response_columns = list(response_metadata['fields'].keys())
 
     class AnyTable(APITable):
         def _get_params_from_conditions(self, conditions: List) -> Dict:
@@ -95,10 +95,10 @@ def create_table_class(params_metadata, response_metadata, obb_function):
                 if arg1 in mandatory_fields:
                     mandatory_args[arg1] = True
 
-                if ('start_' + arg1 in params_metadata['properties']
+                if ('start_' + arg1 in params_metadata['fields']
                     and arg1 in response_columns and arg2 is not None
-                        and "format" in response_metadata['properties'][arg1]):
-                    if response_metadata['properties'][arg1]["format"] != 'date-time':
+                        and "format" in response_metadata['fields'][arg1]):
+                    if response_metadata['fields'][arg1]["format"] != 'date-time':
                         date = parse_local_date(arg2)
                         interval = arg_params.get('interval', '1d')
                         if op == '>':
@@ -116,7 +116,7 @@ def create_table_class(params_metadata, response_metadata, obb_function):
                             params['start_' + arg1] = date.strftime('%Y-%m-%d')
                             date = date + pd.Timedelta(interval)
                             params['end_' + arg1] = date.strftime('%Y-%m-%d')
-                elif arg1 in params_metadata['properties'] or not strict_filter:
+                elif arg1 in params_metadata['fields'] or not strict_filter:
                     if op == '=':
                         params[arg1] = arg2
                         columns_to_add[arg1] = arg2
@@ -126,10 +126,10 @@ def create_table_class(params_metadata, response_metadata, obb_function):
                 string = 'You must specify the following arguments in the WHERE statement:'
                 for key in mandatory_args:
                     if not mandatory_args[key]:
-                        string += "\n--(required)---\n* {key}:\n{help}\n ".format(key=key, help=dict_to_yaml(params_metadata['properties'][key]))
+                        string += "\n--(required)---\n* {key}:\n{help}\n ".format(key=key, help=dict_to_yaml(params_metadata['fields'][key]))
                 for key in params_metadata["properties"]:
                     if key not in mandatory_args:
-                        string += "\n--(optional)---\n* {key}:\n{help}\n ".format(key=key, help=dict_to_yaml(params_metadata['properties'][key]))
+                        string += "\n--(optional)---\n* {key}:\n{help}\n ".format(key=key, help=dict_to_yaml(params_metadata['fields'][key]))
                 raise NotImplementedError(string)
 
             result = obb_function(**params).to_df()

@@ -40,6 +40,9 @@ class TwelveLabsHandler(BaseMLEngine):
             engine_storage=self.engine_storage,
         )
 
+        # get headers for API requests
+        headers = self._get_headers(api_key=api_key)
+
         # if index_name is not provided, create an index
 
         # create video indexing tasks for all video files or video urls
@@ -96,6 +99,12 @@ class TwelveLabsHandler(BaseMLEngine):
             raise Exception(f"Method {method} not supported yet.")
 
         return response.json()
+
+    def _get_headers(self, api_key: str) -> Dict:
+        return {
+            "x-api-key": api_key,
+            "Content-Type": "application/json
+        }
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         pass

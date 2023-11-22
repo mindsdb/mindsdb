@@ -54,6 +54,7 @@ def create_table_class(params_metadata, response_metadata, obb_function, provide
     response_columns = list(response_metadata['fields'].keys())
 
     class AnyTable(APITable):
+        
         def _get_params_from_conditions(self, conditions: List) -> Dict:
             """Gets aggregate trade data API params from SQL WHERE conditions.
 
@@ -82,27 +83,31 @@ def create_table_class(params_metadata, response_metadata, obb_function, provide
             """
             conditions = extract_comparison_conditions(query.where)
             arg_params = self._get_params_from_conditions(conditions=conditions)
+    
             params = {}
             if provider is not None:
                 params['provider'] = provider
+            
             filters = []
             mandatory_args = {key: False for key in mandatory_fields}
-            columns_to_add = {}
-            # filter only for properties in the
-            strict_filter = arg_params.get('strict_filter', False)
-            for op, arg1, arg2 in conditions:
 
+            strict_filter = arg_params.get('strict_filter', False)
+
+            for op, arg1, arg2 in conditions:
                 if op == 'or':
                     raise NotImplementedError('OR is not supported')
+                
                 if arg1 in mandatory_fields:
                     mandatory_args[arg1] = True
 
                 if ('start_' + arg1 in params_metadata['fields']
                     and arg1 in response_columns and arg2 is not None
                         and "format" in response_metadata['fields'][arg1]):
+                    
                     if response_metadata['fields'][arg1]["format"] != 'date-time':
                         date = parse_local_date(arg2)
                         interval = arg_params.get('interval', '1d')
+
                         if op == '>':
                             params['start_' + arg1] = date.strftime('%Y-%m-%d')
                         elif op == '<':
@@ -118,18 +123,22 @@ def create_table_class(params_metadata, response_metadata, obb_function, provide
                             params['start_' + arg1] = date.strftime('%Y-%m-%d')
                             date = date + pd.Timedelta(interval)
                             params['end_' + arg1] = date.strftime('%Y-%m-%d')
+
                 elif arg1 in params_metadata['fields'] or not strict_filter:
                     if op == '=':
                         params[arg1] = arg2
                         columns_to_add[arg1] = arg2
+
                 filters.append([op, arg1, arg2])
 
             if not all(mandatory_args.values()):
                 string = 'You must specify the following arguments in the WHERE statement:'
+
                 for key in mandatory_args:
                     if not mandatory_args[key]:
                         string += "\n--(required)---\n* {key}:\n{help}\n ".format(key=key, help=dict_to_yaml(params_metadata['fields'][key]))
-                for key in params_metadata["properties"]:
+
+                for key in params_metadata["fields"]:
                     if key not in mandatory_args:
                         string += "\n--(optional)---\n* {key}:\n{help}\n ".format(key=key, help=dict_to_yaml(params_metadata['fields'][key]))
                 raise NotImplementedError(string)
@@ -162,4 +171,5 @@ def create_table_class(params_metadata, response_metadata, obb_function, provide
 
         def get_columns(self):
             return response_columns
+
     return AnyTable

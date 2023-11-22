@@ -1,8 +1,7 @@
 import os
 from twilio.rest import Client
 import re
-from datetime import datetime as datetime, timezone
-import ast
+from datetime import datetime as datetime
 from typing import List
 import pandas as pd
 
@@ -10,11 +9,9 @@ from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 
 from mindsdb_sql.parser import ast
-from mindsdb_sql.parser.ast import ASTNode, Update, Delete
 from mindsdb.integrations.utilities.date_utils import parse_local_date
-from mindsdb_sql.planner.utils import query_traversal
 
-from mindsdb.integrations.libs.api_handler import APIHandler, APITable, FuncParser
+from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, project_dataframe, filter_dataframe
 
@@ -53,20 +50,17 @@ class WhatsAppMessagesTable(APITable):
             elif arg1 == 'sid':
                 if op == '=':
                     params['sid'] = arg2
-                # TODO: implement IN
                 else:
                     NotImplementedError('Only  "from_number=" is implemented')
             elif arg1 == 'from_number':
                 if op == '=':
                     params['from_number'] = arg2
-                # TODO: implement IN
                 else:
                     NotImplementedError('Only  "from_number=" is implemented')
 
             elif arg1 == 'to_number':
                 if op == '=':
                     params['to_number'] = arg2
-                # TODO: implement IN
                 else:
                     NotImplementedError('Only  "to_number=" is implemented')
 
@@ -288,31 +282,37 @@ class WhatsAppHandler(APIHandler):
                 # ... Add other properties as needed
             }
             data.append(msg_data)
+            
+        # Create a DataFrame
+            result_df = pd.DataFrame(data)
+
+            # Filter rows where 'from_number' or 'to_number' begins with 'whatsapp:'
+            result_df = result_df[result_df['from_number'].str.startswith('whatsapp:') | result_df['to_number'].str.startswith('whatsapp:')]
 
         if df is True:
-            return pd.DataFrame(data)
-        return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(data))
+            return pd.DataFrame(result_df)
+        return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(result_df))
 
         
-    def send_message(self, params, ret_as_dict=False):
+    def send_message(self, params, ret_as_dict=False) -> Response:
         from_num = params.get('from_number'),
         to_num = params.get('to_number')
         
-        messages = self.client.messages.create(
+        message = self.client.messages.create(
             body = params.get('body'),
             to = params.get('to_number'),
             from_ = params.get('from_number')
         )
         
         if ret_as_dict is True:
-            return {"sid": messages.sid, "from": messages.from_, "to": messages.to, "message": messages.body, "status": messages.status}
+            return {"sid": message.sid, "from": message.from_, "to": message.to, "message": message.body, "status": message.status}
         return Response(
             RESPONSE_TYPE.MESSAGE,
-            sid=messages.sid,
-            from_=messages.from_,
-            to=messages.to,
-            body=messages.body,
-            status=messages.status
+            sid=message.sid,
+            from_=message.from_,
+            to=message.to,
+            body=message.body,
+            status=message.status
         )
 
     def call_whatsapp_api(self, method_name: str = None, params: dict = None):

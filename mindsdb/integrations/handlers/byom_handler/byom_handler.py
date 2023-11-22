@@ -182,12 +182,17 @@ class BYOMHandler(BaseMLEngine):
                     )
                 self.model_wrappers[version_str] = self.inhouse_model_wrapper
             elif engine_version_type == BYOM_TYPE.VENV:
+                if version_meta.get('venv_status') != 'ready':
+                    version_meta['venv_status'] = 'creating'
+                    self.engine_storage.update_connection_args(connection_args)
                 self.model_wrappers[version_str] = ModelWrapperSafe(
                     code=code,
                     modules_str=modules_str,
                     engine_id=self.engine_storage.integration_id,
                     engine_version=version
                 )
+                version_meta['venv_status'] = 'ready'
+                self.engine_storage.update_connection_args(connection_args)
 
         return self.model_wrappers[version_str]
 
@@ -450,6 +455,7 @@ class ModelWrapperSafe:
             if isinstance(engine_version, int) and engine_version > 1:
                 env_folder_name = f'{env_folder_name}_{engine_version}'
             self.env_path = base_path / env_folder_name
+            logger.info(f'BYOM venv path: {self.env_path}')
 
             self.python_path = self.env_path / 'bin' / 'python'
 
@@ -458,6 +464,7 @@ class ModelWrapperSafe:
                 return
 
             # create
+            logger.info(f"Creating new environment: {self.env_path}")
             virtualenv.cli_run(['-p', sys.executable, str(self.env_path)])
             logger.info(f"Created new environment: {self.env_path}")
 
@@ -503,12 +510,14 @@ class ModelWrapperSafe:
 
         pip_cmd = self.python_path.parent / 'pip'
         for module in modules:
+            logger.debug(f"BYOM install module: {module}")
             p = subprocess.Popen([pip_cmd, 'install', module], stderr=subprocess.PIPE)
             p.wait()
             if p.returncode != 0:
                 raise Exception(f'Problem with installing module {module}: {p.stderr.read()}')
 
     def _run_command(self, params):
+        logger.debug(f"BYOM run command: {params.get('method')}")
         params_enc = encode(params)
 
         wrapper_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'proc_wrapper.py')

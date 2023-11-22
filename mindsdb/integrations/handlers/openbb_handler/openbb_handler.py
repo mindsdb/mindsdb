@@ -44,12 +44,35 @@ class OpenBBHandler(APIHandler):
         self._register_table("openbb_fetcher", OpenBBtable(self))
 
         for cmd in list(obb.coverage.command_model.keys()):
+
+            openbb_params = obb.coverage.command_model[cmd]["openbb"]["QueryParams"]
+            openbb_data = obb.coverage.command_model[cmd]["openbb"]["Data"]
+            
+            # Creates the default data retrieval function for the given command
+            # e.g. obb.equity.price.historical, obb.equity.fa.income
             table_class = create_table_class(
-                params_metadata=obb.coverage.command_model[cmd]["openbb"]["QueryParams"],
-                response_metadata=obb.coverage.command_model[cmd]["openbb"]["Data"],
+                params_metadata=openbb_params,
+                response_metadata=openbb_data,
                 obb_function=reduce(getattr, cmd[1:].split('.'), self.obb)
             )
             self._register_table(cmd.replace('.', '_')[1:], table_class(self))
+
+            # Creates the data retrieval function for each provider
+            # e.g. obb.equity.price.historical_polygon, obb.equity.price.historical_intrinio
+            for provider in list(obb.coverage.command_model[cmd].keys()):
+                provider_extra_params = obb.coverage.command_model[cmd][provider]["QueryParams"]
+                combined_params = {**openbb_params, **provider_extra_params}
+
+                provider_extra_data = obb.coverage.command_model[cmd][provider]["Data"]
+                combined_data = {**openbb_data, **provider_extra_data}
+
+                table_class = create_table_class(
+                    params_metadata=combined_params,
+                    response_metadata=combined_data,
+                    obb_function=reduce(getattr, cmd[1:].split('.'), self.obb)
+                )
+                self._register_table(f"{cmd.replace('.', '_')[1:]}_{provider}", table_class(self))
+
 
     def connect(self) -> bool:
         """Connects with OpenBB account through personal access token (PAT).

@@ -97,7 +97,18 @@ class TwelveLabsHandler(BaseMLEngine):
         Get an index by name.
 
         """
-        pass
+        body = {
+            "index_name": index_name,
+        }
+
+        response = self._submit_request(
+            method="GET",
+            endpoint="indexes",
+            headers=headers,
+            body=body,
+        )
+
+        return response['data'][0]['_id'] if response['data'] else None
 
     def _create_video_indexing_tasks(self, index_id: str, video_urls: List[str] = None, video_files: List[str] = None) -> List[str]:
         """

@@ -169,9 +169,16 @@ class TwelveLabsHandler(BaseMLEngine):
         Get a video indexing task.
 
         """
-        pass
 
-    def _submit_request(self, method: str = "GET", endpoint: str, headers: Dict, body: Dict) -> Dict:
+        response = self._submit_request(
+            method="GET",
+            endpoint=f"tasks/{task_id}",
+            headers=headers,
+        )
+
+        return response
+
+    def _submit_request(self, method: str = "GET", endpoint: str, headers: Dict, data: Dict) -> Dict:
         """
         Submit a request to the Twelve Labs API.
 
@@ -182,14 +189,14 @@ class TwelveLabsHandler(BaseMLEngine):
             response = requests.get(
                 url=url,
                 headers=headers,
-                params=body,
+                params=data,
             )
 
         elif method == "POST":
             response = requests.post(
                 url=url,
                 headers=headers,
-                json=body,
+                data=data,
             )
 
         else:

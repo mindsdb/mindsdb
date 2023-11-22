@@ -71,12 +71,26 @@ class TwelveLabsHandler(BaseMLEngine):
         # store args in model_storage
         self.model_storage.json_set('args', args)
 
-    def _create_index(self, index_name: str, engine_id: str  = None, index_options: List[str], addons: List[str] = None) -> str:
+    def _create_index(self, index_name: str, engine_id: str  = None, index_options: List[str], addons: List[str] = []) -> str:
         """
         Create an index.
         
         """
-        pass
+        body = {
+            "index_name": index_name,
+            "engine_id": engine_id if engine_id else DEFAULT_ENGINE,
+            "index_options": index_options,
+            "addons": addons,
+        }
+
+        response = self._submit_request(
+            method="POST",
+            endpoint="indexes",
+            headers=headers,
+            body=body,
+        )
+
+        return response['_id']
 
     def _get_index_by_name(self, index_name: str) -> str:
         """

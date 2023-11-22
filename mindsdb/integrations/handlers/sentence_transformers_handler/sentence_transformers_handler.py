@@ -28,7 +28,6 @@ class SentenceTransformersHandler(BaseMLEngine):
 
         valid_args = Parameters(**args)
 
-        # todo add gpu support
         model = load_embeddings_model(valid_args.embeddings_model_name)
 
         self.model_storage.file_set("model", dill.dumps(model))

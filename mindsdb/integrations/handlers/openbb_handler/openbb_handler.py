@@ -40,22 +40,29 @@ class OpenBBHandler(APIHandler):
         self.is_connected = False
 
         self.obb = obb
-        from openbb_provider import standard_models
 
         self._register_table("openbb_fetcher", OpenBBtable(self))
-        stock_table_class = create_table_class(
-            params_metadata=standard_models.stock_historical.StockHistoricalQueryParams.model_json_schema(),
-            response_metadata=standard_models.stock_historical.StockHistoricalData.model_json_schema(),
-            obb_function=self.obb.stocks.load
-        )
-        self._register_table("stock_historical", stock_table_class(self))
 
-        crypto_table_class = create_table_class(
-            params_metadata=standard_models.crypto_historical.CryptoHistoricalQueryParams.model_json_schema(),
-            response_metadata=standard_models.crypto_historical.CryptoHistoricalData.model_json_schema(),
-            obb_function=self.obb.crypto.load
+        equity_price_historical = create_table_class(
+            params_metadata=obb.coverage.command_model[".equity.price.historical"]["openbb"]["QueryParams"],
+            response_metadata=obb.coverage.command_model[".equity.price.historical"]["openbb"]["Data"],
+            obb_function=self.obb.equity.price.historical
         )
-        self._register_table("crypto_historical", crypto_table_class(self))
+        self._register_table("equity_price_historical", equity_price_historical(self))
+
+        crypto_price_historical = create_table_class(
+            params_metadata=obb.coverage.command_model[".crypto.price.historical"]["openbb"]["QueryParams"],
+            response_metadata=obb.coverage.command_model[".crypto.price.historical"]["openbb"]["Data"],
+            obb_function=self.obb.equity.price.historical
+        )
+        self._register_table("crypto_price_historical", crypto_price_historical(self))
+
+        # crypto_table_class = create_table_class(
+        #     params_metadata=standard_models.crypto_historical.CryptoHistoricalQueryParams.model_json_schema(),
+        #     response_metadata=standard_models.crypto_historical.CryptoHistoricalData.model_json_schema(),
+        #     obb_function=self.obb.crypto.load
+        # )
+        # self._register_table("crypto_historical", crypto_table_class(self))
 
     def connect(self) -> bool:
         """Connects with OpenBB account through personal access token (PAT).

@@ -94,7 +94,12 @@ class TwelveLabsHandler(BaseMLEngine):
             data=body,
         )
 
-        return response['_id']
+        if response.status_code == 201:
+            logger.info(f"Index {index_name} successfully created.")
+            return response['_id']
+        elif response.status_code == 400:
+            logger.error(f"Index {index_name} could not be created.")
+            raise Exception(f"Index {index_name} could not be created. API request has failed.")
 
     def _get_index_by_name(self, index_name: str) -> str:
         """
@@ -112,7 +117,11 @@ class TwelveLabsHandler(BaseMLEngine):
             data=params,
         )
 
-        return response['data'][0]['_id'] if response['data'] else None
+        if response.status_code == 200:
+            return response['data'][0]['_id'] if response['data'] else None
+        elif response.status_code == 400:
+            logger.error(f"Index {index_name} could not be retrieved.")
+            raise Exception(f"Index {index_name} could not be retrieved. API request has failed.")
 
     def _create_video_indexing_tasks(self, index_id: str, video_urls: List[str] = None, video_files: List[str] = None) -> List[str]:
         """
@@ -164,8 +173,14 @@ class TwelveLabsHandler(BaseMLEngine):
             headers=headers,
             data=body,
         )
-
-        return response['_id']
+        
+        if response.status_code == 200:
+            logger.info(f"Created video indexing task {task_id} for {video_url if video_url else video_file} successfully.")
+            task_id = response['_id']
+            return task_id
+        elif response.status_code == 400:
+            logger.error(f"Video indexing task for {video_url if video_url else video_file} could not be created.")
+            raise Exception(f"Video indexing task for {video_url if video_url else video_file} could not be created. API request has failed.")
 
     def _poll_for_video_indexing_tasks(self, task_ids: List[str]) -> None:
         """
@@ -173,17 +188,27 @@ class TwelveLabsHandler(BaseMLEngine):
 
         """
         for task_id in task_ids:
+            logger.info(f"Polling status of video indexing task {task_id}.")
             is_task_running = True
+
             while is_task_running:
                 task = self._get_video_indexing_task(task_id=task_id)
+                status = task['status']
+                remaining_seconds = task['remain_seconds']
+
+                logger.info(f"Task {task_id} is in the {status} state.")
+                
                 # TODO: check what statuses can be returned
-                if task['status'] == 'running':
+                if status == 'running':
+                    logger.info(f"Task {task_id} will be polled again in {remaining_seconds} seconds.")
                     time.sleep(task['remain_seconds'])
 
-                elif task['status'] == 'completed':
+                elif status == 'completed':
+                    logger.info(f"Task {task_id} completed successfully.")
                     is_task_running = False
 
                 else:
+                    logger.error(f"Task {task_id} failed with status {task['status']}.")
                     raise Exception(f"Task {task_id} failed with status {task['status']}.")
 
     def _get_video_indexing_task(self, task_id: str) -> Dict:
@@ -197,7 +222,12 @@ class TwelveLabsHandler(BaseMLEngine):
             headers=headers,
         )
 
-        return response
+        if response.status_code == 200:
+            logger.info(f"Retrieved video indexing task {task_id} successfully.")
+            return response
+        elif response.status_code == 400:
+            logger.error(f"Video indexing task {task_id} could not be retrieved.")
+            raise Exception(f"Video indexing task {task_id} could not be retrieved. API request has failed.")
 
     def _submit_request(self, method: str = "GET", endpoint: str, headers: Dict, data: Dict = None) -> Dict:
         """

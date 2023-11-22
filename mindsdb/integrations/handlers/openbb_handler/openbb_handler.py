@@ -50,6 +50,10 @@ class OpenBBHandler(APIHandler):
             
             # Creates the default data retrieval function for the given command
             # e.g. obb.equity.price.historical, obb.equity.fa.income
+            # Note: Even though openbb_params just contains the standard fields that are 
+            # common across vendors users are able to select any of the fields from the vendor
+            # as well. However, some of them might have no effect on the data if the vendor 
+            # doesn't support it. Regardless, the endpoint won't crash.
             table_class = create_table_class(
                 params_metadata=openbb_params,
                 response_metadata=openbb_data,
@@ -60,14 +64,18 @@ class OpenBBHandler(APIHandler):
             # Creates the data retrieval function for each provider
             # e.g. obb.equity.price.historical_polygon, obb.equity.price.historical_intrinio
             for provider in list(obb.coverage.command_model[cmd].keys()):
+
+                # Skip the openbb provider since we already created it and it will look like obb.equity.price.historical
                 if provider == "openbb":
                     continue
 
                 provider_extra_params = obb.coverage.command_model[cmd][provider]["QueryParams"]
-                combined_params = {**openbb_params, **provider_extra_params}
+                combined_params = provider_extra_params.copy()  # create a copy to avoid modifying the original
+                combined_params["fields"] = {**openbb_params["fields"], **provider_extra_params["fields"]}  # merge the fields
 
                 provider_extra_data = obb.coverage.command_model[cmd][provider]["Data"]
-                combined_data = {**openbb_data, **provider_extra_data}
+                combined_data = provider_extra_data.copy()  # create a copy to avoid modifying the original
+                combined_data["fields"] = {**openbb_data["fields"], **provider_extra_data["fields"]}  # merge the fields
 
                 table_class = create_table_class(
                     params_metadata=combined_params,

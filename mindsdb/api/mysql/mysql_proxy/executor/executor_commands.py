@@ -98,7 +98,6 @@ from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.model.functions import (
-    PredictorRecordNotFound,
     get_model_record,
     get_model_records,
     get_predictor_integration,
@@ -519,6 +518,17 @@ class ExecuteCommands:
                 )
                 query = SQLQuery(select_statement, session=self.session)
                 return self.answer_select(query)
+            elif sql_category == "rags":
+                select_statement = Select(
+                    targets=[Star()],
+                    from_table=Identifier(
+                        parts=["information_schema", "rags"]
+                    ),
+                    where=_get_show_where(statement, like_name="name"),
+                )
+                query = SQLQuery(select_statement, session=self.session)
+                return self.answer_select(query)
+
             else:
                 raise ErNotSupportedYet(f"Statement not implemented: {sql}")
         elif type(statement) in (
@@ -1356,70 +1366,16 @@ class ExecuteCommands:
             if len(statement.name.parts) > 1
             else self.session.database
         )
-        # get project id
-        try:
-            project = self.session.database_controller.get_project(project_name)
-        except ValueError:
-            raise SqlApiException(f"Project not found: {project_name}")
-        project_id = project.id
 
         rag_name = statement.name.parts[-1]
-
-        # search for the model
-        # verify the model exists and get its id
-        model_identifier = statement.llm
-        try:
-            model_record = self._get_model_info(
-                identifier=model_identifier, except_absent=True
-            )
-
-        except PredictorRecordNotFound:
-            raise SqlApiException(f"Model not found: {model_identifier.to_string()}")
-
-        llm_model_id = model_record["model_record"].id
-
-        is_cloud = self.session.config.get("cloud", False)
-
-        # todo if kb not found, create one with name given in statement
-
-        kb_name = (
-            statement.knowledge_base_store.parts[-1]
-            if statement.knowledge_base_store
-            else f'{rag_name}_{llm_model_id}_default_kb'
-        )
-
-        if not statement.knowledge_base_store:
-            if is_cloud:
-                raise SqlApiException(
-                    "No default knowledge base currently exists in MindsDB cloud. "
-                    'Please specify one using the "storage" parameter'
-                )
-
-            else:
-                name = Identifier(kb_name)
-                _ = self.answer_create_kb(CreateKnowledgeBase(name=name))
-
-        # verify the kb exists and get its id
-        try:
-            kb_record = self.session.kb_controller.get(name=kb_name, project_id=project_id)
-        except Exception:
-            raise SqlApiException(f"knowledge base {kb_name} not found")
-
-        if statement.from_query is not None:
-            # TODO: implement this
-            raise SqlApiException("Create a RAG from a select is not supported yet")
-
-        kb_id = kb_record.id
-
-        params = statement.params
 
         # create the knowledge base
         _ = self.session.rag_controller.add(
             name=rag_name,
-            project_id=project_id,
-            knowledge_base_id=kb_id,
-            llm_id=llm_model_id,
-            params=params,
+            project_name=project_name,
+            knowledge_base=statement.knowledge_base_store,
+            llm=statement.llm,
+            params=statement.params,
             if_not_exists=statement.if_not_exists,
         )
 

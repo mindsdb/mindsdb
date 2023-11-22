@@ -1,5 +1,6 @@
 from typing import List
 
+import pandas as pd
 from mindsdb_sql.parser.ast import (
     ASTNode,
     Delete,
@@ -8,11 +9,14 @@ from mindsdb_sql.parser.ast import (
     Select,
     Update,
 )
+from pandas import DataFrame
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
+from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiException
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
-from mindsdb.api.mysql.mysql_proxy.executor.data_types import ANSWER_TYPE, ExecuteAnswer
+from mindsdb.api.mysql.mysql_proxy.executor.data_types import ExecuteAnswer
+from mindsdb.utilities.exception import EntityExistsError
 
 
 class RAGBaseController:
@@ -49,36 +53,77 @@ class RAGBaseController:
     def add(
             self,
             name: str,
-            project_id: str,
-            knowledge_base_id: str,
-            llm_id: str,
+            project_name: str,
+            knowledge_base: Identifier,
+            llm: Identifier,
             params: dict,
             if_not_exists: bool = False,
     ) -> int:
         """
         Add a new RAG to the database
         """
-        # check if RAG already exists
-        try:
-            rag = self.get(name, project_id)
-        except ValueError:
-            # RAG does not exist
-            rag = db.RAG(
-                name=name,
-                project_id=project_id,
-                knowledge_base_id=knowledge_base_id,
-                llm_id=llm_id,
-                params=params,
-            )
-            db.session.add(rag)
-            db.session.commit()
-            return rag.id
 
-        # RAG already exists
-        if if_not_exists:
-            return rag.id
+        # get project id
+        project = self.session.database_controller.get_project(project_name)
+
+        project_id = project.id
+
+        # not difference between cases in sql
+        name = name.lower()
+
+        # check if RAG already exists
+        rag = self.get(name, project_id)
+
+        if rag is not None:
+            if if_not_exists:
+                return rag
+            raise EntityExistsError("RAG already exists", name)
+
+        if llm is None:
+            raise SqlApiException("You must pass a llm model when creating RAG")
         else:
-            raise Exception(f"Knowledge base already exists: {name}")
+            if len(llm.parts) > 1:
+                # llm project is set
+                llm_project = self.session.database_controller.get_project(llm.parts[-2])
+            else:
+                llm_project = project
+
+            llm_name = llm.parts[-1]
+            llm = self.session.model_controller.get_model(name=llm_name, project_name=llm_project.name)
+
+            llm_record = db.Predictor.query.get(llm['id'])
+            llm_id = llm_record.id
+
+        if knowledge_base is None:
+            kb_name = f"default_kb_{name}"
+            kb = self.session.kb_controller.add(
+                name=kb_name,
+                project_name=project_name,
+                embedding_model=None,
+                storage=None,
+                params=params
+            )
+
+        else:
+            if len(knowledge_base.parts) > 1:
+                # kb project is set
+                kb_project = self.session.database_controller.get_project(knowledge_base.parts[-2])
+            else:
+                kb_project = project
+
+            kb_name = knowledge_base.parts[-1]
+            kb = self.session.kb_controller.get(name=kb_name, project_id=kb_project.id)
+
+        rag = db.RAG(
+            name=name,
+            project_id=project_id,
+            knowledge_base_id=kb.id,
+            llm_id=llm_id
+        )
+
+        db.session.add(rag)
+        db.session.commit()
+        return rag
 
     def delete(self, name: str, project_id: str, if_exists: bool = False) -> None:
         """
@@ -103,6 +148,7 @@ class RAGBaseController:
         Get a RAG from the database
         by name + project_id
         """
+
         rag = (
             db.session.query(db.RAG)
             .filter_by(
@@ -111,8 +157,7 @@ class RAGBaseController:
             )
             .first()
         )
-        if rag is None:
-            raise ValueError(f"Knowledge base not found: {name}")
+
         return rag
 
     def get_by_id(self, id: str) -> db.RAG:
@@ -299,7 +344,7 @@ class RAGBaseExecutor:
         except (ValueError, AttributeError):
             return False
 
-    def select_from_rag(self, query: Select) -> ExecuteAnswer:
+    def select_from_rag(self, query: Select) -> DataFrame:
         """
         Handle the select query
         We do the following translation logics:
@@ -321,14 +366,17 @@ class RAGBaseExecutor:
         vector_db_content = TableField.CONTENT.value
 
         # build the search query for the underlying knowledge base
-        query.targets = [Identifier(vector_db_content)]
-        query.from_table = Identifier(kb.name)
-        query.where.args[0] = Identifier("search_query")
+        kb_query = query.copy()
+
+        kb_query.targets = [Identifier(vector_db_content)]
+        kb_query.from_table = Identifier(kb.name)
+        kb_query.where.args[0] = Identifier(vector_db_content)
 
         # search knowledge base with the search query
-        kb_result = self.session.kb_controller.execute_query(query=query)
+        kb_table = self.session.kb_controller.get_table(kb.name, kb.project_id)
+        kb_result_df = kb_table.select_query(query=kb_query)
 
-        content_data = ", ".join([data[0] for data in kb_result.data])
+        content_data = ", ".join(kb_result_df[vector_db_content].to_list())
 
         # pass retrieved data from knowledgebase to llm
         llm_query = f"""
@@ -338,13 +386,10 @@ class RAGBaseExecutor:
         """
 
         sql_query = SQLQuery(sql=llm_query, session=self.session, execute=True)
-        data = sql_query.fetch()
+        data = sql_query.fetch()['result']
+        columns = [column.name for column in sql_query.columns_list]
 
-        return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE,
-            columns=sql_query.columns_list,
-            data=data["result"],
-        )
+        return pd.DataFrame(data=data, columns=columns)
 
     def update_rag(self, query: Update) -> ExecuteAnswer:
         # TODO: to be implemented

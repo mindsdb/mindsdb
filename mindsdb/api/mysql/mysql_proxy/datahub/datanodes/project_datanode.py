@@ -163,6 +163,20 @@ class ProjectDataNode(DataNode):
 
                 return df.to_dict(orient='records'), columns_info
 
+            is_rag = session.rag_controller.is_rag(query.from_table)
+            if is_rag:
+                # this is a RAG
+                df = session.rag_controller.executor.select_from_rag(query)
+                columns_info = [
+                    {
+                        'name': k,
+                        'type': v
+                    }
+                    for k, v in df.dtypes.items()
+                ]
+
+                return df.to_dict(orient='records'), columns_info
+
             raise EntityNotExistsError(f"Can't select from {query_table} in project")
         else:
             raise NotImplementedError(f"Query not supported {query}")

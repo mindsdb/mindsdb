@@ -36,7 +36,9 @@ class TestRAG(BaseExecutorDummyLLM):
             raise RuntimeError("predictor wasn't created")
 
     @pytest.fixture(autouse=True, scope="function")
-    def setup_method(self):
+    def setup_teardown_method(self):
+
+        # setup steps
 
         super().setup_method()
 
@@ -132,8 +134,9 @@ class TestRAG(BaseExecutorDummyLLM):
         self.llm_name = llm_name
         self.database_path = tmp_directory
 
-    @pytest.fixture(autouse=True, scope="function")
-    def teardown_method(self):
+        yield
+
+        # teardown steps
 
         self.run_sql(f"DROP MODEL {self.llm_name}")
         self.run_sql(f"DROP TABLE {self.vector_database_name}.{self.vector_database_table_name}")

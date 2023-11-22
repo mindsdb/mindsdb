@@ -166,11 +166,14 @@ class TwelveLabsHandler(BaseMLEngine):
         """
         body = {
             "index_id": index_id,
-            "video_url": video_url,
-            "video_file": video_file,
         }
 
-        response = self._submit_request(
+        if video_url:
+            body['video_url'] = video_url
+        elif video_file:
+            body['video_file'] = video_file
+
+        response = self._submit_multi_part_request(
             method="POST",
             endpoint="tasks",
             data=body,

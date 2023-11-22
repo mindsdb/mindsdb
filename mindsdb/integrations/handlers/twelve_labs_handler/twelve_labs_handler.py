@@ -115,14 +115,47 @@ class TwelveLabsHandler(BaseMLEngine):
         Create video indexing tasks.
 
         """
-        pass
+        task_ids = []
+
+        if video_urls:
+            for video_url in video_urls:
+                task_ids.append(
+                    self._create_video_indexing_task(
+                        index_id=index_id, 
+                        video_url=video_url
+                    )
+                )
+            
+        if video_files:
+            for video_file in video_files:
+                task_ids.append(
+                    self._create_video_indexing_task(
+                        index_id=index_id, 
+                        video_file=video_file
+                    )
+                )
+
+        return task_ids
 
     def _create_video_indexing_task(self, index_id: str, video_url: str = None, video_file:  = None) -> str:
         """
         Create a video indexing task.
 
         """
-        pass
+        body = {
+            "index_id": index_id,
+            "video_url": video_url,
+            "video_file": video_file,
+        }
+
+        response = self._submit_request(
+            method="POST",
+            endpoint="tasks",
+            headers=headers,
+            body=body,
+        )
+
+        return response['_id']
 
     def _poll_for_video_indexing_tasks(self, task_ids: List[str]) -> None:
         """

@@ -87,7 +87,7 @@ class TwelveLabsHandler(BaseMLEngine):
             method="POST",
             endpoint="indexes",
             headers=headers,
-            body=body,
+            data=body,
         )
 
         return response['_id']
@@ -97,7 +97,7 @@ class TwelveLabsHandler(BaseMLEngine):
         Get an index by name.
 
         """
-        body = {
+        params = {
             "index_name": index_name,
         }
 
@@ -105,7 +105,7 @@ class TwelveLabsHandler(BaseMLEngine):
             method="GET",
             endpoint="indexes",
             headers=headers,
-            body=body,
+            data=params,
         )
 
         return response['data'][0]['_id'] if response['data'] else None
@@ -152,7 +152,7 @@ class TwelveLabsHandler(BaseMLEngine):
             method="POST",
             endpoint="tasks",
             headers=headers,
-            body=body,
+            data=body,
         )
 
         return response['_id']
@@ -178,7 +178,7 @@ class TwelveLabsHandler(BaseMLEngine):
 
         return response
 
-    def _submit_request(self, method: str = "GET", endpoint: str, headers: Dict, data: Dict) -> Dict:
+    def _submit_request(self, method: str = "GET", endpoint: str, headers: Dict, data: Dict = None) -> Dict:
         """
         Submit a request to the Twelve Labs API.
 
@@ -189,14 +189,14 @@ class TwelveLabsHandler(BaseMLEngine):
             response = requests.get(
                 url=url,
                 headers=headers,
-                params=data,
+                params=data if data else {},
             )
 
         elif method == "POST":
             response = requests.post(
                 url=url,
                 headers=headers,
-                data=data,
+                data=data if data else {},
             )
 
         else:

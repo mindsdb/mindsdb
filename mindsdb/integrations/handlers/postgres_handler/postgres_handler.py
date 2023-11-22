@@ -127,9 +127,9 @@ class PostgresHandler(DatabaseHandler):
         }
         for column_index, column_name in enumerate(df.columns):
             if str(df[column_name].dtype) == 'object':
-                pg_type_name = types.get(description[column_index].type_code).name
-                if pg_type_name in types_map:
-                    df[column_name] = df[column_name].astype(types_map[pg_type_name])
+                pg_type = types.get(description[column_index].type_code)
+                if pg_type is not None and pg_type.name in types_map:
+                    df[column_name] = df[column_name].astype(types_map[pg_type.name])
 
     @profiler.profile()
     def native_query(self, query: str) -> Response:

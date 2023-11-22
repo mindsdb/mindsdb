@@ -1,6 +1,10 @@
 import requests
 from urllib.parse import urljoin
 
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
+
 
 def move_under(d, key_contents_to_move, key_to_move_under=None):
     """
@@ -71,5 +75,5 @@ class SAPERP:
                 move_under(r, "__metadata")
             return resp
         except Exception as e:
-            print(f"Error requesting endpoint {endpoint}: {e}")
+            logger.error(f"Error requesting endpoint {endpoint}: {e}")
             return {}

@@ -1,0 +1,3 @@
+neuralforecast>=1.4.0, <1.5.0
+ray==2.0.1
+hierarchicalforecast~=0.4.0

@@ -583,7 +583,7 @@ class OpenAIHandler(BaseMLEngine):
             promises = []
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 for i in range(math.ceil(len(prompts) / max_batch_size)):
-                    print(
+                    logger.debug(
                         f'{i * max_batch_size}:{(i+1) * max_batch_size}/{len(prompts)}'
                     )
                     future = executor.submit(

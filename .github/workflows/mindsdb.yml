@@ -15,6 +15,10 @@ jobs:
         uses: actions/setup-python@v4.7.0
         with:
           python-version: 3.9
+      - name: Run code checks
+        shell: bash
+        run: |
+          python tests/scripts/check_code.py
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v37

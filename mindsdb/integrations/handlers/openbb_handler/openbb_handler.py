@@ -55,7 +55,8 @@ class OpenBBHandler(APIHandler):
             table_class = create_table_class(
                 params_metadata=openbb_params,
                 response_metadata=openbb_data,
-                obb_function=reduce(getattr, cmd[1:].split('.'), self.obb)
+                obb_function=reduce(getattr, cmd[1:].split('.'), self.obb),
+                func_docs=f"https://docs.openbb.co/platform/reference/{cmd[1:].replace('.', '/')}"
             )
             self._register_table(cmd.replace('.', '_')[1:], table_class(self))
 
@@ -79,6 +80,7 @@ class OpenBBHandler(APIHandler):
                     params_metadata=combined_params,
                     response_metadata=combined_data,
                     obb_function=reduce(getattr, cmd[1:].split('.'), self.obb),
+                    func_docs=f"https://docs.openbb.co/platform/reference/{cmd[1:].replace('.', '/')}",
                     provider=provider
                 )
                 self._register_table(f"{cmd.replace('.', '_')[1:]}_{provider}", table_class(self))

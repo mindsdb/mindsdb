@@ -4,9 +4,13 @@ import requests
 from typing import Optional, Dict
 
 import pandas as pd
+from mindsdb.utilities import log
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
+
+
+logger = log.getLogger(__name__)
 
 # TODO: move to config
 BASE_URL = "https://api.twelvelabs.io/v1.1"
@@ -118,6 +122,9 @@ class TwelveLabsHandler(BaseMLEngine):
         task_ids = []
 
         if video_urls:
+            logger.info("video_urls has been set, therefore, it will be given precedence.")
+            logger.info("Creating video indexing tasks for video urls.")
+
             for video_url in video_urls:
                 task_ids.append(
                     self._create_video_indexing_task(
@@ -126,7 +133,10 @@ class TwelveLabsHandler(BaseMLEngine):
                     )
                 )
             
-        if video_files:
+        elif video_files:
+            logger.info("video_urls has not been set, therefore, video_files will be used.")
+            logger.info("Creating video indexing tasks for video files.")
+
             for video_file in video_files:
                 task_ids.append(
                     self._create_video_indexing_task(
@@ -172,7 +182,7 @@ class TwelveLabsHandler(BaseMLEngine):
 
                 elif task['status'] == 'completed':
                     is_task_running = False
-                    
+
                 else:
                     raise Exception(f"Task {task_id} failed with status {task['status']}.")
 

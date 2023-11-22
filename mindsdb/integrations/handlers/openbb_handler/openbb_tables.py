@@ -9,52 +9,17 @@ from typing import Dict, List
 import pandas as pd
 
 
-class OpenBBtable(APITable):
-    def _get_params_from_conditions(self, conditions: List) -> Dict:
-        """Gets aggregate trade data API params from SQL WHERE conditions.
-
-        Returns params to use for Binance API call to klines.
-
-        Args:
-            conditions (List): List of individual SQL WHERE conditions.
-        """
-        params: dict = {}
-        # generic interpreter for conditions
-        # since these are all equality conditions due to OpenBB Platform's API
-        # then we can just use the first arg as the key and the second as the value
-        for op, arg1, arg2 in conditions:
-            if op != "=":
-                raise NotImplementedError
-            params[arg1] = arg2
-
-        return params
-
-    def select(self, query: ast.Select) -> pd.DataFrame:
-        """Selects data from the OpenBB Platform and returns it as a pandas DataFrame.
-
-        Returns dataframe representing the OpenBB data.
-
-        Args:
-            query (ast.Select): Given SQL SELECT query
-        """
-        conditions = extract_comparison_conditions(query.where)
-        params = self._get_params_from_conditions(conditions)
-
-        openbb_data = self.handler.call_openbb_api(
-            method_name="openbb_fetcher",
-            params=params,
-        )
-
-        return openbb_data
-
-
-def create_table_class(params_metadata, response_metadata, obb_function, provider = None):
+def create_table_class(
+    params_metadata,
+    response_metadata,
+    obb_function,
+    provider=None
+):
 
     mandatory_fields = params_metadata['required'] if 'required' in params_metadata else []
     response_columns = list(response_metadata['fields'].keys())
 
     class AnyTable(APITable):
-        
         def _get_params_from_conditions(self, conditions: List) -> Dict:
             """Gets aggregate trade data API params from SQL WHERE conditions.
 
@@ -90,7 +55,7 @@ def create_table_class(params_metadata, response_metadata, obb_function, provide
             
             filters = []
             mandatory_args = {key: False for key in mandatory_fields}
-
+            columns_to_add = {}
             strict_filter = arg_params.get('strict_filter', False)
 
             for op, arg1, arg2 in conditions:

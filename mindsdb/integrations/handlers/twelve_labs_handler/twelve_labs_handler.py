@@ -1,5 +1,5 @@
 import os
-import json
+import time
 import requests
 from typing import Optional, Dict
 
@@ -162,14 +162,25 @@ class TwelveLabsHandler(BaseMLEngine):
         Poll for video indexing tasks to complete.
 
         """
-        pass
+        for task_id in task_ids:
+            is_task_running = True
+            while is_task_running:
+                task = self._get_video_indexing_task(task_id=task_id)
+                # TODO: check what statuses can be returned
+                if task['status'] == 'running':
+                    time.sleep(task['remain_seconds'])
+
+                elif task['status'] == 'completed':
+                    is_task_running = False
+                    
+                else:
+                    raise Exception(f"Task {task_id} failed with status {task['status']}.")
 
     def _get_video_indexing_task(self, task_id: str) -> Dict:
         """
         Get a video indexing task.
 
         """
-
         response = self._submit_request(
             method="GET",
             endpoint=f"tasks/{task_id}",

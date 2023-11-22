@@ -43,10 +43,27 @@ class TwelveLabsHandler(BaseMLEngine):
         # get headers for API requests
         headers = self._get_headers(api_key=api_key)
 
-        # if index_name is not provided, create an index
+        # get index if it exists
+        # TODO: implement _get_index_by_name
+        index = self._get_index_by_name(index_name=args['index_name'])
+        index_id = index['id'] if index else None
+
+        # create index if it doesn't exist
+        if not index_id:
+            index_id = self._create_index(
+                index_name=args['index_name'],
+                engine_id=args['engine_id'] if 'engine_id' in args else None,
+                index_options=args['index_options'],
+                addons=args['addons'] if 'addons' in args else None,
+            )
 
         # create video indexing tasks for all video files or video urls
         # video urls will be given precedence
+        task_ids = self._create_video_indexing_tasks(
+            index_id=index_id,
+            video_urls=args['video_urls'],
+            video_files=args['video_files'],
+        )
 
         # poll for video indexing tasks to complete
 
@@ -60,7 +77,21 @@ class TwelveLabsHandler(BaseMLEngine):
         """
         pass
 
-    def _create_video_indexing_task(self, index_id: str, video_url: str, video_file: str) -> str:
+    def _get_index_by_name(self, index_name: str) -> str:
+        """
+        Get an index by name.
+
+        """
+        pass
+
+    def _create_video_indexing_tasks(self, index_id: str, video_urls: List[str] = None, video_files: List[str] = None) -> List[str]:
+        """
+        Create video indexing tasks.
+
+        """
+        pass
+
+    def _create_video_indexing_task(self, index_id: str, video_url: str = None, video_file:  = None) -> str:
         """
         Create a video indexing task.
 

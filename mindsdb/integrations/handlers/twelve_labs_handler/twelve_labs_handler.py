@@ -10,6 +10,7 @@ from mindsdb.integrations.utilities.handler_utils import get_api_key
 
 # TODO: move to config
 BASE_URL = "https://api.twelvelabs.io/v1.1"
+DEFAULT_ENGINE = "marengo2.5"
 
 
 class TwelveLabsHandler(BaseMLEngine):
@@ -66,11 +67,13 @@ class TwelveLabsHandler(BaseMLEngine):
         )
 
         # poll for video indexing tasks to complete
+        # TODO: implement _poll_for_video_indexing_tasks
+        self._poll_for_video_indexing_tasks(task_ids=task_ids)
 
         # store args in model_storage
         self.model_storage.json_set('args', args)
 
-    def _create_index(self, index_name: str, engine_id: str  = "marengo2.5", index_options: List[str], addons: List[str] = None) -> str:
+    def _create_index(self, index_name: str, engine_id: str  = None, index_options: List[str], addons: List[str] = None) -> str:
         """
         Create an index.
         
@@ -94,6 +97,13 @@ class TwelveLabsHandler(BaseMLEngine):
     def _create_video_indexing_task(self, index_id: str, video_url: str = None, video_file:  = None) -> str:
         """
         Create a video indexing task.
+
+        """
+        pass
+
+    def _poll_for_video_indexing_tasks(self, task_ids: List[str]) -> None:
+        """
+        Poll for video indexing tasks to complete.
 
         """
         pass

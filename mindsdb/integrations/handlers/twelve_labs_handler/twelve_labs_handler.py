@@ -1,11 +1,15 @@
-import json
 import os
+import json
+import requests
 from typing import Optional, Dict
 
 import pandas as pd
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
+
+# TODO: move to config
+BASE_URL = "https://api.twelvelabs.io/v1.1"
 
 
 class TwelveLabsHandler(BaseMLEngine):
@@ -46,7 +50,7 @@ class TwelveLabsHandler(BaseMLEngine):
         # store args in model_storage
         self.model_storage.json_set('args', args)
 
-    def _create_index(self, index_name: str, engine_id: str, index_options: List[str]) -> str:
+    def _create_index(self, index_name: str, engine_id: str  = "marengo2.5", index_options: List[str], addons: List[str] = None) -> str:
         """
         Create an index.
         
@@ -66,6 +70,32 @@ class TwelveLabsHandler(BaseMLEngine):
 
         """
         pass
+
+    def _submit_request(self, method: str = "GET", endpoint: str, headers: Dict, body: Dict) -> Dict:
+        """
+        Submit a request to the Twelve Labs API.
+
+        """
+        url = f"{BASE_URL}/{endpoint}"
+
+        if method == "GET":
+            response = requests.get(
+                url=url,
+                headers=headers,
+                params=body,
+            )
+
+        elif method == "POST":
+            response = requests.post(
+                url=url,
+                headers=headers,
+                json=body,
+            )
+
+        else:
+            raise Exception(f"Method {method} not supported yet.")
+
+        return response.json()
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         pass

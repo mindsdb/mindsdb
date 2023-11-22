@@ -1,4 +1,4 @@
-from mindsdb.integrations.handlers.popularity_recommender_handler.__about__ import (
+from .__about__ import (
     __description__ as description,
     __version__ as version,
 )

@@ -48,7 +48,7 @@ class OpenBBtable(APITable):
         return openbb_data
 
 
-def create_table_class(params_metadata, response_metadata, obb_function):
+def create_table_class(params_metadata, response_metadata, obb_function, provider = None):
 
     mandatory_fields = params_metadata['required'] if 'required' in params_metadata else []
     response_columns = list(response_metadata['fields'].keys())
@@ -83,6 +83,8 @@ def create_table_class(params_metadata, response_metadata, obb_function):
             conditions = extract_comparison_conditions(query.where)
             arg_params = self._get_params_from_conditions(conditions=conditions)
             params = {}
+            if provider is not None:
+                params['provider'] = provider
             filters = []
             mandatory_args = {key: False for key in mandatory_fields}
             columns_to_add = {}

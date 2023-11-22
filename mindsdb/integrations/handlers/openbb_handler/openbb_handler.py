@@ -60,6 +60,9 @@ class OpenBBHandler(APIHandler):
             # Creates the data retrieval function for each provider
             # e.g. obb.equity.price.historical_polygon, obb.equity.price.historical_intrinio
             for provider in list(obb.coverage.command_model[cmd].keys()):
+                if provider == "openbb":
+                    continue
+
                 provider_extra_params = obb.coverage.command_model[cmd][provider]["QueryParams"]
                 combined_params = {**openbb_params, **provider_extra_params}
 
@@ -69,7 +72,8 @@ class OpenBBHandler(APIHandler):
                 table_class = create_table_class(
                     params_metadata=combined_params,
                     response_metadata=combined_data,
-                    obb_function=reduce(getattr, cmd[1:].split('.'), self.obb)
+                    obb_function=reduce(getattr, cmd[1:].split('.'), self.obb),
+                    provider=provider
                 )
                 self._register_table(f"{cmd.replace('.', '_')[1:]}_{provider}", table_class(self))
 

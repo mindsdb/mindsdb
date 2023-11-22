@@ -8,7 +8,7 @@ from mindsdb.integrations.libs.api_handler import APITable, APIHandler
 
 class MessageTable(APITable):
     name: str = "messages"
-    columns: List[str] = ['message', 'topic_arn', 'id','subject','message_deduplication_id', 'message_group_id']
+    columns: List[str] = ['message', 'topic_arn', 'id', 'subject', 'message_deduplication_id', 'message_group_id']
 
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
@@ -26,8 +26,9 @@ class MessageTable(APITable):
         super().__init__(handler)
         self.handler.connect()
 
-    def insert(self, query: ast.Insert) -> pd.DataFrame:    
-        supported_columns={'id','subject','message_deduplication_id', 'message_group_id', 'message', 'topic_arn', 'message_attributes'}
+    def insert(self, query: ast.Insert) -> pd.DataFrame:
+        supported_columns = {'id', 'subject', 'message_deduplication_id', 'message_group_id', 'message', 'topic_arn',
+                             'message_attributes'}
         insert_statement_parser = INSERTQueryParser(
             query,
             mandatory_columns=['message', 'topic_arn'],
@@ -41,15 +42,14 @@ class MessageTable(APITable):
                 "Unsupported columns for publish message: "
                 + ", ".join(unsupported_columns)
             )
-    
+
         message_rows = insert_statement_parser.parse_query()
-        if 'id' not in  message_rows[0]:
-           for  message_row in message_rows:
-               message = message_row['message']
-               topic_arn = message_row['topic_arn']
-               param = {"message": message_row['message'], "topic_arn": message_row['topic_arn']  }
-               self.handler.call_sns_api("publish_message", param)
-               #self.handler.publish_message(topic_arn=topic_arn, message=message)
+        if 'id' not in message_rows[0]:
+            for message_row in message_rows:
+                message = message_row['message']
+                topic_arn = message_row['topic_arn']
+                param = {"message": message_row['message'], "topic_arn": message_row['topic_arn']}
+                self.handler.call_sns_api("publish_message", param)
         else:
             request_entries = []
             topic_arn = ""
@@ -63,21 +63,22 @@ class MessageTable(APITable):
                 message_deduplication_id = str()
                 message_attributes = {}
                 if 'subject' in message_row:
-                   subject = message_row['subject']
+                    subject = message_row['subject']
                 if 'message_deduplication_id' in message_row:
-                   message_deduplication_id = message_row['message_deduplication_id']
+                    message_deduplication_id = message_row['message_deduplication_id']
                 if 'message_group_id' in message_row:
-                   message_group_id = message_row['message_group_id']
+                    message_group_id = message_row['message_group_id']
                 if 'message_attributes' in message_row:
                     message_attributes = message_row['message_attributes']
                 # check uniq ids ?
                 if message_id in message_ids_set:
                     raise ValueError("Two or more batch entries in the request have the same Id")
-                message_ids_set.add(message_id)                      
-                request_entry={'Id': message_id, 'Message': message, 'Subject': subject, 'MessageDeduplicationId': message_deduplication_id, 'MessageGroupId': message_group_id, 'MessageAttributes': message_attributes }
-                request_entries.append(request_entry)             
+                message_ids_set.add(message_id)
+                request_entry = {'Id': message_id, 'Message': message, 'Subject': subject,
+                                 'MessageDeduplicationId': message_deduplication_id, 'MessageGroupId': message_group_id,
+                                 'MessageAttributes': message_attributes}
+                request_entries.append(request_entry)
             self.handler.publish_batch(topic_arn=topic_arn, batch_request_entries=request_entries)
-        
 
 
 class TopicTable(APITable):

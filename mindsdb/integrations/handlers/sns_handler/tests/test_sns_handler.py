@@ -20,14 +20,33 @@ class SnsHandlerTest(unittest.TestCase):
         assert response.success is True
 
     def test_create_topic(self):
-        topic_name = "test"
+        topic_name = "test12333"
         self.handler.create_topic({"name": topic_name})
         query = "SELECT * FROM topics"
         ast = parse_sql(query)
         sql_output = str(self.handler.query(ast))
         assert topic_name in sql_output
 
-    def test_create_topic_and_select_by_name(self):
+    def test_create_topic_and_select_by_topic_name(self):
         expected_topic_name = "test"
         self.handler.create_topic({"name": expected_topic_name})
         assert expected_topic_name in self.handler.call_sns_api("topic_list", {"topic_name": expected_topic_name})
+
+    def test_publish_message(self):
+        # todo add topic creation
+        expected_topic_name = "arn:aws:sns:us-east-1:000000000000:aaaaaaa"
+        response = self.handler.call_sns_api("publish_message", {"topic_arn": expected_topic_name, "message": "Test_message" })
+        print(str(response))
+    def test_publish_batch(self):
+        request_entries = []
+        expected_topic_name = "arn:aws:sns:us-east-1:000000000000:aaaaaaa"
+        request_entry = {'Id': '2333334', 'Message': 'test', 'Subject': 'subject',
+                         'MessageDeduplicationId': '1234556', 'MessageGroupId': '9999',
+                       }
+        request_entries.append(request_entry)
+        # TopicArn=params['topic_arn'],
+        #  PublishBatchRequestEntries=params['batch_request_entries']
+        response=self.handler.call_sns_api("publish_batch", {"topic_arn": expected_topic_name, "batch_request_entries": request_entries})
+        print(str(response))
+
+# todo test duplicates batch empty respone

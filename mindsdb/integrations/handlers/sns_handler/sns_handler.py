@@ -1,7 +1,5 @@
-
 from mindsdb.integrations.handlers.sns_handler.sns_tables import TopicTable
 from mindsdb.integrations.handlers.sns_handler.sns_tables import MessageTable
-from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb_sql import parse_sql
 from pandas import DataFrame
@@ -11,7 +9,7 @@ import boto3
 from typing import Dict
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 import json as JSON
-from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
+from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.utilities import log
 
 
@@ -32,7 +30,7 @@ class SnsHandler(APIHandler):
         super().__init__(name)
         self.parser = parse_sql
         self.dialect = "sns"
-        self.connection_data = connection_data 
+        self.connection_data = connection_data
         self.kwargs = kwargs
         self.connection = None
         self.is_connected = False
@@ -57,7 +55,7 @@ class SnsHandler(APIHandler):
         except Exception as e:
             log.logger.error(f'Error connecting to AWS with the given credentials, {e}!')
         return response
-    
+
     def disconnect(self):
         """ Close any existing connections
         Should switch self.is_connected.
@@ -70,7 +68,6 @@ class SnsHandler(APIHandler):
         """
         if self.is_connected is True:
             return self.connection
-        # todo test it
         if 'endpoint_url' in self.connection_data:
             self.connection = boto3.client(
                 'sns',
@@ -84,7 +81,7 @@ class SnsHandler(APIHandler):
                 'sns',
                 aws_access_key_id=self.connection_data['aws_access_key_id'],
                 aws_secret_access_key=self.connection_data['aws_secret_access_key'],
-                region_name=self.connection_data['region_name'])                
+                region_name=self.connection_data['region_name'])
         self.is_connected = True
         return self.connection
 
@@ -100,16 +97,28 @@ class SnsHandler(APIHandler):
         json_response = json_response.replace("\'", "\"")
         data = JSON.loads(str(json_response))
         return data["Topics"]
-   
-    def publish_message(self,  params: Dict = None):
-        self.connection.publish(TopicArn = params['topic_arn'], message = params['message'])
-    def publish_batch(self,  params: Dict = None):
-        self.connection.publish_batch(TopicArn = params['topic_arn'],PublishBatchRequestEntries=params['batch_request_entries'])
-                   
+
+    """
+     get topic_arn and message from params and sends message to amazon topic
+    """
+    def publish_message(self, params: Dict = None):
+        self.connection.publish(TopicArn=params['topic_arn'], Message=params['message'])
+
+    """
+    get topic_arn and 
+    publish multiple messages in a single batch (see https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/publish_batch.html)
+    """
+    def publish_batch(self, params: Dict = None):
+        self.connection.publish_batch(TopicArn=params['topic_arn'],
+                                      PublishBatchRequestEntries=params['batch_request_entries'])
+
+    """
+    
+    """
     def create_topic(self, params: Dict = None):
         name = params["name"]
         self.connection.create_topic(Name=name)
-        
+
     def native_query(self, query_string: str = None) -> StatusResponse:
         """Receive and process a raw query.
 
@@ -125,19 +134,20 @@ class SnsHandler(APIHandler):
         """
         ast = parse_sql(query_string, dialect="mindsdb")
         return self.query(ast)
-    
 
     def call_sns_api(self, method_name: str = None, params: dict = None) -> DataFrame:
         if method_name == 'create_topic':
             return self.create_topic(params)
         elif method_name == 'topic_list':
             return self.topic_list(params)
-        elif method_name == 'publish_batch':
+        elif method_name == 'publish_message':
             return self.publish_message(params)
         elif method_name == 'publish_batch':
             return self.publish_batch(params)
         else:
             raise NotImplementedError(f'Unknown method {method_name}')
+
+
 connection_args = OrderedDict(
     aws_access_key_id={
         'type': ARG_TYPE.STR,

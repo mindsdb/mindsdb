@@ -34,19 +34,14 @@ class TwelveLabsAPIClient:
             "addons": addons,
         }
 
-        response = self._submit_request(
+        result = self._submit_request(
             method="POST",
             endpoint="indexes",
             data=body,
         )
 
-        if response.status_code == 201:
-            logger.info(f"Index {index_name} successfully created.")
-            return response.json()['_id']
-        elif response.status_code == 400:
-            logger.error(f"Index {index_name} could not be created.")
-            # TODO: update Exception to be more specific
-            raise Exception(f"Index {index_name} could not be created. API request has failed: {response.json()['message']}")
+        logger.info(f"Index {index_name} successfully created.")
+        return result['_id']
 
     def get_index_by_name(self, index_name: str) -> str:
         """
@@ -57,19 +52,14 @@ class TwelveLabsAPIClient:
             "index_name": index_name,
         }
 
-        response = self._submit_request(
+        result = self._submit_request(
             method="GET",
             endpoint="indexes",
             data=params,
         )
 
-        if response.status_code == 200:
-            result = response.json()['data']
-            return result[0]['_id'] if result else None
-        elif response.status_code == 400:
-            logger.error(f"Index {index_name} could not be retrieved.")
-            # TODO: update Exception to be more specific
-            raise Exception(f"Index {index_name} could not be retrieved. API request has failed: {response.json()['message']}")
+        data = result['data']
+        return data[0]['_id'] if data else None
 
     def create_video_indexing_tasks(self, index_id: str, video_urls: List[str] = None, video_files: List[str] = None) -> List[str]:
         """
@@ -118,20 +108,15 @@ class TwelveLabsAPIClient:
         elif video_file:
             body['video_file'] = video_file
 
-        response = self._submit_multi_part_request(
+        result = self._submit_multi_part_request(
             method="POST",
             endpoint="tasks",
             data=body,
         )
         
-        if response.status_code == 201:
-            task_id = response.json()['_id']
-            logger.info(f"Created video indexing task {task_id} for {video_url if video_url else video_file} successfully.")
-            return task_id
-        elif response.status_code == 400:
-            logger.error(f"Video indexing task for {video_url if video_url else video_file} could not be created.")
-            # TODO: update Exception to be more specific
-            raise Exception(f"Video indexing task for {video_url if video_url else video_file} could not be created. API request has failed: {response.json()['message']}")
+        task_id = result['_id']
+        logger.info(f"Created video indexing task {task_id} for {video_url if video_url else video_file} successfully.")
+        return task_id
 
     def poll_for_video_indexing_tasks(self, task_ids: List[str]) -> None:
         """
@@ -169,18 +154,13 @@ class TwelveLabsAPIClient:
         Get a video indexing task.
 
         """
-        response = self._submit_request(
+        result = self._submit_request(
             method="GET",
             endpoint=f"tasks/{task_id}",
         )
 
-        if response.status_code == 200:
-            logger.info(f"Retrieved video indexing task {task_id} successfully.")
-            return response.json()
-        elif response.status_code == 400:
-            logger.error(f"Video indexing task {task_id} could not be retrieved.")
-            # TODO: update Exception to be more specific
-            raise Exception(f"Video indexing task {task_id} could not be retrieved. API request has failed: {response.json()['message']}")
+        logger.info(f"Retrieved video indexing task {task_id} successfully.")
+        return result
         
     def search_index(self, index_id: str, query: str, search_options: List[str]) -> Dict:
         """
@@ -193,19 +173,14 @@ class TwelveLabsAPIClient:
             "search_options": search_options
         }
 
-        response = self._submit_request(
+        result = self._submit_request(
             method="POST",
             endpoint=f"indexes/{index_id}/search",
             data=body,
         )
 
-        if response.status_code == 200:
-            logger.info(f"Search for index {index_id} completed successfully.")
-            return response.json()
-        elif response.status_code == 400:
-            logger.error(f"Search for index {index_id} could not be completed.")
-        elif response.status_code == 429:
-            logger.error(f"Search for index {index_id} could not be completed. Rate limit of 1 API call per second exceeded.")
+        logger.info(f"Search for index {index_id} completed successfully.")
+        return result
 
     def _submit_request(self, endpoint: str, headers: Dict = None, data: Dict = None, method: str = "GET") -> Dict:
         """
@@ -232,8 +207,14 @@ class TwelveLabsAPIClient:
 
         else:
             raise Exception(f"Method {method} not supported yet.")
-
-        return response
+        
+        result = response.json()
+        if response.status_code in (200, 201):
+            return result
+        else:
+            logger.error(f"API request has failed: {result['message']}")
+            # TODO: update Exception to be more specific
+            raise Exception(f"API request has failed: {result['message']}")
 
     def _submit_multi_part_request(self, endpoint: str, headers: Dict = None, data: Dict = None, method: str = "POST") -> Dict:
         """
@@ -257,4 +238,11 @@ class TwelveLabsAPIClient:
         else:
             raise Exception(f"Method {method} not supported yet.")
 
-        return response
+        result = response.json()
+        if response.status_code in (200, 201):
+            logger.error(f"API request was successful.")
+            return result
+        else:
+            logger.error(f"API request has failed: {result['message']}")
+            # TODO: update Exception to be more specific
+            raise Exception(f"API request has failed: {result['message']}")

@@ -1,4 +1,3 @@
-import os
 import time
 import requests
 from typing import Optional, Dict, List
@@ -9,6 +8,8 @@ from mindsdb.utilities import log
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
+
+from mindsdb.integrations.handlers.twelve_labs_handler.twelve_labs_api_client import TwelveLabsAPIClient
 
 
 logger = log.getLogger(__name__)
@@ -47,6 +48,9 @@ class TwelveLabsHandler(BaseMLEngine):
             engine_storage=self.engine_storage,
         )
 
+        # initialize TwelveLabsAPIClient
+        twelve_labs_api_client = TwelveLabsAPIClient(api_key=api_key)
+
         # update args with api key
         args['api_key'] = api_key
 
@@ -54,12 +58,12 @@ class TwelveLabsHandler(BaseMLEngine):
         self.model_storage.json_set('args', args)
 
         # get index if it exists
-        index_id = self._get_index_by_name(index_name=args['index_name'])
+        index_id = twelve_labs_api_client.get_index_by_name(index_name=args['index_name'])
 
         # create index if it doesn't exist
         if not index_id:
             logger.info(f"Index {args['index_name']} does not exist. Creating index.")
-            index_id = self._create_index(
+            index_id = twelve_labs_api_client.create_index(
                 index_name=args['index_name'],
                 engine_id=args['engine_id'] if 'engine_id' in args else None,
                 index_options=args['index_options'],
@@ -95,14 +99,14 @@ class TwelveLabsHandler(BaseMLEngine):
             logger.error("Neither video_urls_col, video_files_col, video_urls nor video_files have been set.")
             raise RuntimeError("Neither video_urls_col, video_files_col, video_urls nor video_files have been set. Please set one of them.")
 
-        task_ids = self._create_video_indexing_tasks(
+        task_ids = twelve_labs_api_client.create_video_indexing_tasks(
             index_id=index_id,
             video_urls=video_urls,
             video_files=video_files,
         )
 
         # poll for video indexing tasks to complete
-        self._poll_for_video_indexing_tasks(task_ids=task_ids)
+        twelve_labs_api_client.poll_for_video_indexing_tasks(task_ids=task_ids)
 
     def _create_index(self, index_name: str, index_options: List[str], engine_id: str  = None, addons: List[str] = None) -> str:
         """
@@ -314,7 +318,7 @@ class TwelveLabsHandler(BaseMLEngine):
         else:
             raise Exception(f"Method {method} not supported yet.")
 
-        return response        
+        return response   
 
     def _get_headers(self, api_key: str) -> Dict:
         return {

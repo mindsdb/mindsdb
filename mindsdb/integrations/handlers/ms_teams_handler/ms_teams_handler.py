@@ -9,6 +9,8 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
+logger = log.getLogger(__name__)
+
 
 class MSTeamsHandler(APIHandler):
     """
@@ -66,7 +68,7 @@ class MSTeamsHandler(APIHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Microsoft Teams!')
+            logger.error(f'Error connecting to Microsoft Teams!')
             response.error_message = str(e)
 
         self.is_connected = response.success

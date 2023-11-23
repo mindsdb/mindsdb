@@ -121,7 +121,7 @@ class YoutubeCommentsTable(APITable):
                 }
             }
 
-            self.handler.connect().commentThreads().insert(
+            self.handler.connect().comments().insert(
                 part='snippet',
                 body=request_body
             ).execute()

@@ -8,7 +8,7 @@ This is a general-purpose Retrieval Augmented Generation handler that can be use
 It supports the following:
 
 * Large language models such as [OpenAI](/integrations/ai-engines/openai) and [Writer](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/writer_handler#readme).
-* Vector databases such as [ChromaDB](/integrations/vector-db-integrations/chromadb).
+* Vector databases such as [ChromaDB](/integrations/vector-db-integrations/chromadb) and FAISS.
 * Embedding models compatible with the [Hugging Face sentence_transformers library](https://huggingface.co/sentence-transformers).
 
 ## Setup
@@ -62,6 +62,8 @@ Where:
 
 ## Usage
 
+### Simple Example
+
 Below is a complete usage example of the RAG handler.
 
 Create an ML engine - here, we are going to use OpenAI.
@@ -106,4 +108,90 @@ On execution, we get:
 +----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------+-----------------------------------------+
 | MindsDB supports supervised learning tasks such as regression, classification, and time series forecasting, as well as unsupervised learning tasks such as clustering and anomaly detection. | {}               | What ML use cases does MindsDB support? |
 +----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------------+-----------------------------------------+
+```
+
+### Advanced Examples
+
+#### OpenAI
+
+Create the RAG engine providing credentials for LLM you want to use.
+
+```sql
+CREATE ML_ENGINE rag_openai
+FROM rag
+USING 
+    openai_api_key = "value";
+```
+
+Create a model and embed input data.
+
+```sql
+ CREATE MODEL rag_openai_model
+ FROM datasource
+    (SELECT * FROM table)
+ PREDICT answer
+ USING
+    engine="rag_openai",
+    top_k=4,
+    llm_type="openai",
+    summarize_context=true,
+    vector_store_name="faiss",
+    run_embeddings=true,
+    vector_store_folder_name='rag_handler_openai_test',
+    embeddings_model_name="BAAI/bge-base-en",
+    prompt_template='Use the following pieces of context to answer the question at the end. If you do not know the answer, just say that you do not know, do not try to make up an answer.
+                        Context: {context}
+                        Question: {question}
+                        Helpful Answer:';
+```
+
+Now that the model is created, trained, and deployed, you can query for predictions.
+
+```sql
+ SELECT *
+ FROM rag_openai_model
+ WHERE question = 'what product is best for treating a cold?';
+```
+
+#### Writer
+
+Create the RAG engine providing credentials for LLM you want to use.
+
+```sql
+CREATE ML_ENGINE rag_writer
+FROM rag
+USING
+    writer_org_id = "value",
+    writer_api_key = "value";
+```
+
+Create a model and embed input data.
+
+```sql
+ -- Create with writer and embed input data
+ CREATE MODEL rag_writer_model
+ FROM datasource
+    (SELECT * FROM table)
+ PREDICT answer
+ USING
+    engine="rag_writer",
+    top_k=4,
+    llm_type="writer",
+    summarize_context=true,
+    vector_store_name="faiss",
+    run_embeddings=true,
+    vector_store_folder_name='rag_handler_openai_test',
+    embeddings_model_name="BAAI/bge-base-en",
+    prompt_template='Use the following pieces of context to answer the question at the end. If you do not know the answer, just say that you do not know, do not try to make up an answer.
+                        Context: {context}
+                        Question: {question}
+                        Helpful Answer:';
+```
+
+Now that the model is created, trained, and deployed, you can query for predictions.
+
+```sql
+ SELECT *
+ FROM rag_writer_model
+ WHERE question = 'what product is best for treating a cold?';
 ```

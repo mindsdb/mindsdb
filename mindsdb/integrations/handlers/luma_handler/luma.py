@@ -27,7 +27,6 @@ class LumaClient:
 
     def create_event(self, data):
         url = f'{self.luma_base_endpoint}public/v1/event/create'
-        print(url)
         content = self.make_request(url, method="POST", payload=data)
         if content['code'] != 200:
             raise Exception("Create failed - " + json.dumps(content["content"]))

@@ -170,7 +170,6 @@ def serve():
     ml_pb2_grpc.add_MLServiceServicer_to_server(
         MLServiceServicer(), server)
     server.add_insecure_port('[::]:50052')
-    print("staring rpc server on [::]:50052")
     logger.info("staring rpc server on [::]:50052")
     server.start()
     server.wait_for_termination()

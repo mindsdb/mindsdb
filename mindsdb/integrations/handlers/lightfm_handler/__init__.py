@@ -1,7 +1,5 @@
-from mindsdb.integrations.handlers.autosklearn_handler.__about__ import (
+from .__about__ import (
     __description__ as description,
-)
-from mindsdb.integrations.handlers.autosklearn_handler.__about__ import (
     __version__ as version,
 )
 from mindsdb.integrations.libs.const import HANDLER_TYPE

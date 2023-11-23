@@ -40,8 +40,7 @@ PREDICT column_to_be_predicted
 USING
     engine = 'langchain_engine',
     model_name = 'anthropic-or-openai-model'
-    anthropic_api_key = 'if-anthropic-model-is-used',
-    openai_api_key = 'if-openai-model-is-used',
+    api_key = 'either-openai-or-anthropic-api-key',
     serper_api_key = 'if-serper-dev-search-is-used',
     prompt_template = 'message to the model that may include some {{input}} columns as variables',
     ...;

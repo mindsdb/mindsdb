@@ -181,6 +181,31 @@ class TwelveLabsAPIClient:
             logger.error(f"Video indexing task {task_id} could not be retrieved.")
             # TODO: update Exception to be more specific
             raise Exception(f"Video indexing task {task_id} could not be retrieved. API request has failed: {response.json()['message']}")
+        
+    def search_index(self, index_id: str, query: str, search_options: List[str]) -> Dict:
+        """
+        Search an index.
+
+        """
+        body = {
+            "index_id": index_id,
+            "query": query,
+            "search_options": search_options
+        }
+
+        response = self._submit_request(
+            method="POST",
+            endpoint=f"indexes/{index_id}/search",
+            data=body,
+        )
+
+        if response.status_code == 200:
+            logger.info(f"Search for index {index_id} completed successfully.")
+            return response.json()
+        elif response.status_code == 400:
+            logger.error(f"Search for index {index_id} could not be completed.")
+        elif response.status_code == 429:
+            logger.error(f"Search for index {index_id} could not be completed. Rate limit of 1 API call per second exceeded.")
 
     def _submit_request(self, endpoint: str, headers: Dict = None, data: Dict = None, method: str = "GET") -> Dict:
         """

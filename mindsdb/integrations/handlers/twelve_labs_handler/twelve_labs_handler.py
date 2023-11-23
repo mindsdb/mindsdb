@@ -182,8 +182,8 @@ class TwelveLabsHandler(BaseMLEngine):
         )
         
         if response.status_code == 201:
-            logger.info(f"Created video indexing task {task_id} for {video_url if video_url else video_file} successfully.")
             task_id = response.json()['_id']
+            logger.info(f"Created video indexing task {task_id} for {video_url if video_url else video_file} successfully.")
             return task_id
         elif response.status_code == 400:
             logger.error(f"Video indexing task for {video_url if video_url else video_file} could not be created.")
@@ -202,14 +202,13 @@ class TwelveLabsHandler(BaseMLEngine):
             while is_task_running:
                 task = self._get_video_indexing_task(task_id=task_id)
                 status = task['status']
-                remaining_seconds = task['remain_seconds']
-
                 logger.info(f"Task {task_id} is in the {status} state.")
-                
-                # TODO: check what statuses can be returned
+
+                wait_durtion = task['process']['remain_seconds'] if 'process' in task else 5
+
                 if status in ('pending', 'indexing', 'validating'):
-                    logger.info(f"Task {task_id} will be polled again in {remaining_seconds} seconds.")
-                    time.sleep(task['remain_seconds'])
+                    logger.info(f"Task {task_id} will be polled again in {wait_durtion} seconds.")
+                    time.sleep(wait_durtion)
 
                 elif status == 'ready':
                     logger.info(f"Task {task_id} completed successfully.")
@@ -219,6 +218,8 @@ class TwelveLabsHandler(BaseMLEngine):
                     logger.error(f"Task {task_id} failed with status {task['status']}.")
                     # TODO: update Exception to be more specific
                     raise Exception(f"Task {task_id} failed with status {task['status']}.")
+                
+        logger.info("All videos indexed successfully.")
 
     def _get_video_indexing_task(self, task_id: str) -> Dict:
         """

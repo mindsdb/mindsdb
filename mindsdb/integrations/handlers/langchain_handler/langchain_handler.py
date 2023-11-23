@@ -204,7 +204,8 @@ class LangChainHandler(BaseMLEngine):
                             model_kwargs,
                             pred_args,
                             args['executor'],
-                            self.default_agent_tools)
+                            self.default_agent_tools,
+                            get_api_key('openai', args, self.engine_storage))
 
         memory = ConversationSummaryBufferMemory(llm=llm,
                                                  max_token_limit=max_tokens,

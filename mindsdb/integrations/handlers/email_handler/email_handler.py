@@ -10,6 +10,7 @@ from mindsdb_sql import parse_sql
 from mindsdb.integrations.handlers.email_handler.email_tables import EmailsTable
 from mindsdb.integrations.handlers.email_handler.email_helpers import EmailClient
 
+logger = log.getLogger(__name__)
 
 class EmailHandler(APIHandler):
     """A class for handling connections and interactions with Email (send and search).
@@ -44,7 +45,7 @@ class EmailHandler(APIHandler):
         try:
             self.connection = EmailClient(**self.connection_data)
         except Exception as e:
-            log.logger.error(f'Error connecting to email api: {e}!')
+            logger.error(f'Error connecting to email api: {e}!')
             raise e
 
         self.is_connected = True
@@ -60,7 +61,7 @@ class EmailHandler(APIHandler):
 
         except Exception as e:
             response.error_message = f'Error connecting to Email: {e}. '
-            log.logger.error(response.error_message)
+            logger.error(response.error_message)
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False

@@ -12,6 +12,8 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
+logger = log.getLogger(__name__)
+
 
 class OpenBBHandler(APIHandler):
     """A class for handling connections and interactions with the OpenBB Platform.
@@ -81,7 +83,7 @@ class OpenBBHandler(APIHandler):
                 response.success = True
 
         except Exception as e:
-            log.logger.error(f"Error connecting to OpenBB Platform: {e}!")
+            logger.error(f"Error connecting to OpenBB Platform: {e}!")
             response.error_message = e
 
         self.is_connected = response.success
@@ -116,7 +118,7 @@ class OpenBBHandler(APIHandler):
 
         try:
             if params is None:
-                log.logger.error("At least cmd needs to be added!")
+                logger.error("At least cmd needs to be added!")
                 raise Exception("At least cmd needs to be added!")
 
             # Get the OpenBB command to get the data from
@@ -125,7 +127,7 @@ class OpenBBHandler(APIHandler):
             # Ensure that the cmd provided is a valid OpenBB command
             available_cmds = [f"obb{cmd}" for cmd in list(obb.coverage.commands.keys())]
             if cmd not in available_cmds:
-                log.logger.error(f"The command provided is not supported by OpenBB! Choose one of the following: {', '.join(available_cmds)}")
+                logger.error(f"The command provided is not supported by OpenBB! Choose one of the following: {', '.join(available_cmds)}")
                 raise Exception(f"The command provided is not supported by OpenBB! Choose one of the following: {', '.join(available_cmds)}")
 
             args = ""
@@ -155,7 +157,7 @@ class OpenBBHandler(APIHandler):
             data.columns = self._process_cols_names(data.columns)
 
         except Exception as e:
-            log.logger.error(f"Error accessing data from OpenBB: {e}!")
+            logger.error(f"Error accessing data from OpenBB: {e}!")
             raise Exception(f"Error accessing data from OpenBB: {e}!")
 
         return data

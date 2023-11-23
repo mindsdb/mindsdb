@@ -2,6 +2,7 @@ import copy
 from typing import List
 
 import pandas as pd
+from mindsdb.integrations.handlers.sentence_transformers_handler.settings import DEFAULT_EMBEDDING_MODEL
 
 import mindsdb_sql.planner.utils as utils
 from mindsdb_sql.parser.ast import (
@@ -310,8 +311,8 @@ class KnowledgeBaseController:
 
         statement = CreatePredictor(
             name=Identifier(parts=[project_name, model_name]),
-            using={"engine": engine},
-            targets=[Identifier(parts=["text"])],
+            targets=[Identifier(parts=["embeddings"])],
+            using={"embeddings_model_name": DEFAULT_EMBEDDING_MODEL}
         )
 
         ml_handler = self.session.integration_controller.get_handler(

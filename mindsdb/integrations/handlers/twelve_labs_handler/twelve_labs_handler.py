@@ -131,7 +131,9 @@ class TwelveLabsHandler(BaseMLEngine):
                 search_options=args['search_options']
             )
 
-            return pd.json_normalize(data)
+            # TODO: pick only the necessary columns?
+            # TODO: structure nested columns?
+            return pd.json_normalize(data).add_prefix(args['target'] + '.')
             
         else:
             raise NotImplementedError(f"Task {args['task']} is not supported.")

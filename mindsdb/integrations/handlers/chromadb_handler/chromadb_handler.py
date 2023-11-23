@@ -423,5 +423,5 @@ connection_args = OrderedDict(
 connection_args_example = OrderedDict(
     host="localhost",
     port="8000",
-    persist_directory="chroma",
+    persist_directory="chromadb",
 )

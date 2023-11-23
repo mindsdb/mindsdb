@@ -1,6 +1,9 @@
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.fs import RESOURCE_GROUP
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 class JsonStorage:
@@ -71,7 +74,7 @@ class JsonStorage:
                 db.session.commit()
             except Exception:
                 db.session.rollback()
-                print('cant delete record from JSON storage')
+                logger.error('cant delete record from JSON storage')
 
     def delete(self, key):
         del self[key]
@@ -84,7 +87,7 @@ class JsonStorage:
             db.session.commit()
         except Exception:
             db.session.rollback()
-            print('cant delete records from JSON storage')
+            logger.error('cant delete records from JSON storage')
 
 
 def get_json_storage(resource_id: int, resource_group: str = RESOURCE_GROUP.PREDICTOR):

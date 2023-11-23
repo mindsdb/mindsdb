@@ -244,6 +244,28 @@ class TestRAG(BaseExecutorDummyLLM):
         df = self.run_sql(sql)
         assert df.shape[0] == 1
 
-    @pytest.mark.skip(reason="Not implemented")
     def test_update_rag(self):
-        ...
+
+        # create a RAG without knowledge_base_store, default should be used
+        sql = f"""
+            CREATE RAG test_rag
+            USING
+            llm = {self.llm_name}
+        """
+        self.run_sql(sql)
+
+        # verify the RAG is created
+        rag_obj = self.db.session.query(RAG).filter_by(name="test_rag").first()
+        assert rag_obj is not None
+
+        # update the RAG with a new knowledge_base_store 'kb_test'
+        sql = f"""
+            UPDATE RAG test_rag
+            SET knowledge_base_store = {self.kb_name}
+        """
+        self.run_sql(sql)
+
+        # verify the RAG is updated
+        rag_obj = self.db.session.query(RAG).filter_by(name="test_rag").first()
+        assert rag_obj is not None
+        assert rag_obj.knowledge_base_store == self.kb_name

@@ -325,7 +325,8 @@
                     "connect/deepnote",
                     "connect/metabase",
                     "connect/tableau",
-                    "connect/jupysql"
+                    "connect/jupysql",
+                    "connect/grafana"
                   ]
                 }
               ]

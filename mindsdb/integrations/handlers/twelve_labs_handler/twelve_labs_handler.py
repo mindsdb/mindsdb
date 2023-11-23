@@ -69,6 +69,9 @@ class TwelveLabsHandler(BaseMLEngine):
         else:
             logger.info(f"Index {args['index_name']} already exists. Using existing index.")
 
+        # store index_id in model_storage
+        self.model_storage.json_set('index_id', index_id)
+
         # create video indexing tasks for all video files or video urls
         # video urls will be given precedence
         # check if video_urls_col has been set and use it to get the video urls

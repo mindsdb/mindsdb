@@ -102,6 +102,7 @@ class TwelveLabsHandler(BaseMLEngine):
             return response.json()['_id']
         elif response.status_code == 400:
             logger.error(f"Index {index_name} could not be created.")
+            # TODO: update Exception to be more specific
             raise Exception(f"Index {index_name} could not be created. API request has failed: {response.json()['message']}")
 
     def _get_index_by_name(self, index_name: str) -> str:
@@ -124,6 +125,7 @@ class TwelveLabsHandler(BaseMLEngine):
             return result[0]['_id'] if result else None
         elif response.status_code == 400:
             logger.error(f"Index {index_name} could not be retrieved.")
+            # TODO: update Exception to be more specific
             raise Exception(f"Index {index_name} could not be retrieved. API request has failed: {response.json()['message']}")
 
     def _create_video_indexing_tasks(self, index_id: str, video_urls: List[str] = None, video_files: List[str] = None) -> List[str]:
@@ -185,6 +187,7 @@ class TwelveLabsHandler(BaseMLEngine):
             return task_id
         elif response.status_code == 400:
             logger.error(f"Video indexing task for {video_url if video_url else video_file} could not be created.")
+            # TODO: update Exception to be more specific
             raise Exception(f"Video indexing task for {video_url if video_url else video_file} could not be created. API request has failed: {response.json()['message']}")
 
     def _poll_for_video_indexing_tasks(self, task_ids: List[str]) -> None:
@@ -214,6 +217,7 @@ class TwelveLabsHandler(BaseMLEngine):
 
                 else:
                     logger.error(f"Task {task_id} failed with status {task['status']}.")
+                    # TODO: update Exception to be more specific
                     raise Exception(f"Task {task_id} failed with status {task['status']}.")
 
     def _get_video_indexing_task(self, task_id: str) -> Dict:
@@ -231,6 +235,7 @@ class TwelveLabsHandler(BaseMLEngine):
             return response.json()
         elif response.status_code == 400:
             logger.error(f"Video indexing task {task_id} could not be retrieved.")
+            # TODO: update Exception to be more specific
             raise Exception(f"Video indexing task {task_id} could not be retrieved. API request has failed: {response.json()['message']}")
 
     def _submit_request(self, endpoint: str, headers: Dict = None, data: Dict = None, method: str = "GET") -> Dict:

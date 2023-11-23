@@ -4,7 +4,8 @@ from mindsdb.integrations.utilities.date_utils import parse_local_date
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, project_dataframe, filter_dataframe
 from mindsdb.integrations.utilities.sql_utils import sort_dataframe
 from mindsdb.integrations.utilities.utils import dict_to_yaml
-from typing import Dict, List
+from typing import Dict, List, Union
+from pydantic import ValidationError
 
 import pandas as pd
 
@@ -16,7 +17,7 @@ def create_table_class(
     func_docs="",
     provider=None
 ):
-
+    """Creates a table class for the given OpenBB Platform function."""
     mandatory_fields = [key for key in params_metadata['fields'].keys() if params_metadata['fields'][key].is_required() is True]
     response_columns = list(response_metadata['fields'].keys())
 
@@ -55,7 +56,7 @@ def create_table_class(
                 params['provider'] = provider
             
             filters = []
-            mandatory_args = {key: False for key in mandatory_fields}
+            mandatory_args_set = {key: False for key in mandatory_fields}
             columns_to_add = {}
             strict_filter = arg_params.get('strict_filter', False)
 
@@ -64,7 +65,7 @@ def create_table_class(
                     raise NotImplementedError('OR is not supported')
                 
                 if arg1 in mandatory_fields:
-                    mandatory_args[arg1] = True
+                    mandatory_args_set[arg1] = True
 
                 if ('start_' + arg1 in params_metadata['fields']
                     and arg1 in response_columns and arg2 is not None
@@ -97,22 +98,23 @@ def create_table_class(
 
                 filters.append([op, arg1, arg2])
 
-            # TODO: improve this error handling
-            # bug here where mandatory args are not being checked properly
-            if not all(mandatory_args.values()):
-                string = 'You must specify the following arguments in the WHERE statement:'
+            if not all(mandatory_args_set.values()):
+                missing_args = ", ".join([k for k, v in mandatory_args_set.items() if v is False])
+                text = f"You must specify the following arguments in the WHERE statement: {missing_args}\n"
 
-                # Grab the elements that are False and show them + description
+                # Create docstring for the current function
+                text += "\nDocstring:"
+                for param in params_metadata['fields']:
+                    field = params_metadata['fields'][param]
+                    if getattr(field.annotation, '__origin__', None) is Union:
+                        annotation = f"Union[{', '.join(arg.__name__ for arg in field.annotation.__args__)}]"
+                    else:
+                        annotation = field.annotation.__name__
+                    text += f"\n  * {param}{'' if field.is_required() else ' (optional)'}: {annotation}\n{field.description}"
 
-                for key in mandatory_args:
-                    if not mandatory_args[key]:
-                        string += "\n--(required)---\n* {key}:\n{help}\n ".format(key=key, help=str(params_metadata['fields'][key]))
+                text += f"\n\nFor more information check {func_docs}"
 
-                for key in params_metadata["fields"]:
-                    if key not in mandatory_args:
-                        string += "\n--(optional)---\n* {key}:\n{help}\n ".format(key=key, help=str(params_metadata['fields'][key]))
-                
-                raise NotImplementedError(string)
+                raise NotImplementedError(text)
 
             try:
                 obbject = obb_function(**params)
@@ -121,7 +123,7 @@ def create_table_class(
                 result = obbject.to_df()
 
                 if result is None:
-                    raise Exception(f"For more information check '{func_docs}'.")
+                    raise Exception(f"For more information check {func_docs}.")
 
                 # Check if index is a datetime, if it is we want that as a column
                 if isinstance(result.index, pd.DatetimeIndex):
@@ -131,7 +133,7 @@ def create_table_class(
                     result = result.head(query.limit.value)
 
                     if result is None:
-                        raise Exception(f"For more information check '{func_docs}'.")
+                        raise Exception(f"For more information check {func_docs}.")
 
                 for key in columns_to_add:
                     result[key] = params[key]
@@ -140,7 +142,7 @@ def create_table_class(
                 result = filter_dataframe(result, filters)
 
                 if result is None:
-                    raise Exception(f"For more information check '{func_docs}'.")
+                    raise Exception(f"For more information check {func_docs}.")
 
                 columns = self.get_columns()
 
@@ -154,9 +156,39 @@ def create_table_class(
 
                 return result
             
-            # TODO: improve this error handling to show details about the command and the error
             except AttributeError as e:
-                raise Exception(f"{str(e)}\n\nFor more information check '{func_docs}'.") from e
+                print(str(e))
+
+                # Create docstring for the current function
+                text = "Docstring:"
+                for param in params_metadata['fields']:
+                    field = params_metadata['fields'][param]
+                    if getattr(field.annotation, '__origin__', None) is Union:
+                        annotation = f"Union[{', '.join(arg.__name__ for arg in field.annotation.__args__)}]"
+                    else:
+                        annotation = field.annotation.__name__
+                    text += f"\n  * {param}{'' if field.is_required() else ' (optional)'}: {annotation}\n{field.description}"
+
+                text += f"\n\nFor more information check {func_docs}"
+
+                raise Exception(f"{str(e)}\n\n{text}.") from e
+            
+            except ValidationError as e:
+                print(str(e))
+
+                # Create docstring for the current function
+                text = "Docstring:"
+                for param in params_metadata['fields']:
+                    field = params_metadata['fields'][param]
+                    if getattr(field.annotation, '__origin__', None) is Union:
+                        annotation = f"Union[{', '.join(arg.__name__ for arg in field.annotation.__args__)}]"
+                    else:
+                        annotation = field.annotation.__name__
+                    text += f"\n  * {param}{'' if field.is_required() else ' (optional)'}: {annotation}\n{field.description}"
+
+                text += f"\n\nFor more information check {func_docs}"
+
+                raise Exception(f"{str(e)}\n\n{text}.") from e
 
             except Exception as e:
                 print(str(e))
@@ -169,7 +201,19 @@ def create_table_class(
                     raise Exception(f"{str(e)}\n\nGo to https://my.openbb.co/app/platform/api-keys to set this API key, for free.") from e
                 
                 # Catch all other errors
-                raise Exception(f"{str(e)}\n\nFor more information check {func_docs}") from e
+                # Create docstring for the current function
+                text = "Docstring:"
+                for param in params_metadata['fields']:
+                    field = params_metadata['fields'][param]
+                    if getattr(field.annotation, '__origin__', None) is Union:
+                        annotation = f"Union[{', '.join(arg.__name__ for arg in field.annotation.__args__)}]"
+                    else:
+                        annotation = field.annotation.__name__
+                    text += f"\n  * {param}{'' if field.is_required() else ' (optional)'}: {annotation}\n{field.description}"
+
+                text += f"\n\nFor more information check {func_docs}"
+
+                raise Exception(f"{str(e)}\n\n{text}.") from e
 
         def get_columns(self):
             return response_columns

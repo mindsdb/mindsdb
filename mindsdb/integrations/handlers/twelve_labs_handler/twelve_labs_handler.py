@@ -125,11 +125,13 @@ class TwelveLabsHandler(BaseMLEngine):
         # check if task is search
         if args['task'] == 'search':
             # search for query in index
-            result = twelve_labs_api_client.search_index(
+            data = twelve_labs_api_client.search_index(
                 index_id=args['index_id'],
                 query=query,
                 search_options=args['search_options']
             )
+
+            return pd.json_normalize(data)
             
         else:
             raise NotImplementedError(f"Task {args['task']} is not supported.")

@@ -106,10 +106,10 @@ class YoutubeCommentsTable(APITable):
                     self.insert_comment(video_id=value['video_id'], text=value['comment'])
 
             else:
-                if not value.get('replies.reply'):
+                if not value.get('reply'):
                     raise ValueError(f"reply is mandatory for inserting a reply.")
                 else:
-                    self.insert_comment(comment_id=value['comment_id'], text=value['replies.reply'])
+                    self.insert_comment(comment_id=value['comment_id'], text=value['reply'])
 
     def insert_comment(self, text, video_id: str = None, comment_id: str = None):
         # if comment_id is provided, define the request body for a reply and insert it
@@ -151,7 +151,7 @@ class YoutubeCommentsTable(APITable):
         List[str]
             List of columns
         """
-        return ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at", 'replies.user_id', 'replies.reply_author', 'replies.reply']
+        return ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at", 'reply_user_id', 'reply_author', 'reply']
 
     def get_comments(self, video_id: str, channel_id: str):
         """Pulls all the records from the given youtube api end point and returns it select()
@@ -224,7 +224,8 @@ class YoutubeCommentsTable(APITable):
                 break
 
         youtube_comments_df = pd.json_normalize(data, 'replies', ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at"], record_prefix='replies.')
-        return youtube_comments_df[['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at", 'replies.user_id', 'replies.reply_author', 'replies.reply']]
+        youtube_comments_df = youtube_comments_df.rename(columns={'replies.user_id': 'reply_user_id', 'replies.reply_author': 'reply_author', 'replies.reply': 'reply'})
+        return youtube_comments_df[['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at", 'reply_user_id', 'reply_author', 'reply']]
 
 
 class YoutubeChannelsTable(APITable):

@@ -272,7 +272,7 @@ class RAGBaseController:
             model_name=llm.name,
             attribute="args",
         )
-        args_df.set_index("tables", inplace=True)
+        args_df.set_index("key", inplace=True)
 
         # get the knowledge base id
         knowledge_base_id = rag.knowledge_base_id
@@ -357,10 +357,11 @@ class RAGBaseExecutor:
         llm = rag_metadata[self.LLM_FIELD]
         kb = rag_metadata[self.KNOWLEDGE_BASE_FIELD]
 
-        if not query.where and query.where.op != "=":
-            raise ValueError("query on a RAG must include a single where clause")
+        if query.where is None or query.where.op != "=":
+            raise ValueError("query on a RAG must include a single "
+                             "where clause i.e. name of question_column in llm")
 
-        input_where_left = query.where.args[0]
+        input_where_left = query.where.args[0].parts[-1]
         input_where_right = query.where.args[1]
 
         vector_db_content = TableField.CONTENT.value

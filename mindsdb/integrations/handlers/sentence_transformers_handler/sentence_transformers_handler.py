@@ -1,6 +1,5 @@
 from typing import Optional
 
-import dill
 import pandas as pd
 
 from mindsdb.integrations.handlers.sentence_transformers_handler.settings import Parameters
@@ -27,38 +26,37 @@ class SentenceTransformersHandler(BaseMLEngine):
         args = args["using"]
 
         valid_args = Parameters(**args)
-
-        model = load_embeddings_model(valid_args.embeddings_model_name)
-
-        self.model_storage.file_set("model", dill.dumps(model))
         self.model_storage.json_set("args", valid_args.dict())
 
     def predict(self, df, args=None):
         """loads persisted embeddings model and gets embeddings on input text column(s)"""
 
-        args = args["predict_params"]
-        columns = args.get("columns")
+        args = self.model_storage.json_get("args")
 
-        if columns:
-            if isinstance(args["columns"], str):
-                columns = [columns]
+        if isinstance(args['text_columns'], str):
+            columns = [args['text_columns']]
+
+        elif isinstance(args['text_columns'], list):
+            columns = args['text_columns']
+
+        elif args['text_columns'] is None:
+            # assume all columns are text columns
+            logger.info("No text columns specified, assuming all columns are text columns")
+            columns = df.columns.tolist()
 
         else:
-            logger.info("no columns specified, all columns from input will be embedded")
-
-            columns = df.columns
+            raise ValueError(f"Invalid value for text_columns: {args['text_columns']}")
 
         documents = df_to_documents(df=df, page_content_columns=columns)
 
-        model = dill.loads(self.model_storage.file_get("model"))
+        content = [doc.page_content for doc in documents]
+        metadata = [doc.metadata for doc in documents]
 
-        embeddings = []
+        model = load_embeddings_model(args['embeddings_model_name'])
 
-        for _, document in enumerate(documents):
-            _embeddings = model.encode(document.text).tolist()
-            embeddings.append(_embeddings)
+        embeddings = model.embed_documents(texts=content)
 
-        embeddings_df = pd.DataFrame(data={"embeddings": embeddings})
+        embeddings_df = pd.DataFrame(data={"content": content, "embeddings": embeddings, "metadata": metadata})
 
         return embeddings_df
 

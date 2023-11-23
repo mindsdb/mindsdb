@@ -123,10 +123,10 @@ if __name__ == '__main__':
 
     if telemetry_file_exists(config['storage_dir']):
         os.environ['CHECK_FOR_UPDATES'] = '0'
-        print('\n x telemetry disabled! \n')
+        logger.info('\n x telemetry disabled! \n')
     elif os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False'] or config.get('cloud', False):
         disable_telemetry(config['storage_dir'])
-        print('\n x telemetry disabled \n')
+        logger.info('\n x telemetry disabled! \n')
     else:
         logger.info("✓ telemetry enabled")
 

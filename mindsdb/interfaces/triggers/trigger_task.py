@@ -14,6 +14,8 @@ from mindsdb.utilities import log
 from mindsdb.interfaces.tasks.task import BaseTask
 from mindsdb.utilities.context import context as ctx
 
+logger = log.getLogger(__name__)
+
 
 class TriggerTask(BaseTask):
     def __init__(self, *args, **kwargs):
@@ -54,7 +56,7 @@ class TriggerTask(BaseTask):
         data_handler.subscribe(stop_event, self._callback, trigger.table_name, columns)
 
     def _callback(self, row, key=None):
-        log.logger.debug(f'trigger call: {row}, {key}')
+        logger.debug(f'trigger call: {row}, {key}')
 
         # set up environment
         ctx.load(self._ctx_dump)

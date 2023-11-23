@@ -142,7 +142,7 @@ def define_deps():
 
                     extra_requirements[extra_name] = extra
                     full_handlers_requirements += extra
-                    print(extra_name, extra)
+
                 # Even with no requirements in our handler, list the handler as an extra (with no reqs)
                 else:
                     extra_requirements[extra_name] = []

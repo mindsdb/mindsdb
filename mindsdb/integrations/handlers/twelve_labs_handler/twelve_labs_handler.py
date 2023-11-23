@@ -207,11 +207,11 @@ class TwelveLabsHandler(BaseMLEngine):
                 logger.info(f"Task {task_id} is in the {status} state.")
                 
                 # TODO: check what statuses can be returned
-                if status == 'running':
+                if status in ('pending', 'indexing', 'validating'):
                     logger.info(f"Task {task_id} will be polled again in {remaining_seconds} seconds.")
                     time.sleep(task['remain_seconds'])
 
-                elif status == 'completed':
+                elif status == 'ready':
                     logger.info(f"Task {task_id} completed successfully.")
                     is_task_running = False
 

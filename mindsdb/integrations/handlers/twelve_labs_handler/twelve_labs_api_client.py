@@ -19,7 +19,7 @@ class TwelveLabsAPIClient:
         self.api_key = api_key
         self.headers = {
             'Content-Type': 'application/json',
-            'Authorization': f'Bearer {self.api_key}'
+            'x-api-key': self.api_key
         }
 
     def create_index(self, index_name: str, index_options: List[str], engine_id: str  = None, addons: List[str] = None) -> str:

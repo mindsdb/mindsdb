@@ -1,13 +1,9 @@
 import time
 import requests
-from typing import Optional, Dict, List
+from typing import Dict, List
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 
-import pandas as pd
 from mindsdb.utilities import log
-
-from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.integrations.utilities.handler_utils import get_api_key
 
 
 logger = log.getLogger(__name__)

@@ -106,4 +106,30 @@ class TwelveLabsHandler(BaseMLEngine):
         self.model_storage.json_set('args', args)
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        pass
+        # get args from model_storage
+        args = self.model_storage.json_get('args')
+
+        # get api key
+        api_key = get_api_key(
+            api_name=self.name,
+            create_args=args,
+            engine_storage=self.engine_storage,
+        )
+
+        # initialize TwelveLabsAPIClient
+        twelve_labs_api_client = TwelveLabsAPIClient(api_key=api_key)
+
+        # get search query
+        query = df['query'].tolist()[0]
+
+        # check if task is search
+        if args['task'] == 'search':
+            # search for query in index
+            result = twelve_labs_api_client.search_index(
+                index_id=args['index_id'],
+                query=query,
+                search_options=args['search_options']
+            )
+            
+        else:
+            raise NotImplementedError(f"Task {args['task']} is not supported.")

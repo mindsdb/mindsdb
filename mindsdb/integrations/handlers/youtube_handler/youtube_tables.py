@@ -2,7 +2,7 @@ from typing import List
 
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.handlers.utilities.query_utilities import (
@@ -15,7 +15,7 @@ import re
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.formatters import JSONFormatter
 
-logger = get_log("integrations.youtube_handler")
+logger = log.getLogger(__name__)
 
 
 class YoutubeCommentsTable(APITable):

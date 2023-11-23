@@ -18,7 +18,7 @@ import pandas as pd
 import IfxPyDbi as I 
 from sqlalchemy_informix.ibmdb import  InformixDialect
 
-
+logger = log.getLogger(__name__)
 
 class InformixHandler(DatabaseHandler):
 
@@ -74,7 +74,7 @@ class InformixHandler(DatabaseHandler):
   
             self.is_connected= True
         except Exception as e:
-            log.logger.error(f'Error while connecting to {self.database}, {e}')
+            logger.error(f'Error while connecting to {self.database}, {e}')
 
 
         return self.connection
@@ -90,7 +90,7 @@ class InformixHandler(DatabaseHandler):
             self.connection.close()
             self.is_connected = False
         except Exception as e:
-            log.logger.error(f'Error while disconnecting to {self.database}, {e}')
+            logger.error(f'Error while disconnecting to {self.database}, {e}')
 
         return 
 
@@ -107,7 +107,7 @@ class InformixHandler(DatabaseHandler):
             self.connect()
             responseCode.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to database {self.database}, {e}!')
+            logger.error(f'Error connecting to database {self.database}, {e}!')
             responseCode.error_message = str(e)
         finally:
             if responseCode.success is True and need_to_close:
@@ -146,7 +146,7 @@ class InformixHandler(DatabaseHandler):
                 if self.loging_enabled:
                     self.connection.commit()
         except Exception as e:
-            log.logger.error(f'Error running query: {query} on {self.database}')
+            logger.error(f'Error running query: {query} on {self.database}')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
@@ -205,7 +205,7 @@ class InformixHandler(DatabaseHandler):
                 response = Response(RESPONSE_TYPE.OK)
             
         except Exception as e:
-            log.logger.error(f'Error running while getting table {e} on ')
+            logger.error(f'Error running while getting table {e} on ')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
@@ -246,7 +246,7 @@ class InformixHandler(DatabaseHandler):
                 response = Response(RESPONSE_TYPE.OK)
             
         except Exception as e:
-            log.logger.error(f'Error running while getting table {e} on ')
+            logger.error(f'Error running while getting table {e} on ')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)

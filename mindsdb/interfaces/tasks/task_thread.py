@@ -7,6 +7,8 @@ from mindsdb.utilities import log
 from mindsdb.interfaces.triggers.trigger_task import TriggerTask
 from mindsdb.interfaces.chatbot.chatbot_task import ChatBotTask
 
+logger = log.getLogger(__name__)
+
 
 class TaskThread(threading.Thread):
 
@@ -30,7 +32,7 @@ class TaskThread(threading.Thread):
         self.object_type = task_record.object_type
         self.object_id = task_record.object_id
 
-        log.logger.info(f'Task starting: {self.object_type}.{self.object_id}')
+        logger.info(f'Task starting: {self.object_type}.{self.object_id}')
         try:
             if self.object_type == 'trigger':
 
@@ -42,12 +44,12 @@ class TaskThread(threading.Thread):
                 bot.run(self._stop_event)
 
         except Exception:
-            log.logger.error(traceback.format_exc())
+            logger.error(traceback.format_exc())
             task_record.last_error = str(traceback.format_exc())
 
         db.session.commit()
 
     def stop(self):
-        log.logger.info(f'Task stopping: {self.object_type}.{self.object_id}')
+        logger.info(f'Task stopping: {self.object_type}.{self.object_id}')
 
         self._stop_event.set()

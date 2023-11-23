@@ -1,1 +1,1 @@
-pymysql
+-r mindsdb/integrations/handlers/matrixone_handler/requirements.txt

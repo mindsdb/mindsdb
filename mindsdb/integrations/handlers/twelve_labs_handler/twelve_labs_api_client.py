@@ -173,14 +173,23 @@ class TwelveLabsAPIClient:
             "search_options": search_options
         }
 
+        data = []
         result = self._submit_request(
             method="POST",
-            endpoint=f"indexes/{index_id}/search",
+            endpoint="search",
             data=body,
         )
+        data.extend(result['data'])
+
+        while('next_page_token' in result['page_info']):
+            result = self._submit_request(
+                method="GET",
+                endpoint=f"search/{result['page_info']['next_page_token']}"
+            )
+            data.extend(result['data'])
 
         logger.info(f"Search for index {index_id} completed successfully.")
-        return result
+        return data
 
     def _submit_request(self, endpoint: str, headers: Dict = None, data: Dict = None, method: str = "GET") -> Dict:
         """

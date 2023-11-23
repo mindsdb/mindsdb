@@ -71,10 +71,23 @@ class TwelveLabsHandler(BaseMLEngine):
 
         # create video indexing tasks for all video files or video urls
         # video urls will be given precedence
+        if 'video_urls_col' in args:
+            logger.info("video_urls_col has been set, therefore, it will be given precedence.")
+            video_urls = df[args['video_urls_col']].tolist()
+        
+        elif 'video_files_col' in args:
+            logger.info("video_urls_col has not been set, therefore, video_files_col will be used.")
+            video_files = df[args['video_files_col']].tolist()
+
+        else:
+            logger.info("video_urls_col and video_files_col have not been set, therefore, video_urls and video_files will be used.")
+            video_urls = ['video_urls'] if 'video_urls' in args else None
+            video_files = ['video_files'] if 'video_files' in args else None
+
         task_ids = self._create_video_indexing_tasks(
             index_id=index_id,
-            video_urls=args['video_urls'] if 'video_urls' in args else None,
-            video_files=args['video_files'] if 'video_files' in args else None,
+            video_urls=video_urls,
+            video_files=video_files,
         )
 
         # poll for video indexing tasks to complete

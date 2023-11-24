@@ -96,7 +96,6 @@ from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.model.functions import (
-    PredictorRecordNotFound,
     get_model_record,
     get_model_records,
     get_predictor_integration,
@@ -587,9 +586,6 @@ class ExecuteCommands:
         elif type(statement) == Delete:
             if statement.table.parts[-1].lower() == "models_versions":
                 return self.answer_delete_model_version(statement)
-            table_identifier = statement.table
-            if self.session.kb_controller.is_knowledge_base(table_identifier):
-                return self.session.kb_controller.execute_query(statement)
             if (
                 self.session.database != "mindsdb"
                 and statement.table.parts[0] != "mindsdb"
@@ -602,10 +598,6 @@ class ExecuteCommands:
             return ExecuteAnswer(ANSWER_TYPE.OK)
 
         elif type(statement) == Insert:
-            table_identifier = statement.table
-            if self.session.kb_controller.is_knowledge_base(table_identifier):
-                return self.session.kb_controller.execute_query(statement)
-
             SQLQuery(statement, session=self.session, execute=True)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Update:
@@ -624,11 +616,6 @@ class ExecuteCommands:
         elif type(statement) == Select:
             if statement.from_table is None:
                 return self.answer_single_row_select(statement)
-
-            table_identifier = statement.from_table
-            if self.session.kb_controller.is_knowledge_base(table_identifier):
-                return self.session.kb_controller.execute_query(statement)
-
             query = SQLQuery(statement, session=self.session)
             return self.answer_select(query)
         elif type(statement) == Union:
@@ -1030,6 +1017,7 @@ class ExecuteCommands:
             connection_args = {}
         status = HandlerStatusResponse(success=False)
 
+        storage = None
         try:
             handlers_meta = (
                 self.session.integration_controller.get_handlers_import_status()
@@ -1077,6 +1065,8 @@ class ExecuteCommands:
                 handler_type=engine, connection_data=connection_args
             )
             status = handler.check_connection()
+            if status.copy_storage:
+                storage = handler.handler_storage.export_files()
         except Exception as e:
             status.error_message = str(e)
 
@@ -1088,6 +1078,9 @@ class ExecuteCommands:
             raise EntityExistsError('Database already exists', name)
 
         self.session.integration_controller.add(name, engine, connection_args)
+        if storage:
+            handler = self.session.integration_controller.get_handler(name)
+            handler.handler_storage.import_files(storage)
 
     def answer_create_ml_engine(self, statement: ASTNode):
         name = statement.name.parts[-1]
@@ -1315,83 +1308,19 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
-    def _create_persistent_chroma(self, kb_name, collection_name, engine="chromadb"):
-        """Create default vector database for knowledge base, if not specified"""
-
-        vector_store_name = f"{kb_name}_{engine}"
-
-        vector_store_folder_name = f"{vector_store_name}"
-        connection_args = {"persist_directory": vector_store_folder_name}
-        self._create_integration(vector_store_name, engine, connection_args)
-
-        self.session.datahub.get(vector_store_name).integration_handler.create_table(
-            collection_name
-        )
-
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK), vector_store_name
-
     def answer_create_kb(self, statement: CreateKnowledgeBase):
         project_name = (
             statement.name.parts[0]
             if len(statement.name.parts) > 1
             else self.session.database
         )
-        # get project id
-        try:
-            project = self.session.database_controller.get_project(project_name)
-        except ValueError:
-            raise SqlApiException(f"Project not found: {project_name}")
-        project_id = project.id
 
-        kb_name = statement.name.parts[-1]
-
-        # search for the model
-        # verify the model exists and get its id
-        model_identifier = statement.model
-        try:
-            model_record = self._get_model_info(
-                identifier=model_identifier, except_absent=True
-            )
-
-        except PredictorRecordNotFound:
-            raise SqlApiException(f"Model not found: {model_identifier.to_string()}")
-
-        embedding_model_id = model_record["model_record"].id
-
-        # search for the vector database table
-        if statement.storage and len(statement.storage.parts) < 2:
-            raise SqlApiException(
-                f"Invalid vectordatabase table name: {statement.storage}"
-                "Need the form 'database_name.table_name'"
-            )
-
-        is_cloud = self.session.config.get("cloud", False)
-
-        if not statement.storage and is_cloud:
-            raise SqlApiException(
-                "No default vector database currently exists in MindsDB cloud. "
-                'Please specify one using the "storage" parameter'
-            )
-
-        vector_table_name = (
-            statement.storage.parts[-1] if statement.storage else "default_collection"
-        )
-
-        vector_db_name = (
-            statement.storage.parts[0]
-            if statement.storage
-            else self._create_persistent_chroma(
-                kb_name, collection_name=vector_table_name
-            )[1]
-        )
-
-        # verify the vector database exists and get its id
-        database_records = self.session.database_controller.get_dict()
-        is_database_exist = vector_db_name in database_records
-        if not is_database_exist:
-            raise SqlApiException(f"Database not found: {vector_db_name}")
-
-        vector_database_id = database_records[vector_db_name]["id"]
+        if statement.storage is not None:
+            if len(statement.storage.parts) != 2:
+                raise SqlApiException(
+                    f"Invalid vectordatabase table name: {statement.storage}"
+                    "Need the form 'database_name.table_name'"
+                )
 
         if statement.from_query is not None:
             # TODO: implement this
@@ -1399,16 +1328,15 @@ class ExecuteCommands:
                 "Create a knowledge base from a select is not supported yet"
             )
 
-        params = statement.params
+        kb_name = statement.name.parts[-1]
 
         # create the knowledge base
         _ = self.session.kb_controller.add(
             name=kb_name,
-            project_id=project_id,
-            vector_database_id=vector_database_id,
-            vector_database_table_name=vector_table_name,
-            embedding_model_id=embedding_model_id,
-            params=params,
+            project_name=project_name,
+            embedding_model=statement.model,
+            storage=statement.storage,
+            params=statement.params,
             if_not_exists=statement.if_not_exists,
         )
 
@@ -1422,18 +1350,10 @@ class ExecuteCommands:
             else self.session.database
         )
 
-        # get project id
-        try:
-            project = self.session.database_controller.get_project(project_name)
-        except ValueError:
-            raise SqlApiException(f"Project not found: {project_name}")
-
-        project_id = project.id
-
         # delete the knowledge base
         self.session.kb_controller.delete(
             name=name,
-            project_id=project_id,
+            project_name=project_name,
             if_exists=statement.if_exists,
         )
 

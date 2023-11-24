@@ -88,12 +88,14 @@ class SnsHandler(APIHandler):
     def topic_list(self, params: Dict = None):
         response = self.connection.list_topics()
         json_response = str(response)
-        if params is not None and 'topic_name' in params:
-            name = params["topic_name"]
+        if params is not None and 'name' in params:
+            name = params["name"]
             for topic_arn_row in response['Topics']:
                 topic_arn_name = topic_arn_row['TopicArn']
                 if name in topic_arn_name:
-                    return topic_arn_name
+                    return [{'TopicArn': topic_arn_name}]
+        if params is not None and 'name' in params:
+            return []
         json_response = json_response.replace("\'", "\"")
         data = JSON.loads(str(json_response))
         return data["Topics"]
@@ -113,7 +115,7 @@ class SnsHandler(APIHandler):
                                       PublishBatchRequestEntries=params['batch_request_entries'])
 
     """
-    
+       create topic arguments topic name
     """
     def create_topic(self, params: Dict = None):
         name = params["name"]
@@ -132,10 +134,17 @@ class SnsHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query_string, dialect="mindsdb")
-        return self.query(ast)
+        method_name, params = FuncParser().from_string(query_string)
+        df = self.call_sns_api(method_name, params)
+        return Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=df
+        )
 
     def call_sns_api(self, method_name: str = None, params: dict = None) -> DataFrame:
+        """Calls the sns API method with the given params.
+
+        """
         if method_name == 'create_topic':
             return self.create_topic(params)
         elif method_name == 'topic_list':

@@ -4,11 +4,14 @@ import pandas as pd
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilities import INSERTQueryParser
 from mindsdb.integrations.libs.api_handler import APITable, APIHandler
+from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
 
 class MessageTable(APITable):
     name: str = "messages"
-    columns: List[str] = ['message', 'topic_arn', 'id', 'subject', 'message_deduplication_id', 'message_group_id']
+    supported_columns = {'id', 'subject', 'message_deduplication_id', 'message_group_id', 'message', 'topic_arn',
+                             'message_attributes'}
+    columns: List[str] = list(supported_columns)
 
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
@@ -26,18 +29,18 @@ class MessageTable(APITable):
         super().__init__(handler)
         self.handler.connect()
 
+    """  Args: query (ast.Insert): SQL query to parse.
+    """
     def insert(self, query: ast.Insert) -> pd.DataFrame:
-        supported_columns = {'id', 'subject', 'message_deduplication_id', 'message_group_id', 'message', 'topic_arn',
-                             'message_attributes'}
         insert_statement_parser = INSERTQueryParser(
             query,
             mandatory_columns=['message', 'topic_arn'],
-            supported_columns=list(supported_columns),
+            supported_columns=list(self.supported_columns),
             all_mandatory=False
         )
         columns = [col.name for col in query.columns]
-        if not set(columns).issubset(supported_columns):
-            unsupported_columns = set(columns).difference(supported_columns)
+        if not set(columns).issubset(self.supported_columns):
+            unsupported_columns = set(columns).difference(self.supported_columns)
             raise ValueError(
                 "Unsupported columns for publish message: "
                 + ", ".join(unsupported_columns)
@@ -70,7 +73,6 @@ class MessageTable(APITable):
                     message_group_id = message_row['message_group_id']
                 if 'message_attributes' in message_row:
                     message_attributes = message_row['message_attributes']
-                # check uniq ids ?
                 if message_id in message_ids_set:
                     raise ValueError("Two or more batch entries in the request have the same Id")
                 message_ids_set.add(message_id)
@@ -82,8 +84,11 @@ class MessageTable(APITable):
 
 
 class TopicTable(APITable):
+    """
+     class for view and insert sns topics
+    """
     name: str = "topics"
-    columns: List[str] = ["TopicArn"]
+    columns: List[str] = ["topic_arn", "name"]
 
     def __init__(self, handler: APIHandler):
         super().__init__(handler)
@@ -98,15 +103,22 @@ class TopicTable(APITable):
         Returns:
             pd.DataFrame: the queried information
         """
-        topics = self.handler.topic_list()
-        ids_list = []
-        topics_arn_list = []
-        id = 1
+        conditions = extract_comparison_conditions(query.where)
+        params = {}
+        accepted_params = ['name']
+        for op, arg1, arg2 in conditions:
+            if arg1 in accepted_params:
+                if op != '=':
+                    raise NotImplementedError
+                params[arg1] = arg2
+            else:
+                raise NotImplementedError
+       
+        topics = self.handler.call_sns_api("topic_list",params)
+        topics_arn_list = [] 
         for topic in topics:
-            ids_list.append(id)
             topics_arn_list.append(topic["TopicArn"])
-            id += 1
-        data = {'id': ids_list, 'topic_arn': topics_arn_list}
+        data = {'topic_arn': topics_arn_list}
         df = pd.DataFrame(data=data)
         return df
 
@@ -126,7 +138,7 @@ class TopicTable(APITable):
             )
         topic_names = insert_statement_parser.parse_values()
         for topic_name in topic_names:
-            self.handler.create_topic(name=topic_name[0])
+            self.handler.call_sns_api("create_topic",{"name":topic_name[0]})
 
     def get_columns(self, ignore: List[str] = []) -> List[str]:
         """columns

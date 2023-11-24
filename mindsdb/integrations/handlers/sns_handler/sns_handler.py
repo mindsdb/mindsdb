@@ -68,24 +68,22 @@ class SnsHandler(APIHandler):
         """
         if self.is_connected is True:
             return self.connection
-        if 'endpoint_url' in self.connection_data:
-            self.connection = boto3.client(
+        self.connection = boto3.client(
                 'sns',
                 aws_access_key_id=self.connection_data['aws_access_key_id'],
                 aws_secret_access_key=self.connection_data['aws_secret_access_key'],
-                region_name=self.connection_data['region_name'],
-                endpoint_url=self.connection_data['endpoint_url']
-            )
-        else:
-            self.connection = boto3.client(
-                'sns',
-                aws_access_key_id=self.connection_data['aws_access_key_id'],
-                aws_secret_access_key=self.connection_data['aws_secret_access_key'],
-                region_name=self.connection_data['region_name'])
+                # using  for testing locally with localstack
+                # endpoint_url=self.connection_data['endpoint_url']
+                region_name=self.connection_data['region_name'])     
         self.is_connected = True
         return self.connection
 
     def topic_list(self, params: Dict = None):
+        """
+        returns topic arns 
+        Args:
+            params (Dict): topic name
+        """
         response = self.connection.list_topics()
         json_response = str(response)
         if params is not None and 'name' in params:
@@ -100,24 +98,29 @@ class SnsHandler(APIHandler):
         data = JSON.loads(str(json_response))
         return data["Topics"]
 
-    """
-     get topic_arn and message from params and sends message to amazon topic
-    """
+
     def publish_message(self, params: Dict = None):
+        """
+        get topic_arn and message from params and sends message to amazon topic
+        Args:
+           params (Dict): topic name
+        """
         self.connection.publish(TopicArn=params['topic_arn'], Message=params['message'])
 
-    """
-    get topic_arn and 
-    publish multiple messages in a single batch (see https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/publish_batch.html)
-    """
+
     def publish_batch(self, params: Dict = None):
+        """
+        get topic_arn and 
+        publish multiple messages in a single batch (see https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/publish_batch.html)
+        """
         self.connection.publish_batch(TopicArn=params['topic_arn'],
                                       PublishBatchRequestEntries=params['batch_request_entries'])
 
-    """
-       create topic arguments topic name
-    """
+
     def create_topic(self, params: Dict = None):
+        """
+        create topic arguments topic name
+        """
         name = params["name"]
         self.connection.create_topic(Name=name)
 

@@ -171,8 +171,7 @@ AND email = 'john.doe@example.com';
 
 ~~~~sql
 DELETE FROM shopify_datasource.orders
-WHERE id=5632671580477 
-AND contact_email='egnition_sample_21@egnition.com';
+WHERE id=5632671580477;
 ~~~~
 
 

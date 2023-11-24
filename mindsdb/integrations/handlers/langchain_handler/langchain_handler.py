@@ -32,7 +32,6 @@ _PARSING_ERROR_PREFIX = 'An output parsing error occurred'
 
 logger = log.getLogger(__name__)
 
-
 class LangChainHandler(BaseMLEngine):
     """
     This is a MindsDB integration for the LangChain library, which provides a unified interface for interacting with

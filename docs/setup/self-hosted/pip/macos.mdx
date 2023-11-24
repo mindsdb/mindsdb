@@ -34,40 +34,17 @@ To successfully install MindsDB, use **Python 64-bit version**. Also, make sure 
    pip install mindsdb
    ```
 
-4. Verify MindsDB installation:
-
-   ```bash
-   pip freeze
-   ```
-
-   You should see a list of installed packages including but not limited to the
-   following:
-
-   ```bash
-   ...
-   alembic==1.7.7
-   aniso8601==9.0.1
-   appdirs==1.4.4
-   lightgbm==3.3.0
-   lightwood==22.4.1.0
-   MindsDB==22.4.5.0
-   mindsdb-datasources==1.8.2
-   mindsdb-sql==0.3.3
-   mindsdb-streams==0.0.5
-   ...
-   ```
-
-5. Start MindsDB:
+4. Start MindsDB:
 
     ```bash
     python -m mindsdb
     ```
 
-By default, MindsDB will always start the `http` and `mysql` APIs. If you want to use Mongo API, you will need to provide that as a parameter to `--api`. You can do it as following:
+   By default, MindsDB will always start the `http` and `mysql` APIs. If you want to use Mongo API, you will need to provide that as a parameter to `--api`. You can do it as following:
 
-   ```bash
-   python -m mindsdb --api=http,mongodb,mysql
-   ```
+      ```bash
+      python -m mindsdb --api=http,mongodb,mysql
+      ```
 
 ## Installation using Anaconda
 
@@ -100,28 +77,31 @@ your machine.
    pip install mindsdb
    ```
 
-4. Verify MindsDB installation:
+4. Start MindsDB:
 
-   ```bach
-   conda list
-   ```
+    ```bash
+    python -m mindsdb
+    ```
 
-   You should see a list of installed packages including but not limited to the
-   following:
+   By default, MindsDB will always start the `http` and `mysql` APIs. If you want to use Mongo API, you will need to provide that as a parameter to `--api`. You can do it as following:
 
-   ```bash
-   ...
-   alembic==1.7.7
-   aniso8601==9.0.1
-   appdirs==1.4.4
-   lightgbm==3.3.0
-   lightwood==22.4.1.0
-   MindsDB==22.4.5.0
-   mindsdb-datasources==1.8.2
-   mindsdb-sql==0.3.3
-   mindsdb-streams==0.0.5
-   ...
-   ```
+      ```bash
+      python -m mindsdb --api=http,mongodb,mysql
+      ```
+
+## Dependencies
+
+The dependencies for many of the data or ML integrations are not installed by default.
+
+If you want to use a data or ML integration whose dependencies are not available by default, install it by running this command:
+
+```
+pip install .[handler_name]
+```
+
+<Tip>
+You can find all available [handlers here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers).
+</Tip>
 
 ## Troubleshooting
 

@@ -30,6 +30,8 @@ _DEFAULT_AGENT_TOOLS = ['python_repl', 'wikipedia']  # these require no addition
 _ANTHROPIC_CHAT_MODELS = {'claude-2', 'claude-instant-1'}
 _PARSING_ERROR_PREFIX = 'An output parsing error occurred'
 
+logger = log.getLogger(__name__)
+
 class LangChainHandler(BaseMLEngine):
     """
     This is a MindsDB integration for the LangChain library, which provides a unified interface for interacting with
@@ -362,7 +364,7 @@ class LangChainHandler(BaseMLEngine):
                         #
                         # Ideally, in the future, we would write a parser that is more robust and flexible than the one Langchain uses.
                         # Response is wrapped in ``
-                        log.logger.info(f"Agent failure, salvaging response...")
+                        logger.info(f"Agent failure, salvaging response...")
                         response_output = response.split('`')
                         if len(response_output) >= 2:
                             response = response_output[-2]

@@ -26,6 +26,9 @@ from mindsdb.utilities.ml_task_queue.const import (
     TASKS_STREAM_CONSUMER_NAME,
     TASKS_STREAM_CONSUMER_GROUP_NAME
 )
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 def _save_thread_link(func: Callable) -> Callable:
@@ -145,7 +148,7 @@ class MLTaskConsumer(BaseRedisQueue):
             try:
                 message = self.consumer_group.read(count=1, block=1000, consumer=TASKS_STREAM_CONSUMER_NAME)
             except RedisConnectionError as e:
-                print(f"Can't connect to Redis: {e}")
+                logger.error(f"Can't connect to Redis: {e}")
                 self._stop_event.set()
                 return
             except Exception:
@@ -242,7 +245,7 @@ def start(verbose: bool) -> None:
         consumer.run()
     except Exception as e:
         consumer.stop()
-        print(f'Got exception: {e}', flush=True)
+        logger.error(f'Got exception: {e}', flush=True)
         raise
     finally:
-        print('Consumer process stopped', flush=True)
+        logger.info('Consumer process stopped', flush=True)

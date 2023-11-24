@@ -16,7 +16,7 @@ class SnsHandlerTest(unittest.TestCase):
         }
         cls.handler = SnsHandler('test_sns_handler', connection_data)
 
-    """ 
+    
     def test_0_check_connection(self):
         response = self.handler.check_connection()
         assert response.success is True
@@ -36,7 +36,7 @@ class SnsHandlerTest(unittest.TestCase):
         assert expected_topic_name in str(result)
         #print(str(self.handler.call_sns_api("topic_list", {"topic_name": expected_topic_name})))
         #assert expected_topic_name in self.handler.call_sns_api("topic_list", {"topic_name": expected_topic_name})
-    """
+ 
   
     def test_nagative_create_topic_and_select_by_topic_name(self):
         expected_topic_name = "test"
@@ -45,7 +45,7 @@ class SnsHandlerTest(unittest.TestCase):
         result=self.handler.call_sns_api("topic_list", {'name': expected_topic_name})
         assert str(result)=="[]"
      
-    """
+  
     def test_create_topic_and_select_all_topics(self):
         expected_topic_name = "test"
         self.handler.create_topic({"name": expected_topic_name})
@@ -92,5 +92,3 @@ class SnsHandlerTest(unittest.TestCase):
         request_entries.append(request_entry1)
         self.handler.call_sns_api("publish_batch", {"topic_arn": expected_topic_name_arn, "batch_request_entries": request_entries})  
         
-    """ 
-# todo test duplicates batch empty respone

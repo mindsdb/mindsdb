@@ -111,6 +111,7 @@ PACKAGE_NAME_MAP = {
     "python-magic": ["magic"],
     "clickhouse-sqlalchemy": ["clickhouse_sqlalchemy"],
     "pillow": ["PIL"],
+    "auto-ts": ["auto_ts"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

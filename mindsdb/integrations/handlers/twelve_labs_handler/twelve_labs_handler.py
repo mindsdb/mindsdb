@@ -133,7 +133,12 @@ class TwelveLabsHandler(BaseMLEngine):
 
             # TODO: pick only the necessary columns?
             # TODO: structure nested columns?
-            return pd.json_normalize(data).add_prefix(args['target'] + '.')
+            # metadata = ['score', 'start', 'end', 'video_id', 'confidence']
+            # df_metadata = pd.json_normalize(data, record_path='metadata', meta=metadata, record_prefix='metadata_')
+            # df_modules = pd.json_normalize(data, record_path='modules', meta=metadata, record_prefix='modules_')
+            # df_predictions = pd.merge(df_metadata, df_modules, on=metadata)   
+            # return df_predictions
+            return pd.json_normalize(data).add_prefix(args['target'] + '_')
             
         else:
             raise NotImplementedError(f"Task {args['task']} is not supported.")

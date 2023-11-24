@@ -22,10 +22,10 @@ class TwelveLabsAPIClient:
             'x-api-key': self.api_key
         }
 
-    def create_index(self, index_name: str, index_options: List[str], engine_id: str  = None, addons: List[str] = None) -> str:
+    def create_index(self, index_name: str, index_options: List[str], engine_id: str = None, addons: List[str] = None) -> str:
         """
         Create an index.
-        
+
         """
         body = {
             "index_name": index_name,
@@ -75,11 +75,11 @@ class TwelveLabsAPIClient:
             for video_url in video_urls:
                 task_ids.append(
                     self._create_video_indexing_task(
-                        index_id=index_id, 
+                        index_id=index_id,
                         video_url=video_url
                     )
                 )
-            
+
         elif video_files:
             logger.info("video_urls has not been set, therefore, video_files will be used.")
             logger.info("Creating video indexing tasks for video files.")
@@ -87,7 +87,7 @@ class TwelveLabsAPIClient:
             for video_file in video_files:
                 task_ids.append(
                     self._create_video_indexing_task(
-                        index_id=index_id, 
+                        index_id=index_id,
                         video_file=video_file
                     )
                 )
@@ -113,7 +113,7 @@ class TwelveLabsAPIClient:
             endpoint="tasks",
             data=body,
         )
-        
+
         task_id = result['_id']
         logger.info(f"Created video indexing task {task_id} for {video_url if video_url else video_file} successfully.")
         return task_id
@@ -146,7 +146,7 @@ class TwelveLabsAPIClient:
                     logger.error(f"Task {task_id} failed with status {task['status']}.")
                     # TODO: update Exception to be more specific
                     raise Exception(f"Task {task_id} failed with status {task['status']}.")
-                
+
         logger.info("All videos indexed successfully.")
 
     def _get_video_indexing_task(self, task_id: str) -> Dict:
@@ -161,7 +161,7 @@ class TwelveLabsAPIClient:
 
         logger.info(f"Retrieved video indexing task {task_id} successfully.")
         return result
-        
+
     def search_index(self, index_id: str, query: str, search_options: List[str]) -> Dict:
         """
         Search an index.
@@ -216,10 +216,10 @@ class TwelveLabsAPIClient:
 
         else:
             raise Exception(f"Method {method} not supported yet.")
-        
+
         result = response.json()
         if response.status_code in (200, 201):
-            logger.info(f"API request was successful.")
+            logger.info("API request was successful.")
             return result
         else:
             logger.error(f"API request has failed: {result['message']}")
@@ -250,7 +250,7 @@ class TwelveLabsAPIClient:
 
         result = response.json()
         if response.status_code in (200, 201):
-            logger.info(f"API request was successful.")
+            logger.info("API request was successful.")
             return result
         else:
             logger.error(f"API request has failed: {result['message']}")

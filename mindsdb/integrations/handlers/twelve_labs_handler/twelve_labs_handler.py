@@ -63,7 +63,7 @@ class TwelveLabsHandler(BaseMLEngine):
                 index_options=args['index_options'],
                 addons=args['addons'] if 'addons' in args else []
             )
-        
+
         else:
             logger.info(f"Index {args['index_name']} already exists. Using existing index.")
 
@@ -76,7 +76,7 @@ class TwelveLabsHandler(BaseMLEngine):
         if 'video_urls_col' in args:
             logger.info("video_urls_col has been set, therefore, it will be given precedence.")
             video_urls = df[args['video_urls_col']].tolist()
-        
+
         # else, check if video_files_col has been set and use it to get the video files
         elif 'video_files_col' in args:
             logger.info("video_urls_col has not been set, therefore, video_files_col will be used.")
@@ -136,9 +136,9 @@ class TwelveLabsHandler(BaseMLEngine):
             # metadata = ['score', 'start', 'end', 'video_id', 'confidence']
             # df_metadata = pd.json_normalize(data, record_path='metadata', meta=metadata, record_prefix='metadata_')
             # df_modules = pd.json_normalize(data, record_path='modules', meta=metadata, record_prefix='modules_')
-            # df_predictions = pd.merge(df_metadata, df_modules, on=metadata)   
+            # df_predictions = pd.merge(df_metadata, df_modules, on=metadata)
             # return df_predictions
             return pd.json_normalize(data).add_prefix(args['target'] + '_')
-            
+
         else:
             raise NotImplementedError(f"Task {args['task']} is not supported.")

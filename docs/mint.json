@@ -793,6 +793,7 @@
             "integrations/app-integrations/mediawiki",
             "integrations/app-integrations/microsoft-teams",
             "integrations/app-integrations/newsapi",
+            "integrations/app-integrations/paypal",
             "integrations/app-integrations/plaid",
             "integrations/app-integrations/pypi",
             "integrations/app-integrations/reddit",

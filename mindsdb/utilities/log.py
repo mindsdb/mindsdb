@@ -3,6 +3,7 @@ import os
 from logging.config import dictConfig
 
 logging_initialized = False
+logger = logging.getLogger(__name__)
 
 
 class ColorFormatter(logging.Formatter):

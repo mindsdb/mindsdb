@@ -18,14 +18,21 @@ The flow is as follows:
     6. Exit
 """
 
+import io
 import sys
 import pickle
 import inspect
-import io
+from enum import Enum
 
 import pandas as pd
 
-from .const import BYOM_METHOD
+
+class BYOM_METHOD(Enum):
+    CHECK = 1
+    TRAIN = 2
+    PREDICT = 3
+    FINETUNE = 4
+    DESCRIBE = 5
 
 
 def pd_encode(df):

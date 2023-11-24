@@ -8,6 +8,8 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 from collections import OrderedDict
 import pandas as pd
 
+logger = log.getLogger(__name__)
+
 
 class StrapiHandler(APIHandler):
     def __init__(self, name: str, **kwargs) -> None:
@@ -42,7 +44,7 @@ class StrapiHandler(APIHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Strapi API: {e}!')
+            logger.error(f'Error connecting to Strapi API: {e}!')
             response.error_message = e
 
         self.is_connected = response.success
@@ -64,7 +66,7 @@ class StrapiHandler(APIHandler):
             else:
                 raise Exception(f"Error connecting to Strapi API: {response.status_code} - {response.text}")
         except Exception as e:
-            log.logger.error(f'Error connecting to Strapi API: {e}!')
+            logger.error(f'Error connecting to Strapi API: {e}!')
             return StatusResponse(False, error_message=e)
 
     def native_query(self, query: str) -> StatusResponse:

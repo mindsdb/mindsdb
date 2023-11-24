@@ -18,6 +18,9 @@ import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.config import Config
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 class HandlersCache(UserDict):
@@ -205,7 +208,7 @@ def learn_process(payload, dataframe):
                 models.sort(key=lambda x: x.created_at)
                 models[-1].active = True
         except Exception as e:
-            print(traceback.format_exc())
+            logger.error(traceback.format_exc())
             error_message = format_exception_error(e)
 
             predictor_record = db.Predictor.query.with_for_update().get(predictor_id)

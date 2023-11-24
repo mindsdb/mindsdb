@@ -11,6 +11,9 @@ from mindsdb_sql import get_lexer_parser
 from mindsdb_sql.parser.ast import Identifier
 
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark, set_process_mark
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 def args_parse():
@@ -39,7 +42,7 @@ def cast_row_types(row, field_types):
             row[key] = timestamp.strftime('%Y-%m-%d')
         elif t == 'Int' and isinstance(row[key], (int, float, str)):
             try:
-                print(f'cast {row[key]} to {int(row[key])}')
+                logger.debug(f'cast {row[key]} to {int(row[key])}')
                 row[key] = int(row[key])
             except Exception:
                 pass
@@ -85,20 +88,20 @@ def get_versions_where_predictors_become_obsolete():
                 timeout=0.5
             )
         except (ConnectionError, requests.exceptions.ConnectionError) as e:
-            print(f'Is no connection. {e}')
+            logger.error(f'Is no connection. {e}')
             raise
         except Exception as e:
-            print(f'Is something wrong with getting version_for_updating_predictors.txt: {e}')
+            logger.error(f'Is something wrong with getting version_for_updating_predictors.txt: {e}')
             raise
 
         if res.status_code != 200:
-            print(f'Cant get version_for_updating_predictors.txt: returned status code = {res.status_code}')
+            logger.error(f'Cant get version_for_updating_predictors.txt: returned status code = {res.status_code}')
             raise
 
         try:
             versions_for_updating_predictors = res.text.replace(' \t\r', '').split('\n')
         except Exception as e:
-            print(f'Cant decode version_for_updating_predictors.txt: {e}')
+            logger.error(f'Cant decode version_for_updating_predictors.txt: {e}')
             raise
     except Exception:
         return False, versions_for_updating_predictors

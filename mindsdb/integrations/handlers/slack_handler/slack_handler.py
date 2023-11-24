@@ -32,6 +32,7 @@ from mindsdb.integrations.libs.response import (
 
 logger = log.getLogger(__name__)
 
+
 class SlackChannelsTable(APITable):
     def __init__(self, handler):
         """
@@ -144,7 +145,7 @@ class SlackChannelsTable(APITable):
                 break
             elif isinstance(target, ast.Identifier):
                 columns.append(target.parts[-1])
-                log.logger.warning(target)
+                logger.warning(target)
             else:
                 raise NotImplementedError
 

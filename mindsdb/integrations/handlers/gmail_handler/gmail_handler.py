@@ -392,6 +392,7 @@ class GmailHandler(APIHandler):
 
             if result and result.get('emailAddress', None) is not None:
                 response.success = True
+                response.copy_storage = True
         except AuthException as error:
             response.error_message = str(error)
             response.redirect_url = error.auth_url
@@ -583,5 +584,10 @@ connection_args = OrderedDict(
         'type': ARG_TYPE.PATH,
         'description': 'Service Account Keys',
         'label': 'Upload Service Account Keys',
+    },
+    code={
+        'type': ARG_TYPE.STR,
+        'description': 'code after authorisation',
+        'label': 'code after authorisation',
     },
 )

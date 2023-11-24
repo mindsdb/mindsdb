@@ -7,7 +7,7 @@ sidebarTitle: Strapi
 
 The Strapi Handler is a MindsDB handler that enables SQL-based querying of Strapi collections. This documentation provides a brief overview of its features, initialization parameters, and example usage.
 
-## Strapi Handler Initialization
+## Connection
 
 To use the Strapi Handler, initialize it with the following parameters:
 
@@ -15,18 +15,6 @@ To use the Strapi Handler, initialize it with the following parameters:
 - `port`: Strapi server port (typically 1337).
 - `api_token`: Strapi server API token for authentication.
 - `plural_api_ids`: List of plural API IDs for the collections.
-
-## Key Features
-
-The Strapi Handler supports the following SQL operations:
-
-- `SELECT`: Retrieve data from a collection.
-- `WHERE`: Filter data based on specific criteria.
-- `LIMIT`: Restrict the number of records returned.
-- `INSERT`: Add new data to a collection (requires necessary permissions).
-- `UPDATE`: Modify existing data in a collection (requires necessary permissions).
-
-## Example Usage
 
 To get started, create a Strapi engine database with the following SQL command:
 
@@ -41,7 +29,7 @@ PARAMETERS = {
 };
 ```
 
-### SELECT
+## Usage
 
 Retrieve data from a collection:
 
@@ -50,27 +38,13 @@ SELECT *
 FROM myshop.<collection-name>;
 ```
 
-### WHERE
-
 Filter data based on specific criteria:
 
 ```sql
 SELECT *
 FROM myshop.<collection-name>
-WHERE <field-name> = <value>;
+WHERE id = <id-value>
 ```
-
-### LIMIT
-
-Limit the number of records returned:
-
-```sql
-SELECT *
-FROM myshop.<collection-name>
-LIMIT <limit>;
-```
-
-### INSERT
 
 Insert new data into a collection:
 
@@ -83,14 +57,14 @@ VALUES (<value-1>, <value-2>, ...);
   Note: You only able to insert data into the collection which has `create`
   permission.
 </Tip>
-### UPDATE
+
 
 Modify existing data in a collection:
 
 ```sql
 UPDATE myshop.<collection-name>
 SET <field-name-1> = <value-1>, <field-name-2> = <value-2>, ...
-WHERE <field-name> = <value>;
+WHERE id = <id-value>;
 ```
 
 <Tip>

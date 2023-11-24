@@ -1,0 +1,81 @@
+---
+title: Chatbot
+sidebarTitle: Chatbot
+---
+
+Within MindsDB, chatbots are [agents](/agents/agent) connected to some messaging interface.
+
+Creating a chatbot requires an [AI agent](/agents/agent) and a connection to a chat app, like [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams).
+
+<p align="center">
+  <img src="/assets/chatbot_diagram.png" />
+</p>
+
+## How to work with chatbots
+
+A chatbot can be created, deleted, queried, and updated using MindsDB SQL or via REST API endpoints.
+
+### MindsDB SQL
+
+Here is how to interact with chatbots using MindsDB SQL:
+
+* Creating a chatbot:
+
+    ```sql
+    CREATE CHATBOT my_chatbot
+    USING
+        database = my_slack, -- this must be created with CREATE DATABASE
+        agent = customer_support_agent, -- this must be created with CREATE AGENT
+        included_channels = ['support', 'help'], -- Default is all
+        excluded_channels = [], -- Default is none
+        enable_dms = true,
+        running = true;
+    ```
+
+    The parameters include the following:
+
+    * `database` stores connection to a chat app (like [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams)) that should be created with the `CREATE DATABASE` statement.
+    * `agent` is an [AI agent](/agents/agent) created with the `CREATE AGENT` command. It consists of an AI model trained with defined data sets.
+    * `included_channels` and `excluded_channels` are optional and store channel names where the bot will or will not respond.
+    * `enable_dms` is the initially supported mode of talking to a chatbot. A chatbot responds to direct messages.
+    * `running` indicates whether or not to start the chatbot upon creation.
+
+* Deleting a chatbot:
+
+    ```sql
+    DROP CHATBOT my_chatbot;
+    ```
+
+You can query all chatbots using these commands:
+
+```sql
+SELECT * FROM chatbots;
+```
+
+### REST API
+
+Here is how to interact with agents using REST API endpoints:
+
+* `GET /projects/<project_name>/chatbots` - gets all chatbots created by the user.
+* `GET /projects/<project_name>/chatbots/<chatbot_name>` - gets a chatbot by name.
+* `PUT /projects/<project_name>/chatbots/<chatbot_name>` - updates a chatbot with new settings, creating it if it doesn't exist.
+* `POST /projects/<project_name>/chatbots` - creates a new chatbot.
+* `DELETE /projects/<project_name>/chatbots/<chatbot_name>` - deletes a chatbot by name.
+
+## Example
+
+Following the example from [here](/agents/agent#example), let's create a chatbot utilizing the already created agent.
+
+Start by connecting a chat app to MindsDB:
+
+* Follow [this instruction](/integrations/app-integrations/slack) to connect Slack to MindsDB.
+* Follow [this instruction](/integrations/app-integrations/microsoft-teams) to connect MS Teams to MindsDB.
+
+Next, create a chatbot.
+
+```sql
+CREATE CHATBOT text_to_sql_chatbot
+USING
+    database = 'slack_db.chatbot_agent_db',
+    agent = 'text_to_sql_agent';
+```

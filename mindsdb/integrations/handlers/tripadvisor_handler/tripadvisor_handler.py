@@ -19,6 +19,8 @@ from .tripadvisor_table import NearbyLocationTable
 from .tripadvisor_api import TripAdvisorAPI
 from .tripadvisor_api import TripAdvisorAPICall
 
+logger = log.getLogger(__name__)
+
 
 class TripAdvisorHandler(APIHandler):
     """A class for handling connections and interactions with the TripAdvisor Content API.
@@ -87,7 +89,7 @@ class TripAdvisorHandler(APIHandler):
 
         except Exception as e:
             response.error_message = f"Error connecting to TripAdvisor api: {e}"
-            log.logger.error(response.error_message)
+            logger.error(response.error_message)
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False
@@ -258,8 +260,6 @@ class TripAdvisorHandler(APIHandler):
 
         locations = self.api.getTripAdvisorData(TripAdvisorAPICall.NEARBY_SEARCH, **params)
         result = []
-
-        print("RESULT: ", result)
 
         for loc in locations:
             data = {

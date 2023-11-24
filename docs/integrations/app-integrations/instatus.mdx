@@ -1,0 +1,74 @@
+---
+title: Instatus
+sidebarTitle: Instatus
+---
+
+In this section, we present how to connect Instatus to MindsDB.
+
+[Instatus](https://instatus.com/) is a cloud-based status page software that enables users to communicate status information using incidents and maintenances. It serves as a SaaS platform for creating status pages for services.
+
+The Instatus Handler for MindsDB offers an interface to connect with Instatus via APIs and retrieve status pages.
+
+## Connection
+
+Initialize the Instatus handler with the following parameter:
+
+- `api_key`: Instatus API key for authentication. Obtain it from [Instatus Developer Dashboard](https://dashboard.instatus.com/developer).
+
+Start by creating a database with the new instatus engine using the following SQL command:
+
+```sql
+CREATE DATABASE mindsdb_instatus --- Display name for the database.
+WITH
+    ENGINE = 'instatus', --- Name of the MindsDB handler.
+    PARAMETERS = {
+        "api_key": "<your-instatus-api-key>" --- Instatus API key to use for authentication.
+    };
+```
+
+## Usage
+
+To get a status page, use the `SELECT` statement:
+
+```sql
+SELECT id, name, status, subdomain
+FROM mindsdb_instatus.status_pages
+WHERE id = '<status-page-id>'
+LIMIT 10;
+```
+
+To create a new status page, use the `INSERT` statement:
+
+```sql
+INSERT INTO mindsdb_instatus.status_pages (email, name, subdomain, components, logoUrl, faviconUrl, websiteUrl, language, useLargeHeader, brandColor, okColor, disruptedColor, degradedColor, downColor, noticeColor, unknownColor, googleAnalytics, subscribeBySms, smsService, twilioSid, twilioToken, twilioSender, nexmoKey, nexmoSecret, nexmoSender, htmlInMeta, htmlAboveHeader, htmlBelowHeader, htmlAboveFooter, htmlBelowFooter, htmlBelowSummary, cssGlobal, launchDate, dateFormat, dateFormatShort, timeFormat)
+VALUES ('yourname@gmail.com', 'mindsdb', 'mindsdb-instatus', '["Website", "App", "API"]', 'https://instatus.com/sample.png', 'https://instatus.com/favicon-32x32.png', 'https://instatus.com', 'en', true, '#111', '#33B17E', '#FF8C03', '#ECC94B', '#DC123D', '#70808F', '#DFE0E1', 'UA-00000000-1', true, 'twilio', 'YOUR_TWILIO_SID', 'YOUR_TWILIO_TOKEN', 'YOUR_TWILIO_SENDER', null, null, null, null, null, null, null, null, null, null, 'MMMMMM d, yyyy', 'MMM yyyy', 'p');
+```
+
+<Tip>
+The following fields are required when inserting new status pages:
+
+- `email` (e.g. 'yourname@gmail.com')
+- `name` (e.g 'mindsdb')
+- `subdomain` (e.g. 'mindsdb-docs')
+- `components` (e.g. '["Website", "App", "API"]')
+
+The other fields are optional.
+</Tip>
+
+To update an existing status page, use the `UPDATE` statement:
+
+```sql
+UPDATE mindsdb_instatus.status_pages
+SET name = 'mindsdb',
+    status = 'UP',
+    logoUrl = 'https://instatus.com/sample.png',
+    faviconUrl = 'https://instatus.com/favicon-32x32.png',
+    websiteUrl = 'https://instatus.com',
+    language = 'en',
+    translations = '{
+      "name": {
+        "fr": "nasa"
+      }
+    }'
+WHERE id = '<status-page-id>';
+```

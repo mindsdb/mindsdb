@@ -1,4 +1,3 @@
-import logging
 import os
 try:
     import torch.multiprocessing as mp
@@ -44,7 +43,6 @@ def start(verbose, no_studio):
     elif server.lower() == "flask":
         logger.debug("Serving HTTP app with flask..")
         # that will 'disable access' log in console
-        logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
         app.run(debug=False, port=port, host=host)
     elif server.lower() == 'gunicorn':

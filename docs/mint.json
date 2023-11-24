@@ -325,7 +325,8 @@
                     "connect/deepnote",
                     "connect/metabase",
                     "connect/tableau",
-                    "connect/jupysql"
+                    "connect/jupysql",
+                    "connect/grafana"
                   ]
                 }
               ]
@@ -787,6 +788,8 @@
             "integrations/app-integrations/gmail",
             "integrations/app-integrations/google-calendar",
             "integrations/app-integrations/hackernews",
+            "integrations/app-integrations/instatus",
+            "integrations/app-integrations/intercom",
             "integrations/app-integrations/mediawiki",
             "integrations/app-integrations/microsoft-teams",
             "integrations/app-integrations/newsapi",
@@ -893,7 +896,8 @@
             "integrations/ai-engines/huggingface",
             "integrations/ai-engines/langchain",
             "integrations/ai-engines/llamaindex",
-            "integrations/ai-engines/monkeylearn"            
+            "integrations/ai-engines/monkeylearn",
+            "integrations/ai-engines/rag"           
           ]
         },
         {

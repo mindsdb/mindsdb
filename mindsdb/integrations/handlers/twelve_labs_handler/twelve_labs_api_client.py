@@ -219,6 +219,7 @@ class TwelveLabsAPIClient:
         
         result = response.json()
         if response.status_code in (200, 201):
+            logger.info(f"API request was successful.")
             return result
         else:
             logger.error(f"API request has failed: {result['message']}")
@@ -249,7 +250,7 @@ class TwelveLabsAPIClient:
 
         result = response.json()
         if response.status_code in (200, 201):
-            logger.error(f"API request was successful.")
+            logger.info(f"API request was successful.")
             return result
         else:
             logger.error(f"API request has failed: {result['message']}")

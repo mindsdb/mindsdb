@@ -21,26 +21,25 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 
+
 class WhatsAppMessagesTable(APITable):
     def select(self, query: ast.Select) -> Response:
         """
         Retrieves messages sent/received from the database using Twilio Whatsapp API
-        
         Returns 
             Response: conversation_history
-
         """
-        
+
         # Extract comparison conditions from the query
         conditions = extract_comparison_conditions(query.where)
         params = {}
         filters = []
-        
+
         # Build the filters and parameters for the query
         for op, arg1, arg2 in conditions:
             if op == 'or':
                 raise NotImplementedError('OR is not supported')
-            
+
             if arg1 == 'sent_at' and arg2 is not None:
                 date = parse_local_date(arg2)
                 if op == '>':
@@ -58,7 +57,7 @@ class WhatsAppMessagesTable(APITable):
                     params['sid'] = arg2
                 else:
                     NotImplementedError('Only  "from_number=" is implemented')
-                    
+
             elif arg1 == 'from_number':
                 if op == '=':
                     params['from_number'] = arg2
@@ -73,7 +72,7 @@ class WhatsAppMessagesTable(APITable):
 
             else:
                 filters.append([op, arg1, arg2])
-                
+
         # Fetch messages based on the filters
         result = self.handler.fetch_messages(params, df=True)
 
@@ -114,22 +113,22 @@ class WhatsAppMessagesTable(APITable):
             from_number: number from which to send the message
             to_number: number to which message will be sent
         """
-        
+
         # get column names and values from the query
         columns = [col.name for col in query.columns]
-        
+
         ret = []
-        
+
         insert_params = ["body", "from_number", "to_number"]
         for row in query.values:
             params = dict(zip(columns, row))
-            
+
             # Check text length
             max_text_len = 1500
             text = params["body"]
             words = re.split('( )', text)
             messages = []
-            
+
             # Check text pattern
             text2 = ''
             pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
@@ -157,17 +156,18 @@ class WhatsAppMessagesTable(APITable):
 
                 if i >= 1:
                     text += f'({i + 1}/{len_messages})'
-                    
+
                 # Pass parameters and call 'send_message'
                 params['body'] = text
                 params_to_send = {key: params[key] for key in insert_params if (key in params)}
                 ret_row = self.handler.send_message(params_to_send, ret_as_dict=True)
-                
+
                 # Save the results
                 ret_row['body'] = text
                 ret.append(ret_row)
-                
+
         return pd.DataFrame(ret)
+
 
 class WhatsAppHandler(APIHandler):
     """
@@ -195,10 +195,9 @@ class WhatsAppHandler(APIHandler):
                 self.connection_args[k] = handler_config[k]
         self.client = None
         self.is_connected = False
-        
+
         messages = WhatsAppMessagesTable(self)
         self._register_table('messages', messages)
-
 
     def connect(self):
         """
@@ -211,7 +210,7 @@ class WhatsAppHandler(APIHandler):
             self.connection_args['account_sid'],
             self.connection_args['auth_token']
         )
-        
+
         self.is_connected = True
         return self.client
 
@@ -224,7 +223,7 @@ class WhatsAppHandler(APIHandler):
         try:
             self.connect()
             response.success = True
-            
+
         except Exception as e:
             response.error_message = f'Error connecting to Twilio API: {str(e)}. Check credentials.'
             log.logger.error(response.error_message)
@@ -233,7 +232,7 @@ class WhatsAppHandler(APIHandler):
             self.is_connected = False
 
         return response
-    
+
     def parse_native_query(self, query_string: str):
         """Parses the native query string of format method(arg1=val1, arg2=val2, ...) and returns the method name and arguments."""
 
@@ -264,9 +263,9 @@ class WhatsAppHandler(APIHandler):
             response = self.send_message(params)
         else:
             raise ValueError(f"Method '{method_name}' not supported by TwilioHandler")
-        
+
         return response
-    
+
     def fetch_messages(self, params, df=False):
         """
         Gets conversation history
@@ -316,7 +315,7 @@ class WhatsAppHandler(APIHandler):
                 # ... Add other properties as needed
             }
             data.append(msg_data)
-            
+
         # Create a DataFrame
             result_df = pd.DataFrame(data)
 
@@ -327,7 +326,7 @@ class WhatsAppHandler(APIHandler):
             return pd.DataFrame(result_df)
         return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(result_df))
 
-        
+
     def send_message(self, params, ret_as_dict=False) -> Response:
         """
         Sends a message to the given Whatsapp number.
@@ -360,7 +359,7 @@ class WhatsAppHandler(APIHandler):
             # Log the exception for debugging purposes
             log.logger.error(f"Error sending message: {str(e)}")
             raise Exception(f"Error posting message to the user '{params['to_number']}': {e.response['error']}")
-        
+
     def call_whatsapp_api(self, method_name: str = None, params: dict = None):
         """
         Calls specific method specified.
@@ -381,7 +380,7 @@ class WhatsAppHandler(APIHandler):
             error = f"Error calling method '{method_name}' with params '{params}': {e.response['error']}"
             log.logger.error(error)
             raise e
-        
+
         if 'messages' in result:
             result['messages'] = self.convert_channel_data(result['messages'])
 

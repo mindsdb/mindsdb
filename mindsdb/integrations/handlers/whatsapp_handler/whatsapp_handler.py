@@ -22,21 +22,27 @@ from mindsdb.integrations.libs.response import (
 )
 
 class WhatsAppMessagesTable(APITable):
-    
     def select(self, query: ast.Select) -> Response:
+        """
+        Retrieves messages sent/received from the database using Twilio Whatsapp API
+        
+        Returns 
+            Response: conversation_history
 
+        """
+        
+        # Extract comparison conditions from the query
         conditions = extract_comparison_conditions(query.where)
-
         params = {}
         filters = []
+        
+        # Build the filters and parameters for the query
         for op, arg1, arg2 in conditions:
-
             if op == 'or':
                 raise NotImplementedError('OR is not supported')
+            
             if arg1 == 'sent_at' and arg2 is not None:
-
                 date = parse_local_date(arg2)
-
                 if op == '>':
                     params['date_sent_after'] = date
                 elif op == '<':
@@ -52,6 +58,7 @@ class WhatsAppMessagesTable(APITable):
                     params['sid'] = arg2
                 else:
                     NotImplementedError('Only  "from_number=" is implemented')
+                    
             elif arg1 == 'from_number':
                 if op == '=':
                     params['from_number'] = arg2
@@ -66,12 +73,14 @@ class WhatsAppMessagesTable(APITable):
 
             else:
                 filters.append([op, arg1, arg2])
-
+                
+        # Fetch messages based on the filters
         result = self.handler.fetch_messages(params, df=True)
 
         # filter targets
         result = filter_dataframe(result, filters)
 
+        # If limit is specified
         if query.limit is not None:
             result = result[:int(query.limit.value)]
 
@@ -97,7 +106,16 @@ class WhatsAppMessagesTable(APITable):
         ]
 
     def insert(self, query: ast.Insert):
+        """
+        Sends a whatsapp message
+
+        Args:
+            body: message body
+            from_number: number from which to send the message
+            to_number: number to which message will be sent
+        """
         
+        # get column names and values from the query
         columns = [col.name for col in query.columns]
         
         ret = []
@@ -106,11 +124,13 @@ class WhatsAppMessagesTable(APITable):
         for row in query.values:
             params = dict(zip(columns, row))
             
+            # Check text length
             max_text_len = 1500
             text = params["body"]
             words = re.split('( )', text)
             messages = []
             
+            # Check text pattern
             text2 = ''
             pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
             for word in words:
@@ -122,12 +142,13 @@ class WhatsAppMessagesTable(APITable):
                     text2 = ''
                 text2 += word
 
-            # the last message
+            # Parse last message
             if text2.strip() != '':
                 messages.append(text2.strip())
 
             len_messages = len(messages)
 
+            # Modify message based on the length
             for i, text in enumerate(messages):
                 if i < len_messages - 1:
                     text += '...'
@@ -137,9 +158,12 @@ class WhatsAppMessagesTable(APITable):
                 if i >= 1:
                     text += f'({i + 1}/{len_messages})'
                     
+                # Pass parameters and call 'send_message'
                 params['body'] = text
                 params_to_send = {key: params[key] for key in insert_params if (key in params)}
                 ret_row = self.handler.send_message(params_to_send, ret_as_dict=True)
+                
+                # Save the results
                 ret_row['body'] = text
                 ret.append(ret_row)
                 
@@ -147,13 +171,16 @@ class WhatsAppMessagesTable(APITable):
 
 class WhatsAppHandler(APIHandler):
     """
-    A class for handling connections and interactions with WhatsApp API.
+    A class for handling connections and interactions with Twilio WhatsApp API.
     Args:
-        phone_number(str): The phone number for the WhatsApp account.
-        api_key(str): The API key for the WhatsApp service.
+        account_sid(str): Accound ID of the twilio account.
+        auth_token(str): Authentication Token obtained from the twilio account.
     """
 
     def __init__(self, name=None, **kwargs):
+        """
+        Initializes the connection by checking all the params are provided by the user.
+        """
         super().__init__(name)
 
         args = kwargs.get('connection_data', {})
@@ -166,18 +193,16 @@ class WhatsAppHandler(APIHandler):
                 self.connection_args[k] = os.environ[f'TWILIO_{k.upper()}']
             elif k in handler_config:
                 self.connection_args[k] = handler_config[k]
-                
         self.client = None
         self.is_connected = False
         
         messages = WhatsAppMessagesTable(self)
-        
         self._register_table('messages', messages)
 
 
     def connect(self):
         """
-        Authenticate with the Twilio API using the provided account SID and auth token.
+        Authenticate with the Twilio API using the provided `account_SID` and `auth_token`.
         """
         if self.is_connected is True:
             return self.client
@@ -231,6 +256,9 @@ class WhatsAppHandler(APIHandler):
         return method_name, args
 
     def native_query(self, query_string: str = None):
+        """
+        Retreievs the native query from the `parse_native_query` and calls appropriate function and returns the result of the query as a Response object.
+        """
         method_name, params = self.parse_native_query(query_string)
         if method_name == 'send_message':
             response = self.send_message(params)
@@ -240,6 +268,12 @@ class WhatsAppHandler(APIHandler):
         return response
     
     def fetch_messages(self, params, df=False):
+        """
+        Gets conversation history
+
+        Returns:
+            Response: conversation history
+        """
         limit = int(params.get('limit', 1000))
         sid = params.get('sid', None)
         # Convert date strings to datetime objects if provided
@@ -295,27 +329,49 @@ class WhatsAppHandler(APIHandler):
 
         
     def send_message(self, params, ret_as_dict=False) -> Response:
-        from_num = params.get('from_number'),
-        to_num = params.get('to_number')
-        
-        message = self.client.messages.create(
-            body = params.get('body'),
-            to = params.get('to_number'),
-            from_ = params.get('from_number')
-        )
-        
-        if ret_as_dict is True:
-            return {"sid": message.sid, "from": message.from_, "to": message.to, "message": message.body, "status": message.status}
-        return Response(
-            RESPONSE_TYPE.MESSAGE,
-            sid=message.sid,
-            from_=message.from_,
-            to=message.to,
-            body=message.body,
-            status=message.status
-        )
+        """
+        Sends a message to the given Whatsapp number.
 
+        Args:
+            body: message body
+            from_number: number from which to send the message
+            to_number: number to which message will be sent
+        """
+        try:
+            message = self.client.messages.create(
+                body=params.get('body'),
+                to=params.get('to_number'),
+                from_=params.get('from_number')
+            )
+
+            if ret_as_dict is True:
+                return {"sid": message.sid, "from": message.from_, "to": message.to, "message": message.body, "status": message.status}
+
+            return Response(
+                RESPONSE_TYPE.MESSAGE,
+                sid=message.sid,
+                from_=message.from_,
+                to=message.to,
+                body=message.body,
+                status=message.status
+            )
+
+        except Exception as e:
+            # Log the exception for debugging purposes
+            log.logger.error(f"Error sending message: {str(e)}")
+            raise Exception(f"Error posting message to the user '{params['to_number']}': {e.response['error']}")
+        
     def call_whatsapp_api(self, method_name: str = None, params: dict = None):
+        """
+        Calls specific method specified.
+
+        Args:
+            method_name: to call specific method
+            params: parameters to call the method
+
+        Returns:
+            List of dictionaries as a result of the method call
+        """
         api = self.connect()
         method = getattr(api, method_name)
 
@@ -332,6 +388,15 @@ class WhatsAppHandler(APIHandler):
         return [result]
 
     def convert_channel_data(self, messages: List[dict]):
+        """
+        Convert the list of channel dictionaries to a format that can be easily used in the data pipeline.
+
+        Args:
+            channels: A list of channel dictionaries.
+
+        Returns:
+            A list of channel dictionaries with modified keys and values.
+        """
         new_messages = []
         for message in messages:
             new_message = {

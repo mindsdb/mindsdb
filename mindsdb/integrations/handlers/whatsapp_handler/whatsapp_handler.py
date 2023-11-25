@@ -26,7 +26,7 @@ class WhatsAppMessagesTable(APITable):
     def select(self, query: ast.Select) -> Response:
         """
         Retrieves messages sent/received from the database using Twilio Whatsapp API
-        Returns 
+        Returns
             Response: conversation_history
         """
 
@@ -325,7 +325,6 @@ class WhatsAppHandler(APIHandler):
         if df is True:
             return pd.DataFrame(result_df)
         return Response(RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(result_df))
-
 
     def send_message(self, params, ret_as_dict=False) -> Response:
         """

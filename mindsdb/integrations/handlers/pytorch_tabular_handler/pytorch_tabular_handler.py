@@ -35,8 +35,8 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
                 raise Exception("Please specify layers in format : '128-64-32'")
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
-        train_data = df
         args = args["using"]
+        args['target'] = target
         categorical_columns = args.get('categorical_cols', None)
         continuous_columns = args.get('continuous_cols', None)
 
@@ -84,7 +84,7 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
             optimizer_config=optimizer_config,
             trainer_config=trainer_config,
         )
-        tabular_model.fit(train=train_data)
+        tabular_model.fit(train=df)
 
         # Save the trained model
         self.model_storage.json_set('args', args)
@@ -92,7 +92,10 @@ class Pytorch_Tabular_Handler(BaseMLEngine):
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         tabular_model = dill.load(self.model_storage.file_get('model'))
+        args = self.model_storage.json_get('args')
+        target = args['target']
         predictions = tabular_model.predict(df)
+        predictions.rename(columns={f'{target}_prediction': target}, inplace=True)
         return predictions
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:

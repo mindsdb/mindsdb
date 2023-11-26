@@ -43,7 +43,6 @@ class TestPytorchTabular(BaseExecutorTest):
             PREDICT median_house_value
             USING
                 engine='pytorch_tabular',
-                target = 'medain_house_value',
                 initialization = 'xavier',
                 task='invalid_task',
                 continuous_cols=["longitude", "latitude", "housing_median_age", "total_rooms", "total_bedrooms", "population", "households", "median income"],
@@ -55,6 +54,7 @@ class TestPytorchTabular(BaseExecutorTest):
         with pytest.raises(RuntimeError):
             self.wait_predictor("proj", "invalid_task")
 
+    # Failing tests to check model creation with invalid parameters
     def test_invalid_initialization(self):
         self.run_sql("create database proj")
         self.run_sql(
@@ -66,7 +66,6 @@ class TestPytorchTabular(BaseExecutorTest):
             PREDICT median_house_value
             USING
                 engine='pytorch_tabular',
-                target = 'medain_house_value',
                 initialization = 'invalid_initialization',
                 task='regression',
                 continuous_cols=["longitude", "latitude", "housing_median_age", "total_rooms", "total_bedrooms", "population", "households", "median income"],
@@ -89,7 +88,6 @@ class TestPytorchTabular(BaseExecutorTest):
             PREDICT median_house_value
             USING
                 engine='pytorch_tabular',
-                target = 'medain_house_value',
                 initialization = 'xavier',
                 task='regression',
                 layers = 'invalid_layers',

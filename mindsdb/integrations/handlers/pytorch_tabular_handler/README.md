@@ -33,7 +33,6 @@ SELECT * FROM California_Housing
 PREDICT median_house_value
 USING
     engine='pytorch_tabular',
-    target = 'medain_house_value',
     initialization = 'xavier',
     task='regression',
     continuous_cols=["longitude", "latitude", "housing_median_age", "total_rooms", "total_bedrooms", "population", "households", "median income"],
@@ -62,7 +61,6 @@ SELECT FROM California_Housing
 PREDICT median_house_value
 USING
     engine='pytorch_tabular',
-    target = 'medain_house_value',
     initialization = 'xavier',
     task='regression',
     continuous_cols=["longitude", "latitude", "housing_median_age", "total_rooms", "total_bedrooms", "population", "households", "median income"],

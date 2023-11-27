@@ -34,8 +34,6 @@ class SnsHandlerTest(unittest.TestCase):
         self.handler.create_topic({"name": expected_topic_name})
         result=self.handler.call_sns_api("topic_list", {"name": expected_topic_name})
         assert expected_topic_name in str(result)
-        #print(str(self.handler.call_sns_api("topic_list", {"topic_name": expected_topic_name})))
-        #assert expected_topic_name in self.handler.call_sns_api("topic_list", {"topic_name": expected_topic_name})
  
   
     def test_nagative_create_topic_and_select_by_topic_name(self):
@@ -51,7 +49,6 @@ class SnsHandlerTest(unittest.TestCase):
         self.handler.create_topic({"name": expected_topic_name})
         response = self.handler.call_sns_api("topic_list", {})
         assert expected_topic_name in str(response)
-        #assert expected_topic_name in self.handler.call_sns_api("topic_list", {})
     
     
     def test_publish_message(self):

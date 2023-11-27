@@ -14,6 +14,8 @@ jobs:
       runs-on: ubuntu-latest
       steps:
       - uses: actions/checkout@v3.5.3
+      # Get clean environment variables via https://github.com/marketplace/actions/github-environment-variables-action
+      - uses: FranzDiebold/github-env-vars-action@v2
       - name: Deploy AMI's
         env:
           ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
@@ -26,8 +28,8 @@ jobs:
           sudo apt-get install packer
           git clone https://${ACCESS_KEY}@github.com/mindsdb/mindsdb_gateway
           cd mindsdb_gateway/deployments
-          echo "Building AMIs for ${{ github.ref }}"
-          sudo packer build -var "mindsdb_version=${{ github.ref }}" -var "acces_key=$ACCESS_KEY" -var "aws_acces_key=$AWS_ACCESS_KEY" -var "aws_secret_key=$AWS_SECRET_KEY" -parallel-builds=2 config.json
+          echo "Building AMIs for ${{ env.CI_REF_NAME }}"
+          sudo packer build -var "mindsdb_version=${{ env.CI_REF_NAME }}" -var "acces_key=$ACCESS_KEY" -var "aws_acces_key=$AWS_ACCESS_KEY" -var "aws_secret_key=$AWS_SECRET_KEY" -parallel-builds=2 config.json
 
   deploy_to_dockerhub:
       # Build our docker images based on our bake file
@@ -48,4 +50,4 @@ jobs:
           shell: bash
           run: |
             docker buildx create --name=remote-buildkit-agent --driver=remote --use tcp://remote-buildkit-agent.infrastructure.svc.cluster.local:80 || true # Create the builder (might already exist)
-            VERSION=${{ github.ref }} REGISTRY=mindsdb docker buildx bake --push --progress plain -f docker/docker-bake.hcl
+            VERSION=${{ env.CI_REF_NAME }} REGISTRY=mindsdb docker buildx bake --push --progress plain -f docker/docker-bake.hcl

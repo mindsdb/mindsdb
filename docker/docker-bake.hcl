@@ -1,23 +1,23 @@
 group "default" {
-  targets = ["builder", "bare-ecr", "cloud-ecr"]
-}
-group "release" {
-  targets = ["bare", "devel", "lightwood", "huggingface"]
-}
-
-variable "TAG" {
-  default = "latest"
+  targets = ["bare", "devel", "cloud", "lightwood", "huggingface"]
 }
 
 
-variable "ECR_REGISTRY" {
+variable "REGISTRY" {
   default = "454861456664.dkr.ecr.us-east-2.amazonaws.com"
 }
-
 variable "VERSION" {
   default = "unknown"
 }
 
+
+# This is effectively the base image for all of our images.
+# We define it separately so we can use it as a base and only build it once.
+target "builder" {
+  dockerfile = "docker/mindsdb.Dockerfile"
+  target = "build"
+}
+# Common traits of every image that we use to reduce duplication below.
 target "_common" {
     dockerfile = "docker/mindsdb.Dockerfile" # If you change this, also change it in target:builder
     contexts = {
@@ -25,37 +25,27 @@ target "_common" {
     }
 }
 
-target "builder" {
-  dockerfile = "docker/mindsdb.Dockerfile"
-  target = "build"
-}
-
-target "bare-ecr" {
-  inherits = ["_common"]
-  tags = ["${ECR_REGISTRY}/mindsdb:bare-${TAG}"]
-}
-
-target "cloud-ecr" {
-  inherits = ["_common"]
-  args = {
-    EXTRAS = ".[lightwood,huggingface,statsforecast_extra,neuralforecast_extra]"
-  }
-  tags = ["${ECR_REGISTRY}/mindsdb:cloud-${TAG}"]
-}
 
 
-
-### DOCKERHUB IMAGES ###
+### IMAGES ###
 
 target "bare" {
   inherits = ["_common"]
-  tags = ["mindsdb/mindsdb:${VERSION}", "mindsdb/mindsdb:latest"]
+  tags = ["${REGISTRY}/mindsdb:${VERSION}", "${REGISTRY}/mindsdb:latest"]
 }
 
 target "devel" {
   inherits = ["_common"]
-  tags = ["mindsdb/mindsdb:${VERSION}-dev", "mindsdb/mindsdb:dev"]
+  tags = ["${REGISTRY}/mindsdb:${VERSION}-dev", "${REGISTRY}/mindsdb:dev"]
   target = "dev"
+}
+
+target "cloud" {
+  inherits = ["_common"]
+  args = {
+    EXTRAS = ".[lightwood,huggingface,statsforecast_extra,neuralforecast_extra]"
+  }
+  tags = ["${REGISTRY}/mindsdb:${VERSION}-cloud", "${REGISTRY}/mindsdb:cloud"]
 }
 
 target "lightwood" {
@@ -63,7 +53,7 @@ target "lightwood" {
   args = {
     EXTRAS = ".[lightwood]"
   }
-  tags = ["mindsdb/mindsdb:${VERSION}-lightwood", "mindsdb/mindsdb:lightwood"]
+  tags = ["${REGISTRY}/mindsdb:${VERSION}-lightwood", "${REGISTRY}/mindsdb:lightwood"]
 }
 
 target "huggingface" {
@@ -71,5 +61,5 @@ target "huggingface" {
   args = {
     EXTRAS = ".[huggingface]"
   }
-  tags = ["mindsdb/mindsdb:${VERSION}-huggingface", "mindsdb/mindsdb:huggingface"]
+  tags = ["${REGISTRY}/mindsdb:${VERSION}-huggingface", "${REGISTRY}/mindsdb:huggingface"]
 }

@@ -13,6 +13,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
+logger = log.getLogger(__name__)
 
 class FrappeHandler(APIHandler):
     """A class for handling connections and interactions with the Frappe API.
@@ -153,7 +154,7 @@ class FrappeHandler(APIHandler):
             response.success = True
 
         except Exception as e:
-            log.logger.error(f'Error connecting to Frappe API: {e}!')
+            logger.error(f'Error connecting to Frappe API: {e}!')
             response.error_message = e
 
         self.is_connected = response.success

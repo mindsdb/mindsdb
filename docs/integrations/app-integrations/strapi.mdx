@@ -1,0 +1,73 @@
+---
+title: Strapi
+sidebarTitle: Strapi
+---
+
+[Strapi](https://strapi.io/) is a popular open-source Headless Content Management System (CMS) that empowers developers to work with their preferred tools and frameworks, while providing content editors with a user-friendly interface to manage and distribute content across various platforms.
+
+The Strapi Handler is a MindsDB handler that enables SQL-based querying of Strapi collections. This documentation provides a brief overview of its features, initialization parameters, and example usage.
+
+## Connection
+
+To use the Strapi Handler, initialize it with the following parameters:
+
+- `host`: Strapi server host.
+- `port`: Strapi server port (typically 1337).
+- `api_token`: Strapi server API token for authentication.
+- `plural_api_ids`: List of plural API IDs for the collections.
+
+To get started, create a Strapi engine database with the following SQL command:
+
+```sql
+CREATE DATABASE myshop --- Display name for the database.
+WITH ENGINE = 'strapi', --- Name of the MindsDB handler.
+PARAMETERS = {
+  "host" : "<strapi-host>", --- Host (can be an IP address or URL).
+  "port" : "<strapi-port>",  --- Common port is 1337.
+  "api_token": "<your-strapi-api-token>", --- API token of the Strapi server.
+  "plural_api_ids" : ["<plural-api-id>"] --- Plural API IDs of the collections.
+};
+```
+
+## Usage
+
+Retrieve data from a collection:
+
+```sql
+SELECT *
+FROM myshop.<collection-name>;
+```
+
+Filter data based on specific criteria:
+
+```sql
+SELECT *
+FROM myshop.<collection-name>
+WHERE id = <id-value>
+```
+
+Insert new data into a collection:
+
+```sql
+INSERT INTO myshop.<collection-name> (<field-name-1>, <field-name-2>, ...)
+VALUES (<value-1>, <value-2>, ...);
+```
+
+<Tip>
+  Note: You only able to insert data into the collection which has `create`
+  permission.
+</Tip>
+
+
+Modify existing data in a collection:
+
+```sql
+UPDATE myshop.<collection-name>
+SET <field-name-1> = <value-1>, <field-name-2> = <value-2>, ...
+WHERE id = <id-value>;
+```
+
+<Tip>
+  Note: You only able to update data into the collection which has `update`
+  permission.
+</Tip>

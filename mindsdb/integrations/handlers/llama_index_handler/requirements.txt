@@ -1,4 +1,3 @@
-llama-index==0.6.11
-langchain<=0.0.192
-openai<=0.28.0
-html2text
+llama-index==0.8.57
+langchain==0.0.303
+openai == 0.28.1

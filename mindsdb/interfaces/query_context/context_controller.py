@@ -81,7 +81,7 @@ class QueryContextController:
         if len(data) == 0:
             return
 
-        max_vals = pd.DataFrame(data).max().to_dict()
+        df = pd.DataFrame(data)
         values = {}
         # get max values
         for info in l_query.get_last_columns():
@@ -89,10 +89,25 @@ class QueryContextController:
             if target_idx is not None:
                 # get by index
                 col_name = columns_info[target_idx]['name']
-                value = max_vals.get(col_name)
             else:
+                col_name = info['column_name']
                 # get by name
-                value = max_vals.get(info['column_name'])
+            if col_name not in df:
+                continue
+
+            column_values = df[col_name].dropna()
+            try:
+                value = max(column_values)
+            except (TypeError, ValueError):
+                try:
+                    # try to convert to float
+                    value = max(map(float, column_values))
+                except (TypeError, ValueError):
+                    try:
+                        # try to convert to str
+                        value = max(map(str, column_values))
+                    except (TypeError, ValueError):
+                        continue
 
             if value is not None:
                 values[info['table_name']] = {info['column_name']: value}

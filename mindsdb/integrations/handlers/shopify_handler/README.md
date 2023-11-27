@@ -70,6 +70,7 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+  - [x] Support DELETE
 - [x] Shopify Customer Reviews Table for a given Store
   - [x] Support SELECT
     - [x] Support LIMIT
@@ -166,6 +167,11 @@ DELETE FROM shopify_datasource.customers
 WHERE first_name = 'John'
 AND last_name = 'Doe'
 AND email = 'john.doe@example.com';
+~~~~
+
+~~~~sql
+DELETE FROM shopify_datasource.orders
+WHERE id=5632671580477;
 ~~~~
 
 

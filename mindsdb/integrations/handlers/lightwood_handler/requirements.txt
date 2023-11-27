@@ -1,1 +1,2 @@
-lightwood[all_extras] >= 22.8.1.0
+lightwood[all_extras] >= 23.11.1.0
+type-infer

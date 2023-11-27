@@ -6,6 +6,9 @@ group "default" {
 variable "REGISTRY" {
   default = "454861456664.dkr.ecr.us-east-2.amazonaws.com"
 }
+variable "IMAGE" {
+  default = "mindsdb"
+}
 variable "VERSION" {
   default = "unknown"
 }
@@ -31,12 +34,12 @@ target "_common" {
 
 target "bare" {
   inherits = ["_common"]
-  tags = ["${REGISTRY}/mindsdb:${VERSION}", "${REGISTRY}/mindsdb:latest"]
+  tags = ["${REGISTRY}/${IMAGE}:${VERSION}", "${REGISTRY}/${IMAGE}:latest"]
 }
 
 target "devel" {
   inherits = ["_common"]
-  tags = ["${REGISTRY}/mindsdb:${VERSION}-dev", "${REGISTRY}/mindsdb:dev"]
+  tags = ["${REGISTRY}/${IMAGE}:${VERSION}-dev", "${REGISTRY}/${IMAGE}:dev"]
   target = "dev"
 }
 
@@ -45,7 +48,7 @@ target "cloud" {
   args = {
     EXTRAS = ".[lightwood,huggingface,statsforecast_extra,neuralforecast_extra]"
   }
-  tags = ["${REGISTRY}/mindsdb:${VERSION}-cloud", "${REGISTRY}/mindsdb:cloud"]
+  tags = ["${REGISTRY}/${IMAGE}:${VERSION}-cloud", "${REGISTRY}/${IMAGE}:cloud"]
 }
 
 target "lightwood" {
@@ -53,7 +56,7 @@ target "lightwood" {
   args = {
     EXTRAS = ".[lightwood]"
   }
-  tags = ["${REGISTRY}/mindsdb:${VERSION}-lightwood", "${REGISTRY}/mindsdb:lightwood"]
+  tags = ["${REGISTRY}/${IMAGE}:${VERSION}-lightwood", "${REGISTRY}/${IMAGE}:lightwood"]
 }
 
 target "huggingface" {
@@ -61,5 +64,5 @@ target "huggingface" {
   args = {
     EXTRAS = ".[huggingface]"
   }
-  tags = ["${REGISTRY}/mindsdb:${VERSION}-huggingface", "${REGISTRY}/mindsdb:huggingface"]
+  tags = ["${REGISTRY}/${IMAGE}:${VERSION}-huggingface", "${REGISTRY}/${IMAGE}:huggingface"]
 }

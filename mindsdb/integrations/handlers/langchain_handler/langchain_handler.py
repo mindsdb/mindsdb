@@ -79,38 +79,6 @@ class LangChainHandler(BaseMLEngine):
         if strict:
             raise Exception(f'Missing API key serper_api_key. Either re-create this ML_ENGINE specifying the `serper_api_key` parameter,\
                  or re-create this model and pass the API key with `USING` syntax.')  # noqa
-        
-    def _get_openai_api_key(self, args, strict=True):
-        if 'openai_api_key' in args:
-            return args['openai_api_key']
-        # 2
-        connection_args = self.engine_storage.get_connection_args()
-        if 'openai_api_key' in connection_args:
-            return connection_args['openai_api_key']
-        # 3
-        api_key = os.getenv('OPENAI_API_KEY')  # e.g. "OPENAI_API_KEY"
-        if api_key is not None:
-            return api_key
-
-        if strict:
-            raise Exception(f'Missing API key openai_api_key. Either re-create this ML_ENGINE specifying the `openai_api_key` parameter,\
-                 or re-create this model and pass the API key with `USING` syntax.')  # noqa
-
-    def _get_anthropic_api_key(self, args, strict=True):
-        if 'anthropic_api_key' in args:
-            return args['anthropic_api_key']
-        # 2
-        connection_args = self.engine_storage.get_connection_args()
-        if 'anthropic_api_key' in connection_args:
-            return connection_args['anthropic_api_key']
-        # 3
-        api_key = os.getenv('ANTHROPIC_API_KEY')  # e.g. "OPENAI_API_KEY"
-        if api_key is not None:
-            return api_key
-
-        if strict:
-            raise Exception(f'Missing API key anthropic_api_key. Either re-create this ML_ENGINE specifying the `anthropic_api_key` parameter,\
-                 or re-create this model and pass the API key with `USING` syntax.')  # noqa
 
     def create(self, target, args=None, **kwargs):
         self.write_privileges = args.get('using', {}).get('writer', self.write_privileges)
@@ -190,8 +158,6 @@ class LangChainHandler(BaseMLEngine):
         top_p = pred_args.get('top_p', None)
         timeout = pred_args.get('request_timeout', None)
         serper_api_key = self._get_serper_api_key(args, strict=False)
-        openai_api_key = self._get_openai_api_key(args, strict=False)
-        anthropic_api_key = self._get_anthropic_api_key(args, strict=False)
         model_kwargs = {}
         if model_name in _ANTHROPIC_CHAT_MODELS:
             model_kwargs['model'] = model_name
@@ -201,7 +167,7 @@ class LangChainHandler(BaseMLEngine):
             model_kwargs['timeout'] = timeout
             model_kwargs['stop_sequences'] = pred_args.get('stop_sequences', None)
             model_kwargs['serper_api_key'] = serper_api_key
-            model_kwargs['anthropic_api_key'] = anthropic_api_key
+            model_kwargs['anthropic_api_key'] = get_api_key('anthropic', args, self.engine_storage)
         else:
             # OpenAI
             model_kwargs['model_name'] = model_name
@@ -215,7 +181,7 @@ class LangChainHandler(BaseMLEngine):
             model_kwargs['n'] = pred_args.get('n', None)
             model_kwargs['best_of'] = pred_args.get('best_of', None)
             model_kwargs['logit_bias'] = pred_args.get('logit_bias', None)
-            model_kwargs['openai_api_key'] = openai_api_key
+            model_kwargs['openai_api_key'] = get_api_key('openai', args, self.engine_storage)
 
         model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
         return model_kwargs

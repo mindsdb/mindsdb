@@ -24,7 +24,7 @@ The first step is to create a ML Engine with the new `clipdrop` engine.
 CREATE ML_ENGINE clipdrop_engine
 FROM clipdrop
 USING
-  api_key = 'your_api_key';
+  clipdrop_api_key = 'your_api_key';
 ~~~~
 
 

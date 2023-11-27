@@ -18,7 +18,7 @@ The first step to make use of this handler is to create an ML Engine. This can b
 CREATE ML_ENGINE hf_api_engine
 FROM huggingface_api
 USING
-  api_key = '<YOUR_API_KEY>';
+  huggingface_api_api_key = '<YOUR_API_KEY>';
 ```
 
 ## Creating Models

@@ -23,7 +23,7 @@ The first step is to create a ML Engine with the new `cohere` engine.
 CREATE ML_ENGINE Cohere_ML_Engine
 FROM cohere
 USING
-  api_key = 'your_api_key';
+  cohere_api_key = 'your_api_key';
 ~~~~
 
 ### Detect_language 

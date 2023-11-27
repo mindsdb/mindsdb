@@ -15,7 +15,7 @@ Create a ML Engine with the new `anthropic` engine.
 CREATE ML_ENGINE Anthropic_ML_Engine
 FROM anthropic
 USING
-  api_key = 'your_api_key';
+  anthropic_api_key = 'your_api_key';
 ~~~~
 
 ~~~ sql

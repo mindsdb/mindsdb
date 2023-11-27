@@ -1,14 +1,15 @@
-from langchain.agents.agent_toolkits import SQLDatabaseToolkit
-from langchain.schema.language_model import BaseLanguageModel
-from langchain.tools.base import BaseTool
-
 from mindsdb.interfaces.storage import db
 from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
 
 from typing import List
 
 
-def _make_text_to_sql_tools(skill: db.Skills, llm: BaseLanguageModel, executor) -> List[BaseTool]:
+def _make_text_to_sql_tools(skill: db.Skills, llm, executor) -> List:
+    # To prevent dependency on Langchain unless an actual tool uses it.
+    try:
+        from langchain.agents.agent_toolkits import SQLDatabaseToolkit
+    except ImportError:
+        raise ImportError('To use the text-to-SQL skill, please install langchain with `pip install langchain`')
     database = skill.params['database']
     tables = skill.params['tables']
     tables_to_include = [f'{database}.{table}' for table in tables]
@@ -20,7 +21,7 @@ def _make_text_to_sql_tools(skill: db.Skills, llm: BaseLanguageModel, executor) 
     return SQLDatabaseToolkit(db=db, llm=llm).get_tools()
 
 
-def make_tools_from_skill(skill: db.Skills, llm: BaseLanguageModel, executor) -> List[BaseTool]:
+def make_tools_from_skill(skill: db.Skills, llm, executor) -> List:
     """Makes Langchain compatible tools from a skill
 
     Args:

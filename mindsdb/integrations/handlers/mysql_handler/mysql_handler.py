@@ -1,3 +1,14 @@
+"""
+This is the MySQL integration handler for mindsdb.  It provides the routines
+which provide for interacting with the database.
+
+MindsDB currently does not appear to multiple round trip transactions. This
+makes sense given the niche that the project fulfills.  If this changes, most
+handlers will require modification.  Here we would need a context manager for
+handling transactions.  This would be safer than explicit commits since errors
+would result in rolling back automatically.
+"""
+
 from collections import OrderedDict
 
 import pandas as pd
@@ -73,6 +84,7 @@ class MySQLHandler(DatabaseHandler):
                 config["ssl_key"] = ssl_key
 
         connection = mysql.connector.connect(**config)
+        connection.autocommit = True
         self.is_connected = True
         self.connection = connection
         return self.connection
@@ -131,7 +143,6 @@ class MySQLHandler(DatabaseHandler):
                     )
                 else:
                     response = Response(RESPONSE_TYPE.OK)
-                connection.commit()
             except Exception as e:
                 log.logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
                 response = Response(

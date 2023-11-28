@@ -48,7 +48,7 @@ CREATE MODEL mindsdb.gpt_model
 PREDICT response
 USING
 engine = 'openai_engine',
-api_key = 'your openai key',
+openai_api_key = 'your openai key',
 model_name = 'gpt-4', -- you can also use 'text-davinci-003' or 'gpt-3.5-turbo'
 prompt_template = 'respond to {{text}} by {{author_username}}'; 
 ```

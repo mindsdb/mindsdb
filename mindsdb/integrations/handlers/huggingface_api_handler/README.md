@@ -45,8 +45,7 @@ CREATE MODEL mindsdb.hf_text_classifier
 PREDICT sentiment
 USING
   task = 'text-classification',
-  engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
+  engine = 'hf_api_engine'
   input_column = 'text'
 ```
 
@@ -57,7 +56,6 @@ PREDICT sequence
 USING
   task = 'fill-mask',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
   input_column = 'text'
 ```
 
@@ -68,7 +66,6 @@ PREDICT summary
 USING
   task = 'summarization',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
   input_column = 'text'
 ```
 
@@ -79,7 +76,6 @@ PREDICT generated_text
 USING
   task = 'text-generation',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
   input_column = 'text'
 ```
 
@@ -90,7 +86,6 @@ PREDICT answer
 USING
   task = 'question-answering',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
   input_column = 'question',
   context_column = 'context'
 ```
@@ -104,7 +99,6 @@ PREDICT similarity
 USING
   task = 'sentence-similarity',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
   input_column = 'sentence1',
   input_column2 = 'sentence2'
 ```
@@ -118,7 +112,6 @@ PREDICT label
 USING
   task = 'zero-shot-classification',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
   input_column = 'text',
   candidate_labels = ['label1', 'label2', 'label3']
 ```
@@ -132,7 +125,6 @@ PREDICT label
 USING
   task = 'image-classification',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
   input_column = 'image_url'
 ```
 
@@ -143,7 +135,6 @@ PREDICT objects
 USING
   task = 'object-detection',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
   input_column = 'image_url'
 ```
 
@@ -154,7 +145,6 @@ PREDICT transcription
 USING
   task = 'automatic-speech-recognition',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
   input_column = 'audio_url'
 ```
 
@@ -165,7 +155,6 @@ PREDICT label
 USING
   task = 'audio-classification',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
   input_column = 'audio_url'
 ```
 

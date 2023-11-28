@@ -46,7 +46,6 @@ PREDICT answer
 USING
     column = 'question',
     engine = 'anthropic_engine',
-    api_key = 'your-anthropic-api-key',
     max_tokens = 300,
     model = 'claude-1'; -- choose one of claude-1 or claude-2
 ```
@@ -57,7 +56,6 @@ Where:
 |-------------------|---------------------------------------------------------------------------|
 | `column`          | It defines the prompt to the model.                                       |
 | `engine`          | It defines the Anthropic engine.                                          |
-| `api_key`         | It is used to provide your Anthropic API key to gain access to the model. |
 | `max_tokens`      | It defines the maximum number of tokens to generate before stopping.      |
 | `model`           | It defines model that will complete your prompt.                          |
 

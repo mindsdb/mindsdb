@@ -229,7 +229,7 @@ class TestMongoDBServer(BaseUnitTest):
 
     def t_create_ml_engine(self, client_con, mock_executor):
 
-        client_con.myproj.ml_engines.insert_one({'name': "openai2", "handler": "openai", "params": {"api_key": "qqq"}})
+        client_con.myproj.ml_engines.insert_one({'name': "openai2", "handler": "openai", "params": {"openai_api_key": "qqq"}})
 
         ast = mock_executor.call_args[0][0]
 

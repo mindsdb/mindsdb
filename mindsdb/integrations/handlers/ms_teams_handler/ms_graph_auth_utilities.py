@@ -2,7 +2,7 @@ import msal
 from msal.exceptions import MsalServiceError
 
 
-class MSGraphAuthUtilities:
+class MSGraphAuthManager:
     def __init__(self, client_id: str, client_secret: str, tenant_id: str, refresh_token: str = None):
         """
         Initializes the class with the client_id, client_secret and tenant_id
@@ -14,6 +14,7 @@ class MSGraphAuthUtilities:
         self.client_id = client_id
         self.client_secret = client_secret
         self.tenant_id = tenant_id
+        self.refresh_token = refresh_token
 
     def _get_msal_app(self):
         return msal.ConfidentialClientApplication(

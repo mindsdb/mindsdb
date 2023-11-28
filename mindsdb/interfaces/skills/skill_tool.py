@@ -1,8 +1,3 @@
-from langchain.agents import Tool
-from langchain.agents.agent_toolkits import SQLDatabaseToolkit
-from langchain.schema.language_model import BaseLanguageModel
-from langchain.tools.base import BaseTool
-
 from mindsdb.interfaces.storage import db
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
 from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
@@ -15,7 +10,12 @@ from typing import List
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
 
 
-def _make_text_to_sql_tools(skill: db.Skills, llm: BaseLanguageModel, executor) -> List[BaseTool]:
+def _make_text_to_sql_tools(skill: db.Skills, llm, executor) -> List:
+    # To prevent dependency on Langchain unless an actual tool uses it.
+    try:
+        from langchain.agents.agent_toolkits import SQLDatabaseToolkit
+    except ImportError:
+        raise ImportError('To use the text-to-SQL skill, please install langchain with `pip install langchain`')
     database = skill.params['database']
     tables = skill.params['tables']
     tables_to_include = [f'{database}.{table}' for table in tables]

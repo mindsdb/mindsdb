@@ -1441,9 +1441,12 @@ class SQLQuery():
 
                 dn.query(query=update_query, session=self.session)
         elif type(step) == DeleteStep:
-
-            integration_name = step.table.parts[0]
-            table_name_parts = step.table.parts[1:]
+            if len(step.table.parts) > 1:
+                integration_name = step.table.parts[0]
+                table_name_parts = step.table.parts[1:]
+            else:
+                integration_name = self.database
+                table_name_parts = step.table.parts
 
             dn = self.datahub.get(integration_name)
 

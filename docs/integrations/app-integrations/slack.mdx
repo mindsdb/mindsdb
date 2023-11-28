@@ -22,7 +22,7 @@ The Slack handler is initialized with the following parameters:
 Please note that `app_token` is an optional parameter. Without providing it, you need to integrate an app into a Slack channel.
 </Note>
 
-### Method 1
+### Method 1: Chatbot responds in direct messages to a Slack app
 
 One way to connect Slack is to use both bot and app tokens. By following the instructions below, you'll set up the Slack app and be able to message this Slack app directly to chat with the bot.
 
@@ -73,7 +73,7 @@ WITH
     };
 ```
 
-### Method 2
+### Method 2: Chatbot responds on a defined Slack channel
 
 Another way to connect to Slack is to use the bot token only. By following the instructions below, you'll set up the Slack app and integrate it into one of the channels from which you can directly chat with the bot.
 
@@ -122,7 +122,7 @@ It comes with the `channels` table.
 <Warning>
 The following usage applies when **Connection Method 2** was used to connect Slack.
 
-The usage for **Connection Method 1** is through the LLM UI. More details [here](/sql/tutorials/llm-chatbot-ui).
+See the usage for **Connection Method 1** [via LLM UI](/sql/tutorials/llm-chatbot-ui) or [via the `CREATE CHATBOT` syntax](/sql/tutorials/create-chatbot).
 </Warning>
 
 You can select all messages from the channel using the below query.

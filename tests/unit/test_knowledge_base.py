@@ -237,7 +237,7 @@ class TestKnowledgeBase(BaseExecutorTest):
             SELECT *
             FROM test_kb
             WHERE
-                search_query = 'some query'
+                content = 'some query'
             LIMIT 1
         """
         df = self.run_sql(sql)

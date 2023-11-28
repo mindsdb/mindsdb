@@ -8,6 +8,8 @@ import pandas as pd
 from collections import OrderedDict
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
+logger = log.getLogger(__name__)
+
 
 class InstatusHandler(APIHandler):
     def __init__(self, name: str, **kwargs) -> None:
@@ -46,7 +48,7 @@ class InstatusHandler(APIHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Instatus API: {e}!')
+            logger.error(f'Error connecting to Instatus API: {e}!')
             response.error_message = e
 
         self.is_connected = response.success

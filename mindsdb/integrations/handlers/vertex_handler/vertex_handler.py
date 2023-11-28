@@ -4,6 +4,8 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.handlers.vertex_handler.vertex_client import VertexClient
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
+
 
 class VertexHandler(BaseMLEngine):
     """Handler for the Vertex Google AI cloud API"""
@@ -37,13 +39,13 @@ class VertexHandler(BaseMLEngine):
             raise Exception(f"Vertex model {model_name} not found")
         endpoint_name = model_name + "_endpoint"
         if vertex.get_endpoint_by_display_name(endpoint_name):
-            log.logger.info(f"Endpoint {endpoint_name} already exists, skipping deployment")
+            logger.info(f"Endpoint {endpoint_name} already exists, skipping deployment")
         else:
-            log.logger.info(f"Starting deployment at {endpoint_name}")
+            logger.info(f"Starting deployment at {endpoint_name}")
             endpoint = vertex.deploy_model(model)
             endpoint.display_name = endpoint_name
             endpoint.update()
-            log.logger.info(f"Endpoint {endpoint_name} deployed")
+            logger.info(f"Endpoint {endpoint_name} deployed")
 
         predict_args = {}
         predict_args["target"] = target

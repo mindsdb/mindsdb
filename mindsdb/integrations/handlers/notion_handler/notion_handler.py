@@ -18,6 +18,8 @@ from .notion_table import (
     NotionPagesTable,
 )
 
+logger = log.getLogger(__name__)
+
 
 class NotionHandler(APIHandler):
     name = "notion"
@@ -66,7 +68,7 @@ class NotionHandler(APIHandler):
             response.error_message = (
                 f"Error connecting to Notion api: {e}. Check api_token"
             )
-            log.logger.error(response.error_message)
+            logger.error(response.error_message)
             response.success = False
 
         if response.success is False:
@@ -177,7 +179,7 @@ class NotionHandler(APIHandler):
                     data = data[:left]
                     break
 
-            log.logger.debug(f">>>notion in: {method_name}({params})")
+            logger.debug(f">>>notion in: {method_name}({params})")
 
             resp = method(**params)
 

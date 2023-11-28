@@ -1,0 +1,201 @@
+---
+title: Agent
+sidebarTitle: Agent
+---
+
+With MindsDB, you can create and deploy AI agents that comprise AI models and customizable skills such as knowledge bases and text-to-SQL.
+
+<p align="center">
+  <img src="/assets/agent_diagram.png" />
+</p>
+
+AI agents use a conversational model (like OpenAI or Anthropic) from LangChain utilizing [tools as skills](https://python.langchain.com/docs/modules/agents/tools/) to respond to user input. Users can customize AI agents with their own prompts to fit their use cases.
+
+A [chatbot](/agents/chatbot) can be thought of as an agent connected to some messaging interface.
+
+## How to work with AI agents
+
+### Create skills
+
+Start by setting up the skills. You can create and manage skills using MindsDB SQL or via REST API endpoints.
+
+#### MindsDB SQL
+
+Here is how to create, update, and delete skills and knowledge bases using MindsDB SQL:
+
+* Creating, inserting into, updating, and deleting a knowledge base:
+
+    ```sql
+    CREATE KNOWLEDGE BASE my_knowledge_base
+    USING
+        model = model_name, -- this must be created with CREATE MODEL
+        storage = vector_database.storage_table; -- this parameter is optional; if not provided, the default ChromaDB is used for storage
+
+    INSERT INTO my_knowledge_base
+        SELECT id, text AS content FROM datasource.data_table;
+
+    UPDATE KNOWLEDGE BASE my_knowledge_base
+    ON id
+    FROM (SELECT id, text AS content FROM datasource.data_table);
+
+    DROP KNOWLEDGE BASE my_knowledge_base;
+    ```
+
+* Creating, updating, and deleting a skill that utilizes a knowledge base:
+
+    ```sql
+    CREATE SKILL kb_skill
+    USING
+        type = 'knowledge_base',
+        source = 'my_knowledge_base'; -- this must be created with CREATE KNOWLEDGE BASE
+
+    UPDATE SKILL kb_skill
+    SET
+       source = 'new_knowledge_base'; -- this must be created with CREATE KNOWLEDGE BASE
+
+    DROP SKILL kb_skill;
+    ```
+
+* Creating, updating, and deleting a text-to-SQL skill:
+
+    ```sql
+    CREATE SKILL text_to_sql_skill
+    USING
+        type = 'text_to_sql',
+        database = 'example_db', -- this must be created with CREATE DATABASE
+        tables = ['sales_data'];
+
+    UPDATE SKILL text_to_sql_skill
+    SET
+        database = 'new_example_db', -- this must be created with CREATE DATABASE
+        tables = ['sales_data'];
+
+    DROP SKILL text_to_sql_skill;
+    ```
+
+You can query all skills using this command:
+
+```sql
+SELECT * FROM skills;
+```
+
+#### REST API
+
+Here is how to interact with skills using REST API endpoints:
+
+* `GET /projects/<project_name>/skills` - gets all skills created by the user (allow params to filter by agent)
+* `GET /projects/<project_name>/skills/<skill_name>` - gets a skill by name or ID
+* `PUT /projects/<project_name>/skills/<skill_name>` - updates skill with new params
+* `POST /projects/<project_name>/skills` - creates a new skill
+* `DELETE /projects/<project_name>/skills/<skills>` - deletes a skill by name or ID
+
+### Create an agent
+
+An agent can be created, deleted, queried, and updated using MindsDB SQL or via REST API endpoints.
+
+#### MindsDB SQL
+
+Here is how to interact with agents using MindsDB SQL:
+
+* Creating an AI agent:
+
+    ```sql
+    CREATE AGENT my_agent
+    USING
+       model = 'chatbot_agent', -- this must be created with CREATE MODEL
+       skills = ['test_skill']; -- this must be created with CREATE SKILL
+    ```
+
+* Updating an AI agent:
+
+    ```sql
+    UPDATE AGENT my_agent
+    SET
+       model = 'new_chatbot_agent', -- this must be created with CREATE MODEL
+       skills_to_remove = ['test_skill'],
+       skills_to_add = ['production_skill']; -- this must be created with CREATE SKILL
+    ```
+
+* Deleting an AI agent:
+
+    ```sql
+    DROP AGENT my_agent;
+    ```
+
+You can query all agents using this command:
+
+```sql
+SELECT * FROM agents;
+```
+
+#### REST API
+
+Here is how to interact with agents using REST API endpoints:
+
+* `GET /projects/<project_name>/agents` - gets all agents created by the user
+* `GET /projects/<project_name>/agents/<agent>` - gets an agent by name or ID
+* `PUT /projects/<project_name>/agents/<agent_name>` updates agent with new settings
+* `POST /projects/<project_name>/agents` - creates a new agent
+* `DELETE /projects/<project_name>/agent/<agent_name>` - deletes an agent by name or ID
+
+## Example
+
+Start by creating a conversational large language model to be used by an agent.
+
+```sql
+CREATE MODEL my_model
+PREDICT answer
+USING
+    engine = 'langchain',
+    input_column = 'question',
+    api_key = 'your-model-api-key', -- choose one of OpenAI or Anthropic
+    model_name='gpt-4',
+    mode = 'conversational',
+    user_column = 'question' ,
+    assistant_column = 'answer',
+    max_tokens=100,
+    temperature=0,
+    verbose=True,
+    prompt_template='Answer the user input in a helpful way';
+```
+
+Then, connect a data source to be used for creating a skill.
+
+```sql
+CREATE DATABASE example_db
+WITH ENGINE = "postgres",
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "3.220.66.106",
+    "port": "5432",
+    "database": "demo"
+    };
+ 
+SELECT * FROM example_db.sales_data;
+```
+
+Create a skill using one or more tables from a connected data source.
+
+```sql
+CREATE SKILL text_to_sql_skill
+USING
+    type = 'text_to_sql',
+    database = 'example_db',
+    tables = ['sales_data'];
+```
+
+Now that we have a model and a skill, let's create an agent.
+
+```sql
+CREATE AGENT text_to_sql_agent
+USING
+    model = 'my_model',
+    skills = ['text_to_sql_skill'];
+```
+
+The next step would be to connect a chat app, like Slack, to MindsDB and create a chatbot utilizing this agent.
+
+<Tip>
+Learn about [chatbots here](/agents/chatbot).
+</Tip>

@@ -12,6 +12,8 @@ from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusRe
 from mindsdb.integrations.libs.vectordatabase_handler import FilterCondition, FilterOperator, TableField, VectorStoreHandler
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
+
 
 class MilvusHandler(VectorStoreHandler):
     """This handler handles connection and execution of the Milvus statements."""
@@ -65,7 +67,7 @@ class MilvusHandler(VectorStoreHandler):
             connections.connect(**self._connection_data)
             self.is_connected = True
         except Exception as e:
-            log.logger.error(f"Error connecting to Milvus client: {e}!")
+            logger.error(f"Error connecting to Milvus client: {e}!")
             self.is_connected = False
 
     def disconnect(self):
@@ -81,7 +83,7 @@ class MilvusHandler(VectorStoreHandler):
         try:
             response_code.success = connections.has_connection(self._connection_data["alias"])
         except Exception as e:
-            log.logger.error(f"Error checking Milvus connection: {e}!")
+            logger.error(f"Error checking Milvus connection: {e}!")
             response_code.error_message = str(e)
         return response_code
 

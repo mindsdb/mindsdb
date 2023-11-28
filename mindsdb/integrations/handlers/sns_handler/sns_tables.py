@@ -80,7 +80,8 @@ class MessageTable(APITable):
                                  'MessageDeduplicationId': message_deduplication_id, 'MessageGroupId': message_group_id,
                                  'MessageAttributes': message_attributes}
                 request_entries.append(request_entry)
-            self.handler.publish_batch(topic_arn=topic_arn, batch_request_entries=request_entries)
+            param = {"batch_request_entries": request_entries, "topic_arn": topic_arn}
+            self.handler.call_sns_api('publish_batch', param)
 
 
 class TopicTable(APITable):

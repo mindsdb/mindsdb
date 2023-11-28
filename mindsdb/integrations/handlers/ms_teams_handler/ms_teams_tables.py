@@ -16,6 +16,10 @@ logger = log.getLogger(__name__)
 class ChannelMessagesTable(APITable):
     """The Microsoft Teams Messages Table implementation"""
     pass
+
+class ChannelMessageRepliesTable(APITable):
+    """The Microsoft Teams Message Replies Table implementation"""
+    pass
             
 class ChannelsTable(APITable):
     """The Microsoft Channels Table implementation"""

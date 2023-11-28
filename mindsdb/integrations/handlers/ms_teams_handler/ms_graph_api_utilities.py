@@ -2,7 +2,7 @@ import time
 import requests
 from typing import Optional, Dict, Union, List
 
-from .ms_graph_auth_utilities import MSGraphAuthManager
+from mindsdb.integrations.handlers.utilities.auth_utilities.ms_graph_api_auth_utilities import MSGraphAPIAuthManager
 
 
 class MSGraphAPIClient:
@@ -18,7 +18,7 @@ class MSGraphAPIClient:
         :param tenant_id: The tenant_id of the app
         :param refresh_token: The refresh_token of the app
         """
-        ms_graph_auth_manager = MSGraphAuthManager(client_id, client_secret, tenant_id, refresh_token)
+        ms_graph_auth_manager = MSGraphAPIAuthManager(client_id, client_secret, tenant_id, refresh_token)
         self.access_token = ms_graph_auth_manager.get_access_token()
         self._group_ids = None
 

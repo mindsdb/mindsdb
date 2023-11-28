@@ -1,5 +1,4 @@
-import msal
-from msal.exceptions import MsalServiceError
+from .ms_graph_api_utilities import MSGraphAPIClient
 
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import MessagesTable
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -50,10 +49,11 @@ class MSTeamsHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        self.connection = msal.ConfidentialClientApplication(
-            self.connection_data["client_id"],
-            authority=f"https://login.microsoftonline.com/" f"{self.connection_data['tenant_id']}",
-            client_credential=self.connection_data["client_secret"],
+        self.connection = MSGraphAPIClient(
+            client_id=self.connection_data["client_id"],
+            client_secret=self.connection_data["client_secret"],
+            tenant_id=self.connection_data["tenant_id"],
+            refresh_token=self.connection_data.get("refresh_token"),
         )
 
         self.is_connected = True

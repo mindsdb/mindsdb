@@ -1,4 +1,4 @@
-from .ms_graph_api_utilities import MSGraphAPIClient
+from mindsdb.integrations.handlers.utilities.api_utilities import MSGraphAPIClient
 
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import MessagesTable, ChannelsTable
 from mindsdb.integrations.libs.api_handler import APIHandler

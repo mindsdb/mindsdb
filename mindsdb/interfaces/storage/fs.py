@@ -27,6 +27,9 @@ except Exception:
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -165,6 +168,9 @@ class FileLock:
                 relative_path (Path): path to resource directory relative to storage root
                 mode (str): lock for read (r) or write (w)
         """
+        if os.name != 'posix':
+            return
+
         self._local_path = FileLock.lock_folder_path(relative_path)
         self._lock_file_name = DIR_LOCK_FILE_NAME
         self._lock_file_path = self._local_path / self._lock_file_name
@@ -188,10 +194,10 @@ class FileLock:
             fcntl.lockf(self._lock_fd, self._mode | fcntl.LOCK_NB)
         except (ValueError, FileNotFoundError):
             # file probably was deleted between open and lock
-            print(f'Cant accure lock on {self._local_path}')
+            logger.error(f'Cant accure lock on {self._local_path}')
             raise FileNotFoundError
         except BlockingIOError:
-            print(f'Directory is locked by another process: {self._local_path}')
+            logger.error(f'Directory is locked by another process: {self._local_path}')
             fcntl.lockf(self._lock_fd, self._mode)
 
     def __exit__(self, exc_type, exc_value, traceback):

@@ -35,7 +35,6 @@ from mindsdb.api.http.namespaces.tab import ns_conf as tab_ns
 from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
 from mindsdb.api.http.namespaces.views import ns_conf as views_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
-from mindsdb.api.nlp.nlp import ns_conf as nlp_ns
 from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.file.file_controller import FileController
@@ -44,9 +43,10 @@ from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
-from mindsdb.utilities.log import get_log
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
+
+logger = log.getLogger(__name__)
 
 
 class Swagger_Api(Api):
@@ -66,25 +66,26 @@ def custom_output_json(data, code, headers=None):
 
 
 def get_last_compatible_gui_version() -> LooseVersion:
-    logger = get_log('http')
-
+    logger.debug("Getting last compatible frontend..")
     try:
         res = requests.get('https://mindsdb-web-builds.s3.amazonaws.com/compatible-config.json', timeout=5)
     except (ConnectionError, requests.exceptions.ConnectionError) as e:
-        print(f'Is no connection. {e}')
+        logger.error(f"Is no connection. {e}")
         return False
     except Exception as e:
-        print(f'Is something wrong with getting compatible-config.json: {e}')
+        logger.error(f"Is something wrong with getting compatible-config.json: {e}")
         return False
 
     if res.status_code != 200:
-        print(f'Cant get compatible-config.json: returned status code = {res.status_code}')
+        logger.error(
+            f"Cant get compatible-config.json: returned status code = {res.status_code}"
+        )
         return False
 
     try:
         versions = res.json()
     except Exception as e:
-        print(f'Cant decode compatible-config.json: {e}')
+        logger.error(f"Cant decode compatible-config.json: {e}")
         return False
 
     current_mindsdb_lv = LooseVersion(mindsdb_version)
@@ -121,12 +122,15 @@ def get_last_compatible_gui_version() -> LooseVersion:
                 all_lower_versions = [LooseVersion(x) for x in lower_versions.keys()]
                 gui_version_lv = gui_versions[all_lower_versions[-1].vstring]
     except Exception as e:
-        logger.error(f'Error in compatible-config.json structure: {e}')
+        logger.error(f"Error in compatible-config.json structure: {e}")
         return False
+
+    logger.debug(f"Last compatible frontend version: {gui_version_lv}.")
     return gui_version_lv
 
 
 def get_current_gui_version() -> LooseVersion:
+    logger.debug("Getting current frontend version..")
     config = Config()
     static_path = Path(config['paths']['static'])
     version_txt_path = static_path.joinpath('version.txt')
@@ -136,12 +140,16 @@ def get_current_gui_version() -> LooseVersion:
         with open(version_txt_path, 'rt') as f:
             current_gui_version = f.readline()
 
-    current_gui_lv = None if current_gui_version is None else LooseVersion(current_gui_version)
+    current_gui_lv = (
+        None if current_gui_version is None else LooseVersion(current_gui_version)
+    )
+    logger.debug(f"Current frontend version: {current_gui_lv}.")
 
     return current_gui_lv
 
 
 def initialize_static():
+    logger.debug("Initializing static..")
     config = Config()
     last_gui_version_lv = get_last_compatible_gui_version()
     current_gui_version_lv = get_current_gui_version()
@@ -154,6 +162,7 @@ def initialize_static():
             current_gui_version_lv is None
             or required_gui_version_lv != current_gui_version_lv
         ):
+            logger.debug("Updating gui..")
             success = update_static(required_gui_version_lv)
     else:
         if last_gui_version_lv is False:
@@ -162,16 +171,18 @@ def initialize_static():
         if current_gui_version_lv is not None:
             if current_gui_version_lv >= last_gui_version_lv:
                 return True
-
+        logger.debug("Updating gui..")
         success = update_static(last_gui_version_lv)
 
     db.session.close()
     return success
 
 
-def initialize_app(config, no_studio, with_nlp):
+def initialize_app(config, no_studio):
     static_root = config['paths']['static']
+    logger.debug(f"Static route: {static_root}")
     gui_exists = Path(static_root).joinpath('index.html').is_file()
+    logger.debug(f"Does GUI already exist.. {'YES' if gui_exists else 'NO'}")
     init_static_thread = None
     if (
         no_studio is False
@@ -218,8 +229,6 @@ def initialize_app(config, no_studio, with_nlp):
         skills_ns,
         agents_ns
     ]
-    if with_nlp:
-        protected_namespaces.append(nlp_ns)
 
     for ns in protected_namespaces:
         api.add_namespace(ns)
@@ -228,12 +237,12 @@ def initialize_app(config, no_studio, with_nlp):
 
     @api.errorhandler(Exception)
     def handle_exception(e):
-        log.get_log('http').error(f'http exception: {e}')
+        logger.error(f"http exception: {e}")
         # pass through HTTP errors
         if isinstance(e, HTTPException):
-            return {'message': str(e)}, e.code, e.get_response().headers
-        name = getattr(type(e), '__name__') or 'Unknown error'
-        return {'message': f'{name}: {str(e)}'}, 500
+            return {"message": str(e)}, e.code, e.get_response().headers
+        name = getattr(type(e), "__name__") or "Unknown error"
+        return {"message": f"{name}: {str(e)}"}, 500
 
     @app.teardown_appcontext
     def remove_session(*args, **kwargs):
@@ -241,6 +250,7 @@ def initialize_app(config, no_studio, with_nlp):
 
     @app.before_request
     def before_request():
+        logger.debug(f"HTTP: {request.path}")
         ctx.set_default()
         config = Config()
 
@@ -268,14 +278,18 @@ def initialize_app(config, no_studio, with_nlp):
             try:
                 company_id = int(company_id)
             except Exception as e:
-                log.get_log('http').error(f'Cloud not parse company id: {company_id} | exception: {e}')
+                logger.error(
+                    f"Cloud not parse company id: {company_id} | exception: {e}"
+                )
                 company_id = None
 
         if user_class is not None:
             try:
                 user_class = int(user_class)
             except Exception as e:
-                log.get_log('http').error(f'Cloud not parse user_class: {user_class} | exception: {e}')
+                logger.error(
+                    f"Cloud not parse user_class: {user_class} | exception: {e}"
+                )
                 user_class = 0
         else:
             user_class = 0
@@ -288,10 +302,12 @@ def initialize_app(config, no_studio, with_nlp):
     if not no_studio and init_static_thread is not None:
         init_static_thread.join()
 
+    logger.debug("Done initializing app.")
     return app
 
 
 def initialize_flask(config, init_static_thread, no_studio):
+    logger.debug("Initializing flask..")
     # region required for windows https://github.com/mindsdb/mindsdb/issues/2526
     mimetypes.add_type('text/css', '.css')
     mimetypes.add_type('text/javascript', '.js')
@@ -302,13 +318,11 @@ def initialize_flask(config, init_static_thread, no_studio):
         static_path = os.path.join(config['paths']['static'], 'static/')
         if os.path.isabs(static_path) is False:
             static_path = os.path.join(os.getcwd(), static_path)
-        kwargs['static_url_path'] = '/static'
-        kwargs['static_folder'] = static_path
+        kwargs["static_url_path"] = "/static"
+        kwargs["static_folder"] = static_path
+        logger.debug(f"Static path: {static_path}")
 
-    app = Flask(
-        __name__,
-        **kwargs
-    )
+    app = Flask(__name__, **kwargs)
 
     app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', secrets.token_hex(32))
     app.config['SESSION_COOKIE_NAME'] = 'session'
@@ -325,6 +339,7 @@ def initialize_flask(config, init_static_thread, no_studio):
         }
     }
 
+    logger.debug("Creating swagger API..")
     api = Swagger_Api(
         app,
         authorizations=authorizations,
@@ -341,12 +356,11 @@ def initialize_flask(config, init_static_thread, no_studio):
 
     # NOTE rewrite it, that hotfix to see GUI link
     if not no_studio:
-        logger = get_log('http')
-        if host in ('', '0.0.0.0'):
-            url = f'http://127.0.0.1:{port}/'
+        if host in ("", "0.0.0.0"):
+            url = f"http://127.0.0.1:{port}/"
         else:
-            url = f'http://{host}:{port}/'
-        logger.info(f' - GUI available at {url}')
+            url = f"http://{host}:{port}/"
+        logger.info(f" - GUI available at {url}")
 
         pid = os.getpid()
         x = threading.Thread(target=_open_webbrowser, args=(url, pid, port, init_static_thread, config['paths']['static']), daemon=True)
@@ -371,13 +385,13 @@ def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_f
     if init_static_thread is not None:
         init_static_thread.join()
     inject_telemetry_to_static(static_folder)
-    logger = get_log('http')
     try:
-        is_http_active = wait_func_is_true(func=is_pid_listen_port, timeout=15,
-                                           pid=pid, port=port)
+        is_http_active = wait_func_is_true(
+            func=is_pid_listen_port, timeout=15, pid=pid, port=port
+        )
         if is_http_active:
             webbrowser.open(url)
     except Exception as e:
-        logger.error(f'Failed to open {url} in webbrowser with exception {e}')
+        logger.error(f"Failed to open {url} in webbrowser with exception {e}")
         logger.error(traceback.format_exc())
     db.session.close()

@@ -8,6 +8,10 @@ from typing import Optional
 import psutil
 from appdirs import user_data_dir
 
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
+
 
 def create_directory(path):
     path = Path(path)
@@ -70,6 +74,25 @@ def create_process_mark(folder="learn"):
     return mark
 
 
+def set_process_mark(folder: str, mark: str) -> None:
+    """touch new file which will be process mark
+
+    Args:
+        folder (str): where create the file
+        mark (str): file name
+
+    Returns:
+        str: process mark
+    """
+    if os.name != "posix":
+        return
+    p = Path(tempfile.gettempdir()).joinpath(f"mindsdb/processes/{folder}/")
+    p.mkdir(parents=True, exist_ok=True)
+    mark = f"{os.getpid()}-{threading.get_native_id()}-{mark}"
+    p.joinpath(mark).touch()
+    return mark
+
+
 def delete_process_mark(folder: str = "learn", mark: Optional[str] = None):
     if mark is None:
         mark = _get_process_mark_id()
@@ -88,6 +111,7 @@ def clean_process_marks():
     if os.name != "posix":
         return
 
+    logger.debug("Deleting PIDs..")
     p = Path(tempfile.gettempdir()).joinpath("mindsdb/processes/")
     if p.exists() is False:
         return
@@ -123,24 +147,18 @@ def clean_unlinked_process_marks():
                 try:
                     next(t for t in threads if t.id == thread_id)
                 except StopIteration:
-                    from mindsdb.utilities.log import get_log
-
-                    get_log("main").warning(
+                    logger.warning(
                         f"We have mark for process/thread {process_id}/{thread_id} but it does not exists"
                     )
                     file.unlink()
 
             except psutil.AccessDenied:
-                from mindsdb.utilities.log import get_log
-
-                get_log("main").warning(f"access to {process_id} denied")
+                logger.warning(f"access to {process_id} denied")
 
                 continue
 
             except psutil.NoSuchProcess:
-                from mindsdb.utilities.log import get_log
-
-                get_log("main").warning(
+                logger.warning(
                     f"We have mark for process/thread {process_id}/{thread_id} but it does not exists"
                 )
                 file.unlink()

@@ -1,10 +1,10 @@
 import os
 
 from mindsdb.api.mysql.mysql_proxy.executor.executor import Executor
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 
-logger = get_log(logger_name="main")
+logger = log.getLogger(__name__)
 
 
 class ExecutorClientFactory:

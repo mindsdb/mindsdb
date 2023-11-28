@@ -7,6 +7,9 @@ from alembic.script.revision import ResolutionError
 from alembic.migration import MigrationContext
 
 import mindsdb.interfaces.storage.db as db
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 def migrate_to_head():
@@ -32,7 +35,7 @@ def migrate_to_head():
             script.revision_map.get_revision(cur_revision)
 
         except ResolutionError:
-            print('!!! Database version higher than application !!!')
+            logger.error('!!! Database version higher than application !!!')
             return
 
     upgrade(config=config, revision='head')

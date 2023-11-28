@@ -25,9 +25,10 @@ PLAID_ENV = {
     'sandbox': plaid.Environment.Sandbox,
 }
 
+logger = log.getLogger(__name__)
 
 class PlaidHandler(APIHandler):
-    '''A class for handling connections and interactions with the Twitter API.
+    '''A class for handling connections and interactions with the Plaid API.
 
     Attributes:
         plaid_env (str): Enviroment used by user [ 'sandbox'(default) OR 'development' OR 'production' ].
@@ -87,7 +88,7 @@ class PlaidHandler(APIHandler):
 
         except Exception as e:
             response.error_message = f'Error connecting to Plaid api: {e}. '
-            log.logger.error(response.error_message)
+            logger.error(response.error_message)
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False

@@ -1,7 +1,5 @@
-import os
 import sys
-import json
-import base64
+import copy
 import datetime as dt
 from copy import deepcopy
 from multiprocessing.pool import ThreadPool
@@ -13,10 +11,7 @@ from sqlalchemy import func, null
 import numpy as np
 
 import mindsdb.interfaces.storage.db as db
-from mindsdb.interfaces.storage.fs import FsStore
 from mindsdb.utilities.config import Config
-from mindsdb.utilities.json_encoder import json_serialiser
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.interfaces.model.functions import (
     get_model_record,
     get_model_records
@@ -26,6 +21,10 @@ from mindsdb.interfaces.storage.model_fs import ModelStorage
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import resolve_model_identifier
 import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -36,7 +35,7 @@ def delete_model_storage(model_id, ctx_dump):
         modelStorage = ModelStorage(model_id)
         modelStorage.delete()
     except Exception as e:
-        print(f'Something went wrong during deleting storage of model {model_id}: {e}')
+        logger.error(f'Something went wrong during deleting storage of model {model_id}: {e}')
 
 
 class ModelController():
@@ -106,23 +105,24 @@ class ModelController():
         return reduced_model_data
 
     def describe_model(self, session, project_name, model_name, attribute, version=None):
-        model_record = get_model_record(
-            name=model_name,
-            version=version,
-            project_name=project_name,
-            except_absent=True
-        )
+        args = {
+            'name': model_name,
+            'version': version,
+            'project_name': project_name,
+            'except_absent': True
+        }
+        if version is not None:
+            args['active'] = None
+
+        model_record = get_model_record(**args)
+
         integration_record = db.Integration.query.get(model_record.integration_id)
 
         ml_handler_base = session.integration_controller.get_handler(integration_record.name)
 
-        ml_handler = ml_handler_base._get_ml_handler(model_record.id)
-        if not hasattr(ml_handler, 'describe'):
-            raise Exception("ML handler doesn't support description")
-
+        ml_handler = ml_handler_base.get_ml_handler(model_record.id)
 
         if attribute is None:
-            # show model record
             model_info = self.get_model_info(model_record)
 
             try:
@@ -138,7 +138,7 @@ class ModelController():
                     # first cell already has a list
                     attributes = attributes[0]
 
-            model_info.insert(0, 'tables', [attributes])
+            model_info.insert(0, 'TABLES', [attributes])
             return model_info
         else:
             return ml_handler.describe(attribute)
@@ -192,7 +192,7 @@ class ModelController():
                 version=version,
             )
         if len(predictors_records) == 0:
-            raise Exception(f"Model '{model_name}' does not exist")
+            raise EntityNotExistsError('Model does not exist', model_name)
 
         is_cloud = self.config.get('cloud', False)
         if is_cloud:
@@ -254,12 +254,17 @@ class ModelController():
                 }
         return data_integration_ref, fetch_data_query
 
-    def prepare_create_statement(self, statement, database_controller, handler_controller):
+    def prepare_create_statement(self, statement, database_controller):
         # extract data from Create model or Retrain statement and prepare it for using in crate and retrain functions
         project_name = statement.name.parts[0].lower()
         model_name = statement.name.parts[1].lower()
 
-        problem_definition = {}
+        sql_task = None
+        if statement.task is not None:
+            sql_task = statement.task.to_string()
+        problem_definition = {
+            '__mdb_sql_task': sql_task
+        }
         if statement.targets is not None:
             problem_definition['target'] = statement.targets[0].parts[-1]
 
@@ -299,18 +304,16 @@ class ModelController():
         )
 
     def create_model(self, statement, ml_handler):
-        params = self.prepare_create_statement(statement,
-                                               ml_handler.database_controller,
-                                               ml_handler.handler_controller)
+        params = self.prepare_create_statement(statement, ml_handler.database_controller)
 
         existing_projects_meta = ml_handler.database_controller.get_dict(filter_type='project')
         if params['project_name'] not in existing_projects_meta:
-            raise Exception(f"Project '{params['project_name']}' does not exist.")
+            raise EntityNotExistsError('Project does not exist', params['project_name'])
 
         project = ml_handler.database_controller.get_project(name=params['project_name'])
         project_tables = project.get_tables()
         if params['model_name'] in project_tables:
-            raise Exception(f"Error: model '{params['model_name']}' already exists in project {params['project_name']}!")
+            raise EntityExistsError('Model already exists', f"{params['project_name']}.{params['model_name']}")
 
         predictor_record = ml_handler.learn(**params)
 
@@ -324,9 +327,7 @@ class ModelController():
             if set_active in ('0', 0, None):
                 set_active = False
 
-        params = self.prepare_create_statement(statement,
-                                               ml_handler.database_controller,
-                                               ml_handler.handler_controller)
+        params = self.prepare_create_statement(statement, ml_handler.database_controller)
 
         base_predictor_record = get_model_record(
             name=params['model_name'],
@@ -415,11 +416,18 @@ class ModelController():
 
         ml_handler_base = session.integration_controller.get_handler(integration_record.name)
 
-        ml_handler = ml_handler_base._get_ml_handler(model_record.id)
+        ml_handler = ml_handler_base.get_ml_handler(model_record.id)
         if not hasattr(ml_handler, 'update'):
             raise Exception("ML handler doesn't updating")
 
         ml_handler.update(args=problem_definition)
+
+        # update model record
+        if 'using' in problem_definition:
+            learn_args = copy.deepcopy(model_record.learn_args)
+            learn_args['using'].update(problem_definition['using'])
+            model_record.learn_args = learn_args
+            db.session.commit()
 
     def get_model_info(self, predictor_record):
         from mindsdb.interfaces.database.projects import ProjectController
@@ -444,7 +452,7 @@ class ModelController():
 
     def update_model_version(self, models, active=None):
         if active is None:
-            raise NotImplementedError(f'Update is not supported')
+            raise NotImplementedError('Update is not supported')
 
         if active in ('0', 0, False):
             active = False
@@ -473,7 +481,7 @@ class ModelController():
         model_records = db.Predictor.query.filter(
             db.Predictor.name == model_record.name,
             db.Predictor.project_id == model_record.project_id,
-            db.Predictor.active == True,
+            db.Predictor.active == True,    # noqa
             db.Predictor.company_id == ctx.company_id,
             db.Predictor.id != model_record.id
         )
@@ -484,7 +492,7 @@ class ModelController():
 
     def delete_model_version(self, models):
         if len(models) == 0:
-            raise Exception(f"Version to delete is not found")
+            raise Exception("Version to delete is not found")
 
         for model in models:
             model_record = get_model_record(

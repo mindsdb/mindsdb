@@ -1,4 +1,3 @@
-import datetime as dt
 import pandas as pd
 import dill
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -14,6 +13,12 @@ from mindsdb.integrations.utilities.time_series_utils import (
 from sklearn.metrics import r2_score
 from statsforecast import StatsForecast
 from statsforecast.models import AutoARIMA, AutoCES, AutoETS, AutoTheta
+
+# hierarchicalforecast is an optional dependency
+try:
+    from hierarchicalforecast.core import HierarchicalReconciliation
+except ImportError:
+    HierarchicalReconciliation = None
 
 DEFAULT_MODEL_NAME = "AutoARIMA"
 model_dict = {
@@ -101,7 +106,7 @@ class StatsForecastHandler(BaseMLEngine):
         model_args["order_by"] = time_settings["order_by"]
         if 'group_by' not in time_settings:
             # add group column
-            group_col = '__groupy_by'
+            group_col = '__group_by'
             time_settings["group_by"] = [group_col]
 
         model_args["group_by"] = time_settings["group_by"]
@@ -109,7 +114,7 @@ class StatsForecastHandler(BaseMLEngine):
             using_args["frequency"] if "frequency" in using_args else infer_frequency(df, time_settings["order_by"])
         )
         model_args["hierarchy"] = using_args["hierarchy"] if "hierarchy" in using_args else False
-        if model_args["hierarchy"]:
+        if model_args["hierarchy"] and HierarchicalReconciliation is not None:
             training_df, hier_df, hier_dict = get_hierarchy_from_df(df, model_args)
             self.model_storage.file_set("hier_dict", dill.dumps(hier_dict))
             self.model_storage.file_set("hier_df", dill.dumps(hier_df))
@@ -147,9 +152,11 @@ class StatsForecastHandler(BaseMLEngine):
 
         sf = StatsForecast(models=[], freq=model_args["frequency"], df=training_df)
         sf.fitted_ = fitted_models
+        model_name = str(fitted_models[0][0])
         forecast_df = sf.predict(model_args["horizon"])
+        forecast_df.index = forecast_df.index.astype(str)
 
-        if model_args["hierarchy"]:
+        if model_args["hierarchy"] and HierarchicalReconciliation is not None:
             hier_df = dill.loads(self.model_storage.file_get("hier_df"))
             hier_dict = dill.loads(self.model_storage.file_get("hier_dict"))
             reconciled_df = reconcile_forecasts(training_df, forecast_df, hier_df, hier_dict)
@@ -159,10 +166,7 @@ class StatsForecastHandler(BaseMLEngine):
             results_df = forecast_df[forecast_df.index.isin(groups_to_keep)]
 
         result = get_results_from_nixtla_df(results_df, model_args)
-
-        ts_col = model_args["order_by"]
-        if len(result) > 0 and isinstance(result.iloc[0][ts_col], dt.date):
-            result[ts_col] = result[ts_col].dt.date
+        result = result.rename(columns={model_name: model_args['target']})
         return result
 
     def describe(self, attribute=None):

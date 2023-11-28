@@ -16,8 +16,19 @@ The GitLab handler is initialized with the following parameters:
 
 ## Implemented Features
 
-- GitLab Issues table for a given Repository (Support LIMIT, WHERE, ORDER BY, SELECT - column)
-- GitLab Merge Requests table for a given Repository (Support LIMIT, WHERE, ORDER BY, SELECT - column)
+ [x] GitLab Issues Table for a given Repository
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
+- [x] GitLab Merge Requests Table for a given Repository
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
+
 
 ## Usage
 In order to make use of this handler and connect to a gitlab api in MindsDB, the following syntax can be used,
@@ -33,25 +44,27 @@ PARAMETERS = {
 
 Now, you can use this established connection to query your table as follows,
 ~~~~sql
-SELECT * FROM mindsdb_gitlab.issues
+SELECT * FROM mindsdb_gitlab.issues;
 ~~~~
 
 ~~~~sql
-SELECT number, state, creator, assignee, title, labels
+SELECT number, state, creator, assignee, title, created, labels 
   FROM mindsdb_gitlab.issues
-  WHERE state="open"
+  WHERE state="opened"
   ORDER BY created ASC, creator DESC
-  LIMIT 10
+  LIMIT 10;
 ~~~~
 
 ~~~~sql
-SELECT number, state, creator, reviewers, title, has_conflicts
+SELECT number, state, creator, reviewers, title, created, has_conflicts
   FROM mindsdb_gitlab.merge_requests
   WHERE state="merged"
   ORDER BY created ASC, creator DESC
-  LIMIT 10
+  LIMIT 10;
 ~~~~
 
 ## What is next??
-- GitLab Branches table for a given Repository 
-- GitLab ....
+
+Add support for:
+
+- GitLab Branches, Releases, Branches tables for a given Repository 

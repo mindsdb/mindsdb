@@ -13,6 +13,10 @@ This handler is implemented using `pymongo`, a Python library that contains tool
 
 The required arguments to establish a connection are as follows:
 
+* `host` is the MongoDB connection string.
+
+Optionally, you can connect using these parameters:
+
 * `username` is the username associated with the database.
 * `password` is the password to authenticate your access.
 * `host` is the host name or IP address.
@@ -62,16 +66,12 @@ Once you connected MindsDB to MongoDB Compass or MongoDB Shell, you can run this
 ```sql
 test> use mindsdb
 mindsdb> db.databases.insertOne({
-            'name': 'mongo_datasource',
-            'engine': 'mongodb',
-            'connection_args': {
-                "host": "127.0.0.1",
-                "port": 27017,
-                "username": "mongo",
-                "password": "password",
-                "database": "database"
-            }
-        })
+              name: "mongo_datasource",
+              engine: "mongodb",
+              connection_args: {
+                      "host": "mongodb+srv://user:pass@db.xxxyyy.mongodb.net/"
+              }
+          });
 ```
 
 Then you can query your data, like this:

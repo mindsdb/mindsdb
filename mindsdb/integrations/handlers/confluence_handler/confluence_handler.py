@@ -1,17 +1,24 @@
-from mindsdb.integrations.handlers.confluence_handler.confluence_table import ConfluenceSpacesTable
+from typing import Optional, Union
+
+import requests
+from atlassian import Confluence
+from mindsdb_sql import parse_sql
+
+from mindsdb.integrations.handlers.confluence_handler.confluence_table import (
+    ConfluencePagesTable,
+)
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
-from mindsdb.utilities.log import get_log
 from mindsdb_sql import parse_sql
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 from atlassian import Confluence
 from typing import Optional
 import requests
 
-logger = get_log("integrations.confluence_handler")
+logger = log.getLogger(__name__)
 
 class ConfluenceHandler(APIHandler):
     """Confluence handler implementation"""
@@ -24,9 +31,9 @@ class ConfluenceHandler(APIHandler):
             name of a handler instance
         """
         super().__init__(name)
-        
+
         connection_data = kwargs.get("connection_data", {})
-        
+
         self.parser = parse_sql
         self.dialect = 'confluence'
         self.connection_data = connection_data
@@ -34,10 +41,10 @@ class ConfluenceHandler(APIHandler):
         self.connection = None
         self.is_connected = False
 
-        confluence_pages_data = ConfluenceSpacesTable(self)
+        confluence_pages_data = ConfluencePagesTable(self)
         self._register_table("pages", confluence_pages_data)
 
-    def connect(self) -> StatusResponse:
+    def connect(self):
         """Set up the connection required by the handler.
         Returns
         -------
@@ -46,13 +53,13 @@ class ConfluenceHandler(APIHandler):
         """
         if self.is_connected is True:
             return self.connection
-       
-        s = requests.Session()
-        s.headers['Authorization'] =  f"Bearer {self.connection_data['confluence_api_token']}"
-
-        self.connection = Confluence(url= self.connection_data['url'], session=s)
+        conf = Confluence(
+            url=self.connection_data.get('url'),
+            username=self.connection_data.get('username'),
+            password=self.connection_data.get('password'),
+        )
+        self.connection = conf
         self.is_connected = True
-        
         return self.connection
 
     def check_connection(self) -> StatusResponse:
@@ -64,7 +71,7 @@ class ConfluenceHandler(APIHandler):
         """
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
-        
+
         try:
             self.connect()
             response.success = True

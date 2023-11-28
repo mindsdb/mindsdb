@@ -2,14 +2,16 @@ from typing import Dict, List
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.storage.db import Predictor
 
+from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 
 from mindsdb.utilities.context import context as ctx
 
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
 from mindsdb.utilities.config import Config
+
+from sqlalchemy.orm.attributes import flag_modified
 
 
 class AgentsController:
@@ -43,7 +45,27 @@ class AgentsController:
         ).first()
         return agent
 
-    def get_agents(self, project_name: str = 'mindsdb') -> List[dict]:
+    def get_agent_by_id(self, id: int, project_name: str = 'mindsdb') -> db.Agents:
+        '''
+        Gets an agent by id.
+
+        Parameters:
+            id (int): The id of the agent
+            project_name (str): The name of the containing project - must exist
+
+        Returns:
+            agent (db.Agents): The database agent object
+        '''
+
+        project = self.project_controller.get(name=project_name)
+        agent = db.Agents.query.filter(
+            db.Agents.id == id,
+            db.Agents.project_id == project.id,
+            db.Agents.company_id == ctx.company_id
+        ).first()
+        return agent
+
+    def get_agents(self, project_name: str) -> List[dict]:
         '''
         Gets all agents in a project.
 
@@ -53,7 +75,8 @@ class AgentsController:
         Returns:
             all-agents (List[db.Agents]): List of database agent object
         '''
-
+        if project_name is None:
+            project_name = 'mindsdb'
         project = self.project_controller.get(name=project_name)
         all_agents = db.Agents.query.filter(
             db.Agents.project_id == project.id,
@@ -102,10 +125,10 @@ class AgentsController:
             raise ValueError(f'Agent with name already exists: {name}')
 
         # Check if model exists.
-        session_controller = SessionController()
+        model_controller = ModelController()
         model_name_no_version, model_version = Predictor.get_name_and_version(model_name)
         try:
-            session_controller.model_controller.get_model(model_name_no_version, version=model_version, project_name=project_name)
+            model_controller.get_model(model_name_no_version, version=model_version, project_name=project_name)
         except PredictorRecordNotFound:
             raise ValueError(f'Model with name does not exist: {model_name}')
 
@@ -171,10 +194,11 @@ class AgentsController:
 
         # Check if model exists.
         if model_name is not None:
-            session_controller = SessionController()
+            model_controller = ModelController()
             model_name_no_version, model_version = Predictor.get_name_and_version(model_name)
             try:
-                session_controller.model_controller.get_model(model_name_no_version, version=model_version, project_name=project_name)
+                _ = model_controller.get_model(model_name_no_version, version=model_version, project_name=project_name)
+                existing_agent.model_name = model_name
             except PredictorRecordNotFound:
                 return ValueError(f'Model with name does not exist: {model_name}')
 
@@ -201,6 +225,9 @@ class AgentsController:
             # Remove None values entirely.
             params = {k: v for k, v in existing_params.items() if v is not None}
             existing_agent.params = params
+            # Some versions of SQL Alchemy won't handle JSON updates correctly without this.
+            # See: https://docs.sqlalchemy.org/en/20/orm/session_api.html#sqlalchemy.orm.attributes.flag_modified
+            flag_modified(existing_agent, 'params')
         db.session.commit()
 
         return existing_agent

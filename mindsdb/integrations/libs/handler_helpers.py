@@ -4,8 +4,8 @@ from threading import Thread
 
 import requests
 
-from mindsdb.utilities.log import get_log
-logger = get_log(logger_name="main")
+from mindsdb.utilities import log
+logger = log.getLogger(__name__)
 
 
 def action_logger(logger, loglevel="info"):
@@ -53,15 +53,3 @@ def registry(url, data, interval):
     _th_worker = Thread(target=worker)
     _th_worker.start()
     logger.info("handler_register: registering service. url - %s, data - %s, interval - %s", url, data, interval)
-
-
-def discover_services(url):
-    res = None
-    try:
-        res = requests.get(url, headers={"Content-Type": "application/json"})
-        res = res.json()
-    except Exception as e:
-        logger.error("service discover: unable to get handlers metadata. url - %s, error - %s", url, e)
-        res = {}
-    logger.info("discover_services: service response - %s", res)
-    return res

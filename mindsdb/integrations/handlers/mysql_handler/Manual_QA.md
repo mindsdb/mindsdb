@@ -31,7 +31,7 @@ COMMAND THAT YOU RAN TO DO A SELECT FROM.
 ### Results
 
 Drop a remark based on your observation.
-- [ ] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
+- [ ] Works Great 💚 (This means that all the steps were executed successfully and the expected outputs were returned.)
 - [ ] There's a Bug 🪲 [Issue Title](URL To the Issue you created) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
 
 ---
@@ -81,7 +81,7 @@ WHERE torque =40;
 ### Results
 
 Drop a remark based on your observation.
-- [X] Works Great 💚 (This means that all the steps were executed successfuly and the expected outputs were returned.)
+- [X] Works Great 💚 (This means that all the steps were executed successfully and the expected outputs were returned.)
 - [ ] There's a Bug 🪲 [Issue Title](URL To the Issue you created) ( This means you encountered a Bug. Please open an issue with all the relevant details with the Bug Issue Template)
 
 ---

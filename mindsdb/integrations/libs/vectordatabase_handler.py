@@ -1,5 +1,5 @@
 import ast
-import uuid
+import hashlib
 from enum import Enum
 from typing import Any, List, Optional
 
@@ -19,12 +19,13 @@ from mindsdb_sql.parser.ast import (
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
+from mindsdb.integrations.utilities.sql_utils import conditions_to_filter
 
 from ..utilities.sql_utils import query_traversal
 from .base import BaseHandler
 
-LOG = get_log("VectorStoreHandler")
+LOG = log.getLogger(__name__)
 
 
 class FilterOperator(Enum):
@@ -115,8 +116,17 @@ class VectorStoreHandler(BaseHandler):
         },
     ]
 
-    def __init__(self, name: str):
-        super().__init__(name)
+    def validate_connection_parameters(self, name, **kwargs):
+        """Create validation for input parameters."""
+
+        return NotImplementedError()
+
+    def __del__(self):
+        if self.is_connected is True:
+            self.disconnect()
+
+    def disconnect(self):
+        raise NotImplementedError()
 
     def _value_or_self(self, value):
         if isinstance(value, Constant):
@@ -144,7 +154,14 @@ class VectorStoreHandler(BaseHandler):
                         else:
                             right_hand = node.args[1].value
                     elif isinstance(node.args[1], Tuple):
-                        right_hand = [item.value for item in node.args[1].items]
+                        # Constant could be actually a list i.e. [1.2, 3.2]
+                        right_hand = [
+                            ast.literal_eval(item.value)
+                            if isinstance(item, Constant)
+                            and not isinstance(item.value, list)
+                            else item.value
+                            for item in node.args[1].items
+                        ]
                     else:
                         raise Exception(f"Unsupported right hand side: {node.args[1]}")
                     conditions.append(
@@ -183,7 +200,7 @@ class VectorStoreHandler(BaseHandler):
             else:
                 return False
 
-    def _dispatch_create_table(self, query: CreateTable) -> HandlerResponse:
+    def _dispatch_create_table(self, query: CreateTable):
         """
         Dispatch create table query to the appropriate method.
         """
@@ -192,7 +209,7 @@ class VectorStoreHandler(BaseHandler):
         if_not_exists = getattr(query, "if_not_exists", False)
         return self.create_table(table_name, if_not_exists=if_not_exists)
 
-    def _dispatch_drop_table(self, query: DropTables) -> HandlerResponse:
+    def _dispatch_drop_table(self, query: DropTables):
         """
         Dispatch drop table query to the appropriate method.
         """
@@ -203,7 +220,7 @@ class VectorStoreHandler(BaseHandler):
             self.drop_table(table_name, if_exists=if_exists)
         return HandlerResponse(resp_type=RESPONSE_TYPE.OK)
 
-    def _dispatch_insert(self, query: Insert) -> HandlerResponse:
+    def _dispatch_insert(self, query: Insert):
         """
         Dispatch insert query to the appropriate method.
         """
@@ -217,13 +234,6 @@ class VectorStoreHandler(BaseHandler):
                 f"Allowed columns are {[col['name'] for col in self.SCHEMA]}"
             )
 
-        # get id column if it is present
-        if "id" in columns:
-            id_col_index = columns.index("id")
-            ids = [self._value_or_self(row[id_col_index]) for row in query.values]
-        else:
-            ids = [uuid.uuid4().hex for _ in query.values]
-
         # get content column if it is present
         if TableField.CONTENT.value in columns:
             content_col_index = columns.index("content")
@@ -232,6 +242,16 @@ class VectorStoreHandler(BaseHandler):
             ]
         else:
             content = None
+
+        # get id column if it is present
+        if TableField.ID.value in columns:
+            id_col_index = columns.index("id")
+            ids = [self._value_or_self(row[id_col_index]) for row in query.values]
+        elif TableField.CONTENT.value is not None:
+            # use hashed value
+            ids = [hashlib.md5(str(val).encode()).hexdigest() for val in content]
+        else:
+            raise Exception("Content or id is required!")
 
         # get embeddings column if it is present
         if TableField.EMBEDDINGS.value in columns:
@@ -262,16 +282,81 @@ class VectorStoreHandler(BaseHandler):
             }
         )
 
-        # dispatch insert
-        return self.insert(table_name, data, columns=columns)
+        # remove duplicated ids
+        data = data.drop_duplicates([TableField.ID.value])
 
-    def _dispatch_update(self, query: Update) -> HandlerResponse:
+        return self.do_upsert(table_name, data)
+
+    def _dispatch_update(self, query: Update):
         """
         Dispatch update query to the appropriate method.
         """
-        raise NotImplementedError("Update query is not supported!")
+        table_name = query.table.parts[-1]
 
-    def _dispatch_delete(self, query: Delete) -> HandlerResponse:
+        row = {}
+        for k, v in query.update_columns.items():
+            k = k.lower()
+            if isinstance(v, Constant):
+                v = v.value
+            if k == TableField.EMBEDDINGS.value and isinstance(v, str):
+                # it could be embeddings in string
+                try:
+                    v = eval(v)
+                except Exception:
+                    pass
+            row[k] = v
+
+        filters = conditions_to_filter(query.where)
+        row.update(filters)
+
+        # checks
+        if TableField.EMBEDDINGS.value not in row:
+            raise Exception("Embeddings column is required!")
+
+        if TableField.CONTENT.value not in row:
+            raise Exception("Content is required!")
+
+        if TableField.ID.value not in row:
+            value = row[TableField.CONTENT.value]
+            row[TableField.ID.value] = hashlib.md5(str(value).encode()).hexdigest()
+
+        # store
+        df = pd.DataFrame([row])
+
+        return self.do_upsert(table_name, df)
+
+    def do_upsert(self, table_name, df):
+        # if handler supports it, call upsert method
+
+        id_col = TableField.ID.value
+
+        # id is string TODO is it ok?
+        df[id_col] = df[id_col].apply(str)
+
+        if hasattr(self, 'upsert'):
+            self.upsert(table_name, df)
+            return
+
+        # find existing ids
+        res = self.select(
+            table_name,
+            columns=[id_col],
+            conditions=[
+                FilterCondition(column=id_col, op=FilterOperator.IN, value=list(df[id_col]))
+            ]
+        )
+        existed_ids = list(res[id_col])
+
+        # update existed
+        df_update = df[df[id_col].isin(existed_ids)]
+        df_insert = df[~df[id_col].isin(existed_ids)]
+
+        if not df_update.empty:
+            self.update(table_name, df_update, [id_col])
+        if not df_insert.empty:
+            self.insert(table_name, df_insert)
+
+    def _dispatch_delete(self, query: Delete):
         """
         Dispatch delete query to the appropriate method.
         """
@@ -283,7 +368,7 @@ class VectorStoreHandler(BaseHandler):
         # dispatch delete
         return self.delete(table_name, conditions=conditions)
 
-    def _dispatch_select(self, query: Select) -> HandlerResponse:
+    def _dispatch_select(self, query: Select):
         """
         Dispatch select query to the appropriate method.
         """
@@ -331,7 +416,15 @@ class VectorStoreHandler(BaseHandler):
             Select: self._dispatch_select,
         }
         if type(query) in dispatch_router:
-            return dispatch_router[type(query)](query)
+            resp = dispatch_router[type(query)](query)
+            if resp is not None:
+                return HandlerResponse(
+                    resp_type=RESPONSE_TYPE.TABLE,
+                    data_frame=resp
+                )
+            else:
+                return HandlerResponse(resp_type=RESPONSE_TYPE.OK)
+
         else:
             raise NotImplementedError(f"Query type {type(query)} not implemented.")
 
@@ -373,7 +466,7 @@ class VectorStoreHandler(BaseHandler):
         raise NotImplementedError()
 
     def insert(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
+        self, table_name: str, data: pd.DataFrame
     ) -> HandlerResponse:
         """Insert data into table
 
@@ -388,14 +481,14 @@ class VectorStoreHandler(BaseHandler):
         raise NotImplementedError()
 
     def update(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
+        self, table_name: str, data: pd.DataFrame, key_columns: List[str] = None
+    ):
         """Update data in table
 
         Args:
             table_name (str): table name
             data (pd.DataFrame): data to update
-            columns (List[str]): columns to update
+            key_columns (List[str]): key to  to update
 
         Returns:
             HandlerResponse
@@ -423,7 +516,7 @@ class VectorStoreHandler(BaseHandler):
         conditions: List[FilterCondition] = None,
         offset: int = None,
         limit: int = None,
-    ) -> HandlerResponse:
+    ) -> pd.DataFrame:
         """Select data from table
 
         Args:
@@ -441,5 +534,6 @@ class VectorStoreHandler(BaseHandler):
         data = pd.DataFrame(self.SCHEMA)
         data.columns = ["COLUMN_NAME", "DATA_TYPE"]
         return HandlerResponse(
+            resp_type=RESPONSE_TYPE.DATA,
             data_frame=data,
         )

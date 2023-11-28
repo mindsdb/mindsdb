@@ -1,3 +1,13 @@
+""" BYOM: Bring Your Own Model
+
+env vars to contloll BYOM:
+ - MINDSDB_BYOM_ENABLED - can BYOM be uysed or not. Locally enabled by default.
+ - MINDSDB_BYOM_INHOUSE_ENABLED - enable or disable 'inhouse' BYOM usage. Locally enabled by default.
+ - MINDSDB_BYOM_DEFAULT_TYPE - [inhouse|venv] default byom type. Locally it is 'venv' by default.
+ - MINDSDB_BYOM_TYPE - [safe|unsafe] - obsolete, same as above.
+"""
+
+
 import os
 import re
 import sys
@@ -8,10 +18,9 @@ import traceback
 from enum import Enum
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
 from collections import OrderedDict
 
-import numpy as np
 import pandas as pd
 from pandas.api import types as pd_types
 
@@ -24,11 +33,16 @@ from mindsdb.integrations.utilities.utils import format_exception_error
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 import mindsdb.utilities.profiler as profiler
 
-from .proc_wrapper import pd_decode, pd_encode, encode, decode
-from .proc_wrapper import import_string, find_model_class
+from .proc_wrapper import (
+    pd_decode, pd_encode, encode, decode, BYOM_METHOD,
+    import_string, find_model_class
+)
+from .__about__ import __version__
 
 
-BYOM_TYPE = Enum('BYOM_TYPE', ['SAFE', 'UNSAFE'])
+BYOM_TYPE = Enum('BYOM_TYPE', ['INHOUSE', 'VENV'])
+
+logger = log.getLogger(__name__)
 
 
 class BYOMHandler(BaseMLEngine):
@@ -46,42 +60,148 @@ class BYOMHandler(BaseMLEngine):
 
         self.model_wrapper = None
 
-        # region read MINDSDB_BYOM_TYPE
+        self.inhouse_model_wrapper = None
+        self.model_wrappers = {}
+
+        # region read and save set default byom type
         try:
-            self._byom_type = BYOM_TYPE[
-                os.environ.get(
-                    'MINDSDB_BYOM_TYPE',
-                    BYOM_TYPE.UNSAFE.name
-                ).upper()
-            ]
+            self._default_byom_type = BYOM_TYPE.VENV
+            if os.environ.get('MINDSDB_BYOM_DEFAULT_TYPE') is not None:
+                self._default_byom_type = BYOM_TYPE[
+                    os.environ.get('MINDSDB_BYOM_DEFAULT_TYPE').upper()
+                ]
+            else:
+                env_var = os.environ.get('MINDSDB_BYOM_DEFAULT_TYPE')
+                if env_var == 'SAVE':
+                    self._default_byom_type = BYOM_TYPE['VENV']
+                elif env_var == 'UNSAVE':
+                    self._default_byom_type = BYOM_TYPE['INHOUSE']
+                else:
+                    raise KeyError
         except KeyError:
-            self._byom_type = BYOM_TYPE.SAFE
+            self._default_byom_type = BYOM_TYPE.VENV
+        # endregion
+
+        # region check if 'inhouse' BYOM is enabled
+        env_var = os.environ.get('MINDSDB_BYOM_INHOUSE_ENABLED')
+        if env_var is None:
+            self._inhouse_enabled = False if is_cloud else True
+        else:
+            self._inhouse_enabled = env_var.lower() in ('true', '1')
         # endregion
 
         super().__init__(model_storage, engine_storage, **kwargs)
 
-    def _get_model_proxy(self):
+    @staticmethod
+    def normalize_engine_version(engine_version: Union[int, str, None]) -> int:
+        """Cast engine version to int, or return `1` if can not be casted
+
+        Args:
+            engine_version (Union[int, str, None]): engine version
+
+        Returns:
+            int: engine version
+        """
+        if isinstance(engine_version, str):
+            try:
+                engine_version = int(engine_version)
+            except Exception:
+                engine_version = 1
+        if isinstance(engine_version, int) is False:
+            engine_version = 1
+        return engine_version
+
+    @staticmethod
+    def create_validation(target: str, args: dict = None, **kwargs) -> None:
+        if isinstance(args, dict) is False:
+            return
+        using_args = args.get('using', {})
+        engine_version = using_args.get('engine_version')
+        if engine_version is not None:
+            engine_version = BYOMHandler.normalize_engine_version(engine_version)
+        else:
+            connection_args = kwargs['handler_storage'].get_connection_args()
+            versions = connection_args.get('versions')
+            if isinstance(versions, dict):
+                engine_version = max([int(x) for x in versions.keys()])
+            else:
+                engine_version = 1
+            using_args['engine_version'] = engine_version
+
+    def get_model_engine_version(self) -> int:
+        """Return current model engine version
+
+        Returns:
+            int: engine version
+        """
+        engine_version = self.model_storage.get_info()['learn_args'].get('using', {}).get('engine_version')
+        engine_version = BYOMHandler.normalize_engine_version(engine_version)
+        return engine_version
+
+    def normalize_byom_type(self, byom_type: Optional[str]) -> BYOM_TYPE:
+        if byom_type is not None:
+            byom_type = BYOM_TYPE[byom_type.upper()]
+        else:
+            byom_type = self._default_byom_type
+        if byom_type == BYOM_TYPE.INHOUSE and self._inhouse_enabled is False:
+            raise Exception("'Inhouse' BYOM engine type can not be used")
+        return byom_type
+
+    def _get_model_proxy(self, version=None):
+        version_mark = ''
+        if version is not None and int(version) > 1:
+            version_mark = f'_{version}'
+        version_str = str(version or 1)
+
         self.engine_storage.fileStorage.pull()
-        code = self.engine_storage.fileStorage.file_get('code')
-        modules_str = self.engine_storage.fileStorage.file_get('modules')
+        try:
+            code = self.engine_storage.fileStorage.file_get(f'code{version_mark}')
+            modules_str = self.engine_storage.fileStorage.file_get(f'modules{version_mark}')
+        except FileNotFoundError:
+            raise Exception(f"Engine version '{version}' does not exists")
 
-        if self.model_wrapper is None:
-            if self._byom_type == BYOM_TYPE.UNSAFE:
-                WrapperClass = ModelWrapperUnsafe
-            elif self._byom_type == BYOM_TYPE.SAFE:
-                WrapperClass = ModelWrapperSafe
+        if version_str not in self.model_wrappers:
+            connection_args = self.engine_storage.get_connection_args()
+            version_meta = connection_args['versions'][version_str]
 
-            self.model_wrapper = WrapperClass(
-                code=code,
-                modules_str=modules_str,
-                engine_id=self.engine_storage.integration_id
-            )
+            try:
+                engine_version_type = BYOM_TYPE[
+                    version_meta.get('type', self._default_byom_type.name).upper()
+                ]
+            except KeyError:
+                raise Exception('Unknown BYOM engine type')
+            if engine_version_type == BYOM_TYPE.INHOUSE:
+                if self._inhouse_enabled is False:
+                    raise Exception("'Inhouse' BYOM engine type can not be used")
+                if self.inhouse_model_wrapper is None:
+                    self.inhouse_model_wrapper = ModelWrapperUnsafe(
+                        code=code,
+                        modules_str=modules_str,
+                        engine_id=self.engine_storage.integration_id,
+                        engine_version=version
+                    )
+                self.model_wrappers[version_str] = self.inhouse_model_wrapper
+            elif engine_version_type == BYOM_TYPE.VENV:
+                self.model_wrappers[version_str] = ModelWrapperSafe(
+                    code=code,
+                    modules_str=modules_str,
+                    engine_id=self.engine_storage.integration_id,
+                    engine_version=version
+                )
 
-        return self.model_wrapper
+        return self.model_wrappers[version_str]
+
+    def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
+        engine_version = self.get_model_engine_version()
+        mp = self._get_model_proxy(engine_version)
+        model_state = self.model_storage.file_get('model')
+        return mp.describe(model_state, attribute)
 
     def create(self, target, df=None, args=None, **kwargs):
-        model_proxy = self._get_model_proxy()
+        using_args = args.get('using', {})
+        engine_version = using_args.get('engine_version')
 
+        model_proxy = self._get_model_proxy(engine_version)
         model_state = model_proxy.train(df, target, args)
 
         self.model_storage.file_set('model', model_state)
@@ -99,7 +219,7 @@ class BYOMHandler(BaseMLEngine):
                 return 'categorical'
 
         columns = {
-            target: convert_type(np.object)
+            target: convert_type(object)
         }
 
         self.model_storage.columns_set(columns)
@@ -107,29 +227,98 @@ class BYOMHandler(BaseMLEngine):
     def predict(self, df, args=None):
         pred_args = args.get('predict_params', {})
 
-        model_proxy = self._get_model_proxy()
+        engine_version = pred_args.get('engine_version')
+        if engine_version is not None:
+            engine_version = int(engine_version)
+        else:
+            engine_version = self.get_model_engine_version()
 
+        model_proxy = self._get_model_proxy(engine_version)
         model_state = self.model_storage.file_get('model')
-
         pred_df = model_proxy.predict(df, model_state, pred_args)
 
         return pred_df
 
     def create_engine(self, connection_args):
+        code_path = Path(connection_args['code'])
         self.engine_storage.fileStorage.file_set(
             'code',
-            Path(connection_args['code']).read_bytes()
+            code_path.read_bytes()
         )
 
+        requirements_path = Path(connection_args['modules'])
         self.engine_storage.fileStorage.file_set(
             'modules',
-            Path(connection_args['modules']).read_bytes()
+            requirements_path.read_bytes()
         )
 
         self.engine_storage.fileStorage.push()
 
-        model_proxy = self._get_model_proxy()
+        self.engine_storage.update_connection_args({
+            'handler_version': __version__,
+            'versions': {
+                '1': {
+                    'code': code_path.name,
+                    'requirements': requirements_path.name,
+                    'type': self.normalize_byom_type(
+                        connection_args.get('type')
+                    ).name.lower()
+                }
+            }
+        })
 
+        model_proxy = self._get_model_proxy()
+        try:
+            model_proxy.check()
+        except Exception as e:
+            model_proxy.remove_venv()
+            raise e
+
+    def update_engine(self, connection_args: dict) -> None:
+        """Add new version of engine
+
+            Args:
+                connection_args (dict): paths to code and requirements
+        """
+        code_path = Path(connection_args['code'])
+        requirements_path = Path(connection_args['modules'])
+
+        engine_connection_args = self.engine_storage.get_connection_args()
+        if isinstance(engine_connection_args, dict) is False or 'handler_version' not in engine_connection_args:
+            engine_connection_args = {
+                'handler_version': __version__,
+                'versions': {
+                    '1': {
+                        'code': 'code.py',
+                        'requirements': 'requirements.txt',
+                        'type': self._default_byom_type.name.lower()
+                    }
+                }
+            }
+        new_version = str(max([int(x) for x in engine_connection_args['versions'].keys()]) + 1)
+
+        engine_connection_args['versions'][new_version] = {
+            'code': code_path.name,
+            'requirements': requirements_path.name,
+            'type': self.normalize_byom_type(
+                connection_args.get('type')
+            ).name.lower()
+        }
+
+        self.engine_storage.fileStorage.file_set(
+            f'code_{new_version}',
+            code_path.read_bytes()
+        )
+
+        self.engine_storage.fileStorage.file_set(
+            f'modules_{new_version}',
+            requirements_path.read_bytes()
+        )
+        self.engine_storage.fileStorage.push()
+
+        self.engine_storage.update_connection_args(engine_connection_args)
+
+        model_proxy = self._get_model_proxy(new_version)
         try:
             model_proxy.check()
         except Exception as e:
@@ -137,8 +326,10 @@ class BYOMHandler(BaseMLEngine):
             raise e
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        model_storage = self.model_storage
+        using_args = args.get('using', {})
+        engine_version = using_args.get('engine_version')
 
+        model_storage = self.model_storage
         # TODO: should probably refactor at some point, as a bit of the logic is shared with lightwood's finetune logic
         try:
             base_predictor_id = args['base_model_id']
@@ -149,21 +340,21 @@ class BYOMHandler(BaseMLEngine):
             predictor_id = model_storage.predictor_id
             predictor_record = db.Predictor.query.get(predictor_id)
 
-            predictor_record.data = {'training_log': 'training'} # TODO move to ModelStorage (don't work w/ db directly)
+            predictor_record.data = {'training_log': 'training'}  # TODO move to ModelStorage (don't work w/ db directly)
             predictor_record.training_start_at = datetime.now()
             predictor_record.status = PREDICTOR_STATUS.FINETUNING  # TODO: parallel execution block
             db.session.commit()
 
-            model_proxy = self._get_model_proxy()
+            model_proxy = self._get_model_proxy(engine_version)
             model_state = self.base_model_storage.file_get('model')
-            model_state = model_proxy.finetune(df, model_state, args=args.get('using', {}))  # WRONG
+            model_state = model_proxy.finetune(df, model_state, args=args.get('using', {}))
 
             # region hack to speedup file saving
             with profiler.Context('finetune-byom-write-file'):
-                dest_abs_path = self.model_storage.fileStorage.folder_path / 'model'
+                dest_abs_path = model_storage.fileStorage.folder_path / 'model'
                 with open(dest_abs_path, 'wb') as fd:
                     fd.write(model_state)
-                self.model_storage.fileStorage.push(compression_level=0)
+                model_storage.fileStorage.push(compression_level=0)
             # endregion
 
             predictor_record.update_status = 'up_to_date'
@@ -172,10 +363,10 @@ class BYOMHandler(BaseMLEngine):
             db.session.commit()
 
         except Exception as e:
-            log.logger.error(e)
+            logger.error(e)
             predictor_id = model_storage.predictor_id
             predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
-            print(traceback.format_exc())
+            logger.error(traceback.format_exc())
             error_message = format_exception_error(e)
             predictor_record.data = {"error": error_message}
             predictor_record.status = PREDICTOR_STATUS.ERROR
@@ -192,7 +383,7 @@ class ModelWrapperUnsafe:
     """ Model wrapper that executes learn/predict in current process
     """
 
-    def __init__(self, code, modules_str, engine_id):
+    def __init__(self, code, modules_str, engine_id, engine_version: int):
         module = import_string(code)
         model_class = find_model_class(module)
         self.model_class = model_class
@@ -207,7 +398,7 @@ class ModelWrapperUnsafe:
         self.model_instance.__dict__ = model_state
         try:
             result = self.model_instance.predict(df, args)
-        except:
+        except Exception:
             result = self.model_instance.predict(df)
         return result
 
@@ -222,6 +413,13 @@ class ModelWrapperUnsafe:
 
         return pickle.dumps(self.model_instance.__dict__, protocol=5)
 
+    def describe(self, model_state, attribute: Optional[str] = None) -> pd.DataFrame:
+        if hasattr(self.model_instance, 'describe'):
+            model_state = pickle.loads(model_state)
+            self.model_instance.__dict__ = model_state
+            return self.model_instance.describe(attribute)
+        return pd.DataFrame()
+
     def check(self):
         pass
 
@@ -230,14 +428,14 @@ class ModelWrapperSafe:
     """ Model wrapper that executes learn/predict in venv
     """
 
-    def __init__(self, code, modules_str, engine_id):
+    def __init__(self, code, modules_str, engine_id, engine_version: int):
         self.code = code
         modules = self.parse_requirements(modules_str)
 
         self.env_path = None
-        self.prepare_env(modules, engine_id)
+        self.prepare_env(modules, engine_id, engine_version)
 
-    def prepare_env(self, modules, engine_id):
+    def prepare_env(self, modules, engine_id, engine_version: int):
         config = Config()
 
         try:
@@ -248,7 +446,10 @@ class ModelWrapperSafe:
                 # create in root path
                 base_path = Path(config.paths['root']) / 'venvs'
 
-            self.env_path = base_path / f'env_{engine_id}'
+            env_folder_name = f'env_{engine_id}'
+            if isinstance(engine_version, int) and engine_version > 1:
+                env_folder_name = f'{env_folder_name}_{engine_version}'
+            self.env_path = base_path / env_folder_name
 
             self.python_path = self.env_path / 'bin' / 'python'
 
@@ -258,14 +459,13 @@ class ModelWrapperSafe:
 
             # create
             virtualenv.cli_run(['-p', sys.executable, str(self.env_path)])
-            log.logger.info(f"Created new environment: {self.env_path}")
+            logger.info(f"Created new environment: {self.env_path}")
 
             if len(modules) > 0:
                 self.install_modules(modules)
-
-        except Exception as e:
+        except Exception:
             # DANGER !!! VENV MUST BE CREATED
-            log.logger.info("Can't create virtual environment. venv module should be installed")
+            logger.info("Can't create virtual environment. venv module should be installed")
 
             self.python_path = Path(sys.executable)
 
@@ -280,7 +480,7 @@ class ModelWrapperSafe:
         # get requirements from string
         # they should be located at the top of the file, before code
 
-        pattern = '^[\w\\[\\]-]+[=!<>\s]*[\d\.]*[,=!<>\s]*[\d\.]*$'
+        pattern = '^[\w\\[\\]-]+[=!<>\s]*[\d\.]*[,=!<>\s]*[\d\.]*$'  # noqa
         modules = []
         for line in requirements.split(b'\n'):
             line = line.decode().strip()
@@ -332,18 +532,17 @@ class ModelWrapperSafe:
         return ret
 
     def check(self):
-
         params = {
-            'method': 'check',
+            'method': BYOM_METHOD.CHECK.value,
             'code': self.code,
         }
         return self._run_command(params)
 
     def train(self, df, target, args):
         params = {
-            'method': 'train',
-            'df': pd_encode(df),
+            'method': BYOM_METHOD.TRAIN.value,
             'code': self.code,
+            'df': pd_encode(df),
             'to_predict': target,
             'args': args,
         }
@@ -354,10 +553,10 @@ class ModelWrapperSafe:
     def predict(self, df, model_state, args):
 
         params = {
-            'method': 'predict',
+            'method': BYOM_METHOD.PREDICT.value,
             'code': self.code,
-            'df': pd_encode(df),
             'model_state': model_state,
+            'df': pd_encode(df),
             'args': args,
         }
         pred_df = self._run_command(params)
@@ -365,15 +564,25 @@ class ModelWrapperSafe:
 
     def finetune(self, df, model_state, args):
         params = {
-            'method': 'finetune',
+            'method': BYOM_METHOD.FINETUNE.value,
+            'code': self.code,
             'model_state': model_state,
             'df': pd_encode(df),
-            'code': self.code,
             'args': args,
         }
 
         model_state = self._run_command(params)
         return model_state
+
+    def describe(self, model_state, attribute: Optional[str] = None) -> pd.DataFrame:
+        params = {
+            'method': BYOM_METHOD.DESCRIBE.value,
+            'code': self.code,
+            'model_state': model_state,
+            'attribute': attribute
+        }
+        df = self._run_command(params)
+        return df
 
 
 connection_args = OrderedDict(

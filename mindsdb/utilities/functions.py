@@ -4,12 +4,16 @@ from functools import wraps
 import hashlib
 import base64
 from cryptography.fernet import Fernet
+from collections.abc import Callable
 
 import requests
 from mindsdb_sql import get_lexer_parser
 from mindsdb_sql.parser.ast import Identifier
 
-from mindsdb.utilities.fs import create_process_mark, delete_process_mark
+from mindsdb.utilities.fs import create_process_mark, delete_process_mark, set_process_mark
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 def args_parse():
@@ -20,7 +24,7 @@ def args_parse():
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--no_studio', action='store_true')
     parser.add_argument('-v', '--version', action='store_true')
-    parser.add_argument('--ray', action='store_true', default=None)
+    parser.add_argument('--ml_task_queue_consumer', action='store_true', default=None)
     return parser.parse_args()
 
 
@@ -38,7 +42,7 @@ def cast_row_types(row, field_types):
             row[key] = timestamp.strftime('%Y-%m-%d')
         elif t == 'Int' and isinstance(row[key], (int, float, str)):
             try:
-                print(f'cast {row[key]} to {int(row[key])}')
+                logger.debug(f'cast {row[key]} to {int(row[key])}')
                 row[key] = int(row[key])
             except Exception:
                 pass
@@ -54,11 +58,15 @@ def is_notebook():
         return False      # Probably standard Python interpreter
 
 
-def mark_process(name):
-    def mark_process_wrapper(func):
+def mark_process(name: str, custom_mark: str = None) -> Callable:
+    def mark_process_wrapper(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
-            mark = create_process_mark(name)
+            if custom_mark is None:
+                mark = create_process_mark(name)
+            else:
+                mark = set_process_mark(name, custom_mark)
+
             try:
                 return func(*args, **kwargs)
             finally:
@@ -80,20 +88,20 @@ def get_versions_where_predictors_become_obsolete():
                 timeout=0.5
             )
         except (ConnectionError, requests.exceptions.ConnectionError) as e:
-            print(f'Is no connection. {e}')
+            logger.error(f'Is no connection. {e}')
             raise
         except Exception as e:
-            print(f'Is something wrong with getting version_for_updating_predictors.txt: {e}')
+            logger.error(f'Is something wrong with getting version_for_updating_predictors.txt: {e}')
             raise
 
         if res.status_code != 200:
-            print(f'Cant get version_for_updating_predictors.txt: returned status code = {res.status_code}')
+            logger.error(f'Cant get version_for_updating_predictors.txt: returned status code = {res.status_code}')
             raise
 
         try:
             versions_for_updating_predictors = res.text.replace(' \t\r', '').split('\n')
         except Exception as e:
-            print(f'Cant decode version_for_updating_predictors.txt: {e}')
+            logger.error(f'Cant decode version_for_updating_predictors.txt: {e}')
             raise
     except Exception:
         return False, versions_for_updating_predictors

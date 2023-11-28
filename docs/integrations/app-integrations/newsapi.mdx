@@ -1,0 +1,63 @@
+---
+title: News API
+sidebarTitle: News API
+---
+
+In this section, we present how to connect News API to MindsDB.
+
+[News API](https://newsapi.org/) is a simple HTTP REST API for searching and retrieving live articles from all over the web.
+
+Data from News API can be utilized within MindsDB for model training and predictions.
+
+## Connection
+
+This handler is implemented using the [newsapi-python](https://newsapi.org/docs/client-libraries/python) library.
+
+The required arguments to establish a connection are as follows:
+
+* `api_key` News API key to use for authentication.
+
+<Tip>
+Check out [this guide](https://newsapi.org/docs/authentication) on how to create the API key.
+
+It is recommended to use the API key to avoid the `API rate limit exceeded` error.
+</Tip>
+
+Here is how to connect News API to MindsDB:
+
+```sql
+CREATE DATABASE newsAPI
+WITH ENGINE = 'newsapi'
+PARAMETERS = {
+	"api_key": "Your api key"
+};
+```
+
+<Tip>
+If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/newsapi_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+## Usage
+
+Simple Search for recent articles:
+
+```sql
+SELECT *
+FROM newsAPI.article
+WHERE query = 'Python';
+```
+
+Advanced search for recent articles per specific sources between dates:
+
+```sql
+SELECT *
+FROM newsAPI.article
+WHERE query = 'Python'
+AND sources="bbc-news"
+AND publishedAt >= "2021-03-23" AND  publishedAt <= "2023-04-23"
+LIMIT 4;
+```
+
+<Info>
+For more information about available actions and development plans, visit [this page](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/newsapi_handler/README.md).
+</Info>

@@ -1,8 +1,8 @@
 import copy
 
 import duckdb
+from duckdb import InvalidInputException
 import numpy as np
-import pandas as pd
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -14,6 +14,42 @@ from mindsdb_sql.parser.ast import (
 
 from mindsdb.utilities import log
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
+
+logger = log.getLogger(__name__)
+
+
+def query_df_with_type_infer_fallback(query_str: str, dataframes: dict):
+    ''' Duckdb need to infer column types if column.dtype == object. By default it take 1000 rows,
+        but that may be not sufficient for some cases. This func try to run query multiple times
+        increasing butch size for type infer
+
+        Args:
+            query_str (str): query to execute
+            dataframes (dict): dataframes
+
+        Returns:
+            pandas.DataFrame
+            pandas.columns
+    '''
+
+    for name, value in dataframes.items():
+        locals()[name] = value
+
+    con = duckdb.connect(database=':memory:')
+    for sample_size in [1000, 10000, 1000000]:
+        try:
+            con.execute(f'set global pandas_analyze_sample={sample_size};')
+            result_df = con.execute(query_str).fetchdf()
+        except InvalidInputException:
+            pass
+        else:
+            break
+    else:
+        raise InvalidInputException
+    description = con.description
+    con.close()
+
+    return result_df, description
 
 
 def query_df(df, query, session=None):
@@ -39,7 +75,7 @@ def query_df(df, query, session=None):
         )
 
     table_name = query_ast.from_table.parts[0]
-    query_ast.from_table.parts = ['df_table']
+    query_ast.from_table.parts = ['df']
 
     json_columns = set()
 
@@ -85,27 +121,22 @@ def query_df(df, query, session=None):
     try:
         query_str = render.get_string(query_ast, with_failback=False)
     except Exception as e:
-        log.logger.error(
+        logger.error(
             f"Exception during query casting to 'postgres' dialect. Query: {str(query)}. Error: {e}"
         )
         query_str = render.get_string(query_ast, with_failback=True)
 
     # workaround to prevent duckdb.TypeMismatchException
-    if len(df) > 0 and table_name.lower() in ('models', 'predictors', 'models_versions'):
-        if 'TRAINING_OPTIONS' in df.columns:
-            df = df.astype({'TRAINING_OPTIONS': 'string'})
+    if len(df) > 0:
+        if table_name.lower() in ('models', 'predictors', 'models_versions'):
+            if 'TRAINING_OPTIONS' in df.columns:
+                df = df.astype({'TRAINING_OPTIONS': 'string'})
+        if table_name.lower() == 'ml_engines':
+            if 'CONNECTION_DATA' in df.columns:
+                df = df.astype({'CONNECTION_DATA': 'string'})
 
-    con = duckdb.connect(database=':memory:')
-
-    # lets make sure we have the right types, pandas sucks at type inference
-    df = infer_and_convert_types(df)
-
-    con.register('df_table', df)
-    result_df = con.execute(query_str).fetchdf()
+    result_df, description = query_df_with_type_infer_fallback(query_str, {'df': df})
     result_df = result_df.replace({np.nan: None})
-    description = con.description
-    con.unregister('df_table')
-    con.close()
 
     new_column_names = {}
     real_column_names = [x[0] for x in description]
@@ -116,43 +147,3 @@ def query_df(df, query, session=None):
         axis='columns'
     )
     return result_df
-
-
-def infer_column_type(column):
-    if not pd.api.types.is_object_dtype(column):
-        return column
-
-    # If already a datetime type, leave it as such
-    if pd.api.types.is_datetime64_any_dtype(column):
-        return column
-
-    # Try to convert the entire column to integers
-    try:
-        return column.astype(float)
-    except (ValueError, TypeError):
-        # Check if the column can be converted to datetime
-        try:
-            return pd.to_datetime(column)
-        except (pd.errors.ParserError, ValueError, TypeError):
-            # If that fails, try to convert the entire column to floats
-            try:
-                return column.astype(int)
-            except (ValueError, TypeError):
-                # If both fail, leave the column as a string
-                return column.astype(str)
-
-
-def infer_and_convert_types(df, sample_size=100):
-    for column in df.columns:
-        # Sample the column to analyze
-        sample_data = df[column].sample(min(sample_size, len(df)))
-
-        # Infer the type from the sample
-        inferred_column = infer_column_type(sample_data)
-
-        # Check if the inferred type is the same as the original type
-        if inferred_column.dtype != sample_data.dtype:
-            # If not, apply the inferred type to the entire column
-            df[column] = infer_column_type(df[column])
-
-    return df

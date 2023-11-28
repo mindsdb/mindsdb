@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 from mindsdb.interfaces.database.projects import ProjectController
 import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.exception import EntityNotExistsError
 
 
 class DatabaseController:
@@ -14,7 +15,7 @@ class DatabaseController:
     def delete(self, name: str):
         databases = self.get_dict()
         if name not in databases:
-            raise Exception(f"Database '{name}' does not exists")
+            raise EntityNotExistsError('Database does not exists', name)
         db_type = databases[name]['type']
         if db_type == 'project':
             project = self.get_project(name)

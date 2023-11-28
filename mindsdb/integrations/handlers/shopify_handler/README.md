@@ -39,8 +39,8 @@ These are the optional parameters:
 - `yotpo_app_key`: token needed to access customer reviews via the Yotpo Product Reviews app.
 - `yotpo_access_token`: token needed to access customer reviews via the Yotpo Product Reviews app.
 
-If you want to query customer reviews, use the [Yotpo Product Reviews](https://apps.shopify.com/yotpo-social-reviews) app available in Shopify. To generate `yotpo_app_key` and `yotpo_access_token` keys, refer to [this](https://support.yotpo.com/docs/finding-your-yotpo-app-key-and-secret-key) and [this](https://apidocs.yotpo.com/reference/yotpo-authentication).
-
+If you want to query customer reviews, use the [Yotpo Product Reviews](https://apps.shopify.com/yotpo-social-reviews) app available in Shopify. To generate `yotpo_app_key` and `yotpo_access_token` keys, refer to [this](https://support.yotpo.com/docs/finding-your-yotpo-app-key-and-secret-key) and [this](https://apidocs.yotpo.com/reference/yotpo-authentication)(Note:please don't enter the app secret key instead of yotpo access token both are different).
+Note:please don't enter the app secret key instead of yotpo access token both are different
 Watch this video on creating a Shopify access token [here](https://www.youtube.com/watch?v=4f_aiC5oTNc&t=302s).
 
 ## Implemented Features

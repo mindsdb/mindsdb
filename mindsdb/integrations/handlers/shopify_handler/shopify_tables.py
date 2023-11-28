@@ -398,8 +398,58 @@ class OrdersTable(APITable):
 
         return orders_df
 
+    def update(self, query: ast.Update) -> None:
+        """Updates data from the Shopify "PUT /products" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Update
+           Given SQL UPDATE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        update_statement_parser = UPDATEQueryParser(query)
+        values_to_update, where_conditions = update_statement_parser.parse_query()
+
+        orders_df = pd.json_normalize(self.get_orders())
+
+        update_query_executor = UPDATEQueryExecutor(
+            orders_df,
+            where_conditions
+        )
+
+        orders_df = update_query_executor.execute_query()
+
+        order_ids = orders_df['id'].tolist()
+
+        self.update_orders(order_ids, values_to_update)
+        
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_orders(limit=1)).columns.tolist()
+
+    def get_orders(self, **kwargs) -> List[Dict]:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+        orders = shopify.Order.find(**kwargs)
+        return [order.to_dict() for order in orders]
+
+    def update_orders(self, order_ids: List[int], values_to_update: Dict[Text, Any]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for order_id in order_ids:
+            order = shopify.Order.find(order_id)
+            for key, value in values_to_update.items():
+                setattr(order, key, value)
+            order.save()
+            logger.info(f'Order {order_id} updated')
 
     def get_orders(self, **kwargs) -> List[Dict]:
         api_session = self.handler.connect()

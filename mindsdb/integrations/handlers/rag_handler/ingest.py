@@ -93,7 +93,7 @@ class RAGIngestor:
     def create_db_from_documents(self, documents, embeddings_model) -> VectorStore:
         """Create DB from documents."""
 
-        if self.args.vector_store_name == "chroma":
+        if self.args.vector_store_name == "chromadb":
 
             return self.vector_store.from_documents(
                 documents=documents,

@@ -20,6 +20,7 @@ class MSGraphAPIClient:
         """
         ms_graph_auth_manager = MSGraphAuthManager(client_id, client_secret, tenant_id, refresh_token)
         self.access_token = ms_graph_auth_manager.get_access_token()
+        self._group_ids = None
 
     def _get_api_url(self, endpoint: str) -> str:
         api_url = f"{self.MICROSOFT_GRAPH_BASE_API_URL}{self.MICROSOFT_GRAPH_API_VERSION}/{endpoint}/"
@@ -47,12 +48,13 @@ class MSGraphAPIClient:
             if "$top" not in params:
                 params["$top"] = self.PAGINATION_COUNT
         return params
-    
+
+    @staticmethod
     def _get_response_value_unsafe(raw_response: Dict) -> List:
         value = raw_response["value"]
         return value
     
-    def fetch_data(self, endpoint: str, params: Optional[Dict] = None, pagination: bool = True):
+    def _fetch_data(self, endpoint: str, params: Optional[Dict] = None, pagination: bool = True):
         api_url = self._get_api_url(endpoint)
         params = self._get_request_params(params, pagination)
         while api_url:
@@ -62,5 +64,33 @@ class MSGraphAPIClient:
             api_url = raw_response.get("@odata.nextLink", "")
             yield value
 
+    def _get_group_ids(self):
+        if not self._group_ids:
+            api_url = self._get_api_url("groups")
+            params = {"$select": "id,resourceProvisioningOptions"}
+            groups = self._get_response_value_unsafe(self._make_request(api_url, params=params))
+            self._group_ids = [item["id"] for item in groups if "Team" in item["resourceProvisioningOptions"]]
+        return self._group_ids
 
+    def get_channels(self):
+        channels = []
+        for group_id in self._get_group_ids():
+            for group_channels in self._fetch_data(f"teams/{group_id}/channels", pagination=False):
+                channels.extend(group_channels)
+
+        return channels
+
+    def _get_channel_ids(self, group_id: str):
+        api_url = self._get_api_url(f"teams/{group_id}/channels")
+        channels_ids = self._get_response_value_unsafe(self._make_request(api_url))
+        return channels_ids
+
+    def get_channel_messages(self):
+        channel_messages = []
+        for group_id in self._get_group_ids():
+            for channel_id in self._get_channel_ids(group_id):
+                for messages in self._fetch_data(f"teams/{group_id}/channels/{channel_id['id']}/messages"):
+                    channel_messages.extend(messages)
+
+        return channel_messages
     

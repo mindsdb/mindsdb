@@ -47,7 +47,8 @@ Here is how to create, update, and delete skills and knowledge bases using Minds
     CREATE SKILL kb_skill
     USING
         type = 'knowledge_base',
-        source = 'my_knowledge_base'; -- this must be created with CREATE KNOWLEDGE BASE
+        source = 'my_knowledge_base', -- this must be created with CREATE KNOWLEDGE BASE
+        description = 'My data'; -- data description to help the agent know when to use the knowledge base
 
     UPDATE SKILL kb_skill
     SET

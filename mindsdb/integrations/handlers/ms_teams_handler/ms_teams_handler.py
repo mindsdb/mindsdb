@@ -1,4 +1,5 @@
-import pymsteams
+import msal
+from msal.exceptions import MsalServiceError
 
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import MessagesTable
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -49,7 +50,11 @@ class MSTeamsHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        self.connection = pymsteams.connectorcard(self.connection_data['webhook_url'])
+        self.connection = msal.ConfidentialClientApplication(
+            self.connection_data["client_id"],
+            authority=f"https://login.microsoftonline.com/" f"{self.connection_data['tenant_id']}",
+            client_credential=self.connection_data["client_secret"],
+        )
 
         self.is_connected = True
 

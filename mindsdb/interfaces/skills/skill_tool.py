@@ -78,7 +78,12 @@ def _get_rag_query_function(
 def _make_knowledge_base_tools(
         skill: db.Skills,
         openai_api_key: str,
-        session_controller) -> List[BaseTool]:
+        session_controller) -> List:
+    # To prevent dependency on Langchain unless an actual tool uses it.
+    try:
+        from langchain.agents import Tool
+    except ImportError:
+        raise ImportError('To use the knowledge base skill, please install langchain with `pip install langchain`')
     description = skill.params.get('description', '')
     all_tools = []
     all_tools.append(Tool(
@@ -91,9 +96,9 @@ def _make_knowledge_base_tools(
 
 def make_tools_from_skill(
         skill: db.Skills,
-        llm: BaseLanguageModel,
+        llm,
         openai_api_key: str,
-        executor) -> List[BaseTool]:
+        executor) -> List:
     """Makes Langchain compatible tools from a skill
 
     Args:

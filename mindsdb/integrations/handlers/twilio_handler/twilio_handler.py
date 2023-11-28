@@ -16,6 +16,8 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 
 from mindsdb_sql.parser import ast
 
+logger = log.getLogger(__name__)
+
 
 class PhoneNumbersTable(APITable):
 
@@ -243,7 +245,7 @@ class TwilioHandler(APIHandler):
 
         except Exception as e:
             response.error_message = f'Error connecting to Twilio api: {e}. '
-            log.logger.error(response.error_message)
+            logger.error(response.error_message)
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False

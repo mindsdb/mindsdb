@@ -1,0 +1,138 @@
+---
+title: MindsDB and Grafana
+sidebarTitle: Grafana
+---
+
+[Grafana](https://grafana.com/) is an open-source analytics and interactive visualization web application
+that allows users to ingest data from various sources, query this data, and display it on customizable charts for easy analysis. 
+
+## How to Connect
+
+To begin, set up Grafana by following one of the methods outlined in the [Grafana Installation Documentation](https://grafana.com/docs/grafana/latest/setup-grafana/installation/#supported-operating-systems).
+
+Once Grafana is successfully set up in your environment, navigate to the Connections section, click on Add new connection, and select the MySQL plugin
+, as shown below.
+
+<p align="center">
+  <img src="/assets/sql/grafana_1.png" />
+</p>
+
+Now it's time to fill in the connection details.
+
+<p align="center">
+  <img src="/assets/sql/grafana_2.png" />
+</p>
+
+There are three options, as below.
+
+<Tabs>
+  <Tab title="Local MindsDB">
+    You can connect to your local MindsDB. To do that, please use the connection details below:
+    
+    ```
+    Host: `127.0.0.1:47335`
+    Username: `mindsdb`
+    Password: <leave it empty>
+    Database: <leave it empty>
+    ```
+  </Tab>
+  <Tab title="MindsDB Cloud">
+    You can connect to your MindsDB Cloud account. To do that, please use the connection details below:
+
+    ```
+    Host: cloud.mindsdb.com:3306
+    Username: <your MindsDB Cloud username>
+    Password: <your MindsDB Cloud password>
+    Database: <leave it empty>
+    ```
+
+  </Tab>
+  <Tab title="MindsDB Pro">
+    You can connect to your MindsDB Pro account. To do that, please use the connection details below:
+
+    ```
+    Host: <dedicated instace ip>:3306
+    Username: <your MindsDB Cloud username>
+    Password: <your MindsDB Cloud password>
+    Database: <leave it empty>
+    ```
+
+  </Tab>
+</Tabs>
+
+Now we are ready to Save & test the connection.
+
+## Testing the Connection
+
+Click on the `Save & test` button to check if all the provided data
+allows you to connect to MindsDB.
+
+On success, you should see the message, as below.
+
+<p align="center">
+  <img src="/assets/sql/grafana_3.png" />
+</p>
+
+## Examples 
+
+### Querying
+
+To verify the functionality of our MindsDB database connection, 
+you can query data in the Explore view. Use the text edit mode to compose your queries.
+
+```sql
+SHOW FULL DATABASES;
+```
+
+On execution, we get:
+
+<p align="center">
+  <img src="/assets/sql/grafana_4.png" />
+</p>
+
+### Visual Query Builder
+
+Now you can build a dashboard with a MindsDB database connection.
+Example query :
+
+```sql
+CREATE DATABASE mysql_demo_db
+WITH ENGINE = "mysql",
+PARAMETERS = {
+   "user": "user",
+   "password": "MindsDBUser123!",
+   "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
+   "port": "3306",
+   "database": "public"
+   };
+
+SELECT * FROM mysql_demo_db.air_passengers;
+```
+
+On execution, we get:
+
+<p align="center">
+  <img src="/assets/sql/grafana_5.png" />
+</p>
+
+<Tip>
+**Whitelist MindsDB Cloud IP address**
+
+If you need to whitelist the MindsDB Cloud IP address to gain access to your
+database, reach out to the MindsDB team, and we'll share the MindsDB Cloud
+static IP address with you.
+
+</Tip>
+
+## What's Next?
+
+Now that you are all set, we recommend you check out our **Tutorials** and
+**Community Tutorials** sections, where you'll find various examples of
+regression, classification, and time series predictions with MindsDB.
+
+To learn more about MindsDB itself, follow the guide on
+[MindsDB database structure](/sql/table-structure/). Also, don't miss out on the
+remaining pages from the **SQL API** section, as they explain a common SQL
+syntax with examples.
+
+Have fun!

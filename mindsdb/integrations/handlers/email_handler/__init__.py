@@ -7,7 +7,6 @@ try:
     )
     import_error = None
 except Exception as e:
-    print(e)
     Handler = None
     import_error = e
 

@@ -7,6 +7,8 @@ from mindsdb.utilities.context import context as ctx
 
 from .types import ChatBotMessage, BotException
 
+logger = log.getLogger(__name__)
+
 
 class BasePolling:
     def __init__(self, chat_task, chat_params):
@@ -52,11 +54,11 @@ class MessageCountPolling(BasePolling):
                         self.chat_task.on_message(chat_memory, message)
 
             except Exception as e:
-                log.logger.error(e)
+                logger.error(e)
 
             if stop_event.is_set():
                 return
-            log.logger.debug(f'running {self.chat_task.bot_id}')
+            logger.debug(f'running {self.chat_task.bot_id}')
             time.sleep(7)
 
     def get_last_message(self, chat_memory):

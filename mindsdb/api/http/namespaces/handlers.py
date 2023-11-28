@@ -119,7 +119,8 @@ class BYOMUpload(Resource):
 
         connection_args = {
             'code': params['code'].name.decode(),
-            'modules': params['modules'].name.decode()
+            'modules': params['modules'].name.decode(),
+            'type': params.get('type')
         }
 
         session = SessionController()
@@ -187,6 +188,7 @@ class BYOMUpload(Resource):
         connection_args = {
             'code': params['code'].name.decode(),
             'modules': params['modules'].name.decode(),
+            'type': params.get('type')
         }
 
         ast_query = CreateMLEngine(

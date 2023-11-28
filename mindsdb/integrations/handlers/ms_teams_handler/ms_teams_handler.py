@@ -1,6 +1,6 @@
 from .ms_graph_api_utilities import MSGraphAPIClient
 
-from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import MessagesTable
+from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import MessagesTable, ChannelsTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -37,6 +37,9 @@ class MSTeamsHandler(APIHandler):
 
         messages_data = MessagesTable(self)
         self._register_table("messages", messages_data)
+
+        channels_data = ChannelsTable(self)
+        self._register_table("channels", channels_data)
 
     def connect(self):
         """

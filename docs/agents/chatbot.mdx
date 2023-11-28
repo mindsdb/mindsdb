@@ -77,11 +77,13 @@ Next, create a chatbot.
 CREATE CHATBOT text_to_sql_chatbot
 USING
     database = 'my_slack', -- this must be created with CREATE DATABASE
-    agent = 'customer_support_agent', -- this must be created with CREATE AGENT
+    agent = 'text_to_sql_agent', -- this must be created with CREATE AGENT
     enable_dms = true,
     running = true;
 ```
 
 <Tip>
 To create `my_slack` and be able to talk to the chatbot via DMs, follow [this instruction](https://docs.mindsdb.com/integrations/app-integrations/slack#method-1-chatbot-responds-in-direct-messages-to-a-slack-app).
+
+To see how the agent is created, follow [this example](/agents/agent#example).
 </Tip>

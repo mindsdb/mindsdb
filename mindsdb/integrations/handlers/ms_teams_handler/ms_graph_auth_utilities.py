@@ -1,14 +1,8 @@
-from typing import Optional
-
 import msal
 from msal.exceptions import MsalServiceError
 
 
 class MSGraphAuthUtilities:
-    MICROSOFT_GRAPH_BASE_API_URL: str = "https://graph.microsoft.com/"
-    MICROSOFT_GRAPH_API_VERSION: str = "v1.0"
-    PAGINATION_COUNT: Optional[int] = 20
-
     def __init__(self, client_id: str, client_secret: str, tenant_id: str, refresh_token: str = None):
         """
         Initializes the class with the client_id, client_secret and tenant_id

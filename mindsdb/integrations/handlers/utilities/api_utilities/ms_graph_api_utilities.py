@@ -26,9 +26,14 @@ class MSGraphAPIClient:
         api_url = f"{self.MICROSOFT_GRAPH_BASE_API_URL}{self.MICROSOFT_GRAPH_API_VERSION}/{endpoint}/"
         return api_url
 
-    def _make_request(self, api_url: str, params: Optional[Dict] = None) -> Union[Dict, object]:
+    def _make_request(self, api_url: str, params: Optional[Dict] = None, data: Optional[Dict] = None, method: str = "GET") -> Union[Dict, object]:
         headers = {"Authorization": f"Bearer {self.access_token}"}
-        response = requests.get(api_url, headers=headers, params=params)
+        if method == "GET":
+            response = requests.get(api_url, headers=headers, params=params)
+        elif method == "POST":
+            response = requests.post(api_url, headers=headers, json=data)
+        else:
+            raise NotImplementedError(f"Method {method} not implemented")
         if response.status_code == 429:
             if "Retry-After" in response.headers:
                 pause_time = float(response.headers["Retry-After"])
@@ -93,4 +98,14 @@ class MSGraphAPIClient:
                     channel_messages.extend(messages)
 
         return channel_messages
+    
+    def send_channel_message(self, group_id: str, channel_id: str, message: str, subject: Optional[str] = None):
+        api_url = self._get_api_url(f"teams/{group_id}/channels/{channel_id}/messages")
+        data = {
+            "subject": subject,
+            "body": {
+                "content": message
+            }
+        }
+        self._make_request(api_url, data=data, method="POST")
     

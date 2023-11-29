@@ -8,6 +8,7 @@ from mindsdb_sql.parser import ast
 from mindsdb.integrations.handlers.utilities.query_utilities import (
     SELECTQueryParser,
     SELECTQueryExecutor,
+    INSERTQueryParser
 )
 
 import pandas as pd
@@ -36,65 +37,112 @@ class YoutubeCommentsTable(APITable):
         ValueError
             If the query contains an unsupported condition
         """
-        conditions = extract_comparison_conditions(query.where)
+        select_statement_parser = SELECTQueryParser(query, "comments", self.get_columns())
 
-        order_by_conditions = {}
-        clubs_kwargs = {}
+        (
+            selected_columns,
+            where_conditions,
+            order_by_conditions,
+            result_limit,
+        ) = select_statement_parser.parse_query()
 
-        if query.order_by and len(query.order_by) > 0:
-            order_by_conditions["columns"] = []
-            order_by_conditions["ascending"] = []
-
-            for an_order in query.order_by:
-                if an_order.field.parts[0] != "id":
-                    next
-                if an_order.field.parts[1] in self.get_columns():
-                    order_by_conditions["columns"].append(an_order.field.parts[1])
-
-                    if an_order.direction == "ASC":
-                        order_by_conditions["ascending"].append(True)
-                    else:
-                        order_by_conditions["ascending"].append(False)
-                else:
-                    raise ValueError(f"Order by unknown column {an_order.field.parts[1]}")
-
-        for a_where in conditions:
+        channel_id, video_id = None, None
+        for a_where in where_conditions:
             if a_where[1] == "video_id":
                 if a_where[0] != "=":
-                    raise ValueError("Unsupported where operation for youtube video id")
-                clubs_kwargs["type"] = a_where[2]
+                    raise NotImplementedError("Only '=' operator is supported for video_id column.")
+                else:
+                    video_id = a_where[2]
+            elif a_where[1] == "channel_id":
+                if a_where[0] != "=":
+                    raise NotImplementedError("Only '=' operator is supported for channel_id column.")
+                else:
+                    channel_id = a_where[2]
+
+        if not video_id and not channel_id:
+            raise ValueError("Either video_id or channel_id has to be present in where clause.")
+            
+        comments_df = self.get_comments(video_id=video_id, channel_id=channel_id)
+
+        select_statement_executor = SELECTQueryExecutor(
+            comments_df, 
+            selected_columns, 
+            [where_condition for where_condition in where_conditions if where_condition[1] not in ['video_id', 'channel_id']], 
+            order_by_conditions, 
+            result_limit if query.limit else None
+        )
+
+        comments_df = select_statement_executor.execute_query()
+
+        return comments_df
+    
+    def insert(self, query: ast.Insert) -> None:
+        """Inserts data into the YouTube POST /commentThreads API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Insert
+            Given SQL INSERT query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        
+        insert_query_parser = INSERTQueryParser(query, self.get_columns())
+
+        values_to_insert = insert_query_parser.parse_query()
+
+        for value in values_to_insert:
+            if not value.get('comment_id'):
+                if not value.get('comment'):
+                    raise ValueError(f"comment is mandatory for inserting a top-level comment.")
+                else:
+                    self.insert_comment(video_id=value['video_id'], text=value['comment'])
+
             else:
-                raise ValueError(f"Unsupported where argument {a_where[1]}")
+                if not value.get('reply'):
+                    raise ValueError(f"reply is mandatory for inserting a reply.")
+                else:
+                    self.insert_comment(comment_id=value['comment_id'], text=value['reply'])
 
-        youtube_comments_df = self.call_youtube_comments_api(a_where[2])
+    def insert_comment(self, text, video_id: str = None, comment_id: str = None):
+        # if comment_id is provided, define the request body for a reply and insert it
+        if comment_id:
+            request_body = {
+                'snippet': {
+                    'parentId': comment_id,
+                    'textOriginal': text
+                }
+            }
 
-        selected_columns = []
-        for target in query.targets:
-            if isinstance(target, ast.Star):
-                selected_columns = self.get_columns()
-                break
-            elif isinstance(target, ast.Identifier):
-                selected_columns.append(target.parts[-1])
-            else:
-                raise ValueError(f"Unknown query target {type(target)}")
+            self.handler.connect().comments().insert(
+                part='snippet',
+                body=request_body
+            ).execute()
 
-        if len(youtube_comments_df) == 0:
-            youtube_comments_df = pd.DataFrame([], columns=selected_columns)
-        else:
-            youtube_comments_df.columns = self.get_columns()
-            for col in set(youtube_comments_df.columns).difference(set(selected_columns)):
-                youtube_comments_df = youtube_comments_df.drop(col, axis=1)
+        # else if video_id is provided, define the request body for a top-level comment and insert it
+        elif video_id:
+            request_body = {
+                'snippet': {
+                    'topLevelComment': {
+                        'snippet': {
+                            'videoId': video_id,
+                            'textOriginal': text
+                        }
+                    }
+                }
+            }
 
-            if len(order_by_conditions.get("columns", [])) > 0:
-                youtube_comments_df = youtube_comments_df.sort_values(
-                    by=order_by_conditions["columns"],
-                    ascending=order_by_conditions["ascending"],
-                )
-
-        if query.limit:
-            youtube_comments_df = youtube_comments_df.head(query.limit.value)
-
-        return youtube_comments_df
+            self.handler.connect().commentThreads().insert(
+                part='snippet',
+                body=request_body
+            ).execute()
 
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
@@ -103,9 +151,9 @@ class YoutubeCommentsTable(APITable):
         List[str]
             List of columns
         """
-        return ["user_id", "display_name", "comment", "replies"]
+        return ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at", 'reply_user_id', 'reply_author', 'reply']
 
-    def call_youtube_comments_api(self, video_id):
+    def get_comments(self, video_id: str, channel_id: str):
         """Pulls all the records from the given youtube api end point and returns it select()
 
         Returns
@@ -113,40 +161,53 @@ class YoutubeCommentsTable(APITable):
         pd.DataFrame of all the records of the "commentThreads()" API end point
         """
 
+        if video_id and channel_id:
+            channel_id = None
+
         resource = (
             self.handler.connect()
             .commentThreads()
-            .list(part="snippet, replies", videoId=video_id, textFormat="plainText")
+            .list(part="snippet, replies", videoId=video_id, allThreadsRelatedToChannelId=channel_id, textFormat="plainText")
         )
 
-        video_cols = self.get_columns()
-        all_youtube_comments_df = pd.DataFrame(columns=video_cols)
         data = []
-
         while resource:
             comments = resource.execute()
+
             for comment in comments["items"]:
-                video_replies = comment["replies"]["comments"]
-                user_id = comment["snippet"]["topLevelComment"]["snippet"]["authorChannelId"]["value"]
-                display_name = comment["snippet"]["topLevelComment"]["snippet"]["authorDisplayName"]
-                comment_text = comment["snippet"]["topLevelComment"]["snippet"]["textDisplay"]
                 replies = []
-                for reply in video_replies:
-                    formatted_reply = {
-                        "reply_author": reply["snippet"]["authorDisplayName"],
-                        "user_id": reply["snippet"]["authorChannelId"]["value"],
-                        "reply": reply["snippet"]["textOriginal"],
-                    }
-                    replies.append(formatted_reply)
-                data = pd.DataFrame(
+                if 'replies' in comment:
+                    for reply in comment["replies"]["comments"]:
+                        replies.append( 
+                            {
+                                "reply_author": reply["snippet"]["authorDisplayName"],
+                                "user_id": reply["snippet"]["authorChannelId"]["value"],
+                                "reply": reply["snippet"]["textOriginal"],
+                            }
+                        )
+                else:
+                    replies.append(
+                        {
+                            "reply_author": None,
+                            "user_id": None,
+                            "reply": None,
+                        }
+                    )
+
+                data.append(
                     {
-                        "user_id": [user_id],
-                        "display_name": [display_name],
-                        "comment": [comment_text],
-                        "replies": [replies],
+                        "channel_id": comment["snippet"]["channelId"],
+                        "video_id": comment["snippet"]["videoId"],
+                        "user_id": comment["snippet"]["topLevelComment"]["snippet"]["authorChannelId"]["value"],
+                        "comment_id": comment["snippet"]["topLevelComment"]["id"],
+                        "display_name": comment["snippet"]["topLevelComment"]["snippet"]["authorDisplayName"],
+                        "comment": comment["snippet"]["topLevelComment"]["snippet"]["textDisplay"],
+                        "published_at": comment["snippet"]["topLevelComment"]["snippet"]["publishedAt"],
+                        "updated_at": comment["snippet"]["topLevelComment"]["snippet"]["updatedAt"],
+                        "replies": replies,
                     }
                 )
-                all_youtube_comments_df = pd.concat([all_youtube_comments_df, data], ignore_index=True)
+
             if "nextPageToken" in comments:
                 resource = (
                     self.handler.connect()
@@ -154,6 +215,7 @@ class YoutubeCommentsTable(APITable):
                     .list(
                         part="snippet, replies",
                         videoId=video_id,
+                        allThreadsRelatedToChannelId=channel_id,
                         textFormat="plainText",
                         pageToken=comments["nextPageToken"],
                     )
@@ -161,7 +223,9 @@ class YoutubeCommentsTable(APITable):
             else:
                 break
 
-        return all_youtube_comments_df
+        youtube_comments_df = pd.json_normalize(data, 'replies', ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at"], record_prefix='replies.')
+        youtube_comments_df = youtube_comments_df.rename(columns={'replies.user_id': 'reply_user_id', 'replies.reply_author': 'reply_author', 'replies.reply': 'reply'})
+        return youtube_comments_df[['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at", 'reply_user_id', 'reply_author', 'reply']]
 
 
 class YoutubeChannelsTable(APITable):
@@ -193,7 +257,11 @@ class YoutubeChannelsTable(APITable):
         channel_df = self.get_channel_details(channel_id)
 
         select_statement_executor = SELECTQueryExecutor(
-            channel_df, selected_columns, where_conditions, order_by_conditions
+            channel_df, 
+            selected_columns, 
+            [where_condition for where_condition in where_conditions if where_condition[1] == 'channel_id'], 
+            order_by_conditions, 
+            result_limit if query.limit else None
         )
 
         channel_df = select_statement_executor.execute_query()
@@ -245,56 +313,91 @@ class YoutubeVideosTable(APITable):
             result_limit,
         ) = select_statement_parser.parse_query()
 
-        video_id = None
+        video_id, channel_id = None, None
         for op, arg1, arg2 in where_conditions:
             if arg1 == "video_id":
                 if op == "=":
                     video_id = arg2
-                    break
                 else:
                     raise NotImplementedError("Only '=' operator is supported for video_id column.")
+                
+            elif arg1 == "channel_id":
+                if op == "=":
+                    channel_id = arg2
+                else:
+                    raise NotImplementedError("Only '=' operator is supported for channel_id column.")
 
-        if not video_id:
-            raise NotImplementedError("video_id has to be present in where clause.")
-
-        video_df = self.get_video_details(video_id)
+        if not video_id and not channel_id:
+            raise ValueError("Either video_id or channel_id has to be present in where clause.")
+        
+        if video_id:
+            video_df = self.get_videos_by_video_ids([video_id])
+        else:
+            video_df = self.get_videos_by_channel_id(channel_id)
 
         select_statement_executor = SELECTQueryExecutor(
-            video_df, selected_columns, where_conditions, order_by_conditions
+            video_df, 
+            selected_columns, 
+            [where_condition for where_condition in where_conditions if where_condition[1] not in ['video_id', 'channel_id']], 
+            order_by_conditions, 
+            result_limit if query.limit else None
         )
 
         video_df = select_statement_executor.execute_query()
 
         return video_df
+    
+    def get_videos_by_channel_id(self, channel_id):
+        video_ids = []
+        resource = (
+            self.handler.connect()
+            .search()
+            .list(part="snippet", channelId=channel_id, type="video")
+        )
+        while resource:
+            response = resource.execute()
+            for item in response["items"]:
+                video_ids.append(item["id"]["videoId"])
+            if "nextPageToken" in response:
+                resource = (
+                    self.handler.connect()
+                    .search()
+                    .list(
+                        part="snippet",
+                        channelId=channel_id,
+                        type="video",
+                        pageToken=response["nextPageToken"],
+                    )
+                )
+            else:
+                break
 
-    def get_video_details(self, video_id):
-        details = self.handler.connect().videos().list(part="statistics,snippet,contentDetails", id=video_id).execute()
-        items = details.get("items")[0]
-        snippet = items["snippet"]
-        statistics = items["statistics"]
-        content_details = items["contentDetails"]
-        transcript = self.get_captions(video_id)
-        data = {
-            "channel_title": snippet["channelTitle"],
-            "comment_count": statistics["commentCount"],
-            "description": snippet["description"],
-            "like_count": statistics["likeCount"],
-            "publish_time": snippet["publishedAt"],
-            "title": snippet["title"],
-            "transcript": transcript,
-            "video_id": video_id,
-            "view_count": statistics["viewCount"],
-        }
-        duration = content_details["duration"]
-        parsed_duration = re.search(f"PT(\d+H)?(\d+M)?(\d+S)", duration).groups()
-        duration_str = ""
-        for d in parsed_duration:
-            if d:
-                duration_str += f"{d[:-1]}:"
-        data["duration_str"] = duration_str.strip(":")
+        return self.get_videos_by_video_ids(video_ids)
+
+    def get_videos_by_video_ids(self, video_ids):
+        resource = self.handler.connect().videos().list(part="statistics,snippet,contentDetails", id=",".join(video_ids)).execute()
+
+        data = []
+        for item in resource["items"]:
+            data.append(
+                {
+                    "channel_id": item["snippet"]["channelId"],
+                    "channel_title": item["snippet"]["channelTitle"],
+                    "comment_count": item["statistics"]["commentCount"],
+                    "description": item["snippet"]["description"],
+                    "like_count": item["statistics"]["likeCount"],
+                    "publish_time": item["snippet"]["publishedAt"],
+                    "title": item["snippet"]["title"],
+                    "transcript": self.get_captions_by_video_id(item["id"]),
+                    "video_id": item["id"],
+                    "view_count": item["statistics"]["viewCount"],
+                    "duration_str": self.parse_duration(item["id"], item["contentDetails"]["duration"]),
+                }
+            )
+
         return pd.json_normalize(data)
 
-    def get_captions(self, video_id):
+    def get_captions_by_video_id(self, video_id):
         try:
             transcript_response = YouTubeTranscriptApi.get_transcript(video_id, preserve_formatting=True)
             json_formatted_transcript = JSONFormatter().format_transcript(transcript_response, indent=2)
@@ -303,9 +406,23 @@ class YoutubeVideosTable(APITable):
         except Exception as e:
             logger.error(f"Encountered an error while fetching transcripts for video ${video_id}: ${e}"),
             return "Transcript not available for this video"
+        
+    def parse_duration(self, video_id, duration):
+        try:
+            parsed_duration = re.search(f"PT(\d+H)?(\d+M)?(\d+S)", duration).groups()
+            duration_str = ""
+            for d in parsed_duration:
+                if d:
+                    duration_str += f"{d[:-1]}:"
+            
+            return duration_str.strip(":")
+        except Exception as e:
+            logger.error(f"Encountered an error while parsing duration for video ${video_id}: ${e}"),
+            return "Duration not available for this video"
 
     def get_columns(self) -> List[str]:
         return [
+            "channel_id",
             "channel_title",
             "title",
             "description",

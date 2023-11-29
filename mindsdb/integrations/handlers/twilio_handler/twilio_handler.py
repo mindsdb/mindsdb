@@ -16,6 +16,8 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 
 from mindsdb_sql.parser import ast
 
+logger = log.getLogger(__name__)
+
 
 class PhoneNumbersTable(APITable):
 
@@ -111,13 +113,13 @@ class MessagesTable(APITable):
             else:
                 filters.append([op, arg1, arg2])
 
-        if query.limit is not None:
-            params['limit'] = query.limit.value
-
         result = self.handler.fetch_messages(params, df=True)
 
         # filter targets
         result = filter_dataframe(result, filters)
+
+        if query.limit is not None:
+            result = result[:int(query.limit.value)]
 
         # project targets
         result = project_dataframe(result, query.targets, self.get_columns())
@@ -243,7 +245,7 @@ class TwilioHandler(APIHandler):
 
         except Exception as e:
             response.error_message = f'Error connecting to Twilio api: {e}. '
-            log.logger.error(response.error_message)
+            logger.error(response.error_message)
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False
@@ -341,7 +343,7 @@ class TwilioHandler(APIHandler):
                 'price_unit': msg.price_unit,
                 'api_version': msg.api_version,
                 'uri': msg.uri,
-                'media_url': [media.uri for media in msg.media.list()]
+                # 'media_url': [media.uri for media in msg.media.list()]
                 # ... Add other properties as needed
             }
             data.append(msg_data)

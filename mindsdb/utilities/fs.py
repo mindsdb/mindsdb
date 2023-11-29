@@ -8,6 +8,10 @@ from typing import Optional
 import psutil
 from appdirs import user_data_dir
 
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
+
 
 def create_directory(path):
     path = Path(path)
@@ -84,7 +88,8 @@ def set_process_mark(folder: str, mark: str) -> None:
         return
     p = Path(tempfile.gettempdir()).joinpath(f"mindsdb/processes/{folder}/")
     p.mkdir(parents=True, exist_ok=True)
-    p.joinpath(f"{os.getpid()}-{threading.get_native_id()}-{mark}").touch()
+    mark = f"{os.getpid()}-{threading.get_native_id()}-{mark}"
+    p.joinpath(mark).touch()
     return mark
 
 
@@ -106,6 +111,7 @@ def clean_process_marks():
     if os.name != "posix":
         return
 
+    logger.debug("Deleting PIDs..")
     p = Path(tempfile.gettempdir()).joinpath("mindsdb/processes/")
     if p.exists() is False:
         return
@@ -141,24 +147,18 @@ def clean_unlinked_process_marks():
                 try:
                     next(t for t in threads if t.id == thread_id)
                 except StopIteration:
-                    from mindsdb.utilities.log import get_log
-
-                    get_log(__name__).warning(
+                    logger.warning(
                         f"We have mark for process/thread {process_id}/{thread_id} but it does not exists"
                     )
                     file.unlink()
 
             except psutil.AccessDenied:
-                from mindsdb.utilities.log import get_log
-
-                get_log(__name__).warning(f"access to process id: {process_id} denied")
+                logger.warning(f"access to {process_id} denied")
 
                 continue
 
             except psutil.NoSuchProcess:
-                from mindsdb.utilities.log import get_log
-
-                get_log(__name__).warning(
+                logger.warning(
                     f"We have mark for process/thread {process_id}/{thread_id} but it does not exists"
                 )
                 file.unlink()

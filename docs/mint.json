@@ -27,7 +27,7 @@
   ],
   "topbarCtaButton": {
     "name": "Get Started",
-    "url": "https://cloud.mindsdb.com"
+    "url": "https://github.com/mindsdb/mindsdb"
   },
   "anchors": [
     {
@@ -187,7 +187,8 @@
             "sql/tutorials/llm-chatbot-ui",
             "sql/tutorials/create-chatbot",
             "sql/tutorials/slack-chatbot",
-            "sql/tutorials/twitterbot-mariadb-enterprise-server-skysql"
+            "sql/tutorials/twitterbot-mariadb-enterprise-server-skysql",
+            "sql/tutorials/twilio-chatbot"
           ]
         },
         {
@@ -324,7 +325,8 @@
                     "connect/deepnote",
                     "connect/metabase",
                     "connect/tableau",
-                    "connect/jupysql"
+                    "connect/jupysql",
+                    "connect/grafana"
                   ]
                 }
               ]
@@ -760,6 +762,13 @@
               ]
             }
           ]
+        },
+        {
+          "group": "Agents and Chatbots",
+          "pages": [
+            "agents/agent",
+            "agents/chatbot"
+          ]
         }
       ]
     },
@@ -775,18 +784,23 @@
             "integrations/app-integrations/dockerhub",
             "integrations/app-integrations/email",
             "integrations/app-integrations/github",
+            "integrations/app-integrations/gitlab",
             "integrations/app-integrations/gmail",
             "integrations/app-integrations/google-calendar",
             "integrations/app-integrations/hackernews",
+            "integrations/app-integrations/instatus",
+            "integrations/app-integrations/intercom",
             "integrations/app-integrations/mediawiki",
             "integrations/app-integrations/microsoft-teams",
             "integrations/app-integrations/newsapi",
+            "integrations/app-integrations/paypal",
             "integrations/app-integrations/plaid",
             "integrations/app-integrations/pypi",
             "integrations/app-integrations/reddit",
             "integrations/app-integrations/sendinblue",
             "integrations/app-integrations/shopify",
             "integrations/app-integrations/slack",
+            "integrations/app-integrations/strapi",
             "integrations/app-integrations/stripe",
             "integrations/app-integrations/twitter",
             "integrations/app-integrations/web-crawler",
@@ -878,11 +892,13 @@
           "group": "Large Language Models",
           "pages": [
             "integrations/ai-engines/anthropic",
+            "integrations/ai-engines/cohere",
             "integrations/ai-engines/openai",
             "integrations/ai-engines/huggingface",
             "integrations/ai-engines/langchain",
             "integrations/ai-engines/llamaindex",
-            "integrations/ai-engines/monkeylearn"            
+            "integrations/ai-engines/monkeylearn",
+            "integrations/ai-engines/rag"           
           ]
         },
         {

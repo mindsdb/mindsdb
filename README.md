@@ -67,9 +67,7 @@ MindsDB offers two primary benefits to its users.
 ----------------------------------------
 
 
-## Demo
 
-You can try MindsDB using our [demo environment](https://cloud.mindsdb.com/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) with sample data for the most popular use cases.
 
 ## Installation <a name="Installation"></a>
 
@@ -151,4 +149,4 @@ Join our [Slack community](https://mindsdb.com/joincommunity) and subscribe to t
 
 ## License <a name="License"></a>
 
-MindsDB is licensed under [GNU General Public License v3.0](https://github.com/mindsdb/mindsdb/blob/master/LICENSE)
+For detailed licensing information, please refer to the [LICENSE file](https://github.com/mindsdb/mindsdb/blob/master/LICENSE)

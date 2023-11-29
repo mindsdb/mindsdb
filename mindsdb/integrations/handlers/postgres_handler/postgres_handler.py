@@ -19,6 +19,7 @@ from mindsdb.integrations.libs.response import (
 )
 import mindsdb.utilities.profiler as profiler
 
+logger = log.getLogger(__name__)
 
 class PostgresHandler(DatabaseHandler):
     """
@@ -90,7 +91,7 @@ class PostgresHandler(DatabaseHandler):
                 cur.execute('select 1;')
             response.success = True
         except psycopg.Error as e:
-            log.logger.error(f'Error connecting to PostgreSQL {self.database}, {e}!')
+            logger.error(f'Error connecting to PostgreSQL {self.database}, {e}!')
             response.error_message = e
 
         if response.success is True and need_to_close:
@@ -126,9 +127,9 @@ class PostgresHandler(DatabaseHandler):
         }
         for column_index, column_name in enumerate(df.columns):
             if str(df[column_name].dtype) == 'object':
-                pg_type_name = types.get(description[column_index].type_code).name
-                if pg_type_name in types_map:
-                    df[column_name] = df[column_name].astype(types_map[pg_type_name])
+                pg_type = types.get(description[column_index].type_code)
+                if pg_type is not None and pg_type.name in types_map:
+                    df[column_name] = df[column_name].astype(types_map[pg_type.name])
 
     @profiler.profile()
     def native_query(self, query: str) -> Response:
@@ -158,7 +159,7 @@ class PostgresHandler(DatabaseHandler):
                     )
                 connection.commit()
             except Exception as e:
-                log.logger.error(f'Error running query: {query} on {self.database}!')
+                logger.error(f'Error running query: {query} on {self.database}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_code=0,

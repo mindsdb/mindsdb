@@ -15,9 +15,9 @@ from mindsdb.integrations.handlers.rag_handler.settings import (
     load_embeddings_model,
     url_to_documents,
 )
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
-logger = get_log(__name__)
+logger = log.getLogger(__name__)
 
 
 def validate_document(doc) -> bool:
@@ -93,7 +93,7 @@ class RAGIngestor:
     def create_db_from_documents(self, documents, embeddings_model) -> VectorStore:
         """Create DB from documents."""
 
-        if self.args.vector_store_name == "chroma":
+        if self.args.vector_store_name == "chromadb":
 
             return self.vector_store.from_documents(
                 documents=documents,

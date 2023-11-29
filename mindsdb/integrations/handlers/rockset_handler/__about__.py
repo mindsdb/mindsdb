@@ -5,5 +5,5 @@ __description__ = "MindsDB handler for Rockset"
 __author__ = 'Alissa Troiano'
 __github__ = 'https://github.com/mindsdb/mindsdb'
 __pypi__ = 'https://pypi.org/project/mindsdb/'
-__license__ = 'GPL-3.0'
+__license__ = 'MIT'
 __copyright__ = 'Copyright 2022- mindsdb'

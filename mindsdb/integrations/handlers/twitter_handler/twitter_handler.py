@@ -26,6 +26,7 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 
+logger = log.getLogger(__name__)
 
 class TweetsTable(APITable):
 
@@ -151,26 +152,24 @@ class TweetsTable(APITable):
             # split long text over 280 symbols
             max_text_len = 280
             text = params['text']
-            if len(text) <= 280:
-                # Post image if column media_url is provided, only do this on last tweet
-                if 'media_url' in params:
-                    media_url = params['media_url']
 
-                    # create an in memory file
-                    resp = requests.get(media_url)
-                    img = io.BytesIO(resp.content)
+            # Post image if column media_url is provided, only do this on last tweet
+            media_ids = None
+            if 'media_url' in params:
+                media_url = params.pop('media_url')
 
-                    # upload media to twitter
-                    api_v1 = self.handler.create_connection(api_version=1)
-                    content_type = resp.headers['Content-Type']
-                    file_type = content_type.split('/')[-1]
-                    media = api_v1.media_upload(filename="img.{file_type}".format(file_type=file_type), file=img)
+                # create an in memory file
+                resp = requests.get(media_url)
+                img = io.BytesIO(resp.content)
 
-                    del params['media_url']
-                    params['media_ids'] = [media.media_id]
+                # upload media to twitter
+                api_v1 = self.handler.create_connection(api_version=1)
+                content_type = resp.headers['Content-Type']
+                file_type = content_type.split('/')[-1]
+                media = api_v1.media_upload(filename="img.{file_type}".format(file_type=file_type), file=img)
 
-                self.handler.call_twitter_api('create_tweet', params)
-                continue
+                media_ids = [media.media_id]
+
 
             words = re.split('( )', text)
 
@@ -197,6 +196,9 @@ class TweetsTable(APITable):
                     text += '...'
                 else:
                     text += ' '
+                    # publish media with the last message
+                    if media_ids is not None:
+                        params['media_ids'] = media_ids
 
                 text += f'({i + 1}/{len_messages})'
 
@@ -277,7 +279,7 @@ class TwitterHandler(APIHandler):
 
         except tweepy.Unauthorized as e:
             response.error_message = f'Error connecting to Twitter api: {e}. Check bearer_token'
-            log.logger.error(response.error_message)
+            logger.error(response.error_message)
 
         if response.success is True and len(self.connection_args) > 1:
             # not only bearer_token, check read-write mode (OAuth 2.0 Authorization Code with PKCE)
@@ -289,7 +291,7 @@ class TwitterHandler(APIHandler):
             except tweepy.Unauthorized as e:
                 keys = 'consumer_key', 'consumer_secret', 'access_token', 'access_token_secret'
                 response.error_message = f'Error connecting to Twitter api: {e}. Check' + ', '.join(keys)
-                log.logger.error(response.error_message)
+                logger.error(response.error_message)
 
                 response.success = False
 
@@ -399,7 +401,7 @@ class TwitterHandler(APIHandler):
                 else:
                     params['max_results'] = left
 
-            log.logger.debug(f'>>>twitter in: {method_name}({params})')
+            logger.debug(f'>>>twitter in: {method_name}({params})')
             resp = method(**params)
 
             if hasattr(resp, 'includes'):

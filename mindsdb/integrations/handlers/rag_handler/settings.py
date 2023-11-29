@@ -28,7 +28,7 @@ from mindsdb.integrations.handlers.rag_handler.exceptions import (
 
 DEFAULT_EMBEDDINGS_MODEL = "BAAI/bge-base-en"
 
-SUPPORTED_VECTOR_STORES = ("chroma", "faiss")
+SUPPORTED_VECTOR_STORES = ("chromadb", "faiss")
 
 SUPPORTED_LLMS = ("writer", "openai")
 
@@ -53,7 +53,7 @@ When summarizing, please keep the following in mind the following question:
 
 DEFAULT_CHUNK_SIZE = 500
 DEFAULT_CHUNK_OVERLAP = 50
-DEFAULT_VECTOR_STORE_NAME = "chroma"
+DEFAULT_VECTOR_STORE_NAME = "chromadb"
 DEFAULT_VECTOR_STORE_COLLECTION_NAME = "collection"
 
 chromadb = get_chromadb()
@@ -78,7 +78,7 @@ class VectorStoreFactory:
         if name == "faiss":
             return FAISS
 
-        if name == "chroma":
+        if name == "chromadb":
             return Chroma
 
 
@@ -162,7 +162,7 @@ class PersistedVectorStoreLoader:
     ):
         """Load vector store from the persisted vector store"""
 
-        if vector_store == "chroma":
+        if vector_store == "chromadb":
 
             return Chroma(
                 collection_name=self.config.collection_name,
@@ -186,9 +186,9 @@ class PersistedVectorStoreLoader:
         method_name = f"load_{self.config.vector_store_name}"
         return getattr(self, method_name)()
 
-    def load_chroma(self) -> Chroma:
+    def load_chromadb(self) -> Chroma:
         """Load Chroma vector store from the persisted vector store"""
-        return self.load_vector_store_client(vector_store="chroma")
+        return self.load_vector_store_client(vector_store="chromadb")
 
     def load_faiss(self) -> FAISS:
         """Load FAISS vector store from the persisted vector store"""
@@ -284,6 +284,7 @@ class RAGBaseParameters(BaseModel):
     url: Union[str, List[str]] = None
     run_embeddings: bool = True
     top_k: int = 4
+    embeddings_model: Embeddings = None
     embeddings_model_name: str = DEFAULT_EMBEDDINGS_MODEL
     context_columns: Union[List[str], str] = None
     vector_store_name: str = DEFAULT_VECTOR_STORE_NAME
@@ -317,7 +318,7 @@ class RAGBaseParameters(BaseModel):
     def vector_store_must_be_supported(cls, v):
         if not is_valid_store(v):
             raise UnsupportedVectorStore(
-                f"currently we only support {', '.join(str(v) for v in SUPPORTED_VECTOR_STORES)} vector store"
+                f"we don't support {v}. currently we only support {', '.join(str(v) for v in SUPPORTED_VECTOR_STORES)} vector store"
             )
         return v
 

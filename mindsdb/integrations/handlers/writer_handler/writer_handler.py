@@ -16,12 +16,11 @@ from mindsdb.integrations.utilities.datasets.dataset import (
     load_dataset,
     validate_dataframe,
 )
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 # these require no additional arguments
 
-logger = get_log(logger_name=__name__)
-
+logger = log.getLogger(__name__)
 
 def extract_llm_params(args):
     """extract llm params from input query args"""

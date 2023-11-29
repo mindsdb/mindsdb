@@ -29,9 +29,10 @@ class MessageTable(APITable):
         super().__init__(handler)
         self.handler.connect()
 
-    """  Args: query (ast.Insert): SQL query to parse.
-    """
+   
     def insert(self, query: ast.Insert) -> pd.DataFrame:
+        """  Args: query (ast.Insert): SQL query to parse.
+        """
         insert_statement_parser = INSERTQueryParser(
             query,
             mandatory_columns=['message', 'topic_arn'],

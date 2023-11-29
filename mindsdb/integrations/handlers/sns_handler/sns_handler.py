@@ -9,7 +9,12 @@ import boto3
 from typing import Dict
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 import json as JSON
-from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+    RESPONSE_TYPE
+)
+from mindsdb.integrations.libs.api_handler import APIHandler,FuncParser
 from mindsdb.utilities import log
 
 
@@ -72,13 +77,14 @@ class SnsHandler(APIHandler):
                 'sns',
                 aws_access_key_id=self.connection_data['aws_access_key_id'],
                 aws_secret_access_key=self.connection_data['aws_secret_access_key'],
+                # verify=False,
                 # using  for testing locally with localstack
-                # endpoint_url=self.connection_data['endpoint_url']
+                endpoint_url=self.connection_data['endpoint_url'],
                 region_name=self.connection_data['region_name'])     
         self.is_connected = True
         return self.connection
 
-    def topic_list(self, params: Dict = None):
+    def topic_list(self, params: Dict = None) -> DataFrame:
         """
         returns topic arns 
         Args:
@@ -96,53 +102,38 @@ class SnsHandler(APIHandler):
             return []
         json_response = json_response.replace("\'", "\"")
         data = JSON.loads(str(json_response))
-        return data["Topics"]
+        return DataFrame(data["Topics"])
 
 
-    def publish_message(self, params: Dict = None):
+    def publish_message(self, params: Dict = None) -> DataFrame:
         """
         get topic_arn and message from params and sends message to amazon topic
         Args:
            params (Dict): topic name
         """
-        self.connection.publish(TopicArn=params['topic_arn'], Message=params['message'])
+        json = self.connection.publish(TopicArn=params['topic_arn'], Message=params['message'])
+        print(json)
+        return DataFrame(json)
 
 
-    def publish_batch(self, params: Dict = None):
+    def publish_batch(self, params: Dict = None) -> DataFrame:
         """
         get topic_arn and 
         publish multiple messages in a single batch (see https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/publish_batch.html)
         """
-        self.connection.publish_batch(TopicArn=params['topic_arn'],
+        json = self.connection.publish_batch(TopicArn=params['topic_arn'],
                                       PublishBatchRequestEntries=params['batch_request_entries'])
+        return DataFrame(json['Successful'])
+        
 
 
-    def create_topic(self, params: Dict = None):
+    def create_topic(self, params: Dict = None) -> DataFrame:
         """
         create topic arguments topic name
         """
         name = params["name"]
-        self.connection.create_topic(Name=name)
-
-    def native_query(self, query_string: str = None) -> StatusResponse:
-        """Receive and process a raw query.
-
-        Parameters
-        ----------
-        query : str
-            query in a native format
-
-        Returns
-        -------
-        StatusResponse
-            Request status
-        """
-        method_name, params = FuncParser().from_string(query_string)
-        df = self.call_sns_api(method_name, params)
-        return Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=df
-        )
+        json = self.connection.create_topic(Name=name)
+        return DataFrame(json)
 
     def call_sns_api(self, method_name: str = None, params: dict = None) -> DataFrame:
         """Calls the sns API method with the given params.

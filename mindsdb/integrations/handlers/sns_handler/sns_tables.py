@@ -115,14 +115,7 @@ class TopicTable(APITable):
                 params[arg1] = arg2
             else:
                 raise NotImplementedError
-       
-        topics = self.handler.call_sns_api("topic_list",params)
-        topics_arn_list = [] 
-        for topic in topics:
-            topics_arn_list.append(topic["TopicArn"])
-        data = {'topic_arn': topics_arn_list}
-        df = pd.DataFrame(data=data)
-        return df
+        return self.handler.call_sns_api("topic_list",params)
 
     def insert(self, query: ast.Insert) -> pd.DataFrame:
         mandatory_columns = {'name'}

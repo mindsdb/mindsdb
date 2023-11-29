@@ -18,11 +18,11 @@ def is_private_url(url: str):
     return ipaddress.ip_address(ip).is_private
 
 
-def clear_filename(filename: str):
+def clear_filename(filename: str) -> str:
     """
     Removes path symbols from filename which could be used for path injection
-    :param s:
-    :return:
+    :param filename: input filename
+    :return: output filename
     """
 
     if not filename:

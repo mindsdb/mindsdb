@@ -51,6 +51,43 @@ class ChannelMessagesTable(APITable):
         # TODO: Should these records be filtered somehow?
         return api_client.get_channel_messages()
     
+    def insert(self, query: ASTNode) -> None:
+        """Inserts data into the Microsoft Teams "POST /teams/{group_id}/channels/{channel_id}/messages" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Insert
+           Given SQL INSERT query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        insert_statement_parser = INSERTQueryParser(
+            query,
+            supported_columns=["channelIdentity_teamId", "channelIdentity_channelId", "subject", "body_content"],
+            mandatory_columns=["channelIdentity_teamId", "channelIdentity_channelId", "body_content"],
+        )
+
+        messages_to_send = insert_statement_parser.parse_query()
+
+        self.send_messages(messages_to_send)
+
+    def send_messages(self, messages_to_send: List[Dict[Text, Any]]) -> None:
+        api_client = self.handler.connect()
+        for message in messages_to_send:
+            api_client.send_channel_message(
+                group_id=message["channelIdentity_teamId"],
+                channel_id=message["channelIdentity_channelId"],
+                message=message["body_content"],
+                subject=message.get("subject")
+            )
+    
     def get_columns(self) -> list:
         return [
             "id",

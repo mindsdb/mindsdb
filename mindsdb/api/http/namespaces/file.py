@@ -52,7 +52,7 @@ class File(Resource):
 
         def on_file(file):
             nonlocal file_object
-            data["file"] = clear_filename(file.file_name.decode())
+            data["file"] = file.file_name.decode()
             file_object = file.file_object
 
         temp_dir_path = tempfile.mkdtemp(prefix="mindsdb_file_")

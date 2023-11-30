@@ -79,7 +79,7 @@ class SnsHandler(APIHandler):
                 aws_secret_access_key=self.connection_data['aws_secret_access_key'],
                 # verify=False,
                 # using  for testing locally with localstack
-                endpoint_url=self.connection_data['endpoint_url'],
+                # endpoint_url=self.connection_data['endpoint_url'],
                 region_name=self.connection_data['region_name'])     
         self.is_connected = True
         return self.connection

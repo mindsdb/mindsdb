@@ -16,9 +16,9 @@ from mindsdb.integrations.handlers.rag_handler.settings import (
     load_embeddings_model,
     url_to_documents,
 )
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
-logger = get_log(__name__)
+logger = log.getLogger(__name__)
 
 
 def validate_document(doc) -> bool:
@@ -94,7 +94,7 @@ class RAGIngestor:
     def create_db_from_documents(self, documents, embeddings_model) -> VectorStore:
         """Create DB from documents."""
 
-        if self.args.vector_store_name == "chroma":
+        if self.args.vector_store_name == "chromadb":
 
             return self.vector_store.from_documents(
                 documents=documents,
@@ -122,7 +122,7 @@ class RAGIngestor:
         )
 
     @staticmethod
-    def create_batch_embeddings(documents: List[Document], embeddings_batch_size):
+    def _create_batch_embeddings(documents: List[Document], embeddings_batch_size):
         """
         create batch of document embeddings
         """
@@ -130,18 +130,31 @@ class RAGIngestor:
         for i in range(0, len(documents), embeddings_batch_size):
             yield documents[i : i + embeddings_batch_size]
 
+    def create_db_from_batch_documents(self, documents, embeddings_model):
+        """
+        Create DB from documents in batches, this is used for chromadb to get around the add limit
+        """
+        batches_documents = self._create_batch_embeddings(
+            documents, self.args.embeddings_batch_size
+        )
+
+        try:
+            for batch_id, batch_document in enumerate(batches_documents):
+                db = self.create_db_from_documents(batch_document, embeddings_model)
+
+        except Exception as e:
+            raise Exception(
+                f"Error loading embeddings batches to {self.args.vector_store_name}: {e}"
+            )
+
     def embeddings_to_vectordb(self) -> None:
         """Create vectorstore from documents and store locally."""
 
         start_time = time.time()
 
-        # Load documents and splits in chunks and defines overlap
+        # Load documents and splits in chunks (if not in evaluation_type mode)
         documents = self.split_documents(
             chunk_size=self.args.chunk_size, chunk_overlap=self.args.chunk_overlap
-        )
-
-        batches_documents = self.create_batch_embeddings(
-            documents, embeddings_batch_size=self.args.embeddings_batch_size
         )
 
         # Load embeddings model
@@ -154,23 +167,27 @@ class RAGIngestor:
         if not validate_documents(documents):
             raise ValueError("Invalid documents")
 
-        # todo get max_batch from chroma client
+        if self.args.vector_store_name == "chromadb":
 
-        try:
-            for batch_document in batches_documents:
-                db = self.create_db_from_documents(batch_document, embeddings_model)
-        except Exception as e:
-            logger.error(
-                f"Error loading using 'from_documents' method, trying 'from_text': {e}"
-            )
+            self.create_db_from_batch_documents(documents, embeddings_model)
+
+            db = None  # chromadb does autosave in latest version, just for the saver PersistedVectorStoreSaver
+
+        else:
+
             try:
-                for batch_document in batches_documents:
-                    db = self.create_db_from_texts(batch_document, embeddings_model)
+                db = self.create_db_from_documents(documents, embeddings_model)
+            except Exception as e:
+                logger.error(
+                    f"Error loading using 'from_documents' method, trying 'from_text': {e}"
+                )
+                try:
+                    db = self.create_db_from_texts(documents, embeddings_model)
                     logger.info(f"successfully loaded using 'from_text' method: {e}")
 
-            except Exception as e:
-                logger.error(f"Error creating from texts: {e}")
-                raise e
+                except Exception as e:
+                    logger.error(f"Error creating from texts: {e}")
+                    raise e
 
         config = PersistedVectorStoreSaverConfig(
             vector_store_name=self.args.vector_store_name,
@@ -184,6 +201,7 @@ class RAGIngestor:
         vector_store_saver.save_vector_store(db)
 
         db = None  # Free up memory
+
         end_time = time.time()
         elapsed_time = end_time - start_time
 

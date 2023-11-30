@@ -177,6 +177,35 @@ class TestRAG(BaseExecutorTest):
         )
         assert result_df["answer"].iloc[0]
 
+        # test batching with openai qa chroma
+
+        embeddings_batch_size = 1
+
+        self.run_sql(
+            f"""
+           create model proj.test_rag_openai_qa_batch
+           from files (select * from df)
+           predict answer
+           using
+             engine='rag',
+             llm_type='openai',
+             openai_api_key='{OPENAI_API_KEY}',
+             vector_store_folder_name='rag_openai_qa_test_batch',
+             embeddings_batch_size={embeddings_batch_size}
+        """
+        )
+
+        self.wait_predictor("proj", "test_rag_openai_qa_batch")
+
+        result_df = self.run_sql(
+            """
+            SELECT p.answer
+            FROM proj.test_rag_openai_qa_batch as p
+            WHERE question='What is the best treatment for a cold?'
+        """
+        )
+        assert result_df["answer"].iloc[0]
+
         # test writer qa with FAISS
 
         self.run_sql(

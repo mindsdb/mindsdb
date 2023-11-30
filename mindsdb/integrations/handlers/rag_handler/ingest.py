@@ -97,7 +97,7 @@ class RAGIngestor:
         """Create DB from documents."""
 
         if self.args.vector_store_name == "chromadb":
-        logger.info(f"Creating chroma db with persist location {self.args.vector_store_storage_path}")
+            logger.info(f"Creating chroma db with persist location {self.args.vector_store_storage_path}")
 
             return self.vector_store.from_documents(
                 documents=documents,

@@ -1143,10 +1143,10 @@ class SQLQuery():
 
                 records = step_data.get_records_raw()
 
-                if isinstance(step.offset, Constant) and isinstance(step.offset.value, int):
-                    records = records[step.offset.value:]
-                if isinstance(step.limit, Constant) and isinstance(step.limit.value, int):
-                    records = records[:step.limit.value]
+                if isinstance(step.offset, int):
+                    records = records[step.offset:]
+                if isinstance(step.limit, int):
+                    records = records[:step.limit]
 
                 for record in records:
                     step_data2.add_record_raw(record)

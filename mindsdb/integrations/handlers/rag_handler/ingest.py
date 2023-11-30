@@ -140,7 +140,8 @@ class RAGIngestor:
 
         try:
             for batch_id, batch_document in enumerate(batches_documents):
-                db = self.create_db_from_documents(batch_document, embeddings_model)
+                _ = self.create_db_from_documents(batch_document, embeddings_model)
+                logger.info(f"added batch {batch_id} of embeddings")
 
         except Exception as e:
             raise Exception(
@@ -169,9 +170,8 @@ class RAGIngestor:
 
         if self.args.vector_store_name == "chromadb":
 
-            self.create_db_from_batch_documents(documents, embeddings_model)
-
-            db = None  # chromadb does autosave in latest version, just for the saver PersistedVectorStoreSaver
+            # chromadb does autosave in latest version, just for the saver PersistedVectorStoreSaver
+            db = self.create_db_from_batch_documents(documents, embeddings_model)
 
         else:
 

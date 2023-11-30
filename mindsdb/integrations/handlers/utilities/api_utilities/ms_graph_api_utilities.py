@@ -2,7 +2,7 @@ import time
 import requests
 from typing import Optional, Dict, Union, List
 
-from mindsdb.integrations.handlers.utilities.auth_utilities.ms_graph_api_auth_utilities import MSGraphAPIApplicationPermissionsManager
+from mindsdb.integrations.handlers.utilities.auth_utilities.ms_graph_api_auth_utilities import MSGraphAPIApplicationPermissionsManager, MSGraphAPIDelegatedPermissionsManager
 
 
 class MSGraphAPIClient:
@@ -18,8 +18,8 @@ class MSGraphAPIClient:
         :param tenant_id: The tenant_id of the app
         :param refresh_token: The refresh_token of the app
         """
-        ms_graph_auth_manager = MSGraphAPIAuthManager(client_id, client_secret, tenant_id, refresh_token)
-        self.access_token = ms_graph_auth_manager.get_access_token()
+        self.ms_graph_api_application_permissions_manager = MSGraphAPIApplicationPermissionsManager(client_id, client_secret, tenant_id, refresh_token)
+        self.ms_graph_api_delegated_permissions_manager = MSGraphAPIDelegatedPermissionsManager(client_id, tenant_id)
         self._group_ids = None
 
     def _get_api_url(self, endpoint: str) -> str:
@@ -27,10 +27,11 @@ class MSGraphAPIClient:
         return api_url
 
     def _make_request(self, api_url: str, params: Optional[Dict] = None, data: Optional[Dict] = None, method: str = "GET") -> Union[Dict, object]:
-        headers = {"Authorization": f"Bearer {self.access_token}"}
         if method == "GET":
+            headers = {"Authorization": f"Bearer {self.ms_graph_api_application_permissions_manager.get_access_token()}"}
             response = requests.get(api_url, headers=headers, params=params)
         elif method == "POST":
+            headers = {"Authorization": f"Bearer {self.ms_graph_api_delegated_permissions_manager.get_access_token()}"}
             response = requests.post(api_url, headers=headers, json=data)
         else:
             raise NotImplementedError(f"Method {method} not implemented")

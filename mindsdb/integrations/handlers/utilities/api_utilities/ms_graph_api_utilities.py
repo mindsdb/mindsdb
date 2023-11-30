@@ -22,6 +22,8 @@ class MSGraphAPIClient:
         self.ms_graph_api_delegated_permissions_manager = MSGraphAPIDelegatedPermissionsManager(client_id, tenant_id)
         self._group_ids = None
 
+    # TODO: Add a method to check connection
+
     def _get_api_url(self, endpoint: str) -> str:
         api_url = f"{self.MICROSOFT_GRAPH_BASE_API_URL}{self.MICROSOFT_GRAPH_API_VERSION}/{endpoint}/"
         return api_url
@@ -40,7 +42,7 @@ class MSGraphAPIClient:
                 pause_time = float(response.headers["Retry-After"])
                 time.sleep(pause_time)
                 response = requests.get(api_url, headers=headers, params=params)
-        if response.status_code != 200:
+        if response.status_code not in [200, 201]:
             raise requests.exceptions.RequestException(response.text)
         if response.headers["Content-Type"] == "application/octet-stream":
             raw_response = response.content

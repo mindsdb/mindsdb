@@ -137,11 +137,11 @@ class RAGIngestor:
         batches_documents = self._create_batch_embeddings(
             documents, self.args.embeddings_batch_size
         )
-
+        n_batches = len(documents) // self.args.embeddings_batch_size
         try:
             for batch_id, batch_document in enumerate(batches_documents):
                 _ = self.create_db_from_documents(batch_document, embeddings_model)
-                logger.info(f"Added batch {batch_id + 1} of {len(batch_document)} batches to vector db")
+                logger.info(f"Added batch {batch_id + 1} of {n_batches} batches to vector db")
 
         except Exception as e:
             raise Exception(

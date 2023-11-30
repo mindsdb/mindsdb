@@ -30,20 +30,32 @@ WITH
       "region_name": "region_name"
     };
 ```
-Now, you can view the topics list 
+Now, you can create a topic 
 ```sql
-
+ insert into topics(name) values('test');
 
 ```
 
+then view topic lists
+```sql
+ select * from topics;
+```
 
- mysql -u mindsdb -h 127.0.0.1  -P 47335
-### Implemented Features
-- [x] Feature A
-- [x] Feature B
-  - [x] Feature B1
-  - [ ] Feature B2
+Each topic should look like this:
++-----------------------------------------+
+| topic_arn                               |
++-----------------------------------------+
+| arn:aws:sns:us-east-1:000000000000:test |
++-----------------------------------------+
 
-### TODOs
-- [ ] Feature C
-- [ ] Feature D
+Then we can publish a single message
+```sql
+insert into messages(message,topic_arn) values('some_message','arn:aws:sns:us-east-1:000000000000:test')
+```
+we can publish messages using the publish batch functionality
+
+```sql
+insert into messages(message,topic_arn,id,subject,message_deduplication_id,message_group_id) values('some_message','arn:aws:sns:us-east-1:000000000000:test','333','aaaa','000-222','ssss'),('some_message','arn:aws:sns:us-east-1:000000000000:test','3373','aaaa','000-222','ssss')
+```
+
+

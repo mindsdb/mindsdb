@@ -19,6 +19,7 @@ class MSGraphAPIApplicationPermissionsManager:
         self.client_secret = client_secret
         self.tenant_id = tenant_id
         self.refresh_token = refresh_token
+        self.msal_app = self._get_msal_app()
 
     def _get_msal_app(self):
         return msal.ConfidentialClientApplication(
@@ -28,13 +29,11 @@ class MSGraphAPIApplicationPermissionsManager:
         )
     
     def get_access_token(self):
-        msal_app = self._get_msal_app()
-
         scope = ["https://graph.microsoft.com/.default"]
         if self.refresh_token:
-            result = msal_app.acquire_token_by_refresh_token(self.refresh_token, scopes=scope)
+            result = self.msal_app.acquire_token_by_refresh_token(self.refresh_token, scopes=scope)
         else:
-            result = msal_app.acquire_token_for_client(scopes=scope)
+            result = self.msal_app.acquire_token_for_client(scopes=scope)
         if "access_token" in result:
             return result["access_token"]
         else:
@@ -52,6 +51,7 @@ class MSGraphAPIDelegatedPermissionsManager:
         """
         self.client_id = client_id
         self.tenant_id = tenant_id
+        self.msal_app = self._get_msal_app()
 
     def _get_msal_app(self):
         return msal.PublicClientApplication(
@@ -76,15 +76,13 @@ class MSGraphAPIDelegatedPermissionsManager:
         return cache
     
     def _execute_auth_flow(self):
-        msal_app = self._get_msal_app()
-
-        accounts = msal_app.get_accounts()
+        accounts = self.msal_app.get_accounts()
         if accounts:
             # TODO: Is accounts[0] always the right one?
-            result = msal_app.acquire_token_silent(self.scopes, account=accounts[0])
+            result = self.msal_app.acquire_token_silent(self.scopes, account=accounts[0])
 
         if not result:
-            flow = msal_app.initiate_device_flow(scopes=self.scopes)
+            flow = self.msal_app.initiate_device_flow(scopes=self.scopes)
             if "user_code" not in flow:
                 raise ValueError(
                     "Failed to create device flow. Err: %s" % json.dumps(flow, indent=4)

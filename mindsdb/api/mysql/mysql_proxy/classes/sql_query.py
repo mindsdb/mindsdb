@@ -36,6 +36,7 @@ from mindsdb_sql.parser.ast import (
     Parameter,
     Tuple,
 )
+from mindsdb_sql.planner.step_result import Result
 from mindsdb_sql.planner.steps import (
     ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
@@ -926,9 +927,17 @@ class SQLQuery():
                 where_data = data.get_records()
 
                 # add constants from where
+                row_dict = {}
                 if step.row_dict is not None:
+                    for k, v in step.row_dict.items():
+                        if isinstance(v, Result):
+                            prev_result = steps_data[v.step_num]
+                            # TODO we await only one value: model.param = (subselect)
+                            v = prev_result.get_records_raw()[0][0]
+                        row_dict[k] = v
+
                     for record in where_data:
-                        record.update(step.row_dict)
+                        record.update(row_dict)
 
                 predictor_metadata = {}
                 for pm in self.predictor_metadata:

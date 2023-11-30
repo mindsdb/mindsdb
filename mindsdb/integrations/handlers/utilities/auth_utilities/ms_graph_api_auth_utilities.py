@@ -76,6 +76,7 @@ class MSGraphAPIDelegatedPermissionsManager:
         return cache
     
     def _execute_auth_flow(self):
+        result = None
         accounts = self.msal_app.get_accounts()
         if accounts:
             # TODO: Is accounts[0] always the right one?
@@ -87,7 +88,7 @@ class MSGraphAPIDelegatedPermissionsManager:
                 raise ValueError(
                     "Failed to create device flow. Err: %s" % json.dumps(flow, indent=4)
                 )
-            result = msal_app.acquire_token_by_device_flow(flow)
+            result = self.msal_app.acquire_token_by_device_flow(flow)
 
         return result
     

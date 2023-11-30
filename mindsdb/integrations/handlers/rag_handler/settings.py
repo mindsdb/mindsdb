@@ -413,8 +413,6 @@ def url_to_documents(urls: Union[List[str], str]) -> List[Document]:
     return documents
 
 
-# todo issue#7361 hard coding device to cpu, add support for gpu later on
-# e.g. {"device": "gpu" if torch.cuda.is_available() else "cpu"}
 @lru_cache()
 def load_embeddings_model(embeddings_model_name, use_gpu=False):
     """Load embeddings model from Hugging Face Hub"""

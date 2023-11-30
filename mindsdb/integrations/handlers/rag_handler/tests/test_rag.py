@@ -176,7 +176,7 @@ class TestRAG(BaseExecutorTest):
             WHERE question='What is the best treatment for a cold?'
         """
         )
-        assert result_df["answer"].iloc[0].lower()
+        assert result_df["answer"].iloc[0]
 
         # test writer qa with FAISS
 
@@ -203,7 +203,7 @@ class TestRAG(BaseExecutorTest):
             WHERE question='What is the best treatment for a cold?'
         """
         )
-        assert result_df["answer"].iloc[0].lower()
+        assert result_df["answer"].iloc[0]
 
     def test_invalid_prompt_template(self):
         # create project

@@ -6,7 +6,7 @@ import msal
 from msal.exceptions import MsalServiceError
 
 
-class MSGraphAPIAuthManager:
+class MSGraphAPIApplicationPermissionsManager:
     def __init__(self, client_id: str, client_secret: str, tenant_id: str, refresh_token: str = None):
         """
         Initializes the class with the client_id, client_secret and tenant_id

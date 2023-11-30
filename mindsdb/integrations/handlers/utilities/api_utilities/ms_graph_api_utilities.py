@@ -2,7 +2,7 @@ import time
 import requests
 from typing import Optional, Dict, Union, List
 
-from mindsdb.integrations.handlers.utilities.auth_utilities.ms_graph_api_auth_utilities import MSGraphAPIAuthManager
+from mindsdb.integrations.handlers.utilities.auth_utilities.ms_graph_api_auth_utilities import MSGraphAPIApplicationPermissionsManager
 
 
 class MSGraphAPIClient:

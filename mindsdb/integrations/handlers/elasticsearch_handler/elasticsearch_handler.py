@@ -21,6 +21,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
+logger = log.getLogger(__name__)
 
 class ElasticsearchHandler(DatabaseHandler):
     """
@@ -78,13 +79,13 @@ class ElasticsearchHandler(DatabaseHandler):
             self.is_connected = True
             return StatusResponse(True)
         except ConnectionError as conn_error:
-            log.logger.error(f'Connection error when connecting to Elasticsearch: {conn_error}')
+            logger.error(f'Connection error when connecting to Elasticsearch: {conn_error}')
             return StatusResponse(False, error_message=str(conn_error))
         except AuthenticationException as auth_error:
-            log.logger.error(f'Authentication error when connecting to Elasticsearch: {auth_error}')
+            logger.error(f'Authentication error when connecting to Elasticsearch: {auth_error}')
             return StatusResponse(False, error_message=str(auth_error))
         except Exception as e:
-            log.logger.error(f'Error connecting to Elasticsearch: {e}')
+            logger.error(f'Error connecting to Elasticsearch: {e}')
             return StatusResponse(False, error_message=str(e))
 
     def disconnect(self):
@@ -113,7 +114,7 @@ class ElasticsearchHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Elasticsearch {self.connection_data["hosts"]}, {e}!')
+            logger.error(f'Error connecting to Elasticsearch {self.connection_data["hosts"]}, {e}!')
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -161,7 +162,7 @@ class ElasticsearchHandler(DatabaseHandler):
                     )
                 )
         except Exception as e:
-            log.logger.error(f'Error running query: {query} on {self.connection_data["hosts"]}!')
+            logger.error(f'Error running query: {query} on {self.connection_data["hosts"]}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)

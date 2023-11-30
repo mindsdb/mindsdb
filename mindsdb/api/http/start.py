@@ -1,4 +1,3 @@
-import logging
 import os
 try:
     import torch.multiprocessing as mp
@@ -14,24 +13,25 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.functions import init_lexer_parsers
 from mindsdb.integrations.libs.ml_exec_base import process_cache
 
+logger = log.getLogger(__name__)
 
-def start(verbose, no_studio, with_nlp):
+
+def start(verbose, no_studio):
     config = Config()
 
     server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
     db.init()
-    log.initialize_log(config, 'http', wrap_print=True if server.lower() != 'gunicorn' else False)
-
     init_lexer_parsers()
 
-    app = initialize_app(config, no_studio, with_nlp)
+    app = initialize_app(config, no_studio)
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']
 
     process_cache.init()
 
-    if server.lower() == 'waitress':
+    if server.lower() == "waitress":
+        logger.debug("Serving HTTP app with waitress..")
         serve(
             app,
             host='*' if host in ('', '0.0.0.0') else host,
@@ -40,17 +40,18 @@ def start(verbose, no_studio, with_nlp):
             max_request_body_size=1073741824 * 10,
             inbuf_overflow=1073741824 * 10
         )
-    elif server.lower() == 'flask':
+    elif server.lower() == "flask":
+        logger.debug("Serving HTTP app with flask..")
         # that will 'disable access' log in console
-        logger = logging.getLogger('werkzeug')
-        logger.setLevel(logging.WARNING)
 
         app.run(debug=False, port=port, host=host)
     elif server.lower() == 'gunicorn':
         try:
             from mindsdb.api.http.gunicorn_wrapper import StandaloneApplication
         except ImportError:
-            print("Gunicorn server is not available by default. If you wish to use it, please install 'gunicorn'")
+            logger.error(
+                "Gunicorn server is not available by default. If you wish to use it, please install 'gunicorn'"
+            )
             return
 
         def post_fork(arbiter, worker):

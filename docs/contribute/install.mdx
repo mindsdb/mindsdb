@@ -25,56 +25,84 @@ follow the steps below or visit the provided link.
 Before proceeding, make sure you have `Git` and `Python 3.8.x` or `Python 3.9.x`
 installed.
 
-1. Fork the MindsDB repository from
-   [GitHub](https://github.com/mindsdb/mindsdb/fork).
+1. Fork the MindsDB repository from [GitHub](https://github.com/mindsdb/mindsdb/fork).
 
 2. Clone the fork locally:
 
-```bash
-git clone https://github.com/mindsdb/mindsdb.git
-```
+   ```bash
+   git clone https://github.com/mindsdb/mindsdb.git
+   ```
 
 3. Create a new virtual environment:
 
-```bash
-python -m venv mindsdb-venv
-```
+   ```bash
+   python -m venv mindsdb-venv
+   ```
 
 4. Activate the virtual environment:
 
-```bash
-source mindsdb-venv/bin/activate
-```
+   ```bash
+   source mindsdb-venv/bin/activate
+   ```
 
-5. Install dependencies:
+5. Install MindsDB with its local development dependencies and start it:
 
-```bash
-cd mindsdb/requirements && pip install -r requirements.txt
-```
+   Install dependencies:
 
-6. Install MindsDB:
+   ```bash
+   cd mindsdb
+   pip install -e .
+   pip install -r requirements/requirements-dev.txt
+   ```
+   
+   And start MindsDB:
+   
+   ```bash
+   python -m mindsdb
+   ```
+   
+   <Tip>
+   Alternatively, you can use a makefile to install dependencies and start MindsDB:
+  
+    ```bash
+    make install_mindsdb
+    make run_mindsdb
+    ```
+   </Tip>
 
-```bash
-python setup.py develop
-```
+By default, MindsDB will always start the `http` and `mysql` APIs. If you want to use Mongo API, you will need to provide that as a parameter to `--api`. You can do it as follows:
 
-7. Start MindsDB:
+   ```bash
+   python -m mindsdb --api=http,mongodb,mysql
+   ```
 
-```bash
-python -m mindsdb
-```
-
-If everything works as expected, you should see the following message in the
-console:
+If everything works as expected, you should see the following message in the console:
 
 ```
 ...
 
-2022-06-28 16:21:46,942 - INFO - - GUI available at http://127.0.0.1:47334/
-2022-06-28 16:21:47,010 - INFO - Starting MindsDB Mysql proxy server on
-tcp://127.0.0.1:47335 2022-06-28 16:21:47,015 - INFO - Waiting for incoming
-connections... mysql API: started on 47335 http API: started on 47334
+mindsdb.api.http.initialize:  - GUI available at http://127.0.0.1:47334/
+mindsdb.api.mysql.mysql_proxy.mysql_proxy: Starting MindsDB Mysql proxy server on tcp://127.0.0.1:47335
+mindsdb.api.mysql.mysql_proxy.mysql_proxy: Waiting for incoming connections...
+mindsdb: mysql API: started on 47335
+mindsdb: http API: started on 47334
 ```
+
+You can access the MindsDB Editor at `localhost:47334`.
+
+## Dependencies
+
+The dependencies for many of the data or ML integrations are not installed by default.
+
+If you want to use a data or ML integration whose dependencies are not available by default, install it by running this command:
+
+```
+pip install .[handler_name]
+```
+
+<Tip>
+You can find all available [handlers here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers).
+</Tip>
 
 ## What's Next?
 

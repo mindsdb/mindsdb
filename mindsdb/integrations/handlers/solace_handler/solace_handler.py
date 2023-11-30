@@ -17,6 +17,8 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
+
 
 class SolaceHandler(DatabaseHandler):
 
@@ -81,7 +83,7 @@ class SolaceHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Solace: {e}!')
+            logger.error(f'Error connecting to Solace: {e}!')
             response.error_message = e
 
         if response.success is False:

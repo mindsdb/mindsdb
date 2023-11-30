@@ -7,6 +7,8 @@ from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse, HandlerResponse as Response, RESPONSE_TYPE
 from .hn_table import StoriesTable, CommentsTable , HNStoriesTable ,JobStoriesTable, ShowStoriesTable
 
+logger = log.getLogger(__name__)
+
 class HackerNewsHandler(APIHandler):
     """
     A class for handling connections and interactions with the Hacker News API.
@@ -41,7 +43,7 @@ class HackerNewsHandler(APIHandler):
             response.raise_for_status()
             return StatusResponse(True)
         except Exception as e:
-            log.error(f'Error checking connection: {e}')
+            logger.error(f'Error checking connection: {e}')
             return StatusResponse(False, str(e))
 
     def native_query(self, query_string: str = None):

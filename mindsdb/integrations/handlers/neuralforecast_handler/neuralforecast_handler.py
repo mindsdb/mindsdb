@@ -16,24 +16,11 @@ from neuralforecast.models import NHITS
 from neuralforecast.auto import AutoNHITS
 from ray.tune.search.hyperopt import HyperOptSearch
 
-DEFAULT_FREQUENCY = "D"
-DEFAULT_MODEL_NAME = "NHITS"
-DEFAULT_TRIALS = 20
-MIN_TRIALS_FOR_AUTOTUNE = 3
-
-
-def choose_model(num_trials, horizon, window, exog_vars=[], threshold=MIN_TRIALS_FOR_AUTOTUNE):
-    """Chooses model based on the number of trials allowed by the user.
-
-    A lower args for training time reduces the number of trial models we can
-    search through. Below a certain threshold, we switch to the default
-    NHITS implementation instead of using AutoML to search for the best config.
-    """
-    if num_trials >= threshold:
-        model = AutoNHITS(horizon, gpus=0, num_samples=num_trials, search_alg=HyperOptSearch())
-    else:  # faster implementation without auto parameter tuning
-        model = NHITS(horizon, window, hist_exog_list=exog_vars)
-    return model
+# hierarchicalforecast is an optional dependency
+try:
+    from hierarchicalforecast.core import HierarchicalReconciliation
+except ImportError:
+    HierarchicalReconciliation = None
 
 
 class NeuralForecastHandler(BaseMLEngine):
@@ -63,14 +50,15 @@ class NeuralForecastHandler(BaseMLEngine):
         model_args["frequency"] = (
             using_args["frequency"] if "frequency" in using_args else infer_frequency(df, time_settings["order_by"])
         )
-        model_args["model_name"] = DEFAULT_MODEL_NAME
-        num_trials = int(DEFAULT_TRIALS * using_args["train_time"]) if "train_time" in using_args else DEFAULT_TRIALS
         model_args["exog_vars"] = using_args["exogenous_vars"] if "exogenous_vars" in using_args else []
+        model_args["max_steps"] = using_args.get('max_steps', 20)
+        model_args["val_check_steps"] = using_args.get('val_check_steps', 10)
+        model_args["n_auto_trials"] = using_args.get('n_auto_trials', 0)
         model_args["model_folder"] = tempfile.mkdtemp()
 
         # Deal with hierarchy
         model_args["hierarchy"] = using_args["hierarchy"] if "hierarchy" in using_args else False
-        if model_args["hierarchy"]:
+        if model_args["hierarchy"] and HierarchicalReconciliation is not None:
             training_df, hier_df, hier_dict = get_hierarchy_from_df(df, model_args)
             self.model_storage.file_set("hier_dict", dill.dumps(hier_dict))
             self.model_storage.file_set("hier_df", dill.dumps(hier_df))
@@ -79,13 +67,20 @@ class NeuralForecastHandler(BaseMLEngine):
             training_df = transform_to_nixtla_df(df, model_args, model_args["exog_vars"])
 
         # Train model
-        model = choose_model(num_trials, time_settings["horizon"], time_settings["window"])
+        if model_args["n_auto_trials"]:
+            model = AutoNHITS(time_settings["horizon"], gpus=0, num_samples=model_args["n_auto_trials"], search_alg=HyperOptSearch())
+        else:
+            # faster implementation without auto parameter tuning
+            model = NHITS(time_settings["horizon"], time_settings["window"], hist_exog_list=model_args["exog_vars"], max_steps=model_args["max_steps"])
         neural = NeuralForecast(models=[model], freq=model_args["frequency"])
-        results_df = neural.cross_validation(training_df)
-        # Get model accuracy
-        model_args["accuracies"] = get_model_accuracy_dict(results_df, r2_score)
 
-        ###### persist changes to handler folder
+        if model_args.get('crossval', False):
+            results_df = neural.cross_validation(training_df)
+            model_args["accuracies"] = get_model_accuracy_dict(results_df, r2_score)
+        else:
+            neural.fit(training_df)
+
+        # persist changes to handler folder
         neural.save(model_args["model_folder"], overwrite=True)
         self.model_storage.json_set("model_args", model_args)
 
@@ -105,14 +100,17 @@ class NeuralForecastHandler(BaseMLEngine):
 
         neural = NeuralForecast.load(model_args["model_folder"])
         forecast_df = neural.predict()
-        if model_args["hierarchy"]:
+        if model_args["hierarchy"] and HierarchicalReconciliation is not None:
             training_df = dill.loads(self.model_storage.file_get("training_df"))
             hier_df = dill.loads(self.model_storage.file_get("hier_df"))
             hier_dict = dill.loads(self.model_storage.file_get("hier_dict"))
             reconciled_df = reconcile_forecasts(training_df, forecast_df, hier_df, hier_dict)
             results_df = reconciled_df[reconciled_df.index.isin(groups_to_keep)]
         else:
-            results_df = forecast_df[forecast_df.index.isin(groups_to_keep)]
+            results_df = forecast_df[forecast_df.index.isin(groups_to_keep)].rename({
+                "y": model_args["target"],  # auto mode
+                "NHITS": model_args["target"],  # non-auto mode
+            }, axis=1)
         return get_results_from_nixtla_df(results_df, model_args)
 
     def describe(self, attribute=None):
@@ -129,7 +127,7 @@ class NeuralForecastHandler(BaseMLEngine):
         elif attribute == 'info':
             outputs = model_args["target"]
             inputs = [model_args["target"], model_args["order_by"], model_args["group_by"]] + model_args["exog_vars"]
-            accuracies = [(model, acc) for model, acc in model_args["accuracies"].items()]
+            accuracies = [(model, acc) for model, acc in model_args.get("accuracies", {}).items()]
             return pd.DataFrame({"accuracies": [accuracies], "outputs": outputs, "inputs": [inputs]})
 
         else:

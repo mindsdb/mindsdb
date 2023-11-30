@@ -133,11 +133,13 @@ class RAGIngestor:
     def create_db_from_batch_documents(self, documents, embeddings_model):
         """
         Create DB from documents in batches, this is used for chromadb to get around the add limit
+        in sqlite implementation of later versions of chromadb
         """
         batches_documents = self._create_batch_embeddings(
             documents, self.args.embeddings_batch_size
         )
-        n_batches = len(documents) // self.args.embeddings_batch_size
+        n_batches = len(documents) // self.args.embeddings_batch_size \
+            if len(documents) >= self.args.embeddings_batch_size else 1
         try:
             for batch_id, batch_document in enumerate(batches_documents):
                 _ = self.create_db_from_documents(batch_document, embeddings_model)

@@ -104,33 +104,33 @@ class LumaEventsTable(APITable):
         data["name"] = event["name"]
         data["start_at"] = event["start_at"]
         data["timezone"] = event["timezone"]
-        
+
         if "end_at" in event:
             data["end_at"] = event["end_at"]
-        
+
         if "require_rsvp_approval" in event:
             data["require_rsvp_approval"] = event["require_rsvp_approval"]
-        
+
         if "geo_latitude" in event:
             data["geo_latitude"] = event["geo_latitude"]
-        
+
         if "geo_longitude" in event:
             data["geo_longitude"] = event["geo_longitude"]
-        
+
         if "meeting_url" in event:
             data["meeting_url"] = event["meeting_url"]
-        
+
         data["geo_address_json"] = {}
-        
+
         if "geo_address_json_type" in event:
             data["geo_address_json"]["type"] = event["geo_address_json_type"]
-        
+
         if "geo_address_json_place_id" in event:
             data["geo_address_json"]["place_id"] = event["geo_address_json_place_id"]
-        
+
         if "geo_address_json_description" in event:
             data["geo_address_json"]["description"] = event["geo_address_json_description"]
-        
+
         return data
 
     def insert(self, query: ast.ASTNode) -> None:
@@ -156,9 +156,9 @@ class LumaEventsTable(APITable):
             mandatory_columns=["name", "start_at", "timezone"],
             all_mandatory=False
         )
-        
+
         event_data = insert_statement_parser.parse_query()
-        
+
         for event in event_data:
             parsed_event_data = self._parse_event_insert_data(event)
             self.handler.luma_client.create_event(parsed_event_data)

@@ -41,7 +41,7 @@ class FootballApiHandler(APIHandler):
         self.connection_data = connection_data
         self.connection = None
         players = PlayersTable(self)
-        self._register_table("get_players", players)
+        self._register_table("players", players)
 
     def connect(self) -> FootballAPI:
         """Set up the connection required by the handler.

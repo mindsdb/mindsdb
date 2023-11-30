@@ -22,7 +22,7 @@ To get the player information, use the following query
   
 ``` sql 
 SELECT player_id, player_name, player_firstname
-FROM my_mindsdb_footballapi.get_players
+FROM my_mindsdb_footballapi.players
 WHERE league=39  AND season=2021 AND page=3;  
 ```
 

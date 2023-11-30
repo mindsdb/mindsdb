@@ -5,6 +5,10 @@ import atexit
 import msal
 from msal.exceptions import MsalServiceError
 
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
+
 
 class MSGraphAPIApplicationPermissionsManager:
     def __init__(self, client_id: str, client_secret: str, tenant_id: str, refresh_token: str = None):
@@ -88,6 +92,7 @@ class MSGraphAPIDelegatedPermissionsManager:
                 raise ValueError(
                     "Failed to create device flow. Err: %s" % json.dumps(flow, indent=4)
                 )
+            logger.info(flow["message"])
             result = self.msal_app.acquire_token_by_device_flow(flow)
 
         return result

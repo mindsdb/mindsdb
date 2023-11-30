@@ -16,9 +16,9 @@ from mindsdb.integrations.handlers.rag_handler.settings import (
     load_embeddings_model,
     url_to_documents,
 )
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
-logger = get_log(__name__)
+logger = log.getLogger(__name__)
 
 
 def validate_document(doc) -> bool:
@@ -50,9 +50,9 @@ class RAGIngestor:
     """A class for converting a dataframe and/or url to a vectorstore embedded with a given embeddings model"""
 
     def __init__(
-            self,
-            args: RAGBaseParameters,
-            df: pd.DataFrame,
+        self,
+        args: RAGBaseParameters,
+        df: pd.DataFrame,
     ):
         self.args = args
         self.df = df
@@ -96,8 +96,9 @@ class RAGIngestor:
     def create_db_from_documents(self, documents, embeddings_model) -> VectorStore:
         """Create DB from documents."""
 
-        if self.args.vector_store_name == "chroma":
-            logger.info(f"Creating chroma db with persist location {self.args.vector_store_storage_path}")
+        if self.args.vector_store_name == "chromadb":
+        logger.info(f"Creating chroma db with persist location {self.args.vector_store_storage_path}")
+
             return self.vector_store.from_documents(
                 documents=documents,
                 embedding=embeddings_model,
@@ -107,7 +108,6 @@ class RAGIngestor:
                 collection_name=self.args.collection_name,
             )
         else:
-            logger.info(f"Creating chroma db without persist")
             return self.vector_store.from_documents(
                 documents=documents,
                 embedding=embeddings_model,
@@ -125,7 +125,7 @@ class RAGIngestor:
         )
 
     @staticmethod
-    def create_batch_embeddings(documents: List[Document], embeddings_batch_size):
+    def _create_batch_embeddings(documents: List[Document], embeddings_batch_size):
         """
         create batch of document embeddings
         """
@@ -133,18 +133,34 @@ class RAGIngestor:
         for i in range(0, len(documents), embeddings_batch_size):
             yield documents[i: i + embeddings_batch_size]
 
+    def create_db_from_batch_documents(self, documents, embeddings_model):
+        """
+        Create DB from documents in batches, this is used for chromadb to get around the add limit
+        in sqlite implementation of later versions of chromadb
+        """
+        batches_documents = self._create_batch_embeddings(
+            documents, self.args.embeddings_batch_size
+        )
+        n_batches = len(documents) // self.args.embeddings_batch_size \
+            if len(documents) >= self.args.embeddings_batch_size else 1
+        try:
+            for batch_id, batch_document in enumerate(batches_documents):
+                _ = self.create_db_from_documents(batch_document, embeddings_model)
+                logger.info(f"Added batch {batch_id + 1} of {n_batches} batches to vector db")
+
+        except Exception as e:
+            raise Exception(
+                f"Error loading embeddings batches to {self.args.vector_store_name}: {e}"
+            )
+
     def embeddings_to_vectordb(self) -> None:
         """Create vectorstore from documents and store locally."""
 
         start_time = time.time()
 
-        # Load documents and splits in chunks and defines overlap
+        # Load documents and splits in chunks (if not in evaluation_type mode)
         documents = self.split_documents(
             chunk_size=self.args.chunk_size, chunk_overlap=self.args.chunk_overlap
-        )
-
-        batches_documents = self.create_batch_embeddings(
-            documents, embeddings_batch_size=self.args.embeddings_batch_size
         )
 
         # Load embeddings model
@@ -157,30 +173,26 @@ class RAGIngestor:
         if not validate_documents(documents):
             raise ValueError("Invalid documents")
 
-        # todo get max_batch from chroma client
+        if self.args.vector_store_name == "chromadb":
 
-        try:
-            for i, batch_document in enumerate(batches_documents):
-                db = self.create_db_from_documents(batch_document, embeddings_model)
-                logger.info(f"Added batch {i + 1} of {len(batch_document)} batches to vector db")
+            # chromadb does autosave in latest version, just for the saver PersistedVectorStoreSaver
+            db = self.create_db_from_batch_documents(documents, embeddings_model)
 
-            logger.info(f"successfully loaded using 'from_documents' method")
-
-        except Exception as e:
-            logger.error(
-                f"Error loading using 'from_documents' method, trying 'from_text': {e}"
-            )
+        else:
 
             try:
-                for i, batch_document in enumerate(batches_documents):
-                    db = self.create_db_from_texts(batch_document, embeddings_model)
-                    logger.info(f"Added batch {i + 1} of {len(batch_document)} batches to vector db")
-
-                logger.info(f"successfully loaded using 'from_text' method")
-
+                db = self.create_db_from_documents(documents, embeddings_model)
             except Exception as e:
-                logger.error(f"Error creating from texts: {e}")
-                raise e
+                logger.error(
+                    f"Error loading using 'from_documents' method, trying 'from_text': {e}"
+                )
+                try:
+                    db = self.create_db_from_texts(documents, embeddings_model)
+                    logger.info(f"successfully loaded using 'from_text' method: {e}")
+
+                except Exception as e:
+                    logger.error(f"Error creating from texts: {e}")
+                    raise e
 
         config = PersistedVectorStoreSaverConfig(
             vector_store_name=self.args.vector_store_name,
@@ -196,9 +208,13 @@ class RAGIngestor:
         db = None  # Free up memory
 
         end_time = time.time()
-        elapsed_time = end_time - start_time
+        elapsed_time = round(end_time - start_time)
 
-        logger.info(
-            f"Fished creating vectorstore from documents. It took: {elapsed_time / 60} minutes"
-        )
+        logger.info("Finished creating vectorstore from documents.")
 
+        time_minutes = round(elapsed_time / 60)
+
+        if time_minutes > 1:
+            logger.info(f"Elapsed time: {time_minutes} minutes")
+        else:
+            logger.info(f"Elapsed time: {elapsed_time} seconds")

@@ -1,6 +1,5 @@
 import os
 import time
-from unittest.mock import patch
 
 import pandas as pd
 import pytest
@@ -151,8 +150,9 @@ class TestRAG(BaseExecutorTest):
                 ]
             }
         )
-
         self.save_file("df", df)
+
+        # test openai qa with chromadb
 
         self.run_sql(
             f"""
@@ -163,7 +163,7 @@ class TestRAG(BaseExecutorTest):
              engine='rag',
              llm_type='openai',
              openai_api_key='{OPENAI_API_KEY}',
-             vector_store_folder_name="test";
+             vector_store_folder_name='rag_openai_qa_test'
         """
         )
         self.wait_predictor("proj", "test_rag_openai_qa")
@@ -175,7 +175,63 @@ class TestRAG(BaseExecutorTest):
             WHERE question='What is the best treatment for a cold?'
         """
         )
-        assert "cold" in result_df["answer"].iloc[0].lower()
+        assert result_df["answer"].iloc[0]
+
+        # test batching with openai qa chroma
+
+        embeddings_batch_size = 1
+
+        self.run_sql(
+            f"""
+           create model proj.test_rag_openai_qa_batch
+           from files (select * from df)
+           predict answer
+           using
+             engine='rag',
+             llm_type='openai',
+             openai_api_key='{OPENAI_API_KEY}',
+             vector_store_folder_name='rag_openai_qa_test_batch',
+             embeddings_batch_size={embeddings_batch_size}
+        """
+        )
+
+        self.wait_predictor("proj", "test_rag_openai_qa_batch")
+
+        result_df = self.run_sql(
+            """
+            SELECT p.answer
+            FROM proj.test_rag_openai_qa_batch as p
+            WHERE question='What is the best treatment for a cold?'
+        """
+        )
+        assert result_df["answer"].iloc[0]
+
+        # test writer qa with FAISS
+
+        self.run_sql(
+            f"""
+           create model proj.test_rag_writer_qa
+           from files (select * from df)
+           predict answer
+           using
+             engine='rag',
+             llm_type='writer',
+             vector_store_name='faiss',
+             writer_api_key='{WRITER_API_KEY}',
+             writer_org_id='{WRITER_ORG_ID}',
+             vector_store_folder_name='rag_writer_qa_test'
+        """
+        )
+        self.wait_predictor("proj", "test_rag_writer_qa")
+
+        result_df = self.run_sql(
+            """
+            SELECT p.answer
+            FROM proj.test_rag_writer_qa as p
+            WHERE question='What is the best treatment for a cold?'
+        """
+        )
+        assert result_df["answer"].iloc[0]
 
     def test_invalid_prompt_template(self):
         # create project

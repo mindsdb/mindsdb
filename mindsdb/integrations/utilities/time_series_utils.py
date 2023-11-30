@@ -2,9 +2,19 @@ import numpy as np
 import pandas as pd
 from pandas.tseries.frequencies import to_offset
 from sklearn.metrics import r2_score
-from hierarchicalforecast.core import HierarchicalReconciliation
-from hierarchicalforecast.methods import BottomUp
-from hierarchicalforecast.utils import aggregate
+
+# handle optional dependency
+try:
+    import hierarchicalforecast  # noqa: F401
+    from hierarchicalforecast.core import HierarchicalReconciliation
+    from hierarchicalforecast.methods import BottomUp
+    from hierarchicalforecast.utils import aggregate
+except ImportError:
+    HierarchicalReconciliation = None
+    BottomUp = None
+    aggregate = None
+
+from mindsdb.utilities import log
 
 DEFAULT_FREQUENCY = "D"
 DEFAULT_RECONCILER = BottomUp
@@ -134,24 +144,30 @@ def get_hierarchy_from_df(df, model_args):
     hier_dict is a dictionary with the hierarchical structure. See the unit test
     in tests/unit/ml_handlers/test_time_series_utils.py for an example.
     """
-    spec = spec_hierarchy_from_list(model_args["hierarchy"])
+    if HierarchicalReconciliation is not None:
+        spec = spec_hierarchy_from_list(model_args["hierarchy"])
 
-    nixtla_df = df.rename({model_args["order_by"]: "ds", model_args["target"]: "y"}, axis=1)
-    nixtla_df["ds"] = pd.to_datetime(nixtla_df["ds"])
-    for col in model_args["group_by"]:
-        nixtla_df[col] = nixtla_df[col].astype(str)  # grouping columns need to be string format
-    nixtla_df.insert(0, "Total", "total")
+        nixtla_df = df.rename({model_args["order_by"]: "ds", model_args["target"]: "y"}, axis=1)
+        nixtla_df["ds"] = pd.to_datetime(nixtla_df["ds"])
+        for col in model_args["group_by"]:
+            nixtla_df[col] = nixtla_df[col].astype(str)  # grouping columns need to be string format
+        nixtla_df.insert(0, "Total", "total")
 
-    nixtla_df, hier_df, hier_dict = aggregate(nixtla_df, spec)  # returns (nixtla_df, hierarchy_df, hierarchy_dict)
-    return nixtla_df, hier_df, hier_dict
+        nixtla_df, hier_df, hier_dict = aggregate(nixtla_df, spec)  # returns (nixtla_df, hierarchy_df, hierarchy_dict)
+        return nixtla_df, hier_df, hier_dict
+    else:
+        log.logger.warning("HierarchicalForecast is not installed, but `get_hierarchy_from_df` has been called. This should never happen.")  # noqa
 
 
 def reconcile_forecasts(nixtla_df, forecast_df, hierarchy_df, hierarchy_dict):
     """Reconciles forecast results according to the hierarchy."""
-    reconcilers = [DEFAULT_RECONCILER()]
-    hrec = HierarchicalReconciliation(reconcilers=reconcilers)
-    reconciled_df = hrec.reconcile(Y_hat_df=forecast_df, Y_df=nixtla_df, S=hierarchy_df, tags=hierarchy_dict)
-    return get_results_from_reconciled_df(reconciled_df, hierarchy_df)
+    if HierarchicalReconciliation is not None:
+        reconcilers = [DEFAULT_RECONCILER()]
+        hrec = HierarchicalReconciliation(reconcilers=reconcilers)
+        reconciled_df = hrec.reconcile(Y_hat_df=forecast_df, Y_df=nixtla_df, S=hierarchy_df, tags=hierarchy_dict)
+        return get_results_from_reconciled_df(reconciled_df, hierarchy_df)
+    else:
+        log.logger.warning("HierarchicalForecast is not installed, but `reconcile_forecasts` has been called. This should never happen.")  # noqa
 
 
 def get_results_from_reconciled_df(reconciled_df, hierarchy_df):

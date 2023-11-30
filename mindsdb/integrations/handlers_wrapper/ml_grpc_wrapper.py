@@ -15,10 +15,10 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.integrations.libs.handler_helpers import get_handler
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 
-logger = get_log(logger_name="main")
+logger = log.getLogger(__name__)
 
 
 class MLServiceServicer(ml_pb2_grpc.MLServiceServicer):
@@ -170,7 +170,6 @@ def serve():
     ml_pb2_grpc.add_MLServiceServicer_to_server(
         MLServiceServicer(), server)
     server.add_insecure_port('[::]:50052')
-    print("staring rpc server on [::]:50052")
     logger.info("staring rpc server on [::]:50052")
     server.start()
     server.wait_for_termination()

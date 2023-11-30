@@ -14,6 +14,8 @@ from .eventbrite_tables import EventbriteFormatTable
 from .eventbrite_tables import EventbriteEventDetailsTable
 from .eventbrite_tables import EventbriteEventsTable
 
+logger = log.getLogger(__name__)
+
 
 class EventbriteHandler(APIHandler):
     """A class for handling connections and interactions with the Eventbrite API.
@@ -79,12 +81,12 @@ class EventbriteHandler(APIHandler):
         try:
             api = self.connect()
             me = api.get_current_user()
-            log.logger.info(f"Connected to Eventbrite as {me['name']}")
+            logger.info(f"Connected to Eventbrite as {me['name']}")
             response.success = True
 
         except Exception as e:
             response.error_message = f"Error connecting to Eventbrite API: {e}"
-            log.logger.error(response.error_message)
+            logger.error(response.error_message)
 
         if not response.success and self.is_connected:
             self.is_connected = False

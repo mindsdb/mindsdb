@@ -10,9 +10,12 @@ from mindsdb.integrations.handlers.rag_handler.settings import (
     build_llm_params,
 )
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
-logger = get_log(logger_name=__name__)
+# these require no additional arguments
+
+logger = log.getLogger(__name__)
+
 
 class RAGHandler(BaseMLEngine):
     """
@@ -28,7 +31,6 @@ class RAGHandler(BaseMLEngine):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.generative = True
-
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):

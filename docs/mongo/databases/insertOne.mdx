@@ -27,6 +27,20 @@ db.databases.insertOne({
 });
 ```
 
+<Tip>
+Alternatively, you can use the `host` parameter alone, providing the connection string, as below:
+
+```sql
+db.databases.insertOne({
+    name: "mongo_int",
+    engine: "mongodb",
+    connection_args: {
+            "host": "mongodb+srv://user:pass@db.xxxyyy.mongodb.net/"
+    }
+});
+```
+</Tip>
+
 On execution, we get:
 
 ```json

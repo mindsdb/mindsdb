@@ -1,77 +1,78 @@
-import os
 import logging
+import os
+from logging.config import dictConfig
 
-from mindsdb.utilities.config import Config
-from functools import partial
-
-"""
-This module sets up logging when called in different threads. 
-
-Each thread that imports this module will automatically create the top level mindsdb logger and configure it according
-to the config provided by Config(). Presumably Config() will provide the local config. 
-
-The module also sets up telemetry.
-
-Finally, calling initialize_log will create a child logger for the caller which will be used to create children with the
-get log function. This allows the thread to establish a unique child logger. 
-
-Absent a call to initialize_log, the default logger will be the root mindsdb logger.  
-
-"""
-
-config = Config().get_all()
-
-log = logging.getLogger('mindsdb')
-log.propagate = False
-log.setLevel(min(
-    getattr(logging, config['log']['level']['console']),
-    getattr(logging, config['log']['level']['file'])
-))
-
-formatter = logging.Formatter('%(levelname)s: - %(asctime)s - %(name)s - %(message)s')
-
-console_handler = logging.StreamHandler()
-console_handler.setLevel(config['log']['level'].get('console', logging.INFO))
-console_handler.setFormatter(formatter)
-
-log.handlers.clear()
-log.addHandler(console_handler)
-log.info(f"Root logger set to loglevel {log.level}")
-log.info(f"Root handler set to loglevel {console_handler.level}.")
-log.info(f"Number of handlers: {len(log.handlers)}")
-log.info(f"")
-
-log.error = partial(log.error, exc_info=True)
-
-logger = log
-
-# activate telemetry
-telemtry_enabled = os.getenv('CHECK_FOR_UPDATES', '1').lower() not in ['0', 'false', 'False']
-if telemtry_enabled:
-    try:
-        import sentry_sdk
-
-        sentry_sdk.init(
-            "https://29e64dbdf325404ebf95473d5f4a54d3@o404567.ingest.sentry.io/5633566",
-            traces_sample_rate=0  # Set to `1` to experiment with performance metrics
-        )
-    except (ImportError, ModuleNotFoundError) as e:
-        raise Exception(f"to use telemetry please install 'pip install mindsdb[telemetry]': {e}")
+logging_initialized = False
 
 
-def initialize_log(config=None, logger_name='main', wrap_print=None):
+class ColorFormatter(logging.Formatter):
+
+    green = "\x1b[32;20m"
+    default = "\x1b[39;20m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
+    format = "%(asctime)s %(processName)15s %(levelname)-8s %(name)s: %(message)s"
+
+    FORMATS = {
+        logging.DEBUG: logging.Formatter(green + format + reset),
+        logging.INFO: logging.Formatter(default + format + reset),
+        logging.WARNING: logging.Formatter(yellow + format + reset),
+        logging.ERROR: logging.Formatter(red + format + reset),
+        logging.CRITICAL: logging.Formatter(bold_red + format + reset),
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        return log_fmt.format(record)
+
+
+def configure_logging():
+    mindsdb_level = os.environ.get("MINDSDB_LOG_LEVEL", None)
+    if mindsdb_level is not None:
+        mindsdb_level = getattr(logging, mindsdb_level)
+    else:
+        mindsdb_level = logging.INFO
+
+    logging_config = dict(
+        version=1,
+        formatters={"f": {"()": ColorFormatter}},
+        handlers={
+            "console": {
+                "class": "logging.StreamHandler",
+                "formatter": "f",
+            }
+        },
+        loggers={
+            "": {  # root logger
+                "handlers": ["console"],
+                "level": logging.WARNING,
+            },
+            "__main__": {
+                "level": mindsdb_level,
+            },
+            "mindsdb": {
+                "level": mindsdb_level,
+            },
+            "alembic": {
+                "level": logging.DEBUG,
+            },
+        },
+    )
+    dictConfig(logging_config)
+
+
+# I would prefer to leave code to use logging.getLogger(), but there are a lot of complicated situations
+# in MindsDB with processes being spawned that require logging to be configured again in a lot of cases.
+# Using a custom logger-getter like this lets us do that logic here, once.
+def getLogger(name=None):
     """
-    This function sets the global logger used by get_log to the thread specific logger.
+    Get a new logger, configuring logging first if it hasn't been done yet.
     """
-    global logger
-    logger = logging.getLogger(f'mindsdb.{logger_name}')
+    global logging_initialized
+    if not logging_initialized:
+        configure_logging()
+        logging_initialized = True
 
-
-def get_log(logger_name=None):
-    """
-    Creates child loggers from the mindsdb logger
-    """
-
-    if logger_name is None:
-        return logger
-    return logger.getChild(logger_name)
+    return logging.getLogger(name)

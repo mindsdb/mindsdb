@@ -150,7 +150,7 @@ class TestRAG(BaseExecutorTest):
                 ]
             }
         )
-        self.save_file("df",df)
+        self.save_file("df", df)
 
         # test openai qa with chromadb
 

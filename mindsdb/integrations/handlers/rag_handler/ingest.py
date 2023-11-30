@@ -203,11 +203,13 @@ class RAGIngestor:
         db = None  # Free up memory
 
         end_time = time.time()
-        elapsed_time = end_time - start_time
-
-        logger.info(
-            "Fished creating vectorstore from documents. It took: {elapsed_time/60} minutes"
-        )
+        elapsed_time = round(end_time - start_time)
 
         logger.info("Finished creating vectorstore from documents.")
-        logger.info(f"Elapsed time: {round(elapsed_time / 60)} minutes")
+
+        time_minutes = round(elapsed_time / 60)
+
+        if time_minutes > 1:
+            logger.info(f"Elapsed time: {time_minutes} minutes")
+        else:
+            logger.info(f"Elapsed time: {elapsed_time} seconds")

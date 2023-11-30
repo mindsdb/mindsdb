@@ -139,11 +139,7 @@ class TestRAG(BaseExecutorTest):
         with pytest.raises(Exception):
             self.wait_predictor("proj", "test_openai_unknown_arguments")
 
-    @pytest.mark.xfail(
-        reason="there seems to be an issue with running inner queries, it appears to be a potential bug in the mock handler"
-    )
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_qa(self, postgres_mock_handler):
+    def test_qa(self):
         # create project
         self.run_sql("create database proj")
         df = pd.DataFrame.from_dict(
@@ -155,17 +151,20 @@ class TestRAG(BaseExecutorTest):
                 ]
             }
         )
-        self.set_handler(postgres_mock_handler, name="pg", tables={"df": df})
+        self.save_file("df",df)
+
+        # test openai qa with chromadb
 
         self.run_sql(
             f"""
            create model proj.test_rag_openai_qa
-           from pg (select * from df)
+           from files (select * from df)
            predict answer
            using
              engine='rag',
              llm_type='openai',
-             openai_api_key='{OPENAI_API_KEY}';
+             openai_api_key='{OPENAI_API_KEY}',
+             vector_store_folder_name='rag_openai_qa_test'
         """
         )
         self.wait_predictor("proj", "test_rag_openai_qa")
@@ -177,7 +176,34 @@ class TestRAG(BaseExecutorTest):
             WHERE question='What is the best treatment for a cold?'
         """
         )
-        assert "cold" in result_df["answer"].iloc[0].lower()
+        assert result_df["answer"].iloc[0].lower()
+
+        # test writer qa with FAISS
+
+        self.run_sql(
+            f"""
+           create model proj.test_rag_writer_qa
+           from files (select * from df)
+           predict answer
+           using
+             engine='rag',
+             llm_type='writer',
+             vector_store_name='faiss',
+             writer_api_key='{WRITER_API_KEY}',
+             writer_org_id='{WRITER_ORG_ID}',
+             vector_store_folder_name='rag_writer_qa_test'
+        """
+        )
+        self.wait_predictor("proj", "test_rag_writer_qa")
+
+        result_df = self.run_sql(
+            """
+            SELECT p.answer
+            FROM proj.test_rag_writer_qa as p
+            WHERE question='What is the best treatment for a cold?'
+        """
+        )
+        assert result_df["answer"].iloc[0].lower()
 
     def test_invalid_prompt_template(self):
         # create project

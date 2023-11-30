@@ -139,7 +139,7 @@ class PersistedVectorStoreSaver:
         method_name = f"save_{self.config.vector_store_name}"
         getattr(self, method_name)(vector_store)
 
-    def save_chroma(self, vector_store: Chroma):
+    def save_chromadb(self, vector_store: Chroma):
         """Save Chroma vector store to disk"""
         # no need to save chroma vector store to disk, auto save
         pass

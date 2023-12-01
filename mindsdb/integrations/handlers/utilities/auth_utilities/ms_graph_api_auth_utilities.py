@@ -22,23 +22,22 @@ class MSGraphAPIAuthManager:
         self.code = code
 
     def get_access_token(self):
-        curr_dir = self.handler_storage.folder_get('config')
-        creds_file = os.path.join(curr_dir, 'creds.json')
-
-        if os.path.isfile(creds_file):
-            # read from file
-            with open(creds_file, 'r') as f:
-                creds = json.load(f)
-                access_token = creds.get('access_token')
+        try:
+            creds = json.loads(self.handler_storage.file_get('creds'))
+            access_token = creds.get('access_token')
             
-            self.handler_storage.folder_sync('config')
             return access_token
+        except Exception as e:
+            logger.error(f'Error getting credentials from storage: {e}!')
 
-        else:
-            response = self._execute_ms_graph_api_auth_flow()
-            self._save_credentials_to_file(response, creds_file)
-            self.handler_storage.folder_sync('config')
+        response = self._execute_ms_graph_api_auth_flow()
+        if "access_token" in response:
+            self.handler_storage.file_set('creds', json.dumps(response).encode('utf-8'))
             return response['access_token']
+        elif response.get('error') == 'invalid_grant' and response.get('error_description').startswith('AADSTS54005: OAuth2 Authorization code was already redeemed'):
+            return True
+        else:
+            raise AuthException(f'Error getting access token: {response.get("error_description")}', auth_url=response.get('auth_url'))            
 
     def _get_msal_app(self):
         return msal.ConfidentialClientApplication(

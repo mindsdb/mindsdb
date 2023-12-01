@@ -1,13 +1,76 @@
 import os
 import json
 import atexit
+from flask import request
 
 import msal
 from msal.exceptions import MsalServiceError
+from .exceptions import AuthException
 
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
+
+
+class MSGraphAPIAuthManager:
+    def __init__(self, handler_storage: str, scopes: list, client_id: str, client_secret: str, tenant_id: str, code: str = None) -> None:
+        self.handler_storage = handler_storage
+        self.scopes = scopes
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.tenant_id = tenant_id
+        self.code = code
+
+    def get_access_token(self):
+        curr_dir = self.handler_storage.folder_get('config')
+        creds_file = os.path.join(curr_dir, 'creds.json')
+
+        if os.path.isfile(creds_file):
+            # read from file
+            with open(creds_file, 'r') as f:
+                creds = json.load(f)
+                access_token = creds.get('access_token')
+            
+            self.handler_storage.folder_sync('config')
+            return access_token
+
+        else:
+            response = self._execute_ms_graph_api_auth_flow()
+            self._save_credentials_to_file(response, creds_file)
+            self.handler_storage.folder_sync('config')
+            return response['access_token']
+
+    def _get_msal_app(self):
+        return msal.ConfidentialClientApplication(
+            self.client_id,
+            authority=f"https://login.microsoftonline.com/{self.tenant_id}",
+            client_credential=self.client_secret,
+        )
+    
+    def _save_credentials_to_file(self, creds, creds_file):
+        with open(creds_file, 'w') as f:
+            f.write(json.dumps(creds))
+    
+    def _execute_ms_graph_api_auth_flow(self):
+        msal_app = self._get_msal_app()
+
+        if self.code:
+            response = msal_app.acquire_token_by_authorization_code(
+                code=self.code,
+                scopes=self.scopes,
+            )
+
+            return response
+        else:
+            # TODO: Pass the redirect_uri as a parameter when getting the auth url
+            redirect_uri = request.headers['ORIGIN'] + '/verify-auth'
+
+            auth_url = msal_app.get_authorization_request_url(
+                scopes=self.scopes,
+                # redirect_uri=request.headers['ORIGIN'] + '/verify-auth',
+            )
+
+            raise AuthException(f'Authorisation required. Please follow the url: {auth_url}', auth_url=auth_url)
 
 
 class MSGraphAPIApplicationPermissionsManager:

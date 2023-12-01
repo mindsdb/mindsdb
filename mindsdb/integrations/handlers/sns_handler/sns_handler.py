@@ -14,7 +14,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.libs.api_handler import APIHandler,FuncParser
+from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
 from mindsdb.utilities import log
 
 
@@ -74,13 +74,13 @@ class SnsHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
         self.connection = boto3.client(
-                'sns',
-                aws_access_key_id=self.connection_data['aws_access_key_id'],
-                aws_secret_access_key=self.connection_data['aws_secret_access_key'],
-                # verify=False,
-                # using  for testing locally with localstack
-                # endpoint_url=self.connection_data['endpoint_url'],
-                region_name=self.connection_data['region_name'])     
+            'sns',
+            aws_access_key_id=self.connection_data['aws_access_key_id'],
+            aws_secret_access_key=self.connection_data['aws_secret_access_key'],
+            # verify=False,
+            # using  for testing locally with localstack
+            # endpoint_url=self.connection_data['endpoint_url'],
+            region_name=self.connection_data['region_name'])
         self.is_connected = True
         return self.connection
 
@@ -104,7 +104,6 @@ class SnsHandler(APIHandler):
         data = JSON.loads(str(json_response))
         return DataFrame(data["Topics"])
 
-
     def publish_message(self, params: Dict = None) -> DataFrame:
         """
         get topic_arn and message from params and sends message to amazon topic
@@ -115,20 +114,17 @@ class SnsHandler(APIHandler):
         response = self.connection.publish(TopicArn=params['topic_arn'], Message=params['message'])
         return DataFrame(response)
 
-
     def publish_batch(self, params: Dict = None) -> DataFrame:
         """
-        get topic_arn and 
+        get topic_arn and
         publish multiple messages in a single batch (see https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/publish_batch.html)
         Returns results as a pandas DataFrame.
         Args:
-            params (Dict):  topic_arn (str) and  batch_request_entries(dict) 
+            params (Dict):  topic_arn (str) and  batch_request_entries(dict)
         """
         response = self.connection.publish_batch(TopicArn=params['topic_arn'],
-                                      PublishBatchRequestEntries=params['batch_request_entries'])
+                                                 PublishBatchRequestEntries=params['batch_request_entries'])
         return DataFrame(response['Successful'])
-        
-
 
     def create_topic(self, params: Dict = None) -> DataFrame:
         """

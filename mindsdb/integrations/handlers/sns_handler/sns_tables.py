@@ -11,7 +11,7 @@ class MessageTable(APITable):
     """The SNS message Table implementation for publish (insert) messages"""
     name: str = "messages"
     supported_columns = {'id', 'subject', 'message_deduplication_id', 'message_group_id', 'message', 'topic_arn',
-                             'message_attributes'}
+                         'message_attributes'}
     columns: List[str] = list(supported_columns)
 
     def get_columns(self) -> List[str]:
@@ -30,7 +30,6 @@ class MessageTable(APITable):
         super().__init__(handler)
         self.handler.connect()
 
-   
     def insert(self, query: ast.Insert) -> pd.DataFrame:
         """  Args: query (ast.Insert): SQL query to parse.
         """
@@ -134,7 +133,7 @@ class TopicTable(APITable):
             )
         topic_names = insert_statement_parser.parse_values()
         for topic_name in topic_names:
-            self.handler.call_sns_api("create_topic",{"name":topic_name[0]})
+            self.handler.call_sns_api("create_topic", {"name": topic_name[0]})
 
     def get_columns(self, ignore: List[str] = []) -> List[str]:
         """columns

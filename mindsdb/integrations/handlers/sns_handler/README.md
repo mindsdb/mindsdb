@@ -57,5 +57,6 @@ we can publish messages using the publish batch functionality
 ```sql
 insert into messages(message,topic_arn,id,subject,message_deduplication_id,message_group_id) values('some_message','arn:aws:sns:us-east-1:000000000000:test','333','aaaa','000-222','ssss'),('some_message','arn:aws:sns:us-east-1:000000000000:test','3373','aaaa','000-222','ssss')
 ```
+## TODO
 
-
+- [ ] test insert message attribute 

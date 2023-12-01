@@ -1,5 +1,5 @@
 from typing import List
-
+import json
 import pandas as pd
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilities import INSERTQueryParser
@@ -8,6 +8,7 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 
 
 class MessageTable(APITable):
+    """The SNS message Table implementation for publish (insert) messages"""
     name: str = "messages"
     supported_columns = {'id', 'subject', 'message_deduplication_id', 'message_group_id', 'message', 'topic_arn',
                              'message_attributes'}
@@ -87,7 +88,7 @@ class MessageTable(APITable):
 
 class TopicTable(APITable):
     """
-     class for view and insert sns topics
+    class for view and insert sns topics
     """
     name: str = "topics"
     columns: List[str] = ["topic_arn", "name"]

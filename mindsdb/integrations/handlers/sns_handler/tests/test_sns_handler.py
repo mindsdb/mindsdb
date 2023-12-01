@@ -1,5 +1,4 @@
 import unittest
-import boto3
 from mindsdb.integrations.handlers.sns_handler.sns_handler import SnsHandler
 from mindsdb_sql import parse_sql
 from pandas import DataFrame
@@ -90,4 +89,20 @@ class SnsHandlerTest(unittest.TestCase):
         request_entries.append(request_entry)
         request_entries.append(request_entry1)
         response = self.handler.call_sns_api("publish_batch", {"topic_arn": expected_topic_name_arn, "batch_request_entries": request_entries})
+        assert len(response["MessageId"][0])>2
+             
+    def test_publish_batch_with_message_attribute(self):
+        request_entries = []
+        expected_topic_name = "test"
+        df = self.handler.create_topic({"name": expected_topic_name})
+        expected_topic_name_arn = df["TopicArn"][0]
+        attribute = {'from': {
+        'StringValue': '2019-12-11',
+        'DataType': 'String'
+        }
+        }
+        request_entry = {"Id": "2333334", "Message": "test", "Subject": "subject",
+                          "MessageAttributes": attribute }
+        request_entries.append(request_entry)
+        response =self.handler.call_sns_api("publish_batch", {"topic_arn": expected_topic_name_arn, "batch_request_entries": request_entries})
         assert len(response["MessageId"][0])>2

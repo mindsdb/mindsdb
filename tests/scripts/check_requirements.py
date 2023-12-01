@@ -38,7 +38,8 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers", "pryproject.toml"]
 # hierarchicalforecast is an optional dep of neural/statsforecast
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
-    "DEP001": ["torch", "hierarchicalforecast"],
+    # Ignore Langhchain since the requirements check will still fail even if it's conditionally imported for certain features.
+    "DEP001": ["torch", "hierarchicalforecast", "langchain"],
     "DEP002": ["psycopg2-binary"],
 }
 

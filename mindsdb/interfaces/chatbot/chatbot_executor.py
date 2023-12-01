@@ -30,11 +30,27 @@ class BotExecutor:
                         ))
         return functions
 
+    def _prepare_skills(self):
+        skills = []
+        if self.chat_task.agent_id is None:
+            return skills
+        # Check available skills and translate into a tool.
+        agent = self.chat_task.session.agents_controller.get_agent_by_id(
+            self.chat_task.agent_id,
+            project_name=self.chat_task.project_name
+        )
+        if agent is None:
+            return skills
+        for skill in agent.skills:
+            skills.append(skill)
+        return skills
+
     def process(self):
         functions = self._prepare_available_functions()
+        skills = self._prepare_skills()
 
         model_executor = self._get_model(self.chat_task.base_model_name)
-        model_output = model_executor.call(self.chat_memory.get_history(), functions)
+        model_output = model_executor.call(self.chat_memory.get_history(), functions, skills)
         return model_output
 
 
@@ -136,6 +152,7 @@ class MultiModeBotExecutor(BotExecutor):
         switched_to_mode = []
 
         functions_all = self._prepare_available_functions()
+        skills = self._prepare_skills()
 
         # Modes handling
         functions_all.append(self._mode_switching_function(switched_to_mode))
@@ -146,7 +163,7 @@ class MultiModeBotExecutor(BotExecutor):
         if self.chat_memory.get_mode() is None:
             self.chat_memory.hide_history(left_count=1)
 
-        model_output = model_executor.call(self.chat_memory.get_history(), functions)
+        model_output = model_executor.call(self.chat_memory.get_history(), functions, skills)
 
         if len(switched_to_mode) > 0:
             # mode changed:
@@ -158,6 +175,6 @@ class MultiModeBotExecutor(BotExecutor):
 
             model_executor, functions = self.enter_bot_mode(functions_all)
 
-            model_output = model_executor.call(self.chat_memory.get_history(), functions)
+            model_output = model_executor.call(self.chat_memory.get_history(), functions, skills)
 
         return model_output

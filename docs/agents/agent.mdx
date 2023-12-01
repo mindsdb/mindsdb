@@ -47,7 +47,8 @@ Here is how to create, update, and delete skills and knowledge bases using Minds
     CREATE SKILL kb_skill
     USING
         type = 'knowledge_base',
-        source = 'my_knowledge_base'; -- this must be created with CREATE KNOWLEDGE BASE
+        source = 'my_knowledge_base', -- this must be created with CREATE KNOWLEDGE BASE
+        description = 'My data'; -- data description to help the agent know when to use the knowledge base
 
     UPDATE SKILL kb_skill
     SET
@@ -149,7 +150,7 @@ USING
     engine = 'langchain',
     input_column = 'question',
     api_key = 'your-model-api-key', -- choose one of OpenAI or Anthropic
-    model_name='gpt-4',
+    model_name='gpt-4', -- optional model name from OpenAI or Anthropic
     mode = 'conversational',
     user_column = 'question' ,
     assistant_column = 'answer',
@@ -158,6 +159,10 @@ USING
     verbose=True,
     prompt_template='Answer the user input in a helpful way';
 ```
+
+<Tip>
+Follow the integration doc pages for [LangChain](/integrations/ai-engines/langchain) and [OpenAI](/integrations/ai-engines/openai).
+</Tip>
 
 Then, connect a data source to be used for creating a skill.
 

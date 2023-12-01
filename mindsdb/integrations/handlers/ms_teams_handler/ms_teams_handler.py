@@ -35,6 +35,7 @@ class MSTeamsHandler(APIHandler):
 
         connection_data = kwargs.get("connection_data", {})
         self.connection_data = connection_data
+        self.handler_storage = kwargs['handler_storage']
         self.kwargs = kwargs
 
         self.connection = None
@@ -58,7 +59,7 @@ class MSTeamsHandler(APIHandler):
             return self.connection
 
         ms_graph_api_auth_manager = MSGraphAPIAuthManager(
-            handler_storage=self.kwargs['handler_storage'],
+            handler_storage=self.handler_storage,
             scopes=self.connection_data.get('scopes', DEFAULT_SCOPES),
             client_id=self.connection_data["client_id"],
             client_secret=self.connection_data["client_secret"],

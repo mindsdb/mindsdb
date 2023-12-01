@@ -24,6 +24,7 @@ class MSGraphAPIClient:
 
     def __init__(self, access_token: str) -> None:
         self.access_token = access_token
+        self._group_ids = None
 
     # TODO: Add a method to check connection
 

@@ -1,4 +1,5 @@
 from mindsdb.integrations.handlers.utilities.api_utilities import MSGraphAPIClient
+from mindsdb.integrations.handlers.utilities.auth_utilities import MSGraphAPIAuthManager
 
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import ChannelsTable, ChannelMessagesTable
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -8,6 +9,10 @@ from mindsdb.integrations.libs.response import (
 
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
+
+DEFAULT_SCOPES = [
+	'https://graph.microsoft.com/.default'
+]
 
 logger = log.getLogger(__name__)
 
@@ -52,12 +57,18 @@ class MSTeamsHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        self.connection = MSGraphAPIClient(
+        ms_graph_api_auth_manager = MSGraphAPIAuthManager(
+            handler_storage=self.kwargs['handler_storage'],
+            scopes=self.connection_data.get('scopes', DEFAULT_SCOPES),
             client_id=self.connection_data["client_id"],
             client_secret=self.connection_data["client_secret"],
             tenant_id=self.connection_data["tenant_id"],
-            refresh_token=self.connection_data.get("refresh_token"),
+            code=self.connection_data.get('code')
         )
+
+        access_token = ms_graph_api_auth_manager.get_access_token()
+
+        self.connection = MSGraphAPIClient(access_token)
 
         self.is_connected = True
 
@@ -75,8 +86,9 @@ class MSTeamsHandler(APIHandler):
         try:
             self.connect()
             response.success = True
+            response.copy_storage = True
         except Exception as e:
-            logger.error(f'Error connecting to Microsoft Teams!')
+            logger.error(f'Error connecting to Microsoft Teams: {e}!')
             response.error_message = str(e)
 
         self.is_connected = response.success

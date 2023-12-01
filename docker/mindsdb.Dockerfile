@@ -1,5 +1,13 @@
 # Bare mindsdb with no extras is built as a separate stage for caching
 FROM python:3.10 as build
+# "rm ... docker-clean" stops docker from removing packages from our cache
+# https://vsupalov.com/buildkit-cache-mount-dockerfile/
+RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
+    --mount=target=/var/cache/apt,type=cache,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean \
+    && apt update && apt-get upgrade -y \
+    && apt-get install -y freetds-dev  # freetds required to build pymssql for mssql_handler
+
 COPY . /mindsdb
 WORKDIR /mindsdb
 RUN --mount=type=cache,target=/root/.cache/pip pip install "."
@@ -19,7 +27,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean \
     && apt update && apt-get upgrade -y \
-    && apt-get install -y libmagic1 libpq5
+    && apt-get install -y libmagic1 libpq5 freetds-bin
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements/requirements-dev.txt
 
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
@@ -42,7 +50,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean \
     && apt update && apt-get upgrade -y \
-    && apt-get install -y libmagic1 libpq5
+    && apt-get install -y libmagic1 libpq5 freetds-bin
 
 COPY --link --from=extras /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json

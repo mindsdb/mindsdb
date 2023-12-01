@@ -29,6 +29,7 @@ DEFAULT_PIP_EXTRAS = [
     'timegpt',
     'binance',
     'twitter',
+    'rag',  # required for mindsdb/interfaces/skills/skill_tool used by some handlers
 ]
 
 

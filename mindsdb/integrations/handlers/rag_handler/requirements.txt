@@ -1,5 +1,5 @@
 -r mindsdb/integrations/handlers/chromadb_handler/requirements.txt
-langchain==0.0.267
+langchain==0.0.303
 openai == 0.28.1
 pydantic>=1.10.8
 html2text

@@ -84,9 +84,16 @@ class MSGraphAPIClient:
         channels = []
         for group_id in self._get_group_ids():
             for group_channels in self._fetch_data(f"teams/{group_id}/channels", pagination=False):
+                [group_channel.update({"teamId": group_id}) for group_channel in group_channels]
                 channels.extend(group_channels)
 
         return channels
+    
+    def get_channel(self, group_id: str, channel_id: str):
+        api_url = self._get_api_url(f"teams/{group_id}/channels/{channel_id}")
+        channel = self._make_request(api_url)
+        channel.update({"teamId": group_id})
+        return channel
 
     def _get_channel_ids(self, group_id: str):
         api_url = self._get_api_url(f"teams/{group_id}/channels")

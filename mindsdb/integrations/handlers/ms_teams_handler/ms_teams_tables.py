@@ -6,7 +6,7 @@ from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 
 from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilities import INSERTQueryParser
-from mindsdb.integrations.handlers.utilities.query_utilities.select_query_utilities import SELECTQueryParser
+from mindsdb.integrations.handlers.utilities.query_utilities.select_query_utilities import SELECTQueryParser, SELECTQueryExecutor
 
 from mindsdb.utilities import log
 
@@ -173,13 +173,45 @@ class ChannelsTable(APITable):
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        channels_df = pd.json_normalize(self.get_channels())
+        channel_id, team_id = None, None
+        for op, arg1, arg2 in where_conditions:
+            if arg1 == 'id':
+                if op == "=":
+                    channel_id = arg2
+                else:
+                    raise NotImplementedError("Only '=' operator is supported for id column.")
+                
+            if arg1 == 'teamId':
+                if op == "=":
+                    team_id = arg2
+                else:
+                    raise NotImplementedError("Only '=' operator is supported for teamId column.")
+                
+        if channel_id and team_id:
+            channels_df = pd.json_normalize(self.get_channels(channel_id, team_id))
+            where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id', 'teamId']]
+        else:
+            channels_df = pd.json_normalize(self.get_channels())
+
+        select_statement_executor = SELECTQueryExecutor(
+            channels_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions,
+            result_limit if query.limit else None
+        )
+
+        channels_df = select_statement_executor.execute_query()
 
         return channels_df
 
-    def get_channels(self) -> List[Dict[Text, Any]]:
+    def get_channels(self, channel_id = None, team_id: str = None) -> List[Dict[Text, Any]]:
         api_client = self.handler.connect()
-        return api_client.get_channels()
+
+        if channel_id and team_id:
+            return [api_client.get_channel(team_id, channel_id)]
+        else:
+            return api_client.get_channels()
     
     def get_columns(self) -> List[Text]:
         return [
@@ -191,5 +223,6 @@ class ChannelsTable(APITable):
             "email",
             "tenantId",
             "webUrl",
-            "membershipType"
+            "membershipType",
+            "teamId",
         ]

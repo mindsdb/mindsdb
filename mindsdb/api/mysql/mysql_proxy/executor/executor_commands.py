@@ -41,6 +41,7 @@ from mindsdb_sql.parser.ast import (
 from mindsdb_sql.parser.dialects.mindsdb import (
     CreateAgent,
     CreateAnomalyDetectionModel,
+    CreateForecastingModel,
     CreateChatBot,
     CreateDatabase,
     CreateJob,
@@ -576,7 +577,9 @@ class ExecuteCommands:
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) in (
             CreatePredictor,
-            CreateAnomalyDetectionModel,  # we may want to specialize these in the future
+            # we may want to specialize typed model dispatches at some point
+            CreateAnomalyDetectionModel,
+            CreateForecastingModel,
         ):
             return self.answer_create_predictor(statement)
         elif type(statement) == CreateView:

@@ -502,7 +502,8 @@ class SQLQuery():
                 'name': table_name,
                 'integration_name': project_name,   # integration_name,
                 'timeseries': False,
-                'id': model_record.id
+                'id': model_record.id,
+                'task_type': model_record.learn_args['__mdb_sql_task']
             }
             if ts_settings.get('is_timeseries') is True:
                 window = ts_settings.get('window')

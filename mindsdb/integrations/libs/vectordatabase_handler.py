@@ -321,13 +321,15 @@ class VectorStoreHandler(BaseHandler):
         id_col = TableField.ID.value
         content_col = TableField.CONTENT.value
 
-        gen_hash_f = lambda v: hashlib.md5(str(v).encode()).hexdigest()
+        def gen_hash(v):
+            return hashlib.md5(str(v).encode()).hexdigest()
+
         if id_col not in df.columns:
             # generate for all
-            df[id_col] = df[content_col].apply(gen_hash_f)
+            df[id_col] = df[content_col].apply(gen_hash)
         else:
             # generate for empty
-            df.loc[df[id_col], id_col] = df[content_col].apply(gen_hash_f)
+            df.loc[df[id_col], id_col] = df[content_col].apply(gen_hash)
 
         # remove duplicated ids
         df = df.drop_duplicates([TableField.ID.value])

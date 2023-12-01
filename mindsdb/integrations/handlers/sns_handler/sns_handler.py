@@ -86,7 +86,7 @@ class SnsHandler(APIHandler):
 
     def topic_list(self, params: Dict = None) -> DataFrame:
         """
-        returns topic arns 
+        Returns topic arns as a pandas DataFrame.
         Args:
             params (Dict): topic name
         """
@@ -108,36 +108,42 @@ class SnsHandler(APIHandler):
     def publish_message(self, params: Dict = None) -> DataFrame:
         """
         get topic_arn and message from params and sends message to amazon topic
+        Returns results as a pandas DataFrame.
         Args:
-           params (Dict): topic name
+           params (Dict): topic name (str) and message (str)
         """
-        json = self.connection.publish(TopicArn=params['topic_arn'], Message=params['message'])
-        print(json)
-        return DataFrame(json)
+        response = self.connection.publish(TopicArn=params['topic_arn'], Message=params['message'])
+        return DataFrame(response)
 
 
     def publish_batch(self, params: Dict = None) -> DataFrame:
         """
         get topic_arn and 
         publish multiple messages in a single batch (see https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns/client/publish_batch.html)
+        Returns results as a pandas DataFrame.
+        Args:
+            params (Dict):  topic_arn (str) and  batch_request_entries(dict) 
         """
-        json = self.connection.publish_batch(TopicArn=params['topic_arn'],
+        response = self.connection.publish_batch(TopicArn=params['topic_arn'],
                                       PublishBatchRequestEntries=params['batch_request_entries'])
-        return DataFrame(json['Successful'])
+        return DataFrame(response['Successful'])
         
 
 
     def create_topic(self, params: Dict = None) -> DataFrame:
         """
-        create topic arguments topic name
+        create topic
+        Args:
+           params (Dict):
+        Returns results as a pandas DataFrame.
         """
         name = params["name"]
-        json = self.connection.create_topic(Name=name)
-        return DataFrame(json)
+        response = self.connection.create_topic(Name=name)
+        return DataFrame(response)
 
     def call_sns_api(self, method_name: str = None, params: dict = None) -> DataFrame:
         """Calls the sns API method with the given params.
-
+           Returns results as a pandas DataFrame.
         """
         if method_name == 'create_topic':
             return self.create_topic(params)

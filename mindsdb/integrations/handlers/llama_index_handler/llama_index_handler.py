@@ -64,7 +64,7 @@ class LlamaIndexHandler(BaseMLEngine):
 
         if args['using']['reader'] == 'DFReader':
             dstrs = df.apply(lambda x: ', '.join([f'{col}: {str(entry)}' for col, entry in zip(df.columns, x)]), axis=1)
-            reader = list(map(lambda x: Document(x), dstrs.tolist()))
+            reader = list(map(lambda x: Document(text=x), dstrs.tolist()))
 
         elif args['using']['reader'] == 'SimpleWebPageReader':
             if 'source_url_link' not in args['using']:

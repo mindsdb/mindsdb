@@ -42,14 +42,51 @@ class ChannelMessagesTable(APITable):
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        messages_df = pd.json_normalize(self.get_messages(), sep='_')
+        message_id, channel_id, team_id = None, None, None
+        for op, arg1, arg2 in where_conditions:
+            if arg1 == 'id':
+                if op == "=":
+                    message_id = arg2
+                else:
+                    raise NotImplementedError("Only '=' operator is supported for id column.")
+
+            if arg1 == 'channelIdentity_teamId':
+                if op == "=":
+                    channel_id = arg2
+                else:
+                    raise NotImplementedError("Only '=' operator is supported for id column.")
+                
+            if arg1 == 'channelIdentity_channelId':
+                if op == "=":
+                    team_id = arg2
+                else:
+                    raise NotImplementedError("Only '=' operator is supported for teamId column.")
+                
+        if message_id and channel_id and team_id:
+            messages_df = pd.json_normalize(self.get_messages(message_id, channel_id, team_id), sep='_')
+            where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id', 'channelIdentity_teamId', 'channelIdentity_channelId']]
+        else:
+            messages_df = pd.json_normalize(self.get_messages(), sep='_')
+
+        select_statement_executor = SELECTQueryExecutor(
+            messages_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions,
+            result_limit if query.limit else None
+        )
+
+        messages_df = select_statement_executor.execute_query()
 
         return messages_df
     
-    def get_messages(self):
+    def get_messages(self, message_id = None, channel_id = None, team_id = None) -> List[Dict[Text, Any]]:
         api_client = self.handler.connect()
         # TODO: Should these records be filtered somehow?
-        return api_client.get_channel_messages()
+        if message_id and channel_id and team_id:
+            return [api_client.get_channel_message(team_id, channel_id, message_id)]
+        else:
+            return api_client.get_channel_messages()
     
     def insert(self, query: ASTNode) -> None:
         """Inserts data into the Microsoft Teams "POST /teams/{group_id}/channels/{channel_id}/messages" API endpoint.

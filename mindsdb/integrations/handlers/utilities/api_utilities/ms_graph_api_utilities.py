@@ -2,7 +2,7 @@ import time
 import requests
 from typing import Optional, Dict, Union, List
 
-from mindsdb.integrations.handlers.utilities.auth_utilities.ms_graph_api_auth_utilities import MSGraphAPIApplicationPermissionsManager, MSGraphAPIDelegatedPermissionsManager
+from mindsdb.integrations.handlers.utilities.auth_utilities import MSGraphAPIAuthManager, MSGraphAPIApplicationPermissionsManager, MSGraphAPIDelegatedPermissionsManager
 
 
 class MSGraphAPIClient:
@@ -10,17 +10,20 @@ class MSGraphAPIClient:
     MICROSOFT_GRAPH_API_VERSION: str = "v1.0"
     PAGINATION_COUNT: Optional[int] = 20
 
-    def __init__(self, client_id: str, client_secret: str, tenant_id: str, refresh_token: str = None):
-        """
-        Initializes the class with the client_id, client_secret and tenant_id
-        :param client_id: The client_id of the app
-        :param client_secret: The client_secret of the app
-        :param tenant_id: The tenant_id of the app
-        :param refresh_token: The refresh_token of the app
-        """
-        self.ms_graph_api_application_permissions_manager = MSGraphAPIApplicationPermissionsManager(client_id, client_secret, tenant_id, refresh_token)
-        self.ms_graph_api_delegated_permissions_manager = MSGraphAPIDelegatedPermissionsManager(client_id, tenant_id)
-        self._group_ids = None
+    # def __init__(self, client_id: str, client_secret: str, tenant_id: str, refresh_token: str = None):
+    #     """
+    #     Initializes the class with the client_id, client_secret and tenant_id
+    #     :param client_id: The client_id of the app
+    #     :param client_secret: The client_secret of the app
+    #     :param tenant_id: The tenant_id of the app
+    #     :param refresh_token: The refresh_token of the app
+    #     """
+    #     self.ms_graph_api_application_permissions_manager = MSGraphAPIApplicationPermissionsManager(client_id, client_secret, tenant_id, refresh_token)
+    #     self.ms_graph_api_delegated_permissions_manager = MSGraphAPIDelegatedPermissionsManager(client_id, tenant_id)
+    #     self._group_ids = None
+
+    def __init__(self, access_token: str) -> None:
+        self.access_token = access_token
 
     # TODO: Add a method to check connection
 
@@ -29,11 +32,10 @@ class MSGraphAPIClient:
         return api_url
 
     def _make_request(self, api_url: str, params: Optional[Dict] = None, data: Optional[Dict] = None, method: str = "GET") -> Union[Dict, object]:
+        headers = {"Authorization": f"Bearer {self.access_token}"}
         if method == "GET":
-            headers = {"Authorization": f"Bearer {self.ms_graph_api_application_permissions_manager.get_access_token()}"}
             response = requests.get(api_url, headers=headers, params=params)
         elif method == "POST":
-            headers = {"Authorization": f"Bearer {self.ms_graph_api_delegated_permissions_manager.get_access_token()}"}
             response = requests.post(api_url, headers=headers, json=data)
         else:
             raise NotImplementedError(f"Method {method} not implemented")

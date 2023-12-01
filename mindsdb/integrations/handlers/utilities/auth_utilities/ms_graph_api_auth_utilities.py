@@ -34,8 +34,6 @@ class MSGraphAPIAuthManager:
         if "access_token" in response:
             self.handler_storage.file_set('creds', json.dumps(response).encode('utf-8'))
             return response['access_token']
-        elif response.get('error') == 'invalid_grant' and response.get('error_description').startswith('AADSTS54005: OAuth2 Authorization code was already redeemed'):
-            return True
         else:
             raise AuthException(f'Error getting access token: {response.get("error_description")}', auth_url=response.get('auth_url'))            
 

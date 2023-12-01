@@ -86,9 +86,12 @@ class RAGIngestor:
             # if user provides a url, load documents from url
             documents.extend(url_to_documents(self.args.url))
 
+        n_tokens = sum([len(doc.page_content) for doc in documents])
+
         # split documents into chunks of text
         texts = text_splitter.split_documents(documents)
         logger.info(f"Loaded {len(documents)} documents from input data")
+        logger.info(f"Total number of tokens: {n_tokens}")
         logger.info(f"Split into {len(texts)} chunks of text (tokens)")
 
         return texts
@@ -97,7 +100,6 @@ class RAGIngestor:
         """Create DB from documents."""
 
         if self.args.vector_store_name == "chromadb":
-            logger.info(f"Creating chroma db with persist location {self.args.vector_store_storage_path}")
 
             return self.vector_store.from_documents(
                 documents=documents,
@@ -108,11 +110,7 @@ class RAGIngestor:
                 collection_name=self.args.collection_name,
             )
         else:
-            return self.vector_store.from_documents(
-                documents=documents,
-                embedding=embeddings_model,
-                index_name=self.args.collection_name,
-            )
+            return self.create_db_from_texts(documents, embeddings_model)
 
     def create_db_from_texts(self, documents, embeddings_model) -> VectorStore:
         """Create DB from text content."""
@@ -179,20 +177,12 @@ class RAGIngestor:
             db = self.create_db_from_batch_documents(documents, embeddings_model)
 
         else:
-
             try:
                 db = self.create_db_from_documents(documents, embeddings_model)
             except Exception as e:
-                logger.error(
-                    f"Error loading using 'from_documents' method, trying 'from_text': {e}"
+                raise Exception(
+                    f"Error loading embeddings to {self.args.vector_store_name}: {e}"
                 )
-                try:
-                    db = self.create_db_from_texts(documents, embeddings_model)
-                    logger.info(f"successfully loaded using 'from_text' method: {e}")
-
-                except Exception as e:
-                    logger.error(f"Error creating from texts: {e}")
-                    raise e
 
         config = PersistedVectorStoreSaverConfig(
             vector_store_name=self.args.vector_store_name,
@@ -210,7 +200,8 @@ class RAGIngestor:
         end_time = time.time()
         elapsed_time = round(end_time - start_time)
 
-        logger.info("Finished creating vectorstore from documents.")
+        logger.info(f"Finished creating {self.args.vector_store_name} from texts, it has been "
+                    f"persisted to {self.args.vector_store_storage_path}")
 
         time_minutes = round(elapsed_time / 60)
 

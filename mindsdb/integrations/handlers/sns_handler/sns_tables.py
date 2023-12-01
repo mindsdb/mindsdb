@@ -108,7 +108,7 @@ class TopicTable(APITable):
         """
         conditions = extract_comparison_conditions(query.where)
         params = {}
-        accepted_params = ['name']
+        accepted_params = ['TopicArn']
         for op, arg1, arg2 in conditions:
             if arg1 in accepted_params:
                 if op != '=':
@@ -116,7 +116,7 @@ class TopicTable(APITable):
                 params[arg1] = arg2
             else:
                 raise NotImplementedError
-        return self.handler.call_sns_api("topic_list",params)
+        return self.handler.call_sns_api("topic_list", params)
 
     def insert(self, query: ast.Insert) -> pd.DataFrame:
         mandatory_columns = {'name'}

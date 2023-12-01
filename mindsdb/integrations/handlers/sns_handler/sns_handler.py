@@ -88,18 +88,18 @@ class SnsHandler(APIHandler):
         """
         Returns topic arns as a pandas DataFrame.
         Args:
-            params (Dict): topic name
+            params (Dict): topic TopicArn (str)
         """
         response = self.connection.list_topics()
         json_response = str(response)
-        if params is not None and 'name' in params:
-            name = params["name"]
+        if params is not None and 'TopicArn' in params:
+            topic_arn = params["TopicArn"]
             for topic_arn_row in response['Topics']:
-                topic_arn_name = topic_arn_row['TopicArn']
-                if name in topic_arn_name:
-                    return [{'TopicArn': topic_arn_name}]
-        if params is not None and 'name' in params:
-            return []
+                topic_arn_response_name = topic_arn_row['TopicArn']
+                if topic_arn == topic_arn_response_name:
+                    return DataFrame([{'TopicArn': topic_arn_response_name}])
+        if params is not None and 'TopicArn' in params:
+            return DataFrame({'TopicArn': []})
         json_response = json_response.replace("\'", "\"")
         data = JSON.loads(str(json_response))
         return DataFrame(data["Topics"])

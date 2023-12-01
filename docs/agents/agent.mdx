@@ -28,15 +28,19 @@ Here is how to create, update, and delete skills and knowledge bases using Minds
     ```sql
     CREATE KNOWLEDGE BASE my_knowledge_base
     USING
-        model = model_name, -- this must be created with CREATE MODEL
+        model = model_name, -- this must be an embedding model created with CREATE MODEL (see examples below)
         storage = vector_database.storage_table; -- this parameter is optional; if not provided, the default ChromaDB is used for storage
 
+    -- inserts new data rows and generates id for each row if id is not provided
+    INSERT INTO my_knowledge_base
+        SELECT text AS content FROM datasource.data_table;
+
+    -- inserts new data rows and updates existing ones if id value matches
     INSERT INTO my_knowledge_base
         SELECT id, text AS content FROM datasource.data_table;
 
-    UPDATE KNOWLEDGE BASE my_knowledge_base
-    ON id
-    FROM (SELECT id, text AS content FROM datasource.data_table);
+    -- view content of a knowledge base (for example, to look up the generated id values)
+    SELECT * FROM my_knowledge_base;
 
     DROP KNOWLEDGE BASE my_knowledge_base;
     ```
@@ -141,6 +145,8 @@ Here is how to interact with agents using REST API endpoints:
 
 ## Example
 
+### Agents with Text-to-SQL Skills
+
 Start by creating a conversational large language model to be used by an agent.
 
 ```sql
@@ -204,3 +210,49 @@ The next step would be to connect a chat app, like Slack, to MindsDB and create 
 <Tip>
 Learn about [chatbots here](/agents/chatbot).
 </Tip>
+
+### Agents with Knowledge Bases as Skills
+
+To create a knowledge base, it is required to provide an embedding model. You can choose one from OpenAI, Hugging Face, or LangChain.
+
+```sql
+CREATE ML_ENGINE openai_engine
+FROM openai
+USING
+   api_key = 'your-openai-api-key';
+
+CREATE MODEL embedding_model
+PREDICT embeddings
+USING
+   engine = 'openai_engine',
+   mode='embedding',
+   model_name='text-embedding-ada-002',
+   question_column = 'content';
+```
+
+Now let's create a knowledge base that uses this embedding model and the default storage vector database (that is, ChromaDB).
+
+```sql
+CREATE KNOWLEDGE BASE my_knowledge_base
+USING
+   model = embedding_model;
+```
+
+This is how you can insert data into the knowledge base and select it.
+
+```sql
+INSERT INTO my_knowledge_base (content)
+VALUES ('I drink tea.');
+
+SELECT * FROM my_knowledge_base;
+```
+
+Use this knowledge base to create a skill for an agent:
+
+```sql
+CREATE SKILL kb_skill
+USING
+    type = 'knowledge_base',
+    source = 'my_knowledge_base', -- this must be created with CREATE KNOWLEDGE BASE
+    description = 'My data'; -- data description to help the agent know when to use the knowledge base
+```

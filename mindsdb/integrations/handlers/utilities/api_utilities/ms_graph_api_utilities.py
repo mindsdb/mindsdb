@@ -109,6 +109,11 @@ class MSGraphAPIClient:
 
         return channel_messages
     
+    def get_channel_message(self, group_id: str, channel_id: str, message_id: str):
+        api_url = self._get_api_url(f"teams/{group_id}/channels/{channel_id}/messages/{message_id}")
+        message = self._make_request(api_url)
+        return message
+    
     def send_channel_message(self, group_id: str, channel_id: str, message: str, subject: Optional[str] = None):
         api_url = self._get_api_url(f"teams/{group_id}/channels/{channel_id}/messages")
         data = {

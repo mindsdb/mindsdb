@@ -1,4 +1,6 @@
 import paypalrestsdk
+from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
+
 import pandas as pd
 from typing import Text, List, Dict
 
@@ -136,13 +138,14 @@ class OrdersTable(APITable):
             self.get_columns()
         )
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-
+        
+        #search_params = {"ids": ["51V74287RS930901H"]}
         search_params = {"ids": []}
         subset_where_conditions = []
         for op, arg1, arg2 in where_conditions:
-            if arg1 == 'ids':
+            if arg1 == 'id':
                 if op == '=':
-                    search_params["ids"] = arg2
+                    search_params["ids"].append(arg2)
                 else:
                     raise NotImplementedError("Only '=' operator is supported for 'ids' column")
             elif arg1 in ['state', 'amount', 'create_time', 'update_time', 'links', 'pending_reason', 'parent_payment']:
@@ -169,7 +172,17 @@ class OrdersTable(APITable):
             selected_cols.append("id")
 
     def get_columns(self) -> List[Text]:
-        return ["id", "state", "amount", "create_time", "update_time", "links", "pending_reason", "parent_payment"]
+         return ["id",
+                 "status",
+                 "intent",
+                 "gross_total_amount.value",
+                 "gross_total_amount.currency",
+                 "purchase_units",
+                 "metadata.supplementary_data",
+                 "redirect_urls.return_url",
+                 "redirect_urls.cancel_url",
+                 "links",
+                 "create_time"]
 
     def get_orders(self, kwargs) -> List[Dict]:
         connection = self.handler.connect()

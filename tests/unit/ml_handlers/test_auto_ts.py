@@ -118,7 +118,6 @@ class TestAuto_ts(BaseExecutorTest):
         df = pd.read_csv("unit/ml_handlers/data/sales.csv")
         self.run_sql("create database proj")
         self.set_handler(mock_handler, name="pg", tables={"df": df})
-
         self.run_sql(
             """
             CREATE MODEL proj.auto_ts
@@ -135,7 +134,6 @@ class TestAuto_ts(BaseExecutorTest):
                """
         )
         self.wait_predictor("proj", "auto_ts")
-
         original_prediction = 611
         handler_prediction = self.run_sql(
             """
@@ -153,7 +151,6 @@ class TestAuto_ts(BaseExecutorTest):
         df = pd.read_csv("unit/ml_handlers/data/sales.csv")
         self.run_sql("create database proj")
         self.set_handler(mock_handler, name="pg", tables={"df": df})
-
         self.run_sql(
             """
             CREATE MODEL proj.auto_ts
@@ -170,7 +167,6 @@ class TestAuto_ts(BaseExecutorTest):
                """
         )
         self.wait_predictor("proj", "auto_ts")
-
         batch_length = 48
         handler_prediction = self.run_sql(
             """
@@ -179,6 +175,5 @@ class TestAuto_ts(BaseExecutorTest):
             JOIN proj.auto_ts as m ;
             """
         )
-
         handler_prediction = handler_prediction['sales_preds'].to_list()
         assert len(handler_prediction) == batch_length, f"The handler only returned {len(handler_prediction)} predictions, but it should have returned {batch_length} predictions"

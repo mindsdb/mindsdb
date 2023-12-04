@@ -20,6 +20,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install .
+        pip install .[huggingface]
         pip install -r requirements/requirements-test.txt
       shell: bash
       env:

@@ -263,3 +263,80 @@ class ChannelsTable(APITable):
             "membershipType",
             "teamId",
         ]
+    
+class ChatsTable(APITable):
+    """The Microsoft Chats Table implementation"""
+    
+    def select(self, query: ASTNode) -> pd.DataFrame:
+        """Pulls data from the Microsoft Teams "GET /chats" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+            Microsoft Teams Chats matching the query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'chats',
+            self.get_columns()
+        )
+
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        id = None
+        for op, arg1, arg2 in where_conditions:
+            if arg1 == 'id':
+                if op == "=":
+                    id = arg2
+                else:
+                    raise NotImplementedError("Only '=' operator is supported for id column.")
+                
+        if id:
+            chats_df = pd.json_normalize(self.get_chats(id))
+            where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id']]
+        else:
+            chats_df = pd.json_normalize(self.get_chats(), sep='_')
+
+        select_statement_executor = SELECTQueryExecutor(
+            chats_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions,
+            result_limit if query.limit else None
+        )
+
+        chats_df = select_statement_executor.execute_query()
+
+        return chats_df
+    
+    def get_chats(self, chat_id = None) -> List[Dict[Text, Any]]:
+        api_client = self.handler.connect()
+
+        if chat_id:
+            return [api_client.get_chat(chat_id)]
+        else:
+            return api_client.get_chats()
+
+    def get_columns(self) -> list:
+        return [
+            "id",
+            "topic",
+            "createdDateTime",
+            "lastUpdatedDateTime",
+            "chatType",
+            "webUrl",
+            "tenantId",
+            "onlineMeetingInfo",
+            "viewpoint_isHidden",
+            "viewpoint_lastMessageReadDateTime",
+        ]

@@ -1,7 +1,7 @@
 from mindsdb.integrations.handlers.utilities.api_utilities import MSGraphAPIClient
 from mindsdb.integrations.handlers.utilities.auth_utilities import MSGraphAPIAuthManager
 
-from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import ChannelsTable, ChannelMessagesTable
+from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import ChannelsTable, ChannelMessagesTable, ChatsTable
 from mindsdb.integrations.libs.api_handler import APIChatHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -13,7 +13,8 @@ from mindsdb_sql import parse_sql
 DEFAULT_SCOPES = [
     'https://graph.microsoft.com/User.Read',
     'https://graph.microsoft.com/Group.Read.All',
-    'https://graph.microsoft.com/ChannelMessage.Send'
+    'https://graph.microsoft.com/ChannelMessage.Send',
+    'https://graph.microsoft.com/Chat.ReadBasic',
 ]
 
 logger = log.getLogger(__name__)
@@ -48,6 +49,9 @@ class MSTeamsHandler(APIChatHandler):
 
         channel_messages_data = ChannelMessagesTable(self)
         self._register_table("channel_messages", channel_messages_data)
+
+        chats_data = ChatsTable(self)
+        self._register_table("chats", chats_data)
 
     def connect(self):
         """

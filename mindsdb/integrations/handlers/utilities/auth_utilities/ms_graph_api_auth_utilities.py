@@ -7,6 +7,8 @@ import msal
 from msal.exceptions import MsalServiceError
 from .exceptions import AuthException
 
+from mindsdb.integrations.handlers.utilities.api_utilities import MSGraphAPIClient
+
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -25,6 +27,12 @@ class MSGraphAPIAuthManager:
         try:
             creds = json.loads(self.handler_storage.file_get('creds'))
             access_token = creds.get('access_token')
+
+            if not self._check_access_token_validity(access_token):
+                logger.info('Access token expired. Refreshing...')
+                response = self._refresh_access_token(creds.get('refresh_token'))
+                self.handler_storage.file_set('creds', json.dumps(response).encode('utf-8'))
+                access_token = response.get('access_token')
             
             return access_token
         except Exception as e:
@@ -68,6 +76,30 @@ class MSGraphAPIAuthManager:
             )
 
             raise AuthException(f'Authorisation required. Please follow the url: {auth_url}', auth_url=auth_url)
+        
+    def _refresh_access_token(self, refresh_token: str):
+        msal_app = self._get_msal_app()
+
+        response = msal_app.acquire_token_by_refresh_token(
+            refresh_token=refresh_token,
+            scopes=self.scopes,
+        )
+
+        return response
+    
+    def _check_access_token_validity(self, access_token: str):
+        msal_app = self._get_msal_app()
+
+        msal_graph_api_client = MSGraphAPIClient(access_token)
+        try:
+            msal_graph_api_client.get_user_profile()
+            return True
+        except Exception as e:
+            if 'InvalidAuthenticationToken' in str(e):
+                return False
+            else:
+                raise e
+
 
 
 class MSGraphAPIApplicationPermissionsManager:

@@ -36,6 +36,7 @@ from mindsdb_sql.parser.ast import (
     Parameter,
     Tuple,
 )
+from mindsdb_sql.planner.step_result import Result
 from mindsdb_sql.planner.steps import (
     ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
@@ -930,6 +931,19 @@ class SQLQuery():
 
                 where_data = data.get_records()
 
+                # add constants from where
+                row_dict = {}
+                if step.row_dict is not None:
+                    for k, v in step.row_dict.items():
+                        if isinstance(v, Result):
+                            prev_result = steps_data[v.step_num]
+                            # TODO we await only one value: model.param = (subselect)
+                            v = prev_result.get_records_raw()[0][0]
+                        row_dict[k] = v
+
+                    for record in where_data:
+                        record.update(row_dict)
+
                 predictor_metadata = {}
                 for pm in self.predictor_metadata:
                     if pm['name'] == predictor_name and pm['integration_name'].lower() == project_name:
@@ -1077,6 +1091,9 @@ class SQLQuery():
                 names_a.update(names_b)
                 data = ResultSet().from_df_cols(resp_df, col_names=names_a)
 
+                for col in data.find_columns('__mindsdb_row_id'):
+                    data.del_column(col)
+
             except Exception as e:
                 raise SqlApiUnknownError(f'error in join step: {e}') from e
 
@@ -1131,10 +1148,10 @@ class SQLQuery():
 
                 records = step_data.get_records_raw()
 
-                if isinstance(step.offset, Constant) and isinstance(step.offset.value, int):
-                    records = records[step.offset.value:]
-                if isinstance(step.limit, Constant) and isinstance(step.limit.value, int):
-                    records = records[:step.limit.value]
+                if isinstance(step.offset, int):
+                    records = records[step.offset:]
+                if isinstance(step.limit, int):
+                    records = records[:step.limit]
 
                 for record in records:
                     step_data2.add_record_raw(record)

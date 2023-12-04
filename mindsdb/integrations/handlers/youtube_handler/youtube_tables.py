@@ -430,7 +430,6 @@ class YoutubeVideosTable(APITable):
             "comment_count",
             "like_count",
             "view_count",
-            "view_count",
             "video_id",
             "duration_str",
             "transcript",

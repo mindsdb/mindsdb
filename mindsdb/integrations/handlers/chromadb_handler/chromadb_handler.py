@@ -433,7 +433,7 @@ connection_args = OrderedDict(
     },
     persist_directory={
         "type": ARG_TYPE.STR,
-        "description": "persistence directory for chroma",
+        "description": "persistence directory for ChromaDB",
         "required": False,
     },
 )
@@ -441,5 +441,5 @@ connection_args = OrderedDict(
 connection_args_example = OrderedDict(
     host="localhost",
     port="8000",
-    persist_directory="chroma",
+    persist_directory="chromadb",
 )

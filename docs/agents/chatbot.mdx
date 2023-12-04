@@ -7,6 +7,10 @@ Within MindsDB, chatbots are [agents](/agents/agent) connected to some messaging
 
 Creating a chatbot requires an [AI agent](/agents/agent) and a connection to a chat app, like [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams).
 
+<Tip>
+Currently, the recommended chat app is Slack. MS Teams will be fully supported soon.
+</Tip>
+
 <p align="center">
   <img src="/assets/chatbot_diagram.png" />
 </p>
@@ -24,12 +28,12 @@ Here is how to interact with chatbots using MindsDB SQL:
     ```sql
     CREATE CHATBOT my_chatbot
     USING
-        database = my_slack, -- this must be created with CREATE DATABASE
-        agent = customer_support_agent, -- this must be created with CREATE AGENT
+        database = 'my_slack', -- this must be created with CREATE DATABASE
+        agent = 'customer_support_agent', -- this must be created with CREATE AGENT
         included_channels = ['support', 'help'], -- Default is all
         excluded_channels = [], -- Default is none
         enable_dms = true,
-        running = true;
+        is_running = true; -- Default is true
     ```
 
     The parameters include the following:
@@ -38,7 +42,11 @@ Here is how to interact with chatbots using MindsDB SQL:
     * `agent` is an [AI agent](/agents/agent) created with the `CREATE AGENT` command. It consists of an AI model trained with defined data sets.
     * `included_channels` and `excluded_channels` are optional and store channel names where the bot will or will not respond.
     * `enable_dms` is the initially supported mode of talking to a chatbot. A chatbot responds to direct messages.
-    * `running` indicates whether or not to start the chatbot upon creation.
+    * `is_running` indicates whether or not to start the chatbot upon creation.
+
+    <Tip>
+    Currently, the recommended chat app is Slack. MS Teams will be fully supported soon.
+    </Tip>
 
 * Deleting a chatbot:
 
@@ -76,6 +84,14 @@ Next, create a chatbot.
 ```sql
 CREATE CHATBOT text_to_sql_chatbot
 USING
-    database = 'slack_db.chatbot_agent_db',
-    agent = 'text_to_sql_agent';
+    database = 'my_slack', -- this must be created with CREATE DATABASE
+    agent = 'text_to_sql_agent', -- this must be created with CREATE AGENT
+    enable_dms = true,
+    is_running = true;
 ```
+
+<Tip>
+To create `my_slack` and be able to talk to the chatbot via DMs, follow [this instruction](https://docs.mindsdb.com/integrations/app-integrations/slack#method-1-chatbot-responds-in-direct-messages-to-a-slack-app).
+
+To see how the agent is created, follow [this example](/agents/agent#example).
+</Tip>

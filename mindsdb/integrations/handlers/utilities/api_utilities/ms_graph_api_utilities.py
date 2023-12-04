@@ -126,4 +126,9 @@ class MSGraphAPIClient:
             }
         }
         self._make_request(api_url, data=data, method="POST")
+
+    def get_user_profile(self):
+        api_url = self._get_api_url("me")
+        user_profile = self._make_request(api_url)
+        return user_profile
     

@@ -937,6 +937,7 @@ class SQLQuery():
                         predictor_metadata = pm
                         break
                 is_timeseries = predictor_metadata['timeseries']
+                # @TODO: how to best refactor this? We have the info now in the predictor_metadata[0].task_type attr...
                 _mdb_forecast_offset = None
                 if is_timeseries:
                     if '> LATEST' in self.query_str:

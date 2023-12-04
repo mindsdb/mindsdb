@@ -1,6 +1,6 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
-from mindsdb.integrations.handlers.autokeras_handler.__about__ import (
+from mindsdb.integrations.handlers.auto_ts_handler.__about__ import (
     __version__ as version,
     __description__ as description,
 )

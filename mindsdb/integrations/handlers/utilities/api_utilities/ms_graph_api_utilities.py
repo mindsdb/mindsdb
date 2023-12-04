@@ -123,6 +123,18 @@ class MSGraphAPIClient:
         }
         self._make_request(api_url, data=data, method="POST")
 
+    def get_chats(self):
+        chats = []
+        for chat in self._fetch_data("chats"):
+            chats.extend(chat)
+
+        return chats
+    
+    def get_chat(self, chat_id: str):
+        api_url = self._get_api_url(f"chats/{chat_id}")
+        chat = self._make_request(api_url)
+        return chat
+
     def get_user_profile(self):
         api_url = self._get_api_url("me")
         user_profile = self._make_request(api_url)

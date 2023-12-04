@@ -2,7 +2,7 @@ from mindsdb.integrations.handlers.utilities.api_utilities import MSGraphAPIClie
 from mindsdb.integrations.handlers.utilities.auth_utilities import MSGraphAPIAuthManager
 
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import ChannelsTable, ChannelMessagesTable
-from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.api_handler import APIChatHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
@@ -19,7 +19,7 @@ DEFAULT_SCOPES = [
 logger = log.getLogger(__name__)
 
 
-class MSTeamsHandler(APIHandler):
+class MSTeamsHandler(APIChatHandler):
     """
     The Microsoft Teams handler implementation.
     """
@@ -87,7 +87,8 @@ class MSTeamsHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            self.connect()
+            connection = self.connect()
+            connection.get_user_profile()
             response.success = True
             response.copy_storage = True
         except Exception as e:
@@ -111,3 +112,19 @@ class MSTeamsHandler(APIHandler):
         """
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
+    
+    def get_chat_config(self):
+        params = {
+            'polling': {
+
+            },
+            'chat_table': {
+
+            }
+        }
+        return params
+    
+    def get_my_user_name(self):
+        connection = self.connect()
+        user_profile = connection.get_user_profile()
+        return user_profile['displayName']

@@ -24,8 +24,6 @@ class MSGraphAPIClient:
         self.access_token = access_token
         self._group_ids = None
 
-    # TODO: Add a method to check connection
-
     def _get_api_url(self, endpoint: str) -> str:
         api_url = f"{self.MICROSOFT_GRAPH_BASE_API_URL}{self.MICROSOFT_GRAPH_API_VERSION}/{endpoint}/"
         return api_url

@@ -8,7 +8,8 @@ from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
-
+import requests
+import json
 
 class PaymentsTable(APITable):
 
@@ -138,8 +139,7 @@ class OrdersTable(APITable):
             self.get_columns()
         )
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-        
-        #search_params = {"ids": ["51V74287RS930901H"]}
+
         search_params = {"ids": []}
         subset_where_conditions = []
         for op, arg1, arg2 in where_conditions:
@@ -151,7 +151,7 @@ class OrdersTable(APITable):
             elif arg1 in ['state', 'amount', 'create_time', 'update_time', 'links', 'pending_reason', 'parent_payment']:
                 subset_where_conditions.append([op, arg1, arg2])
 
-        if search_params == {}:
+        if search_params['ids'] == []:
             raise NotImplementedError("id column is required for this table")
 
         orders_df = pd.json_normalize(self.get_orders(search_params))
@@ -175,24 +175,75 @@ class OrdersTable(APITable):
          return ["id",
                  "status",
                  "intent",
-                 "gross_total_amount.value",
-                 "gross_total_amount.currency",
                  "purchase_units",
-                 "metadata.supplementary_data",
-                 "redirect_urls.return_url",
-                 "redirect_urls.cancel_url",
                  "links",
                  "create_time"]
 
+    # restore this or similar header list for API 2.0 refactor
+    #restore this list when restore paypalsdk api, and retired the request call
+        # return ["id",
+        #         "status",
+        #         "intent",
+        #         "gross_total_amount.value",
+        #         "gross_total_amount.currency",
+        #         "purchase_units",
+        #         "metadata.supplementary_data",
+        #         "redirect_urls.return_url",
+        #         "redirect_urls.cancel_url",
+        #         "links",
+        #         "create_time"]
+
+    def getDataFromApiCall(self,connection,value):
+        """
+        Replacing the Paypal SDK API call with this request
+        The current API v1/payments/orders/<ORDER_ID>
+        is broken and deprecated.  They will not fix.
+        Replacing the call with v2/checkout/orders/ API call.
+        New 2.0 API due out soon and this entire module syould be
+        refactored  to use the new API module
+        Old calls below can be reverted when 2.0 api refactor happens
+        and this direct call using the requests module can be removed.
+        """
+        client_id = connection.client_id
+        client_secret = connection.client_secret
+        token_url = 'https://api-m.sandbox.paypal.com/v1/oauth2/token'
+        data = {
+            'grant_type': 'client_credentials'
+        }
+        auth = (client_id, client_secret)
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+        response = requests.post(token_url, data=data, auth=auth, headers=headers)
+        access_token = None
+        if response.status_code == 200:
+            response_data = response.json()
+            access_token = response_data["access_token"]
+        else:
+            raise ValueError("Could not get auth-token, check client-id and secret-key")
+        bearer = "Bearer " + access_token
+        headers = {
+            'Authorization': bearer,
+        }
+        url = "https://api-m.sandbox.paypal.com/v2/checkout/orders/" + value
+        response = requests.get(url, headers=headers)
+        data_dict = json.loads(response.text)
+        return data_dict
+
     def get_orders(self, kwargs) -> List[Dict]:
         connection = self.handler.connect()
+
         orders = []
         for value in kwargs["ids"]:
             try:
-                order = paypalrestsdk.Order.find(value, api=connection)
+                # restore 'order = ...' call below for API 2.0 refactor
+                data_dict=self.getDataFromApiCall(connection,value)
+                # order = paypalrestsdk.Order.find(value, api=connection)
             except paypalrestsdk.exceptions.ResourceNotFound:
                 continue
-            orders.append(order.to_dict())
+            # restore 'order.append' call below for API 2.0 refactor
+            orders.append(data_dict)
+            # orders.append(order.to_dict())
         return orders
 
 

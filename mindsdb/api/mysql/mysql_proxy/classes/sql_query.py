@@ -914,7 +914,7 @@ class SQLQuery():
 
                 params = step.params or {}
 
-                for table in data.get_tables():
+                for table in data.get_tables()[:1]:  # add  __mindsdb_row_id only for first table
                     row_id_col = Column(
                         name='__mindsdb_row_id',
                         database=table['database'],

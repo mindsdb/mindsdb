@@ -125,7 +125,7 @@ class MSGraphAPIClient:
 
     def get_chats(self):
         chats = []
-        for chat in self._fetch_data("chats"):
+        for chat in self._fetch_data("chats", params={"$expand": "lastMessagePreview"}):
             chats.extend(chat)
 
         return chats

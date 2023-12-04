@@ -10,6 +10,10 @@ MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS = (
     else False
 )
 DEFAULT_PIP_EXTRAS = [
+    'file',                 # Required by the core codebase
+    'rag',                  # required for mindsdb/interfaces/skills/skill_tool used by some handlers
+    'langchain',            # required for mindsdb/interfaces/skills/skill_tool used by some handlers
+    'langchain_embedding',  # required for mindsdb/interfaces/skills/skill_tool used by some handlers
     'postgres',
     'mssql',
     'mysql',
@@ -19,17 +23,14 @@ DEFAULT_PIP_EXTRAS = [
     'clickhouse',
     'snowflake',
     'slack',
-    'file',
     'sqlite',
     'mongodb',
-    'langchain',
     'openai',
     'byom',
     'statsforecast',
     'timegpt',
     'binance',
     'twitter',
-    'rag',  # required for mindsdb/interfaces/skills/skill_tool used by some handlers
 ]
 
 

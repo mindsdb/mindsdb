@@ -1,1 +1,1 @@
--r ../rag_handler/requirements.txt
+-r mindsdb/integrations/handlers/rag_handler/requirements.txt

@@ -1130,6 +1130,7 @@ class SQLQuery():
             where_query = step.query
             query_traversal(where_query, check_fields)
 
+            query_context_controller.remove_lasts(where_query)
             query = Select(targets=[Star()], from_table=Identifier('df'), where=where_query)
 
             res = query_df(df, query)

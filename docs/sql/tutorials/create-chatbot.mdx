@@ -5,25 +5,39 @@ sidebarTitle: Customize Chatbot
 
 MindsDB provides the `CREATE CHATBOT` statement that is used under the hood by the [Chatbot Interface](/sql/tutorials/llm-chatbot-ui). But, if you want to customize your chatbot to learn from the underlying database or use a different model, check out this tutorial.
 
-The `CREATE CHATBOT` statement requires three componenets:
+The `CREATE CHATBOT` statement requires the following componenets:
 
-1. The AI model in the `conversational` mode.
+1. **Chat app**: A connection to a chat app, such as [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams).
 
-<Note>
-Currently, we support the `langchain` and `llamaindex` engines to create models for chatbots.
-</Note>
+2. **AI agent**: An AI agent that comes with an AI model trained with the provided training data. Learn more about [AI agents here](/agents/agent).
 
-2. The connection to the chat app, like Slack or Rocket Chat.
-
-3. The training data source used to train the chatbot with your private data.
+Learn more about [chatbots here](/agents/chatbot).
 
 Let's go over getting all the components ready.
 
 ## Chatbot Components
 
-### AI Model
+### Chat App
 
-Here is the command to create and deploy the model:
+Here is the command to connect your Slack app to MindsDB:
+
+```sql
+CREATE DATABASE chatbot_slack
+WITH
+  ENGINE = 'slack',
+  PARAMETERS = {
+      "token": "xoxb-...",
+      "app_token": "xapp-..."
+    };
+```
+
+<Tip>
+Follow [this link](/sql/tutorials/llm-chatbot-ui#slack-app-setup) to learn how to setup Slack app and generate tokens.
+</Tip>
+
+### AI Agent
+
+Start by creating and deploying the model:
 
 ```sql
 CREATE MODEL conversational_langchain_model
@@ -44,40 +58,25 @@ DESCRIBE conversational_langchain_model;
 
 The status should read `complete` before proceeding.
 
-### Chat App
-
-Here is the command to connect your Slack app to MindsDB:
+Create one or more skills for an AI agent:
 
 ```sql
-CREATE DATABASE chatbot_slack
-WITH
-  ENGINE = 'slack',
-  PARAMETERS = {
-      "token": "xoxb-...",
-      "app_token": "xapp-..."
-    };
+CREATE SKILL text_to_sql_skill
+USING
+    type = 'text_to_sql',
+    database = 'example_db',   -- this must be created with CREATE DATABASE
+    tables = ['sales_data'];   -- this table comes from example_db
 ```
 
-<Tip>
-Follow [this link](/sql/tutorials/llm-chatbot-ui#slack-app-setup) to learn how to setup Slack app and generate tokens.
-</Tip>
+This skill enables a model to answer questions about data from the `sales_data` table.
 
-### Training Data
-
-Use the `CREATE DATABASE` statement to connect your database that stores training data.
-
-Here is an example for the MySQL database:
+Now let's create an AI agent:
 
 ```sql
-CREATE DATABASE mysql_demo_db
-WITH ENGINE = "mysql",
-PARAMETERS = {
-    "user": "user",
-    "password": "MindsDBUser123!",
-    "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
-    "port": "3306",
-    "database": "public"
-    };
+CREATE AGENT support_agent
+USING
+model = customer_support_model,  -- this must be created with CREATE MODEL
+skills = ['text_to_sql_skill'];  -- this must be created with CREATE SKILL
 ```
 
 ## Create Chatbot
@@ -87,12 +86,13 @@ Once all the components are ready, let's proceed to creating the chatbot.
 ```sql
 CREATE CHATBOT my_chatbot
 USING
-   model = 'conversational_langchain_model',
    database = 'chatbot_slack',
-   backoffice_db = 'mysql_demo_db';
+   agent = 'support_agent',
+   enable_dms = true,
+   running = true;
 ```
 
-The `model` parameter defines the underlying model for the chatbot. The `database` parameter stores connection to a chat app. And the `backoffice_db` parameter stores connection to a data source that contains training data.
+The `database` parameter stores connection to a chat app. And the `agent` parameter stores an AI agent created by passing a model and training data.
 
 You can query all chatbot using this query:
 

@@ -11,7 +11,9 @@ from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
 DEFAULT_SCOPES = [
-	'https://graph.microsoft.com/.default'
+    'https://graph.microsoft.com/User.Read',
+    'https://graph.microsoft.com/Group.Read.All',
+    'https://graph.microsoft.com/ChannelMessage.Send'
 ]
 
 logger = log.getLogger(__name__)

@@ -14,7 +14,7 @@ DEFAULT_SCOPES = [
     'https://graph.microsoft.com/User.Read',
     'https://graph.microsoft.com/Group.Read.All',
     'https://graph.microsoft.com/ChannelMessage.Send',
-    'https://graph.microsoft.com/Chat.ReadBasic',
+    'https://graph.microsoft.com/Chat.Read',
 ]
 
 logger = log.getLogger(__name__)

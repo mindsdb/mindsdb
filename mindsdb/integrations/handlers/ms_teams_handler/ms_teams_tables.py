@@ -323,9 +323,20 @@ class ChatsTable(APITable):
         api_client = self.handler.connect()
 
         if chat_id:
-            return [api_client.get_chat(chat_id)]
+            chats = [api_client.get_chat(chat_id)]
         else:
-            return api_client.get_chats()
+            chats = api_client.get_chats()
+
+        for chat in chats:
+            last_message_preview = chat.get("lastMessagePreview")
+            # keep only the lastMessagePreview_id and lastMessagePreview_createdDateTime columns
+            if last_message_preview:
+                chat["lastMessagePreview_id"] = last_message_preview.get("id")
+                chat["lastMessagePreview_createdDateTime"] = last_message_preview.get("createdDateTime")
+                del chat["lastMessagePreview"]
+                del chat["lastMessagePreview@odata.context"]
+
+        return chats
 
     def get_columns(self) -> list:
         return [
@@ -339,4 +350,6 @@ class ChatsTable(APITable):
             "onlineMeetingInfo",
             "viewpoint_isHidden",
             "viewpoint_lastMessageReadDateTime",
+            "lastMessagePreview_id",
+            "lastMessagePreview_createdDateTime",
         ]

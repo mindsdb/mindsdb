@@ -2,8 +2,6 @@ import time
 import requests
 from typing import Optional, Dict, Union, List
 
-from mindsdb.integrations.handlers.utilities.auth_utilities import MSGraphAPIAuthManager, MSGraphAPIApplicationPermissionsManager, MSGraphAPIDelegatedPermissionsManager
-
 
 class MSGraphAPIClient:
     MICROSOFT_GRAPH_BASE_API_URL: str = "https://graph.microsoft.com/"

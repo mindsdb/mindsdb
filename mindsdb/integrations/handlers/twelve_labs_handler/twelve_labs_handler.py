@@ -6,6 +6,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 
+from mindsdb.integrations.handlers.twelve_labs_handler.settings import TwelveLabsHandlerConfig
 from mindsdb.integrations.handlers.twelve_labs_handler.twelve_labs_api_client import TwelveLabsAPIClient
 
 
@@ -26,14 +27,25 @@ class TwelveLabsHandler(BaseMLEngine):
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
-        pass
-
-    def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        """
+        Validates the create arguments.
+        Args:
+            target (str): name of the target column
+            args (dict): dictionary of create arguments
+            **kwargs: arbitrary keyword arguments.
+        Returns:
+            None
+        """
         # check for USING clause
         if 'using' not in args:
             # TODO: update Exception to InsufficientParametersException
             raise Exception("Twelve Labs engine requires a USING clause! Refer to its documentation for more details.")
+        else:
+            # get USING args
+            args = args['using']
+            TwelveLabsHandlerConfig(**args)
 
+    def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         # get USING args and add target
         args = args['using']
         args['target'] = target

@@ -353,3 +353,45 @@ class ChatsTable(APITable):
             "lastMessagePreview_id",
             "lastMessagePreview_createdDateTime",
         ]
+    
+class ChatMessagesTable(APITable):
+    """The Microsoft Chat Messages Table implementation"""
+    
+    def select(self, query: ASTNode) -> pd.DataFrame:
+        """Pulls data from the Microsoft Teams "GET /chats/{chat_id}/messages" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+            Microsoft Teams Chat Messages matching the query
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        pass
+
+    def insert(self, query: ASTNode) -> None:
+        """Inserts data into the Microsoft Teams "POST /chats/{chat_id}/messages" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Insert
+           Given SQL INSERT query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        pass

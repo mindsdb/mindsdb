@@ -45,7 +45,6 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     CreateDatabase,
     CreateJob,
     CreateKnowledgeBase,
-    CreateRAG,
     CreateMLEngine,
     CreatePredictor,
     CreateSkill,
@@ -56,7 +55,6 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     DropDatasource,
     DropJob,
     DropKnowledgeBase,
-    DropRAG,
     DropMLEngine,
     DropPredictor,
     DropSkill,
@@ -66,7 +64,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     RetrainPredictor,
     UpdateAgent,
     UpdateChatBot,
-    UpdateSkill,
+    UpdateSkill
 )
 from mindsdb_sql.parser.dialects.mysql import Variable
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -518,17 +516,6 @@ class ExecuteCommands:
                 )
                 query = SQLQuery(select_statement, session=self.session)
                 return self.answer_select(query)
-            elif sql_category == "rags":
-                select_statement = Select(
-                    targets=[Star()],
-                    from_table=Identifier(
-                        parts=["information_schema", "rags"]
-                    ),
-                    where=_get_show_where(statement, like_name="name"),
-                )
-                query = SQLQuery(select_statement, session=self.session)
-                return self.answer_select(query)
-
             else:
                 raise ErNotSupportedYet(f"Statement not implemented: {sql}")
         elif type(statement) in (
@@ -659,11 +646,7 @@ class ExecuteCommands:
         elif type(statement) == CreateKnowledgeBase:
             return self.answer_create_kb(statement)
         elif type(statement) == DropKnowledgeBase:
-            return self.answer_drop_kb(statement)
-        elif type(statement) == CreateRAG:
-            return self.answer_create_rag(statement)
-        elif type(statement) == DropRAG:
-            return self.answer_drop_rag(statement)
+            return self.anwser_drop_kb(statement)
         elif type(statement) == CreateSkill:
             return self.answer_create_skill(statement)
         elif type(statement) == DropSkill:
@@ -1359,7 +1342,7 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
-    def answer_drop_kb(self, statement: DropKnowledgeBase):
+    def anwser_drop_kb(self, statement: DropKnowledgeBase):
         name = statement.name.parts[-1]
         project_name = (
             statement.name.parts[0]
@@ -1371,52 +1354,6 @@ class ExecuteCommands:
         self.session.kb_controller.delete(
             name=name,
             project_name=project_name,
-            if_exists=statement.if_exists,
-        )
-
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
-
-    def answer_create_rag(self, statement: CreateRAG):
-        project_name = (
-            statement.name.parts[0]
-            if len(statement.name.parts) > 1
-            else self.session.database
-        )
-
-        rag_name = statement.name.parts[-1]
-
-        # create the knowledge base
-        _ = self.session.rag_controller.add(
-            name=rag_name,
-            project_name=project_name,
-            knowledge_base=statement.knowledge_base_store,
-            llm=statement.llm,
-            params=statement.params,
-            if_not_exists=statement.if_not_exists,
-        )
-
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
-
-    def answer_drop_rag(self, statement: DropRAG):
-        name = statement.name.parts[-1]
-        project_name = (
-            statement.name.parts[0]
-            if len(statement.name.parts) > 1
-            else self.session.database
-        )
-
-        # get project id
-        try:
-            project = self.session.database_controller.get_project(project_name)
-        except ValueError:
-            raise SqlApiException(f"Project not found: {project_name}")
-
-        project_id = project.id
-
-        # delete the knowledge base
-        self.session.rag_controller.delete(
-            name=name,
-            project_id=project_id,
             if_exists=statement.if_exists,
         )
 

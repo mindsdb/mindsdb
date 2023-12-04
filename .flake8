@@ -8,9 +8,7 @@ ignore =
   # Line break occurred before a binary operator
   W503,
   # Function is too complex
-  C901,
-  W291
-  # trailing whitespace
+  C901
 per-file-ignores =
   mindsdb/__main__.py: E402
   mindsdb/api/mysql/mysql_proxy/libs/constants/mysql.py: E241

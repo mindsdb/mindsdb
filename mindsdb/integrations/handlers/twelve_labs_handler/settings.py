@@ -44,7 +44,7 @@ class TwelveLabsHandlerConfig(BaseModel):
             )
 
         return values
-    
+
     @root_validator(allow_reuse=True)
     def check_for_task(cls, values):
         """Check if task has been provided along with the other relevant parameters for each task."""
@@ -57,17 +57,17 @@ class TwelveLabsHandlerConfig(BaseModel):
                 raise ValueError(
                     "search_options have not been provided. Please provide search_options."
                 )
-            
+
             # search options should be a subset of index options
             index_options = values.get("index_options")
             if not set(search_options).issubset(set(index_options)):
                 raise ValueError(
                     "search_options should be a subset of index_options."
                 )
-        
+
         else:
             raise ValueError(
                 f"task {task} is not supported. Please provide a valid task."
             )
-        
+
         return values

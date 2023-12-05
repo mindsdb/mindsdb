@@ -129,7 +129,18 @@ class WhatsAppMessagesTable(APITable):
             words = re.split('( )', text)
             messages = []
 
-            # Check text pattern
+            """
+                Regex for matching if any URls are present, if yes then replace with string of hyphens(-)
+                
+                Example:
+                    words = ['Check', ' ', 'out', ' ', 'this', ' ', 'cool', ' ', 'website:', ' ', 'https://example.com.', "It's", ' ', 'awesome!']
+                    
+                    After parsing through regex ('https://example.com') URL is matched
+                
+                    Final output: 
+                    messages = ['Check - out - this - cool - website: ----------------------- "It\'s - awesome!']
+            """
+            
             text2 = ''
             pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
             for word in words:

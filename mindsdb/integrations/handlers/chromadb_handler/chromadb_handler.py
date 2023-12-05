@@ -18,6 +18,8 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
+
 
 def get_chromadb():
     """
@@ -32,7 +34,7 @@ def get_chromadb():
         __import__("pysqlite3")
         sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
     except ImportError:
-        log.logger.error(
+        logger.warn(
             "[Chromadb-handler] pysqlite3 is not installed, this is not a problem for local usage"
         )  # noqa: E501
 
@@ -141,7 +143,7 @@ class ChromaDBHandler(VectorStoreHandler):
             self._client.heartbeat()
             response_code.success = True
         except Exception as e:
-            log.logger.error(f"Error connecting to ChromaDB , {e}!")
+            logger.error(f"Error connecting to ChromaDB , {e}!")
             response_code.error_message = str(e)
         finally:
             if response_code.success is True and need_to_close:
@@ -230,9 +232,12 @@ class ChromaDBHandler(VectorStoreHandler):
         conditions: List[FilterCondition] = None,
         offset: int = None,
         limit: int = None,
-    ) -> HandlerResponse:
+    ) -> pd.DataFrame:
         collection = self._client.get_collection(table_name)
         filters = self._translate_metadata_condition(conditions)
+
+        include = ["metadatas", "documents", "embeddings"]
+
         # check if embedding vector filter is present
         vector_filter = (
             []
@@ -240,20 +245,23 @@ class ChromaDBHandler(VectorStoreHandler):
             else [
                 condition
                 for condition in conditions
-                if condition.column == TableField.SEARCH_VECTOR.value
+                if condition.column == TableField.EMBEDDINGS.value
             ]
         )
+
         if len(vector_filter) > 0:
             vector_filter = vector_filter[0]
         else:
             vector_filter = None
-        id_filters = None
+        id_filters = []
         if conditions is not None:
-            id_filters = [
-                condition.value
-                for condition in conditions
-                if condition.column == TableField.ID.value
-            ] or None
+            for condition in conditions:
+                if condition.column != TableField.ID.value:
+                    continue
+                if condition.op == FilterOperator.EQUAL:
+                    id_filters.append(condition.value)
+                elif condition.op == FilterOperator.IN:
+                    id_filters.extend(condition.value)
 
         if vector_filter is not None:
             # similarity search
@@ -262,7 +270,7 @@ class ChromaDBHandler(VectorStoreHandler):
                 "query_embeddings": vector_filter.value
                 if vector_filter is not None
                 else None,
-                "include": ["metadatas", "documents", "distances"],
+                "include": include + ["distances"],
             }
             if limit is not None:
                 query_payload["n_results"] = limit
@@ -272,6 +280,8 @@ class ChromaDBHandler(VectorStoreHandler):
             documents = result["documents"][0]
             metadatas = result["metadatas"][0]
             distances = result["distances"][0]
+            embeddings = result["embeddings"][0]
+
         else:
             # general get query
             result = collection.get(
@@ -279,10 +289,12 @@ class ChromaDBHandler(VectorStoreHandler):
                 where=filters,
                 limit=limit,
                 offset=offset,
+                include=include,
             )
             ids = result["ids"]
             documents = result["documents"]
             metadatas = result["metadatas"]
+            embeddings = result["embeddings"]
             distances = None
 
         # project based on columns
@@ -290,24 +302,18 @@ class ChromaDBHandler(VectorStoreHandler):
             TableField.ID.value: ids,
             TableField.CONTENT.value: documents,
             TableField.METADATA.value: metadatas,
+            TableField.EMBEDDINGS.value: embeddings,
         }
 
         if columns is not None:
-            payload = {
-                column: payload[column]
-                for column in columns
-                if column != TableField.EMBEDDINGS.value
-            }
+            payload = {column: payload[column] for column in columns}
 
         # always include distance
         if distances is not None:
             payload[TableField.DISTANCE.value] = distances
-        result_df = pd.DataFrame(payload)
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=result_df)
+        return pd.DataFrame(payload)
 
-    def insert(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
+    def insert(self, table_name: str, data: pd.DataFrame):
         """
         Insert data into the ChromaDB database.
         """
@@ -320,27 +326,43 @@ class ChromaDBHandler(VectorStoreHandler):
 
         data = data.to_dict(orient="list")
 
-        collection.add(
+        collection.upsert(
             ids=data[TableField.ID.value],
             documents=data.get(TableField.CONTENT.value),
             embeddings=data[TableField.EMBEDDINGS.value],
             metadatas=data.get(TableField.METADATA.value),
         )
 
-        return Response(resp_type=RESPONSE_TYPE.OK)
+    def upsert(self, table_name: str, data: pd.DataFrame):
+        return self.insert(table_name, data)
 
     def update(
-        self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
+        self,
+        table_name: str,
+        data: pd.DataFrame,
+        key_columns: List[str] = None,
+    ):
         """
         Update data in the ChromaDB database.
-        TODO: not implemented yet
         """
-        return super().update(table_name, data, columns)
+        collection = self._client.get_collection(table_name)
+
+        # drop columns with all None values
+
+        data.dropna(axis=1, inplace=True)
+
+        data = data.to_dict(orient="list")
+
+        collection.update(
+            ids=data[TableField.ID.value],
+            documents=data.get(TableField.CONTENT.value),
+            embeddings=data[TableField.EMBEDDINGS.value],
+            metadatas=data.get(TableField.METADATA.value),
+        )
 
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
-    ) -> HandlerResponse:
+    ):
         filters = self._translate_metadata_condition(conditions)
         # get id filters
         id_filters = [
@@ -353,16 +375,14 @@ class ChromaDBHandler(VectorStoreHandler):
             raise Exception("Delete query must have at least one condition!")
         collection = self._client.get_collection(table_name)
         collection.delete(ids=id_filters, where=filters)
-        return Response(resp_type=RESPONSE_TYPE.OK)
 
-    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
+    def create_table(self, table_name: str, if_not_exists=True):
         """
         Create a collection with the given name in the ChromaDB database.
         """
         self._client.create_collection(table_name, get_or_create=if_not_exists)
-        return Response(resp_type=RESPONSE_TYPE.OK)
 
-    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
+    def drop_table(self, table_name: str, if_exists=True):
         """
         Delete a collection from the ChromaDB database.
         """
@@ -376,8 +396,6 @@ class ChromaDBHandler(VectorStoreHandler):
                     resp_type=RESPONSE_TYPE.ERROR,
                     error_message=f"Table {table_name} does not exist!",
                 )
-
-        return Response(resp_type=RESPONSE_TYPE.OK)
 
     def get_tables(self) -> HandlerResponse:
         """
@@ -415,7 +433,7 @@ connection_args = OrderedDict(
     },
     persist_directory={
         "type": ARG_TYPE.STR,
-        "description": "persistence directory for chroma",
+        "description": "persistence directory for ChromaDB",
         "required": False,
     },
 )
@@ -423,5 +441,5 @@ connection_args = OrderedDict(
 connection_args_example = OrderedDict(
     host="localhost",
     port="8000",
-    persist_directory="chroma",
+    persist_directory="chromadb",
 )

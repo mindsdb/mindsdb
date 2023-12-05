@@ -13,6 +13,9 @@ from mindsdb.utilities.ml_task_queue.const import (
     ML_TASK_TYPE,
     ML_TASK_STATUS
 )
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 class MLTaskProducer(BaseRedisQueue):
@@ -73,5 +76,5 @@ class MLTaskProducer(BaseRedisQueue):
             self.stream.add(message)
             return Task(self.db, redis_key)
         except ConnectionError:
-            print('Cant send message to redis: connect failed')
+            logger.error('Cant send message to redis: connect failed')
             raise

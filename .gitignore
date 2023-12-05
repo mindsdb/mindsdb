@@ -47,7 +47,7 @@ lib64
 pyvenv.cfg
 .python-version
 .DS_Store
-./Scripts
+Scripts
 Include
 xgboost
 

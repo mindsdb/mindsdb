@@ -14,6 +14,12 @@ from sklearn.metrics import r2_score
 from statsforecast import StatsForecast
 from statsforecast.models import AutoARIMA, AutoCES, AutoETS, AutoTheta
 
+# hierarchicalforecast is an optional dependency
+try:
+    from hierarchicalforecast.core import HierarchicalReconciliation
+except ImportError:
+    HierarchicalReconciliation = None
+
 DEFAULT_MODEL_NAME = "AutoARIMA"
 model_dict = {
     "AutoARIMA": AutoARIMA,
@@ -108,7 +114,7 @@ class StatsForecastHandler(BaseMLEngine):
             using_args["frequency"] if "frequency" in using_args else infer_frequency(df, time_settings["order_by"])
         )
         model_args["hierarchy"] = using_args["hierarchy"] if "hierarchy" in using_args else False
-        if model_args["hierarchy"]:
+        if model_args["hierarchy"] and HierarchicalReconciliation is not None:
             training_df, hier_df, hier_dict = get_hierarchy_from_df(df, model_args)
             self.model_storage.file_set("hier_dict", dill.dumps(hier_dict))
             self.model_storage.file_set("hier_df", dill.dumps(hier_df))
@@ -150,7 +156,7 @@ class StatsForecastHandler(BaseMLEngine):
         forecast_df = sf.predict(model_args["horizon"])
         forecast_df.index = forecast_df.index.astype(str)
 
-        if model_args["hierarchy"]:
+        if model_args["hierarchy"] and HierarchicalReconciliation is not None:
             hier_df = dill.loads(self.model_storage.file_get("hier_df"))
             hier_dict = dill.loads(self.model_storage.file_get("hier_dict"))
             reconciled_df = reconcile_forecasts(training_df, forecast_df, hier_df, hier_dict)

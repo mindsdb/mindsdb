@@ -244,13 +244,11 @@ class VectorStoreHandler(BaseHandler):
             content = None
 
         # get id column if it is present
+        ids = None
         if TableField.ID.value in columns:
             id_col_index = columns.index("id")
             ids = [self._value_or_self(row[id_col_index]) for row in query.values]
-        elif TableField.CONTENT.value is not None:
-            # use hashed value
-            ids = [hashlib.md5(str(val).encode()).hexdigest() for val in content]
-        else:
+        elif TableField.CONTENT.value is None:
             raise Exception("Content or id is required!")
 
         # get embeddings column if it is present
@@ -273,19 +271,15 @@ class VectorStoreHandler(BaseHandler):
             metadata = None
 
         # create dataframe
-        data = pd.DataFrame(
-            {
-                TableField.ID.value: ids,
-                TableField.CONTENT.value: content,
-                TableField.EMBEDDINGS.value: embeddings,
-                TableField.METADATA.value: metadata,
-            }
-        )
+        data = {
+            TableField.CONTENT.value: content,
+            TableField.EMBEDDINGS.value: embeddings,
+            TableField.METADATA.value: metadata,
+        }
+        if ids is not None:
+            data[TableField.ID.value] = ids
 
-        # remove duplicated ids
-        data = data.drop_duplicates([TableField.ID.value])
-
-        return self.do_upsert(table_name, data)
+        return self.do_upsert(table_name, pd.DataFrame(data))
 
     def _dispatch_update(self, query: Update):
         """
@@ -316,10 +310,6 @@ class VectorStoreHandler(BaseHandler):
         if TableField.CONTENT.value not in row:
             raise Exception("Content is required!")
 
-        if TableField.ID.value not in row:
-            value = row[TableField.CONTENT.value]
-            row[TableField.ID.value] = hashlib.md5(str(value).encode()).hexdigest()
-
         # store
         df = pd.DataFrame([row])
 
@@ -329,6 +319,20 @@ class VectorStoreHandler(BaseHandler):
         # if handler supports it, call upsert method
 
         id_col = TableField.ID.value
+        content_col = TableField.CONTENT.value
+
+        def gen_hash(v):
+            return hashlib.md5(str(v).encode()).hexdigest()
+
+        if id_col not in df.columns:
+            # generate for all
+            df[id_col] = df[content_col].apply(gen_hash)
+        else:
+            # generate for empty
+            df.loc[df[id_col], id_col] = df[content_col].apply(gen_hash)
+
+        # remove duplicated ids
+        df = df.drop_duplicates([TableField.ID.value])
 
         # id is string TODO is it ok?
         df[id_col] = df[id_col].apply(str)

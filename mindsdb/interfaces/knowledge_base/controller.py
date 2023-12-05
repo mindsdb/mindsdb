@@ -123,10 +123,11 @@ class KnowledgeBaseTable:
 
         # add embeddings
         df_emb = self._df_to_embeddings(df)
+        df = pd.concat([df, df_emb], axis=1)
 
         # send to vector db
         db_handler = self._get_vector_db()
-        db_handler.do_upsert(self._kb.vector_database_table, df_emb)
+        db_handler.do_upsert(self._kb.vector_database_table, df)
 
     def _replace_query_content(self, node, **kwargs):
         if isinstance(node, BinaryOperation):

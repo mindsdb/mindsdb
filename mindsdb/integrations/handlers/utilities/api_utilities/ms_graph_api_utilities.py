@@ -132,8 +132,28 @@ class MSGraphAPIClient:
     
     def get_chat(self, chat_id: str):
         api_url = self._get_api_url(f"chats/{chat_id}")
-        chat = self._make_request(api_url)
+        chat = self._make_request(api_url, params={"$expand": "lastMessagePreview"})
         return chat
+    
+    def get_all_chat_messages(self):
+        chat_messages = []
+        for chat_id in [chat["id"] for chat in self.get_chats()]:
+            for messages in self._fetch_data(f"chats/{chat_id}/messages"):
+                chat_messages.extend(messages)
+
+        return chat_messages
+    
+    def get_chat_messages(self, chat_id: str):
+        chat_messages = []
+        for messages in self._fetch_data(f"chats/{chat_id}/messages"):
+            chat_messages.extend(messages)
+
+        return chat_messages
+    
+    def get_chat_message(self, chat_id: str, message_id: str):
+        api_url = self._get_api_url(f"chats/{chat_id}/messages/{message_id}")
+        message = self._make_request(api_url)
+        return message
 
     def get_user_profile(self):
         api_url = self._get_api_url("me")

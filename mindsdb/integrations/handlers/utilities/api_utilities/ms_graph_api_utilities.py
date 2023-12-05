@@ -154,6 +154,16 @@ class MSGraphAPIClient:
         api_url = self._get_api_url(f"chats/{chat_id}/messages/{message_id}")
         message = self._make_request(api_url)
         return message
+    
+    def send_chat_message(self, chat_id: str, message: str, subject: Optional[str] = None):
+        api_url = self._get_api_url(f"chats/{chat_id}/messages")
+        data = {
+            "subject": subject,
+            "body": {
+                "content": message
+            }
+        }
+        self._make_request(api_url, data=data, method="POST")
 
     def get_user_profile(self):
         api_url = self._get_api_url("me")

@@ -1,4 +1,5 @@
 import time
+from typing import List
 
 import pandas as pd
 from langchain.schema import Document
@@ -75,7 +76,9 @@ class RAGIngestor:
             # if user provides a dataframe, load documents from dataframe
             documents.extend(
                 df_to_documents(
-                    df=self.df, page_content_columns=self.args.context_columns
+                    df=self.df,
+                    page_content_columns=self.args.context_columns,
+                    url_column_name=self.args.url_column_name,
                 )
             )
 
@@ -83,9 +86,12 @@ class RAGIngestor:
             # if user provides a url, load documents from url
             documents.extend(url_to_documents(self.args.url))
 
+        n_tokens = sum([len(doc.page_content) for doc in documents])
+
         # split documents into chunks of text
         texts = text_splitter.split_documents(documents)
         logger.info(f"Loaded {len(documents)} documents from input data")
+        logger.info(f"Total number of tokens: {n_tokens}")
         logger.info(f"Split into {len(texts)} chunks of text (tokens)")
 
         return texts
@@ -104,11 +110,7 @@ class RAGIngestor:
                 collection_name=self.args.collection_name,
             )
         else:
-            return self.vector_store.from_documents(
-                documents=documents,
-                embedding=embeddings_model,
-                index_name=self.args.collection_name,
-            )
+            return self.create_db_from_texts(documents, embeddings_model)
 
     def create_db_from_texts(self, documents, embeddings_model) -> VectorStore:
         """Create DB from text content."""
@@ -119,6 +121,35 @@ class RAGIngestor:
         return self.vector_store.from_texts(
             texts=texts, embedding=embeddings_model, metadatas=metadata
         )
+
+    @staticmethod
+    def _create_batch_embeddings(documents: List[Document], embeddings_batch_size):
+        """
+        create batch of document embeddings
+        """
+
+        for i in range(0, len(documents), embeddings_batch_size):
+            yield documents[i: i + embeddings_batch_size]
+
+    def create_db_from_batch_documents(self, documents, embeddings_model):
+        """
+        Create DB from documents in batches, this is used for chromadb to get around the add limit
+        in sqlite implementation of later versions of chromadb
+        """
+        batches_documents = self._create_batch_embeddings(
+            documents, self.args.embeddings_batch_size
+        )
+        n_batches = len(documents) // self.args.embeddings_batch_size \
+            if len(documents) >= self.args.embeddings_batch_size else 1
+        try:
+            for batch_id, batch_document in enumerate(batches_documents):
+                _ = self.create_db_from_documents(batch_document, embeddings_model)
+                logger.info(f"Added batch {batch_id + 1} of {n_batches} batches to vector db")
+
+        except Exception as e:
+            raise Exception(
+                f"Error loading embeddings batches to {self.args.vector_store_name}: {e}"
+            )
 
     def embeddings_to_vectordb(self) -> None:
         """Create vectorstore from documents and store locally."""
@@ -131,26 +162,27 @@ class RAGIngestor:
         )
 
         # Load embeddings model
-        embeddings_model = load_embeddings_model(self.embeddings_model_name)
+        embeddings_model = load_embeddings_model(
+            self.embeddings_model_name, self.args.use_gpu
+        )
 
         logger.info(f"Creating vectorstore from documents")
 
         if not validate_documents(documents):
             raise ValueError("Invalid documents")
 
-        try:
-            db = self.create_db_from_documents(documents, embeddings_model)
-        except Exception as e:
-            logger.error(
-                f"Error loading using 'from_documents' method, trying 'from_text': {e}"
-            )
-            try:
-                db = self.create_db_from_texts(documents, embeddings_model)
-                logger.info(f"successfully loaded using 'from_text' method: {e}")
+        if self.args.vector_store_name == "chromadb":
 
+            # chromadb does autosave in latest version, just for the saver PersistedVectorStoreSaver
+            db = self.create_db_from_batch_documents(documents, embeddings_model)
+
+        else:
+            try:
+                db = self.create_db_from_documents(documents, embeddings_model)
             except Exception as e:
-                logger.error(f"Error creating from texts: {e}")
-                raise e
+                raise Exception(
+                    f"Error loading embeddings to {self.args.vector_store_name}: {e}"
+                )
 
         config = PersistedVectorStoreSaverConfig(
             vector_store_name=self.args.vector_store_name,
@@ -164,12 +196,16 @@ class RAGIngestor:
         vector_store_saver.save_vector_store(db)
 
         db = None  # Free up memory
+
         end_time = time.time()
-        elapsed_time = end_time - start_time
+        elapsed_time = round(end_time - start_time)
 
-        logger.info(
-            "Fished creating vectorstore from documents. It took: {elapsed_time/60} minutes"
-        )
+        logger.info(f"Finished creating {self.args.vector_store_name} from texts, it has been "
+                    f"persisted to {self.args.vector_store_storage_path}")
 
-        logger.info("Finished creating vectorstore from documents.")
-        logger.info(f"Elapsed time: {round(elapsed_time / 60)} minutes")
+        time_minutes = round(elapsed_time / 60)
+
+        if time_minutes > 1:
+            logger.info(f"Elapsed time: {time_minutes} minutes")
+        else:
+            logger.info(f"Elapsed time: {elapsed_time} seconds")

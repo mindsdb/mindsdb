@@ -504,3 +504,7 @@ class ChatMessagesTable(APITable):
                 message=message["body_content"],
                 subject=message.get("subject")
             )
+
+    class ChatMessageRepliesTable(APITable):
+        """The Microsoft Chat Message Replies Table implementation"""
+        pass

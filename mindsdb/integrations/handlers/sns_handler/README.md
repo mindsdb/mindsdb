@@ -48,6 +48,18 @@ Each topic should look like this:
 | arn:aws:sns:us-east-1:000000000000:test |
 +-----------------------------------------+
 
+select topic  using topic_arn:
+```sql
+ select * from topics where TopicArn="arn:aws:sns:us-eas
+t-1:000000000000:test";
++-----------------------------------------+
+| TopicArn                                |
++-----------------------------------------+
+| arn:aws:sns:us-east-1:000000000000:test |
++-----------------------------------------+
+```sql
+
+
 Then we can publish a single message
 ```sql
 insert into messages(message,topic_arn) values('some_message','arn:aws:sns:us-east-1:000000000000:test')

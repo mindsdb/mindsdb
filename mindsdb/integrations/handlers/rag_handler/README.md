@@ -101,6 +101,22 @@ SELECT *
 FROM rag_handler_url_test
 WHERE question='what ML use cases does mindsdb support?';
 
+-- multiple urls as input
+--upload files to UI first that contains a list of urls i.e. a csv with a column containing urls
+--then use the following syntax
+
+CREATE MODEL rag_handler_multi_url_test
+FROM files (select * from file_with_urls)     
+predict answer
+USING
+    engine="rag",
+    llm_type="openai",
+    url_column_name="url",
+    vector_store_folder_name='test_multi_url';
+
+SELECT *
+FROM rag_handler_multi_url_test
+WHERE question='answer to question?';
 
 --using .txt or .pdf as input (first upload file using UI)
 

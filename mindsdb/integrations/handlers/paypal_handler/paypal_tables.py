@@ -283,6 +283,8 @@ class PayoutsTable(APITable):
                     raise ValueError("Unsupported where operation for state")
 
                 payout_batch_id = a_where[2]
+        if not payout_batch_id:
+            raise NotImplementedError("payout_batch_id column is required for this table")
 
         payouts_data = self.get_payout(payout_batch_id)  # Get the data
         payouts_df = pd.DataFrame(payouts_data)  # Create a DataFrame

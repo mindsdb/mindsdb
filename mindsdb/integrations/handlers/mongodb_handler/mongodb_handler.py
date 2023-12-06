@@ -74,6 +74,7 @@ class MongoDBHandler(DatabaseHandler):
             port=self.port,
             **kwargs
         )
+
         # detect database from connection
         if self.database is None:
             self.database = connection.get_database().name
@@ -116,10 +117,10 @@ class MongoDBHandler(DatabaseHandler):
                 callback(row=full_doc, key={'_id': _id})
 
     def disconnect(self):
-        if self.is_connected is False:
-            return
-        self.connection.close()
-        return
+        if self.is_connected:
+            self.connection.close()
+            self.is_connected = False
+
 
     def check_connection(self) -> StatusResponse:
         """

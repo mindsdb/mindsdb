@@ -31,5 +31,7 @@ Create AI Tables (SQL) Test Passed - https://github.com/maarioos1308/mindsdb-Tes
 </br>
 Create AI Tables (SQL) Test Passed - https://github.com/maarioos1308/mindsdb-Testing
 </br>
+Create AI Tables (SQL) Test Passed -https://github.com/maarioos1308/mindsdb-Testing/blob/master/Apache_Druid/Manual_QA.md
+</br>
 
 

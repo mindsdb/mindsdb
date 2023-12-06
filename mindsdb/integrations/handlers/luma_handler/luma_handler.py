@@ -9,12 +9,7 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
-
-from mindsdb.utilities.log import get_log
 from mindsdb_sql import parse_sql
-
-
-logger = get_log("integrations.luma_handler")
 
 
 class LumaHandler(APIHandler):

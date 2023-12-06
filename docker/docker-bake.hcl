@@ -19,13 +19,15 @@ variable "VERSION" {
 target "builder" {
   dockerfile = "docker/mindsdb.Dockerfile"
   target = "build"
+  platforms = ["linux/amd64", "linux/arm64"]
 }
 # Common traits of every image that we use to reduce duplication below.
 target "_common" {
-    dockerfile = "docker/mindsdb.Dockerfile" # If you change this, also change it in target:builder
-    contexts = {
-      builder = "target:builder" # Use a target to only perform base build steps once
-    }
+  dockerfile = "docker/mindsdb.Dockerfile" # If you change this, also change it in target:builder
+  contexts = {
+    builder = "target:builder" # Use a target to only perform base build steps once
+  }
+  platforms = ["linux/amd64", "linux/arm64"]
 }
 
 

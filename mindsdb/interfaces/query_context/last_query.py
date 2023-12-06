@@ -114,13 +114,15 @@ class LastQuery:
             for node in nodes:
                 col, last = node.args
                 tables = tables_idx[parent_query_id]
+
+                uniq_tables = len(set([id(v) for v in tables.values()]))
                 if len(col.parts) > 1:
 
                     table = tables.get(col.parts[-2])
                     if table is None:
                         raise Exception('cant find table')
-                elif len(tables) == 1:
-                    table = tables[0]
+                elif uniq_tables == 1:
+                    table = list(tables.values())[0]
                 else:
                     # or just skip it?
                     raise Exception('cant find table')

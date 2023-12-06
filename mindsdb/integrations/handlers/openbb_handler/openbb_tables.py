@@ -132,6 +132,10 @@ def create_table_class(
                 raise NotImplementedError(text)
 
             try:
+                # Handle limit keyword correctly since it can't be parsed as a WHERE arg (i.e. WHERE limit = 50)
+                if query.limit is not None and 'limit' in params_metadata['fields']:
+                    print('Adding limit')
+                    params['limit'] = query.limit.value
                 obbject = obb_function(**params)
 
                 # Extract data in dataframe format

@@ -1,5 +1,4 @@
 import paypalrestsdk
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
 import pandas as pd
 from typing import Text, List, Dict
@@ -8,8 +7,7 @@ from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
-import requests
-import json
+
 
 class PaymentsTable(APITable):
 
@@ -140,21 +138,21 @@ class OrdersTable(APITable):
         )
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        search_params = {"ids": []}
+        id=""
         subset_where_conditions = []
         for op, arg1, arg2 in where_conditions:
             if arg1 == 'id':
                 if op == '=':
-                    search_params["ids"].append(arg2)
+                    id=arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for 'ids' column")
             elif arg1 in ['state', 'amount', 'create_time', 'update_time', 'links', 'pending_reason', 'parent_payment']:
                 subset_where_conditions.append([op, arg1, arg2])
 
-        if search_params['ids'] == []:
+        if not id :
             raise NotImplementedError("id column is required for this table")
 
-        orders_df = pd.json_normalize(self.get_orders(search_params))
+        orders_df = pd.json_normalize(self.get_orders({"id":id}))
         self.clean_selected_columns(selected_columns)
         select_statement_executor = SELECTQueryExecutor(
             orders_df,
@@ -167,8 +165,8 @@ class OrdersTable(APITable):
 
     @staticmethod
     def clean_selected_columns(selected_cols) -> None:
-        if "ids" in selected_cols:
-            selected_cols.remove("ids")
+        if "id" in selected_cols:
+            selected_cols.remove("id")
             selected_cols.append("id")
 
     def get_columns(self) -> List[Text]:
@@ -193,58 +191,14 @@ class OrdersTable(APITable):
         #         "links",
         #         "create_time"]
 
-    def getDataFromApiCall(self,connection,value):
-        """
-        Replacing the Paypal SDK API call with this request
-        The current API v1/payments/orders/<ORDER_ID>
-        is broken and deprecated.  They will not fix.
-        Replacing the call with v2/checkout/orders/ API call.
-        New 2.0 API due out soon and this entire module syould be
-        refactored  to use the new API module
-        Old calls below can be reverted when 2.0 api refactor happens
-        and this direct call using the requests module can be removed.
-        """
-        client_id = connection.client_id
-        client_secret = connection.client_secret
-        token_url = 'https://api-m.sandbox.paypal.com/v1/oauth2/token'
-        data = {
-            'grant_type': 'client_credentials'
-        }
-        auth = (client_id, client_secret)
-        headers = {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        }
-        response = requests.post(token_url, data=data, auth=auth, headers=headers)
-        access_token = None
-        if response.status_code == 200:
-            response_data = response.json()
-            access_token = response_data["access_token"]
-        else:
-            raise ValueError("Could not get auth-token, check client-id and secret-key")
-        bearer = "Bearer " + access_token
-        headers = {
-            'Authorization': bearer,
-        }
-        url = "https://api-m.sandbox.paypal.com/v2/checkout/orders/" + value
-        response = requests.get(url, headers=headers)
-        data_dict = json.loads(response.text)
-        return data_dict
-
     def get_orders(self, kwargs) -> List[Dict]:
+        #we can use the paypalrestsdk api to get the order if they refactor their code
         connection = self.handler.connect()
-
-        orders = []
-        for value in kwargs["ids"]:
-            try:
-                # restore 'order = ...' call below for API 2.0 refactor
-                data_dict=self.getDataFromApiCall(connection,value)
-                # order = paypalrestsdk.Order.find(value, api=connection)
-            except paypalrestsdk.exceptions.ResourceNotFound:
-                continue
-            # restore 'order.append' call below for API 2.0 refactor
-            orders.append(data_dict)
-            # orders.append(order.to_dict())
-        return orders
+        endpoint = f"v2/checkout/orders/{kwargs['id']}"
+        order = connection.get(endpoint)
+        if not order:
+            raise ValueError("Could not get order, check order id")
+        return order
 
 
 class PayoutsTable(APITable):
@@ -273,11 +227,9 @@ class PayoutsTable(APITable):
         )
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        conditions = extract_comparison_conditions(query.where)
-
         payout_batch_id = ""
 
-        for a_where in conditions:
+        for a_where in where_conditions:
             if a_where[1] == "payout_batch_id":
                 if a_where[0] != "=":
                     raise ValueError("Unsupported where operation for state")

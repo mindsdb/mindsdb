@@ -7,7 +7,7 @@ class LibSQLHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "database": "test.db",
+            "database": "tests/test.db",
         }
         cls.handler = LibSQLHandler("test_libsql_handler", cls.kwargs)
 

@@ -1,4 +1,5 @@
 [flake8]
+min_python_version = 3.8.0
 max-line-length = 120
 ignore =
   # E402
@@ -53,12 +54,10 @@ exclude =
   mindsdb/integrations/handlers/dockerhub_handler/*
   mindsdb/integrations/libs/response.py
   mindsdb/integrations/utilities/utils.py
-  mindsdb/interfaces/model/model_controller.py
   mindsdb/migrations/env.py
   tests/handler_tests/test_storage_handler.py
   tests/integration_tests/flows/test_mysql_bin_api.py
   tests/prediction_latency_test/*
-  tests/unit/executor_test_base.py
   tests/unit/test_cache.py
   tests/unit/test_mongodb_handler.py
   tests/unit/test_mongodb_server.py

@@ -5,5 +5,5 @@ __description__ = "MindsDB handler for the Hubspot API"
 __author__ = 'Shivam Dhaka'
 __github__ = 'https://github.com/mindsdb/mindsdb'
 __pypi__ = 'https://pypi.org/project/mindsdb/'
-__license__ = 'GPL-3.0'
+__license__ = 'MIT'
 __copyright__ = 'Copyright 2023 - mindsdb'

@@ -1,14 +1,7 @@
-langchain==0.0.267
-SQLAlchemy
-requests>=2.28.1
-openai>=0.27.0
-chromadb==0.4.8
+-r mindsdb/integrations/handlers/chromadb_handler/requirements.txt
+langchain==0.0.303
+openai == 0.28.1
 pydantic>=1.10.8
-sentence_transformers==2.2.2
-markupsafe==2.0.1
-faiss-cpu>=1.7.4 #todo check support for 'faiss-gpu'
-datasets>=2.14.4
-nltk>=3.8.1
-rouge-score>=0.1.2
 html2text
-writerai>=0.25.3
+writerai~=1.1.0
+pydantic

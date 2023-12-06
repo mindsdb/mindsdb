@@ -12,28 +12,27 @@ The `JOIN` clause combines rows from the database table and the model table on a
 Here is the syntax:
 
 ```sql
-SELECT t.column_name, p.column_name, ...
-FROM integration_name.table_name [AS] t
-JOIN project_name.model_name [AS] p;
-```
-
-On execution, we get:
-
-```sql
-+-----------------+-----------------+
-| t.column_name   | p.column_name   |
-+-----------------+-----------------+
-| t.value         | p.value         |
-+-----------------+-----------------+
+SELECT d1.column_name,
+       d2.column_name,
+       m1.column_name,
+       m2.column_name,
+       ...
+FROM integration_name.table_name_1 [AS] d1
+[JOIN integration_name.table_name_2 [AS] d2]
+[JOIN ...]
+JOIN project_name.model_name_1 [AS] m1
+[JOIN project_name.model_name_2 [AS] m2]
+[JOIN ...];
 ```
 
 Where:
 
-| Name                                | Description                                                         |
-| ----------------------------------- | ------------------------------------------------------------------- |
-| `integration_name.table_name`       | Name of the data source table used as input for making predictions. |
-| `project_name.model_name`           | Name of the model table used to make predictions.                   |
-| `p.value`                           | Predicted value stored in the output table.                         |
+| Name                                | Description                                                                   |
+| ----------------------------------- | ----------------------------------------------------------------------------- |
+| `integration_name.table_name_1`     | Name of the data source table used as input for making predictions.           |
+| `integration_name.table_name_2`     | Optionally, you can join arbitrary number of data source tables.              |
+| `project_name.model_name_1`         | Name of the model table used to make predictions.                             |
+| `project_name.model_name_2`         | Optionally, you can join arbitrary number of models.                          |
 
 ## Example 1
 

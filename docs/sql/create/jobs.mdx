@@ -9,10 +9,12 @@ The `CREATE JOB` statement lets you schedule the execution of queries by providi
 
 ## Syntax
 
+### `CREATE MODEL`
+
 Here is the syntax:
 
 ```sql
-CREATE JOB [project_name.]job_name [AS] (
+CREATE JOB [IF NOT EXISTS] [project_name.]job_name [AS] (
    <mindsdb_sql_query_1>[; <mindsdb_sql_query_2>]
 )
 [START <date>]
@@ -50,6 +52,76 @@ And the supported `<period>` values:
 - `week` / `weeks`
 - `month` / `months`
 </Info>
+
+### `LAST`
+
+MindsDB provides a custom `LAST` keyword that enables you to fetch data inserted/updated after the last time you queried for it. It is a convenient way to select only the newly added data rows when running a job.
+
+Imagine you have the `fruit_data` table that contains the following:
+
+```sql
++-------+-----------+
+| id    | name      |
++-------+-----------+
+| 1     | apple     |
+| 2     | orange    |
++-------+-----------+
+```
+
+When you run the `SELECT` query with the `LAST` keyword for the first time, it'll fetch all records as below.
+
+```sql
+SELECT id, name
+FROM fruit_data
+WHERE id > LAST;
+```
+
+This query returns:
+
+```sql
++-------+-----------+
+| id    | name      |
++-------+-----------+
+| 1     | apple     |
+| 2     | orange    |
++-------+-----------+
+```
+
+When you run this query again, you'll get an empty output, assuming there were no new data rows inserted since the last time you queried this table.
+
+```sql
+SELECT id, name
+FROM fruit_data
+WHERE id > LAST;
+```
+
+This query returns:
+
+```sql
++-------+-----------+
+| id    | name      |
++-------+-----------+
+|       |           |
++-------+-----------+
+```
+
+Let's insert another row with values `(3, 'pear')` into the `fruit_data` table. And now this query returns just the newly added row.
+
+```sql
+SELECT id, name
+FROM fruit_data
+WHERE id > LAST;
+```
+
+This returns:
+
+```sql
++-------+-----------+
+| id    | name      |
++-------+-----------+
+| 3     | pear      |
++-------+-----------+
+```
 
 ## Examples
 
@@ -136,20 +208,20 @@ CREATE JOB mindsdb.gpt4_twitter_job AS (
 
    -- insert into tweets the output of joining model and new tweets
    INSERT INTO my_twitter_v2.tweets (in_reply_to_tweet_id, text)
-   SELECT
-      t.id AS in_reply_to_tweet_id,
-      r.response AS text
-   FROM my_twitter.tweets t
-   JOIN mindsdb.snoopstein_model r
-      WHERE
-         t.query = '(@snoopstein OR @snoop_stein OR #snoopstein OR #snoop_stein) -is:retweet -from:snoop_stein'
-      AND t.created_at > "{{PREVIOUS_START_DATETIME}}"
-   LIMIT 10
+      SELECT
+         t.id AS in_reply_to_tweet_id,
+         r.response AS text
+      FROM my_twitter.tweets t
+      JOIN mindsdb.snoopstein_model r
+         WHERE
+            t.query = '(@snoopstein OR @snoop_stein OR #snoopstein OR #snoop_stein) -is:retweet -from:snoop_stein'
+         AND t.created_at > LAST
+      LIMIT 10
 )
 EVERY hour;
 ```
 
-The [`SELECT`](/sql/api/select) statement joins the data table with the model table to get responses for tweets posted after the `{{PREVIOUS_START_DATETIME}}` timestamp. Then, the [`INSERT INTO`](/sql/api/insert) statement writes these responses to the `tweets` table of the `my_twitter` integration.
+The [`SELECT`](/sql/api/select) statement joins the data table with the model table to get responses for newly posted tweets, thanks to the `LAST` keyword. Then, the [`INSERT INTO`](/sql/api/insert) statement writes these responses to the `tweets` table of the `my_twitter` integration.
 
 <Tip>
 To learn more about OpenAI integration with MindsDB, visit our docs [here](/nlp/nlp-mindsdb-openai).

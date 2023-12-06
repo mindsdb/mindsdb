@@ -7,12 +7,9 @@ from typing import Iterable, List, Optional
 from mindsdb_sql import parse_sql
 from langchain.sql_database import SQLDatabase
 
+from mindsdb.utilities import log
 
-def _format_index(index: dict) -> str:
-    return (
-        f'Name: {index["name"]}, Unique: {index["unique"]},'
-        f' Columns: {str(index["column_names"])}'
-    )
+logger = log.getLogger(__name__)
 
 
 class MindsDBSQL(SQLDatabase):
@@ -33,7 +30,13 @@ class MindsDBSQL(SQLDatabase):
         self._engine = engine   # executor instance
         self._metadata = metadata  # integrations controller instance
         self._sample_rows_in_table_info = int(sample_rows_in_table_info)
-        self._usable_tables = None
+        
+        self._tables_to_include = include_tables
+        self._tables_to_ignore = []
+        if not self._tables_to_include:
+            # ignore_tables and include_tables should not be used together.
+            # include_tables takes priority if it's set.
+            self._tables_to_ignore = ignore_tables
 
     @property
     def dialect(self) -> str:
@@ -47,24 +50,27 @@ class MindsDBSQL(SQLDatabase):
         return ret
 
     def get_usable_table_names(self) -> Iterable[str]:
-        if self._usable_tables is None:
-            original_db = self._engine.session.database
-            ret = self._call_engine(['show databases;'])
-            dbs = [lst[0] for lst in ret.data if lst[0] != 'information_schema']
-            usable_tables = []
-            for db in dbs:
-                if db != 'mindsdb':
-                    try:
-                        ret = self._call_engine([f'use `{db}`;', 'show tables;'])
-                        tables = [lst[0] for lst in ret.data if lst[0] != 'information_schema']
-                        if tables:
-                            usable_tables.extend([f'{db}.{t}' for t in tables])
-                    except Exception:
-                        pass
-                    finally:
-                        _ = self._call_engine([f'use {original_db};'])
-            self._usable_tables = usable_tables
-        return self._usable_tables
+        if self._tables_to_include:
+            return self._tables_to_include
+        
+        original_db = self._engine.session.database
+        ret = self._call_engine(['show databases;'])
+        dbs = [lst[0] for lst in ret.data if lst[0] != 'information_schema']
+        usable_tables = []
+        for db in dbs:
+            if db != 'mindsdb':
+                try:
+                    ret = self._call_engine([f'use `{db}`;', 'show tables;'])
+                    tables = [lst[0] for lst in ret.data if lst[0] != 'information_schema']
+                    for table in tables:
+                        table_name = f'{db}.{table}'
+                        if table_name not in self._tables_to_ignore:
+                            usable_tables.append(table_name)
+                except Exception as e:
+                    logger.warning('Unable to get tables for %s: %s', db, str(e))
+                finally:
+                    _ = self._call_engine([f'use {original_db};'])
+        return usable_tables
 
     def get_table_names(self) -> Iterable[str]:
         warnings.warn("This method is deprecated - please use `get_usable_table_names`.")
@@ -99,14 +105,11 @@ class MindsDBSQL(SQLDatabase):
     def _get_single_table_info(self, table_str: str) -> str:
         controller = self._metadata
         integration, table_name = table_str.split('.')
-
-        tables = controller.get_handler(integration).get_tables().data_frame
-        tbl_name, n_rows, tbl_type = tables[tables['TABLE_NAME'] == table_name].iloc[0].to_list()
         cols_df = controller.get_handler(integration).get_columns(table_name).data_frame
         fields = cols_df['Field'].to_list()
         dtypes = cols_df['Type'].to_list()
 
-        info = f'Table named `{tbl_name}`, type `{tbl_type}`, row count: {n_rows}.\n'
+        info = f'Table named `{table_name}`\n'
         info += f"\n/* Sample with first {self._sample_rows_in_table_info} rows from table `{table_str}`:\n"
         info += "\t".join([field for field in fields])
         info += self._get_sample_rows(table_str, fields) + "\n*/"

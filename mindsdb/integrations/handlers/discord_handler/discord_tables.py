@@ -12,9 +12,10 @@ from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilit
     INSERTQueryParser
 )
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
-logger = get_log("integrations.discord_handler")
+logger = log.getLogger(__name__)
+
 
 class MessagesTable(APITable):
     """The Discord Table implementation"""

@@ -11,6 +11,7 @@ from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 from mindsdb.integrations.libs.api_handler_exceptions import InvalidNativeQuery, ConnectionFailed, MissingConnectionParams
 
+logger = log.getLogger(__name__)
 
 class ShopifyHandler(APIHandler):
     """
@@ -49,7 +50,7 @@ class ShopifyHandler(APIHandler):
 
         inventory_level_data = InventoryLevelTable(self)
         self._register_table("inventory_level", inventory_level_data)
-    
+
         location_data = LocationTable(self)
         self._register_table("locations", location_data)
 
@@ -80,7 +81,7 @@ class ShopifyHandler(APIHandler):
             raise MissingConnectionParams(f"Incomplete parameters passed to Shopify Handler")
 
         api_session = shopify.Session(self.connection_data['shop_url'], '2021-10', self.connection_data['access_token'])
-        
+
         self.yotpo_app_key = self.connection_data['yotpo_app_key'] if 'yotpo_app_key' in self.connection_data else None
         self.yotpo_access_token = self.connection_data['yotpo_access_token'] if 'yotpo_access_token' in self.connection_data else None
 
@@ -105,7 +106,7 @@ class ShopifyHandler(APIHandler):
             shopify.Shop.current()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Shopify!')
+            logger.error(f'Error connecting to Shopify!')
             raise ConnectionFailed(f"Conenction to Shopify failed.")
             response.error_message = str(e)
 

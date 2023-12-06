@@ -10,6 +10,8 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
+logger = log.getLogger(__name__)
+
 
 class OpenStreetMapHandler(APIHandler):
     """The OpenStreetMap handler implementation."""
@@ -68,7 +70,7 @@ class OpenStreetMapHandler(APIHandler):
             if api_session is not None:
                 response.success = True
         except Exception as e:
-            log.logger.error('Error connecting to OpenStreetMap!')
+            logger.error('Error connecting to OpenStreetMap!')
             response.error_message = str(e)
 
         self.is_connected = response.success

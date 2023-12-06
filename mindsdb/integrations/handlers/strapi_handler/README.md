@@ -13,7 +13,7 @@ The Strapi handler is initialized with the following parameters:
 - `host` - the host of the Strapi server
 - `port` - the port of the Strapi server
 - `api_token` - the api token of the Strapi server
-- `pluralApiIds` - the list of plural api ids of the collections
+- `plural_api_ids` - the list of plural api ids of the collections
 
 ## Implemented Features
 
@@ -36,7 +36,7 @@ PARAMETERS = {
   "host" : "<strapi-host>", --- host, it can be an ip or an url.
   "port" : "<strapi-port>",  --- common port is 1337.
   "api_token": "<your-strapi-api-token>", --- api token of the strapi server.
-  "pluralApiIds" : ["<plural-api-id>"] --- plural api ids of the collections.
+  "plural_api_ids" : ["<plural-api-id>"] --- plural api ids of the collections.
 };
 ```
 
@@ -49,7 +49,7 @@ PARAMETERS = {
   "host" : "localhost",
   "port" : "1337",
   "api_token": "c56c000d867e95848c",
-  "pluralApiIds" : ["products", "sellers"]
+  "plural_api_ids" : ["products", "sellers"]
 };
 ```
 

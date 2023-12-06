@@ -3,6 +3,10 @@ import json
 
 import psycopg
 
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
+
 
 MINDSDB_PROFILING_ENABLED = os.environ.get("MINDSDB_PROFILING_ENABLED") in ("1", "true")
 MINDSDB_PROFILING_DB_HOST = os.environ.get("MINDSDB_PROFILING_DB_HOST")
@@ -45,7 +49,7 @@ def send_profiling_results(profiling_data: dict):
             connect_timeout=5
         )
     except Exception:
-        print('cant get acceess to profiling database')
+        logger.error('cant get acceess to profiling database')
         return
     cur = connection.cursor()
     cur.execute("""

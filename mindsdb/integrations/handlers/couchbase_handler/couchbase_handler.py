@@ -18,6 +18,9 @@ from couchbase.options import ClusterOptions
 from couchbase.exceptions import KeyspaceNotFoundException, CouchbaseException
 
 
+logger = log.getLogger(__name__)
+
+
 class CouchbaseHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Couchbase statements.
@@ -101,7 +104,7 @@ class CouchbaseHandler(DatabaseHandler):
             cluster = self.connect()
             result.success = cluster.connected
         except UnAmbiguousTimeoutException as e:
-            log.logger.error(
+            logger.error(
                 f'Error connecting to Couchbase {self.connection_data["bucket"]}, {e}!'
             )
             result.error_message = str(e)
@@ -194,7 +197,6 @@ class CouchbaseHandler(DatabaseHandler):
         try:
             q = f"SELECT * FROM `{table_name}` limit 1"
             row_iter = cb.query(q)
-            # print(row_iter.execute())
             data = []
             for row in row_iter:
                 for k, v in row[table_name].items():

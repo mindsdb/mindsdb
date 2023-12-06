@@ -10,6 +10,7 @@ from collections.abc import Callable
 import psutil
 from walrus import Database
 from pandas import DataFrame
+from redis.exceptions import ConnectionError as RedisConnectionError
 
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
@@ -25,6 +26,9 @@ from mindsdb.utilities.ml_task_queue.const import (
     TASKS_STREAM_CONSUMER_NAME,
     TASKS_STREAM_CONSUMER_GROUP_NAME
 )
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 def _save_thread_link(func: Callable) -> Callable:
@@ -140,7 +144,17 @@ class MLTaskConsumer(BaseRedisQueue):
             self.wait_redis_ping()
             if self._stop_event.is_set():
                 return
-            message = self.consumer_group.read(count=1, block=1000, consumer=TASKS_STREAM_CONSUMER_NAME)
+
+            try:
+                message = self.consumer_group.read(count=1, block=1000, consumer=TASKS_STREAM_CONSUMER_NAME)
+            except RedisConnectionError as e:
+                logger.error(f"Can't connect to Redis: {e}")
+                self._stop_event.set()
+                return
+            except Exception:
+                self._stop_event.set()
+                raise
+
             if message.get(TASKS_STREAM_NAME) is None or len(message.get(TASKS_STREAM_NAME)) == 0:
                 message = None
 
@@ -207,6 +221,7 @@ class MLTaskConsumer(BaseRedisQueue):
                 continue
             self._ready_event.clear()
             threading.Thread(target=self._listen).start()
+        self.stop()
 
     def stop(self) -> None:
         """ Stop all executing threads
@@ -230,5 +245,7 @@ def start(verbose: bool) -> None:
         consumer.run()
     except Exception as e:
         consumer.stop()
-        print(f'Got exception: {e}', flush=True)
+        logger.error(f'Got exception: {e}', flush=True)
         raise
+    finally:
+        logger.info('Consumer process stopped', flush=True)

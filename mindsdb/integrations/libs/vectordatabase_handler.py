@@ -329,7 +329,9 @@ class VectorStoreHandler(BaseHandler):
             df[id_col] = df[content_col].apply(gen_hash)
         else:
             # generate for empty
-            df.loc[df[id_col], id_col] = df[content_col].apply(gen_hash)
+            for i in range(len(df)):
+                if pd.isna(df.loc[i, id_col]):
+                    df.loc[i, id_col] = gen_hash(df.loc[i, content_col])
 
         # remove duplicated ids
         df = df.drop_duplicates([TableField.ID.value])

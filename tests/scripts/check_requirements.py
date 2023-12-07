@@ -44,9 +44,9 @@ MAIN_RULE_IGNORES = {
 }
 
 # THe following packages need exceptions because they are optional deps of some other packages. e.g. langchain CAN use openai
-# (pysqlite3-binary is imported in an unusual way in the chromadb handler and needs to be excluded too)
+# (pysqlite3 is imported in an unusual way in the chromadb handler and needs to be excluded too)
 # pypdf and openpyxl are optional deps of langchain, that are used for the file handler
-OPTIONAL_HANDLER_DEPS = ["pysqlite3-binary", "torch", "openai", "tiktoken", "wikipedia", "anthropic", "pypdf", "openpyxl"]
+OPTIONAL_HANDLER_DEPS = ["pysqlite3", "torch", "openai", "tiktoken", "wikipedia", "anthropic", "pypdf", "openpyxl"]
 
 # List of rules we can ignore for specific packages
 # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in a given handler
@@ -72,7 +72,7 @@ PACKAGE_NAME_MAP = {
     "protobuf": ["google"],
     "google-api-python-client": ["googleapiclient"],
     "binance-connector": ["binance"],
-    "pysqlite3-binary": ["pysqlite3"],
+    "pysqlite3": ["pysqlite3"],
     "sqlalchemy-spanner": ["sqlalchemy"],
     "atlassian-python-api": ["atlassian"],
     "databricks-sql-connector": ["databricks"],

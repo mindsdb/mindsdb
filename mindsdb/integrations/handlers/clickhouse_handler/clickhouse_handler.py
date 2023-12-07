@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from urllib.parse import quote
 
 import pandas as pd
 from sqlalchemy import create_engine
@@ -54,11 +55,11 @@ class ClickHouseHandler(DatabaseHandler):
             return self.connection
 
         protocol = self.protocol
-        host = self.connection_data['host']
+        host = quote(self.connection_data['host'])
         port = self.connection_data['port']
-        user = self.connection_data['user']
-        password = self.connection_data['password']
-        database = self.connection_data['database']
+        user = quote(self.connection_data['user'])
+        password = quote(self.connection_data['password'])
+        database = quote(self.connection_data['database'])
         url = f'{protocol}://{user}:{password}@{host}:{port}/{database}'
         if self.protocol == 'clickhouse+https':
             url = url + "?protocol=https"

@@ -1,5 +1,4 @@
 import paypalrestsdk
-
 import pandas as pd
 from typing import Text, List, Dict
 
@@ -138,7 +137,7 @@ class OrdersTable(APITable):
         )
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
-        id=""
+        id=None
         subset_where_conditions = []
         for op, arg1, arg2 in where_conditions:
             if arg1 == 'id':
@@ -153,7 +152,6 @@ class OrdersTable(APITable):
             raise NotImplementedError("id column is required for this table")
 
         orders_df = pd.json_normalize(self.get_orders(id))
-        self.clean_selected_columns(selected_columns)
         select_statement_executor = SELECTQueryExecutor(
             orders_df,
             selected_columns,
@@ -162,13 +160,6 @@ class OrdersTable(APITable):
         )
         orders_df = select_statement_executor.execute_query()
         return orders_df
-
-    @staticmethod
-    def clean_selected_columns(selected_cols) -> None:
-        if "id" in selected_cols:
-            selected_cols.remove("id")
-            selected_cols.append("id")
-
     def get_columns(self) -> List[Text]:
          return ["id",
                  "status",

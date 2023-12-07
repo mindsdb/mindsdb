@@ -13,8 +13,9 @@ import re
 import sys
 import shutil
 import pickle
-import subprocess
+import tempfile
 import traceback
+import subprocess
 from enum import Enum
 from pathlib import Path
 from datetime import datetime
@@ -170,6 +171,7 @@ class BYOMHandler(BaseMLEngine):
                 ]
             except KeyError:
                 raise Exception('Unknown BYOM engine type')
+
             if engine_version_type == BYOM_TYPE.INHOUSE:
                 if self._inhouse_enabled is False:
                     raise Exception("'Inhouse' BYOM engine type can not be used")
@@ -451,6 +453,13 @@ class ModelWrapperSafe:
                 env_folder_name = f'{env_folder_name}_{engine_version}'
             self.env_path = base_path / env_folder_name
 
+            is_cloud = Config().get('cloud', False)
+            env_install_path = (
+                Path(tempfile.mkdtemp()) / env_folder_name if is_cloud
+                else self.env_path
+            )
+            pip_cmd = env_install_path / 'bin' / 'pip'
+
             self.python_path = self.env_path / 'bin' / 'python'
 
             if self.env_path.exists():
@@ -458,11 +467,11 @@ class ModelWrapperSafe:
                 return
 
             # create
-            virtualenv.cli_run(['-p', sys.executable, str(self.env_path)])
-            logger.info(f"Created new environment: {self.env_path}")
+            virtualenv.cli_run(['-p', sys.executable, str(env_install_path)])
+            logger.info(f"Created new environment: {env_install_path}")
 
             if len(modules) > 0:
-                self.install_modules(modules)
+                self.install_modules(modules, pip_cmd=pip_cmd)
         except Exception:
             # DANGER !!! VENV MUST BE CREATED
             logger.info("Can't create virtual environment. venv module should be installed")
@@ -470,7 +479,14 @@ class ModelWrapperSafe:
             self.python_path = Path(sys.executable)
 
             # try to install modules everytime
-            self.install_modules(modules)
+            self.install_modules(modules, pip_cmd=pip_cmd)
+
+        # fastest way to copy files if destination is NFS
+        if env_install_path != self.env_path:
+            subprocess.run(
+                ['cp', '-R', '--no-preserve=mode,ownership', str(env_install_path), str(self.env_path)],
+                check=True, shell=False
+            )
 
     def remove_venv(self):
         if self.env_path is not None and self.env_path.exists():
@@ -498,10 +514,8 @@ class ModelWrapperSafe:
         modules.append('pyarrow==11.0.0')
         return modules
 
-    def install_modules(self, modules):
+    def install_modules(self, modules, pip_cmd):
         # install in current environment using pip
-
-        pip_cmd = self.python_path.parent / 'pip'
         for module in modules:
             p = subprocess.Popen([pip_cmd, 'install', module], stderr=subprocess.PIPE)
             p.wait()
@@ -551,7 +565,6 @@ class ModelWrapperSafe:
         return model_state
 
     def predict(self, df, model_state, args):
-
         params = {
             'method': BYOM_METHOD.PREDICT.value,
             'code': self.code,

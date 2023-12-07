@@ -17,6 +17,7 @@ from collections import defaultdict
 import dateinfer
 import pandas as pd
 import numpy as np
+from dateutil.parser import parse as date_parse
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import (
@@ -950,28 +951,57 @@ class SQLQuery():
                     if pm['name'] == predictor_name and pm['integration_name'].lower() == project_name:
                         predictor_metadata = pm
                         break
+
                 is_timeseries = predictor_metadata['timeseries']
-                # @TODO: how to best refactor this? We have the info now in the predictor_metadata[0].task_type attr...
+                is_legacy_ts_model = is_timeseries and predictor_metadata['task_type'] != '`Forecasting`'
+
+                # time series models
                 _mdb_forecast_offset = None
                 if is_timeseries:
                     if '> LATEST' in self.query_str:
                         # stream mode -- if > LATEST, forecast starts on inferred next timestamp
                         _mdb_forecast_offset = 1
+                    # TODO: first two cases do not cover `LATEST - N` case, it should be added
                     elif '= LATEST' in self.query_str:
                         # override: when = LATEST, forecast starts on last provided timestamp instead of inferred next time
                         _mdb_forecast_offset = 0
                     else:
-                        # normal mode -- emit a forecast ($HORIZON data points on each) for each provided timestamp
+                        # join mode -- emit a forecast ($HORIZON data points on each) for each provided timestamp
                         params['force_ts_infer'] = True
                         _mdb_forecast_offset = None
+
                     for row in where_data:
                         if '__mdb_forecast_offset' not in row:
                             row['__mdb_forecast_offset'] = _mdb_forecast_offset
 
-                # for row in where_data:
-                #     for key in row:
-                #         if isinstance(row[key], datetime.date):
-                #             row[key] = str(row[key])
+                if is_timeseries and not is_legacy_ts_model:
+                    # pre-call filtering: get date cutoff for predictor "out of sample" mark in join mode
+                    oby_col = predictor_metadata['order_by_column']
+                    to_drop = []
+
+                    if 'LATEST' not in self.query_str:
+                        for item in step.output_time_filter.args:
+                            if oby_col in str(item):
+                                continue
+                            else:
+                                cutoff = date_parse(str(item))
+
+                        if step.output_time_filter.op == '=':
+                            op = 'eq'
+                        else:
+                            op = 'gt'
+
+                        # we truncate predictor input data to `cutoff`, then join back with the rest
+                        # TODO: obs: ResultSet()s are not a good choice, we should refactor and use DFs natively instead as much as possible
+                        for i, record in enumerate(where_data):
+                            if op == 'eq' and pd.Timestamp(record[oby_col]) >= cutoff:
+                                to_drop.append(i)
+                            elif op == 'gt' and pd.Timestamp(record[oby_col]) > cutoff:
+                                to_drop.append(i)
+
+                        # reversed to guarantee correct indices
+                        for idx in reversed(to_drop):
+                            where_data.pop(idx)
 
                 table_name = get_preditor_alias(step, self.database)
                 result = ResultSet()
@@ -1009,6 +1039,15 @@ class SQLQuery():
                         )
                         data = predictions.to_dict(orient='records')
                         columns_dtypes = dict(predictions.dtypes)
+
+                        # add indices if predicted region is within original data region (join mode)
+                        # TODO: huge problem: data is not ordered correcly. Goes from boundary = 0  to N at the very beginning. Should be other way around. This is problematic b/c other steps have the same order from before.
+                        # if is_timeseries and not is_legacy_ts_model:
+                        #     if to_drop:
+                        #         region_start = sorted(to_drop)[0]
+                        #         TODO: need a way to take only predictions (not input) AND ordered... why does the datanode return input, too?!
+                                # for i, pred in enumerate(data):
+                                #     pred['__mindsdb_row_id'] = region_start + i
 
                         if data is not None and isinstance(data, list) and self.session.predictor_cache is not False:
                             predictor_cache.set(key, data)

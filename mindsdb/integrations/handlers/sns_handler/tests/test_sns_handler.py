@@ -13,9 +13,27 @@ class SnsHandlerTest(unittest.TestCase):
             "aws_secret_access_key": "some_access_key",
             "region_name": "us-east-1",
             "endpoint_url": "http://localhost:4566"
-
         }
         cls.handler = SnsHandler('test_sns_handler', connection_data)
+
+    def test_check_topic_list_call_without_topics(self):
+        response = self.handler.call_sns_api("topic_list", {})
+        for topic_arn in response['TopicArn']:
+            self.handler.call_sns_api("delete_topic", {'TopicArn': topic_arn})
+        df = self.handler.call_sns_api("topic_list", {})
+        assert df.empty is True
+
+    def test_create_topic_and_select_all_topics(self):
+        expected_topic_name = "test"
+        self.handler.create_topic({"name": expected_topic_name})
+        response = self.handler.call_sns_api("topic_list", {})
+        assert expected_topic_name in str(response)
+
+    def test_delete_topic_by_arn(self):
+        response = self.handler.create_topic({"name": "test_topic"})
+        topic_arn = response["TopicArn"][0]
+        result = self.handler.call_sns_api("delete_topic", {'TopicArn': topic_arn})
+        assert result['ResponseMetadata']['HTTPStatusCode'] == 200
 
     def test_nagative_create_topic_and_select_by_topic_name(self):
         expected_topic_name = "test"
@@ -40,12 +58,6 @@ class SnsHandlerTest(unittest.TestCase):
         response = self.handler.create_topic({"name": "sss"})
         result = self.handler.call_sns_api("topic_list", {"TopicArn": response["TopicArn"][0]})
         assert response["TopicArn"][0] == result['TopicArn'][0]
-
-    def test_create_topic_and_select_all_topics(self):
-        expected_topic_name = "test"
-        self.handler.create_topic({"name": expected_topic_name})
-        response = self.handler.call_sns_api("topic_list", {})
-        assert expected_topic_name in str(response)
 
     def test_publish_message(self):
         expected_topic_name = "test"

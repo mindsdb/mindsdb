@@ -91,6 +91,8 @@ class SnsHandler(APIHandler):
             params (Dict): topic TopicArn (str)
         """
         response = self.connection.list_topics()
+        if len(response['Topics']) == 0:
+            return DataFrame({'TopicArn': []})
         json_response = str(response)
         if params is not None and 'TopicArn' in params:
             topic_arn = params["TopicArn"]
@@ -137,6 +139,17 @@ class SnsHandler(APIHandler):
         response = self.connection.create_topic(Name=name)
         return DataFrame(response)
 
+    def delete_topic(self, params: Dict = None) -> DataFrame:
+        """
+        delete topic by TopicArn
+        Args:
+           params (Dict):
+        Returns results as a pandas DataFrame.
+        """
+        topic_arn = params["TopicArn"]
+        response = self.connection.delete_topic(TopicArn=topic_arn)
+        return DataFrame(response)
+
     def call_sns_api(self, method_name: str = None, params: dict = None) -> DataFrame:
         """Calls the sns API method with the given params.
            Returns results as a pandas DataFrame.
@@ -149,6 +162,8 @@ class SnsHandler(APIHandler):
             return self.publish_message(params)
         elif method_name == 'publish_batch':
             return self.publish_batch(params)
+        elif method_name == 'delete_topic':
+            return self.delete_topic(params)
         else:
             raise NotImplementedError(f'Unknown method {method_name}')
 

@@ -2,23 +2,15 @@ import time
 import requests
 from typing import Optional, Dict, Union, List
 
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
+
 
 class MSGraphAPIClient:
     MICROSOFT_GRAPH_BASE_API_URL: str = "https://graph.microsoft.com/"
     MICROSOFT_GRAPH_API_VERSION: str = "v1.0"
     PAGINATION_COUNT: Optional[int] = 20
-
-    # def __init__(self, client_id: str, client_secret: str, tenant_id: str, refresh_token: str = None):
-    #     """
-    #     Initializes the class with the client_id, client_secret and tenant_id
-    #     :param client_id: The client_id of the app
-    #     :param client_secret: The client_secret of the app
-    #     :param tenant_id: The tenant_id of the app
-    #     :param refresh_token: The refresh_token of the app
-    #     """
-    #     self.ms_graph_api_application_permissions_manager = MSGraphAPIApplicationPermissionsManager(client_id, client_secret, tenant_id, refresh_token)
-    #     self.ms_graph_api_delegated_permissions_manager = MSGraphAPIDelegatedPermissionsManager(client_id, tenant_id)
-    #     self._group_ids = None
 
     def __init__(self, access_token: str) -> None:
         self.access_token = access_token
@@ -169,4 +161,12 @@ class MSGraphAPIClient:
         api_url = self._get_api_url("me")
         user_profile = self._make_request(api_url)
         return user_profile
+    
+    def check_connection(self):
+        try:
+            self.get_user_profile()
+            return True
+        except Exception as e:
+            logger.error(f'Error connecting to Microsoft Teams: {e}!')
+            return False
     

@@ -152,7 +152,7 @@ class OrdersTable(APITable):
         if not id :
             raise NotImplementedError("id column is required for this table")
 
-        orders_df = pd.json_normalize(self.get_orders({"id":id}))
+        orders_df = pd.json_normalize(self.get_orders(id))
         self.clean_selected_columns(selected_columns)
         select_statement_executor = SELECTQueryExecutor(
             orders_df,
@@ -191,10 +191,10 @@ class OrdersTable(APITable):
         #         "links",
         #         "create_time"]
 
-    def get_orders(self, kwargs) -> List[Dict]:
+    def get_orders(self, id) -> List[Dict]:
         #we can use the paypalrestsdk api to get the order if they refactor their code
         connection = self.handler.connect()
-        endpoint = f"v2/checkout/orders/{kwargs['id']}"
+        endpoint = f"v2/checkout/orders/{id}"
         order = connection.get(endpoint)
         if not order:
             raise ValueError("Could not get order, check order id")

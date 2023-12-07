@@ -170,6 +170,7 @@ class TestKnowledgeBase(BaseExecutorTest):
         # verify the knowledge base is created
         kb_obj = self.db.session.query(KnowledgeBase).filter_by(name="test_kb5").first()
         assert kb_obj is not None
+        assert kb_obj.vector_database.name == "test_kb5_chromadb"
 
         # create a knowledge base without a model name, default should be used
         sql = f"""
@@ -183,6 +184,7 @@ class TestKnowledgeBase(BaseExecutorTest):
         # verify the knowledge base is created
         kb_obj = self.db.session.query(KnowledgeBase).filter_by(name="test_kb6").first()
         assert kb_obj is not None
+        assert kb_obj.embedding_model.name == "test_kb6_default_model"
 
         # create a knowledge base without a model or storage
         # todo this should be supported but requires a fix to the sql parser

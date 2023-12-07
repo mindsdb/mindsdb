@@ -65,7 +65,7 @@ class MSTeamsHandler(APIChatHandler):
         StatusResponse
             connection object
         """
-        if self.is_connected is True:
+        if self.is_connected and self.connection.check_connection():
             return self.connection
 
         ms_graph_api_auth_manager = MSGraphAPIAuthManager(
@@ -96,11 +96,12 @@ class MSTeamsHandler(APIChatHandler):
 
         try:
             connection = self.connect()
-            connection.get_user_profile()
+            connection.check_connection()
             response.success = True
             response.copy_storage = True
         except Exception as e:
             logger.error(f'Error connecting to Microsoft Teams: {e}!')
+            response.success = False
             response.error_message = str(e)
 
         self.is_connected = response.success

@@ -4,10 +4,14 @@ from mindsdb.integrations.utilities.date_utils import parse_local_date
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, project_dataframe, filter_dataframe
 from mindsdb.integrations.utilities.sql_utils import sort_dataframe
 from mindsdb.integrations.utilities.utils import dict_to_yaml
+from mindsdb.utilities import log
+
 from typing import Dict, List, Union
 from pydantic import ValidationError
 
 import pandas as pd
+
+logger = log.getLogger(__name__)
 
 
 def create_table_class(
@@ -157,7 +161,7 @@ def create_table_class(
                 return result
             
             except AttributeError as e:
-                print(str(e))
+                logger.info(f'Encountered error while executing OpenBB select: {str(e)}')
 
                 # Create docstring for the current function
                 text = "Docstring:"
@@ -174,7 +178,7 @@ def create_table_class(
                 raise Exception(f"{str(e)}\n\n{text}.") from e
             
             except ValidationError as e:
-                print(str(e))
+                logger.info(f'Encountered error while executing OpenBB select: {str(e)}')
 
                 # Create docstring for the current function
                 text = "Docstring:"
@@ -191,7 +195,7 @@ def create_table_class(
                 raise Exception(f"{str(e)}\n\n{text}.") from e
 
             except Exception as e:
-                print(str(e))
+                logger.info(f'Encountered error while executing OpenBB select: {str(e)}')
 
                 #  TODO: This one doesn't work because it's taken care of from MindsDB side
                 if "Table not found" in str(e):

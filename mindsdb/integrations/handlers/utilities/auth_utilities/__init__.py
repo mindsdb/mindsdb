@@ -1,2 +1,2 @@
-from .google_oauth_utilities import GoogleOAuth2Manager
-from .ms_graph_api_auth_utilities import MSGraphAPIAuthManager, MSGraphAPIApplicationPermissionsManager, MSGraphAPIDelegatedPermissionsManager
+from .google import GoogleOAuth2Manager
+from .microsoft import MSGraphAPIAuthManager

@@ -2,7 +2,7 @@ import json
 from flask import request
 
 import msal
-from .exceptions import AuthException
+from ..exceptions import AuthException
 
 from mindsdb.integrations.handlers.utilities.api_utilities import MSGraphAPIClient
 

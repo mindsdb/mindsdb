@@ -7,7 +7,7 @@ from shutil import copyfile
 
 from mindsdb.utilities import log
 
-from .exceptions import AuthException
+from ..exceptions import AuthException
 
 from google_auth_oauthlib.flow import Flow
 

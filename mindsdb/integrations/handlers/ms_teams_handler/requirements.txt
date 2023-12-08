@@ -1,1 +1,1 @@
-msal
+-r mindsdb/integrations/handlers/utilities/requirements.txt

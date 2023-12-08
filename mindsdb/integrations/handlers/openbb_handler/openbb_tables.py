@@ -3,14 +3,15 @@ from mindsdb_sql.parser import ast
 from mindsdb.integrations.utilities.date_utils import parse_local_date
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, project_dataframe, filter_dataframe
 from mindsdb.integrations.utilities.sql_utils import sort_dataframe
-from mindsdb.utilities.log import logging
+from mindsdb.utilities import log
+
 from typing import Dict, List, Union
 from pydantic import ValidationError
 
 import duckdb
 import pandas as pd
 
-logger = logging.getLogger(__name__)
+logger = log.getLogger(__name__)
 
 
 def create_table_class(
@@ -67,6 +68,7 @@ def create_table_class(
             """
             conditions = extract_comparison_conditions(query.where)
             arg_params = self._get_params_from_conditions(conditions=conditions)
+
             params = {}
             if provider is not None:
                 params['provider'] = provider
@@ -77,7 +79,6 @@ def create_table_class(
             strict_filter = arg_params.get('strict_filter', False)
 
             for op, arg1, arg2 in conditions:
-
                 if op == 'or':
                     raise NotImplementedError('OR is not supported')
 
@@ -252,4 +253,5 @@ def create_table_class(
 
         def get_columns(self):
             return response_columns
+
     return AnyTable

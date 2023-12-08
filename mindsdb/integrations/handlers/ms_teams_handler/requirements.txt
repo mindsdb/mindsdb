@@ -1,1 +1,1 @@
--r mindsdb/integrations/handlers/utilities/requirements.txt
+-r mindsdb/integrations/handlers/utilities/auth_utilities/microsoft/requirements.txt

@@ -14,58 +14,13 @@ To illustrate practically, we will be having a Slack bot - **@Whiz_Fizz** - whic
 
 Before Jumping more into it. Let's first see how to create a bot and connect it to our Slack Workspace.
 
-## To get started:
+## Getting Started
 
 - [Create an account on MindsDB cloud](https://cloud.mindsdb.com) (if you don’t have one yet).
-- [Create a Slack Account](https://slack.com/get-started#/createnew) (if you don't already know about Slack.)
+- [Create a Slack Account](https://slack.com/get-started#/createnew) and follow [this instruction](/integrations/app-integrations/slack) to connect Slack to MindsDB.
 - Go to your [MindsDB SQL Editor](https://cloud.mindsdb.com/editor)
 
 _[MindsDB](https://mindsdb.com/) is a famous open-source application used for simplifying the use of Machine Learning in modern-day applications without the need for any external tool by making forecasts on the Data available in your database. It lets you build any Generative AI application with minimal steps required._
-
-<Tip>
-If you already have the API token of a Slack Bot, feel free to skip the following steps.
-</Tip>
-
-
-If you have a Slack Account, you have to generate the API token, please follow below instructions:
-
-<Accordion title="How to Generate API Keys" icon="slack" iconType="thin">
-    Here are the steps to generate the Slack API token:
-
-    1. Follow [this link](https://api.slack.com/apps) and sign in with your Slack account.
-    2. Create a new App/Bot or select an existing App.
-    3. Go to the *OAuth & Permissions* section.
-    4. Under the *Scopes* section, add the *Bot Token Scopes* necessary for your application. You can add more later as well.
-        - channels:history
-        - channels:read
-        - chat:write
-        - groups:read
-        - im:read
-        - mpim:read
-    5. Install the bot to your workspace.
-    6. Under the *OAuth Tokens for Your Workspace* section, copy the the *Bot User OAuth Token* value.
-    7. Open your Slack application and add the App/Bot to one of the channels:
-        - Go to the channel where you want to use the bot.
-        - Right-click on the channel and select *View Channel Details*.
-        - Select *Integrations*.
-        - Click on *Add an App*.
-    8. Now you can use the token from step 6 to initialize the Slack handler in MindsDB, and use the channel name to query and write messages.
-</Accordion>
-
-Now, let's establish a connection to our Slack using MindsDB SQL Editor:
-
-```sql
-CREATE DATABASE mindsdb_slack 
-WITH 
-    ENGINE = 'slack', 
-    PARAMETERS = { 
-        "token": "<slack-bot-token>" 
-    };
-```
-
-<Note>
-Please change the `slack-bot-token` with the token mentioned in `Bot User OAuth Access Token`.
-</Note>
 
 ## Usage
 

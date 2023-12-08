@@ -314,7 +314,6 @@ class ModelController():
         project_tables = project.get_tables()
         if params['model_name'] in project_tables:
             raise EntityExistsError('Model already exists', f"{params['project_name']}.{params['model_name']}")
-
         predictor_record = ml_handler.learn(**params)
 
         return self.get_model_info(predictor_record)

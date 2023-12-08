@@ -23,6 +23,7 @@ class ChatBotTask(BaseTask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.bot_id = self.object_id
+        self.agent_id = None
 
         self.session = SessionController()
 
@@ -34,6 +35,7 @@ class ChatBotTask(BaseTask):
         bot_record = db.ChatBots.query.get(self.bot_id)
 
         self.base_model_name = bot_record.model_name
+        self.agent_id = bot_record.agent_id
         self.project_name = db.Project.query.get(bot_record.project_id).name
         self.project_datanode = self.session.datahub.get(self.project_name)
 

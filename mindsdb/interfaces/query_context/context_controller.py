@@ -2,7 +2,10 @@ from typing import List
 
 import pandas as pd
 
-from mindsdb_sql.parser.ast import ASTNode
+from mindsdb_sql.parser.ast import (
+    Identifier, BinaryOperation, Last, Constant, ASTNode
+)
+from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
@@ -61,6 +64,18 @@ class QueryContextController:
             self._result_callback(l_query, context_name, query_str, data, columns_info)
 
         return query_out, callback
+
+    def remove_lasts(self, query):
+        def replace_lasts(node, **kwargs):
+
+            # find last in where
+            if isinstance(node, BinaryOperation):
+                if isinstance(node.args[0], Identifier) and isinstance(node.args[1], Last):
+                    # memorize node
+                    return BinaryOperation(op='=', args=[Constant(0), Constant(0)])
+
+        # find lasts
+        query_traversal(query, replace_lasts)
 
     def _result_callback(self, l_query: LastQuery,
                          context_name: str, query_str: str,

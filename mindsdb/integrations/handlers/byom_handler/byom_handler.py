@@ -13,6 +13,7 @@ import re
 import sys
 import shutil
 import pickle
+import tarfile
 import tempfile
 import traceback
 import subprocess
@@ -434,31 +435,39 @@ class ModelWrapperSafe:
         self.code = code
         modules = self.parse_requirements(modules_str)
 
+        self.config = Config()
+        self.is_cloud = Config().get('cloud', False)
+
         self.env_path = None
+        self.env_storage_path = None
         self.prepare_env(modules, engine_id, engine_version)
 
     def prepare_env(self, modules, engine_id, engine_version: int):
-        config = Config()
-
         try:
             import virtualenv
 
-            base_path = config.get('byom', {}).get('venv_path')
+            base_path = self.config.get('byom', {}).get('venv_path')
             if base_path is None:
                 # create in root path
-                base_path = Path(config.paths['root']) / 'venvs'
+                base_path = Path(self.config.paths['root']) / 'venvs'
 
             env_folder_name = f'env_{engine_id}'
             if isinstance(engine_version, int) and engine_version > 1:
                 env_folder_name = f'{env_folder_name}_{engine_version}'
-            self.env_path = base_path / env_folder_name
 
-            is_cloud = Config().get('cloud', False)
-            env_install_path = (
-                Path(tempfile.mkdtemp()) / env_folder_name if is_cloud
-                else self.env_path
-            )
-            pip_cmd = env_install_path / 'bin' / 'pip'
+            self.env_storage_path = base_path / env_folder_name
+            if self.is_cloud:
+                bese_env_path = Path(tempfile.gettempdir()) / 'mindsdb' / 'venv'
+                bese_env_path.mkdir(parents=True, exist_ok=True)
+                self.env_path = bese_env_path / env_folder_name
+                tar_path = self.env_storage_path.with_suffix('.tar')
+                if self.env_path.exists() is False and tar_path.exists() is True:
+                    with tarfile.open(tar_path) as tar:
+                        tar.extractall(path=bese_env_path)
+            else:
+                self.env_path = self.env_storage_path
+
+            pip_cmd = self.env_path / 'bin' / 'pip'
 
             self.python_path = self.env_path / 'bin' / 'python'
 
@@ -467,8 +476,8 @@ class ModelWrapperSafe:
                 return
 
             # create
-            virtualenv.cli_run(['-p', sys.executable, str(env_install_path)])
-            logger.info(f"Created new environment: {env_install_path}")
+            virtualenv.cli_run(['-p', sys.executable, str(self.env_path)])
+            logger.info(f"Created new environment: {self.env_path}")
 
             if len(modules) > 0:
                 self.install_modules(modules, pip_cmd=pip_cmd)
@@ -476,21 +485,35 @@ class ModelWrapperSafe:
             # DANGER !!! VENV MUST BE CREATED
             logger.info("Can't create virtual environment. venv module should be installed")
 
+            if self.is_cloud:
+                raise
+
             self.python_path = Path(sys.executable)
 
             # try to install modules everytime
             self.install_modules(modules, pip_cmd=pip_cmd)
 
         # fastest way to copy files if destination is NFS
-        if env_install_path != self.env_path:
+        if self.is_cloud and self.env_storage_path != self.env_path:
+            old_cwd = os.getcwd()
+            os.chdir(str(bese_env_path))
+            tar_path = self.env_path.with_suffix('.tar')
+            with tarfile.open(name=str(tar_path), mode='w') as tar:
+                tar.add(str(self.env_path.name))
+            os.chdir(old_cwd)
             subprocess.run(
-                ['cp', '-R', '--no-preserve=mode,ownership', str(env_install_path), str(self.env_path)],
+                ['cp', '-R', '--no-preserve=mode,ownership', str(tar_path), str(base_path / tar_path.name)],
                 check=True, shell=False
             )
+            tar_path.unlink()
 
     def remove_venv(self):
         if self.env_path is not None and self.env_path.exists():
             shutil.rmtree(str(self.env_path))
+
+        if self.is_cloud:
+            tar_path = self.env_storage_path.with_suffix('.tar')
+            tar_path.unlink()
 
     def parse_requirements(self, requirements):
         # get requirements from string

@@ -1,19 +1,13 @@
-import pandas as pd
-from typing import Dict
-
+from functools import reduce
 from openbb import obb
 
 from mindsdb.integrations.handlers.openbb_handler.openbb_tables import create_table_class
 from mindsdb.integrations.libs.api_handler import APIHandler
-from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-)
+from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
 
 logger = log.getLogger(__name__)
-from functools import reduce
+
 
 class OpenBBHandler(APIHandler):
     """A class for handling connections and interactions with the OpenBB Platform.
@@ -45,12 +39,12 @@ class OpenBBHandler(APIHandler):
 
             openbb_params = obb.coverage.command_model[cmd]["openbb"]["QueryParams"]
             openbb_data = obb.coverage.command_model[cmd]["openbb"]["Data"]
-            
+
             # Creates the default data retrieval function for the given command
             # e.g. obb.equity.price.historical, obb.equity.fa.income
-            # Note: Even though openbb_params just contains the standard fields that are 
+            # Note: Even though openbb_params just contains the standard fields that are
             # common across vendors users are able to select any of the fields from the vendor
-            # as well. However, some of them might have no effect on the data if the vendor 
+            # as well. However, some of them might have no effect on the data if the vendor
             # doesn't support it. Regardless, the endpoint won't crash.
             table_class = create_table_class(
                 params_metadata=openbb_params,
@@ -84,7 +78,6 @@ class OpenBBHandler(APIHandler):
                     provider=provider
                 )
                 self._register_table(f"{cmd.replace('.', '_')[1:]}_{provider}", table_class(self))
-
 
     def connect(self) -> bool:
         """Connects with OpenBB account through personal access token (PAT).

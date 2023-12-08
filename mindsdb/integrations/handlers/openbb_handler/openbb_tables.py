@@ -3,7 +3,6 @@ from mindsdb_sql.parser import ast
 from mindsdb.integrations.utilities.date_utils import parse_local_date
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, project_dataframe, filter_dataframe
 from mindsdb.integrations.utilities.sql_utils import sort_dataframe
-from mindsdb.integrations.utilities.utils import dict_to_yaml
 from mindsdb.utilities import log
 
 from typing import Dict, List, Union
@@ -54,11 +53,11 @@ def create_table_class(
             """
             conditions = extract_comparison_conditions(query.where)
             arg_params = self._get_params_from_conditions(conditions=conditions)
-    
+
             params = {}
             if provider is not None:
                 params['provider'] = provider
-            
+    
             filters = []
             mandatory_args_set = {key: False for key in mandatory_fields}
             columns_to_add = {}
@@ -67,14 +66,14 @@ def create_table_class(
             for op, arg1, arg2 in conditions:
                 if op == 'or':
                     raise NotImplementedError('OR is not supported')
-                
+
                 if arg1 in mandatory_fields:
                     mandatory_args_set[arg1] = True
 
                 if ('start_' + arg1 in params_metadata['fields']
                     and arg1 in response_columns and arg2 is not None
                         and "format" in response_metadata['fields'][arg1]):
-                    
+
                     if response_metadata['fields'][arg1]["format"] != 'date-time':
                         date = parse_local_date(arg2)
                         interval = arg_params.get('interval', '1d')
@@ -159,7 +158,7 @@ def create_table_class(
                     result = sort_dataframe(result, query.order_by)
 
                 return result
-            
+
             except AttributeError as e:
                 logger.info(f'Encountered error while executing OpenBB select: {str(e)}')
 
@@ -176,7 +175,7 @@ def create_table_class(
                 text += f"\n\nFor more information check {func_docs}"
 
                 raise Exception(f"{str(e)}\n\n{text}.") from e
-            
+
             except ValidationError as e:
                 logger.info(f'Encountered error while executing OpenBB select: {str(e)}')
 
@@ -200,10 +199,10 @@ def create_table_class(
                 #  TODO: This one doesn't work because it's taken care of from MindsDB side
                 if "Table not found" in str(e):
                     raise Exception(f"{str(e)}\n\nCheck if the method exists here: {func_docs}.\n\n  -  If it doesn't you may need to look for the parent module to check whether there's a typo in the naming.\n- If it does you may need to install a new extension to the OpenBB Platform, and you can see what is available at https://my.openbb.co/app/platform/extensions.") from e
-                
+
                 if "Missing credential" in str(e):
                     raise Exception(f"{str(e)}\n\nGo to https://my.openbb.co/app/platform/api-keys to set this API key, for free.") from e
-                
+
                 # Catch all other errors
                 # Create docstring for the current function
                 text = "Docstring:"

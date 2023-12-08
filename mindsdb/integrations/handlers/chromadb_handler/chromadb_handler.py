@@ -324,6 +324,14 @@ class ChromaDBHandler(VectorStoreHandler):
 
         data.dropna(axis=1, inplace=True)
 
+        # ensure metadata is a dict, convert to dict if it is a string
+        if data.get(TableField.METADATA.value) is not None:
+            data[TableField.METADATA.value] = data[TableField.METADATA.value].apply(
+                lambda x: x if isinstance(x, dict) else eval(x)
+            )
+
+        # convert to dict
+
         data = data.to_dict(orient="list")
 
         collection.upsert(

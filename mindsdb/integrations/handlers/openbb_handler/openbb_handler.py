@@ -1,5 +1,4 @@
 from functools import reduce
-from functools import reduce
 from openbb import obb
 
 from mindsdb.integrations.handlers.openbb_handler.openbb_tables import create_table_class

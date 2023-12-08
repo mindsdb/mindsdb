@@ -148,7 +148,6 @@ def create_table_class(
                 if isinstance(result.index, pd.DatetimeIndex):
                     result.reset_index(inplace=True)
 
-                # test this
                 if query.order_by:
                     result = sort_dataframe(result, query.order_by)
 

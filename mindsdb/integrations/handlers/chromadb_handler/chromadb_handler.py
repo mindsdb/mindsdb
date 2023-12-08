@@ -1,3 +1,4 @@
+import sys
 from collections import OrderedDict
 from typing import List, Optional
 
@@ -28,15 +29,15 @@ def get_chromadb():
     see https://docs.trychroma.com/troubleshooting#sqlite
     """
 
-    try:
-        import sys
-
-        __import__("pysqlite3")
-        sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
-    except ImportError:
-        logger.warn(
-            "[Chromadb-handler] pysqlite3 is not installed, this is not a problem for local usage"
-        )  # noqa: E501
+    # if we are using python 3.10 or above, we don't need pysqlite
+    if sys.hexversion < 0x30A0000:
+        try:
+            __import__("pysqlite3")
+            sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+        except ImportError:
+            logger.warn(
+                "Python version < 3.10 and pysqlite3 is not installed. ChromaDB may not work without solving one of these: https://docs.trychroma.com/troubleshooting#sqlite"
+            )  # noqa: E501
 
     try:
         import chromadb

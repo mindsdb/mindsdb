@@ -9,32 +9,30 @@ on:
 
 jobs:
 
-  build_amis_packer:
-   #TODO: in the future migrate to https://github.com/hashicorp/packer-github-actions, when we can send config as an url
-      runs-on: ubuntu-latest
-      steps:
-      - uses: actions/checkout@v3.5.3
-      # Get clean environment variables via https://github.com/marketplace/actions/github-environment-variables-action
-      - uses: FranzDiebold/github-env-vars-action@v2
-      - name: Deploy AMI's
-        env:
-          ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
-          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        #NOTE: Send variables to packer build command or var file, because if using env in conf they are not vissible to build
-        run: |
-          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
-          sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
-          sudo apt-get install packer
-          git clone https://${ACCESS_KEY}@github.com/mindsdb/mindsdb_gateway
-          cd mindsdb_gateway/deployments
-          echo "Building AMIs for ${{ env.CI_REF_NAME }}"
-          sudo packer build -var "mindsdb_version=${{ env.CI_REF_NAME }}" -var "acces_key=$ACCESS_KEY" -var "aws_acces_key=$AWS_ACCESS_KEY" -var "aws_secret_key=$AWS_SECRET_KEY" -parallel-builds=2 config.json
+  deploy_to_pypi:
+    runs-on: [self-hosted, dev]
+    if: github.actor != 'mindsdbadmin'
+    steps:
+    - uses: actions/checkout@v3.5.3
+    - name: Set up Python
+      uses: actions/setup-python@v4.7.0
+      with:
+        python-version: ${{ vars.CI_PYTHON_VERSION }}
+    - name: Install dependencies
+      run: |
+        pip install -r requirements/requirements-dev.txt
+    - name: Build and publish
+      env:
+        TWINE_USERNAME:  __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+      run: |
+        python setup.py sdist
+        twine upload dist/*
 
   deploy_to_dockerhub:
       # Build our docker images based on our bake file
       runs-on: [self-hosted, dev]
-      needs: [build_amis_packer]
+      if: github.actor != 'mindsdbadmin'
       steps:
         - uses: actions/checkout@v2
         # Get clean environment variables via https://github.com/marketplace/actions/github-environment-variables-action

@@ -7,9 +7,30 @@ on:
 
 jobs:
 
+  deploy_to_pypi:
+    runs-on: [self-hosted, dev]
+    if: github.actor != 'mindsdbadmin'
+    steps:
+    - uses: actions/checkout@v3.5.3
+    - name: Set up Python
+      uses: actions/setup-python@v4.7.0
+      with:
+        python-version: ${{ vars.CI_PYTHON_VERSION }}
+    - name: Install dependencies
+      run: |
+        pip install -r requirements/requirements-dev.txt
+    - name: Build and publish
+      env:
+        TWINE_USERNAME:  __token__
+        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_PASSWORD }}
+      run: |
+        python setup.py sdist
+        twine upload --repository testpypi dist/*
+
   deploy_to_dockerhub:
       # Build our docker images based on our bake file
       runs-on: [self-hosted, dev]
+      if: github.actor != 'mindsdbadmin'
       steps:
         - uses: actions/checkout@v2
         # Get clean environment variables via https://github.com/marketplace/actions/github-environment-variables-action

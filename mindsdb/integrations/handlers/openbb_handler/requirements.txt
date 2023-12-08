@@ -1,1 +1,2 @@
 openbb==4.0.0b1
+pydantic==2.5.1

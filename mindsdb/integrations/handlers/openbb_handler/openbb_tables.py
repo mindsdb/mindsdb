@@ -57,7 +57,7 @@ def create_table_class(
             params = {}
             if provider is not None:
                 params['provider'] = provider
-    
+
             filters = []
             mandatory_args_set = {key: False for key in mandatory_fields}
             columns_to_add = {}

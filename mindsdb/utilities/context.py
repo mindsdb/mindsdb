@@ -28,7 +28,7 @@ class Context:
     def __getattr__(self, name: str) -> Any:
         storage = self._storage.get({})
         if name not in storage:
-            raise AttributeError(name)
+            return None
         return storage[name]
 
     def __setattr__(self, name: str, value: Any) -> None:

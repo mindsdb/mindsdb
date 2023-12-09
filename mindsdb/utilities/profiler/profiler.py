@@ -97,13 +97,14 @@ def disable():
 
 
 def profiling_enabled():
-    return ctx.profiling['enabled'] is True
+    return ctx.profiling and ctx.profiling['enabled'] is True
 
 
 def start(tag):
     """ add new node to profiling data
     """
-    ctx.profiling['level'] += 1
+    if ctx.profiling:
+        ctx.profiling['level'] += 1
     if profiling_enabled() is True:
         start_node(tag)
 
@@ -111,7 +112,8 @@ def start(tag):
 def stop():
     """ finalize current node and move pointer up
     """
-    ctx.profiling['level'] -= 1
+    if ctx.profiling:
+        ctx.profiling['level'] -= 1
     if profiling_enabled() is True:
         stop_current_node()
 

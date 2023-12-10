@@ -127,3 +127,15 @@ FROM
 WHERE
     user_input = 'python';
 ```
+
+## Features Implemented
+
+- [x] Question Answering
+- [x] Placeholder/Template
+- [x] Embeddings
+- [x] User Input Prompts
+
+## TODOs
+
+- [ ] Conversational chat prompts
+- [ ] Moderation of Prompts

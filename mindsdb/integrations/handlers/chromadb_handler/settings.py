@@ -35,7 +35,7 @@ class ChromaHandlerConfig(BaseModel):
                     raise ValueError(f"Unexpected parameter '{key}'.")
         return values
 
-    @root_validator(allow_reuse=True)
+    @root_validator(allow_reuse=True, skip_on_failure=True)
     def check_config(cls, values):
         """Check if config is valid."""
 

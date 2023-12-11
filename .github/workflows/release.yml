@@ -2,7 +2,7 @@ name: MindsDB Releases
 
 on:
   release:
-    types: [released, prereleased]
+    types: [published]
     paths-ignore:
       - 'docs/**'
       - 'README.md'
@@ -22,7 +22,7 @@ jobs:
         python-version: ${{ vars.CI_PYTHON_VERSION }}
     - name: Check Version
       run: |
-        PYTHONPATH=./ python tests/scripts/check_version.py ${{ env.CI_REF_NAME }} ${{ github.event_name }}
+        PYTHONPATH=./ python tests/scripts/check_version.py ${{ env.CI_REF_NAME }} ${{ github.event.release.prerelease }}
 
 
   deploy_to_pypi:

@@ -1,3 +1,5 @@
+import msal  # noqa, required by MSGraphAPIAuthManager
+
 from .ms_graph_api_teams_client import MSGraphAPITeamsClient
 from mindsdb.integrations.handlers.utilities.auth_utilities import MSGraphAPIAuthManager
 

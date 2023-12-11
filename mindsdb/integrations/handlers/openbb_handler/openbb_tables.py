@@ -1,3 +1,4 @@
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.utilities.date_utils import parse_local_date
@@ -43,20 +44,6 @@ def create_table_class(
                     params[arg1] = arg2
 
             return params
-
-        def _select_dataframe(self, query: ast.Select, df: pd.DataFrame) -> pd.DataFrame:
-            """Selects data from a DataFrame using DuckDB"""
-            df = df
-            openbb_table = query.from_table.parts[-1]
-            query.from_table = ast.Identifier('df')
-            query_str = query.to_string()
-            # Need to get rid of references to the OpenBB table (e.g. crypto_price_historical.close -> close)
-            query_str = query_str.replace(f'{openbb_table}.', '')
-            # Get rid of `` wrapping identifiers
-            query_str = query_str.replace('`', '')
-            duckdb_query_result = duckdb.query(query_str)
-            result = duckdb_query_result.to_df()
-            return result
 
         def select(self, query: ast.Select) -> pd.DataFrame:
             """Selects data from the OpenBB Platform and returns it as a pandas DataFrame.
@@ -179,7 +166,7 @@ def create_table_class(
                         target = full_target.args[0].parts[-1].lower()
                     else:
                         # Could be a window function or other operation we can't handle. Defer to DuckDB.
-                        return self._select_dataframe(query, result)
+                        return query_df(result, query)
                     if target not in columns:
                         raise ValueError(f"Unknown column '{target}' in 'field list'")
 
@@ -188,7 +175,7 @@ def create_table_class(
                     result = project_dataframe(result, query.targets, columns)
                 except NotImplementedError:
                     # Target contains a function that we need DuckDB to resolve.
-                    return self._select_dataframe(query, result)
+                    return query_df(result, query)
                 return result
 
             except AttributeError as e:

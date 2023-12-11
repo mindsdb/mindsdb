@@ -9,7 +9,6 @@ from mindsdb.utilities import log
 from typing import Dict, List, Union
 from pydantic import ValidationError
 
-import duckdb
 import pandas as pd
 
 logger = log.getLogger(__name__)

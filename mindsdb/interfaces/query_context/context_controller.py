@@ -173,7 +173,10 @@ class QueryContextController:
         """
         returns current context name
         """
-        context_stack = ctx.context_stack or []
+        try:
+            context_stack = ctx.context_stack or []
+        except AttributeError:
+            context_stack = []
         if len(context_stack) > 0:
             return context_stack[-1]
         else:
@@ -195,7 +198,10 @@ class QueryContextController:
         """
         Removed current context (defined by object type and id) and restored previous one
         """
-        context_stack = ctx.context_stack or []
+        try:
+            context_stack = ctx.context_stack or []
+        except AttributeError:
+            context_stack = []
         if len(context_stack) == 0:
             return
         context_name = self.gen_context_name(object_type, object_id)

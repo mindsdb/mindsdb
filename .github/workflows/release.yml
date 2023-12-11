@@ -22,7 +22,7 @@ jobs:
         python-version: ${{ vars.CI_PYTHON_VERSION }}
     - name: Check Version
       run: |
-        python tests/scripts/check_version.py ${{ env.CI_REF_NAME }} ${{ github.event_name }}
+        PYTHONPATH=./ python tests/scripts/check_version.py ${{ env.CI_REF_NAME }} ${{ github.event_name }}
 
 
   deploy_to_pypi:

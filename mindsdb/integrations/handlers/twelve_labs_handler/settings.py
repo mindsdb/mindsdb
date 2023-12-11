@@ -29,7 +29,7 @@ class TwelveLabsHandlerConfig(BaseModel):
 
         ParameterValidationUtilities.validate_parameter_spelling(cls, values)
 
-    @root_validator(allow_reuse=True)
+    @root_validator(allow_reuse=True, skip_on_failure=True)
     def check_for_video_urls_or_video_files(cls, values):
         """Check if video_urls or video_files have been provided."""
 
@@ -45,7 +45,7 @@ class TwelveLabsHandlerConfig(BaseModel):
 
         return values
 
-    @root_validator(allow_reuse=True)
+    @root_validator(allow_reuse=True, skip_on_failure=True)
     def check_for_task(cls, values):
         """Check if task has been provided along with the other relevant parameters for each task."""
 

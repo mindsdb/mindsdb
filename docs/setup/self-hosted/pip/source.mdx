@@ -111,10 +111,6 @@ dependencies. Make sure to allocate min. 3 GB of disk space to avoid the
 Before anything, activate your virtual environment where your MindsDB is
 installed. It is to avoid the `No module named mindsdb` error.
 
-The `ImportError: No module named {dependency name}` error may occur if you skip
-step 3 of the [Installation](#installation) section. Make sure you install all
-of the prerequisites.
-
 If you encounter the `This site can’t be reached. 127.0.0.1 refused to connect.`
 error, please check the MindsDB server console to see if the server is still in
 the `starting` phase. But if the server has started and you still get this
@@ -126,8 +122,8 @@ error, please report it on our
 If you get the `ImportError: failed to find libmagic` error, you should install the `libmagic` manually by running one of the commands below:
 
 ```bash
-pip install python-magic-bin
-brew install libmagic
+pip install python-magic-bin  # for linux and windows
+brew install libmagic  # for macOS
 ```
 
 ## Further Issues?

@@ -60,7 +60,7 @@ class WriterHandlerParameters(RAGBaseParameters):
         arbitrary_types_allowed = True
         use_enum_values = True
 
-    @validator("generation_evaluation_metrics")
+    @validator("generation_evaluation_metrics", allow_reuse=True)
     def generation_evaluation_metrics_must_be_supported(cls, v):
         for metric in v:
             if metric not in GENERATION_METRICS:
@@ -69,7 +69,7 @@ class WriterHandlerParameters(RAGBaseParameters):
                 )
         return v
 
-    @validator("retrieval_evaluation_metrics")
+    @validator("retrieval_evaluation_metrics", allow_reuse=True)
     def retrieval_evaluation_metrics_must_be_supported(cls, v):
         for metric in v:
             if metric not in GENERATION_METRICS:
@@ -78,7 +78,7 @@ class WriterHandlerParameters(RAGBaseParameters):
                 )
         return v
 
-    @validator("evaluation_type")
+    @validator("evaluation_type", allow_reuse=True)
     def evaluation_type_must_be_supported(cls, v):
         if v not in SUPPORTED_EVALUATION_TYPES:
             raise ValueError(

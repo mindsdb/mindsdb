@@ -2,7 +2,7 @@ import pandas as pd
 from typing import Text, List
 from mindsdb_sql.parser import ast
 from abc import ABC, abstractmethod
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
+from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, filter_dataframe
 
 
 class BaseQueryParser(ABC):
@@ -60,10 +60,4 @@ class BaseQueryExecutor():
         Executes the where clause of the query.
         """
         if len(self.where_conditions) > 0:
-            for condition in self.where_conditions:
-                column = condition[1]
-                operator = '==' if condition[0] == '=' else condition[0]
-                value = f"'{condition[2]}'" if type(condition[2]) == str else condition[2]
-
-                query = f"{column} {operator} {value}"
-                self.df.query(query, inplace=True)
+            self.df = filter_dataframe(self.df, self.where_conditions)

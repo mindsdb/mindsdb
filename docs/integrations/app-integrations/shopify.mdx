@@ -26,7 +26,10 @@ Optionally, if you want to access customer reviews, provide the following parame
 - `yotpo_access_token`: a token needed to access customer reviews via the Yotpo Product Reviews app.
 
 <Tip>
-If you want to access the customer reviews data, install the [Yotpo Product Reviews](https://apps.shopify.com/yotpo-social-reviews) app in your Shopify account. To generate the `yotpo_app_key` and `yotpo_access_token` tokens, refer to [this](https://support.yotpo.com/docs/finding-your-yotpo-app-key-and-secret-key) and [this](https://apidocs.yotpo.com/reference/yotpo-authentication).
+If you want to query customer reviews, use the [Yotpo Product Reviews](https://apps.shopify.com/yotpo-social-reviews) app available in Shopify. Here are the steps to follow:
+1. Install the [Yotpo Product Reviews](https://apps.shopify.com/yotpo-social-reviews) app for your Shopify store.
+2. Generate `yotpo_app_key` following [this instruction](https://support.yotpo.com/docs/finding-your-yotpo-app-key-and-secret-key) for retrieving your app key. Learn more about [Yotpo authentication here](https://apidocs.yotpo.com/reference/yotpo-authentication).
+3. Generate `yotpo_access_token` following [this instruction](https://develop.yotpo.com/reference/generate-a-token).
 </Tip>
 
 To connect your Shopify account to MindsDB, you must first create a new handler instance. You can do it by the following query:

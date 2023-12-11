@@ -1,13 +1,6 @@
 {
     "config_version":"1.4",
     "storage_dir": "/root/mdb_storage",
-    "log": {
-        "level": {
-            "console": "ERROR",
-            "file": "WARNING",
-            "db": "WARNING"
-        }
-    },
     "debug": false,
     "integrations": {},
     "api": {

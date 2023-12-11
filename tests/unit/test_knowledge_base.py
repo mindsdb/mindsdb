@@ -68,14 +68,14 @@ class TestKnowledgeBase(BaseExecutorTest):
             }
         )
 
-        self.set_handler(mock_handler, "pg", tables={"df": df})
+        self.save_file("df", df)
 
         # create the table
         vectordatabase_table_name = "test_table"
         sql = f"""
             CREATE TABLE chroma_test.{vectordatabase_table_name}
             (
-                SELECT * FROM pg.df
+                SELECT * FROM files.df
             )
         """
         self.run_sql(sql)
@@ -267,8 +267,7 @@ class TestKnowledgeBase(BaseExecutorTest):
         df = self.run_sql(sql)
         assert df.shape[0] == 1
 
-    @pytest.mark.skip(reason="Not implemented")
-    def insert_into_kb(self):
+    def test_insert_into_kb(self):
         # create the knowledge base
         sql = f"""
             CREATE KNOWLEDGE BASE test_kb
@@ -280,13 +279,14 @@ class TestKnowledgeBase(BaseExecutorTest):
 
         # insert into the knowledge base using values
         sql = """
-            INSERT INTO test_kb
-            VALUES (
-                'id4',
-                'content4',
-                '[4, 5, 6]',
-                '{"d": 4}'
-            )
+                INSERT INTO test_kb (id, content, embeddings, metadata)
+                VALUES (
+                    'id4',
+                    'content4',
+                    '[4, 5, 6]',
+                    '{"d": 4}'
+                )
+
         """
         self.run_sql(sql)
 
@@ -304,7 +304,7 @@ class TestKnowledgeBase(BaseExecutorTest):
             INSERT INTO test_kb
             SELECT
                 content, metadata
-            FROM pg.df
+            FROM files.df
         """
         self.run_sql(sql)
 
@@ -315,7 +315,7 @@ class TestKnowledgeBase(BaseExecutorTest):
         """
 
         df = self.run_sql(sql)
-        assert df.shape[0] == 6
+        assert df.shape[0] == 7
 
     @pytest.mark.skip(reason="Not implemented")
     def test_update_kb(self):

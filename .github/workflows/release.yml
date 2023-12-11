@@ -13,6 +13,7 @@ jobs:
     runs-on: [self-hosted, dev]
     if: github.actor != 'mindsdbadmin'
     steps:
+    - uses: actions/checkout@v3.5.3
     # Get clean environment variables via https://github.com/marketplace/actions/github-environment-variables-action
     - uses: FranzDiebold/github-env-vars-action@v2
     - name: Set up Python

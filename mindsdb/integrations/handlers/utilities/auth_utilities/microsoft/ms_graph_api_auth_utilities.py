@@ -4,7 +4,7 @@ from flask import request
 import msal
 from ..exceptions import AuthException
 
-from mindsdb.integrations.handlers.utilities.api_utilities import MSGraphAPIClient
+from mindsdb.integrations.handlers.utilities.api_utilities import MSGraphAPIBaseClient
 
 from mindsdb.utilities import log
 
@@ -85,7 +85,7 @@ class MSGraphAPIAuthManager:
         return response
     
     def _check_access_token_validity(self, access_token: str):
-        msal_graph_api_client = MSGraphAPIClient(access_token)
+        msal_graph_api_client = MSGraphAPIBaseClient(access_token)
         try:
             msal_graph_api_client.get_user_profile()
             return True

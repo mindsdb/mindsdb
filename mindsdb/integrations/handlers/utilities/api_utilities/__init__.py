@@ -1,1 +1,1 @@
-from .microsoft import MSGraphAPIClient
+from .microsoft import MSGraphAPIBaseClient

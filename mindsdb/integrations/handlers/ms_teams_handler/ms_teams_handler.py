@@ -1,4 +1,4 @@
-from mindsdb.integrations.handlers.utilities.api_utilities import MSGraphAPIClient
+from .ms_graph_api_teams_client import MSGraphAPITeamsClient
 from mindsdb.integrations.handlers.utilities.auth_utilities import MSGraphAPIAuthManager
 
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import ChannelsTable, ChannelMessagesTable, ChatsTable, ChatMessagesTable
@@ -79,7 +79,7 @@ class MSTeamsHandler(APIChatHandler):
 
         access_token = ms_graph_api_auth_manager.get_access_token()
 
-        self.connection = MSGraphAPIClient(access_token)
+        self.connection = MSGraphAPITeamsClient(access_token)
 
         self.is_connected = True
 

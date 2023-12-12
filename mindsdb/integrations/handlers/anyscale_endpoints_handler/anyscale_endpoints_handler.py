@@ -8,15 +8,12 @@ import pandas as pd
 
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
 from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE
+from mindsdb.integrations.utilities.handler_utils import get_api_key
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
-# TODO: retrieve these from API once possible
-CHAT_MODELS = (
-    'meta-llama/Llama-2-7b-chat-hf',
-    'meta-llama/Llama-2-13b-chat-hf',
-    'meta-llama/Llama-2-70b-chat-hf',
-    'codellama/CodeLlama-34b-Instruct-hf',
-)
 ANYSCALE_API_BASE = 'https://api.endpoints.anyscale.com/v1'
 
 
@@ -25,10 +22,10 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.all_models = list(CHAT_MODELS)
-        self.chat_completion_models = CHAT_MODELS
-        self.supported_ft_models = CHAT_MODELS  # base models compatible with fine-tuning
-        self.default_model = CHAT_MODELS[0]
+        self.all_models = []
+        self.chat_completion_models = []
+        self.supported_ft_models = []
+        self.default_model = 'meta-llama/Llama-2-7b-chat-hf'
         self.base_api = ANYSCALE_API_BASE
         self.default_mode = 'default'  # can also be 'conversational' or 'conversational-full'
         self.supported_modes = ['default', 'conversational', 'conversational-full']
@@ -50,6 +47,8 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     def create(self, target, args=None, **kwargs):
         with self._anyscale_base_api():
+            self._set_models(args['using'])
+
             # load fine-tuned models, then hand over
             _args = self.model_storage.json_get('args')
             base_models = self.chat_completion_models
@@ -58,6 +57,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         with self._anyscale_base_api():
+            self._set_models(args['using'])
             # load fine-tuned models, then hand over
             _args = self.model_storage.json_get('args')
             base_models = self.chat_completion_models
@@ -66,6 +66,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         with self._anyscale_base_api():
+            self._set_models(args['using'])
             super().finetune(df, args)
             # rewrite chat_completion_models to include the newly fine-tuned model
             args = self.model_storage.json_get('args')
@@ -87,6 +88,13 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         else:
             tables = ['args', 'metadata']
             return pd.DataFrame(tables, columns=['tables'])
+
+    def _set_models(self, args):
+        self.all_models = [m['id'] for m in openai.Model.list(
+            api_key=get_api_key('openai', args, self.engine_storage),
+            api_base=ANYSCALE_API_BASE)['data']]
+        self.chat_completion_models = self.all_models
+        self.supported_ft_models = self.all_models  # base models compatible with fine-tuning
 
     @staticmethod
     def _check_ft_cols(df, cols):
@@ -126,12 +134,12 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         self._validate_jsonl(os.path.join(temp_storage_path, file_names['val']))
         return file_names
 
-    @staticmethod
-    def _get_ft_model_type(model_name: str):
-        for base_model in CHAT_MODELS:
+    def _get_ft_model_type(self, model_name: str):
+        for base_model in self.chat_completion_models:
             if base_model.lower() in model_name.lower():
                 return base_model
-        raise Exception(f'Model {model_name} cannot be finetuned.')
+        logger.warning(f'Cannot recognize model {model_name}. Finetuning may fail.')
+        return model_name.lower()
 
     @staticmethod
     def _add_extra_ft_params(ft_params, using_args):

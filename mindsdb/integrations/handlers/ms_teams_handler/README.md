@@ -154,7 +154,9 @@ Note: The chat bot will assume the identity of the user who signed in with their
 
 ### Step 2: Create an [Agent](https://docs.mindsdb.com/agents/agent)
 
-An agent is created by combining a Model (conversational) with Skills.
+An agent is created by combining a [Model](https://docs.mindsdb.com/model-types) (conversational) with optional Skills.
+
+Here, we will create an agent without any skills, however, it is possilbe to create agents with skills such as the ability to answer questions from a knowledge base.
 
 #### Step 2.1: Create a Conversational Model
 Create a conversational model using either the `LangChain` or `LlamaIndex` integrations. Given below is an example of a conversational model created using the `LlamaIndex` integration:
@@ -176,55 +178,14 @@ USING
   assistant_column = 'answer';
 ~~~~
 
-#### Step 2.2: Create a Skill
-
-Let's create a skill of the type `knowledge_base`. This will require us to first create a Knowledge Base.
-
-##### Step 2.2.1: Create a Knowledge Base
-
-A knowledge base also will require an embedding model to be attached. Let's create an embedding model using the `OpenAI` integration:
-
-~~~~sql
-CREATE MODEL openai_embedding_model
-PREDICT embeddings
-USING
-   engine = 'openai_engine',
-   mode='embedding',
-   model_name='text-embedding-ada-002',
-   question_column = 'content';
-~~~~
-
-Now, we can use this model to create a knowledge base:
-
-~~~~sql
-CREATE KNOWLEDGE BASE chatbot_knowledge_base
-USING
-   model = openai_embedding_model;
-~~~~
-
-Note: The above statement will create a knowledge base with the default empty ChromaDB database. Of course, this can be tweaked to include any information that you want your agent (and chat bot) to be armed with.
-
-##### Step 2.2.2: Create a Skill using the Knowledge Base
-
-Now, let's create a skill using this knowledge base:
-
-~~~~sql
-CREATE SKILL kb_skill
-USING
-    type = 'chatbot_knowledge_base',
-    source = 'my_knowledge_base',
-    description = 'My data';
-~~~~
-
-#### Step 2.2.3: Create an Agent using the Conversational Model and the Skill
+#### Step 2.2: Create an Agent using the Conversational Model
 
 Let's create an agent using the conversational model and the skill created above:
 
 ~~~~sql
-CREATE AGENT kb_agent_1
+CREATE AGENT convo_agent
 USING
     model = 'llama_index_convo_model',
-    skills = ['kb_skill'];
 ~~~~
 
 ### Step 3: Create a [Chatbot](https://docs.mindsdb.com/agents/chatbot)
@@ -235,7 +196,7 @@ Finally, create a chatbot using the agent and the Microsoft Teams data source cr
 CREATE CHATBOT teams_chatbot
 USING
     database = 'teams_datasource',
-    agent = 'kb_agent',
+    agent = 'convo_agent',
     enable_dms = true
 ~~~~
 

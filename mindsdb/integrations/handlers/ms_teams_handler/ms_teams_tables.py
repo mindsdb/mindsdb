@@ -3,7 +3,6 @@ from typing import Text, List, Dict, Any
 
 from mindsdb.utilities import log
 from mindsdb_sql.parser import ast
-from mindsdb_sql.parser.ast import ASTNode
 from mindsdb.integrations.libs.api_handler import APITable
 
 from mindsdb.integrations.handlers.ms_teams_handler.settings import ms_teams_handler_config
@@ -294,7 +293,7 @@ class ChatMessagesTable(APITable):
         The Microsoft Chat Message Replies Table implementation.
         """
         pass
-    
+
 class ChannelsTable(APITable):
     """
     The Microsoft Channels Table implementation.

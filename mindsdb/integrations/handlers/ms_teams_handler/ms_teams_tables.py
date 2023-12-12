@@ -14,6 +14,287 @@ from mindsdb.integrations.handlers.utilities.query_utilities.select_query_utilit
 logger = log.getLogger(__name__)
 
 
+class ChatsTable(APITable):
+    """
+    The Microsoft Teams Chats Table implementation.
+    """
+    
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """
+        Pulls data from the "GET /chats" and "GET /chats/{chat_id} Microsoft Graph API endpoints.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query
+
+        Returns
+        -------
+        pd.DataFrame
+            Microsoft Teams Chats matching the query.
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported target (column).
+
+        NotImplementedError
+            If the query contains an unsupported condition.
+        """
+
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'chats',
+            self.get_columns()
+        )
+
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        id = None
+        for op, arg1, arg2 in where_conditions:
+            if arg1 == 'id':
+                if op == "=":
+                    id = arg2
+                else:
+                    raise NotImplementedError("Only '=' operator is supported for id column.")
+                
+        if id:
+            chats_df = pd.json_normalize(self.get_chats(id), sep='_')
+            where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id']]
+        else:
+            chats_df = pd.json_normalize(self.get_chats(), sep='_')
+
+        select_statement_executor = SELECTQueryExecutor(
+            chats_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions,
+            result_limit if query.limit else None
+        )
+
+        chats_df = select_statement_executor.execute_query()
+
+        return chats_df
+    
+    def get_chats(self, chat_id = None) -> List[Dict[Text, Any]]:
+        """
+        Calls the API client to get the chats from the Microsoft Graph API.
+
+        Parameters
+        ----------
+        chat_id: Text
+            The chat id to get the chat from.
+
+        Returns
+        -------
+        List[Dict[Text, Any]]
+            The chats from the Microsoft Graph API.
+        """
+
+        api_client = self.handler.connect()
+
+        if chat_id:
+            chats = [api_client.get_chat(chat_id)]
+        else:
+            chats = api_client.get_chats()
+
+        for chat in chats:
+            last_message_preview = chat.get("lastMessagePreview")
+
+            # keep only the lastMessagePreview_id and lastMessagePreview_createdDateTime columns
+            if last_message_preview:
+                chat["lastMessagePreview_id"] = last_message_preview.get("id")
+                chat["lastMessagePreview_createdDateTime"] = last_message_preview.get("createdDateTime")
+                del chat["lastMessagePreview"]
+                del chat["lastMessagePreview@odata.context"]
+
+        return chats
+
+    def get_columns(self) -> List[Text]:
+        """
+        Returns the columns of the Chats Table.
+
+        Returns
+        -------
+        List[Text]
+            The columns of the Chats Table.
+        """
+
+        return ms_teams_handler_config.CHATS_TABLE_COLUMNS
+    
+class ChatMessagesTable(APITable):
+    """
+    The Microsoft Teams Chat Messages Table implementation.
+    """
+    
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """
+        Pulls data from the "GET /chats/{chat_id}/messages" and "GET /chats/{chat_id}/messages/{message_id}" Microsoft Graph API endpoints.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query.
+
+        Returns
+        -------
+        pd.DataFrame
+            Microsoft Teams Chat Messages matching the query.
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported target (column).
+
+        NotImplementedError
+            If the query contains an unsupported condition.
+        """
+
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'chat_messages',
+            self.get_columns()
+        )
+
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        chat_id, message_id = None, None
+        for op, arg1, arg2 in where_conditions:
+            if arg1 == 'id':
+                if op == "=":
+                    message_id = arg2
+                else:
+                    raise NotImplementedError("Only '=' operator is supported for id column.")
+                
+            if arg1 == 'chatId':
+                if op == "=":
+                    chat_id = arg2
+                else:
+                    raise NotImplementedError("Only '=' operator is supported for chatId column.")
+                
+        if message_id and chat_id:
+            messages_df = pd.json_normalize(self.get_messages(chat_id, message_id), sep='_')
+            where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id', 'chatId']]
+        else:
+            messages_df = pd.json_normalize(self.get_messages(chat_id), sep='_')
+
+        select_statement_executor = SELECTQueryExecutor(
+            messages_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions,
+            result_limit if query.limit else None
+        )
+
+        messages_df = select_statement_executor.execute_query()
+
+        return messages_df
+    
+    def get_messages(self, chat_id = None, message_id = None) -> List[Dict[Text, Any]]:
+        """
+        Calls the API client to get the messages from the Microsoft Graph API.
+        If all parameters are None, it will return all the messages from all the chats.
+        If only the chat_id is given, it will return all the messages from that chat.
+
+        Parameters
+        ----------
+        chat_id: Text
+            The chat id to get the messages from.
+
+        message_id: Text
+            The message id to get the message from.
+
+        Returns
+        -------
+        List[Dict[Text, Any]]
+            The messages from the Microsoft Graph API.
+        """
+
+        api_client = self.handler.connect()
+
+        if message_id and chat_id:
+            return [api_client.get_chat_message(chat_id, message_id)]
+        elif chat_id:
+            return api_client.get_chat_messages(chat_id)
+        else:
+            return api_client.get_all_chat_messages()
+
+    def insert(self, query: ast.Insert) -> None:
+        """
+        Inserts data into the "POST /chats/{chat_id}/messages" Microsoft Graph API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Insert
+           Given SQL INSERT query.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        UnsupportedColumnException
+            If the query contains an unsupported column.
+
+        MandatoryColumnException
+            If the query is missing a mandatory column.
+
+        ColumnCountMismatchException
+            If the number of columns does not match the number of values.
+        """
+
+        insert_statement_parser = INSERTQueryParser(
+            query,
+            supported_columns=["chatId", "subject", "body_content"],
+            mandatory_columns=["chatId", "body_content"],
+        )
+
+        messages_to_send = insert_statement_parser.parse_query()
+
+        self.send_messages(messages_to_send)
+
+    def send_messages(self, messages_to_send: List[Dict[Text, Any]]) -> None:
+        """
+        Calls the API client to send the messages to the Microsoft Graph API.
+
+        Parameters
+        ----------
+        messages_to_send: List[Dict[Text, Any]]
+            The messages to send to the Microsoft Graph API.
+
+        Returns
+        -------
+        None
+        """
+
+        api_client = self.handler.connect()
+
+        for message in messages_to_send:
+            api_client.send_chat_message(
+                chat_id=message["chatId"],
+                message=message["body_content"],
+                subject=message.get("subject")
+            )
+
+    def get_columns(self) -> List[Text]:
+        """
+        Returns the columns of the Chat Messages Table.
+
+        Returns
+        -------
+        List[Text]
+            The columns of the Chat Messages Table.
+        """
+
+        return ms_teams_handler_config.CHAT_MESSAGES_TABLE_COLUMNS
+
+    class ChatMessageRepliesTable(APITable):
+        """
+        The Microsoft Chat Message Replies Table implementation.
+        """
+        pass
+    
 class ChannelsTable(APITable):
     """
     The Microsoft Channels Table implementation.
@@ -117,7 +398,7 @@ class ChannelsTable(APITable):
         List[Text]
             The columns of the Channels Table.
         """
-        
+
         return ms_teams_handler_config.CHANNELS_TABLE_COLUMNS
 
 class ChannelMessagesTable(APITable):
@@ -272,6 +553,7 @@ class ChannelMessagesTable(APITable):
         """
 
         api_client = self.handler.connect()
+
         for message in messages_to_send:
             api_client.send_channel_message(
                 group_id=message["channelIdentity_teamId"],
@@ -297,268 +579,3 @@ class ChannelMessageRepliesTable(APITable):
     The Microsoft Teams Channel Message Replies Table implementation.
     """
     pass
-    
-class ChatsTable(APITable):
-    """
-    The Microsoft Chats Table implementation.
-    """
-    
-    def select(self, query: ast.Select) -> pd.DataFrame:
-        """
-        Pulls data from the "GET /chats" and "GET /chats/{chat_id} Microsoft Graph API endpoints.
-
-        Parameters
-        ----------
-        query : ast.Select
-           Given SQL SELECT query
-
-        Returns
-        -------
-        pd.DataFrame
-            Microsoft Teams Chats matching the query.
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported target (column).
-
-        NotImplementedError
-            If the query contains an unsupported condition.
-        """
-
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'chats',
-            self.get_columns()
-        )
-
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-
-        id = None
-        for op, arg1, arg2 in where_conditions:
-            if arg1 == 'id':
-                if op == "=":
-                    id = arg2
-                else:
-                    raise NotImplementedError("Only '=' operator is supported for id column.")
-                
-        if id:
-            chats_df = pd.json_normalize(self.get_chats(id), sep='_')
-            where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id']]
-        else:
-            chats_df = pd.json_normalize(self.get_chats(), sep='_')
-
-        select_statement_executor = SELECTQueryExecutor(
-            chats_df,
-            selected_columns,
-            where_conditions,
-            order_by_conditions,
-            result_limit if query.limit else None
-        )
-
-        chats_df = select_statement_executor.execute_query()
-
-        return chats_df
-    
-    def get_chats(self, chat_id = None) -> List[Dict[Text, Any]]:
-        """
-        Calls the API client to get the chats from the Microsoft Graph API.
-
-        Parameters
-        ----------
-        chat_id: Text
-            The chat id to get the chat from.
-
-        Returns
-        -------
-        List[Dict[Text, Any]]
-            The chats from the Microsoft Graph API.
-        """
-
-        api_client = self.handler.connect()
-
-        if chat_id:
-            chats = [api_client.get_chat(chat_id)]
-        else:
-            chats = api_client.get_chats()
-
-        for chat in chats:
-            last_message_preview = chat.get("lastMessagePreview")
-
-            # keep only the lastMessagePreview_id and lastMessagePreview_createdDateTime columns
-            if last_message_preview:
-                chat["lastMessagePreview_id"] = last_message_preview.get("id")
-                chat["lastMessagePreview_createdDateTime"] = last_message_preview.get("createdDateTime")
-                del chat["lastMessagePreview"]
-                del chat["lastMessagePreview@odata.context"]
-
-        return chats
-
-    def get_columns(self) -> List[Text]:
-        """
-        Returns the columns of the Chats Table.
-
-        Returns
-        -------
-        List[Text]
-            The columns of the Chats Table.
-        """
-
-        return ms_teams_handler_config.CHATS_TABLE_COLUMNS
-    
-class ChatMessagesTable(APITable):
-    """The Microsoft Chat Messages Table implementation"""
-    
-    def select(self, query: ASTNode) -> pd.DataFrame:
-        """Pulls data from the Microsoft Teams "GET /chats/{chat_id}/messages" API endpoint.
-
-        Parameters
-        ----------
-        query : ast.Select
-           Given SQL SELECT query
-
-        Returns
-        -------
-        pd.DataFrame
-            Microsoft Teams Chat Messages matching the query
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'chat_messages',
-            self.get_columns()
-        )
-
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-
-        chat_id, message_id = None, None
-        for op, arg1, arg2 in where_conditions:
-            if arg1 == 'id':
-                if op == "=":
-                    message_id = arg2
-                else:
-                    raise NotImplementedError("Only '=' operator is supported for id column.")
-                
-            if arg1 == 'chatId':
-                if op == "=":
-                    chat_id = arg2
-                else:
-                    raise NotImplementedError("Only '=' operator is supported for chatId column.")
-                
-        if message_id and chat_id:
-            messages_df = pd.json_normalize(self.get_messages(chat_id, message_id), sep='_')
-            where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id', 'chatId']]
-        else:
-            messages_df = pd.json_normalize(self.get_messages(chat_id), sep='_')
-
-        select_statement_executor = SELECTQueryExecutor(
-            messages_df,
-            selected_columns,
-            where_conditions,
-            order_by_conditions,
-            result_limit if query.limit else None
-        )
-
-        messages_df = select_statement_executor.execute_query()
-
-        return messages_df
-    
-    def get_messages(self, chat_id = None, message_id = None) -> List[Dict[Text, Any]]:
-        api_client = self.handler.connect()
-
-        if message_id and chat_id:
-            return [api_client.get_chat_message(chat_id, message_id)]
-        elif chat_id:
-            return api_client.get_chat_messages(chat_id)
-        else:
-            return api_client.get_all_chat_messages()
-        
-    def get_columns(self) -> list:
-        return [
-            "id",
-            "replyToId",
-            "etag",
-            "messageType",
-            "createdDateTime",
-            "lastModifiedDateTime",
-            "lastEditedDateTime",
-            "deletedDateTime",
-            "subject",
-            "summary",
-            "chatId",
-            "importance",
-            "locale",
-            "webUrl",
-            "channelIdentity",
-            "policyViolation",
-            "eventDetail",
-            "attachments",
-            "mentions",
-            "reactions",
-            "from_application",
-            "from_device",
-            "from_user_@odata.type",
-            "from_user_id",
-            "from_user_displayName",
-            "from_user_userIdentityType",
-            "from_user_tenantId",
-            "body_contentType",
-            "body_content",
-            "from",
-            "eventDetail_@odata.type",
-            "eventDetail_visibleHistoryStartDateTime",
-            "eventDetail_members",
-            "eventDetail_initiator_application",
-            "eventDetail_initiator_device",
-            "eventDetail_initiator_user_@odata.type",
-            "eventDetail_initiator_user_id",
-            "eventDetail_initiator_user_displayName",
-            "eventDetail_initiator_user_userIdentityType",
-            "eventDetail_initiator_user_tenantId",
-        ]
-
-    def insert(self, query: ASTNode) -> None:
-        """Inserts data into the Microsoft Teams "POST /chats/{chat_id}/messages" API endpoint.
-
-        Parameters
-        ----------
-        query : ast.Insert
-           Given SQL INSERT query
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-        insert_statement_parser = INSERTQueryParser(
-            query,
-            supported_columns=["chatId", "subject", "body_content"],
-            mandatory_columns=["chatId", "body_content"],
-        )
-
-        messages_to_send = insert_statement_parser.parse_query()
-
-        self.send_messages(messages_to_send)
-
-    def send_messages(self, messages_to_send: List[Dict[Text, Any]]) -> None:
-        api_client = self.handler.connect()
-        for message in messages_to_send:
-            api_client.send_chat_message(
-                chat_id=message["chatId"],
-                message=message["body_content"],
-                subject=message.get("subject")
-            )
-
-    class ChatMessageRepliesTable(APITable):
-        """
-        The Microsoft Chat Message Replies Table implementation.
-        """
-        pass

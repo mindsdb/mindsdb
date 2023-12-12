@@ -5,11 +5,11 @@ sidebarTitle: Amazon Redshift
 
 This is the implementation of the Redshift data handler for MindsDB.
 
-[Amazon Redshift](https://docs.aws.amazon.com/redshift/latest/mgmt/welcome.html) is a fully managed, petabyte-scale data warehouse service in the cloud. You can start with just a few hundred gigabytes of data and scale to a petabyte or more. This enables you to use your data to acquire new insights for your business and customers.
+[Amazon Redshift](https://docs.aws.amazon.com/redshift/latest/mgmt/welcome.html) is a fully managed, petabyte-scale data warehouse service in the cloud. You can start with just a few hundred gigabytes of data and scale to a petabyte or more enabling you to use your data to acquire new insights for your business and customers.
 
 ## Implementation
 
-This handler is implemented using the `redshift_connector` library that is provided by the Amazon Web Services.
+This handler is implemented using the `redshift_connector` library that is provided by Amazon Web Services.
 
 The required arguments to establish a connection are as follows:
 
@@ -19,14 +19,14 @@ The required arguments to establish a connection are as follows:
 * `user` is the username to authenticate the user with the Redshift cluster.
 * `password` is the password to authenticate the user with the Redshift cluster.
 <Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/redshift_handler) and run this command: `pip install -r requirements.txt`.
+If you installed MindsDB locally via pip, you must manually install all handler dependencies. To do so, go to the handler's folder (mindsdb/integrations/handlers/redshift_handler) and run the following command: `pip install -r requirements.txt`.
 </Tip>
 
 ## Usage
 
-Before attempting to connect to the Redshift database to MindsDB, ensure that it accepts incoming connections. Here is a [guideline](https://aws.amazon.com/premiumsupport/knowledge-center/cannot-connect-redshift-cluster) on how to do that.
+Before attempting to connect the Redshift database to MindsDB, ensure that it accepts incoming connections. Here is a [guide](https://aws.amazon.com/premiumsupport/knowledge-center/cannot-connect-redshift-cluster) for troubleshooting Redshift database connections.
 
-In order to make use of this handler and connect to the Redshift database in MindsDB, the following syntax can be used:
+To connect to the Redshift database in MindsDB using this handler, use the following syntax:
 
 ```sql
 CREATE DATABASE redshift_datasource
@@ -41,7 +41,7 @@ WITH
   };
 ```
 
-You can use this established connection to query your table as follows:
+Once this connection has been established, you can query your table as follows:
 
 ```sql
 SELECT *

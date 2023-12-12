@@ -25,7 +25,7 @@ https://support.microsoft.com/en-us/topic/what-is-microsoft-teams-3de4d369-0167-
 
 ## Microsoft Teams Handler Implementation
 
-This handler was implemented using [msal](https://github.com/AzureAD/microsoft-authentication-library-for-python) for authentication and [Requests](https://github.com/psf/requests) to submit requests to the Microsoft Graph API.
+  This handler was implemented using [msal](https://github.com/AzureAD/microsoft-authentication-library-for-python) for authentication and [Requests](https://github.com/psf/requests) to submit requests to the Microsoft Graph API.
 
 ## Microsoft Teams Handler Initialization
 
@@ -37,7 +37,7 @@ The Microsoft Teams handler is initialized with the following parameters:
 
 Note: Microsoft Entra ID was previously known as Azure Active Directory (Azure AD).
 
-The parameters given above can be obtained by registering an application in Azure AD by following these steps,
+The parameters given above can be obtained by registering an application in Microsoft Entra ID by following these steps,
 1. Go to the [Azure Portal](https://portal.azure.com/#home) and sign in with your Microsoft account.
 2. Locate the **Microsoft Entra ID** service and click on it.
 3. Click on **App registrations** and then click on **New registration**.
@@ -106,7 +106,7 @@ PARAMETERS = {
 };
 ~~~~
 
-Use the established connection to query your chats:
+  Use the established connection to query your chats:
 
 ~~~~sql
 SELECT * FROM teams_datasource.chats
@@ -132,7 +132,7 @@ VALUES
 ('your-team-id', 'your-channel-id', 'Hello from MindsDB!');
 ~~~~
 
-## Create a Microsoft Teams Chat Bot
+## Create a Microsoft Teams Chatbot
 
 While the Microsoft Teams handler allows you to send messages to a chat or channel as shown above, it is also possible to create a chat bot that will listen to messages sent to a chat or channel and respond to them.
 
@@ -159,6 +159,7 @@ An agent is created by combining a [Model](https://docs.mindsdb.com/model-types)
 Here, we will create an agent without any skills, however, it is possilbe to create agents with skills such as the ability to answer questions from a knowledge base.
 
 #### Step 2.1: Create a Conversational Model
+
 Create a conversational model using either the `LangChain` or `LlamaIndex` integrations. Given below is an example of a conversational model created using the `LlamaIndex` integration:
 
 ~~~~sql
@@ -180,7 +181,7 @@ USING
 
 #### Step 2.2: Create an Agent using the Conversational Model
 
-Let's create an agent using the conversational model and the skill created above:
+Let's create an agent using the conversational model created above:
 
 ~~~~sql
 CREATE AGENT convo_agent

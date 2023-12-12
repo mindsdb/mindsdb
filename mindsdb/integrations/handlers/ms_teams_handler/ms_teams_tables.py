@@ -117,6 +117,7 @@ class ChannelsTable(APITable):
         List[Text]
             The columns of the Channels Table.
         """
+        
         return ms_teams_handler_config.CHANNELS_TABLE_COLUMNS
 
 class ChannelMessagesTable(APITable):
@@ -298,10 +299,13 @@ class ChannelMessageRepliesTable(APITable):
     pass
     
 class ChatsTable(APITable):
-    """The Microsoft Chats Table implementation"""
+    """
+    The Microsoft Chats Table implementation.
+    """
     
-    def select(self, query: ASTNode) -> pd.DataFrame:
-        """Pulls data from the Microsoft Teams "GET /chats" API endpoint.
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """
+        Pulls data from the "GET /chats" and "GET /chats/{chat_id} Microsoft Graph API endpoints.
 
         Parameters
         ----------
@@ -311,13 +315,17 @@ class ChatsTable(APITable):
         Returns
         -------
         pd.DataFrame
-            Microsoft Teams Chats matching the query
+            Microsoft Teams Chats matching the query.
 
         Raises
         ------
         ValueError
-            If the query contains an unsupported condition
+            If the query contains an unsupported target (column).
+
+        NotImplementedError
+            If the query contains an unsupported condition.
         """
+
         select_statement_parser = SELECTQueryParser(
             query,
             'chats',
@@ -353,6 +361,20 @@ class ChatsTable(APITable):
         return chats_df
     
     def get_chats(self, chat_id = None) -> List[Dict[Text, Any]]:
+        """
+        Calls the API client to get the chats from the Microsoft Graph API.
+
+        Parameters
+        ----------
+        chat_id: Text
+            The chat id to get the chat from.
+
+        Returns
+        -------
+        List[Dict[Text, Any]]
+            The chats from the Microsoft Graph API.
+        """
+
         api_client = self.handler.connect()
 
         if chat_id:
@@ -362,6 +384,7 @@ class ChatsTable(APITable):
 
         for chat in chats:
             last_message_preview = chat.get("lastMessagePreview")
+
             # keep only the lastMessagePreview_id and lastMessagePreview_createdDateTime columns
             if last_message_preview:
                 chat["lastMessagePreview_id"] = last_message_preview.get("id")
@@ -371,21 +394,17 @@ class ChatsTable(APITable):
 
         return chats
 
-    def get_columns(self) -> list:
-        return [
-            "id",
-            "topic",
-            "createdDateTime",
-            "lastUpdatedDateTime",
-            "chatType",
-            "webUrl",
-            "tenantId",
-            "onlineMeetingInfo",
-            "viewpoint_isHidden",
-            "viewpoint_lastMessageReadDateTime",
-            "lastMessagePreview_id",
-            "lastMessagePreview_createdDateTime",
-        ]
+    def get_columns(self) -> List[Text]:
+        """
+        Returns the columns of the Chats Table.
+
+        Returns
+        -------
+        List[Text]
+            The columns of the Chats Table.
+        """
+
+        return ms_teams_handler_config.CHATS_TABLE_COLUMNS
     
 class ChatMessagesTable(APITable):
     """The Microsoft Chat Messages Table implementation"""
@@ -539,5 +558,7 @@ class ChatMessagesTable(APITable):
             )
 
     class ChatMessageRepliesTable(APITable):
-        """The Microsoft Chat Message Replies Table implementation"""
+        """
+        The Microsoft Chat Message Replies Table implementation.
+        """
         pass

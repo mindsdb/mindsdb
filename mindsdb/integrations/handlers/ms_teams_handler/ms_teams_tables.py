@@ -14,6 +14,111 @@ from mindsdb.integrations.handlers.utilities.query_utilities.select_query_utilit
 logger = log.getLogger(__name__)
 
 
+class ChannelsTable(APITable):
+    """
+    The Microsoft Channels Table implementation.
+    """
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """
+        Pulls data from the "GET /teams/{group_id}/channels" and "GET teams/{group_id}/channels/{channel_id}" Microsoft Graph API endpoints.
+
+        Parameters
+        ----------
+        query : ast.Select
+           Given SQL SELECT query.
+
+        Returns
+        -------
+        pd.DataFrame
+            Microsoft Teams Channels matching the query.
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported target (column).
+
+        NotImplementedError
+            If the query contains an unsupported condition.
+        """
+
+        select_statement_parser = SELECTQueryParser(
+            query,
+            'channels',
+            self.get_columns()
+        )
+
+        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+
+        channel_id, team_id = None, None
+        for op, arg1, arg2 in where_conditions:
+            if arg1 == 'id':
+                if op == "=":
+                    channel_id = arg2
+                else:
+                    raise NotImplementedError("Only '=' operator is supported for id column.")
+                
+            if arg1 == 'teamId':
+                if op == "=":
+                    team_id = arg2
+                else:
+                    raise NotImplementedError("Only '=' operator is supported for teamId column.")
+                
+        if channel_id and team_id:
+            channels_df = pd.json_normalize(self.get_channels(channel_id, team_id))
+            where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id', 'teamId']]
+        else:
+            channels_df = pd.json_normalize(self.get_channels())
+
+        select_statement_executor = SELECTQueryExecutor(
+            channels_df,
+            selected_columns,
+            where_conditions,
+            order_by_conditions,
+            result_limit if query.limit else None
+        )
+
+        channels_df = select_statement_executor.execute_query()
+
+        return channels_df
+
+    def get_channels(self, channel_id: Text = None, team_id: Text = None) -> List[Dict[Text, Any]]:
+        """
+        Calls the API client to get the channels from the Microsoft Graph API.
+        If all parameters are None, it will return all the channels from all the teams.
+
+        Parameters
+        ----------
+        channel_id: Text
+            The channel id to get the channel from.
+
+        team_id: Text
+            The team id to get the channels from.
+
+        Returns
+        -------
+        List[Dict[Text, Any]]
+            The channels from the Microsoft Graph API.
+        """
+
+        api_client = self.handler.connect()
+
+        if channel_id and team_id:
+            return [api_client.get_channel(team_id, channel_id)]
+        else:
+            return api_client.get_channels()
+    
+    def get_columns(self) -> List[Text]:
+        """
+        Returns the columns of the Channels Table.
+
+        Returns
+        -------
+        List[Text]
+            The columns of the Channels Table.
+        """
+        return ms_teams_handler_config.CHANNELS_TABLE_COLUMNS
+
 class ChannelMessagesTable(APITable):
     """
     The Microsoft Teams Channel Messages Table implementation.       
@@ -35,6 +140,9 @@ class ChannelMessagesTable(APITable):
 
         Raises
         ------
+        ValueError
+            If the query contains an unsupported target (column).
+
         NotImplementedError
             If the query contains an unsupported condition.
         """
@@ -92,13 +200,13 @@ class ChannelMessagesTable(APITable):
 
         Parameters
         ----------
-        team_id: str
+        team_id: Text
             The team id to get the messages from.
 
-        channel_id: str
+        channel_id: Text
             The channel id to get the messages from.
 
-        message_id: str
+        message_id: Text
             The message id to get the message from.
         """
 
@@ -184,91 +292,10 @@ class ChannelMessagesTable(APITable):
         return ms_teams_handler_config.CHANNEL_MESSAGES_TABLE_COLUMNSS
 
 class ChannelMessageRepliesTable(APITable):
-    """The Microsoft Teams Message Replies Table implementation"""
+    """
+    The Microsoft Teams Channel Message Replies Table implementation.
+    """
     pass
-            
-class ChannelsTable(APITable):
-    """The Microsoft Channels Table implementation"""
-
-    def select(self, query: ASTNode) -> pd.DataFrame:
-        """Pulls data from the Microsoft Teams "GET /teams/{group_id}/channels" API endpoint.
-
-        Parameters
-        ----------
-        query : ast.Select
-           Given SQL SELECT query
-
-        Returns
-        -------
-        pd.DataFrame
-            Microsoft Teams Channels matching the query
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'channels',
-            self.get_columns()
-        )
-
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-
-        channel_id, team_id = None, None
-        for op, arg1, arg2 in where_conditions:
-            if arg1 == 'id':
-                if op == "=":
-                    channel_id = arg2
-                else:
-                    raise NotImplementedError("Only '=' operator is supported for id column.")
-                
-            if arg1 == 'teamId':
-                if op == "=":
-                    team_id = arg2
-                else:
-                    raise NotImplementedError("Only '=' operator is supported for teamId column.")
-                
-        if channel_id and team_id:
-            channels_df = pd.json_normalize(self.get_channels(channel_id, team_id))
-            where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id', 'teamId']]
-        else:
-            channels_df = pd.json_normalize(self.get_channels())
-
-        select_statement_executor = SELECTQueryExecutor(
-            channels_df,
-            selected_columns,
-            where_conditions,
-            order_by_conditions,
-            result_limit if query.limit else None
-        )
-
-        channels_df = select_statement_executor.execute_query()
-
-        return channels_df
-
-    def get_channels(self, channel_id = None, team_id: str = None) -> List[Dict[Text, Any]]:
-        api_client = self.handler.connect()
-
-        if channel_id and team_id:
-            return [api_client.get_channel(team_id, channel_id)]
-        else:
-            return api_client.get_channels()
-    
-    def get_columns(self) -> List[Text]:
-        return [
-            "id",
-            "createdDateTime",
-            "displayName",
-            "description",
-            "isFavoriteByDefault",
-            "email",
-            "tenantId",
-            "webUrl",
-            "membershipType",
-            "teamId",
-        ]
     
 class ChatsTable(APITable):
     """The Microsoft Chats Table implementation"""

@@ -134,7 +134,7 @@ VALUES
 
 ## Create a Microsoft Teams Chatbot
 
-While the Microsoft Teams handler allows you to send messages to a chat or channel as shown above, it is also possible to create a chat bot that will listen to messages sent to a chat or channel and respond to them.
+While the Microsoft Teams handler allows you to read/send messages to a chat or channel as shown above, it is also possible to create a chat bot that will listen to messages sent to a chat or channel and respond to them.
 
 ### Step 1: Create a Microsoft Teams Data Source
 

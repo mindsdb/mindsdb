@@ -1,0 +1,2 @@
+pandas
+google-cloud-storage

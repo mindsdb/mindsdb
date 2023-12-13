@@ -137,7 +137,7 @@ class TestMySQLHandler:
         assert new_table in tables, f"expected to have {new_table} in database, but got: {tables}"
 
     def test_insert_table(self, handler):
-        tablename = "test_mdb"
+        new_table = "test_mdb"
         res = handler.native_query(f"INSERT INTO {new_table} (test_col) values (1), (2), (3))")
         self.check_valid_response(res)
         handler.disconnect()
@@ -146,7 +146,6 @@ class TestMySQLHandler:
         self.check_valid_response(res)
         got_rows = res.data_frame.shape[0]
         assert got_rows == 3
-
 
     def test_drop_table(self, handler):
         drop_table = "test_mdb"

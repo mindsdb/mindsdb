@@ -116,13 +116,13 @@ The chat bot will assume the identity of the user who signed in with their Micro
 
 ### Step 2: Create an [Agent](https://docs.mindsdb.com/agents/agent)
 
-An agent is created by combining a [Model](https://docs.mindsdb.com/model-types) (conversational) with optional Skills.
+An agent is created by combining a conversational model, like [LlamaIndex](https://docs.mindsdb.com/integrations/ai-engines/llamaindex), with a set of Skills.
 
 Here, we will create an agent without any skills, however, it is possilbe to create agents with skills such as the ability to answer questions from a knowledge base.
 
 #### Step 2.1: Create a Conversational Model
 
-Create a conversational model using either the `LangChain` or `LlamaIndex` integrations. Given below is an example of a conversational model created using the `LlamaIndex` integration:
+Create a conversational model using either the [`LangChain`](https://docs.mindsdb.com/integrations/ai-engines/langchain) or [`LlamaIndex`](https://docs.mindsdb.com/integrations/ai-engines/llamaindex) integrations. Given below is an example of a conversational model created using the `LlamaIndex` integration:
 
 ```sql
 CREATE ML_ENGINE llama_index_engine

@@ -2,7 +2,7 @@ import re
 import os
 from typing import Optional, Dict
 
-from concurrent.futures import as_completed, ThreadPoolExecutor, TimeoutError
+from concurrent.futures import as_completed, TimeoutError
 import numpy as np
 import pandas as pd
 
@@ -21,6 +21,7 @@ from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.utilities import log
+from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 
 
 _DEFAULT_MODEL = 'gpt-3.5-turbo'
@@ -377,7 +378,7 @@ class LangChainHandler(BaseMLEngine):
         # https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
         max_workers = args.get('max_workers', None)
         agent_timeout_seconds = args.get('timeout', _DEFAULT_AGENT_TIMEOUT_SECONDS)
-        executor = ThreadPoolExecutor(max_workers=max_workers)
+        executor = ContextThreadPoolExecutor(max_workers=max_workers)
         futures = [executor.submit(_run_agent_with_prompt, agent, prompt) for prompt in prompts]
         try:
             for future in as_completed(futures, timeout=agent_timeout_seconds):

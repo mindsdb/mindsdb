@@ -49,6 +49,7 @@ class ChatsTable(APITable):
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
+        # only the = operator is supported for the id column
         id = None
         for op, arg1, arg2 in where_conditions:
             if arg1 == 'id':
@@ -56,12 +57,10 @@ class ChatsTable(APITable):
                     id = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for id column.")
-                
-        if id:
-            chats_df = pd.json_normalize(self.get_chats(id), sep='_')
-            where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id']]
-        else:
-            chats_df = pd.json_normalize(self.get_chats(), sep='_')
+        
+        chats_df = pd.json_normalize(self.get_chats(id), sep='_')
+        # remove the id column from the where conditions as it has already been evaluated
+        where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id']]
 
         select_statement_executor = SELECTQueryExecutor(
             chats_df,
@@ -75,7 +74,7 @@ class ChatsTable(APITable):
 
         return chats_df
     
-    def get_chats(self, chat_id = None) -> List[Dict[Text, Any]]:
+    def get_chats(self, chat_id: Text = None) -> List[Dict[Text, Any]]:
         """
         Calls the API client to get the chats from the Microsoft Graph API.
 
@@ -92,8 +91,10 @@ class ChatsTable(APITable):
 
         api_client = self.handler.connect()
 
+        # if the chat_id is given, get the chat with that id from the API
         if chat_id:
             chats = [api_client.get_chat(chat_id)]
+        # if the chat_id is not given, get all the chats
         else:
             chats = api_client.get_chats()
 
@@ -157,6 +158,7 @@ class ChatMessagesTable(APITable):
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
+        # only the = operator is supported for the id and chatId columns
         chat_id, message_id = None, None
         for op, arg1, arg2 in where_conditions:
             if arg1 == 'id':
@@ -170,12 +172,10 @@ class ChatMessagesTable(APITable):
                     chat_id = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for chatId column.")
-                
-        if message_id and chat_id:
-            messages_df = pd.json_normalize(self.get_messages(chat_id, message_id), sep='_')
-            where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id', 'chatId']]
-        else:
-            messages_df = pd.json_normalize(self.get_messages(chat_id), sep='_')
+        
+        messages_df = pd.json_normalize(self.get_messages(chat_id, message_id), sep='_')
+        # remove the id and chatId columns from the where conditions as they have already been evaluated
+        where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id', 'chatId']]
 
         select_statement_executor = SELECTQueryExecutor(
             messages_df,
@@ -189,7 +189,7 @@ class ChatMessagesTable(APITable):
 
         return messages_df
     
-    def get_messages(self, chat_id = None, message_id = None) -> List[Dict[Text, Any]]:
+    def get_messages(self, chat_id: Text = None, message_id: Text = None) -> List[Dict[Text, Any]]:
         """
         Calls the API client to get the messages from the Microsoft Graph API.
         If all parameters are None, it will return all the messages from all the chats.
@@ -211,10 +211,13 @@ class ChatMessagesTable(APITable):
 
         api_client = self.handler.connect()
 
+        # if both chat_id and message_id are given, get the message with that id from the API
         if message_id and chat_id:
             return [api_client.get_chat_message(chat_id, message_id)]
+        # if only the chat_id is given, get all the messages from that chat
         elif chat_id:
             return api_client.get_chat_messages(chat_id)
+        # if no parameters are given, get all the messages from all the chats
         else:
             return api_client.get_all_chat_messages()
 
@@ -243,6 +246,8 @@ class ChatMessagesTable(APITable):
             If the number of columns does not match the number of values.
         """
 
+        # only the chatId, subject and body_content columns are supported
+        # chatId and body_content are mandatory
         insert_statement_parser = INSERTQueryParser(
             query,
             supported_columns=["chatId", "subject", "body_content"],
@@ -269,6 +274,7 @@ class ChatMessagesTable(APITable):
 
         api_client = self.handler.connect()
 
+        # send each message through the API to the chat with the given id
         for message in messages_to_send:
             api_client.send_chat_message(
                 chat_id=message["chatId"],
@@ -330,6 +336,7 @@ class ChannelsTable(APITable):
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
+        # only the = operator is supported for the id and teamId columns
         channel_id, team_id = None, None
         for op, arg1, arg2 in where_conditions:
             if arg1 == 'id':
@@ -344,11 +351,9 @@ class ChannelsTable(APITable):
                 else:
                     raise NotImplementedError("Only '=' operator is supported for teamId column.")
                 
-        if channel_id and team_id:
-            channels_df = pd.json_normalize(self.get_channels(channel_id, team_id))
-            where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id', 'teamId']]
-        else:
-            channels_df = pd.json_normalize(self.get_channels())
+        channels_df = pd.json_normalize(self.get_channels(channel_id, team_id))
+        # remove the id and teamId columns from the where conditions as they have already been evaluated
+        where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id', 'teamId']]
 
         select_statement_executor = SELECTQueryExecutor(
             channels_df,
@@ -383,8 +388,10 @@ class ChannelsTable(APITable):
 
         api_client = self.handler.connect()
 
+        # if both channel_id and team_id are given, get the channel with that id from the API
         if channel_id and team_id:
             return [api_client.get_channel(team_id, channel_id)]
+        # if only the team_id is given, get all the channels
         else:
             return api_client.get_channels()
     
@@ -436,6 +443,7 @@ class ChannelMessagesTable(APITable):
 
         selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
 
+        # only the = operator is supported for the id, channelIdentity_teamId and channelIdentity_channelId columns
         team_id, channel_id, message_id = None, None, None
         for op, arg1, arg2 in where_conditions:
             if arg1 == 'id':
@@ -456,11 +464,8 @@ class ChannelMessagesTable(APITable):
                 else:
                     raise NotImplementedError("Only '=' operator is supported for teamId column.")
                 
-        if message_id and channel_id and team_id:
-            messages_df = pd.json_normalize(self.get_messages(team_id, channel_id, message_id), sep='_')
-            where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id', 'channelIdentity_teamId', 'channelIdentity_channelId']]
-        else:
-            messages_df = pd.json_normalize(self.get_messages(), sep='_')
+        messages_df = pd.json_normalize(self.get_messages(team_id, channel_id, message_id), sep='_')
+        where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id', 'channelIdentity_teamId', 'channelIdentity_channelId']]
 
         select_statement_executor = SELECTQueryExecutor(
             messages_df,
@@ -492,9 +497,11 @@ class ChannelMessagesTable(APITable):
         """
 
         api_client = self.handler.connect()
-        # TODO: Should these records be filtered somehow?
+
+        # if all parameters are given, get the message with that id from that channel from that team from the API
         if message_id and channel_id and team_id:
             return [api_client.get_channel_message(team_id, channel_id, message_id)]
+        # if no parameters are given, get all the messages from all the channels from all the teams
         else:
             return api_client.get_channel_messages()
     
@@ -523,6 +530,8 @@ class ChannelMessagesTable(APITable):
             If the number of columns does not match the number of values.
         """
 
+        # only the channelIdentity_teamId, channelIdentity_channelId, subject and body_content columns are supported
+        # channelIdentity_teamId and channelIdentity_channelId are mandatory
         insert_statement_parser = INSERTQueryParser(
             query,
             supported_columns=["channelIdentity_teamId", "channelIdentity_channelId", "subject", "body_content"],
@@ -553,6 +562,7 @@ class ChannelMessagesTable(APITable):
 
         api_client = self.handler.connect()
 
+        # send each message through the API to the channel with the given id from the team with the given id
         for message in messages_to_send:
             api_client.send_channel_message(
                 group_id=message["channelIdentity_teamId"],

@@ -136,6 +136,8 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="dummy_llm", data={}, engine="dummy_llm")
         db.session.add(r)
+        r = db.Integration(name="litellm", data={}, engine="litellm")
+        db.session.add(r)
         r = db.Integration(name="sentence_transformers", data={}, engine="sentence_transformers")
         db.session.add(r)
 

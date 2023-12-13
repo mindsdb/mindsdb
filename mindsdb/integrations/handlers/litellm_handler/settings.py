@@ -22,6 +22,7 @@ When summarizing, please keep the following in mind the following question:
 
 class CompletionParameters(BaseModel):
     model: str  # The model to be used for the API call.
+    prompt_template: Optional[str] = None  # Template for the prompt to be used.
 
     # Optional OpenAI params: see https://platform.openai.com/docs/api-reference/chat/create
     messages: List = []  # List of messages for conversation-based models.
@@ -50,7 +51,7 @@ class CompletionParameters(BaseModel):
     # set api_base, api_version, api_key
     base_url: Optional[str] = None  # Base URL of the API.
     api_version: Optional[str] = None  # Version of the API to be used.
-    api_key: Optional[str] = None  # API key for authentication.
+    api_key: str  # API key for authentication.
     model_list: Optional[List] = None  # List of models, API bases, keys, etc., for dynamic selection.
 
     class Config:

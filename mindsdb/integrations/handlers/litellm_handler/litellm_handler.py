@@ -1,4 +1,5 @@
-from typing import Dict, Optional
+import ast
+from typing import Dict, Optional, List
 
 import pandas as pd
 
@@ -13,6 +14,8 @@ from litellm import completion
 
 logger = log.getLogger(__name__)
 
+
+# todo add support for prompt templates and corresponding kwargs for formatting
 
 class LiteLLMHandler(BaseMLEngine):
     """
@@ -44,6 +47,7 @@ class LiteLLMHandler(BaseMLEngine):
         # get api key from user input on create ML_ENGINE or create MODEL
         input_args = args["using"]
 
+        # get api key from engine_storage
         ml_engine_args = self.engine_storage.get_connection_args()
 
         # for a model created with USING, only get api for that specific llm type
@@ -78,8 +82,54 @@ class LiteLLMHandler(BaseMLEngine):
 
         input_args = self.model_storage.json_get("args")
 
+        # validate args
         args = CompletionParameters(**input_args).dict()
 
+        prompt_kwargs = df.iloc[0].to_dict()
+
+        # if args['messages'] is empty, convert prompt to messages
+        if not args['messages']:
+            # if prompt_template is passed in, use that
+
+            if len(prompt_kwargs) == 1:
+                args['messages'] = self._prompt_to_messages(args['prompt_template'], **prompt_kwargs) \
+                    if args['prompt_template'] else self._prompt_to_messages(df.iloc[0][0])
+
+            elif len(prompt_kwargs) > 1:
+                try:
+                    args['messages'] = self._prompt_to_messages(args['prompt_template'], **prompt_kwargs)
+                except KeyError as e:
+                    raise Exception(
+                        f"{e}: Please pass in either a prompt_template on create MODEL or "
+                        f"a single where clause in predict query."
+                        f""
+                    )
+
+        # if user passes in messages, use those instead
+        elif 'messages' in prompt_kwargs:
+            args['messages']: List = ast.literal_eval(df['messages'].iloc[0])
+
+        else:
+            raise Exception(
+                "Please pass in either a prompt_template on create MODEL or a single input column on predict."
+            )
+
+        # remove prompt_template from args
+        args.pop('prompt_template', None)
+
+        # run completion
         response = completion(**args)
 
-        return pd.DataFrame(response)
+        return pd.DataFrame({"result": [response.choices[0].message.content]})
+
+    @staticmethod
+    def _prompt_to_messages(prompt: str, **kwargs) -> List[Dict]:
+        """
+        Convert a prompt to a list of messages
+        """
+
+        if kwargs:
+            # if kwargs are passed in, format the prompt with kwargs
+            prompt = prompt.format(**kwargs)
+
+        return [{"content": prompt, "role": "user"}]

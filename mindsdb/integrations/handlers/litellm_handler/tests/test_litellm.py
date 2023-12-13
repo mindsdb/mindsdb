@@ -9,14 +9,12 @@ from tests.unit.executor_test_base import BaseExecutorTest
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
-WRITER_API_KEY = os.environ.get("WRITER_API_KEY")
-os.environ["WRITER_API_KEY"] = WRITER_API_KEY
-
-WRITER_ORG_ID = os.environ.get("WRITER_ORG_ID")
-os.environ["WRITER_ORG_ID"] = WRITER_ORG_ID
+USER_MESSAGE = "Write a short poem about the sky"
+MESSAGE = [{"content": USER_MESSAGE, "role": "user"}]
+MESSAGES = [{"content": USER_MESSAGE, "role": "user"}, {"content": "The sky is blue", "role": "user"}]
 
 
-class TestRAG(BaseExecutorTest):
+class TestLiteLLM(BaseExecutorTest):
     def wait_predictor(self, project, name):
         # wait
         done = False
@@ -41,18 +39,119 @@ class TestRAG(BaseExecutorTest):
             ]
             return pd.DataFrame(ret.data, columns=columns)
 
-    def test_completion(self):
+    def test_completion_without_prompt_template(self):
         # create project
         self.run_sql("create database proj")
 
-        # # self.run_sql(
-        # #     """
-        # #     CREATE MODEL proj.test_litellm_handler_on_completion_openai
-        # #     PREDICT text
-        # #     USING
-        # #     engine="litellm",
-        # #     model="openai"
-        # #     """
-        # # )
-        #
-        # self.wait_predictor("proj", "test_litellm_handler_on_completion_openai")
+        # simple completion with openai using prompt on predict
+
+        self.run_sql(
+            f"""
+            CREATE MODEL proj.test_litellm_handler_on_completion_openai
+            PREDICT text
+            USING
+            engine="litellm",
+            model="gpt-3.5-turbo",
+            api_key='{OPENAI_API_KEY}'
+            """
+        )
+
+        self.wait_predictor("proj", "test_litellm_handler_on_completion_openai")
+
+        # run predict
+        ret = self.run_sql(
+            """
+            SELECT *
+            FROM proj.test_litellm_handler_on_completion_openai
+            where text = "I like to eat"
+            """
+        )
+
+        assert ret["result"][0]
+
+        # completion with openai using messages in predict
+
+        # run predict
+        ret = self.run_sql(
+            f"""
+            SELECT *
+            FROM proj.test_litellm_handler_on_completion_openai
+            where messages = "{MESSAGE}"
+            """
+        )
+
+        assert ret["result"][0]
+
+        # completion with openai using multiple messages in predict
+
+        # run predict
+        ret = self.run_sql(
+            f"""
+            SELECT *
+            FROM proj.test_litellm_handler_on_completion_openai
+            where messages = "{MESSAGES}"
+            """
+        )
+
+        assert ret["result"][0]
+
+    def test_completion_openai_with_prompt_template(self):
+
+        # create project
+        self.run_sql("create database proj")
+
+        # completion with openai using prompt_template in create with single format variable
+
+        self.run_sql(
+            f"""
+            CREATE MODEL proj.test_litellm_handler_on_completion_openai_prompt_template
+            PREDICT text
+            USING
+            engine="litellm",
+            model="gpt-3.5-turbo",
+            api_key='{OPENAI_API_KEY}',
+            prompt_template="I like to eat {{text}}"
+            """
+        )
+
+        self.wait_predictor("proj", "test_litellm_handler_on_completion_openai_prompt_template")
+
+        # run predict
+
+        ret = self.run_sql(
+            """
+            SELECT *
+            FROM proj.test_litellm_handler_on_completion_openai_prompt_template
+            where text = "pizza"
+            """
+        )
+
+        assert ret["result"][0]
+
+        # completion with openai using prompt_template in create with multiple format variables
+
+        self.run_sql(
+            f"""
+            CREATE MODEL proj.test_litellm_handler_on_completion_openai_prompt_template_multiple
+            PREDICT text
+            USING
+            engine="litellm",
+            model="gpt-3.5-turbo",
+            api_key='{OPENAI_API_KEY}',
+            prompt_template="I like to eat {{text1}} and {{text2}}"
+            """
+        )
+
+        self.wait_predictor("proj", "test_litellm_handler_on_completion_openai_prompt_template_multiple")
+
+        # run predict
+
+        ret = self.run_sql(
+            """
+            SELECT *
+            FROM proj.test_litellm_handler_on_completion_openai_prompt_template_multiple
+            where text1 = "pizza" and text2 = "pasta"
+            """
+        )
+
+        assert ret["result"][0]

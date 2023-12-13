@@ -128,6 +128,7 @@ class MSTeamsHandler(APIChatHandler):
         """
 
         ast = parse_sql(query, dialect="mindsdb")
+
         return self.query(ast)
     
     def get_chat_config(self) -> Dict:
@@ -172,4 +173,5 @@ class MSTeamsHandler(APIChatHandler):
 
         connection = self.connect()
         user_profile = connection.get_user_profile()
+        
         return user_profile['displayName']

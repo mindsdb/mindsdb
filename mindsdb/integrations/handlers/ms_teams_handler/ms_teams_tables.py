@@ -581,7 +581,7 @@ class ChannelMessagesTable(APITable):
             The columns of the Channel Messages Table.
         """
 
-        return ms_teams_handler_config.CHANNEL_MESSAGES_TABLE_COLUMNSS
+        return ms_teams_handler_config.CHANNEL_MESSAGES_TABLE_COLUMNS
 
 class ChannelMessageRepliesTable(APITable):
     """

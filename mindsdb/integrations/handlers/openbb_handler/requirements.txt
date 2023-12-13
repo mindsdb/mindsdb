@@ -1,2 +1,3 @@
-openbb==4.0.0b1
+openbb==4.0.1
+openbb-core==1.0.1
 pydantic==2.5.1

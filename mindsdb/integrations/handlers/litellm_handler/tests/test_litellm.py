@@ -2,6 +2,7 @@ import os
 import time
 
 import pandas as pd
+import pytest
 from mindsdb_sql import parse_sql
 
 from tests.unit.executor_test_base import BaseExecutorTest
@@ -11,7 +12,7 @@ os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
 USER_MESSAGE = "Write a short poem about the sky"
 MESSAGE = [{"content": USER_MESSAGE, "role": "user"}]
-MESSAGES = [{"content": USER_MESSAGE, "role": "user"}, {"content": "The sky is blue", "role": "user"}]
+MESSAGES = [[{"content": USER_MESSAGE, "role": "user"}], [{"content": "The sky is blue", "role": "user"}]]
 
 
 class TestLiteLLM(BaseExecutorTest):
@@ -63,7 +64,7 @@ class TestLiteLLM(BaseExecutorTest):
             """
             SELECT *
             FROM proj.test_litellm_handler_on_completion_openai
-            where text = "I like to eat"
+            where text = "I like to eat" and mock_response = "test"
             """
         )
 
@@ -76,13 +77,13 @@ class TestLiteLLM(BaseExecutorTest):
             f"""
             SELECT *
             FROM proj.test_litellm_handler_on_completion_openai
-            where messages = "{MESSAGE}"
+            where messages = "{MESSAGE}" and mock_response = "test"
             """
         )
 
         assert ret["result"][0]
 
-        # completion with openai using multiple messages in predict
+        # completion with openai using multiple messages in predict using batch_completion
 
         # run predict
         ret = self.run_sql(
@@ -93,7 +94,20 @@ class TestLiteLLM(BaseExecutorTest):
             """
         )
 
-        assert ret["result"][0]
+        # check there are two results
+        assert ret["result"].shape[0] == 2
+
+        # completion with messages in predict with other args should fail
+
+        # run predict
+        with pytest.raises(Exception):
+            self.run_sql(
+                f"""
+                SELECT *
+                FROM proj.test_litellm_handler_on_completion_openai
+                where messages = "{MESSAGES}" and temperature = 0.5
+                """
+            )
 
     def test_completion_openai_with_prompt_template(self):
 
@@ -122,7 +136,7 @@ class TestLiteLLM(BaseExecutorTest):
             """
             SELECT *
             FROM proj.test_litellm_handler_on_completion_openai_prompt_template
-            where text = "pizza"
+            where text = "pizza" and mock_response = "test"
             """
         )
 
@@ -150,7 +164,34 @@ class TestLiteLLM(BaseExecutorTest):
             """
             SELECT *
             FROM proj.test_litellm_handler_on_completion_openai_prompt_template_multiple
-            where text1 = "pizza" and text2 = "pasta"
+            where text1 = "pizza" and text2 = "pasta" and mock_response = "test"
+            """
+        )
+
+        assert ret["result"][0]
+
+        # use prompt_template in predict
+
+        self.run_sql(
+            """
+            CREATE MODEL proj.test_litellm_handler_on_completion_openai_prompt_template_predict
+            PREDICT text
+            USING
+            engine="litellm",
+            model="gpt-3.5-turbo",
+            api_key='{OPENAI_API_KEY}'
+            """
+        )
+
+        self.wait_predictor("proj", "test_litellm_handler_on_completion_openai_prompt_template_predict")
+
+        # run predict
+
+        ret = self.run_sql(
+            """
+            SELECT *
+            FROM proj.test_litellm_handler_on_completion_openai_prompt_template_predict
+            where text = "pizza" and prompt_template = "I like to eat {{text}}" and mock_response = "test"
             """
         )
 

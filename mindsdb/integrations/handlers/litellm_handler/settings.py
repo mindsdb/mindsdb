@@ -2,30 +2,11 @@ from typing import List, Optional, Union, Dict
 from pydantic import BaseModel, Extra
 
 
-# this is the default prompt template for qa
-DEFAULT_QA_PROMPT_TEMPLATE = """
-Use the following pieces of context to answer the question at the end. If you do not know the answer,
-just say that you do not know, do not try to make up an answer.
-Context: {context}
-Question: {question}
-Helpful Answer:"""
-
-# this is the default prompt template for if the user wants to summarize the context before qa prompt
-DEFAULT_SUMMARIZATION_PROMPT_TEMPLATE = """
-Summarize the following texts for me:
-{context}
-
-When summarizing, please keep the following in mind the following question:
-{question}
-"""
-
-
 class CompletionParameters(BaseModel):
     model: str  # The model to be used for the API call.
     prompt_template: Optional[str] = None  # Template for the prompt to be used.
 
     # Optional OpenAI params: see https://platform.openai.com/docs/api-reference/chat/create
-    messages: List = []  # List of messages for conversation-based models.
     functions: List = []  # List of functions for advanced model operations.
     function_call: str = ""  # String to specify a particular function call, if needed.
 

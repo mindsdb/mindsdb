@@ -7,7 +7,7 @@ In this section, we present how to connect Microsoft Teams to MindsDB.
 
 [Microsoft Teams](https://www.microsoft.com/en/microsoft-teams/group-chat-software/) is the ultimate messaging app for your organization—a workspace for real-time collaboration and communication, meetings, file and app sharing, and even the occasional emoji! All in one place, all in the open, all accessible to everyone.
 
-The Microsoft Temas handler allows you to read and send messages to a Microsoft Teams channel or chat. It also allows you to create a chatbot that will respond to messages.
+The Microsoft Teams handler allows you to read and send messages to a Microsoft Teams channel or chat. It also allows you to create a chatbot that will respond to messages.
 
 ## Connection
 
@@ -29,10 +29,10 @@ The parameters given above can be obtained by registering an application in Entr
 3. Click on **App registrations** and then click on **New registration**.
 4. Enter a name for your application and select the **Accounts in this organizational directory only** option for the **Supported account types** field.
 5. Keep the **Redirect URI** field empty and click on **Register**.
-6. Copy the **Application (client) ID** and paste it as the `client_id` parameter, and copy the **Directory (tenant) ID** and paste it as the `tenant_id` parameter.
+6. Copy the **Application (client) ID** and record it as the `client_id` parameter, and copy the **Directory (tenant) ID** and record it as the `tenant_id` parameter.
 7. Click on **Certificates & secrets** and then click on **New client secret**.
 8. Enter a description for your client secret and select an expiration period.
-9. Click on **Add** and copy the generated client secret and paste it as the `client_secret` parameter.
+9. Click on **Add** and copy the generated client secret and record it as the `client_secret` parameter.
 10. Click on **Authentication** and then click on **Add a platform**.
 11. Select **Web** and enter the following URLs in the **Redirect URIs** field:
     - `https://cloud.mindsdb.com/verify-auth`
@@ -41,10 +41,6 @@ The parameters given above can be obtained by registering an application in Entr
 <Tip>
 You can find more information about creating app registrations [here](https://docs.microsoft.com/en-us/graph/auth-register-app-v2).
 </Tip>
-
-When the above is statement is executed with the given parameters, the handler will open a browser window and prompt you to sign in with your Microsoft account. 
-
-The handler will then act (via the app registration) as the signed in user and will submit requests to the Microsoft Graph API. This is done using the concept of [delegated permissions](https://docs.microsoft.com/en-us/graph/auth/auth-concepts#delegated-permissions).
 
 To connect to Microsoft Teams using MindsDB, the following CREATE DATABASE statement can be used:
 
@@ -58,8 +54,12 @@ PARAMETERS = {
 };
 ```
 
+When the above is statement is executed with the given parameters, the handler will open a browser window and prompt you to sign in with your Microsoft account. 
+
+The handler will then act (via the app registration) as the signed in user and will submit requests to the Microsoft Graph API. This is done using the concept of [delegated permissions](https://docs.microsoft.com/en-us/graph/auth/auth-concepts#delegated-permissions).
+
 <Tip>
-If you installed MindsDB locally, make sure to install all Microsoft Teams dependencies by running `pip install .[teams]` or from the [requirements.txt](indsdb/integrations/handlers/ms_teams_handler/requirements.txt) file.
+If you installed MindsDB locally, make sure to install all Microsoft Teams dependencies by running `pip install mindsdb[teams]` or from the [requirements.txt](indsdb/integrations/handlers/ms_teams_handler/requirements.txt) file.
 </Tip>
 
 ## Usage

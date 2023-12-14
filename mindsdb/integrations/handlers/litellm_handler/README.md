@@ -74,4 +74,47 @@ api_key="anthropic-api-key";
 select * from information_schema.models where name ="litellm_handler_simple_anthropic" ;
 
 select * from litellm_handler_simple_anthropic where text='Once upon a time';
+
+--completion using prompt_template on create
+
+create model litellm_handler_prompt_template
+predict text
+using
+engine="litellm",
+model="gpt-3.5-turbo",
+api_key="openai-api-key",
+prompt_template="write a story based on {{text}}";
+
+select * from information_schema.models where name ="litellm_handler_prompt_template" ;
+
+select * from litellm_handler_prompt_template where text='Once upon a time';
+
+--completion using prompt_template on predict
+
+create model litellm_handler_prompt_template_predict
+predict text
+using
+engine="litellm",
+model="gpt-3.5-turbo",
+api_key="openai-api-key";
+
+select * from information_schema.models where name ="litellm_handler_prompt_template_predict" ;
+
+select * from litellm_handler_prompt_template_predict 
+where text='Once upon a time' prompt_template="write a story based on {{text}}";
+
+
+--completion using messages with batch_completion (multiple messages)
+
+create model litellm_handler_messages
+predict text
+using
+engine="litellm",
+model="gpt-3.5-turbo",
+api_key="openai-api-key";
+       
+select * from information_schema.models where name ="litellm_handler_messages" ;
+
+select * from litellm_handler_messages 
+where messages='[[{"content": "The sky is blue", "role": "user"}], [{"content": "The grass is green", "role": "user"}]]';
 ```

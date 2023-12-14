@@ -49,7 +49,7 @@ class TestChatMessagesTable(unittest.TestCase):
 
         chat_messages_table = ChatMessagesTable(self.api_handler)
 
-        self.assertListEqual(chat_messages_table.get_columns(), ms_teams_handler_config.CHAT_MESSAGES_TABLE_COLUMNS)    
+        self.assertListEqual(chat_messages_table.get_columns(), ms_teams_handler_config.CHAT_MESSAGES_TABLE_COLUMNS)
 
 
 class TestChannelsTable(unittest.TestCase):
@@ -95,7 +95,7 @@ class TestChannelMessagesTable(unittest.TestCase):
 
         channel_messages_table = ChannelMessagesTable(self.api_handler)
 
-        self.assertListEqual(channel_messages_table.get_columns(), ms_teams_handler_config.CHANNEL_MESSAGES_TABLE_COLUMNS)       
+        self.assertListEqual(channel_messages_table.get_columns(), ms_teams_handler_config.CHANNEL_MESSAGES_TABLE_COLUMNS)
 
 
 if __name__ == "__main__":

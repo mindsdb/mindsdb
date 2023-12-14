@@ -8,14 +8,12 @@ from mindsdb.utilities import log
 
 from mindsdb.integrations.handlers.litellm_handler.settings import CompletionParameters
 
-from litellm import completion
+from litellm import completion, batch_completion
 
 # these require no additional arguments
 
 logger = log.getLogger(__name__)
 
-
-# todo add support for prompt templates and corresponding kwargs for formatting
 
 class LiteLLMHandler(BaseMLEngine):
     """
@@ -116,6 +114,11 @@ class LiteLLMHandler(BaseMLEngine):
 
         # remove prompt_template from args
         args.pop('prompt_template', None)
+
+        if len(args['messages']) > 1:
+            # if more than one message, use batch completion
+            responses = batch_completion(**args)
+            return pd.DataFrame({"result": [response.choices[0].message.content for response in responses]})
 
         # run completion
         response = completion(**args)

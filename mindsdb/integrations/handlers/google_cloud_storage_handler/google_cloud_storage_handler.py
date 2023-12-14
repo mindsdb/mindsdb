@@ -2,7 +2,7 @@ import os
 from collections import OrderedDict
 
 import pandas as pd
-from google.cloud import storage
+import google.cloud.storage as gcs
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
@@ -55,7 +55,7 @@ class GoogleCloudStorageHandler(APIHandler):
 
         keyfile_path = os.path.join(HANDLER_PATH, self.keyfile)
 
-        self.client = storage.Client.from_service_account_json(keyfile_path)
+        self.client = gcs.Client.from_service_account_json(keyfile_path)
 
     def check_connection(self) -> StatusResponse:
         """

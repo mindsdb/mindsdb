@@ -25,7 +25,7 @@ class ChatsTable(APITable):
         Parameters
         ----------
         query : ast.Select
-           Given SQL SELECT query
+           Given SQL SELECT query.
 
         Returns
         -------

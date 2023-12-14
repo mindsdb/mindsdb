@@ -33,7 +33,7 @@ class LiteLLMHandler(BaseMLEngine):
     def create_validation(target, args=None, **kwargs):
         if "using" not in args:
             raise Exception(
-                "RAG engine requires a USING clause! Refer to its documentation for more details."
+                "Litellm engine requires a USING clause. See settings.py for more info on supported args."
             )
 
     def create(

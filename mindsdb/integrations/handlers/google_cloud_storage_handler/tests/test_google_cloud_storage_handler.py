@@ -11,7 +11,7 @@ class GoogleCloudStorageHandlerTest(unittest.TestCase):
                 "keyfile": "keyfile.json",
             }
         }
-        cls.handler = GoogleCloudStorageHandler('test_google_cloud_storage_handler', **cls.kwargs)
+        cls.handler = GoogleCloudStorageHandler("test_google_cloud_storage_handler", **cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -28,7 +28,7 @@ class GoogleCloudStorageHandlerTest(unittest.TestCase):
         assert result.type is RESPONSE_TYPE.TABLE
 
     def test_3_get_columns(self):
-        columns = self.handler.get_columns('id')
+        columns = self.handler.get_columns("id")
         assert columns.type is not RESPONSE_TYPE.ERROR
 
     def test_4_insert_query(self):
@@ -50,5 +50,5 @@ class GoogleCloudStorageHandlerTest(unittest.TestCase):
         assert result.type is not RESPONSE_TYPE.ERROR
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

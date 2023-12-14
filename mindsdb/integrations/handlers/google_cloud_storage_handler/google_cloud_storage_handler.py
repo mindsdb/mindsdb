@@ -9,20 +9,20 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response, HandlerStatusResponse, HandlerResponse,
+    HandlerResponse as Response
 )
+from .google_cloud_storage_tables import GoogleCloudStorageBucketsTable
 from mindsdb.utilities import log
-
 logger = log.getLogger(__name__)
 
-from .google_cloud_storage_tables import GoogleCloudStorageBucketsTable
+HANDLER_PATH = os.path.abspath(".")
 
 
 class GoogleCloudStorageHandler(APIHandler):
     """
     A class for handling connections and interactions with the Google Cloud Storage API.
     """
-    name = 'google_cloud_storage'
+    name = "google_cloud_storage"
 
     def __init__(self, name: str, **kwargs):
         """
@@ -33,16 +33,14 @@ class GoogleCloudStorageHandler(APIHandler):
         """
         super().__init__(name)
 
-        self.connection_data = kwargs.get('connection_data', {})
-        self.keyfile = self.connection_data['keyfile']
+        self.connection_data = kwargs.get("connection_data", {})
+        self.keyfile = self.connection_data["keyfile"]
         self.client = None
 
         self.is_connected = False
 
-        self.handler_path = os.path.abspath(".")
-
         self.buckets = GoogleCloudStorageBucketsTable(self)
-        self._register_table('buckets', self.buckets)
+        self._register_table("buckets", self.buckets)
 
     def connect(self):
         """
@@ -55,9 +53,7 @@ class GoogleCloudStorageHandler(APIHandler):
         if self.is_connected:
             return self.client
 
-        curr_dir = self.handler_path
-
-        keyfile_path = os.path.join(curr_dir, 'keyfile.json')
+        keyfile_path = os.path.join(HANDLER_PATH, self.keyfile)
 
         self.client = storage.Client.from_service_account_json(keyfile_path)
 
@@ -76,7 +72,7 @@ class GoogleCloudStorageHandler(APIHandler):
             response.success = True
         except Exception as e:
             response.error_message = e
-            logger.error(f'Error connecting to Google Cloud Storage API: {e}!')
+            logger.error(f"Error connecting to Google Cloud Storage API: {e}!")
 
         self.is_connected = response.success
 
@@ -111,22 +107,22 @@ class GoogleCloudStorageHandler(APIHandler):
         self.connect()
 
         # Use the client to retrieve buckets
-        buckets = list(self.client.list_buckets(project=params['user_project'], max_results=params['limit']))
+        buckets = list(self.client.list_buckets(project=params["user_project"], max_results=params["limit"]))
 
         # Create a DataFrame to hold bucket information
         bucket_data = []
         for bucket in buckets:
             bucket_data.append({
-                'selfLink': [bucket.self_link],
-                'id': [str(bucket.id)],
-                'name': [str(bucket.name)],
-                'projectNumber': [str(bucket.projectNumber)],
-                'location': [str(bucket.location)],
-                'storageClass': [str(bucket.storage_class)],
-                'timeCreated': [str(bucket.time_created)],
-                'updated': [str(bucket.updated)],
-                'owner': [str(bucket.owner['entityId'])],
-                'labels': [str(bucket.labels)]
+                "selfLink": [bucket.self_link],
+                "id": [str(bucket.id)],
+                "name": [str(bucket.name)],
+                "projectNumber": [str(bucket.projectNumber)],
+                "location": [str(bucket.location)],
+                "storageClass": [str(bucket.storage_class)],
+                "timeCreated": [str(bucket.time_created)],
+                "updated": [str(bucket.updated)],
+                "owner": [str(bucket.owner["entityId"])],
+                "labels": [str(bucket.labels)]
             })
 
         # Convert the bucket data to a pandas DataFrame
@@ -146,22 +142,22 @@ class GoogleCloudStorageHandler(APIHandler):
         # Connect client
         self.connect()
 
-        new_bucket = self.client.bucket(bucket_name=params['name'], user_project=params['user_project'])
+        new_bucket = self.client.bucket(bucket_name=params["name"], user_project=params["user_project"])
 
         for param, value in params:
-            if param == 'storageClass':
+            if param == "storageClass":
                 new_bucket.storage_class(value=value)
 
         created_bucket = new_bucket.create(
-            location=params['location']
+            location=params["location"]
         )
 
         # Return information about the newly created bucket
         return pd.DataFrame({
-            'name': [str(created_bucket.name)],
-            'userProject': [str(created_bucket.user_project)],
-            'location': [str(created_bucket.location)],
-            'storageClass': [str(created_bucket.storage_class)]
+            "name": [str(created_bucket.name)],
+            "userProject": [str(created_bucket.user_project)],
+            "location": [str(created_bucket.location)],
+            "storageClass": [str(created_bucket.storage_class)]
         })
 
     def update_bucket(self, params: dict = None) -> pd.DataFrame:
@@ -177,10 +173,10 @@ class GoogleCloudStorageHandler(APIHandler):
         self.connect()
 
         # Get the existing bucket
-        bucket = self.client.get_bucket(bucket_or_name=params['name'])
+        bucket = self.client.get_bucket(bucket_or_name=params["name"])
 
         for param, value in params:
-            if param == 'storageClass':
+            if param == "storageClass":
                 bucket.storage_class(value)
 
         # Update the bucket with provided properties
@@ -205,7 +201,7 @@ class GoogleCloudStorageHandler(APIHandler):
         self.connect()
 
         # Get the existing bucket
-        bucket = self.client.get_bucket(bucket_or_name=params['name'])
+        bucket = self.client.get_bucket(bucket_or_name=params["name"])
 
         result = pd.DataFrame({
             "name": [str(bucket.name)],
@@ -229,24 +225,24 @@ class GoogleCloudStorageHandler(APIHandler):
         if func_name is None:
             raise ValueError("Function name not provided")
 
-        if func_name == 'list_buckets':
+        if func_name == "list_buckets":
             return self.list_buckets(params)
-        elif func_name == 'create_bucket':
+        elif func_name == "create_bucket":
             return self.create_bucket(params)
-        elif func_name == 'update_bucket':
-           return self.update_bucket(params)
-        elif func_name == 'delete_bucket':
+        elif func_name == "update_bucket":
+            return self.update_bucket(params)
+        elif func_name == "delete_bucket":
             return self.delete_bucket(params)
         else:
-            raise NotImplementedError(f"Function '{func_name}' not supported")
+            raise NotImplementedError(f"Function \"{func_name}\" not supported")
 
 
 connection_args = OrderedDict(
     keyfile={
-        'type': ARG_TYPE.PATH,
-        'description': 'Service Account keyfile.json path',
-        'required': True,
-        'label': 'Upload Service Account keyfile.json path',
+        "type": ARG_TYPE.STR,
+        "description": "Name of JSON keyfile used for Google Cloud Storage authentication. The keyfile is obtainable trough Google Cloud Storage itself.",
+        "required": True,
+        "label": "keyfile",
     },
 )
 

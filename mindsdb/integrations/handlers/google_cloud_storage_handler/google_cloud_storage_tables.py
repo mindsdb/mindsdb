@@ -3,7 +3,6 @@ from mindsdb_sql.parser import ast
 
 from mindsdb.integrations.handlers.utilities.query_utilities import INSERTQueryParser, UPDATEQueryParser, DELETEQueryParser
 from mindsdb.integrations.libs.api_handler import APITable
-from mindsdb.integrations.libs.response import HandlerResponse as Response
 
 from mindsdb.integrations.utilities.date_utils import parse_utc_date
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
@@ -132,7 +131,7 @@ class GoogleCloudStorageBucketsTable(APITable):
         }
 
         for op, arg1, arg2 in conditions:
-            if arg1 is "name":
+            if arg1 == "name":
                 if op == "=":
                     bucket_data[arg1] = arg2
                 else:
@@ -161,7 +160,7 @@ class GoogleCloudStorageBucketsTable(APITable):
 
         bucket_data = {}
         for op, arg1, arg2 in conditions:
-            if arg1 is "name":
+            if arg1 == "name":
                 if op == "=":
                     bucket_data[arg1] = arg2
                 else:

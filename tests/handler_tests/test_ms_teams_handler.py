@@ -69,7 +69,7 @@ class TestChatsTable(unittest.TestCase):
 
         self.assertListEqual(chats_table.get_columns(), ms_teams_handler_config.CHATS_TABLE_COLUMNS)
 
-    def test_select_star_returns_correct_data(self):
+    def test_select_star_returns_all_columns(self):
         # patch the api handler to return the chat data
         with patch.object(self.api_handler.connect(), 'get_chat', return_value=self.chat_data):
             chats_table = ChatsTable(self.api_handler)
@@ -155,7 +155,23 @@ class TestChannelsTable(unittest.TestCase):
         Set up the tests.
         """
 
+        # mock the api handler
         cls.api_handler = Mock(MSTeamsHandler)
+
+        # define the channel data to return
+        cls.channel_data = {
+            '@odata.context': 'test_context', 
+            'id': 'test_id', 
+            'createdDateTime': '2023-11-17T22:54:33.055Z', 
+            'displayName': 'test_display_name', 
+            'description': None, 
+            'isFavoriteByDefault': None, 
+            'email': 'test@test.com', 
+            'tenantId': 'test_tenant_id', 
+            'webUrl': 'https://teams.test', 
+            'membershipType': 'standard', 
+            'teamId': 'test_team_id'
+        }
 
     def test_get_columns_returns_all_columns(self):
         """
@@ -165,6 +181,77 @@ class TestChannelsTable(unittest.TestCase):
         channels_table = ChannelsTable(self.api_handler)
 
         self.assertListEqual(channels_table.get_columns(), ms_teams_handler_config.CHANNELS_TABLE_COLUMNS)
+
+    def test_select_star_returns_all_columns(self):
+        # patch the api handler to return the channel data
+        with patch.object(self.api_handler.connect(), 'get_channel', return_value=self.channel_data):
+            channels_table = ChannelsTable(self.api_handler)
+
+            select_all = ast.Select(
+                # select all columns
+                targets=[Star()],
+                from_table="channels",
+                where=[
+                    BinaryOperation(
+                        op='=',
+                        args = [
+                            Identifier('id'), 
+                            Constant("test_id")
+                        ]
+                    ),
+                    BinaryOperation(
+                        op='=',
+                        args = [
+                            Identifier('teamId'), 
+                            Constant("test_team_id")
+                        ]
+                    )
+                ]
+            )
+
+            all_channels = channels_table.select(select_all)
+            first_channel = all_channels.iloc[0]
+
+            self.assertEqual(all_channels.shape[1], len(ms_teams_handler_config.CHANNELS_TABLE_COLUMNS))
+            self.assertEqual(first_channel["id"], "test_id")
+            self.assertEqual(first_channel["displayName"], "test_display_name")
+
+    def test_select_returns_only_selected_columns(self):
+        # patch the api handler to return the channel data
+        with patch.object(self.api_handler.connect(), 'get_channel', return_value=self.channel_data):
+            channels_table = ChannelsTable(self.api_handler)
+
+            select_all = ast.Select(
+                # select only the id and displayName columns
+                targets=[
+                    Identifier('id'),
+                    Identifier('displayName'),
+                ],
+                from_table="channels",
+                where=[
+                    BinaryOperation(
+                        op='=',
+                        args = [
+                            Identifier('id'), 
+                            Constant("test_id")
+                        ]
+                    ),
+                    BinaryOperation(
+                        op='=',
+                        args = [
+                            Identifier('teamId'), 
+                            Constant("test_team_id")
+                        ]
+                    )
+                ]
+            )
+
+            all_channels = channels_table.select(select_all)
+            first_channel = all_channels.iloc[0]
+
+            self.assertEqual(all_channels.shape[1], 2)
+            self.assertEqual(first_channel["id"], "test_id")
+            self.assertEqual(first_channel["displayName"], "test_display_name")
 
 
 class TestChannelMessagesTable(unittest.TestCase):

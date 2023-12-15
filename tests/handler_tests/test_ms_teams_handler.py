@@ -376,7 +376,74 @@ class TestChannelMessagesTable(unittest.TestCase):
         Set up the tests.
         """
 
+        # mock the api handler
         cls.api_handler = Mock(MSTeamsHandler)
+
+        # define the channel message data to return
+        cls.channel_message_data = {
+            '@odata.context': 'test_context', 
+            'id': 'test_id', 
+            'replyToId': None, 
+            'etag': 'test_etag', 
+            'messageType': 'message', 
+            'createdDateTime': '2023-11-30T16:52:50.18Z', 
+            'lastModifiedDateTime': '2023-11-30T16:52:50.18Z', 
+            'lastEditedDateTime': None, 
+            'deletedDateTime': None, 
+            'subject': 'Test Subject', 
+            'summary': None, 
+            'chatId': None, 
+            'importance': 
+            'normal', 
+            'locale': 'en-us',
+            'webUrl': 'https://teams.test',
+            'policyViolation': None,
+            'attachments': [],
+            'mentions': [],
+            'reactions': [],
+            'from': {
+                'application': None,
+                'device': None,
+                'user': {
+                    '@odata.type': 'test_type',
+                    'id': 'test_user_id',
+                    'displayName': 'test_user_display_name',
+                    'userIdentityType': 'aadUser',
+                    'tenantId': 'test_tenant_id'
+                }
+            },
+            'body': {
+                'contentType': 'text',
+                'content': '\n\nTest message.'
+            },
+            'channelIdentity': {
+                'teamId': 'test_team_id',
+                'channelId': 'test_channel_id'
+            },
+            'eventDetail': {
+                '@odata.type': 'test_type',
+                'visibleHistoryStartDateTime': '2023-11-30T16:52:50.18Z',
+                'members': [],
+                'initiator': {
+                    'device': None,
+                    'application': {
+                        '@odata.type': 'test_type',
+                        'id': 'test_app_id',
+                        'displayName': 'test_app_display_name',
+                        'applicationIdentityType': 'bot'
+                    },
+                    'user': {
+                        '@odata.type': 'test_type',
+                        'id': 'test_user_id',
+                        'displayName': 'test_user_display_name',
+                        'userIdentityType': 'aadUser',
+                        'tenantId': 'test_tenant_id'
+                    }
+                },
+                'channelId': 'test_channel_id',
+                'channelDisplayName': 'test_channel_display_name'
+            }
+        }
 
     def test_get_columns_returns_all_columns(self):
         """
@@ -386,6 +453,91 @@ class TestChannelMessagesTable(unittest.TestCase):
         channel_messages_table = ChannelMessagesTable(self.api_handler)
 
         self.assertListEqual(channel_messages_table.get_columns(), ms_teams_handler_config.CHANNEL_MESSAGES_TABLE_COLUMNS)
+
+    def test_select_star_returns_all_columns(self):
+        # patch the api handler to return the channel message data
+        with patch.object(self.api_handler.connect(), 'get_channel_message', return_value=self.channel_message_data):
+            channel_messages_table = ChannelMessagesTable(self.api_handler)
+
+            select_all = ast.Select(
+                # select all columns
+                targets=[Star()],
+                from_table="channel_messages",
+                where=[
+                    BinaryOperation(
+                        op='=',
+                        args = [
+                            Identifier('id'), 
+                            Constant("test_id")
+                        ]
+                    ),
+                    BinaryOperation(
+                        op='=',
+                        args = [
+                            Identifier('channelIdentity_channelId'), 
+                            Constant("test_channel_id")
+                        ]
+                    ),
+                    BinaryOperation(
+                        op='=',
+                        args = [
+                            Identifier('channelIdentity_teamId'), 
+                            Constant("test_team_id")
+                        ]
+                    )
+                ]
+            )
+
+            all_channel_messages = channel_messages_table.select(select_all)
+            first_channel_message = all_channel_messages.iloc[0]
+
+            self.assertEqual(all_channel_messages.shape[1], len(ms_teams_handler_config.CHANNEL_MESSAGES_TABLE_COLUMNS))
+            self.assertEqual(first_channel_message["id"], "test_id")
+            self.assertEqual(first_channel_message["messageType"], "message")
+
+    def test_select_returns_only_selected_columns(self):
+        # patch the api handler to return the channel message data
+        with patch.object(self.api_handler.connect(), 'get_channel_message', return_value=self.channel_message_data):
+            channel_messages_table = ChannelMessagesTable(self.api_handler)
+
+            select_all = ast.Select(
+                # select only the id and messageType columns
+                targets=[
+                    Identifier('id'),
+                    Identifier('messageType'),
+                ],
+                from_table="channel_messages",
+                where=[
+                    BinaryOperation(
+                        op='=',
+                        args = [
+                            Identifier('id'), 
+                            Constant("test_id")
+                        ]
+                    ),
+                    BinaryOperation(
+                        op='=',
+                        args = [
+                            Identifier('channelIdentity_channelId'), 
+                            Constant("test_channel_id")
+                        ]
+                    ),
+                    BinaryOperation(
+                        op='=',
+                        args = [
+                            Identifier('channelIdentity_teamId'), 
+                            Constant("test_team_id")
+                        ]
+                    )
+                ]
+            )
+
+            all_channel_messages = channel_messages_table.select(select_all)
+            first_channel_message = all_channel_messages.iloc[0]
+
+            self.assertEqual(all_channel_messages.shape[1], 2)
+            self.assertEqual(first_channel_message["id"], "test_id")
+            self.assertEqual(first_channel_message["messageType"], "message")
 
 
 if __name__ == "__main__":

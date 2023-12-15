@@ -459,6 +459,9 @@ class ModelWrapperSafe:
             if base_path is None:
                 # create in root path
                 base_path = Path(self.config.paths['root']) / 'venvs'
+            else:
+                base_path = Path(base_path)
+            base_path.mkdir(parents=True, exist_ok=True)
 
             env_folder_name = f'env_{engine_id}'
             if isinstance(engine_version, int) and engine_version > 1:

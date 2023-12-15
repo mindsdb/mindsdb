@@ -59,8 +59,10 @@ class ChatsTable(APITable):
                     raise NotImplementedError("Only '=' operator is supported for id column.")
         
         chats_df = pd.json_normalize(self.get_chats(id), sep='_')
-        # remove the id column from the where conditions as it has already been evaluated
-        where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id']]
+
+        # if the id is given, remove the id column from the where conditions as it has already been evaluated in the API call (get_chats)
+        if id:
+            where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id']]
 
         select_statement_executor = SELECTQueryExecutor(
             chats_df,
@@ -174,8 +176,13 @@ class ChatMessagesTable(APITable):
                     raise NotImplementedError("Only '=' operator is supported for chatId column.")
         
         messages_df = pd.json_normalize(self.get_messages(chat_id, message_id), sep='_')
-        # remove the id and chatId columns from the where conditions as they have already been evaluated
-        where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id', 'chatId']]
+    
+        # if both chat_id and message_id are given, remove the id and chatId columns from the where conditions as they have already been evaluated in the API call (get_messages)
+        if chat_id and message_id:
+            where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id', 'chatId']]
+        # if only the chat_id is given, remove the chatId column from the where conditions as it has already been evaluated in the API call (get_messages)
+        elif chat_id:
+            where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['chatId']]
 
         select_statement_executor = SELECTQueryExecutor(
             messages_df,
@@ -236,7 +243,7 @@ class ChatMessagesTable(APITable):
         # if only the chat_id is given, get all the messages from that chat
         elif chat_id:
             return api_client.get_chat_messages(chat_id)
-        # if no parameters are given, get all the messages from all the chats
+        # if no parameters are given or only the message_id is given, get all the messages from all the chats
         else:
             return api_client.get_all_chat_messages()
 
@@ -371,8 +378,10 @@ class ChannelsTable(APITable):
                     raise NotImplementedError("Only '=' operator is supported for teamId column.")
                 
         channels_df = pd.json_normalize(self.get_channels(channel_id, team_id))
-        # remove the id and teamId columns from the where conditions as they have already been evaluated
-        where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id', 'teamId']]
+
+        # if both channel_id and team_id are given, remove the id and teamId columns from the where conditions as they have already been evaluated in the API call (get_channels)
+        if channel_id and team_id:
+            where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id', 'teamId']]
 
         select_statement_executor = SELECTQueryExecutor(
             channels_df,
@@ -410,7 +419,7 @@ class ChannelsTable(APITable):
         # if both channel_id and team_id are given, get the channel with that id from the API
         if channel_id and team_id:
             return [api_client.get_channel(team_id, channel_id)]
-        # if only the team_id is given, get all the channels
+        # if no parameter are given or only the team_id is given, get all the channels
         else:
             return api_client.get_channels()
     
@@ -479,12 +488,15 @@ class ChannelMessagesTable(APITable):
                 
             if arg1 == 'channelIdentity_channelId':
                 if op == "=":
-                    team_id = arg2
+                    channel_id = arg2
                 else:
                     raise NotImplementedError("Only '=' operator is supported for teamId column.")
                 
         messages_df = pd.json_normalize(self.get_messages(team_id, channel_id, message_id), sep='_')
-        where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id', 'channelIdentity_teamId', 'channelIdentity_channelId']]
+
+        # if all parameters are given, remove the id, channelIdentity_teamId and channelIdentity_channelId columns from the where conditions as they have already been evaluated in the API call (get_messages)
+        if team_id and channel_id and message_id:
+            where_conditions = [where_condition for where_condition in where_conditions if where_condition[1] not in ['id', 'channelIdentity_teamId', 'channelIdentity_channelId']]
 
         select_statement_executor = SELECTQueryExecutor(
             messages_df,
@@ -519,8 +531,34 @@ class ChannelMessagesTable(APITable):
 
         # if all parameters are given, get the message with that id from that channel from that team from the API
         if message_id and channel_id and team_id:
-            return [api_client.get_channel_message(team_id, channel_id, message_id)]
-        # if no parameters are given, get all the messages from all the channels from all the teams
+            channel_message = api_client.get_channel_message(team_id, channel_id, message_id)
+            # add the missing eventDetail attribute to the channel message
+            channel_message['eventDetail'] = {
+                '@odata.type': None, 
+                'visibleHistoryStartDateTime': None, 
+                'members': None,
+                'channelId': None,
+                'channelDisplayName': None,
+                'initiator': {
+                    'application': {
+                        '@odata.type': None, 
+                        'id': None,
+                        'displayName': None,
+                        'applicationIdentityType': None
+                    },
+                    'device': None, 
+                    'user': {
+                        '@odata.type': None, 
+                        'id': None,
+                        'displayName': None,
+                        'userIdentityType': None,
+                        'tenantId': None
+                    }
+                }
+            }
+
+            return [channel_message]
+        # for any other combination of parameters, get all the messages from all the channels from all the teams
         else:
             return api_client.get_channel_messages()
     

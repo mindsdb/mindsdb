@@ -46,8 +46,8 @@ class TestChatsTable(unittest.TestCase):
                 from_table="chats",
                 where=BinaryOperation(
                     op='=',
-                    args = [
-                        Identifier('id'), 
+                    args=[
+                        Identifier('id'),
                         Constant("test_id")
                     ]
                 )
@@ -75,7 +75,7 @@ class TestChatsTable(unittest.TestCase):
                 where=BinaryOperation(
                     op='=',
                     args=[
-                        Identifier('id'), 
+                        Identifier('id'),
                         Constant("test_id")
                     ]
                 )
@@ -125,14 +125,14 @@ class TestChatMessagesTable(unittest.TestCase):
                     BinaryOperation(
                         op='=',
                         args=[
-                            Identifier('id'), 
+                            Identifier('id'),
                             Constant("test_id")
                         ]
                     ),
                     BinaryOperation(
                         op='=',
                         args=[
-                            Identifier('chatId'), 
+                            Identifier('chatId'),
                             Constant("test_chat_id")
                         ]
                     )
@@ -162,14 +162,14 @@ class TestChatMessagesTable(unittest.TestCase):
                     BinaryOperation(
                         op='=',
                         args=[
-                            Identifier('id'), 
+                            Identifier('id'),
                             Constant("test_id")
                         ]
                     ),
                     BinaryOperation(
                         op='=',
                         args=[
-                            Identifier('chatId'), 
+                            Identifier('chatId'),
                             Constant("test_chat_id")
                         ]
                     )
@@ -220,14 +220,14 @@ class TestChannelsTable(unittest.TestCase):
                     BinaryOperation(
                         op='=',
                         args=[
-                            Identifier('id'), 
+                            Identifier('id'),
                             Constant("test_id")
                         ]
                     ),
                     BinaryOperation(
                         op='=',
                         args=[
-                            Identifier('teamId'), 
+                            Identifier('teamId'),
                             Constant("test_team_id")
                         ]
                     )
@@ -257,14 +257,14 @@ class TestChannelsTable(unittest.TestCase):
                     BinaryOperation(
                         op='=',
                         args=[
-                            Identifier('id'), 
+                            Identifier('id'),
                             Constant("test_id")
                         ]
                     ),
                     BinaryOperation(
                         op='=',
                         args=[
-                            Identifier('teamId'), 
+                            Identifier('teamId'),
                             Constant("test_team_id")
                         ]
                     )
@@ -315,21 +315,21 @@ class TestChannelMessagesTable(unittest.TestCase):
                     BinaryOperation(
                         op='=',
                         args=[
-                            Identifier('id'), 
+                            Identifier('id'),
                             Constant("test_id")
                         ]
                     ),
                     BinaryOperation(
                         op='=',
                         args=[
-                            Identifier('channelIdentity_channelId'), 
+                            Identifier('channelIdentity_channelId'),
                             Constant("test_channel_id")
                         ]
                     ),
                     BinaryOperation(
                         op='=',
                         args=[
-                            Identifier('channelIdentity_teamId'), 
+                            Identifier('channelIdentity_teamId'),
                             Constant("test_team_id")
                         ]
                     )
@@ -359,21 +359,21 @@ class TestChannelMessagesTable(unittest.TestCase):
                     BinaryOperation(
                         op='=',
                         args=[
-                            Identifier('id'), 
+                            Identifier('id'),
                             Constant("test_id")
                         ]
                     ),
                     BinaryOperation(
                         op='=',
                         args=[
-                            Identifier('channelIdentity_channelId'), 
+                            Identifier('channelIdentity_channelId'),
                             Constant("test_channel_id")
                         ]
                     ),
                     BinaryOperation(
                         op='=',
                         args=[
-                            Identifier('channelIdentity_teamId'), 
+                            Identifier('channelIdentity_teamId'),
                             Constant("test_team_id")
                         ]
                     )

@@ -10,6 +10,9 @@ import concurrent.futures
 from typing import Optional, Dict
 
 import openai
+from openai import OpenAI
+
+client = OpenAI(api_key=get_api_key('openai', args, self.engine_storage))
 import numpy as np
 import pandas as pd
 
@@ -428,7 +431,7 @@ class OpenAIHandler(BaseMLEngine):
             kwargs = {**kwargs, **api_args}
 
             before_openai_query(kwargs)
-            resp = _tidy(openai.Completion.create(**kwargs))
+            resp = _tidy(client.completions.create(**kwargs))
             _log_api_call(kwargs, resp)
             return resp
 
@@ -444,7 +447,7 @@ class OpenAIHandler(BaseMLEngine):
             kwargs = {**kwargs, **api_args}
 
             before_openai_query(kwargs)
-            resp = _tidy(openai.Embedding.create(**kwargs))
+            resp = _tidy(client.embeddings.create(**kwargs))
             _log_api_call(kwargs, resp)
             return resp
 
@@ -495,7 +498,7 @@ class OpenAIHandler(BaseMLEngine):
                     pkwargs = {**kwargs, **api_args}
 
                     before_openai_query(kwargs)
-                    resp = _tidy(openai.ChatCompletion.create(**pkwargs))
+                    resp = _tidy(client.chat.completions.create(**pkwargs))
                     _log_api_call(pkwargs, resp)
 
                     completions.extend(resp)
@@ -504,7 +507,7 @@ class OpenAIHandler(BaseMLEngine):
                     pkwargs = {**kwargs, **api_args}
 
                     before_openai_query(kwargs)
-                    resp = _tidy(openai.ChatCompletion.create(**pkwargs))
+                    resp = _tidy(client.chat.completions.create(**pkwargs))
                     _log_api_call(pkwargs, resp)
 
                     completions.extend(resp)
@@ -540,7 +543,7 @@ class OpenAIHandler(BaseMLEngine):
                 ]
 
             completions = [
-                openai.Image.create(**{'prompt': p, **kwargs, **api_args})['data']
+                client.images.generate(**{'prompt': p, **kwargs, **api_args})['data']
                 for p in prompts
             ]
             return _tidy(completions)
@@ -551,7 +554,7 @@ class OpenAIHandler(BaseMLEngine):
                 model_name, prompts, api_key, api_args, args, df
             )
             return completion
-        except openai.error.InvalidRequestError as e:
+        except openai.InvalidRequestError as e:
             # else, we get the max batch size
             e = e.user_message
             if 'you can currently request up to at most a total of' in e:
@@ -615,7 +618,7 @@ class OpenAIHandler(BaseMLEngine):
         elif attribute == 'metadata':
             api_key = get_api_key('openai', args, self.engine_storage)
             model_name = args.get('model_name', self.default_model)
-            meta = openai.Model.retrieve(model_name, api_key=api_key)
+            meta = client.models.retrieve(model_name, api_key=api_key)
             return pd.DataFrame(meta.items(), columns=['key', 'value'])
         else:
             tables = ['args', 'metadata']
@@ -654,10 +657,12 @@ class OpenAIHandler(BaseMLEngine):
                 f"This model cannot be finetuned. Supported base models are {self.supported_ft_models}"
             )
 
-        openai.api_key = get_api_key('openai', args, self.engine_storage)
-        openai.api_base = args.get(
-            'api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
-        )
+        # TODO: The 'openai.api_base' option isn't read in the client API. You will need to pass it when you instantiate the client, e.g. 'OpenAI(api_base=args.get(
+        #             'api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
+        #         ))'
+        # openai.api_base = args.get(
+        #             'api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
+        #         )
         finetune_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
         temp_storage_path = tempfile.mkdtemp()
@@ -671,11 +676,9 @@ class OpenAIHandler(BaseMLEngine):
         jsons = {k: None for k in file_names.keys()}
         for split, file_name in file_names.items():
             if os.path.isfile(os.path.join(temp_storage_path, file_name)):
-                jsons[split] = openai.File.create(
-                    file=open(f"{temp_storage_path}/{file_name}", "rb"),
-                    # api_base=openai.api_base,  # TODO: rm
-                    purpose='fine-tune',
-                )
+                jsons[split] = client.files.create(file=open(f"{temp_storage_path}/{file_name}", "rb"),
+                # api_base=openai.api_base,  # TODO: rm
+                purpose='fine-tune')
 
         if type(jsons['train']) in (openai.File, openai.openai_object.OpenAIObject):
             train_file_id = jsons['train'].id
@@ -702,10 +705,10 @@ class OpenAIHandler(BaseMLEngine):
 
         end_time = datetime.datetime.now()
         runtime = end_time - start_time
-        name_extension = openai.File.retrieve(id=result_file_id).filename
+        name_extension = client.files.retrieve(id=result_file_id).filename
         result_path = f'{temp_storage_path}/ft_{finetune_time}_result_{name_extension}'
         with open(result_path, 'wb') as f:
-            f.write(openai.File.download(id=result_file_id))
+            f.write(client.files.download(id=result_file_id))
 
         if '.csv' in name_extension:
             # legacy endpoint

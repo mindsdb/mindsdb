@@ -47,7 +47,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     def create(self, target, args=None, **kwargs):
         with self._anyscale_base_api():
-            self._set_models(args['using'])
+            self._set_models(args.get('using', {}))
 
             # load fine-tuned models, then hand over
             _args = self.model_storage.json_get('args')
@@ -57,7 +57,6 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         with self._anyscale_base_api():
-            self._set_models(args['using'])
             # load fine-tuned models, then hand over
             _args = self.model_storage.json_get('args')
             base_models = self.chat_completion_models
@@ -66,7 +65,6 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         with self._anyscale_base_api():
-            self._set_models(args['using'])
             super().finetune(df, args)
             # rewrite chat_completion_models to include the newly fine-tuned model
             args = self.model_storage.json_get('args')
@@ -90,6 +88,8 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             return pd.DataFrame(tables, columns=['tables'])
 
     def _set_models(self, args):
+        if 'api_key' in args:
+            args['openai_api_key'] = args['api_key']  # remove this once #7496 is fixed
         self.all_models = [m['id'] for m in openai.Model.list(
             api_key=get_api_key('openai', args, self.engine_storage),
             api_base=ANYSCALE_API_BASE)['data']]

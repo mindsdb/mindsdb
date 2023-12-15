@@ -214,6 +214,7 @@ class ChatMessagesTable(APITable):
         # if both chat_id and message_id are given, get the message with that id from the API
         if message_id and chat_id:
             chat_message = api_client.get_chat_message(chat_id, message_id)
+            # add the missing eventDetail attribute to the chat message
             chat_message['eventDetail'] = {
                 '@odata.type': None, 
                 'visibleHistoryStartDateTime': None, 
@@ -230,6 +231,7 @@ class ChatMessagesTable(APITable):
                     }
                 }
             }
+
             return [chat_message]
         # if only the chat_id is given, get all the messages from that chat
         elif chat_id:

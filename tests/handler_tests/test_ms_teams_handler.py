@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 from mindsdb_sql.parser import ast
 from mindsdb_sql.parser.ast import Constant, BinaryOperation
@@ -44,7 +44,8 @@ class TestChatsTable(unittest.TestCase):
                 # select all columns
                 targets=[Star()],
                 from_table="chats",
-                where=BinaryOperation(op='=',
+                where=BinaryOperation(
+                    op='=',
                     args = [
                         Identifier('id'), 
                         Constant("test_id")
@@ -71,8 +72,9 @@ class TestChatsTable(unittest.TestCase):
                     Identifier('chatType'),
                 ],
                 from_table="chats",
-                where=BinaryOperation(op='=',
-                    args = [
+                where=BinaryOperation(
+                    op='=',
+                    args=[
                         Identifier('id'), 
                         Constant("test_id")
                     ]
@@ -122,14 +124,14 @@ class TestChatMessagesTable(unittest.TestCase):
                 where=[
                     BinaryOperation(
                         op='=',
-                        args = [
+                        args=[
                             Identifier('id'), 
                             Constant("test_id")
                         ]
                     ),
                     BinaryOperation(
                         op='=',
-                        args = [
+                        args=[
                             Identifier('chatId'), 
                             Constant("test_chat_id")
                         ]
@@ -159,14 +161,14 @@ class TestChatMessagesTable(unittest.TestCase):
                 where=[
                     BinaryOperation(
                         op='=',
-                        args = [
+                        args=[
                             Identifier('id'), 
                             Constant("test_id")
                         ]
                     ),
                     BinaryOperation(
                         op='=',
-                        args = [
+                        args=[
                             Identifier('chatId'), 
                             Constant("test_chat_id")
                         ]
@@ -217,14 +219,14 @@ class TestChannelsTable(unittest.TestCase):
                 where=[
                     BinaryOperation(
                         op='=',
-                        args = [
+                        args=[
                             Identifier('id'), 
                             Constant("test_id")
                         ]
                     ),
                     BinaryOperation(
                         op='=',
-                        args = [
+                        args=[
                             Identifier('teamId'), 
                             Constant("test_team_id")
                         ]
@@ -254,14 +256,14 @@ class TestChannelsTable(unittest.TestCase):
                 where=[
                     BinaryOperation(
                         op='=',
-                        args = [
+                        args=[
                             Identifier('id'), 
                             Constant("test_id")
                         ]
                     ),
                     BinaryOperation(
                         op='=',
-                        args = [
+                        args=[
                             Identifier('teamId'), 
                             Constant("test_team_id")
                         ]
@@ -312,21 +314,21 @@ class TestChannelMessagesTable(unittest.TestCase):
                 where=[
                     BinaryOperation(
                         op='=',
-                        args = [
+                        args=[
                             Identifier('id'), 
                             Constant("test_id")
                         ]
                     ),
                     BinaryOperation(
                         op='=',
-                        args = [
+                        args=[
                             Identifier('channelIdentity_channelId'), 
                             Constant("test_channel_id")
                         ]
                     ),
                     BinaryOperation(
                         op='=',
-                        args = [
+                        args=[
                             Identifier('channelIdentity_teamId'), 
                             Constant("test_team_id")
                         ]
@@ -356,21 +358,21 @@ class TestChannelMessagesTable(unittest.TestCase):
                 where=[
                     BinaryOperation(
                         op='=',
-                        args = [
+                        args=[
                             Identifier('id'), 
                             Constant("test_id")
                         ]
                     ),
                     BinaryOperation(
                         op='=',
-                        args = [
+                        args=[
                             Identifier('channelIdentity_channelId'), 
                             Constant("test_channel_id")
                         ]
                     ),
                     BinaryOperation(
                         op='=',
-                        args = [
+                        args=[
                             Identifier('channelIdentity_teamId'), 
                             Constant("test_team_id")
                         ]

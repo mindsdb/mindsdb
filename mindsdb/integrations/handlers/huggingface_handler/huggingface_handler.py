@@ -32,6 +32,7 @@ class HuggingFaceHandler(BaseMLEngine):
         # check model task
         supported_tasks = [
             "text-classification",
+            "text-generation",
             "zero-shot-classification",
             "translation",
             "summarization",
@@ -180,6 +181,14 @@ class HuggingFaceHandler(BaseMLEngine):
         final[f"{args['target']}_explain"] = explain
         return final
 
+    def predict_text_generation(self, pipeline, item, args):
+        result = pipeline([item], max_length=args["max_length"])[0]
+
+        final = {}
+        final[args["target"]] = result["generated_text"]
+
+        return final
+
     def predict_zero_shot(self, pipeline, item, args):
         top_k = args.get("top_k", 1000)
 
@@ -241,6 +250,7 @@ class HuggingFaceHandler(BaseMLEngine):
 
         fnc_list = {
             "text-classification": self.predict_text_classification,
+            "text-generation": self.predict_text_generation,
             "zero-shot-classification": self.predict_zero_shot,
             "translation": self.predict_translation,
             "summarization": self.predict_summarization,

@@ -10,6 +10,7 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.llm_utils import get_completed_prompts
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 
+
 class TogetherAIHandler(BaseMLEngine):
     """
     Integration with the Together AI Inference API.

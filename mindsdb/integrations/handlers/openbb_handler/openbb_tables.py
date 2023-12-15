@@ -1,3 +1,4 @@
+from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.utilities.date_utils import parse_local_date
@@ -70,11 +71,9 @@ def create_table_class(
                 if arg1 in mandatory_fields:
                     mandatory_args_set[arg1] = True
 
-                if ('start_' + arg1 in params_metadata['fields']
-                    and arg1 in response_columns and arg2 is not None
-                        and "format" in response_metadata['fields'][arg1]):
+                if ('start_' + arg1 in params_metadata['fields'] and arg1 in response_columns and arg2 is not None):
 
-                    if response_metadata['fields'][arg1]["format"] != 'date-time':
+                    if response_metadata['fields'][arg1].annotation == 'datetime':
                         date = parse_local_date(arg2)
                         interval = arg_params.get('interval', '1d')
 
@@ -120,6 +119,9 @@ def create_table_class(
                 raise NotImplementedError(text)
 
             try:
+                # Handle limit keyword correctly since it can't be parsed as a WHERE arg (i.e. WHERE limit = 50)
+                if query.limit is not None and 'limit' in params_metadata['fields']:
+                    params['limit'] = query.limit.value
                 obbject = obb_function(**params)
 
                 # Extract data in dataframe format
@@ -131,6 +133,9 @@ def create_table_class(
                 # Check if index is a datetime, if it is we want that as a column
                 if isinstance(result.index, pd.DatetimeIndex):
                     result.reset_index(inplace=True)
+
+                if query.order_by:
+                    result = sort_dataframe(result, query.order_by)
 
                 if query.limit is not None:
                     result = result.head(query.limit.value)
@@ -151,12 +156,25 @@ def create_table_class(
 
                 columns += [col for col in result.columns if col not in columns]
 
-                # project targets
-                result = project_dataframe(result, query.targets, columns)
-                # test this
-                if query.order_by:
-                    result = sort_dataframe(result, query.order_by)
+                for full_target in query.targets:
+                    if isinstance(full_target, ast.Star):
+                        continue
+                    if isinstance(full_target, ast.Identifier):
+                        target = full_target.parts[-1].lower()
+                    elif isinstance(full_target, ast.Function):
+                        target = full_target.args[0].parts[-1].lower()
+                    else:
+                        # Could be a window function or other operation we can't handle. Defer to DuckDB.
+                        return query_df(result, query)
+                    if target not in columns:
+                        raise ValueError(f"Unknown column '{target}' in 'field list'")
 
+                # project targets
+                try:
+                    result = project_dataframe(result, query.targets, columns)
+                except NotImplementedError:
+                    # Target contains a function that we need DuckDB to resolve.
+                    return query_df(result, query)
                 return result
 
             except AttributeError as e:

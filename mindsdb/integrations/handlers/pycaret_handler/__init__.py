@@ -7,11 +7,9 @@ logger = log.getLogger(__name__)
 try:
     from .pycaret_handler import PyCaretHandler as Handler
     import_error = None
-    logger.info("PyCaret successfully imported")
 except Exception as e:
     Handler = None
     import_error = e
-    logger.info("Error Importing PyCaret")
 
 title = 'PyCaret'
 name = 'pycaret'

@@ -150,10 +150,14 @@ class BYOMHandler(BaseMLEngine):
         return byom_type
 
     def _get_model_proxy(self, version=None):
+        if version is None:
+            version = 1
+        if isinstance(version, str):
+            version = int(version)
         version_mark = ''
-        if version is not None and int(version) > 1:
+        if version > 1:
             version_mark = f'_{version}'
-        version_str = str(version or 1)
+        version_str = str(version)
 
         self.engine_storage.fileStorage.pull()
         try:

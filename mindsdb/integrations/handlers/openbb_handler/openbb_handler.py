@@ -1,5 +1,5 @@
 from functools import reduce
-from openbb import obb
+from openbb_core.app.static.app_factory import create_app
 
 from mindsdb.integrations.handlers.openbb_handler.openbb_tables import create_table_class
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -33,12 +33,15 @@ class OpenBBHandler(APIHandler):
 
         self.is_connected = False
 
-        self.obb = obb
+        # Initialize OpenBB
+        # pylint: disable=import-outside-toplevel
+        from openbb.package.__extensions__ import Extensions
+        self.obb = create_app(Extensions)
 
-        for cmd in list(obb.coverage.command_model.keys()):
+        for cmd in list(self.obb.coverage.command_model.keys()):
 
-            openbb_params = obb.coverage.command_model[cmd]["openbb"]["QueryParams"]
-            openbb_data = obb.coverage.command_model[cmd]["openbb"]["Data"]
+            openbb_params = self.obb.coverage.command_model[cmd]["openbb"]["QueryParams"]
+            openbb_data = self.obb.coverage.command_model[cmd]["openbb"]["Data"]
 
             # Creates the default data retrieval function for the given command
             # e.g. obb.equity.price.historical, obb.equity.fa.income
@@ -56,17 +59,17 @@ class OpenBBHandler(APIHandler):
 
             # Creates the data retrieval function for each provider
             # e.g. obb.equity.price.historical_polygon, obb.equity.price.historical_intrinio
-            for provider in list(obb.coverage.command_model[cmd].keys()):
+            for provider in list(self.obb.coverage.command_model[cmd].keys()):
 
                 # Skip the openbb provider since we already created it and it will look like obb.equity.price.historical
                 if provider == "openbb":
                     continue
 
-                provider_extra_params = obb.coverage.command_model[cmd][provider]["QueryParams"]
+                provider_extra_params = self.obb.coverage.command_model[cmd][provider]["QueryParams"]
                 combined_params = provider_extra_params.copy()  # create a copy to avoid modifying the original
                 combined_params["fields"] = {**openbb_params["fields"], **provider_extra_params["fields"]}  # merge the fields
 
-                provider_extra_data = obb.coverage.command_model[cmd][provider]["Data"]
+                provider_extra_data = self.obb.coverage.command_model[cmd][provider]["Data"]
                 combined_data = provider_extra_data.copy()  # create a copy to avoid modifying the original
                 combined_data["fields"] = {**openbb_data["fields"], **provider_extra_data["fields"]}  # merge the fields
 
@@ -85,7 +88,7 @@ class OpenBBHandler(APIHandler):
         Returns none.
         """
         self.is_connected = False
-        obb.account.login(pat=self.PAT)
+        self.obb.account.login(pat=self.PAT)
 
         # Check if PAT utilized is valid
         # if obb.user.profile.active:

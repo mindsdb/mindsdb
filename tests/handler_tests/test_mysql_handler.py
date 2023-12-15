@@ -136,8 +136,19 @@ class TestMySQLHandler:
         tables = self.get_table_names(handler)
         assert new_table in tables, f"expected to have {new_table} in database, but got: {tables}"
 
+    def test_insert_table(self, handler):
+        new_table = "test_mdb"
+        res = handler.native_query(f"INSERT INTO {new_table} (test_col) values (1), (2), (3))")
+        self.check_valid_response(res)
+        handler.disconnect()
+        handler.connect()
+        res = handler.query(f"SELECT count(*) FROM {new_table}")
+        self.check_valid_response(res)
+        got_rows = res.data_frame.shape[0]
+        assert got_rows == 3
+
     def test_drop_table(self, handler):
-        drop_table = "test_md"
+        drop_table = "test_mdb"
         res = handler.native_query(f"DROP TABLE IF EXISTS {drop_table}")
         self.check_valid_response(res)
         tables = self.get_table_names(handler)

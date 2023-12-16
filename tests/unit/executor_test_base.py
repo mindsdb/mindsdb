@@ -1,6 +1,5 @@
 import copy
 import datetime as dt
-import importlib
 import json
 import os
 import sys
@@ -12,6 +11,7 @@ import duckdb
 import numpy as np
 import pandas as pd
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql import parse_sql
 
 
 def unload_module(path):
@@ -134,6 +134,11 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="rag", data={}, engine="rag")
         db.session.add(r)
+        r = db.Integration(name="dummy_llm", data={}, engine="dummy_llm")
+        db.session.add(r)
+        r = db.Integration(name="sentence_transformers", data={}, engine="sentence_transformers")
+        db.session.add(r)
+
         r = db.Integration(name="pycaret", data={}, engine="pycaret")
         db.session.add(r)
 
@@ -171,7 +176,13 @@ class BaseExecutorTest(BaseUnitTest):
         super().setup_method()
         self.set_executor()
 
-    def set_executor(self, mock_lightwood=False, mock_model_controller=False, import_dummy_ml=False):
+    def set_executor(
+        self,
+        mock_lightwood=False,
+        mock_model_controller=False,
+        import_dummy_ml=False,
+        import_dummy_llm=False,
+    ):
         # creates executor instance with mocked model_interface
         from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import (
             SessionController,
@@ -204,6 +215,18 @@ class BaseExecutorTest(BaseUnitTest):
 
             if not integration_controller.handlers_import_status['dummy_ml']['import']['success']:
                 error = integration_controller.handlers_import_status['dummy_ml']['import']['error_message']
+                raise Exception(f"Can not import: {str(handler_dir)}: {error}")
+
+        if import_dummy_llm:
+
+            test_handler_path = os.path.dirname(__file__)
+            sys.path.append(test_handler_path)
+
+            handler_dir = Path(test_handler_path) / 'dummy_llm_handler'
+            integration_controller.import_handler('', handler_dir)
+
+            if not integration_controller.handlers_import_status['dummy_llm']['import']['success']:
+                error = integration_controller.handlers_import_status['dummy_llm']['import']['error_message']
                 raise Exception(f"Can not import: {str(handler_dir)}: {error}")
 
         if mock_lightwood:
@@ -298,7 +321,7 @@ class BaseExecutorTest(BaseUnitTest):
             try:
                 result_df = con.execute(query).fetchdf()
                 result_df = result_df.replace({np.nan: None})
-            except:
+            except Exception:
                 # it can be not supported command like update or insert
                 result_df = pd.DataFrame()
             for table in tables.keys():
@@ -337,6 +360,16 @@ class BaseExecutorDummyML(BaseExecutorTest):
     def setup_method(self):
         super().setup_method()
         self.set_executor(import_dummy_ml=True)
+
+
+class BaseExecutorDummyLLM(BaseExecutorTest):
+    """
+    Set up executor: mock LLM handler
+    """
+
+    def setup_method(self):
+        super().setup_method()
+        self.set_executor(import_dummy_llm=True)
 
 
 class BaseExecutorMockPredictor(BaseExecutorTest):
@@ -378,7 +411,6 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         self.db.session.commit()
 
         def predict_f(_model_name, data, pred_format="dict", *args, **kargs):
-            dict_arr = []
             explain_arr = []
             if isinstance(data, dict):
                 data = [data]
@@ -442,3 +474,13 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         self.mock_predict.side_effect = predict_f
         self.mock_model_controller.get_models.side_effect = lambda: [predictor_record]
         self.mock_model_controller.get_model_data.side_effect = get_model_data_f
+
+    def execute(self, sql):
+        ret = self.command_executor.execute_command(
+            parse_sql(sql, dialect='mindsdb')
+        )
+        if ret.error_code is not None:
+            raise Exception()
+        if isinstance(ret.data, list):
+            ret.records = self.ret_to_df(ret).to_dict('records')
+        return ret

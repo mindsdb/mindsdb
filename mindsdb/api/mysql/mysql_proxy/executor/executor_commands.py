@@ -84,7 +84,6 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErSqlWrongArguments,
     ErTableExistError,
     SqlApiException,
-    log,
 )
 from mindsdb.api.mysql.mysql_proxy.utilities.functions import download_file
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
@@ -97,7 +96,6 @@ from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.model.functions import (
-    PredictorRecordNotFound,
     get_model_record,
     get_model_records,
     get_predictor_integration,
@@ -108,6 +106,9 @@ from mindsdb.interfaces.triggers.triggers_controller import TriggersController
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import mark_process, resolve_model_identifier
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 def _get_show_where(
@@ -494,7 +495,7 @@ class ExecuteCommands:
                 #     table_name = expression.parts[-1]
                 if table_name is None:
                     err_str = f"Can't determine table name in query: {sql}"
-                    log.logger.warning(err_str)
+                    logger.warning(err_str)
                     raise ErTableExistError(err_str)
                 return self.answer_show_table_status(table_name)
             elif sql_category == "columns":
@@ -552,7 +553,7 @@ class ExecuteCommands:
                 self.charset = statement.arg.parts[0]
                 self.charset_text_type = charsets.get(self.charset)
                 if self.charset_text_type is None:
-                    log.logger.warning(
+                    logger.warning(
                         f"Unknown charset: {self.charset}. Setting up 'utf8_general_ci' as charset text type."
                     )
                     self.charset_text_type = CHARSET_NUMBERS["utf8_general_ci"]
@@ -565,7 +566,7 @@ class ExecuteCommands:
                     ],
                 )
             else:
-                log.logger.warning(
+                logger.warning(
                     f"SQL statement is not processable, return OK package: {sql}"
                 )
                 return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -585,9 +586,6 @@ class ExecuteCommands:
         elif type(statement) == Delete:
             if statement.table.parts[-1].lower() == "models_versions":
                 return self.answer_delete_model_version(statement)
-            table_identifier = statement.table
-            if self.session.kb_controller.is_knowledge_base(table_identifier):
-                return self.session.kb_controller.execute_query(statement)
             if (
                 self.session.database != "mindsdb"
                 and statement.table.parts[0] != "mindsdb"
@@ -600,10 +598,6 @@ class ExecuteCommands:
             return ExecuteAnswer(ANSWER_TYPE.OK)
 
         elif type(statement) == Insert:
-            table_identifier = statement.table
-            if self.session.kb_controller.is_knowledge_base(table_identifier):
-                return self.session.kb_controller.execute_query(statement)
-
             SQLQuery(statement, session=self.session, execute=True)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Update:
@@ -622,11 +616,6 @@ class ExecuteCommands:
         elif type(statement) == Select:
             if statement.from_table is None:
                 return self.answer_single_row_select(statement)
-
-            table_identifier = statement.from_table
-            if self.session.kb_controller.is_knowledge_base(table_identifier):
-                return self.session.kb_controller.execute_query(statement)
-
             query = SQLQuery(statement, session=self.session)
             return self.answer_select(query)
         elif type(statement) == Union:
@@ -674,7 +663,7 @@ class ExecuteCommands:
             statement.data = parse_sql(statement.query_str, dialect="mindsdb")
             return self.answer_evaluate_metric(statement)
         else:
-            log.logger.warning(f"Unknown SQL statement: {sql}")
+            logger.warning(f"Unknown SQL statement: {sql}")
             raise ErNotSupportedYet(f"Unknown SQL statement: {sql}")
 
     def answer_create_trigger(self, statement):
@@ -750,10 +739,18 @@ class ExecuteCommands:
         # Database ID cannot be null
         database_id = database["id"] if database is not None else -1
 
+        model_name = None
+        if statement.model is not None:
+            model_name = statement.model.parts[-1]
+
+        agent_name = None
+        if statement.agent is not None:
+            agent_name = statement.agent.parts[-1]
         chatbot_controller.add_chatbot(
             name.parts[-1],
             project_name=project_name,
-            model_name=statement.model.parts[-1],
+            model_name=model_name,
+            agent_name=agent_name,
             database_id=database_id,
             is_running=is_running,
             params=statement.params,
@@ -770,6 +767,7 @@ class ExecuteCommands:
         # From SET keyword parameters
         updated_name = statement.params.pop("name", None)
         model_name = statement.params.pop("model", None)
+        agent_name = statement.params.pop("agent", None)
         database_name = statement.params.pop("database", None)
         is_running = statement.params.pop("is_running", None)
 
@@ -785,6 +783,7 @@ class ExecuteCommands:
             project_name=project_name,
             name=updated_name,
             model_name=model_name,
+            agent_name=agent_name,
             database_id=database_id,
             is_running=is_running,
             params=statement.params,
@@ -888,6 +887,8 @@ class ExecuteCommands:
             identifier.parts = [self.session.database, identifier.parts[0]]
 
         database_name, model_name, model_version = resolve_model_identifier(identifier)
+        if database_name is None:
+            database_name = self.session.database
 
         if model_name is None:
             if except_absent:
@@ -1016,6 +1017,7 @@ class ExecuteCommands:
             connection_args = {}
         status = HandlerStatusResponse(success=False)
 
+        storage = None
         try:
             handlers_meta = (
                 self.session.integration_controller.get_handlers_import_status()
@@ -1063,6 +1065,8 @@ class ExecuteCommands:
                 handler_type=engine, connection_data=connection_args
             )
             status = handler.check_connection()
+            if status.copy_storage:
+                storage = handler.handler_storage.export_files()
         except Exception as e:
             status.error_message = str(e)
 
@@ -1074,6 +1078,9 @@ class ExecuteCommands:
             raise EntityExistsError('Database already exists', name)
 
         self.session.integration_controller.add(name, engine, connection_args)
+        if storage:
+            handler = self.session.integration_controller.get_handler(name)
+            handler.handler_storage.import_files(storage)
 
     def answer_create_ml_engine(self, statement: ASTNode):
         name = statement.name.parts[-1]
@@ -1107,7 +1114,7 @@ class ExecuteCommands:
                     pip install mindsdb[{handler_module_meta['name']}]
                 """
                 )
-            log.logger.info(msg)
+            logger.info(msg)
             raise SqlApiException(msg)
 
         integration_id = self.session.integration_controller.add(
@@ -1142,7 +1149,7 @@ class ExecuteCommands:
         integrations = self.session.integration_controller.get_all()
         if name not in integrations:
             if not statement.if_exists:
-                raise SqlApiException(f"Integration '{name}' does not exists")
+                raise EntityNotExistsError('Integration does not exists', name)
             else:
                 return ExecuteAnswer(ANSWER_TYPE.OK)
         self.session.integration_controller.delete(name)
@@ -1185,7 +1192,7 @@ class ExecuteCommands:
         db_name = statement.name.parts[0]
         try:
             self.session.database_controller.delete(db_name)
-        except EntityExistsError:
+        except EntityNotExistsError:
             if statement.if_exists is not True:
                 raise
         return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -1301,83 +1308,19 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
-    def _create_persistent_chroma(self, kb_name, collection_name, engine="chromadb"):
-        """Create default vector database for knowledge base, if not specified"""
-
-        vector_store_name = f"{kb_name}_{engine}"
-
-        vector_store_folder_name = f"{vector_store_name}"
-        connection_args = {"persist_directory": vector_store_folder_name}
-        self._create_integration(vector_store_name, engine, connection_args)
-
-        self.session.datahub.get(vector_store_name).integration_handler.create_table(
-            collection_name
-        )
-
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK), vector_store_name
-
     def answer_create_kb(self, statement: CreateKnowledgeBase):
         project_name = (
             statement.name.parts[0]
             if len(statement.name.parts) > 1
             else self.session.database
         )
-        # get project id
-        try:
-            project = self.session.database_controller.get_project(project_name)
-        except ValueError:
-            raise SqlApiException(f"Project not found: {project_name}")
-        project_id = project.id
 
-        kb_name = statement.name.parts[-1]
-
-        # search for the model
-        # verify the model exists and get its id
-        model_identifier = statement.model
-        try:
-            model_record = self._get_model_info(
-                identifier=model_identifier, except_absent=True
-            )
-
-        except PredictorRecordNotFound:
-            raise SqlApiException(f"Model not found: {model_identifier.to_string()}")
-
-        embedding_model_id = model_record["model_record"].id
-
-        # search for the vector database table
-        if statement.storage and len(statement.storage.parts) < 2:
-            raise SqlApiException(
-                f"Invalid vectordatabase table name: {statement.storage}"
-                "Need the form 'database_name.table_name'"
-            )
-
-        is_cloud = self.session.config.get("cloud", False)
-
-        if not statement.storage and is_cloud:
-            raise SqlApiException(
-                "No default vector database currently exists in MindsDB cloud. "
-                'Please specify one using the "storage" parameter'
-            )
-
-        vector_table_name = (
-            statement.storage.parts[-1] if statement.storage else "default_collection"
-        )
-
-        vector_db_name = (
-            statement.storage.parts[0]
-            if statement.storage
-            else self._create_persistent_chroma(
-                kb_name, collection_name=vector_table_name
-            )[1]
-        )
-
-        # verify the vector database exists and get its id
-        database_records = self.session.database_controller.get_dict()
-        is_database_exist = vector_db_name in database_records
-        if not is_database_exist:
-            raise SqlApiException(f"Database not found: {vector_db_name}")
-
-        vector_database_id = database_records[vector_db_name]["id"]
+        if statement.storage is not None:
+            if len(statement.storage.parts) != 2:
+                raise SqlApiException(
+                    f"Invalid vectordatabase table name: {statement.storage}"
+                    "Need the form 'database_name.table_name'"
+                )
 
         if statement.from_query is not None:
             # TODO: implement this
@@ -1385,16 +1328,15 @@ class ExecuteCommands:
                 "Create a knowledge base from a select is not supported yet"
             )
 
-        params = statement.params
+        kb_name = statement.name.parts[-1]
 
         # create the knowledge base
         _ = self.session.kb_controller.add(
             name=kb_name,
-            project_id=project_id,
-            vector_database_id=vector_database_id,
-            vector_database_table_name=vector_table_name,
-            embedding_model_id=embedding_model_id,
-            params=params,
+            project_name=project_name,
+            embedding_model=statement.model,
+            storage=statement.storage,
+            params=statement.params,
             if_not_exists=statement.if_not_exists,
         )
 
@@ -1408,18 +1350,10 @@ class ExecuteCommands:
             else self.session.database
         )
 
-        # get project id
-        try:
-            project = self.session.database_controller.get_project(project_name)
-        except ValueError:
-            raise SqlApiException(f"Project not found: {project_name}")
-
-        project_id = project.id
-
         # delete the knowledge base
         self.session.kb_controller.delete(
             name=name,
-            project_id=project_id,
+            project_name=project_name,
             if_exists=statement.if_exists,
         )
 
@@ -1650,7 +1584,7 @@ class ExecuteCommands:
                 column_alias = target.alias or column_name
                 result = SERVER_VARIABLES.get(column_name)
                 if result is None:
-                    log.logger.error(f"Unknown variable: {column_name}")
+                    logger.error(f"Unknown variable: {column_name}")
                     raise Exception(f"Unknown variable '{var_name}'")
                 else:
                     result = result[0]

@@ -11,7 +11,7 @@ from mindsdb.utilities import log
 from .config import ClassificationConfig, RegressionConfig
 
 
-logger = log.get_log(__name__)
+logger = log.getLogger(__name__)
 
 
 class AutoGluonHandler(BaseMLEngine):

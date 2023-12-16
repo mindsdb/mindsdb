@@ -22,7 +22,9 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import resolve_model_identifier
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
+from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 IS_PY36 = sys.version_info[1] <= 6
 
@@ -33,7 +35,7 @@ def delete_model_storage(model_id, ctx_dump):
         modelStorage = ModelStorage(model_id)
         modelStorage.delete()
     except Exception as e:
-        print(f'Something went wrong during deleting storage of model {model_id}: {e}')
+        logger.error(f'Something went wrong during deleting storage of model {model_id}: {e}')
 
 
 class ModelController():
@@ -190,7 +192,7 @@ class ModelController():
                 version=version,
             )
         if len(predictors_records) == 0:
-            raise Exception(f"Model '{model_name}' does not exist")
+            raise EntityNotExistsError('Model does not exist', model_name)
 
         is_cloud = self.config.get('cloud', False)
         if is_cloud:
@@ -312,7 +314,6 @@ class ModelController():
         project_tables = project.get_tables()
         if params['model_name'] in project_tables:
             raise EntityExistsError('Model already exists', f"{params['project_name']}.{params['model_name']}")
-
         predictor_record = ml_handler.learn(**params)
 
         return self.get_model_info(predictor_record)

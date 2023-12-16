@@ -45,7 +45,7 @@
 	<span> | </span>
 	<a href="https://cloud.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Demo</a>
 	<span> | </span>
-	<a href="https://mindsdb.com/hackerminds-ai-app-challenge">Hackathon</a>
+	<a href="https://hashnode.com/hackathons/mindsdb">Hashnode Hackathon</a>
 </h3>
 
 </div>
@@ -149,4 +149,4 @@ Join our [Slack community](https://mindsdb.com/joincommunity) and subscribe to t
 
 ## License <a name="License"></a>
 
-MindsDB is licensed under [GNU General Public License v3.0](https://github.com/mindsdb/mindsdb/blob/master/LICENSE)
+For detailed licensing information, please refer to the [LICENSE file](https://github.com/mindsdb/mindsdb/blob/master/LICENSE)

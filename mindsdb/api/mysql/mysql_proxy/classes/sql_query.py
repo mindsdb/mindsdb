@@ -36,6 +36,7 @@ from mindsdb_sql.parser.ast import (
     Parameter,
     Tuple,
 )
+from mindsdb_sql.planner.step_result import Result
 from mindsdb_sql.planner.steps import (
     ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
@@ -913,7 +914,7 @@ class SQLQuery():
 
                 params = step.params or {}
 
-                for table in data.get_tables():
+                for table in data.get_tables()[:1]:  # add  __mindsdb_row_id only for first table
                     row_id_col = Column(
                         name='__mindsdb_row_id',
                         database=table['database'],
@@ -929,6 +930,19 @@ class SQLQuery():
                 predictor_name = step.predictor.parts[0]
 
                 where_data = data.get_records()
+
+                # add constants from where
+                row_dict = {}
+                if step.row_dict is not None:
+                    for k, v in step.row_dict.items():
+                        if isinstance(v, Result):
+                            prev_result = steps_data[v.step_num]
+                            # TODO we await only one value: model.param = (subselect)
+                            v = prev_result.get_records_raw()[0][0]
+                        row_dict[k] = v
+
+                    for record in where_data:
+                        record.update(row_dict)
 
                 predictor_metadata = {}
                 for pm in self.predictor_metadata:
@@ -1077,6 +1091,9 @@ class SQLQuery():
                 names_a.update(names_b)
                 data = ResultSet().from_df_cols(resp_df, col_names=names_a)
 
+                for col in data.find_columns('__mindsdb_row_id'):
+                    data.del_column(col)
+
             except Exception as e:
                 raise SqlApiUnknownError(f'error in join step: {e}') from e
 
@@ -1113,6 +1130,7 @@ class SQLQuery():
             where_query = step.query
             query_traversal(where_query, check_fields)
 
+            query_context_controller.remove_lasts(where_query)
             query = Select(targets=[Star()], from_table=Identifier('df'), where=where_query)
 
             res = query_df(df, query)
@@ -1131,10 +1149,10 @@ class SQLQuery():
 
                 records = step_data.get_records_raw()
 
-                if isinstance(step.offset, Constant) and isinstance(step.offset.value, int):
-                    records = records[step.offset.value:]
-                if isinstance(step.limit, Constant) and isinstance(step.limit.value, int):
-                    records = records[:step.limit.value]
+                if isinstance(step.offset, int):
+                    records = records[step.offset:]
+                if isinstance(step.limit, int):
+                    records = records[:step.limit]
 
                 for record in records:
                     step_data2.add_record_raw(record)
@@ -1441,9 +1459,12 @@ class SQLQuery():
 
                 dn.query(query=update_query, session=self.session)
         elif type(step) == DeleteStep:
-
-            integration_name = step.table.parts[0]
-            table_name_parts = step.table.parts[1:]
+            if len(step.table.parts) > 1:
+                integration_name = step.table.parts[0]
+                table_name_parts = step.table.parts[1:]
+            else:
+                integration_name = self.database
+                table_name_parts = step.table.parts
 
             dn = self.datahub.get(integration_name)
 

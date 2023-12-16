@@ -23,6 +23,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
+logger = log.getLogger(__name__)
 
 class TeradataHandler(DatabaseHandler):
     """
@@ -89,7 +90,7 @@ class TeradataHandler(DatabaseHandler):
                 cur.execute('SELECT 1 FROM (SELECT 1 AS "dual") AS "dual"')
             response.success = True
         except teradatasql.Error as e:
-            log.logger.error(f'Error connecting to Teradata {self.host}, {e}!')
+            logger.error(f'Error connecting to Teradata {self.host}, {e}!')
             response.error_message = e
 
         if response.success is True and need_to_close:
@@ -125,7 +126,7 @@ class TeradataHandler(DatabaseHandler):
                     )
                 connection.commit()
             except Exception as e:
-                log.logger.error(f'Error running query: {query} on {self.host}!')
+                logger.error(f'Error running query: {query} on {self.host}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_code=0,

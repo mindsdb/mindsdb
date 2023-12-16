@@ -11,9 +11,9 @@ from mindsdb.integrations.handlers.utilities.query_utilities import INSERTQueryP
 from mindsdb.integrations.handlers.utilities.query_utilities import DELETEQueryParser, DELETEQueryExecutor
 from mindsdb.integrations.handlers.utilities.query_utilities import UPDATEQueryParser, UPDATEQueryExecutor
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
-logger = get_log("integrations.shopify_handler")
+logger = log.getLogger(__name__)
 
 
 class ProductsTable(APITable):
@@ -397,6 +397,48 @@ class OrdersTable(APITable):
         orders_df = select_statement_executor.execute_query()
 
         return orders_df
+    
+    def delete(self, query: ast.Delete) -> None:
+        """Deletes data from the Shopify "DELETE /orders" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Delete
+           Given SQL DELETE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        delete_statement_parser = DELETEQueryParser(query)
+        where_conditions = delete_statement_parser.parse_query()
+
+        orders_df = pd.json_normalize(self.get_orders())
+
+        delete_query_executor = DELETEQueryExecutor(
+            orders_df,
+            where_conditions
+        )
+
+        orders_df = delete_query_executor.execute_query()
+
+        order_ids = orders_df['id'].tolist()
+        self.delete_orders(order_ids)
+        
+    def delete_orders(self, order_ids: List[int]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for order_id in order_ids:
+            order = shopify.Order.find(order_id)
+            order.destroy()
+            logger.info(f'Order {order_id} deleted')
+    
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_orders(limit=1)).columns.tolist()

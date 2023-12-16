@@ -15,12 +15,15 @@ from .chatbot_executor import MultiModeBotExecutor, BotExecutor
 
 from .types import ChatBotMessage
 
+logger = log.getLogger(__name__)
+
 
 class ChatBotTask(BaseTask):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.bot_id = self.object_id
+        self.agent_id = None
 
         self.session = SessionController()
 
@@ -32,6 +35,7 @@ class ChatBotTask(BaseTask):
         bot_record = db.ChatBots.query.get(self.bot_id)
 
         self.base_model_name = bot_record.model_name
+        self.agent_id = bot_record.agent_id
         self.project_name = db.Project.query.get(bot_record.project_id).name
         self.project_datanode = self.session.datahub.get(self.project_name)
 
@@ -79,7 +83,7 @@ class ChatBotTask(BaseTask):
         # TODO move it to realtime pooling
         chat_memory.add_to_history(message)
 
-        log.logger.debug(f'>>chatbot {chat_memory.chat_id} in: {message.text}')
+        logger.debug(f'>>chatbot {chat_memory.chat_id} in: {message.text}')
 
         # process
         bot_executor = self.bot_executor_cls(self, chat_memory)
@@ -98,7 +102,7 @@ class ChatBotTask(BaseTask):
 
         # send to chat adapter
         self.chat_pooling.send_message(response_message)
-        log.logger.debug(f'>>chatbot {chat_id} out: {response_message.text}')
+        logger.debug(f'>>chatbot {chat_id} out: {response_message.text}')
 
         # send to history
         chat_memory.add_to_history(response_message)

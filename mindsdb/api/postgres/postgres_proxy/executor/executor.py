@@ -11,7 +11,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 from mindsdb.api.mysql.mysql_proxy.executor import ExecuteCommands
 from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiException
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_fields import POSTGRES_TYPES
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 
 class Executor:
@@ -19,7 +19,7 @@ class Executor:
         self.session = session
         self.server = proxy_server
 
-        self.logger = get_log("postgres_proxy")
+        self.logger = log.getLogger(__name__)
         self.charset = charset or "utf8"
         self.query = None
         self.columns = []

@@ -19,6 +19,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 oracledb.defaults.fetch_lobs = False  # return LOBs directly as strings or bytes
 
+logger = log.getLogger(__name__)
 
 class OracleHandler(DatabaseHandler):
     """
@@ -91,7 +92,7 @@ class OracleHandler(DatabaseHandler):
             con.ping()
             response.success = True
         except Exception as e:
-            log.logger.error(f"Error connecting to Oracle DB {self.dsn}, {e}!")
+            logger.error(f"Error connecting to Oracle DB {self.dsn}, {e}!")
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -126,7 +127,7 @@ class OracleHandler(DatabaseHandler):
 
                 connection.commit()
             except Exception as e:
-                log.logger.error(f"Error running query: {query} on {self.dsn}!")
+                logger.error(f"Error running query: {query} on {self.dsn}!")
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e),

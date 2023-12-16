@@ -64,12 +64,12 @@ Please follow this [link](https://dashboard.instatus.com/developer) to get the a
 The first step is to create a database with the new `instatus` engine.
 
 ```sql
-CREATE DATABASE mindsdb_instatus
-    WITH
-    ENGINE = 'instatus',
-    PARAMETERS = {
-      "api_key": "<your-instatus-api-key>"
-    };
+CREATE DATABASE mindsdb_instatus --- Display name for the database.
+WITH
+  ENGINE = 'instatus', --- Name of the MindsDB handler.
+  PARAMETERS = {
+    "api_key": "<your-instatus-api-key>" --- Instatus API key to use for authentication.
+  };
 ```
 ## Usage (Status pages table)
 

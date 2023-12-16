@@ -1,3 +1,8 @@
+from mindsdb.utilities import log
+
+logger = log.getLogger("mindsdb")
+logger.debug("Starting MindsDB...")
+
 import os
 import sys
 import time
@@ -23,7 +28,6 @@ from mindsdb.interfaces.jobs.scheduler import start as start_scheduler
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
-from mindsdb.utilities import log
 from mindsdb.interfaces.database.integrations import integration_controller
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
@@ -39,7 +43,7 @@ except Exception:
 try:
     mp.set_start_method('spawn')
 except RuntimeError:
-    log.logger.info('Torch multiprocessing context already set, ignoring...')
+    logger.info('Torch multiprocessing context already set, ignoring...')
 
 
 _stop_event = threading.Event()
@@ -119,31 +123,31 @@ if __name__ == '__main__':
 
     if telemetry_file_exists(config['storage_dir']):
         os.environ['CHECK_FOR_UPDATES'] = '0'
-        print('\n x telemetry disabled! \n')
+        logger.info('\n x telemetry disabled! \n')
     elif os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False'] or config.get('cloud', False):
         disable_telemetry(config['storage_dir'])
-        print('\n x telemetry disabled \n')
+        logger.info('\n x telemetry disabled! \n')
     else:
-        print('\n ✓ telemetry enabled \n')
+        logger.info("✓ telemetry enabled")
 
-    if os.environ.get('FLASK_SECRET_KEY') is None:
-        os.environ['FLASK_SECRET_KEY'] = secrets.token_hex(32)
+    if os.environ.get("FLASK_SECRET_KEY") is None:
+        os.environ["FLASK_SECRET_KEY"] = secrets.token_hex(32)
 
     # -------------------------------------------------------
 
     # initialization
     db.init()
-    log.initialize_log()
 
     mp.freeze_support()
+    config = Config()
 
-    environment = config.get('environment')
-    if environment == 'aws_marketplace':
+    environment = config.get("environment")
+    if environment == "aws_marketplace":
         try:
             register_oauth_client()
         except Exception as e:
-            print(f'Something went wrong during client register: {e}')
-    elif environment != 'local':
+            logger.error(f"Something went wrong during client register: {e}")
+    elif environment != "local":
         try:
             aws_meta_data = get_aws_meta_data()
             config.update({
@@ -152,68 +156,102 @@ if __name__ == '__main__':
         except Exception:
             pass
 
-    is_cloud = config.get('cloud', False)
+    is_cloud = config.get("cloud", False)
     # need configure migration behavior by env_variables
     # leave 'is_cloud' for now, but needs to be removed further
     run_migration_separately = os.environ.get("SEPARATE_MIGRATIONS", False)
     if run_migration_separately in (False, "false", "False", 0, "0", ""):
         run_migration_separately = False
+        logger.info("Will run migrations here..")
     else:
         run_migration_separately = True
+        logger.info("Migrations will be run separately..")
 
     if not is_cloud and not run_migration_separately:
-        print('Applying database migrations:')
+        logger.info("Applying database migrations:")
         try:
             from mindsdb.migrations import migrate
             migrate.migrate_to_head()
         except Exception as e:
-            print(f'Error! Something went wrong during DB migrations: {e}')
+            logger.error(f"Error! Something went wrong during DB migrations: {e}")
 
     if args.verbose is True:
         # Figure this one out later
         pass
 
     if args.install_handlers is not None:
-        handlers_list = [s.strip() for s in args.install_handlers.split(',')]
+        handlers_list = [s.strip() for s in args.install_handlers.split(",")]
         # import_meta = handler_meta.get('import', {})
         for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():
             if handler_name not in handlers_list:
                 continue
-            import_meta = handler_meta.get('import', {})
-            if import_meta.get('success') is True:
-                print(f"{'{0: <18}'.format(handler_name)} - already installed")
+            import_meta = handler_meta.get("import", {})
+            if import_meta.get("success") is True:
+                logger.info(f"{'{0: <18}'.format(handler_name)} - already installed")
                 continue
-            result = install_dependencies(import_meta.get('dependencies', []))
-            if result.get('success') is True:
-                print(f"{'{0: <18}'.format(handler_name)} - successfully installed")
+            result = install_dependencies(import_meta.get("dependencies", []))
+            if result.get("success") is True:
+                logger.info(
+                    f"{'{0: <18}'.format(handler_name)} - successfully installed"
+                )
             else:
-                print(f"{'{0: <18}'.format(handler_name)} - error during dependencies installation: {result.get('error_message', 'unknown error')}")
+                logger.info(
+                    f"{'{0: <18}'.format(handler_name)} - error during dependencies installation: {result.get('error_message', 'unknown error')}"
+                )
         sys.exit(0)
 
-    print(f'Version {mindsdb_version}')
-    print(f'Configuration file:\n   {config.config_path}')
-    print(f"Storage path:\n   {config['paths']['root']}")
+    logger.info(f"Version: {mindsdb_version}")
+    logger.info(f"Configuration file: {config.config_path}")
+    logger.info(f"Storage path: {config['paths']['root']}")
+    logger.debug(f"User config: {user_config}")
 
-    for handler_name, handler_meta in integration_controller.get_handlers_import_status().items():
-        import_meta = handler_meta.get('import', {})
-        if import_meta.get('success', False) is not True:
-            print(dedent('''
+    for (
+        handler_name,
+        handler_meta,
+    ) in integration_controller.get_handlers_import_status().items():
+        import_meta = handler_meta.get("import", {})
+        if import_meta.get("success", False) is not True:
+            logger.info(
+                dedent(
+                    """
                 Some handlers cannot be imported. You can check list of available handlers by execute command in sql editor:
                     select * from information_schema.handlers;
-            '''))
+            """
+                )
+            )
             break
+    # @TODO Backwards compatibility for tests, remove later
+    for (
+        handler_name,
+        handler_meta,
+    ) in integration_controller.get_handlers_import_status().items():
+        import_meta = handler_meta.get("import", {})
+        dependencies = import_meta.get("dependencies")
+        if import_meta.get("success", False) is not True:
+            logger.debug(
+                f"Dependencies for the handler '{handler_name}' are not installed by default."
+            )
+            logger.debug(
+                f'If you want to use "{handler_name}" please "pip install mindsdb[{handler_name}]"'
+            )
+
+    # from mindsdb.utilities.fs import get_marked_processes_and_threads
+    # marks = get_marked_processes_and_threads()
 
     if not is_cloud:
         # region creating permanent integrations
-        for integration_name, handler in integration_controller.get_handlers_import_status().items():
-            if handler.get('permanent'):
+        for (
+            integration_name,
+            handler,
+        ) in integration_controller.get_handlers_import_status().items():
+            if handler.get("permanent"):
                 integration_meta = integration_controller.get(name=integration_name)
                 if integration_meta is None:
                     integration_record = db.Integration(
                         name=integration_name,
                         data={},
                         engine=integration_name,
-                        company_id=None
+                        company_id=None,
                     )
                     db.session.add(integration_record)
                     db.session.commit()
@@ -221,9 +259,16 @@ if __name__ == '__main__':
 
         # region Mark old predictors as outdated
         is_modified = False
-        predictor_records = db.session.query(db.Predictor).filter(db.Predictor.deleted_at.is_(None)).all()
+        predictor_records = (
+            db.session.query(db.Predictor)
+            .filter(db.Predictor.deleted_at.is_(None))
+            .all()
+        )
         if len(predictor_records) > 0:
-            sucess, compatible_versions = get_versions_where_predictors_become_obsolete()
+            (
+                sucess,
+                compatible_versions,
+            ) = get_versions_where_predictors_become_obsolete()
             if sucess is True:
                 compatible_versions = [version.parse(x) for x in compatible_versions]
                 mindsdb_version_parsed = version.parse(mindsdb_version)
@@ -235,7 +280,7 @@ if __name__ == '__main__':
                             isinstance(predictor_record.mindsdb_version, str)
                             and version.parse(predictor_record.mindsdb_version) < last_compatible_version
                         ):
-                            predictor_record.update_status = 'available'
+                            predictor_record.update_status = "available"
                             is_modified = True
         if is_modified is True:
             db.session.commit()
@@ -247,11 +292,6 @@ if __name__ == '__main__':
         api_arr = []
     else:  # The user has provided a list of APIs to start
         api_arr = args.api.split(',')
-
-    with_nlp = False
-    if 'nlp' in api_arr:
-        with_nlp = True
-        api_arr.remove('nlp')
 
     apis = {
         api: {
@@ -271,11 +311,8 @@ if __name__ == '__main__':
         'ml_task_queue': start_ml_task_queue
     }
 
-    if config.get('jobs', {}).get('disable') is not True:
-        apis['jobs'] = {
-            'process': None,
-            'started': False
-        }
+    if config.get("jobs", {}).get("disable") is not True:
+        apis["jobs"] = {"process": None, "started": False}
 
     # disabled on cloud
     if config.get('tasks', {}).get('disable') is not True:
@@ -290,20 +327,23 @@ if __name__ == '__main__':
             'started': False
         }
 
-    ctx = mp.get_context('spawn')
+    # TODO this 'ctx' is eclipsing 'context' class imported as 'ctx'
+    ctx = mp.get_context("spawn")
     for api_name, api_data in apis.items():
-        if api_data['started']:
+        if api_data["started"]:
             continue
-        print(f'{api_name} API: starting...')
+        logger.info(f"{api_name} API: starting...")
         try:
             process_args = (args.verbose,)
             if api_name == 'http':
-                process_args = (args.verbose, args.no_studio, with_nlp)
+                process_args = (args.verbose, args.no_studio)
             p = ctx.Process(target=start_functions[api_name], args=process_args, name=api_name)
             p.start()
-            api_data['process'] = p
+            api_data["process"] = p
         except Exception as e:
-            log.logger.error(f'Failed to start {api_name} API with exception {e}\n{traceback.format_exc()}')
+            logger.error(
+                f"Failed to start {api_name} API with exception {e}\n{traceback.format_exc()}"
+            )
             close_api_gracefully(apis)
             raise e
 
@@ -320,24 +360,25 @@ if __name__ == '__main__':
 
     async def wait_apis_start():
         futures = [
-            wait_api_start(api_name, api_data['process'].pid, api_data['port'])
-            for api_name, api_data in apis.items() if 'port' in api_data
+            wait_api_start(api_name, api_data["process"].pid, api_data["port"])
+            for api_name, api_data in apis.items()
+            if "port" in api_data
         ]
         for i, future in enumerate(asyncio.as_completed(futures)):
             api_name, port, started = await future
             if started:
-                print(f"{api_name} API: started on {port}")
+                logger.info(f"{api_name} API: started on {port}")
             else:
-                log.logger.error(f"ERROR: {api_name} API cant start on {port}")
+                logger.error(f"ERROR: {api_name} API cant start on {port}")
 
     async def join_process(process, name):
         try:
             process.join()
         except KeyboardInterrupt:
-            print('Got keyboard interrupt, stopping APIs')
+            logger.info("Got keyboard interrupt, stopping APIs")
             close_api_gracefully(apis)
         finally:
-            print(f'{name} API: stopped')
+            logger.info(f"{name} API: stopped")
 
     async def gather_apis():
         await asyncio.gather(

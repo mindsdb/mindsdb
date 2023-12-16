@@ -1,3 +1,14 @@
+"""
+This is the MySQL integration handler for mindsdb.  It provides the routines
+which provide for interacting with the database.
+
+MindsDB currently does not appear to multiple round trip transactions. This
+makes sense given the niche that the project fulfills.  If this changes, most
+handlers will require modification.  Here we would need a context manager for
+handling transactions.  This would be safer than explicit commits since errors
+would result in rolling back automatically.
+"""
+
 from collections import OrderedDict
 
 import pandas as pd
@@ -18,6 +29,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
+logger = log.getLogger(__name__)
 
 class MySQLHandler(DatabaseHandler):
     """
@@ -138,6 +150,7 @@ class MySQLHandler(DatabaseHandler):
                 config["ssl_key"] = ssl_key
 
         connection = mysql.connector.connect(**config)
+        connection.autocommit = True
         self.is_connected = True
         self.connection = connection
         return self.connection
@@ -162,7 +175,7 @@ class MySQLHandler(DatabaseHandler):
             connection = self.connect()
             result.success = connection.is_connected()
         except Exception as e:
-            log.logger.error(f'Error connecting to MySQL {self.connection_data["database"]}, {e}!')
+            logger.error(f'Error connecting to MySQL {self.connection_data["database"]}, {e}!')
             result.error_message = str(e)
 
         if result.success is True and need_to_close:
@@ -196,9 +209,8 @@ class MySQLHandler(DatabaseHandler):
                     )
                 else:
                     response = Response(RESPONSE_TYPE.OK)
-                connection.commit()
             except Exception as e:
-                log.logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
+                logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e)

@@ -62,19 +62,40 @@ WITH
 You can insert data into a new collection like so
 
 ```sql
-CREATE TABLE pvec.items
-    (SELECT embedding AS embeddings
-        FROM (SELECT * FROM mysql_demo_db.demo_fda_context
-        LIMIT 3) AS d
-join  openai_emb);
+CREATE TABLE pvec.embed
+    (SELECT embeddings FROM mysql_demo_db.test_embeddings
+);
+
+CREATE ML_ENGINE openai
+FROM openai
+USING
+    api_key = 'your-openai-api-key';
+
+CREATE MODEL openai_emb 
+PREDICT embedding 
+USING    
+  engine = 'openai',
+  model_name='text-embedding-ada-002',    
+  mode = 'embedding',    
+  question_column = 'review'; 
+
+create table pvec.itemstest (
+SELECT m.embedding AS embeddings, t.review content FROM  mysql_demo_db.amazon_reviews t
+  join openai_emb  m
+);
+
 ```
 
 You can query a collection within your PGVector as follows:
 
 ```sql
 SELECT *
-FROM pvec.items
-Limit 5
+FROM pvec.embed
+Limit 5;
+
+SELECT *
+FROM pvec.itemstest
+Limit 5;
 ```
 
 

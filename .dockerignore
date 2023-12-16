@@ -1,0 +1,10 @@
+.git
+.gitignore
+.github
+.mypy_cache
+.pytest_cahce
+.deployment
+
+var
+
+**/__pycache__

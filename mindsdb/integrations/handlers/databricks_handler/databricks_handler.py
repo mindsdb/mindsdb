@@ -19,6 +19,8 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
+logger = log.getLogger(__name__)
+
 
 class DatabricksHandler(DatabaseHandler):
     """
@@ -108,7 +110,7 @@ class DatabricksHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(
+            logger.error(
                 f'Error connecting to Databricks {self.connection_data["schema"]}, {e}!'
             )
             response.error_message = str(e)
@@ -148,7 +150,7 @@ class DatabricksHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
                     connection.commit()
             except Exception as e:
-                log.logger.error(
+                logger.error(
                     f'Error running query: {query} on {self.connection_data["schema"]}!'
                 )
                 response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))

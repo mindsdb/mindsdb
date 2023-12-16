@@ -1,0 +1,2 @@
+-r mindsdb/integrations/handlers/rag_handler/requirements.txt
+pydantic

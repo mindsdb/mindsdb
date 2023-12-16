@@ -1,0 +1,120 @@
+---
+title: PayPal
+sidebarTitle: PayPal
+---
+
+In this section, we present how to connect PayPal to MindsDB.
+
+[PayPal](https://www.bankrate.com/finance/credit-cards/guide-to-using-paypal/) is an online payment system that makes paying for things online and sending and receiving money safe and secure.
+
+Data from PayPal can be utilized within MindsDB to train models and make predictions about your transactions.
+
+## Connection
+
+This handler is implemented using [PayPal-Python-SDK](https://github.com/paypal/PayPal-Python-SDK), the Python SDK for PayPal RESTful APIs.
+
+The required arguments to establish a connection are as follows:
+
+* `mode`: The mode of the PayPal API. Can be `sandbox` or `live`.
+* `client_id`: The client ID of the PayPal API.
+* `client_secret`: The client secret of the PayPal API.
+
+To connect to PayPal using MindsDB, the following CREATE DATABASE statement can be used:
+
+```sql
+CREATE DATABASE paypal_datasource
+WITH ENGINE = 'paypal',
+PARAMETERS = {
+  "mode": "your-paypal-mode",
+  "client_id": "your-paypal-client-id",
+  "client_secret": "your-paypal-client-secret"
+};
+```
+
+<Tip>
+Check out [this guide](https://developer.paypal.com/api/rest/) on how to create client credentials for PayPal.
+</Tip>
+
+## Usage
+
+Now, you can query PayPal as follows:
+
+Payments: 
+```sql
+SELECT * FROM paypal_datasource.payments
+```
+
+Invoices: 
+```sql
+SELECT * FROM paypal_datasource.invoices
+```
+
+Subscriptions:
+```sql
+SELECT * FROM paypal_datasource.subscriptions
+```
+
+Orders:
+```sql
+SELECT * FROM paypal_datasource.orders
+```
+
+Payouts:
+```sql
+SELECT * FROM paypal_datasource.payouts
+```
+
+You can also run more advanced queries on your data:
+
+Payments: 
+```sql
+SELECT intent, cart
+FROM paypal_datasource.payments
+WHERE state = 'approved'
+ORDER BY id
+LIMIT 5
+```
+
+Invoices: 
+```sql
+SELECT invoice_number, total_amount
+FROM paypal_datasource.invoices
+WHERE status = 'PAID'
+ORDER BY total_amount DESC
+LIMIT 5
+```
+
+Subscriptions:
+```sql
+SELECT id, state, name 
+FROM paypal_datasource.subscriptions 
+WHERE state ="CREATED" 
+LIMIT 5
+```
+
+Orders:
+```sql
+SELECT id, state, amount 
+FROM paypal_datasource.orders 
+WHERE state = 'APPROVED'
+ORDER BY total_amount DESC
+LIMIT 5
+```
+
+Payouts:
+```sql
+SELECT payout_batch_id, amount_currency, amount_value
+FROM paypal_datasource.payouts
+ORDER BY amount_value DESC
+LIMIT 5
+```
+
+## Supported Tables
+
+The following tables are supported by the PayPal handler:
+
+* `payments`: payments made.
+* `invoices`: invoices created.
+* `subscriptions`: subscriptions created.
+* `orders`: orders created.
+* `payouts`: payouts made.

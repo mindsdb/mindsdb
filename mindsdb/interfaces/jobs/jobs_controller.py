@@ -6,11 +6,14 @@ import sqlalchemy as sa
 
 from mindsdb_sql import parse_sql, ParsingException
 
+from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.exception import EntityNotExistsError, EntityExistsError
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
-from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities import log
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 def split_sql(sql):
@@ -83,7 +86,7 @@ class JobsController:
             deleted_at=sa.null()
         ).first()
         if record is not None:
-            raise Exception(f'Job already exists: {name}')
+            raise EntityExistsError(f'Job already exists: {name}')
 
         if start_at is not None:
             start_at = self._parse_date(start_at)
@@ -165,7 +168,7 @@ class JobsController:
             deleted_at=sa.null()
         ).first()
         if record is None:
-            raise Exception(f'Job not exists: {name}')
+            raise EntityNotExistsError('Job does not exist', name)
 
         self._delete_record(record)
         db.session.commit()
@@ -382,7 +385,7 @@ class JobsExecutor:
                     error = ret.error_message
                     break
             except Exception as e:
-                log.logger.error(e)
+                logger.error(e)
                 error = str(e)
                 break
 
@@ -390,9 +393,8 @@ class JobsExecutor:
             self.update_task_schedule(record)
         except Exception as e:
             db.session.rollback()
-
-            log.logger.error(f'Error to update schedule: {e}')
-            error += f'Error to update schedule: {e}'
+            logger.error(f"Error to update schedule: {e}")
+            error += f"Error to update schedule: {e}"
 
             # stop scheduling
             record.next_run_at = None

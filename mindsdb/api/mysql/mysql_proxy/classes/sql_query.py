@@ -48,13 +48,12 @@ from mindsdb_sql.planner.steps import (
     MapReduceStep,
     MultipleSteps,
     ProjectStep,
+    QueryStep,
     SaveToTable,
     InsertToTable,
     UpdateToTable,
-    FilterStep,
     UnionStep,
     JoinStep,
-    GroupByStep,
     SubSelectStep,
     DeleteStep,
     DataStep,
@@ -1097,47 +1096,47 @@ class SQLQuery():
             except Exception as e:
                 raise SqlApiUnknownError(f'error in join step: {e}') from e
 
-        elif type(step) == FilterStep:
-            # used only in join of two regular tables
-            result_set = steps_data[step.dataframe.step_num]
-
-            df, col_names = result_set.to_df_cols()
-            col_idx = {}
-            for name, col in col_names.items():
-                col_idx[col.alias] = name
-                col_idx[(col.table_alias, col.alias)] = name
-
-            # analyze condition and change name of columns
-            def check_fields(node, is_table=None, **kwargs):
-                if is_table:
-                    raise ErNotSupportedYet('Subqueries is not supported in WHERE')
-                if isinstance(node, Identifier):
-                    # only column name
-                    col_name = node.parts[-1]
-
-                    if len(node.parts) == 1:
-                        key = col_name
-                    else:
-                        table_name = node.parts[-2]
-                        key = (table_name, col_name)
-
-                    if key not in col_idx:
-                        raise ErKeyColumnDoesNotExist(f'Table not found for column: {key}')
-
-                    new_name = col_idx[key]
-                    return Identifier(parts=[new_name])
-
-            where_query = step.query
-            query_traversal(where_query, check_fields)
-
-            query_context_controller.remove_lasts(where_query)
-            query = Select(targets=[Star()], from_table=Identifier('df'), where=where_query)
-
-            res = query_df(df, query)
-
-            result_set2 = ResultSet().from_df_cols(res, col_names)
-
-            data = result_set2
+        # elif type(step) == FilterStep:
+        #     # used only in join of two regular tables
+        #     result_set = steps_data[step.dataframe.step_num]
+        #
+        #     df, col_names = result_set.to_df_cols()
+        #     col_idx = {}
+        #     for name, col in col_names.items():
+        #         col_idx[col.alias] = name
+        #         col_idx[(col.table_alias, col.alias)] = name
+        #
+        #     # analyze condition and change name of columns
+        #     def check_fields(node, is_table=None, **kwargs):
+        #         if is_table:
+        #             raise ErNotSupportedYet('Subqueries is not supported in WHERE')
+        #         if isinstance(node, Identifier):
+        #             # only column name
+        #             col_name = node.parts[-1]
+        #
+        #             if len(node.parts) == 1:
+        #                 key = col_name
+        #             else:
+        #                 table_name = node.parts[-2]
+        #                 key = (table_name, col_name)
+        #
+        #             if key not in col_idx:
+        #                 raise ErKeyColumnDoesNotExist(f'Table not found for column: {key}')
+        #
+        #             new_name = col_idx[key]
+        #             return Identifier(parts=[new_name])
+        #
+        #     where_query = step.query
+        #     query_traversal(where_query, check_fields)
+        #
+        #     query_context_controller.remove_lasts(where_query)
+        #     query = Select(targets=[Star()], from_table=Identifier('df'), where=where_query)
+        #
+        #     res = query_df(df, query)
+        #
+        #     result_set2 = ResultSet().from_df_cols(res, col_names)
+        #
+        #     data = result_set2
 
         elif type(step) == LimitOffsetStep:
             try:
@@ -1178,7 +1177,7 @@ class SQLQuery():
             # analyze condition and change name of columns
             def check_fields(node, is_table=None, **kwargs):
                 if is_table:
-                    raise ErNotSupportedYet('Subqueries is not supported in WHERE')
+                    raise ErNotSupportedYet('Subqueries is not supported in target')
                 if isinstance(node, Identifier):
                     # only column name
                     col_name = node.parts[-1]
@@ -1226,24 +1225,78 @@ class SQLQuery():
 
             data = result_set2
 
-        elif type(step) == GroupByStep:
-            # used only in join of two regular tables
-            step_data = steps_data[step.dataframe.step_num]
+        elif type(step) == QueryStep:
+            result_set = steps_data[step.dataframe.step_num]
 
-            df = step_data.to_df()
+            df, col_names = result_set.to_df_cols()
+            col_idx = {}
+            tbl_idx = defaultdict(list)
+            for name, col in col_names.items():
+                col_idx[col.alias] = name
+                col_idx[(col.table_alias, col.alias)] = name
+                # add to tables
+                tbl_idx[col.table_name].append(name)
+                if col.table_name != col.table_alias:
+                    tbl_idx[col.table_alias].append(name)
 
-            query = Select(targets=step.targets, from_table='df', group_by=step.columns).to_string()
+            # analyze condition and change name of columns
+            def check_fields(node, is_target=None, **kwargs):
+
+                if isinstance(node, Identifier):
+                    # only column name
+                    col_name = node.parts[-1]
+                    if is_target and isinstance(col_name, Star):
+                        if len(node.parts) == 1:
+                            # left as is
+                            return
+                        else:
+                            # replace with all columns from table
+                            table_name = node.parts[-2]
+                            return [
+                                Identifier(parts=[col])
+                                for col in tbl_idx.get(table_name, [])
+                            ]
+
+                    if len(node.parts) == 1:
+                        key = col_name
+                    else:
+                        table_name = node.parts[-2]
+                        key = (table_name, col_name)
+
+                    if key not in col_idx:
+                        raise ErKeyColumnDoesNotExist(f'Table not found for column: {key}')
+
+                    new_name = col_idx[key]
+                    return Identifier(parts=[new_name], alias=node.alias)
+
+            query = step.query
+
+            query_traversal(query, check_fields)
+            query_context_controller.remove_lasts(query.where)
+            query.from_table = Identifier('df_table')
             res = query_df(df, query)
 
-            # stick all columns to first table
-            appropriate_table = step_data.get_tables()[0]
+            data = ResultSet().from_df_cols(res, col_names, strict=False)
 
-            data = ResultSet()
 
-            data.from_df(res, appropriate_table['database'], appropriate_table['table_name'], appropriate_table['table_alias'])
-
-            # columns are changed
-            self.columns_list = data.columns
+        # elif type(step) == GroupByStep:
+        #     # used only in join of two regular tables
+        #     step_data = steps_data[step.dataframe.step_num]
+        #
+        #     df = step_data.to_df()
+        #
+        #     query = Select(targets=step.targets, from_table='df', group_by=step.columns).to_string()
+        #     res = query_df(df, query)
+        #
+        #     # stick all columns to first table
+        #     appropriate_table = step_data.get_tables()[0]
+        #
+        #     data = ResultSet()
+        #
+        #     data.from_df(res, appropriate_table['database'], appropriate_table['table_name'], appropriate_table['table_alias'])
+        #
+        #     # columns are changed
+        #     self.columns_list = data.columns
 
         elif type(step) == SubSelectStep:
             result = steps_data[step.dataframe.step_num]

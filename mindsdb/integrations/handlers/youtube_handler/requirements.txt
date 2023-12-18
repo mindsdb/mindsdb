@@ -1,2 +1,3 @@
 google-api-python-client
+google-auth-oauthlib
 youtube-transcript-api

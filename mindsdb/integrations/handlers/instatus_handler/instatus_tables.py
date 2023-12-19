@@ -222,6 +222,9 @@ class Components(APITable):
         if componentId:
             # Call instatus API and get the response as pd.DataFrame
             df = self.handler.call_instatus_api(endpoint=f'/v1/{pageId}/components/{componentId}')
+            df["translations_name"] = df["translations"].apply(lambda x: x.get("name", None))
+            df["translations_desc"] = df["translations"].apply(lambda x: x.get("description", None))
+            df = df.drop(columns=["translations"])
             result_df = df[selected_columns]
         else:
             # Call instatus API and get the response as pd.DataFrame
@@ -238,6 +241,9 @@ class Components(APITable):
                 # Break if no more data is available or limit is reached
                 if len(df) == 0 or (limit and limit <= 0) or limit == 0:
                     break
+                df["translations_name"] = df["translations"].apply(lambda x: x.get("name", None))
+                df["translations_desc"] = df["translations"].apply(lambda x: x.get("description", None))
+                df = df.drop(columns=["translations"])
                 result_df = pd.concat([result_df, df[selected_columns]], ignore_index=True)
 
                 if limit:
@@ -254,14 +260,19 @@ class Components(APITable):
         Returns:
             None
         """
-        data = {}
+        data = {'translations': {}}
 
         for column, value in zip(query.columns, query.values[0]):
             if isinstance(value, Constant):
                 data[column.name] = json.loads(value.value) if column.name == 'translations' else value.value
             elif isinstance(value, str):
                 try:
-                    data[column.name] = json.loads(value)
+                    if column.name == 'translations_name':
+                        data['translations']['name'] = value
+                    elif column.name == 'translations_desc':
+                        data['translations']['description'] = value
+                    else:
+                        data[column.name] = json.loads(value)
                 except json.JSONDecodeError:
                     data[column.name] = True if value == 'True' else (False if value == 'False' else value)
 
@@ -290,11 +301,13 @@ class Components(APITable):
             else:
                 raise Exception("page_id and component_id both are required")
 
-        data = {}
+        data = {'translations': {}}
         for key, value in query.update_columns.items():
             if isinstance(value, Constant):
-                if key == 'translations':
-                    data[key] = json.loads(value.value)
+                if key == 'translations_name':
+                    data['translations']['name'] = value.value
+                elif key == 'translations_desc':
+                    data['translations']['description'] = value.value
                 else:
                     data[key] = value.value
         self.handler.call_instatus_api(endpoint=f'/v1/{pageId}/components/{componentId}', method='PUT', json_data=data)
@@ -338,5 +351,6 @@ class Components(APITable):
             "importedFromStatuspage",
             "startDate",
             "group",
-            "translations"
+            "translations_name",
+            "translations_desc"
         ]

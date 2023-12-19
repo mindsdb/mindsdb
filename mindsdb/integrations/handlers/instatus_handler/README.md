@@ -175,23 +175,17 @@ AND component_id = '<component-id>';
 ### CREATE
 
 ```sql
-INSERT INTO mindsdb_instatus.components (page_id, name, description, status, order, showUptime, grouped, translations)
+INSERT INTO mindsdb_instatus.components (page_id, name, description, status, order, showUptime, grouped, translations_name, translations_desc)
 VALUES (
-  '<page-id>',
+  'clow3ez3g586478hxn40j2cju3o',
   'Test component',
   'Testing',
   'OPERATIONAL',
   6,
   true,
   false,
-  '{
-    "name": {
-      "fr": "Composant de test"
-    },
-    "description": {
-      "fr": "En test"
-    }
-  }' 
+  '{"fr": "Composant de test"}',
+  '{"fr": "En test"}'
 );
 ```
 
@@ -200,19 +194,14 @@ VALUES (
 ```sql
 UPDATE mindsdb_instatus.components
 SET
+  name = 'Test component 4',
   description = 'Test test test',
   status = 'OPERATIONAL',
   order = 6,
   showUptime = true,
   grouped = false,
-  translations = '{
-    "name": {
-      "fr": "Composant de test 4"
-    },
-    "description": {
-      "fr": "Test test test"
-    }
-  }'
+  translations_name = '{"fr": "Composant de test 4"}',
+  translations_desc = '{"fr": "Test test test"}'
 WHERE page_id = '<status-page-id>'
 AND component_id = '<component-id>';
 ```

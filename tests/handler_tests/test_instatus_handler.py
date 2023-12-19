@@ -110,42 +110,31 @@ class InstatusHandlerTest(unittest.TestCase):
         self.assertTrue(self.handler.native_query(query))
 
     def test_10_insert_components(self):
-        query = f'''INSERT INTO mindsdb_instatus.components (page_id, name, description, status, order, showUptime, grouped)
-                    VALUES (
-                        '{self.pageId}',
-                        'Test component',
-                        'Testing',
-                        'OPERATIONAL',
-                        6,
-                        true,
-                        false,
-                        '{{
-                            "name": {{
-                                "fr": "Composant de test"
-                            }},
-                            "description": {{
-                                "fr": "En test"
-                            }}
-                        }}'
-                    );'''
+        query = f'''INSERT INTO mindsdb_instatus.components (page_id, name, description, status, order, showUptime, grouped translations_name, translations_desc)
+            VALUES (
+                '{self.pageId}',
+                'Test component',
+                'Testing',
+                'OPERATIONAL',
+                6,
+                true,
+                false,
+                '{{"fr": "Composant de test"}}',
+                '{{"fr": "En test"}}'
+            );'''
         self.assertTrue(self.handler.native_query(query))
 
     def test_11_update_components(self):
         query = f'''UPDATE mindsdb_instatus.components
                     SET
-                        description = 'Test test test',
-                        status = 'OPERATIONAL',
-                        order = 6,
-                        showUptime = true,
-                        grouped = false,
-                        translations = '{{
-                            "name": {{
-                                "fr": "Composant de test 4"
-                            }},
-                            "description": {{
-                                "fr": "Test test test"
-                            }}
-                        }}'
+                    name = 'Test component 4',
+                    description = 'Test test test',
+                    status = 'OPERATIONAL',
+                    order = 6,
+                    showUptime = true,
+                    grouped = false,
+                    translations_name = '{{"fr": "Composant de test 4"}}',
+                    translations_desc = '{{"fr": "Test test test"}}'
                     WHERE page_id = '{self.pageId}'
                     AND component_id = '{self.componentId}';'''
         self.assertTrue(self.handler.native_query(query))

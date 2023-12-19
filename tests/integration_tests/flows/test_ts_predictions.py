@@ -124,6 +124,6 @@ class TestHTTP(HTTPHelperMixin):
         '''
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
         data = to_dicts(resp['data'])
-        assert len(data) == 2
-        assert len([x for x in data if x['group'] == 'a']) == 1
-        assert data[0]['date'] == (datetime.date.today() + datetime.timedelta(days=15))
+        assert len(data) == 6  # 2 groups * 3 horizon
+        assert len([x for x in data if x['group'] == 'a']) == 3
+        assert data[0]['date'] == (datetime.date.today() + datetime.timedelta(days=16))

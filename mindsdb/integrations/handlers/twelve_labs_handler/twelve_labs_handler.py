@@ -12,11 +12,6 @@ from mindsdb.integrations.handlers.twelve_labs_handler.twelve_labs_api_client im
 
 logger = log.getLogger(__name__)
 
-# TODO: move to config
-BASE_URL = "https://api.twelvelabs.io/v1.1"
-DEFAULT_ENGINE = "marengo2.5"
-DEFAULT_WAIT_DURATION = 5
-
 
 class TwelveLabsHandler(BaseMLEngine):
     """

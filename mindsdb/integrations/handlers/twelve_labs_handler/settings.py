@@ -1,12 +1,34 @@
 from typing import List, Optional
 
-from pydantic import BaseModel, Extra, root_validator
+from pydantic import BaseModel, BaseSettings, Extra, root_validator
 
 from mindsdb.integrations.handlers.utilities.validation_utilities import ParameterValidationUtilities
 
 
+class TwelveLabsHandlerConfig(BaseSettings):
+    """
+    Configuration for Twelve Labs handler.
+
+    Attributes
+    ----------
+
+    BASE_URL : str
+        Base URL for the Twelve Labs API.
+
+    DEFAULT_ENGINE : str
+        Default engine for the Twelve Labs API.
+
+    DEFAULT_WAIT_DURATION : int
+        Default wait duration when polling video indexing tasks created via the Twelve Labs API.
+    """
+    
+    BASE_URL = "https://api.twelvelabs.io/v1.1"
+    DEFAULT_ENGINE = "marengo2.5"
+    DEFAULT_WAIT_DURATION = 5
+
+
 class TwelveLabsHandlerModel(BaseModel):
-    "Configuration for TwelveLabsHandler."
+    "Model for the Twelve Labs handler."
 
     index_name: str
     engine_id: Optional[str] = None

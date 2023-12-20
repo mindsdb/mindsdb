@@ -173,7 +173,8 @@ class TwelveLabsHandler(BaseMLEngine):
         twelve_labs_api_client = TwelveLabsAPIClient(api_key=api_key)
 
         # get search query
-        query = df['query'].tolist()[0]
+        # TODO: support multiple queries
+        query = df[args['query_column']].tolist()[0]
 
         # check if task is search
         if args['task'] == 'search':

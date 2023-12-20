@@ -6,7 +6,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 
-from mindsdb.integrations.handlers.twelve_labs_handler.settings import TwelveLabsHandlerConfig
+from mindsdb.integrations.handlers.twelve_labs_handler.settings import TwelveLabsHandlerModel
 from mindsdb.integrations.handlers.twelve_labs_handler.twelve_labs_api_client import TwelveLabsAPIClient
 
 
@@ -43,7 +43,7 @@ class TwelveLabsHandler(BaseMLEngine):
         else:
             # get USING args
             args = args['using']
-            TwelveLabsHandlerConfig(**args)
+            TwelveLabsHandlerModel(**args)
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         # get USING args and add target

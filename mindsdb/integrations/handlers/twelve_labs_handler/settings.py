@@ -5,7 +5,7 @@ from pydantic import BaseModel, Extra, root_validator
 from mindsdb.integrations.handlers.utilities.validation_utilities import ParameterValidationUtilities
 
 
-class TwelveLabsHandlerConfig(BaseModel):
+class TwelveLabsHandlerModel(BaseModel):
     "Configuration for TwelveLabsHandler."
 
     index_name: str

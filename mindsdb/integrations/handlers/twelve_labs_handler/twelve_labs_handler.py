@@ -5,6 +5,7 @@ from mindsdb.utilities import log
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
+from mindsdb.integrations.libs.api_handler_exceptions import MissingConnectionParams
 
 from mindsdb.integrations.handlers.twelve_labs_handler.settings import TwelveLabsHandlerModel
 from mindsdb.integrations.handlers.twelve_labs_handler.twelve_labs_api_client import TwelveLabsAPIClient
@@ -33,8 +34,7 @@ class TwelveLabsHandler(BaseMLEngine):
         """
         # check for USING clause
         if 'using' not in args:
-            # TODO: update Exception to InsufficientParametersException
-            raise Exception("Twelve Labs engine requires a USING clause! Refer to its documentation for more details.")
+            raise MissingConnectionParams("Twelve Labs engine requires a USING clause! Refer to its documentation for more details.")
         else:
             # get USING args
             args = args['using']

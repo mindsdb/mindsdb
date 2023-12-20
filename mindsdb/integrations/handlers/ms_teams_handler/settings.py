@@ -21,7 +21,19 @@ class MSTeamsHandlerConfig(BaseSettings):
         Columns for the channels table.
 
     CHANNEL_MESSAGES_TABLE_COLUMNS: List
-        Columns for the channel messages table.   
+        Columns for the channel messages table.
+
+    TEST_CHAT_DATA: Dict
+        Test data for the chats table.
+
+    TEST_CHAT_MESSAGES_DATA: Dict
+        Test data for the chat messages table.
+
+    TEST_CHANNEL_DATA: Dict
+        Test data for the channels table.
+
+    TEST_CHANNEL_MESSAGES_DATA: Dict
+        Test data for the channel messages table.   
     """
 
     DEFAULT_SCOPES: List = [

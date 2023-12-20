@@ -112,26 +112,26 @@ class TwelveLabsHandler(BaseMLEngine):
 
         # create video indexing tasks for all video files or video urls
         # video urls will be given precedence
-        # check if video_urls_col has been set and use it to get the video urls
-        if 'video_urls_col' in args:
-            logger.info("video_urls_col has been set, therefore, it will be given precedence.")
-            video_urls = df[args['video_urls_col']].tolist()
+        # check if video_urls_column has been set and use it to get the video urls
+        if 'video_urls_column' in args:
+            logger.info("video_urls_column has been set, therefore, it will be given precedence.")
+            video_urls = df[args['video_urls_column']].tolist()
 
-        # else, check if video_files_col has been set and use it to get the video files
-        elif 'video_files_col' in args:
-            logger.info("video_urls_col has not been set, therefore, video_files_col will be used.")
-            video_files = df[args['video_files_col']].tolist()
+        # else, check if video_files_column has been set and use it to get the video files
+        elif 'video_files_column' in args:
+            logger.info("video_urls_column has not been set, therefore, video_files_column will be used.")
+            video_files = df[args['video_files_column']].tolist()
 
         # else, check if video_urls or video_files have been set and use them
         else:
-            logger.info("video_urls_col and video_files_col have not been set, therefore, video_urls and video_files will be used.")
+            logger.info("video_urls_column and video_files_column have not been set, therefore, video_urls and video_files will be used.")
             video_urls = args['video_urls'] if 'video_urls' in args else None
             video_files = args['video_files'] if 'video_files' in args else None
 
         # if video_urls and video_files are not set, then raise an exception
         if not video_urls and not video_files:
-            logger.error("Neither video_urls_col, video_files_col, video_urls nor video_files have been set.")
-            raise RuntimeError("Neither video_urls_col, video_files_col, video_urls nor video_files have been set. Please set one of them.")
+            logger.error("Neither video_urls_column, video_files_column, video_urls nor video_files have been set.")
+            raise RuntimeError("Neither video_urls_column, video_files_column, video_urls nor video_files have been set. Please set one of them.")
 
         task_ids = twelve_labs_api_client.create_video_indexing_tasks(
             index_id=index_id,

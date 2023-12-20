@@ -31,16 +31,16 @@ class TwelveLabsHandlerModel(BaseModel):
         List of addons that should be enabled for the index. This will have no effect if the index already exists.
 
     video_urls : List[str], optional
-        List of video URLs to be indexed. Either video_urls, video_files, video_urls_col or video_files_col should be provided.
+        List of video URLs to be indexed. Either video_urls, video_files, video_urls_column or video_files_column should be provided.
 
-    video_urls_col : str, optional
-        Name of the column containing video URLs to be indexed. Either video_urls, video_files, video_urls_col or video_files_col should be provided.
+    video_urls_column : str, optional
+        Name of the column containing video URLs to be indexed. Either video_urls, video_files, video_urls_column or video_files_column should be provided.
 
     video_files : List[str], optional
-        List of video files to be indexed. Either video_urls, video_files, video_urls_col or video_files_col should be provided.
+        List of video files to be indexed. Either video_urls, video_files, video_urls_column or video_files_column should be provided.
 
-    video_files_col : str, optional
-        Name of the column containing video files to be indexed. Either video_urls, video_files, video_urls_col or video_files_col should be provided.
+    video_files_column : str, optional
+        Name of the column containing video files to be indexed. Either video_urls, video_files, video_urls_column or video_files_column should be provided.
 
     task : str, optional
         Task to be performed.
@@ -57,9 +57,9 @@ class TwelveLabsHandlerModel(BaseModel):
     index_options: List[str]
     addons: List[str] = []
     video_urls: Optional[List[str]] = None
-    video_urls_col: Optional[str] = None
+    video_urls_column: Optional[str] = None
     video_files: Optional[List[str]] = None
-    video_files_col: Optional[str] = None
+    video_files_column: Optional[str] = None
     task: str = None
     search_options: Optional[List[str]] = None
 
@@ -99,18 +99,18 @@ class TwelveLabsHandlerModel(BaseModel):
         Raises
         ------
         ValueError
-            If neither video_urls, video_files, video_urls_col nor video_files_col have been provided.
+            If neither video_urls, video_files, video_urls_column nor video_files_column have been provided.
         
         """
 
         video_urls = values.get("video_urls")
-        video_urls_col = values.get("video_urls_col")
+        video_urls_column = values.get("video_urls_column")
         video_files = values.get("video_files")
-        video_files_col = values.get("video_files_col")
+        video_files_column = values.get("video_files_column")
 
-        if not video_urls and not video_files and not video_urls_col and not video_files_col:
+        if not video_urls and not video_files and not video_urls_column and not video_files_column:
             raise ValueError(
-                "Neither video_urls, video_files, video_urls_col nor video_files_col have been provided. Please provide one of them."
+                "Neither video_urls, video_files, video_urls_column nor video_files_column have been provided. Please provide one of them."
             )
 
         return values

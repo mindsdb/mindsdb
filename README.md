@@ -52,14 +52,14 @@
 
 ----------------------------------------
 
-[MindsDB's](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) **AI Virtual Database** empowers developers to connect any AI/ML model to any datasource. This includes relational and non-relational databases, data warehouses and SaaS applications.
+[MindsDB's](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) **AI SQL Server** enables developers to build AI tools that need access to realtime data to perform their tasks.
  [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Build%20AI-Centered%20Applications%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,nlp,machine_learning,neural_networks,databases,gpt3)
 
 MindsDB offers two primary benefits to its users. 
 1. Hook AI models to run automatically as new data is observed and plug the output into any of our integrations. 
 2. Automate training and finetuning AI models from data contained in any of the 130+ datasources we support.
   
-<img width="1089" alt="image" src="https://github.com/mindsdb/mindsdb/assets/5898506/5451fe7e-a854-4c53-b34b-769b6c7c9863">
+<img width="1089" alt="image" src="https://docs.google.com/drawings/d/e/2PACX-1vQA8vxCXbYpu9aa8X__wsJ85rLov9XXnQ3oq0GJnJ_ipOn3Ejr0uTmUDbLo6jHcdbdZmKv58Ns7VC4T/pub?w=1392&h=648">
 
 [Installation](#Installation)- [How it works](#Howitworks) - [DatabaseIntegrations](#DatabaseIntegrations) - [Documentation](#Documentation) - [Support](#Support) - [Contributing](#Contributing)
 [Current contributors](#Currentcontributors) - [License](#License)
@@ -71,13 +71,14 @@ MindsDB offers two primary benefits to its users.
 
 ## Installation <a name="Installation"></a>
 
-The preferred way is to use MindsDB Cloud [free demo instance](https://cloud.mindsdb.com/home) or use a [dedicated instance](https://cloud.mindsdb.com/home). If you want to move to production, use [the AWS AMI image](https://aws.amazon.com/marketplace/seller-profile?id=03a65520-86ca-4ab8-a394-c11eb54573a9).
 
 To install locally or on-premise, pull the latest Docker image:
 
 ```
 docker pull mindsdb/mindsdb
 ```
+
+[Read more about Installation](https://docs.mindsdb.com/setup/self-hosted/docker)
 
 ## How it works <a name="How it works"></a>
 
@@ -86,9 +87,9 @@ docker pull mindsdb/mindsdb
     - Choose from pre-trained models like OpenAI's GPT, Hugging Face, LangChain, etc., for NLP and generative AI.
     - Or select from a range of state-of-the-art engines for classic ML tasks (regression, classification, time-series).
     - Even [import custom models](https://docs.mindsdb.com/custom-model/byom) built with any ML framework.
-3. **Query Models:** Use [SELECT statements](https://docs.mindsdb.com/sql/api/select), [API calls](https://docs.mindsdb.com/rest/usage), or [JOIN commands](https://docs.mindsdb.com/sql/api/join) to make predictions on thousands or millions of data points simultaneously.
+    - **Query Models:** Use [SELECT statements](https://docs.mindsdb.com/sql/api/select), [API calls](https://docs.mindsdb.com/rest/usage), or [JOIN commands](https://docs.mindsdb.com/sql/api/join) to make predictions on thousands or millions of data points simultaneously.
+3. **Automate Workflows:** Streamline operations with [JOBS](https://docs.mindsdb.com/sql/create/jobs).
 4. **Fine-Tune Models:** Experiment and [Fine-Tune](https://docs.mindsdb.com/sql/api/finetune) to achieve optimal results.
-5. **Automate Workflows:** Streamline operations with [JOBS](https://docs.mindsdb.com/sql/create/jobs).
 
 Follow the [quickstart guide](https://docs.mindsdb.com/quickstart?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) with sample data to get on-boarded as fast as possible.
 

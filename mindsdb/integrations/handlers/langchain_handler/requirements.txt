@@ -1,5 +1,4 @@
 openai == 0.28.1
-langchain==0.0.347
 wikipedia==1.4.0
 tiktoken >= 0.3.0
 anthropic==0.3.5

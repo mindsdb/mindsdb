@@ -22,6 +22,7 @@ class TogetherAIHandler(BaseMLEngine):
         super().__init__(*args, **kwargs)
         self.default_max_tokens = 128
         self.default_temperature = 0.9
+        self.default_max_workers = 10
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         if 'using' not in args:
@@ -44,7 +45,7 @@ class TogetherAIHandler(BaseMLEngine):
 
         new_column = params['output_column'] if 'output_column' in params else 'prediction'
 
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers=params['workers'] if 'workers' in params else self.default_max_workers) as executor:
             df[new_column] = list(executor.map(lambda x: together.Complete.create(
                 prompt=x,
                 model=params['model_name'],

@@ -28,7 +28,50 @@ class TwelveLabsHandlerConfig(BaseSettings):
 
 
 class TwelveLabsHandlerModel(BaseModel):
-    "Model for the Twelve Labs handler."
+    """
+    Model for the Twelve Labs handler.
+
+    Attributes
+    ----------
+
+    index_name : str
+        Name of the index to be created or used.
+
+    engine_id : str, optional
+        ID of the engine. If not provided, the default engine is used.
+
+    api_key : str, optional
+        API key for the Twelve Labs API. If not provided, attempts will be made to get the API key from the following sources:
+            1. From the engine storage.
+            2. From the environment variable TWELVE_LABS_API_KEY.
+            3. From the config.json file.
+
+    index_options : List[str]
+        List of that specifies how the platform will process the videos uploaded to this index. This will have no effect if the index already exists.
+
+    addons : List[str], optional
+        List of addons that should be enabled for the index. This will have no effect if the index already exists.
+
+    video_urls : List[str], optional
+        List of video URLs to be indexed. Either video_urls, video_files, video_urls_col or video_files_col should be provided.
+
+    video_urls_col : str, optional
+        Name of the column containing video URLs to be indexed. Either video_urls, video_files, video_urls_col or video_files_col should be provided.
+
+    video_files : List[str], optional
+        List of video files to be indexed. Either video_urls, video_files, video_urls_col or video_files_col should be provided.
+
+    video_files_col : str, optional
+        Name of the column containing video files to be indexed. Either video_urls, video_files, video_urls_col or video_files_col should be provided.
+
+    task : str, optional
+        Task to be performed.
+
+    search_options : List[str], optional
+        List of search options to be used for searching. This will only be required if the task is search.
+
+    For more information, refer the API reference: https://docs.twelvelabs.io/reference/api-reference
+    """
 
     index_name: str
     engine_id: Optional[str] = None
@@ -47,7 +90,19 @@ class TwelveLabsHandlerModel(BaseModel):
 
     @root_validator(pre=True, allow_reuse=True, skip_on_failure=True)
     def check_param_typos(cls, values):
-        """Check if there are any typos in the parameters."""
+        """
+        Root validator to check if there are any typos in the parameters.
+
+        Parameters
+        ----------
+        values : Dict
+            Dictionary containing the attributes of the model.
+
+        Raises
+        ------
+        ValueError
+            If there are any typos in the parameters.        
+        """
 
         ParameterValidationUtilities.validate_parameter_spelling(cls, values)
 
@@ -55,7 +110,20 @@ class TwelveLabsHandlerModel(BaseModel):
 
     @root_validator(allow_reuse=True, skip_on_failure=True)
     def check_for_video_urls_or_video_files(cls, values):
-        """Check if video_urls or video_files have been provided."""
+        """
+        Root validator to check if video_urls or video_files have been provided.
+
+        Parameters
+        ----------
+        values : Dict
+            Dictionary containing the attributes of the model.
+
+        Raises
+        ------
+        ValueError
+            If neither video_urls, video_files, video_urls_col nor video_files_col have been provided.
+        
+        """
 
         video_urls = values.get("video_urls")
         video_urls_col = values.get("video_urls_col")
@@ -70,8 +138,20 @@ class TwelveLabsHandlerModel(BaseModel):
         return values
 
     @root_validator(allow_reuse=True, skip_on_failure=True)
-    def check_for_task(cls, values):
-        """Check if task has been provided along with the other relevant parameters for each task."""
+    def check_for_task_specific_parameters(cls, values):
+        """
+        Root validator to check if task has been provided along with the other relevant parameters for each task.
+
+        Parameters
+        ----------
+        values : Dict
+            Dictionary containing the attributes of the model.
+
+        Raises
+        ------
+        ValueError
+            If the relevant parameters for the task have not been provided.        
+        """
 
         task = values.get("task")
 

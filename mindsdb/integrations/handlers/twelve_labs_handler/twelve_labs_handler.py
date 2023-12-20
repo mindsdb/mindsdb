@@ -1,8 +1,7 @@
+import pandas as pd
 from typing import Optional, Dict
 
-import pandas as pd
 from mindsdb.utilities import log
-
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.libs.api_handler_exceptions import MissingConnectionParams

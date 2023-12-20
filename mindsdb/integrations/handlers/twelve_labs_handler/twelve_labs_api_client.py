@@ -4,7 +4,7 @@ from typing import Dict, List
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 from mindsdb.utilities import log
-from mindsdb.integrations.handlers.twelve_labs_handler.settings import TwelveLabsHandlerConfig
+from mindsdb.integrations.handlers.twelve_labs_handler.settings import twelve_labs_handler_config
 
 
 logger = log.getLogger(__name__)
@@ -25,7 +25,7 @@ class TwelveLabsAPIClient:
         """
         body = {
             "index_name": index_name,
-            "engine_id": engine_id if engine_id else TwelveLabsHandlerConfig.DEFAULT_ENGINE,
+            "engine_id": engine_id if engine_id else twelve_labs_handler_config.DEFAULT_ENGINE,
             "index_options": index_options,
             "addons": addons,
         }
@@ -128,7 +128,7 @@ class TwelveLabsAPIClient:
                 status = task['status']
                 logger.info(f"Task {task_id} is in the {status} state.")
 
-                wait_durtion = task['process']['remain_seconds'] if 'process' in task else TwelveLabsHandlerConfig.DEFAULT_WAIT_DURATION
+                wait_durtion = task['process']['remain_seconds'] if 'process' in task else twelve_labs_handler_config.DEFAULT_WAIT_DURATION
 
                 if status in ('pending', 'indexing', 'validating'):
                     logger.info(f"Task {task_id} will be polled again in {wait_durtion} seconds.")
@@ -192,7 +192,7 @@ class TwelveLabsAPIClient:
         Submit a request to the Twelve Labs API.
 
         """
-        url = f"{TwelveLabsHandlerConfig.BASE_URL}/{endpoint}"
+        url = f"{twelve_labs_handler_config.BASE_URL}/{endpoint}"
 
         headers = headers if headers else self.headers
 
@@ -227,7 +227,7 @@ class TwelveLabsAPIClient:
         Submit a multi-part request to the Twelve Labs API.
 
         """
-        url = f"{TwelveLabsHandlerConfig.BASE_URL}/{endpoint}"
+        url = f"{twelve_labs_handler_config.BASE_URL}/{endpoint}"
 
         headers = headers = headers if headers else self.headers
 

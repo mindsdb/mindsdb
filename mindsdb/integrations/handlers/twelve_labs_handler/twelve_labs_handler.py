@@ -16,31 +16,65 @@ logger = log.getLogger(__name__)
 
 class TwelveLabsHandler(BaseMLEngine):
     """
-    Integration with the Twelve Labs API.
+    Twelve Labs API handler implementation.
     """
 
     name = 'twelve_labs'
 
     @staticmethod
-    def create_validation(target, args=None, **kwargs):
+    def create_validation(target: str, args: Dict = None, **kwargs: Dict) -> None:
         """
-        Validates the create arguments.
-        Args:
-            target (str): name of the target column
-            args (dict): dictionary of create arguments
-            **kwargs: arbitrary keyword arguments.
-        Returns:
-            None
+        Validates the create arguments. This method is called when creating a new model, prior to calling the create() method.
+
+        Parameters
+        ----------
+        target : str
+            Name of the target column.
+
+        args : Dict
+            Arguments from the USING clause.
+
+        kwargs : Dict
+            Additional arguments.
+
+        Raises
+        ------
+        MissingConnectionParams
+            If a USING clause is not provided.
+
+        ValueError
+            If the parameters in the USING clause are invalid.
         """
+
         # check for USING clause
         if 'using' not in args:
             raise MissingConnectionParams("Twelve Labs engine requires a USING clause! Refer to its documentation for more details.")
         else:
             # get USING args
             args = args['using']
+            # pass args to TwelveLabsHandlerModel for validation
             TwelveLabsHandlerModel(**args)
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        """
+        Creates a model for for interacting with the Twelve Labs API. This method is called when creating a new model.
+        The following steps are performed:
+            1. Create an index if it doesn't exist already.
+            2. Create video indexing tasks for all video files or video urls.
+            3. Poll for video indexing tasks to complete.
+
+        Parameters
+        ----------
+        target : str
+            Name of the target column.
+
+        df : pd.DataFrame, Optional
+            DataFrame containing the data to be used in creating the model. This can include the columns containing video urls or video files.
+
+        args : Dict, Optional
+            Arguments from the USING clause.
+        """
+
         # get USING args and add target
         args = args['using']
         args['target'] = target
@@ -113,6 +147,19 @@ class TwelveLabsHandler(BaseMLEngine):
         self.model_storage.json_set('args', args)
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        """
+        Predicts the target column for the given data. This method is called when making predictions.
+
+        Parameters
+        ----------
+        df : pd.DataFrame, Optional
+            DataFrame containing the data to be used in making predictions. This can include the column containing the queries to be run against the index.
+
+        args : Dict, Optional
+            Additional arguments.
+
+        """
+
         # get args from model_storage
         args = self.model_storage.json_get('args')
 

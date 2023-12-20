@@ -15,10 +15,10 @@ class TwelveLabsHandlerModel(BaseModel):
     index_name : str
         Name of the index to be created or used.
 
-    engine_id : str, optional
+    engine_id : str, Optional
         ID of the engine. If not provided, the default engine is used.
 
-    api_key : str, optional
+    api_key : str, Optional
         API key for the Twelve Labs API. If not provided, attempts will be made to get the API key from the following sources:
             1. From the engine storage.
             2. From the environment variable TWELVE_LABS_API_KEY.
@@ -27,26 +27,29 @@ class TwelveLabsHandlerModel(BaseModel):
     index_options : List[str]
         List of that specifies how the platform will process the videos uploaded to this index. This will have no effect if the index already exists.
 
-    addons : List[str], optional
+    addons : List[str], Optional
         List of addons that should be enabled for the index. This will have no effect if the index already exists.
 
-    video_urls : List[str], optional
+    video_urls : List[str], Optional
         List of video URLs to be indexed. Either video_urls, video_files, video_urls_column or video_files_column should be provided.
 
-    video_urls_column : str, optional
+    video_urls_column : str, Optional
         Name of the column containing video URLs to be indexed. Either video_urls, video_files, video_urls_column or video_files_column should be provided.
 
-    video_files : List[str], optional
+    video_files : List[str], Optional
         List of video files to be indexed. Either video_urls, video_files, video_urls_column or video_files_column should be provided.
 
-    video_files_column : str, optional
+    video_files_column : str, Optional
         Name of the column containing video files to be indexed. Either video_urls, video_files, video_urls_column or video_files_column should be provided.
 
-    task : str, optional
+    task : str, Optional
         Task to be performed.
 
-    search_options : List[str], optional
+    search_options : List[str], Optional
         List of search options to be used for searching. This will only be required if the task is search.
+
+    query_column : str, Optional
+        Name of the column containing the query to be used for searching. This will only be required if the task is search. Each query will be run against the entire index, not individual videos.
 
     For more information, refer the API reference: https://docs.twelvelabs.io/reference/api-reference
     """
@@ -62,6 +65,7 @@ class TwelveLabsHandlerModel(BaseModel):
     video_files_column: Optional[str] = None
     task: str = None
     search_options: Optional[List[str]] = None
+    query_column: Optional[str] = None
 
     class Config:
         extra = Extra.forbid
@@ -145,6 +149,12 @@ class TwelveLabsHandlerModel(BaseModel):
             if not set(search_options).issubset(set(index_options)):
                 raise ValueError(
                     "search_options should be a subset of index_options."
+                )
+            
+            query_column = values.get("query_column")
+            if not query_column:
+                raise ValueError(
+                    "query_column has not been provided. Please provide query_column."
                 )
 
         else:

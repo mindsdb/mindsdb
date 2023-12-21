@@ -147,8 +147,7 @@ class Articles(APITable):
             "url",
             "parent_id",
             "parent_ids",
-            "parent_type",
-            "statistics"
+            "parent_type"
         ]
 
 

@@ -10,9 +10,9 @@ from mindsdb.utilities.config import Config
 logger = log.getLogger(__name__)
 
 
-class BardHandler(BaseMLEngine):
+class GoogleGeminiHandler(BaseMLEngine):
     """
-    Integration with the Anthropic LLM Python Library
+    Integration with the Google generative AI Python Library
     """
 
     name = "bard"
@@ -20,8 +20,6 @@ class BardHandler(BaseMLEngine):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.default_chat_model = "gemini-pro"
-        self.supported_chat_models = ["gemini-pro"]
-        # self.default_max_tokens = 100
         self.generative = True
         self.connection = None
 
@@ -73,7 +71,7 @@ class BardHandler(BaseMLEngine):
             return api_key
         # 4
         config = Config()
-        bard_config = config.get("bard", {})
+        bard_config = config.get("google_gemini", {})
         if "api_key" in bard_config:
             return bard_config["api_key"]
 
@@ -85,19 +83,12 @@ class BardHandler(BaseMLEngine):
 
     def predict_answer(self, text):
         """
-        connects with bard api to predict the answer for the particular question
+        connects with google generative AI api to predict the answer for the particular question
 
         """
 
-        args = self.model_storage.json_get("args")
-        if "ai_prompt" not in args["using"]:
-            args["using"]["ai_prompt"] = ""
-        if "human_prompt" not in args["using"]:
-            args["using"]["human_prompt"] = ""
-        AI_PROMPT = args["using"]["ai_prompt"]
-        HUMAN_PROMPT = args["using"]["human_prompt"]
         completion = self.connection.generate_content(
-            f"{HUMAN_PROMPT} {text} {AI_PROMPT}",
+            text
         )
 
         return completion.text

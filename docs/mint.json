@@ -43,7 +43,7 @@
     {
       "name": "What's New",
       "icon": "rocket-launch",
-      "url": "https://mindsdb.com/blog-categories/product-updates"
+      "url": "https://mindsdb.com/joincommunity"
     }
   ],
   "tabs": [
@@ -150,37 +150,93 @@
       "group": "Overview",
       "pages": [
         "what-is-mindsdb",
-        "quickstart",
+        
         {
-          "group": "Concepts",
+          "group": "Setup/Install",
           "pages": [
-            "automation",
-            "ai_workflow",
-            "mindsdb-handlers",
-            "data_sources",
-            "ml_engines",
-            "sql/project",
-            "generative-ai-tables",
-            "model-types",
-            "callbacks",
-            "tables_views_files"
+            "setup/self-hosted/docker",
+            {
+              "group": "pip",
+              "pages": [
+                "setup/self-hosted/pip/linux",
+                "setup/self-hosted/pip/windows",
+                "setup/self-hosted/pip/macos",
+                "setup/self-hosted/pip/source"
+              ]
+            },
+            {
+              "group": "Cloud",
+              "pages": [
+                "setup/aws",
+                "setup/gcp",
+                "setup/community-deploys-mindsdb"
+              ]
+            },
+            {
+              "group": "Configuration",
+              "pages": [
+                "setup/custom-config",
+                "setup/environment-vars"
+              ]
+            }
           ]
         },
         {
-          "group": "Learn More",
+          "group": "Quickstart",
           "pages": [
             "mindsdb-gui",
-            "sql/table-structure",
-            "sql/data-insights",
-            "sql/feature-importance",
-            "sql/feature-eng"
+            "/connect/postgres-client",
+            "sql/table-structure"
+            
+          ]
+        }
+      ]
+    },
+    {
+      "group": "Concepts",
+      "pages": [     
+        {
+          "group": "DataSources",
+          "pages": [
+            "datasources/overview",
+            "sql/create/database",
+            "sql/project",
+            "sql/create/view",
+            {
+              "group": "Data Preparation",
+              "pages": [
+                "sql/feature-eng",
+                "sql/data-insights",
+                "sql/feature-importance" 
+              ]
+            }
+          ] 
+        },
+        {
+          "group": "JOBS & Automation",
+          "pages": [
+            "sql/create/jobs",
+            "sql/create/trigger"
+          ]
+        },
+        {
+          "group": "AI-Tables",
+          "pages":[
+            "ai-engines/overview",
+            "generative-ai-tables"
           ] 
         }
+            
+            
+          
+        
       ]
     },
     {
       "group": "Use Cases",
       "pages": [
+        "agents/agent",
+        "agents/knowledge-bases",  
         {
           "group": "Chatbots",
           "pages": [
@@ -226,15 +282,6 @@
           ]
         },
         {
-          "group": "Natural Language Processing",
-          "pages": [
-            "nlp/what-is-nlp",
-            "nlp/nlp-mindsdb-hf",
-            "nlp/nlp-mindsdb-openai",
-            "nlp/nlp-extended-examples"
-          ]
-        },
-        {
           "group": "Forecasting",
           "pages": [
             "sql/tutorials/house-sales-forecasting",
@@ -260,49 +307,7 @@
         "tutorials"
       ]
     },
-    {
-      "group": "Setup",
-      "pages": [
-        {
-          "group": "MindsDB Cloud",
-          "pages": [
-            "setup/cloud",
-            "setup/cloud-starter"
-          ]
-        },
-        {
-          "group": "Self-Hosted",
-          "pages": [
-            "setup/self-hosted/docker",
-            "setup/self-hosted/pip/windows",
-            "setup/self-hosted/pip/linux",
-            "setup/self-hosted/pip/macos",
-            "setup/self-hosted/pip/source"
-          ]
-        },
-        {
-          "group": "External Cloud Services",
-          "pages": [
-            "setup/aws",
-            "setup/gcp"
-          ]
-        },
-        {
-          "group": "Other",
-          "pages": [
-            "connect/dbt"
-          ]
-        },
-        {
-          "group": "Configuration",
-          "pages": [
-            "setup/custom-config",
-            "setup/environment-vars"
-          ]
-        },
-        "setup/community-deploys-mindsdb"
-      ]
-    },
+    
     {
       "group": "AI Workflow",
       "pages": [
@@ -775,7 +780,6 @@
     {
       "group": "Data Sources",
       "pages": [
-        "integrations/data-sources-overview",
         {
           "group": "Applications",
           "pages": [
@@ -879,7 +883,10 @@
         {
           "group": "Vector Databases",
           "pages": [
-            "integrations/vector-db-integrations/chromadb"
+            "integrations/vector-db-integrations/chromadb",
+            "integrations/vector-db-integrations/pgvector",
+            "integrations/vector-db-integrations/pinecone",
+            "integrations/vector-db-integrations/weaviate"
           ]
         }
       ]
@@ -887,10 +894,12 @@
     {
       "group": "AI Engines",
       "pages": [
-        "integrations/ml-engines-overview",
+        "ml_engines",
         {
           "group": "Large Language Models",
           "pages": [
+            "integrations/ai-engines/ollama",
+            "integrations/ai-engines/vertex",
             "integrations/ai-engines/anthropic",
             "integrations/ai-engines/cohere",
             "integrations/ai-engines/openai",
@@ -954,7 +963,8 @@
       "pages": [
         "faqs/whitelist-ips",
         "faqs/persist-predictions",
-        "faqs/mindsdb-with-php"
+        "faqs/mindsdb-with-php",
+        "faqs/benefits"
       ]
     }
   ],

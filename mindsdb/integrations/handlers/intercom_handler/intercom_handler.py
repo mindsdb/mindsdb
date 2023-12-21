@@ -24,7 +24,6 @@ class IntercomHandler(APIHandler):
         """
         super().__init__(name)
 
-        self.connection = None
         self.is_connected = False
         self._baseUrl = 'https://api.intercom.io'
         args = kwargs.get('connection_data', {})
@@ -68,12 +67,12 @@ class IntercomHandler(APIHandler):
         Raises:
             Exception: If the request to the Intercom API fails or the access token is missing.
         """
-        if self.is_connected and self.connection:
-            return self.connection
+        if self.is_connected:
+            return StatusResponse(True)
 
         if self._headers:
             try:
-                self.connection = self.call_intercom_api(endpoint='/me')
+                self.call_intercom_api(endpoint='/me')
                 self.is_connected = True
                 return StatusResponse(True)
             except requests.RequestException as e:

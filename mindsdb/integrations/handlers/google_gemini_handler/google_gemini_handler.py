@@ -15,7 +15,7 @@ class GoogleGeminiHandler(BaseMLEngine):
     Integration with the Google generative AI Python Library
     """
 
-    name = "bard"
+    name = "google_gemini"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -35,7 +35,7 @@ class GoogleGeminiHandler(BaseMLEngine):
         self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None
     ) -> None:
         args = self.model_storage.json_get("args")
-        api_key = self._get_bard_api_key(args)
+        api_key = self._get_google_gemini_api_key(args)
         genai.configure(api_key=api_key)
 
         input_column = args["using"]["column"]
@@ -50,13 +50,13 @@ class GoogleGeminiHandler(BaseMLEngine):
         result_df = result_df.rename(columns={"predictions": args["target"]})
         return result_df
 
-    def _get_bard_api_key(self, args, strict=True):
+    def _get_google_gemini_api_key(self, args, strict=True):
         """
         API_KEY preference order:
             1. provided at model creation
             2. provided at engine creation
             3. GOOGLE_API_KEY env variable
-            4. bard.api_key setting in config.json
+            4. google_gemini.api_key setting in config.json
         """
 
         if "api_key" in args["using"]:
@@ -71,9 +71,9 @@ class GoogleGeminiHandler(BaseMLEngine):
             return api_key
         # 4
         config = Config()
-        bard_config = config.get("google_gemini", {})
-        if "api_key" in bard_config:
-            return bard_config["api_key"]
+        google_gemini_config = config.get("google_gemini", {})
+        if "api_key" in google_gemini_config:
+            return google_gemini_config["api_key"]
 
         if strict:
             raise Exception(

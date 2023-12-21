@@ -77,7 +77,13 @@ def do_clean_process_marks():
 
 
 if __name__ == '__main__':
-    # ----------------  __init__.py section ------------------
+    # warn if less than 1Gb of free RAM
+    if psutil.virtual_memory().available < (1 << 30):
+        logger.warning(
+            'The system is running low on memory. '
+            + 'This may impact the stability and performance of the program.'
+        )
+
     clean_process_marks()
     ctx.set_default()
     args = args_parse()
@@ -123,10 +129,10 @@ if __name__ == '__main__':
 
     if telemetry_file_exists(config['storage_dir']):
         os.environ['CHECK_FOR_UPDATES'] = '0'
-        print('\n x telemetry disabled! \n')
+        logger.info('\n x telemetry disabled! \n')
     elif os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False'] or config.get('cloud', False):
         disable_telemetry(config['storage_dir'])
-        print('\n x telemetry disabled \n')
+        logger.info('\n x telemetry disabled! \n')
     else:
         logger.info("✓ telemetry enabled")
 
@@ -228,11 +234,11 @@ if __name__ == '__main__':
         import_meta = handler_meta.get("import", {})
         dependencies = import_meta.get("dependencies")
         if import_meta.get("success", False) is not True:
-            logger.info(
+            logger.debug(
                 f"Dependencies for the handler '{handler_name}' are not installed by default."
             )
-            logger.info(
-                f'If you want to use "{handler_name}" please install "{dependencies}"'
+            logger.debug(
+                f'If you want to use "{handler_name}" please "pip install mindsdb[{handler_name}]"'
             )
 
     # from mindsdb.utilities.fs import get_marked_processes_and_threads
@@ -373,7 +379,9 @@ if __name__ == '__main__':
 
     async def join_process(process, name):
         try:
-            process.join()
+            while process.is_alive():
+                process.join(1)
+                await asyncio.sleep(0)
         except KeyboardInterrupt:
             logger.info("Got keyboard interrupt, stopping APIs")
             close_api_gracefully(apis)

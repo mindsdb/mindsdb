@@ -19,6 +19,8 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 )
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
+
 
 class XataHandler(VectorStoreHandler):
     """This handler handles connection and execution of the Xata statements."""
@@ -55,7 +57,7 @@ class XataHandler(VectorStoreHandler):
             self.is_connected = True
             return self._client
         except Exception as e:
-            log.logger.error(f"Error connecting to Xata client: {e}!")
+            logger.error(f"Error connecting to Xata client: {e}!")
             self.is_connected = False
 
     def disconnect(self):
@@ -77,7 +79,7 @@ class XataHandler(VectorStoreHandler):
                 raise Exception(resp["message"])
             response_code.success = True
         except Exception as e:
-            log.logger.error(f"Error connecting to Xata: {e}!")
+            logger.error(f"Error connecting to Xata: {e}!")
             response_code.error_message = str(e)
         finally:
             if response_code.success is True and need_to_close:

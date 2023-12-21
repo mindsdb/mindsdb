@@ -57,3 +57,5 @@ Mendeley integration Test Passed: https://github.com/Sekhar-Kumar-Dash/mindsdb_m
 </br>
 PGVector data integration Test Passed: https://github.com/maulanaakbardj/mindsdb-Testing/blob/main/PGVector/PGVector_QA.md
 </br>
+Apache druid data integration Test Passed: https://github.com/maarioos1308/mindsdb-Testing/tree/master/Apache_Druid
+</br>

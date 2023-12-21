@@ -14,6 +14,7 @@ from mindsdb.api.http.utils import http_error, safe_extract
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
+from mindsdb.utilities.security import is_private_url, clear_filename
 
 logger = log.getLogger(__name__)
 
@@ -91,10 +92,15 @@ class File(Resource):
 
         if data.get("source_type") == "url":
             url = data["source"]
-            data["file"] = data["name"]
+            data["file"] = clear_filename(data["name"])
 
             config = Config()
             is_cloud = config.get("cloud", False)
+            if is_cloud and is_private_url(url):
+                return http_error(
+                    400, f'URL is private: {url}'
+                )
+
             if is_cloud is True and ctx.user_class != 1:
                 info = requests.head(url)
                 file_size = info.headers.get("Content-Length")
@@ -123,7 +129,7 @@ class File(Resource):
                     for chunk in r.iter_content(chunk_size=8192):
                         f.write(chunk)
 
-        original_file_name = data.get("original_file_name")
+        original_file_name = clear_filename(data.get("original_file_name"))
 
         file_path = os.path.join(temp_dir_path, data["file"])
         lp = file_path.lower()

@@ -19,6 +19,8 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
 
+logger = log.getLogger(__name__)
+
 
 # todo Issue #7316 add support for different indexes and search algorithms e.g. cosine similarity or L2 norm
 class PgVectorHandler(VectorStoreHandler, PostgresHandler):
@@ -42,10 +44,10 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
             try:
                 # load pg_vector extension
                 cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
-                log.logger.info("pg_vector extension loaded")
+                logger.info("pg_vector extension loaded")
 
             except psycopg.Error as e:
-                log.logger.error(
+                logger.error(
                     f"Error loading pg_vector extension, ensure you have installed it before running, {e}!"
                 )
                 return HandlerResponse(resp_type=RESPONSE_TYPE.ERROR, error_message=str(e))

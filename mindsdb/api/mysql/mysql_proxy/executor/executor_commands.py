@@ -739,10 +739,18 @@ class ExecuteCommands:
         # Database ID cannot be null
         database_id = database["id"] if database is not None else -1
 
+        model_name = None
+        if statement.model is not None:
+            model_name = statement.model.parts[-1]
+
+        agent_name = None
+        if statement.agent is not None:
+            agent_name = statement.agent.parts[-1]
         chatbot_controller.add_chatbot(
             name.parts[-1],
             project_name=project_name,
-            model_name=statement.model.parts[-1],
+            model_name=model_name,
+            agent_name=agent_name,
             database_id=database_id,
             is_running=is_running,
             params=statement.params,
@@ -759,6 +767,7 @@ class ExecuteCommands:
         # From SET keyword parameters
         updated_name = statement.params.pop("name", None)
         model_name = statement.params.pop("model", None)
+        agent_name = statement.params.pop("agent", None)
         database_name = statement.params.pop("database", None)
         is_running = statement.params.pop("is_running", None)
 
@@ -774,6 +783,7 @@ class ExecuteCommands:
             project_name=project_name,
             name=updated_name,
             model_name=model_name,
+            agent_name=agent_name,
             database_id=database_id,
             is_running=is_running,
             params=statement.params,
@@ -1007,6 +1017,7 @@ class ExecuteCommands:
             connection_args = {}
         status = HandlerStatusResponse(success=False)
 
+        storage = None
         try:
             handlers_meta = (
                 self.session.integration_controller.get_handlers_import_status()
@@ -1054,6 +1065,8 @@ class ExecuteCommands:
                 handler_type=engine, connection_data=connection_args
             )
             status = handler.check_connection()
+            if status.copy_storage:
+                storage = handler.handler_storage.export_files()
         except Exception as e:
             status.error_message = str(e)
 
@@ -1065,6 +1078,9 @@ class ExecuteCommands:
             raise EntityExistsError('Database already exists', name)
 
         self.session.integration_controller.add(name, engine, connection_args)
+        if storage:
+            handler = self.session.integration_controller.get_handler(name)
+            handler.handler_storage.import_files(storage)
 
     def answer_create_ml_engine(self, statement: ASTNode):
         name = statement.name.parts[-1]

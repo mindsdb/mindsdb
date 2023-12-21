@@ -197,7 +197,6 @@ class CouchbaseHandler(DatabaseHandler):
         try:
             q = f"SELECT * FROM `{table_name}` limit 1"
             row_iter = cb.query(q)
-            # print(row_iter.execute())
             data = []
             for row in row_iter:
                 for k, v in row[table_name].items():

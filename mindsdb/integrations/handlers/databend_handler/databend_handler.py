@@ -19,6 +19,8 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
+logger = log.getLogger(__name__)
+
 
 class DatabendHandler(DatabaseHandler):
     """
@@ -91,7 +93,7 @@ class DatabendHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Databend, {e}!')
+            logger.error(f'Error connecting to Databend, {e}!')
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:
@@ -130,7 +132,7 @@ class DatabendHandler(DatabaseHandler):
                 connection.commit()
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            log.logger.error(f'Error running query: {query} on Databend!')
+            logger.error(f'Error running query: {query} on Databend!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)

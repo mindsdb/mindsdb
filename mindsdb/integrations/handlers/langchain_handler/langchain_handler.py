@@ -2,6 +2,7 @@ import re
 import os
 from typing import Optional, Dict
 
+from concurrent.futures import as_completed, TimeoutError
 import numpy as np
 import pandas as pd
 
@@ -20,14 +21,20 @@ from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.utilities import log
+from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 
 
 _DEFAULT_MODEL = 'gpt-3.5-turbo'
+_DEFAULT_MAX_ITERATIONS = 10
 _DEFAULT_MAX_TOKENS = 2048  # requires more than vanilla OpenAI due to ongoing summarization and 3rd party input
+# 2 minutes should be more than enough time to complete chains.
+_DEFAULT_AGENT_TIMEOUT_SECONDS = 120
 _DEFAULT_AGENT_MODEL = 'zero-shot-react-description'
 _DEFAULT_AGENT_TOOLS = ['python_repl', 'wikipedia']  # these require no additional arguments
 _ANTHROPIC_CHAT_MODELS = {'claude-2', 'claude-instant-1'}
-_PARSING_ERROR_PREFIX = 'Could not parse LLM output: `'
+_PARSING_ERROR_PREFIX = 'An output parsing error occurred'
+
+logger = log.getLogger(__name__)
 
 class LangChainHandler(BaseMLEngine):
     """
@@ -58,7 +65,6 @@ class LangChainHandler(BaseMLEngine):
         self.default_max_tokens = _DEFAULT_MAX_TOKENS
         self.default_agent_model = _DEFAULT_AGENT_MODEL
         self.default_agent_tools = _DEFAULT_AGENT_TOOLS
-        self.write_privileges = False  # if True, this agent is able to write into other active mindsdb integrations
 
     # TODO (ref #7496): modify handler_utils.get_api_key to check for prefix in all sources, update usage in all handlers, deprecate  # noqa
     def _get_serper_api_key(self, args, strict=True):
@@ -78,7 +84,6 @@ class LangChainHandler(BaseMLEngine):
                  or re-create this model and pass the API key with `USING` syntax.')  # noqa
 
     def create(self, target, args=None, **kwargs):
-        self.write_privileges = args.get('using', {}).get('writer', self.write_privileges)
         self.default_agent_tools = args.get('tools', self.default_agent_tools)
 
         args = args['using']
@@ -206,7 +211,7 @@ class LangChainHandler(BaseMLEngine):
                             pred_args,
                             args['executor'],
                             self.default_agent_tools,
-                            self.write_privileges)
+                            get_api_key('openai', args, self.engine_storage))
 
         memory = ConversationSummaryBufferMemory(llm=llm,
                                                  max_token_limit=max_tokens,
@@ -241,7 +246,7 @@ class LangChainHandler(BaseMLEngine):
             llm,
             memory=memory,
             agent=agent_name,
-            max_iterations=pred_args.get('max_iterations', 3),
+            max_iterations=pred_args.get('max_iterations', args.get('max_iterations', _DEFAULT_MAX_ITERATIONS)),
             verbose=pred_args.get('verbose', args.get('verbose', False)),
             handle_parsing_errors=False,
         )
@@ -282,7 +287,7 @@ class LangChainHandler(BaseMLEngine):
                             pred_args,
                             args['executor'],
                             self.default_agent_tools,
-                            self.write_privileges)
+                            get_api_key('openai', args, self.engine_storage))
 
         # langchain agent setup
         memory = ConversationSummaryBufferMemory(llm=llm, max_token_limit=max_tokens)
@@ -292,7 +297,7 @@ class LangChainHandler(BaseMLEngine):
             llm,
             memory=memory,
             agent=agent_name,
-            max_iterations=pred_args.get('max_iterations', 3),
+            max_iterations=pred_args.get('max_iterations', args.get('max_iterations', _DEFAULT_MAX_ITERATIONS)),
             verbose=pred_args.get('verbose', args.get('verbose', False)),
             handle_parsing_errors=False,
         )
@@ -341,43 +346,53 @@ class LangChainHandler(BaseMLEngine):
                 # just add prompt
                 prompts.append(row[args['user_column']])
 
-        def _completion(agent, prompts):
+        def _run_agent_with_prompt(agent, prompt):
             # TODO: ensure that agent completion plus prompt match the maximum allowed by the user
-            # TODO: use async API if possible for parallelized completion
-            completions = []
-            for prompt in prompts:
-                if not prompt:
-                    # skip empty values
-                    completions.append('')
-                    continue
-                try:
-                    completions.append(agent.run(prompt))
-                except ValueError as e:
-                    # Handle parsing errors ourselves instead of using handle_parsing_errors=True in initialize_agent.
-                    response = str(e)
-                    if not response.startswith(_PARSING_ERROR_PREFIX):
-                        completions.append(f'agent failed with error:\n{str(e)}...')
-                    else:
-                        # By far the most common error is a Langchain parsing error. Some OpenAI models
-                        # always output a response formatted correctly. Anthropic, and others, sometimes just output
-                        # the answer as text (when not using tools), even when prompted to output in a specific format.
-                        # As a somewhat dirty workaround, we accept the output formatted incorrectly and use it as a response.
-                        #
-                        # Ideally, in the future, we would write a parser that is more robust and flexible than the one Langchain uses.
-                        response = response.lstrip(_PARSING_ERROR_PREFIX).rstrip('`')
-                        log.logger.info(f"Agent failure, salvaging response...")
-                        completions.append(response)
-                except Exception as e:
-                    completions.append(f'agent failed with error:\n{str(e)}...')
-            return [c for c in completions]
+            if not prompt:
+                return ''
+            try:
+                return agent.run(prompt)
+            except ValueError as e:
+                # Handle parsing errors ourselves instead of using handle_parsing_errors=True in initialize_agent.
+                response = str(e)
+                if not response.startswith(_PARSING_ERROR_PREFIX):
+                    return f'agent failed with error:\n{str(e)}...'
+                else:
+                    # By far the most common error is a Langchain parsing error. Some OpenAI models
+                    # always output a response formatted correctly. Anthropic, and others, sometimes just output
+                    # the answer as text (when not using tools), even when prompted to output in a specific format.
+                    # As a somewhat dirty workaround, we accept the output formatted incorrectly and use it as a response.
+                    #
+                    # Ideally, in the future, we would write a parser that is more robust and flexible than the one Langchain uses.
+                    # Response is wrapped in ``
+                    logger.info(f"Agent failure, salvaging response...")
+                    response_output = response.split('`')
+                    if len(response_output) >= 2:
+                        response = response_output[-2]
+                    return response
+            except Exception as e:
+                return f'agent failed with error:\n{str(e)}...'
 
-        completion = _completion(agent, prompts)
+        completions = []
+        # max_workers defaults to number of processors on the machine multiplied by 5.
+        # https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
+        max_workers = args.get('max_workers', None)
+        agent_timeout_seconds = args.get('timeout', _DEFAULT_AGENT_TIMEOUT_SECONDS)
+        executor = ContextThreadPoolExecutor(max_workers=max_workers)
+        futures = [executor.submit(_run_agent_with_prompt, agent, prompt) for prompt in prompts]
+        try:
+            for future in as_completed(futures, timeout=agent_timeout_seconds):
+                completions.append(future.result())
+        except TimeoutError:
+            completions.append("I'm sorry! I couldn't come up with a response in time. Please try again.")
+        # Can't use ThreadPoolExecutor as context manager since we need wait=False.
+        executor.shutdown(wait=False, cancel_futures=True)
 
         # add null completion for empty prompts
         for i in sorted(empty_prompt_ids):
-            completion.insert(i, None)
+            completions.insert(i, None)
 
-        pred_df = pd.DataFrame(completion, columns=[args['target']])
+        pred_df = pd.DataFrame(completions, columns=[args['target']])
 
         return pred_df
 
@@ -409,6 +424,6 @@ class LangChainHandler(BaseMLEngine):
         agent = create_sql_agent(
             llm=llm,
             toolkit=toolkit,
-            verbose=True
+            verbose=pred_args.get('verbose', args.get('verbose', False))
         )
         return agent, df

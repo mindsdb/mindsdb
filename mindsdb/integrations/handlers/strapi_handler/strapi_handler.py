@@ -7,6 +7,8 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 from collections import OrderedDict
 import pandas as pd
 
+logger = log.getLogger(__name__)
+
 
 class StrapiHandler(APIHandler):
     def __init__(self, name: str, **kwargs) -> None:

@@ -97,7 +97,10 @@ def disable():
 
 
 def profiling_enabled():
-    return ctx.profiling['enabled'] is True
+    try:
+        return ctx.profiling['enabled'] is True
+    except AttributeError:
+        return False
 
 
 def start(tag):

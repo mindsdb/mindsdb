@@ -63,7 +63,8 @@ In this example, there is a table called world_news_with_ids that contains colum
 SELECT * FROM world_news_with_ids;
 ```
 
-Now we can create an index in the vector store, and insert one example point
+Now, we can create an index in the vector store, and insert one example point:
+
 ```sql
 CREATE TABLE chroma_dev_local.world_news_index (
 	SELECT content, embeddings FROM cohere_embedding_model
@@ -71,14 +72,16 @@ CREATE TABLE chroma_dev_local.world_news_index (
 );
 ```
 
-Let's see if what we have in the vector store
+Let's see what we have in the vector store:
+
 ```sql
 SELECT * FROM chroma_dev_local.world_news_index;
 ```
 
 ### Glue it all together 
 
-Now we can connect the embedding model and the vector index into one knowledge base
+Now, we can connect the embedding model and the vector index into one knowledge base:
+
 ```sql
 -- Create a knowledge base using the Cohere embedding model & Chroma world news index
 CREATE KNOWLEDGE_BASE world_news_kb
@@ -87,7 +90,8 @@ USING
 	storage = chroma_dev_local.world_news_index;
 ```
 
-This is how we add content into the vector store every few seconds if there is new data
+This is how we add content into the vector store every few seconds if there is new data:
+
 ```sql
 -- Insert world news data into Knowledge Base every second, if there is new data
 CREATE JOB keep_knowledge_base_up_to_date AS (
@@ -99,7 +103,7 @@ CREATE JOB keep_knowledge_base_up_to_date AS (
 ) every second;
 ```
 
-<strong> Note: </strong> the query has a id > LAST, this allows the job, to only select new data every time it runs.
+<strong> Note: </strong> the query has a id > LAST. This allows the job, to only select new data every time it runs.
 
 ### Query the knowledge base
 

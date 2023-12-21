@@ -11,6 +11,11 @@ class InstatusHandlerTest(unittest.TestCase):
     def setUpClass(cls):
         cls.handler = IntercomHandler(name="mindsdb_intercon", connection_data={'access_token': os.environ.get('INTERCOM_ACCESS_TOKEN')})
 
+    def setUp(self):
+        df = pd.DataFrame(self.handler.call_intercom_api(endpoint='/articles', params={'page': 1, 'per_page': 1})['data'][0])
+        self.articleId = df['id'][0]
+        self.adminId = self.handler.call_intercom_api(endpoint='/admins')['admins'][0][0]['id']
+
     def test_0_check_connection(self):
         assert self.handler.check_connection()
 
@@ -33,29 +38,32 @@ class InstatusHandlerTest(unittest.TestCase):
         self.assertTrue(self.handler.native_query(query=query))
 
     def test_6_select_articles_by_condition(self):
-        query = "SELECT * FROM articles WHERE id = '8553922'"
+        query = f"SELECT * FROM articles WHERE id = {self.articleId}"
         self.assertTrue(self.handler.native_query(query=query))
 
     def test_7_insert_article(self):
-        query = '''INSERT INTO myintercom.articles (title, description, body, author_id, state, parent_id, parent_type)
+        query = f'''INSERT INTO myintercom.articles (title, description, body, author_id, state, parent_type)
                 VALUES ('Thanks for everything',
                 'Description of the Article',
                 'Body of the Article',
-                6840572,
+                {self.adminId},
                 'published',
-                6801839,
                 'collection'
                 );'''
         self.assertTrue(self.handler.native_query(query=query))
 
     def test_8_update_article(self):
-        df = pd.DataFrame(self.handler.call_intercom_api(endpoint='/articles', params={'page': 1, 'per_page': 1})['data'][0])
-        _id = df['id'][0]
         query = f'''UPDATE myintercom.articles
                 SET title = 'Christmas is here!',
                     body = '<p>New gifts in store for the jolly season</p>'
-                WHERE id = {_id};'''
+                WHERE id = {self.articleId};'''
         self.assertTrue(self.handler.native_query(query=query))
+
+    def test_9_select_admin(self):
+        query = f'''SELECT name, email
+                FROM admins
+                WHERE id = {self.adminId}'''
+        self.assertTrue(self.handler.native_query(query))
 
 
 if __name__ == '__main__':

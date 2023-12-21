@@ -150,3 +150,91 @@ class Articles(APITable):
             "parent_type",
             "statistics"
         ]
+
+
+class Admins(APITable):
+    name: str = 'admins'
+
+    def __init__(self, handler: APIHandler):
+        super().__init__(handler)
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """triggered at the SELECT query
+
+        Args:
+            query (ast.Select): user's entered query
+
+        Returns:
+            pd.DataFrame: the queried information
+        """
+        _id = None
+        selected_columns = []
+
+        # Get id from where clause, if available
+        conditions = extract_comparison_conditions(query.where)
+        for op, arg1, arg2 in conditions:
+            if arg1 == 'id' and op == '=':
+                _id = arg2
+            else:
+                raise ValueError("Unsupported condition in WHERE clause")
+
+        # Get selected columns from query
+        for target in query.targets:
+            if isinstance(target, ast.Star):
+                selected_columns = self.get_columns()
+                break
+            elif isinstance(target, ast.Identifier):
+                selected_columns.append(target.parts[-1])
+            else:
+                raise ValueError(f"Unknown query target {type(target)}")
+
+        if _id is not None:
+            # Fetch data using the provided endpoint for the specific id
+            df = self.handler.call_intercom_api(endpoint=f'/admins/{_id}')
+        else:
+            df = pd.DataFrame(self.handler.call_intercom_api(endpoint='/admins')['admins'][0])
+        if len(df) > 0:
+            return df[selected_columns]
+
+    def insert(self, query: ast.Insert) -> None:
+        """insert
+
+        Args:
+            query (ast.Insert): user's entered query
+
+        Returns:
+            None
+        """
+        raise Exception('Admins table is read-only')
+
+    def update(self, query: ast.Update) -> None:
+        """update
+
+        Args:
+            query (ast.Update): user's entered query
+
+        Returns:
+            None
+        """
+        raise Exception('Admins table is read-only')
+
+    def get_columns(self, ignore: List[str] = []) -> List[str]:
+        """columns
+
+        Args:
+            ignore (List[str], optional): exclusion items. Defaults to [].
+
+        Returns:
+            List[str]: available columns with `ignore` items removed from the list.
+        """
+        return [
+            'type',
+            'email',
+            'id',
+            'name',
+            'away_mode_enabled',
+            'away_mode_reassign',
+            'has_inbox_seat',
+            'team_ids',
+            'team_priority_level'
+        ]

@@ -20,6 +20,10 @@ class TwelveLabsHandler(BaseMLEngine):
 
     name = 'twelve_labs'
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.generative = True
+
     @staticmethod
     def create_validation(target: str, args: Dict = None, **kwargs: Dict) -> None:
         """

@@ -1,4 +1,4 @@
-from mindsdb.integrations.handlers.intercom_handler.intercom_tables import Articles
+from mindsdb.integrations.handlers.intercom_handler.intercom_tables import Articles, Admins
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb_sql import parse_sql
@@ -14,10 +14,13 @@ logger = log.getLogger(__name__)
 
 class IntercomHandler(APIHandler):
     def __init__(self, name: str, **kwargs) -> None:
-        """initializer method
+        """Initializer method for the IntercomHandler class.
 
         Args:
-            name (str): handler name
+            name (str): The name of the handler.
+            connection_data (dict): A dictionary containing the connection data.
+                It should have the following key-value pair:
+                - 'access_token' (str): The access token for the Intercom API.
         """
         super().__init__(name)
 
@@ -32,6 +35,7 @@ class IntercomHandler(APIHandler):
             "Authorization": f"Bearer {access_token}"
         }
         self._register_table(Articles.name, Articles(self))
+        self._register_table(Admins.name, Admins(self))
 
     def check_connection(self) -> StatusResponse:
         """checking the connection
@@ -52,23 +56,26 @@ class IntercomHandler(APIHandler):
         return response
 
     def connect(self) -> StatusResponse:
-        """making the connectino object
+        """making the connection object
+
+        Connects to the Intercom API using the provided access token.
+        If the connection is already established, it returns the existing connection object.
+        If the connection is not established, it makes a request to the Intercom API to retrieve user information.
+
+        Returns:
+            StatusResponse: An object indicating the status of the connection.
+
+        Raises:
+            Exception: If the request to the Intercom API fails or the access token is missing.
         """
         if self.is_connected and self.connection:
             return self.connection
 
         if self._headers:
             try:
-                response = requests.get(
-                    url=self._baseUrl,
-                    headers=self._headers
-                )
-                if response.status_code == 200:
-                    self.connection = response
-                    self.is_connected = True
-                    return StatusResponse(True)
-                else:
-                    raise Exception(f"Error connecting to Intercom API: {response.status_code} - {response.text}")
+                self.connection = self.call_intercom_api(endpoint='/me')
+                self.is_connected = True
+                return StatusResponse(True)
             except requests.RequestException as e:
                 raise Exception(f"Request to Intercom API failed: {str(e)}")
 
@@ -91,6 +98,21 @@ class IntercomHandler(APIHandler):
         return self.query(ast)
 
     def call_intercom_api(self, endpoint: str, method: str = 'GET', params: dict = {}, data=None) -> pd.DataFrame:
+        """
+        Calls the Intercom API with the specified endpoint, method, params, and data.
+
+        Args:
+            endpoint (str): The API endpoint to call.
+            method (str, optional): The HTTP method to use. Defaults to 'GET'.
+            params (dict, optional): The query parameters to include in the request. Defaults to {}.
+            data (Any, optional): The data to include in the request body. Defaults to None.
+
+        Returns:
+            pd.DataFrame: The response data as a pandas DataFrame.
+
+        Raises:
+            Exception: If the API call returns a non-200 status code, an exception is raised with the error message.
+        """
         url = f"{self._baseUrl}{endpoint}"
         json_data = json.loads(data) if data else None
 
@@ -100,7 +122,7 @@ class IntercomHandler(APIHandler):
             data = response.json()
             return pd.DataFrame([data])
         else:
-            raise requests.Response.raise_for_status(response)
+            raise Exception(response.json()['errors'][0]['message'])
 
 
 connection_args = OrderedDict(

@@ -1226,7 +1226,14 @@ class SQLQuery():
             data = result_set2
 
         elif type(step) == QueryStep:
-            result_set = steps_data[step.dataframe.step_num]
+            query = step.query
+
+            if step.from_table is not None:
+                result_set = steps_data[step.dataframe.step_num]
+            else:
+                # only from_table can content result
+                prev_step_num = query.from_table.value.step_num
+                result_set = steps_data[prev_step_num]
 
             df, col_names = result_set.to_df_cols()
             col_idx = {}
@@ -1269,10 +1276,10 @@ class SQLQuery():
                     new_name = col_idx[key]
                     return Identifier(parts=[new_name], alias=node.alias)
 
-            query = step.query
 
             query_traversal(query, check_fields)
             query_context_controller.remove_lasts(query.where)
+
             query.from_table = Identifier('df_table')
             res = query_df(df, query)
 

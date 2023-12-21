@@ -114,6 +114,9 @@ class TwelveLabsHandler(BaseMLEngine):
         # store index_id in args
         args['index_id'] = index_id
 
+        # initialize video_urls and video_files
+        video_urls, video_files = None, None
+
         # create video indexing tasks for all video files or video urls
         # video urls will be given precedence
         # check if video_urls_column has been set and use it to get the video urls

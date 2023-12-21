@@ -136,7 +136,6 @@ WHERE <field-name> = <value>;
 Example
 
 ```sql
-
 UPDATE myshop.products
 SET price = 299,
 avaiablity = false

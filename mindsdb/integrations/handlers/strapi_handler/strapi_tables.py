@@ -13,7 +13,7 @@ class StrapiTable(APITable):
         super().__init__(handler)
         self.name = name
         # get all the fields of a collection as columns
-        self.columns = self.handler.call_strapi_api(method='GET', endpoint=f'/api/{name}').columns
+        self.columns = self.handler.call_strapi_api(method='GET', endpoint=f'/{name}').columns
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Triggered at the SELECT query
@@ -51,7 +51,7 @@ class StrapiTable(APITable):
 
         if _id is not None:
             # Fetch data using the provided endpoint for the specific id
-            df = self.handler.call_strapi_api(method='GET', endpoint=f'/api/{self.name}/{_id}')
+            df = self.handler.call_strapi_api(method='GET', endpoint=f'/{self.name}/{_id}')
 
             if len(df) > 0:
                 result_df = df[selected_columns]
@@ -74,7 +74,7 @@ class StrapiTable(APITable):
                 else:
                     current_page_size = page_size
 
-                df = self.handler.call_strapi_api(method='GET', endpoint=f'/api/{self.name}', params={'pagination[page]': page, 'pagination[pageSize]': current_page_size})
+                df = self.handler.call_strapi_api(method='GET', endpoint=f'/{self.name}', params={'pagination[page]': page, 'pagination[pageSize]': current_page_size})
 
                 if len(df) == 0:
                     break
@@ -97,7 +97,7 @@ class StrapiTable(APITable):
                 data['data'][column.name] = value.value
             else:
                 data['data'][column.name] = value
-        self.handler.call_strapi_api(method='POST', endpoint=f'/api/{self.name}', json_data=json.dumps(data))
+        self.handler.call_strapi_api(method='POST', endpoint=f'/{self.name}', json_data=json.dumps(data))
 
     def update(self, query: ast.Update) -> None:
         """triggered at the UPDATE query
@@ -116,7 +116,7 @@ class StrapiTable(APITable):
         for key, value in query.update_columns.items():
             if isinstance(value, Constant):
                 data['data'][key] = value.value
-        self.handler.call_strapi_api(method='PUT', endpoint=f'/api/{self.name}/{_id}', json_data=json.dumps(data))
+        self.handler.call_strapi_api(method='PUT', endpoint=f'/{self.name}/{_id}', json_data=json.dumps(data))
 
     def get_columns(self, ignore: List[str] = []) -> List[str]:
         """columns
@@ -127,5 +127,4 @@ class StrapiTable(APITable):
         Returns:
             List[str]: available columns with `ignore` items removed from the list.
         """
-
         return [item for item in self.columns if item not in ignore]

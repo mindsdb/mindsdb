@@ -613,10 +613,9 @@ class OpenAIHandler(BaseMLEngine):
         if attribute == 'args':
             return pd.DataFrame(args.items(), columns=['key', 'value'])
         elif attribute == 'metadata':
-            api_key = get_api_key('openai', args, self.engine_storage)
             model_name = args.get('model_name', self.default_model)
-            meta = self.client.models.retrieve(model_name, api_key=api_key)
-            return pd.DataFrame(meta.items(), columns=['key', 'value'])
+            meta = self.client.models.retrieve(model_name)
+            return pd.DataFrame(dict(meta).items(), columns=['key', 'value'])
         else:
             tables = ['args', 'metadata']
             return pd.DataFrame(tables, columns=['tables'])

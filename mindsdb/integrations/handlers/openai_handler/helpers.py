@@ -18,6 +18,7 @@ def retry_with_exponential_backoff(
     hour_budget: float = 0.3,
     jitter: bool = False,
     exponential_base: int = 2,
+    errors: tuple = (openai.RateLimitError, openai.APIConnectionError),
 ):
     """
     Wrapper to enable optional arguments. It means this decorator always needs to be called with parenthesis:
@@ -56,7 +57,7 @@ def retry_with_exponential_backoff(
             while True:
                 try:
                     return func(*args, **kwargs)
-                except (openai.RateLimitError, openai.APIConnectionError) as e:
+                except errors as e:
                     if e.error is not None:
                         if (
                             e.type == 'invalid_request_error'

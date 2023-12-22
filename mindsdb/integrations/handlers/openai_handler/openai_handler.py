@@ -807,7 +807,6 @@ class OpenAIHandler(BaseMLEngine):
 
         @retry_with_exponential_backoff(
             hour_budget=hour_budget,
-            errors=(openai.RateLimitError, openai.OpenAIError),
         )
         def _check_ft_status(model_id):
             ft_retrieved = self.client.fine_tunes.retrieve(fine_tune_id=model_id)

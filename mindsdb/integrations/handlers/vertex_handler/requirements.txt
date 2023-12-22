@@ -1,0 +1,3 @@
+pandas
+google-cloud-aiplatform
+google-auth

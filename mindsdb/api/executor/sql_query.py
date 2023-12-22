@@ -65,7 +65,7 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner import query_planner
 from mindsdb_sql.planner.utils import query_traversal
 
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df, query_df_with_type_infer_fallback
+from mindsdb.api.executor.utilities.sql import query_df, query_df_with_type_infer_fallback
 from mindsdb.interfaces.model.functions import get_model_record
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErKeyColumnDoesNotExist,

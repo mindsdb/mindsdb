@@ -1,5 +1,5 @@
 import unittest
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import (
+from mindsdb.api.executor.data_types.response_type import (
     RESPONSE_TYPE,
 )
 from mindsdb.integrations.handlers.lancedb_handler.lancedb_handler import (

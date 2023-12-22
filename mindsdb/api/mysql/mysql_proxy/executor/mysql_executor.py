@@ -3,8 +3,8 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.planner import utils as planner_utils
 
 import mindsdb.utilities.profiler as profiler
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import Column, SQLQuery
-from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+from mindsdb.api.executor.sql_query import Column, SQLQuery
+from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.mysql.mysql_proxy.utilities import ErBadDbError, SqlApiException
 from mindsdb.utilities import log
 
@@ -49,18 +49,19 @@ class Executor:
         self.sql = ""
         self.sql_lower = ""
 
-        self.command_executor = ExecuteCommands(self.session, self)
+        context = {'connection_id', self.sqlserver.connection_id}
+        self.command_executor = ExecuteCommands(self.session, context)
 
     def change_default_db(self, new_db):
         self.command_executor.change_default_db(new_db)
 
     def stmt_prepare(self, sql):
 
-        resp = self.execute_external(sql)
-        if resp is not None:
-            # is already executed
-            self.is_executed = True
-            return
+        # resp = self.execute_external(sql)
+        # if resp is not None:
+        #     # is already executed
+        #     self.is_executed = True
+        #     return
 
         self.parse(sql)
 
@@ -105,79 +106,35 @@ class Executor:
     @profiler.profile()
     def query_execute(self, sql):
         logger.info("%s.query_execute: sql - %s", self.__class__.__name__, sql)
-        resp = self.execute_external(sql)
-        if resp is not None:
-            # is already executed
-            self.is_executed = True
-            return
+        # resp = self.execute_external(sql)
+        # if resp is not None:
+        #     # is already executed
+        #     self.is_executed = True
+        #     return
 
         self.parse(sql)
         self.do_execute()
 
     # for awesome Mongo API only
-    def binary_query_execute(self, sql):
-        self.sql = sql.to_string()
-        self.sql_lower = self.sql.lower()
+    # def binary_query_execute(self, sql):
+    #     self.sql = sql.to_string()
+    #     self.sql_lower = self.sql.lower()
+    #
+    #     ret = self.command_executor.execute_command(sql)
+    #     self.error_code = ret.error_code
+    #     self.error_message = ret.error_message
+    #
+    #     self.data = ret.data
+    #     self.server_status = ret.status
+    #     if ret.columns is not None:
+    #         self.columns = ret.columns
+    #
+    #     self.state_track = ret.state_track
 
-        ret = self.command_executor.execute_command(sql)
-        self.error_code = ret.error_code
-        self.error_message = ret.error_message
-
-        self.data = ret.data
-        self.server_status = ret.status
-        if ret.columns is not None:
-            self.columns = ret.columns
-
-        self.state_track = ret.state_track
-
-    def execute_external(self, sql):
-
-        # not exec directly in integration
-        return None
-
-        # try exec in external integration
-        if (
-            isinstance(self.session.database, str)
-            and len(self.session.database) > 0
-            and self.session.database.lower()
-            not in ("mindsdb", "files", "information_schema")
-            and "@@" not in sql.lower()
-            and (
-                (sql.lower().strip().startswith("select") and "from" in sql.lower())
-                or (
-                    sql.lower().strip().startswith("show")
-                    # and 'databases' in sql.lower()
-                    and "tables" in sql.lower()
-                )
-            )
-        ):
-            datanode = self.session.datahub.get(self.session.database)
-            if datanode is None:
-                raise ErBadDbError("Unknown database - %s" % self.session.database)
-
-            # try parse or send raw sql
-            try:
-                sql = parse_sql(sql, dialect="mindsdb")
-            except mindsdb_sql.exceptions.ParsingException:
-                pass
-
-            result, column_info = datanode.query(sql)
-            columns = [
-                Column(name=col["name"], type=col["type"]) for col in column_info
-            ]
-
-            data = []
-            if len(result) > 0:
-                # columns = [{
-                #     'table_name': '',
-                #     'name': x,
-                #     'type': TYPES.MYSQL_TYPE_VAR_STRING
-                # } for x in result[0].keys()]
-
-                data = [[str(value) for key, value in x.items()] for x in result]
-            self.columns = columns
-            self.data = data
-            return True
+    # def execute_external(self, sql):
+    #
+    #     # not exec directly in integration
+    #     return None
 
     @profiler.profile()
     def parse(self, sql):

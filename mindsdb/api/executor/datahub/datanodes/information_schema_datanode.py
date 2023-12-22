@@ -4,20 +4,20 @@ import pandas as pd
 from mindsdb_sql.parser.ast import BinaryOperation, Constant, Identifier, Select
 from mindsdb_sql.parser.ast.base import ASTNode
 
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import get_all_tables
-from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import (
+from mindsdb.api.executor.sql_query import get_all_tables
+from mindsdb.api.executor.datahub.classes.tables_row import (
     TABLES_ROW_TYPE,
     TablesRow,
 )
-from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
-from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.integration_datanode import (
+from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
+from mindsdb.api.executor.datahub.datanodes.integration_datanode import (
     IntegrationDataNode,
 )
-from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.project_datanode import (
+from mindsdb.api.executor.datahub.datanodes.project_datanode import (
     ProjectDataNode,
 )
 from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController

@@ -70,8 +70,8 @@ from mindsdb_sql.parser.dialects.mysql import Variable
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 import mindsdb.utilities.profiler as profiler
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import Column, SQLQuery
-from mindsdb.api.mysql.mysql_proxy.executor.data_types import ANSWER_TYPE, ExecuteAnswer
+from mindsdb.api.executor.sql_query import Column, SQLQuery
+from mindsdb.api.executor.data_types.answer import ANSWER_TYPE, ExecuteAnswer
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,
     SERVER_VARIABLES,
@@ -85,8 +85,8 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErTableExistError,
     SqlApiException,
 )
-from mindsdb.api.mysql.mysql_proxy.utilities.functions import download_file
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.api.executor.utilities.functions import download_file
+from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.integrations.libs.const import (
     HANDLER_CONNECTION_ARG_TYPE,
     PREDICTOR_STATUS,
@@ -155,9 +155,12 @@ def _get_show_where(
 
 
 class ExecuteCommands:
-    def __init__(self, session, executor):
+    def __init__(self, session, context=None):
+        if context is None:
+            context = {}
+
+        self.context = context
         self.session = session
-        self.executor = executor
 
         self.charset_text_type = CHARSET_NUMBERS["utf8_general_ci"]
         self.datahub = session.datahub
@@ -165,13 +168,9 @@ class ExecuteCommands:
     @profiler.profile()
     def execute_command(self, statement):
         sql = None
-        if self.executor is None:
-            if isinstance(statement, ASTNode):
-                sql = statement.to_string()
-            sql_lower = sql.lower()
-        else:
-            sql = self.executor.sql
-            sql_lower = self.executor.sql_lower
+        if isinstance(statement, ASTNode):
+            sql = statement.to_string()
+        sql_lower = sql.lower()
 
         if type(statement) == CreateDatabase:
             return self.answer_create_database(statement)
@@ -1980,7 +1979,7 @@ class ExecuteCommands:
             }
         ]
         columns = [Column(**d) for d in columns]
-        data = [[self.executor.sqlserver.connection_id]]
+        data = [[self.context.get('connection_id')]]
         return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=data)
 
     def answer_apply_predictor(self, statement):

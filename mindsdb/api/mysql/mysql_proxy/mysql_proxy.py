@@ -35,7 +35,7 @@ from mindsdb.api.mysql.mysql_proxy.classes.server_capabilities import (
 from mindsdb.api.mysql.mysql_proxy.classes.sql_statement_parser import (
     SqlStatementParser,
 )
-from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
+from mindsdb.api.executor.controllers import SessionController
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packets import (
     BinaryResultsetRowPacket,
@@ -68,7 +68,7 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     TYPES,
     getConstName,
 )
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErWrongCharset,
     SqlApiException,

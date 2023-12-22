@@ -7,7 +7,7 @@ import mindsdb.utilities.hooks as hooks
 import mindsdb.utilities.profiler as profiler
 from mindsdb.api.http.namespaces.configs.sql import ns_conf
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import (
+from mindsdb.api.executor.data_types.response_type import (
     RESPONSE_TYPE as SQL_RESPONSE_TYPE,
 )
 from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiException, SqlApiUnknownError

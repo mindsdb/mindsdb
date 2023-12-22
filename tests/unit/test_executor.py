@@ -8,7 +8,7 @@ import numpy as np
 
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 
 # How to run:

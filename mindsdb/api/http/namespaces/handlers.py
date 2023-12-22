@@ -14,8 +14,8 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.handlers import ns_conf
 from mindsdb.integrations.utilities.install import install_dependencies
 
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
-from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+from mindsdb.api.executor.controllers.session_controller import SessionController
+from mindsdb.api.executor.command_executor import ExecuteCommands
 
 
 @ns_conf.route('/')
@@ -183,7 +183,7 @@ class BYOMUpload(Resource):
 
         sql_session = SessionController()
 
-        command_executor = ExecuteCommands(sql_session, executor=None)
+        command_executor = ExecuteCommands(sql_session)
 
         connection_args = {
             'code': params['code'].name.decode(),

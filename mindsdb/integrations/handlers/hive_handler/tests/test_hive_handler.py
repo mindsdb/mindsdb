@@ -1,7 +1,7 @@
 import unittest
 
 from mindsdb.integrations.handlers.hive_handler.hive_handler import HiveHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class HiveHandlerTest(unittest.TestCase):

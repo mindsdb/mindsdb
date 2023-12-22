@@ -9,7 +9,7 @@ sidebarTitle: Introduction
 
 |  |  |
 | -------- | ------- |
-| [AI Tables](/integrations/ml-engines-overview): |  One of MindsDB's innovations is the ability to treat AI ([MODELS](/model-types), [AGENTS](/agents/agent), [KNOWLEDGE BASES](/agents/knowledge-bases)) as [virtual tables](/generative-ai-tables) that you can [SELECT FROM](/sql/get-single-prediction), [JOIN](/sql/get-batch-predictions), and [FINE-TUNE](/sql/api/finetune) from any datasource using any [AI-Engine](/integrations/ml-engines-overview). |
+| [AI Tables](/ai-engines/overview): |  One of MindsDB's innovations is the ability to treat AI ([MODELS](/model-types), [AGENTS](/agents/agent), [KNOWLEDGE BASES](/agents/knowledge-bases)) as [virtual tables](/generative-ai-tables) that you can [SELECT FROM](/sql/get-single-prediction), [JOIN](/sql/get-batch-predictions), and [FINE-TUNE](/sql/api/finetune) from any datasource using any [AI-Engine](/ai-engines/overview). |
 | [JOBS](/sql/create/jobs): | You can [automate tasks](/sql/create/jobs) in MindsDB, by scheduling any query, at whatever frequency or by using [TRIGGERS](/sql/create/trigger). |
 | [Datasources](/datasources/overview): | MindsDB excels at translating SQL queries into requests that can access and combine data from a wide range of sources, including [Databases](/datasources/overview#databases), [Applications](/datasources/overview#applications), [Vector stores](/datasources/overview#vector-databases), and much more. |
 
@@ -30,7 +30,7 @@ Here are some AI/LLM use cases:
       - [Sentiment Analysis](/nlp/sentiment-analysis-inside-mysql-with-openai)
       - [Summarisation](/nlp/text-summarization-inside-mysql-with-openai)
       - [Translation](/nlp/nlp-extended-examples#translation)
-      - [RAG](/integrations/ai-engines/rag)
+      - [RAG/Semantic Search](/integrations/ai-engines/rag)
       - [Q&A](/nlp/question-answering-inside-mysql-with-openai)
 
 You can use MindsDB for the following machine learning use cases:
@@ -39,6 +39,13 @@ You can use MindsDB for the following machine learning use cases:
       - [Recommenders](sql/tutorials/recommenders)
       - [Classification](/sql/tutorials/customer-churn)
       - [Regression](/sql/tutorials/home-rentals)
+
+And for the following multi-media use cases:
+      - [Video Semantic Search](/integrations/ai-engines/twelvelabs)
+      - [Text Semantic Search](/integrations/ai-engines/replicate-img2text)
+      - [Text to Audio](/integrations/ai-engines/replicate-audio)
+      - [Text to Video](/integrations/ai-engines/replicate-text2video)
+      - [Text to Image](/integrations/ai-engines/replicate-text2img)
 
 You can use one of MindsDB’s AutoMLs or you can bring your own, pre-trained model.
 

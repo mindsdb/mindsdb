@@ -53,28 +53,32 @@
 
 
 [MindsDB's](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) **AI SQL Server** enables developers to build **AI tools** that need access to **real-time data** to perform their tasks.
- [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Build%20AI-Centered%20Applications%20&url=https://www.mindsdb.com&via=mindsdb&hashtags=ai,ml,nlp,machine_learning,neural_networks,databases,gpt3)
+ [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Build%20AI%20using%20SQL%20&url=https://github.com/mindsdb/mindsdb&via=mindsdb&hashtags=ai,ml,nlp,machine_learning,neural_networks,databases,gpt3)
 
 | 🎯  Features                 | ⚙️ SQL Query Examples |
 |---------------------------|-----------|
-| 🤖 Fine-Tuning            |  <code> FINETUNE mindsdb.hf_model FROM postgresql; </code>  |
-| 📚 Knowledge Base         | <code> CREATE KNOWLEDGE_BASE my_knowledge USING model=embedding_model; </code> |
-| 🔍 Semantic Search        |  <code> SELECT * FROM rag WHERE question='What product is best for treating a cold?';  </code>   |
-| ⏱️ Real-Time Forecasting | <code> SELECT * FROM binance.trade_data WHERE symbol = 'BTCUSDT'; </code> |
-| 🕵️ Agents                | <code> CREATE AGENT my_agent USING model='chatbot_agent', skills = ['test_skill']; </code>    |
-| 💬 Chatbots               |  <code> CREATE CHATBOT slack_bot USING database='slack',agent='customer_support'; </code>|
-| ⏲️ Time Driven Automation      |  <code> CREATE JOB twitter_bot ( <sql_query1>, <sql_query2> ) START '2023-04-01 00:00:00';   </code>           |
-| 🔔 Event Driven Automation      | <code> CREATE TRIGGER data_updated ON mysql.customers_data (sql_code)           |
+| 🤖 [Fine-Tuning](https://docs.mindsdb.com/sql/api/finetune#example-3-openai-model)            |  <code> FINETUNE mindsdb.hf_model FROM postgresql.table; </code>  |
+| 📚 [Knowledge Base](https://docs.mindsdb.com/agents/knowledge-bases)         | <code> CREATE KNOWLEDGE_BASE my_knowledge FROM (SELECT contents FROM drive.files); </code> |
+| 🔍 [Semantic Search](https://docs.mindsdb.com/integrations/ai-engines/rag)        |  <code> SELECT * FROM rag_model WHERE question='What product is best for treating a cold?';  </code>   |
+| ⏱️ [Real-Time Forecasting](https://docs.mindsdb.com/sql/tutorials/eeg-forecasting) | <code> SELECT * FROM binance.trade_data WHERE symbol = 'BTCUSDT'; </code> |
+| 🕵️ [Agents](https://docs.mindsdb.com/agents/agent)                | <code> CREATE AGENT my_agent USING model='chatbot_agent', skills = ['knowledge_base']; </code>    |
+| 💬 [Chatbots](https://docs.mindsdb.com/agents/chatbot)               |  <code> CREATE CHATBOT slack_bot USING database='slack',agent='customer_support'; </code>|
+| ⏲️ [Time Driven Automation](https://docs.mindsdb.com/sql/create/jobs)      |  <code> CREATE JOB twitter_bot ( <sql_query1>, <sql_query2> ) START '2023-04-01 00:00:00';   </code>           |
+| 🔔 [Event Driven Automation](https://docs.mindsdb.com/sql/create/trigger)      | <code> CREATE TRIGGER data_updated ON mysql.customers_data (sql_code)           |
 
 ## ⚡️ Quick Example
 
+Enrich datastores by passing new data thorugh an AI-model and writing results back in the database, this can be solved in a few lines of AI-SQL.  Here is a reference architecture:
 <img src='https://docs.google.com/drawings/d/e/2PACX-1vTlROMTlXiYUecoAogwjBVI0eQDYWWI-aY5npcxVjfLzGL6Fs2-YN-aOcUeWFCDzZDxveYe5Dxwilia/pub?w=1438&h=703'></img>
+
+
+Let's look at automating shopify orders analysis:
 
 ```sql
 ---This query creates a job in MindsDB to analyze Shopify orders.
 ---It predicts customer engagement scores based on recent completed orders
 ---and inserts these insights into a customer_engagement table.
----The job runs every 12 hours, providing ongoing updates to the engagement scores.
+---The job runs every minute, providing ongoing updates to the engagement scores.
 
 CREATE JOB mindsdb.shopify_customer_engagement_job AS (
 
@@ -90,7 +94,7 @@ CREATE JOB mindsdb.shopify_customer_engagement_job AS (
          AND o.status = 'completed'
       LIMIT 100
 )
-EVERY 12h;
+EVERY minute;
 
 ```
 

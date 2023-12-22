@@ -231,6 +231,15 @@
     {
       "group": "Use Cases",
       "pages": [
+        {
+          "group": "Fine-Tuning",
+          "pages": [
+            "finetune/anyscale",
+            "finetune/openai",
+            "finetune/classification",
+            "finetune/regression"
+          ]
+        },
         "agents/agent",
         "agents/knowledge-bases",  
         {

@@ -18,7 +18,6 @@ def retry_with_exponential_backoff(
     hour_budget: float = 0.3,
     jitter: bool = False,
     exponential_base: int = 2,
-    errors: tuple = (openai.RateLimitError, openai.APIConnectionError),
 ):
     """
     Wrapper to enable optional arguments. It means this decorator always needs to be called with parenthesis:
@@ -57,16 +56,16 @@ def retry_with_exponential_backoff(
             while True:
                 try:
                     return func(*args, **kwargs)
-                except errors as e:
+                except (openai.RateLimitError, openai.APIConnectionError) as e:
                     if e.error is not None:
                         if (
-                            e.error['type'] == 'invalid_request_error'
-                            and 'Too many parallel completions' in e.error['message']
+                            e.type == 'invalid_request_error'
+                            and 'Too many parallel completions' in e.message
                             or 'Please reduce the length of the messages'
-                            in e.error['message']
+                            in e.message
                         ):
                             raise e  # InvalidRequestError triggers batched mode in the previous call
-                        if e.error['type'] == 'insufficient_quota':
+                        if e.type == 'insufficient_quota':
                             raise Exception(
                                 'API key has exceeded its quota, please try 1) increasing it or 2) using another key.'
                             )  # noqa
@@ -81,7 +80,7 @@ def retry_with_exponential_backoff(
                     time.sleep(delay)
 
                 except openai.OpenAIError as e:
-                    if e.error is not None and e.error['type'] == 'insufficient_quota':
+                    if getattr(e,'body', None) and e.type == 'insufficient_quota':
                         raise Exception(
                             'API key has exceeded its quota, please try 1) increasing it or 2) using another key.'
                         )  # noqa

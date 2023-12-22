@@ -676,12 +676,12 @@ class OpenAIHandler(BaseMLEngine):
                 # api_base=openai.api_base,  # TODO: rm
                 purpose='fine-tune')
 
-        if type(jsons['train']) in (openai.File, openai.openai_object.OpenAIObject):
+        if type(jsons['train']) is openai.types.FileObject:
             train_file_id = jsons['train'].id
         else:
             train_file_id = jsons['base'].id
 
-        if type(jsons['val']) in (openai.File, openai.openai_object.OpenAIObject):
+        if type(jsons['val']) is openai.types.FileObject:
             val_file_id = jsons['val'].id
         else:
             val_file_id = None
@@ -801,7 +801,7 @@ class OpenAIHandler(BaseMLEngine):
         Currently, `OpenAIHandler` uses the legacy endpoint.
         Others, like `AnyscaleEndpointsHandler`, use the new endpoint.
         """
-        ft_result = self.ft_cls.create(
+        ft_result = self.client.fine_tunes.create(
             **{k: v for k, v in ft_params.items() if v is not None}
         )
 
@@ -810,20 +810,20 @@ class OpenAIHandler(BaseMLEngine):
             errors=(openai.RateLimitError, openai.OpenAIError),
         )
         def _check_ft_status(model_id):
-            ft_retrieved = self.ft_cls.retrieve(id=model_id)
-            if ft_retrieved['status'] in ('succeeded', 'failed', 'cancelled'):
+            ft_retrieved = self.client.fine_tunes.retrieve(fine_tune_id=model_id)
+            if ft_retrieved.status in ('succeeded', 'failed', 'cancelled'):
                 return ft_retrieved
             else:
                 raise openai.OpenAIError('Fine-tuning still pending!')
 
         ft_stats = _check_ft_status(ft_result.id)
 
-        if ft_stats['status'] != 'succeeded':
+        if ft_stats.status != 'succeeded':
             raise Exception(
-                f"Fine-tuning did not complete successfully (status: {ft_stats['status']}). Error message: {ft_stats['events'][-1]['message']}"
+                f"Fine-tuning did not complete successfully (status: {ft_stats.status}). Error message: {ft_stats.events[-1].message}"
             )  # noqa
 
-        result_file_id = self.ft_cls.retrieve(id=ft_result.id)['result_files'][0]
+        result_file_id = self.client.fine_tunes.retrieve(fine_tune_id=ft_result.id).result_files[0]
         if hasattr(result_file_id, 'id'):
             result_file_id = result_file_id.id  # legacy endpoint
 

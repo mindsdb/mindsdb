@@ -26,6 +26,7 @@ class FakeMysqlProxy(MysqlProxy):
         self.request = request
         self.client_address = client_address
         self.server = server
+        self.connection_id = None
 
         self.session = SessionController()
         self.session.database = 'mindsdb'

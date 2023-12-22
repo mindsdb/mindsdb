@@ -156,6 +156,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         self.charset_text_type = CHARSET_NUMBERS["utf8_general_ci"]
         self.session = None
         self.client_capabilities = None
+        self.connection_id = None
         super().__init__(request, client_address, server)
 
     def init_session(self):

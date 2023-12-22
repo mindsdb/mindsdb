@@ -8,11 +8,8 @@ import textwrap
 import subprocess
 import concurrent.futures
 from typing import Optional, Dict
-
 import openai
 from openai import OpenAI
-
-client = OpenAI(api_key=get_api_key('openai', args, self.engine_storage))
 import numpy as np
 import pandas as pd
 
@@ -40,6 +37,7 @@ class OpenAIHandler(BaseMLEngine):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.client=OpenAI(api_key=get_api_key('openai', args, self.engine_storage))
         self.generative = True
         self.default_model = 'gpt-3.5-turbo'
         self.default_image_model = 'dall-e-2'
@@ -261,12 +259,12 @@ class OpenAIHandler(BaseMLEngine):
                 'best_of': pred_args.get('best_of', None),
                 'logit_bias': pred_args.get('logit_bias', None),
                 'user': pred_args.get('user', None),
-                'api_base': pred_args.get(
-                    'api_base',
-                    args.get(
-                        'api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
-                    ),
-                ),  # noqa
+                # 'base_url': pred_args.get(
+                #     'api_base',
+                #     args.get(
+                #         'api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
+                #     ),
+                # ),  # noqa
             }
 
             if (
@@ -393,8 +391,8 @@ class OpenAIHandler(BaseMLEngine):
         def _submit_completion(model_name, prompts, api_key, api_args, args, df):
             kwargs = {
                 'model': model_name,
-                'api_key': api_key,
-                'organization': args.get('api_organization'),
+                # 'api_key': api_key,
+                # 'organization': args.get('api_organization'),
             }
             if model_name in IMAGE_MODELS:
                 return _submit_image_completion(kwargs, prompts, api_args)
@@ -422,32 +420,32 @@ class OpenAIHandler(BaseMLEngine):
         def _submit_normal_completion(kwargs, prompts, api_args):
             def _tidy(comp):
                 tidy_comps = []
-                for c in comp['choices']:
-                    if 'text' in c:
-                        tidy_comps.append(c['text'].strip('\n').strip(''))
+                for c in comp.choices:
+                    if hasattr(c,'text'):
+                        tidy_comps.append(c.text.strip('\n').strip(''))
                 return tidy_comps
 
             kwargs['prompt'] = prompts
             kwargs = {**kwargs, **api_args}
 
             before_openai_query(kwargs)
-            resp = _tidy(client.completions.create(**kwargs))
+            resp = _tidy(self.client.completions.create(**kwargs))
             _log_api_call(kwargs, resp)
             return resp
 
         def _submit_embedding_completion(kwargs, prompts, api_args):
             def _tidy(comp):
                 tidy_comps = []
-                for c in comp['data']:
-                    if 'embedding' in c:
-                        tidy_comps.append([c['embedding']])
+                for c in comp.data:
+                    if hasattr(c,'embedding'):
+                        tidy_comps.append([c.embedding])
                 return tidy_comps
 
             kwargs['input'] = prompts
             kwargs = {**kwargs, **api_args}
 
             before_openai_query(kwargs)
-            resp = _tidy(client.embeddings.create(**kwargs))
+            resp = _tidy(self.client.embeddings.create(**kwargs))
             _log_api_call(kwargs, resp)
             return resp
 
@@ -456,9 +454,9 @@ class OpenAIHandler(BaseMLEngine):
         ):
             def _tidy(comp):
                 tidy_comps = []
-                for c in comp['choices']:
-                    if 'message' in c:
-                        tidy_comps.append(c['message']['content'].strip('\n').strip(''))
+                for c in comp.choices:
+                    if hasattr(c,'message'):
+                        tidy_comps.append(c.message.content.strip('\n').strip(''))
                 return tidy_comps
 
             completions = []
@@ -498,7 +496,7 @@ class OpenAIHandler(BaseMLEngine):
                     pkwargs = {**kwargs, **api_args}
 
                     before_openai_query(kwargs)
-                    resp = _tidy(client.chat.completions.create(**pkwargs))
+                    resp = _tidy(self.client.chat.completions.create(**pkwargs))
                     _log_api_call(pkwargs, resp)
 
                     completions.extend(resp)
@@ -507,7 +505,7 @@ class OpenAIHandler(BaseMLEngine):
                     pkwargs = {**kwargs, **api_args}
 
                     before_openai_query(kwargs)
-                    resp = _tidy(client.chat.completions.create(**pkwargs))
+                    resp = _tidy(self.client.chat.completions.create(**pkwargs))
                     _log_api_call(pkwargs, resp)
 
                     completions.extend(resp)
@@ -538,12 +536,12 @@ class OpenAIHandler(BaseMLEngine):
         def _submit_image_completion(kwargs, prompts, api_args):
             def _tidy(comp):
                 return [
-                    c[0]['url'] if 'url' in c[0].keys() else c[0]['b64_json']
+                    c.url if hasattr(c,'url')  else c.b64_json
                     for c in comp
                 ]
 
             completions = [
-                client.images.generate(**{'prompt': p, **kwargs, **api_args})['data']
+                self.client.images.generate(**{'prompt': p, **kwargs, **api_args}).data[0]
                 for p in prompts
             ]
             return _tidy(completions)
@@ -554,9 +552,8 @@ class OpenAIHandler(BaseMLEngine):
                 model_name, prompts, api_key, api_args, args, df
             )
             return completion
-        except openai.InvalidRequestError as e:
+        except Exception as e:
             # else, we get the max batch size
-            e = e.user_message
             if 'you can currently request up to at most a total of' in e:
                 pattern = 'a total of'
                 max_batch_size = int(e[e.find(pattern) + len(pattern) :].split(').')[0])
@@ -618,7 +615,7 @@ class OpenAIHandler(BaseMLEngine):
         elif attribute == 'metadata':
             api_key = get_api_key('openai', args, self.engine_storage)
             model_name = args.get('model_name', self.default_model)
-            meta = client.models.retrieve(model_name, api_key=api_key)
+            meta = self.client.models.retrieve(model_name, api_key=api_key)
             return pd.DataFrame(meta.items(), columns=['key', 'value'])
         else:
             tables = ['args', 'metadata']
@@ -676,7 +673,7 @@ class OpenAIHandler(BaseMLEngine):
         jsons = {k: None for k in file_names.keys()}
         for split, file_name in file_names.items():
             if os.path.isfile(os.path.join(temp_storage_path, file_name)):
-                jsons[split] = client.files.create(file=open(f"{temp_storage_path}/{file_name}", "rb"),
+                jsons[split] = self.client.files.create(file=open(f"{temp_storage_path}/{file_name}", "rb"),
                 # api_base=openai.api_base,  # TODO: rm
                 purpose='fine-tune')
 
@@ -705,10 +702,10 @@ class OpenAIHandler(BaseMLEngine):
 
         end_time = datetime.datetime.now()
         runtime = end_time - start_time
-        name_extension = client.files.retrieve(id=result_file_id).filename
+        name_extension = self.client.files.retrieve(id=result_file_id).filename
         result_path = f'{temp_storage_path}/ft_{finetune_time}_result_{name_extension}'
         with open(result_path, 'wb') as f:
-            f.write(client.files.download(id=result_file_id))
+            f.write(self.client.files.download(id=result_file_id))
 
         if '.csv' in name_extension:
             # legacy endpoint
@@ -811,14 +808,14 @@ class OpenAIHandler(BaseMLEngine):
 
         @retry_with_exponential_backoff(
             hour_budget=hour_budget,
-            errors=(openai.error.RateLimitError, openai.error.OpenAIError),
+            errors=(openai.RateLimitError, openai.OpenAIError),
         )
         def _check_ft_status(model_id):
             ft_retrieved = self.ft_cls.retrieve(id=model_id)
             if ft_retrieved['status'] in ('succeeded', 'failed', 'cancelled'):
                 return ft_retrieved
             else:
-                raise openai.error.OpenAIError('Fine-tuning still pending!')
+                raise openai.OpenAIError('Fine-tuning still pending!')
 
         ft_stats = _check_ft_status(ft_result.id)
 

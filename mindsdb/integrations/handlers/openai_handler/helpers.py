@@ -7,7 +7,6 @@ import math
 import openai
 from openai import OpenAI
 
-client = OpenAI()
 import tiktoken
 
 import mindsdb.utilities.profiler as profiler
@@ -19,7 +18,7 @@ def retry_with_exponential_backoff(
     hour_budget: float = 0.3,
     jitter: bool = False,
     exponential_base: int = 2,
-    errors: tuple = (openai.RateLimitError, openai.error.APIConnectionError),
+    errors: tuple = (openai.RateLimitError, openai.APIConnectionError),
 ):
     """
     Wrapper to enable optional arguments. It means this decorator always needs to be called with parenthesis:
@@ -81,7 +80,7 @@ def retry_with_exponential_backoff(
                     delay *= exponential_base * (1 + jitter * random.random())
                     time.sleep(delay)
 
-                except openai.error.OpenAIError as e:
+                except openai.OpenAIError as e:
                     if e.error is not None and e.error['type'] == 'insufficient_quota':
                         raise Exception(
                             'API key has exceeded its quota, please try 1) increasing it or 2) using another key.'
@@ -149,6 +148,6 @@ def get_available_models(api_key: str) -> List[str]:
     """
 
     api_base = os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
-    res = client.models.list(api_key=api_key, api_base=api_base)
+    res = OpenAI(api_key=api_key, base_url=api_base).models.list()
 
-    return [models["id"] for models in res.data]
+    return [models.id for models in res.data]

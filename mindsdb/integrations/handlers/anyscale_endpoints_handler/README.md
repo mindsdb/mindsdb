@@ -2,6 +2,9 @@
 
 This integration allows you to connect your AnyscaleEndpoints models with MindsDB as AI tables through the `AnyscaleEndpoints` ML engine.
 
+
+### Implementation
+
 The implementation is based on the engine for the OpenAI API, as Anyscale conforms to it.
 
 There are a few notable differences, though:
@@ -12,6 +15,9 @@ There are a few notable differences, though:
 2. This integration only offers chat-based text completion models, either for "normal" text or specialized for code.
 3. When providing a description, this integration returns the respective HuggingFace model card.
 4. Fine-tuning requires that your dataset complies with the chat format. That is, each row should contain a `context` and a `role`. The `context` is the text that is the message in the chat, and the `role` is who authored it (`system`, `user` or `assistant`, where the last one is the model). For more information, please check the fine tuning guide in the Anyscale Endpoints [docs](https://app.endpoints.anyscale.com/docs).
+
+### Base URL
+The base URL for this API is `https://api.endpoints.anyscale.com/v1`.
 
 ## Inference example
 

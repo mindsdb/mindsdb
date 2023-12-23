@@ -801,7 +801,7 @@ class OpenAIHandler(BaseMLEngine):
         Currently, `OpenAIHandler` uses the legacy endpoint.
         Others, like `AnyscaleEndpointsHandler`, use the new endpoint.
         """
-        ft_result = self.client.fine_tunes.create(
+        ft_result = self.client.fine_tuning.jobs.create(
             **{k: v for k, v in ft_params.items() if v is not None}
         )
 
@@ -809,7 +809,7 @@ class OpenAIHandler(BaseMLEngine):
             hour_budget=hour_budget,
         )
         def _check_ft_status(model_id):
-            ft_retrieved = self.client.fine_tunes.retrieve(fine_tune_id=model_id)
+            ft_retrieved = self.client.fine_tuning.jobs.retrieve(fine_tune_id=model_id)
             if ft_retrieved.status in ('succeeded', 'failed', 'cancelled'):
                 return ft_retrieved
             else:
@@ -822,7 +822,7 @@ class OpenAIHandler(BaseMLEngine):
                 f"Fine-tuning did not complete successfully (status: {ft_stats.status}). Error message: {ft_stats.events[-1].message}"
             )  # noqa
 
-        result_file_id = self.client.fine_tunes.retrieve(fine_tune_id=ft_result.id).result_files[0]
+        result_file_id = self.client.fine_tuning.jobs.retrieve(fine_tune_id=ft_result.id).result_files[0]
         if hasattr(result_file_id, 'id'):
             result_file_id = result_file_id.id  # legacy endpoint
 

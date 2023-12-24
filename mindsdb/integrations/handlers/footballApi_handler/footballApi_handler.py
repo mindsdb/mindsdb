@@ -3,9 +3,7 @@ import os
 import pandas as pd
 from mindsdb_sql import parse_sql
 
-from mindsdb.integrations.handlers.footballApi_handler.footballapi_constants import FOOTBALL_API_CLIENT_METHODS
 from mindsdb.integrations.handlers.footballApi_handler.players_table import PlayersTable
-from mindsdb.integrations.handlers.footballApi_handler.football_apis.players_api import PlayersApi
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse, HandlerResponse,
@@ -98,25 +96,3 @@ class FootballApiHandler(APIHandler):
 
         ast = parse_sql(query, dialect='mindsdb')
         return self.query(ast)
-
-    def call_football_api(self, method_name: str, **params) -> pd.DataFrame:
-        """Calls the Football API.
-
-                        Parameters
-                        ----------
-                        method_name : str
-                            name of the calling method from Football api
-                        **params:
-                            Additional keyword arguments representing parameters specific
-                            to the API method being called.
-
-                        Returns
-                        -------
-                        pd.DataFrame
-                            A Pandas DataFrame containing the retrieved player data.
-                        """
-        if method_name == FOOTBALL_API_CLIENT_METHODS.get("PLAYERS"):
-            client = self.connect()
-            players_api = PlayersApi(client)
-            return players_api.get_players(**params)
-        raise NotImplementedError(f"Method name {method_name} not supported by Football API Handler. ")

@@ -1,6 +1,7 @@
 import pandas as pd
 from mindsdb_sql.parser import ast
 
+from mindsdb.integrations.handlers.footballApi_handler.football_apis.players_api import PlayersApi
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
@@ -48,7 +49,10 @@ class PlayersTable(APITable):
             else:
                 raise ValueError(f"Unsupported where argument {key}")
 
-        player_data = self.handler.call_football_api("get_players", **player_params)
+        client = self.handler.connect()
+        players_api = PlayersApi(client)
+        player_data = players_api.get_players(**player_params)
+
         columns = []
         for target in query.targets:
             if isinstance(target, ast.Star):

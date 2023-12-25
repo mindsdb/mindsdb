@@ -23,7 +23,7 @@ class TestMongoDBServer(BaseUnitTest):
     def test_mongo_server(self):
 
         # mock sqlquery
-        with patch('mindsdb.api.mysql.mysql_proxy.executor.executor_commands.ExecuteCommands.execute_command') as mock_executor:
+        with patch('mindsdb.api.executor.command_executor.ExecuteCommands.execute_command') as mock_executor:
 
             # if this module was imported in other test it prevents mocking SQLQuery inside MongoServer thread
             # unload_module('mindsdb.api.mysql.mysql_proxy.executor.executor_commands')

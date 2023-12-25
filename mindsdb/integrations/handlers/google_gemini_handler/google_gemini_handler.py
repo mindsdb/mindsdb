@@ -20,6 +20,7 @@ class GoogleGeminiHandler(BaseMLEngine):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.default_chat_model = "gemini-pro"
+        self.supported_chat_models = ["gemini-pro"]
         self.generative = True
         self.connection = None
 
@@ -29,6 +30,13 @@ class GoogleGeminiHandler(BaseMLEngine):
         df: Optional[pd.DataFrame] = None,
         args: Optional[Dict] = None,
     ) -> None:
+        if "model" not in args["using"]:
+                args["using"]["model"] = self.default_chat_model
+        elif args["using"]["model"] not in self.supported_chat_models:
+            raise Exception(
+                f"Invalid chat model. Please use one of {self.supported_chat_models}"
+            )
+
         self.model_storage.json_set("args", args)
 
     def predict(

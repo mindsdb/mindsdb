@@ -214,7 +214,7 @@ Index(
     Predictor.name,
     Predictor.version,
     Predictor.active,
-    nullsfirst(Predictor.deleted_at),
+    Predictor.deleted_at,  # would be good to have here nullsfirst(Predictor.deleted_at)
     unique=True
 )
 

@@ -25,19 +25,11 @@ def upgrade():
             pass
 
     with op.batch_alter_table('predictor', schema=None) as batch_op:
-        context = batch_op.get_context()
-        if context.dialect.name == 'sqlite':
-            batch_op.create_index(
-                'predictor_index',
-                ['company_id', 'name', 'version', 'active', sa.text('deleted_at')],
-                unique=True
-            )
-        else:
-            batch_op.create_index(
-                'predictor_index',
-                ['company_id', 'name', 'version', 'active', sa.text('deleted_at NULLS FIRST')],
-                unique=True
-            )
+        batch_op.create_index(
+            'predictor_index',
+            ['company_id', 'name', 'version', 'active', 'deleted_at'],
+            unique=True
+        )
 
 
 def downgrade():

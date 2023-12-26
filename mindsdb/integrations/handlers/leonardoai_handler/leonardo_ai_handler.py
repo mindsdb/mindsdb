@@ -20,7 +20,7 @@ class LeonardoAIHandler(BaseMLEngine):
     Integration with Leonardo AI
     """
     
-    name = "leonardo ai"
+    name = "leonardoai"
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -47,12 +47,6 @@ class LeonardoAIHandler(BaseMLEngine):
             
         if "model" not in args["using"]:
             args["using"]["model"] = self.default_model
-            
-            # TODO: if using does not contain valid model throw exception
-        elif args["using"]["model"] not in self.supported_chat_models:
-            raise Exception(
-                f"Invalid model. Please use one of {self.supported_chat_models}"
-            )
         
         self.model_storage.json_set("args", args)
         
@@ -65,21 +59,26 @@ class LeonardoAIHandler(BaseMLEngine):
             "https://cloud.leonardo.ai/api/rest/v1/me", 
             headers={
                 "accept": "application/json",
-                "authorization": f"Bearer {api_key}",
-                "content-type": "application/json",
+                "authorization": f"Bearer {api_key}"
             }
         )
         
-        input_column = args["using"]["column"]
+        print(self.connection.status_code)
         
-        if input_column not in df.columns:
-            raise RuntimeError(f'Column "{input_column}" not found in input data')
-
         result_df = pd.DataFrame()
         
-        result_df["predictions"] = df[input_column].apply(self.predict_answer)
+        result_df['predictions'] = self.predict_answer
         
-        result_df = result_df.rename(columns={"predictions": args["target"]})
+        # input_column = args["using"]["text"]
+        
+        # if input_column not in df.columns:
+        #     raise RuntimeError(f'Column "{input_column}" not found in input data')
+
+        # result_df = pd.DataFrame()
+        
+        # result_df["predictions"] = df[input_column].apply(self.predict_answer)
+        
+        # result_df = result_df.rename(columns={"predictions": args["target"]})
 
         return result_df
         
@@ -115,23 +114,28 @@ class LeonardoAIHandler(BaseMLEngine):
                  or re-create this model and pass the API key with `USING` syntax.'
             )
             
-    def predict_answer(self, text):
+    def predict_answer(self):
         
         args = self.model_storage.json_get("args")
         
         api_key = self._get_leonardo_api_key(args)
         generation_id = ''
         model = args["using"]["model"],
-        prompt = text
+        prompt = 'cute cat picture' # text
         
         # Endpoint URLs
         generation_url = "https://cloud.leonardo.ai/api/rest/v1/generations"
         retrieve_url = f"https://cloud.leonardo.ai/api/rest/v1/generations/{generation_id}"
         
-        headers = {
+        post_headers = {
             "accept": "application/json",
             "authorization": f"Bearer {api_key}",
             "content-type": "application/json",
+        }
+        
+        get_headers = {
+            "accept": "application/json",
+            "authorization": f"Bearer {api_key}"
         }
         
         generation_payload = {
@@ -142,7 +146,7 @@ class LeonardoAIHandler(BaseMLEngine):
         }
         
         # Make a POST request to generate the image
-        response_generation = requests.post(generation_url, headers=headers, json=generation_payload)
+        response_generation = requests.post(generation_url, headers=post_headers, json=generation_payload)
         generation_data = response_generation.json()
         
         # Wait for 5 seconds
@@ -150,7 +154,12 @@ class LeonardoAIHandler(BaseMLEngine):
         time.sleep(5)
         
         generation_id = generation_data.get("generationId")
-        response_retrieve = requests.get(retrieve_url, headers=headers)
+        response_retrieve = requests.get(retrieve_url, headers=get_headers)
         retrieve_data = response_retrieve.json()
         
-        return retrieve_data.get("image_url")
+        generated_images = retrieve_data["generations_by_pk"]["generated_images"]
+        
+        image_urls = [image["url"] for image in generated_images]
+        
+        for url in image_urls:
+            return url

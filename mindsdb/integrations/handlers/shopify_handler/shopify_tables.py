@@ -1,3 +1,4 @@
+import json
 import shopify
 import requests
 import pandas as pd
@@ -398,6 +399,34 @@ class OrdersTable(APITable):
 
         return orders_df
     
+    def insert(self, query: ast.Insert) -> None:
+        """
+        Inserts data into the Shopify "POST /orders" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Insert
+            Given SQL INSERT query
+        
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        insert_statement_parser = INSERTQueryParser(
+            query,
+            supported_columns=['currency', 'email', 'fulfillment_status', 'note', 
+                               'line_items', 'phone', 'processed_at', 'tags', 'test'],
+            mandatory_columns=['line_items'],
+            all_mandatory=False
+        )
+        order_data = insert_statement_parser.parse_query()
+        self.create_orders(order_data)
+
     def delete(self, query: ast.Delete) -> None:
         """Deletes data from the Shopify "DELETE /orders" API endpoint.
 
@@ -429,7 +458,21 @@ class OrdersTable(APITable):
 
         order_ids = orders_df['id'].tolist()
         self.delete_orders(order_ids)
-        
+    
+    def create_orders(self, order_data: List[Dict[Text, Any]]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for order in order_data:
+            if 'line_items' in order and isinstance(order['line_items'], str):
+                order['line_items'] = json.loads(order['line_items'])
+
+            created_order = shopify.Order.create(order)
+            if 'id' not in created_order.to_dict():
+                raise Exception('Order creation failed')
+            else:
+                logger.info(f'Order {created_order.to_dict()["id"]} created')
+
     def delete_orders(self, order_ids: List[int]) -> None:
         api_session = self.handler.connect()
         shopify.ShopifyResource.activate_session(api_session)

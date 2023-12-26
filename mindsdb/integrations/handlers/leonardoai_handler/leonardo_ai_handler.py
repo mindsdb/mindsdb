@@ -2,6 +2,7 @@ import os
 import json
 import contextlib
 import requests
+import time
 from typing import Dict, Optional
 
 import pandas as pd
@@ -114,10 +115,38 @@ class LeonardoAIHandler(BaseMLEngine):
         
         args = self.model_storage.json_get("args")
         
-        img_generation = requests.post(
-            "https://cloud.leonardo.ai/api/rest/v1/generations", 
-            headers={
-                "accept": "application/json",
-                "content_type": "application/json"
-            }
-        )
+        api_key = args["using"]["api_key"]
+        generation_id = ''
+        model = args["using"]["model"],
+        prompt = text
+        
+        # Endpoint URLs
+        generation_url = "https://cloud.leonardo.ai/api/rest/v1/generations"
+        retrieve_url = f"https://cloud.leonardo.ai/api/rest/v1/generations/{generation_id}"
+        
+        headers = {
+            "accept": "application/json",
+            "authorization": f"Bearer {api_key}",
+            "content-type": "application/json",
+        }
+        
+        generation_payload = {
+            "height": 512,
+            "modelId": f"{model}",
+            "prompt": f"{prompt}",
+            "width": 512,
+        }
+        
+        # Make a POST request to generate the image
+        response_generation = requests.post(generation_url, headers=headers, json=generation_payload)
+        generation_data = response_generation.json()
+        
+        # Wait for 5 seconds
+        
+        time.sleep(5)
+        
+        generation_id = generation_data.get("generationId")
+        response_retrieve = requests.get(retrieve_url, headers=headers)
+        retrieve_data = response_retrieve.json()
+        
+        return retrieve_data.get("image_url")

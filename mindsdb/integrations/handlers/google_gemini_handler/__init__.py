@@ -1,8 +1,9 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
+from .__about__ import __version__ as version, __description__ as description
 from mindsdb.utilities import log
 
-logger = log.getLogger(__name__)
 
+logger = log.getLogger(__name__)
 
 try:
     from .google_gemini_handler import GoogleGeminiHandler as Handler
@@ -16,4 +17,4 @@ title = "google_gemini"
 name = "google_gemini"
 type = HANDLER_TYPE.ML
 permanent = True
-__all__ = ["Handler", "name", "type", "title", "import_error"]
+__all__ = ['Handler', 'version', 'name', 'type', 'title', 'description', 'import_error']

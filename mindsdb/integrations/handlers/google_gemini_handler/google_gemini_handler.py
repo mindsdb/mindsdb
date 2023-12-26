@@ -63,7 +63,7 @@ class GoogleGeminiHandler(BaseMLEngine):
         API_KEY preference order:
             1. provided at model creation
             2. provided at engine creation
-            3. GOOGLE_API_KEY env variable
+            3. GOOGLE_GENAI_API_KEY env variable
             4. google_gemini.api_key setting in config.json
         """
 
@@ -74,7 +74,7 @@ class GoogleGeminiHandler(BaseMLEngine):
         if "api_key" in connection_args:
             return connection_args["api_key"]
         # 3
-        api_key = os.getenv("GOOGLE_API_KEY")
+        api_key = os.getenv("GOOGLE_GENAI_API_KEY")
         if api_key is not None:
             return api_key
         # 4

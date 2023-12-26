@@ -16,8 +16,7 @@ from sqlalchemy import (
     UniqueConstraint,
     create_engine,
     text,
-    types,
-    nullsfirst
+    types
 )
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import (

@@ -31,7 +31,7 @@ class GoogleGeminiHandler(BaseMLEngine):
         args: Optional[Dict] = None,
     ) -> None:
         if "model" not in args["using"]:
-                args["using"]["model"] = self.default_chat_model
+            args["using"]["model"] = self.default_chat_model
         elif args["using"]["model"] not in self.supported_chat_models:
             raise Exception(
                 f"Invalid chat model. Please use one of {self.supported_chat_models}"

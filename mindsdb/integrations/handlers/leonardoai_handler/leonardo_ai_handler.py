@@ -78,3 +78,34 @@ class LeonardoAIHandler(BaseMLEngine):
 
         return result_df
         
+    def _get_leonardo_api_key(self, args, strict=True):
+        """
+        API_KEY preference order:
+            1. provided at model creation
+            2. provided at engine creation
+            3. LEONARDO_API_KEY env variable
+            4. anthropic.api_key setting in config.json
+        """
+
+        # 1
+        if "api_key" in args["using"]:
+            return args["using"]["api_key"]
+        # 2
+        connection_args = self.engine_storage.get_connection_args()
+        if "api_key" in connection_args:
+            return connection_args["api_key"]
+        # 3
+        api_key = os.getenv("LEONARDO_API_KEY")
+        if api_key is not None:
+            return api_key
+        # 4
+        config = Config()
+        leonardo_cfg = config.get("leonardo", {})
+        if "api_key" in leonardo_cfg:
+            return leonardo_cfg["api_key"]
+
+        if strict:
+            raise Exception(
+                f'Missing API key "api_key". Either re-create this ML_ENGINE specifying the `api_key` parameter,\
+                 or re-create this model and pass the API key with `USING` syntax.'
+            )

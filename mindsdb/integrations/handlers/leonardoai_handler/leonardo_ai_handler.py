@@ -30,14 +30,14 @@ class LeonardoAIHandler(BaseMLEngine):
         self.rate_limit = 50
         self.max_batch_size = 5
         
-    @staticmethod
-    @contextlib.contextmanager
-    def _leonardo_base_api(key='LEONARDO_API_BASE'):
-        os.environ['LEONARDO_API_BASE'] = LEONARDO_API_BASE
-        try:
-            yield
-        except KeyError:
-            logger.exception('Error getting API key')
+    # @staticmethod
+    # @contextlib.contextmanager
+    # def _leonardo_base_api(key='LEONARDO_API_BASE'):
+    #     os.environ['LEONARDO_API_BASE'] = LEONARDO_API_BASE
+    #     try:
+    #         yield
+    #     except KeyError:
+    #         logger.exception('Error getting API key')
             
     def create(self, target: str, args=None, **kwargs):
         if "using" not in args:
@@ -62,8 +62,12 @@ class LeonardoAIHandler(BaseMLEngine):
         api_key = self._get_leonardo_api_key(args)
         
         self.connection = requests.get(
-            "https://cloud.leornardo.ai/api/rest/v1/me", 
-            headers={"accept: application/json"}
+            "https://cloud.leonardo.ai/api/rest/v1/me", 
+            headers={
+                "accept": "application/json",
+                "authorization": f"Bearer {api_key}",
+                "content-type": "application/json",
+            }
         )
         
         input_column = args["using"]["column"]
@@ -115,7 +119,7 @@ class LeonardoAIHandler(BaseMLEngine):
         
         args = self.model_storage.json_get("args")
         
-        api_key = args["using"]["api_key"]
+        api_key = self._get_leonardo_api_key(args)
         generation_id = ''
         model = args["using"]["model"],
         prompt = text

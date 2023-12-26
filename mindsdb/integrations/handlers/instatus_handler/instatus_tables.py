@@ -5,6 +5,11 @@ from mindsdb_sql.parser import ast
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb_sql.parser.ast.select.constant import Constant
 import json
+import re
+
+langCodes = ["ar", "cs", "da", "de", "en", "es", "et", "fi", "fr", "hu", "id", "it", "ja", "ko",
+             "nl", "no", "pl", "pt", "pt-BR", "ro", "rs", "ru", "sl", "sq", "sv", "tr", "uk",
+             "vi", "zh", "zh-TW"]
 
 
 class StatusPages(APITable):
@@ -222,9 +227,15 @@ class Components(APITable):
         if componentId:
             # Call instatus API and get the response as pd.DataFrame
             df = self.handler.call_instatus_api(endpoint=f'/v1/{pageId}/components/{componentId}')
-            df["translations_name"] = df["translations"].apply(lambda x: x.get("name", None))
-            df["translations_desc"] = df["translations"].apply(lambda x: x.get("description", None))
+            for langCode in langCodes:
+                try:
+                    df[f"translations_name_in_{langCode}"] = df["translations"].apply(lambda x: x.get("name", None)).apply(lambda x: x.get(langCode, None))
+                    df[f"translations_desc_in_{langCode}"] = df["translations"].apply(lambda x: x.get("description", None)).apply(lambda x: x.get(langCode, None))
+                except:
+                    df[f"translations_name_in_{langCode}"] = None
+                    df[f"translations_desc_in_{langCode}"] = None
             df = df.drop(columns=["translations"])
+
             result_df = df[selected_columns]
         else:
             # Call instatus API and get the response as pd.DataFrame
@@ -241,9 +252,19 @@ class Components(APITable):
                 # Break if no more data is available or limit is reached
                 if len(df) == 0 or (limit and limit <= 0) or limit == 0:
                     break
-                df["translations_name"] = df["translations"].apply(lambda x: x.get("name", None))
-                df["translations_desc"] = df["translations"].apply(lambda x: x.get("description", None))
+                ''' Add translations_name_in_{langCode} and translations_desc_in_{langCode} columns to the dataframe'''
+                for i in range(len(df)):
+                    for langCode in langCodes:
+                        try:
+                            df.at[i, f"translations_name_in_{langCode}"] = df.at[i, "translations"].get("name", {}).get(langCode, None)
+                            df.at[i, f"translations_desc_in_{langCode}"] = df.at[i, "translations"].get("description", {}).get(langCode, None)
+                        except:
+                            df.at[i, f"translations_name_in_{langCode}"] = None
+                            df.at[i, f"translations_desc_in_{langCode}"] = None
+
+                # Drop the 'translations' column
                 df = df.drop(columns=["translations"])
+                # Concatenate the dataframes
                 result_df = pd.concat([result_df, df[selected_columns]], ignore_index=True)
 
                 if limit:
@@ -260,17 +281,26 @@ class Components(APITable):
         Returns:
             None
         """
-        data = {'translations': {}}
+        data = {'translations': {
+            "name": {},
+            "description": {}
+        }}
 
         for column, value in zip(query.columns, query.values[0]):
             if isinstance(value, Constant):
                 data[column.name] = json.loads(value.value) if column.name == 'translations' else value.value
             elif isinstance(value, str):
                 try:
-                    if column.name == 'translations_name':
-                        data['translations']['name'] = value
-                    elif column.name == 'translations_desc':
-                        data['translations']['description'] = value
+                    if re.match(r'^translations_name_in_[a-zA-Z\-]+$', column.name):
+                        lang_code = column.name.split('_')[-1]
+                        if lang_code not in langCodes:
+                            raise Exception(f'Invalid language code {lang_code}')
+                        data['translations']['name'][lang_code] = value
+                    elif re.match(r'^translations_desc_in_[a-zA-Z\-]+$', column.name):
+                        lang_code = column.name.split('_')[-1]
+                        if lang_code not in langCodes:
+                            raise Exception(f'Invalid language code {lang_code}')
+                        data['translations']['description'][lang_code] = value
                     else:
                         data[column.name] = json.loads(value)
                 except json.JSONDecodeError:
@@ -301,13 +331,22 @@ class Components(APITable):
             else:
                 raise Exception("page_id and component_id both are required")
 
-        data = {'translations': {}}
+        data = {'translations': {
+            "name": {},
+            "description": {}
+        }}
         for key, value in query.update_columns.items():
             if isinstance(value, Constant):
-                if key == 'translations_name':
-                    data['translations']['name'] = value.value
-                elif key == 'translations_desc':
-                    data['translations']['description'] = value.value
+                if re.match(r'^translations_name_in_[a-zA-Z\-]+$', key):
+                    lang_code = key.split('_')[-1]
+                    if lang_code not in langCodes:
+                        raise Exception(f'Invalid language code {lang_code}')
+                    data['translations']['name'][lang_code] = value.value
+                elif re.match(r'^translations_desc_in_[a-zA-Z\-]+$', key):
+                    lang_code = key.split('_')[-1]
+                    if lang_code not in langCodes:
+                        raise Exception(f'Invalid language code {lang_code}')
+                    data['translations']['description'][lang_code] = value.value
                 else:
                     data[key] = value.value
         self.handler.call_instatus_api(endpoint=f'/v1/{pageId}/components/{componentId}', method='PUT', json_data=data)
@@ -351,6 +390,4 @@ class Components(APITable):
             "importedFromStatuspage",
             "startDate",
             "group",
-            "translations_name",
-            "translations_desc"
-        ]
+        ] + [f'translations_name_in_{langCode}' for langCode in langCodes] + [f'translations_desc_in_{langCode}' for langCode in langCodes]

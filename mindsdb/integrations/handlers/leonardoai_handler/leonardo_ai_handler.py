@@ -84,7 +84,7 @@ class LeonardoAIHandler(BaseMLEngine):
             1. provided at model creation
             2. provided at engine creation
             3. LEONARDO_API_KEY env variable
-            4. anthropic.api_key setting in config.json
+            4. leonardo.api_key setting in config.json
         """
 
         # 1
@@ -109,3 +109,15 @@ class LeonardoAIHandler(BaseMLEngine):
                 f'Missing API key "api_key". Either re-create this ML_ENGINE specifying the `api_key` parameter,\
                  or re-create this model and pass the API key with `USING` syntax.'
             )
+            
+    def predict_answer(self, text):
+        
+        args = self.model_storage.json_get("args")
+        
+        img_generation = requests.post(
+            "https://cloud.leonardo.ai/api/rest/v1/generations", 
+            headers={
+                "accept": "application/json",
+                "content_type": "application/json"
+            }
+        )

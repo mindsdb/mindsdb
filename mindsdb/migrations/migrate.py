@@ -13,11 +13,10 @@ logger = log.getLogger(__name__)
 
 
 def migrate_to_head():
-    '''
-        Trying to update database to head revision.
+    """ Trying to update database to head revision.
         If alembic unable to recognize current revision (In case when database version is newer than backend)
-         then do nothing.
-    '''
+        then do nothing.
+    """
 
     config_file = Path(__file__).parent / 'alembic.ini'
     config = Config(config_file)
@@ -33,11 +32,15 @@ def migrate_to_head():
 
         try:
             script.revision_map.get_revision(cur_revision)
-
         except ResolutionError:
-            logger.error('!!! Database version higher than application !!!')
-            return
+            raise Exception("Database version higher than application.")
 
+    head_rev = script.get_current_head()
+    if cur_revision == head_rev:
+        logger.debug("The database is in its current state, no updates are required.")
+        return
+
+    logger.info("Migrations are available. Applying updates to the database.")
     upgrade(config=config, revision='head')
 
 

@@ -1,6 +1,7 @@
 import os
 import json
 import contextlib
+import requests
 from typing import Dict, Optional
 
 import pandas as pd
@@ -38,6 +39,42 @@ class LeonardoAIHandler(BaseMLEngine):
             logger.exception('Error getting API key')
             
     def create(self, target: str, args=None, **kwargs):
-        pass
+        if "using" not in args:
+            raise Exception(
+                "Leornardo Engine requires a USING clause!"
+            )
             
+        if "model" not in args["using"]:
+            args["using"]["model"] = self.default_model
+            
+            # TODO: if using does not contain valid model throw exception
+        elif args["using"]["model"] not in self.supported_chat_models:
+            raise Exception(
+                f"Invalid model. Please use one of {self.supported_chat_models}"
+            )
+        
+        self.model_storage.json_set("args", args)
+        
+    def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
+        
+        args = self.model_storage.json_get("args")
+        api_key = self._get_leonardo_api_key(args)
+        
+        self.connection = requests.get(
+            "https://cloud.leornardo.ai/api/rest/v1/me", 
+            headers={"accept: application/json"}
+        )
+        
+        input_column = args["using"]["column"]
+        
+        if input_column not in df.columns:
+            raise RuntimeError(f'Column "{input_column}" not found in input data')
+
+        result_df = pd.DataFrame()
+        
+        result_df["predictions"] = df[input_column].apply(self.predict_answer)
+        
+        result_df = result_df.rename(columns={"predictions": args["target"]})
+
+        return result_df
         

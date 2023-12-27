@@ -24,7 +24,7 @@ from mindsdb.integrations.handlers.openai_handler.helpers import (
 from mindsdb.integrations.handlers.openai_handler.constants import (
     CHAT_MODELS,
     IMAGE_MODELS,
-    FINETUNING_LEGACY_MODELS,
+    FINETUNING_MODELS,
     OPENAI_API_BASE,
 )
 from mindsdb.integrations.utilities.handler_utils import get_api_key
@@ -55,7 +55,7 @@ class OpenAIHandler(BaseMLEngine):
         self.max_batch_size = 20
         self.default_max_tokens = 100
         self.chat_completion_models = CHAT_MODELS
-        self.supported_ft_models = FINETUNING_LEGACY_MODELS  # base models compatible with finetuning  # TODO #7387: transition to new endpoint before 4/1/24. Useful reference: Anyscale handler. # noqa
+        self.supported_ft_models = FINETUNING_MODELS # base models compatible with finetuning  # TODO #7387: transition to new endpoint before 4/1/24. Useful reference: Anyscale handler. # noqa
         self.ft_cls = openai.FineTune
 
     @staticmethod
@@ -652,10 +652,10 @@ class OpenAIHandler(BaseMLEngine):
         prompt_col = using_args.get('prompt_column', 'prompt')
         completion_col = using_args.get('completion_column', 'completion')
         
-        api_key=get_api_key('openai', args, self.engine_storage)
-        base_url=self.model_storage.json_get('args').get('api_base')
-        org=self.model_storage.json_get('args').get('api_organization')
-        client= self._get_client(api_key=api_key,base_url=base_url,org=org)
+        api_key = get_api_key('openai', args, self.engine_storage)
+        base_url = using_args.get('api_base')
+        org = using_args.get('api_organization')
+        client = self._get_client(api_key=api_key, base_url=base_url, org=org)
 
         self._check_ft_cols(df, [prompt_col, completion_col])
 
@@ -773,9 +773,8 @@ class OpenAIHandler(BaseMLEngine):
         }
         return file_names
 
-    @staticmethod
-    def _get_ft_model_type(model_name: str):
-        for model_type in ['davinci-002', 'gpt-3.5-turbo', 'gpt-4','davinci-002', 'babbage-002']:
+    def _get_ft_model_type(self, model_name: str):
+        for model_type in self.supported_ft_models:
             if model_type in model_name.lower():
                 return model_type
         return 'babbage-002'
@@ -816,7 +815,7 @@ class OpenAIHandler(BaseMLEngine):
             hour_budget=hour_budget,
         )
         def _check_ft_status(model_id):
-            ft_retrieved = client.fine_tuning.jobs.retrieve(fine_tune_id=model_id)
+            ft_retrieved = client.fine_tuning.jobs.retrieve(fine_tuning_job_id=model_id)
             if ft_retrieved.status in ('succeeded', 'failed', 'cancelled'):
                 return ft_retrieved
             else:
@@ -829,7 +828,7 @@ class OpenAIHandler(BaseMLEngine):
                 f"Fine-tuning did not complete successfully (status: {ft_stats.status}). Error message: {ft_stats.events[-1].message}"
             )  # noqa
 
-        result_file_id = client.fine_tuning.jobs.retrieve(fine_tune_id=ft_result.id).result_files[0]
+        result_file_id = client.fine_tuning.jobs.retrieve(fine_tuning_job_id=ft_result.id).result_files[0]
         if hasattr(result_file_id, 'id'):
             result_file_id = result_file_id.id  # legacy endpoint
 

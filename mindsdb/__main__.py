@@ -163,18 +163,9 @@ if __name__ == '__main__':
             pass
 
     is_cloud = config.get("cloud", False)
-    # need configure migration behavior by env_variables
-    # leave 'is_cloud' for now, but needs to be removed further
-    run_migration_separately = os.environ.get("SEPARATE_MIGRATIONS", False)
-    if run_migration_separately in (False, "false", "False", 0, "0", ""):
-        run_migration_separately = False
-        logger.info("Will run migrations here..")
-    else:
-        run_migration_separately = True
-        logger.info("Migrations will be run separately..")
 
-    if not is_cloud and not run_migration_separately:
-        logger.info("Applying database migrations:")
+    if not is_cloud:
+        logger.debug("Applying database migrations")
         try:
             from mindsdb.migrations import migrate
             migrate.migrate_to_head()

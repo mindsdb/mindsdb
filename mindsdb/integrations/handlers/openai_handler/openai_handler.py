@@ -55,7 +55,6 @@ class OpenAIHandler(BaseMLEngine):
         self.default_max_tokens = 100
         self.chat_completion_models = CHAT_MODELS
         self.supported_ft_models = FINETUNING_MODELS # base models compatible with finetuning  # TODO #7387: transition to new endpoint before 4/1/24. Useful reference: Anyscale handler. # noqa
-        self.ft_cls = openai.FineTune
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):

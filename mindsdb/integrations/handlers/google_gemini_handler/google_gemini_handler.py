@@ -37,14 +37,16 @@ class GoogleGeminiHandler(BaseMLEngine):
                 f"Invalid chat model. Please use one of {self.supported_chat_models}"
             )
 
-        if "api_key" in args["using"]:
-            try:
-                genai.configure(api_key=args['using']['api_key'])
-                genai.chat()
-            except Exception as e:
-                raise Exception(
-                    f"{e}: Invalid api key please check your api key"
-                )
+        api_key = self._get_google_gemini_api_key(args)
+
+        try:
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel(args["using"]["model"])
+            model.generate_content("test")
+        except Exception as e:
+            raise Exception(
+                f"{e}: Invalid api key please check your api key"
+            )
 
         self.model_storage.json_set("args", args)
 

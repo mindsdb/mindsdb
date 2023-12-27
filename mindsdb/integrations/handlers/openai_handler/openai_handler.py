@@ -37,7 +37,6 @@ class OpenAIHandler(BaseMLEngine):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # client=OpenAI(api_key=get_api_key('openai', args, self.engine_storage))
         self.generative = True
         self.default_model = 'gpt-3.5-turbo'
         self.default_image_model = 'dall-e-2'

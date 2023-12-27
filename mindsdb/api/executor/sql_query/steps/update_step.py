@@ -8,7 +8,7 @@ from mindsdb_sql.planner.steps import UpdateToTable
 from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
-from mindsdb.api.mysql.mysql_proxy.utilities import ErSqlWrongArguments
+from mindsdb.api.executor.exceptions import WrongArgumentError
 
 from .base import BaseStepCall
 
@@ -41,7 +41,7 @@ class UpdateToTableCall(BaseStepCall):
 
             key_columns = [i.to_string() for i in step.update_command.keys]
             if len(key_columns) == 0:
-                raise ErSqlWrongArguments('No key columns in update statement')
+                raise WrongArgumentError('No key columns in update statement')
             for col in result_data.columns:
                 name = col.name
                 value = Constant(None)
@@ -67,7 +67,7 @@ class UpdateToTableCall(BaseStepCall):
                 params_map_index.append([name, value])
 
             if len(update_columns) is None:
-                raise ErSqlWrongArguments(f'No columns for update found in: {result_data.columns}')
+                raise WrongArgumentError(f'No columns for update found in: {result_data.columns}')
 
             update_query = Update(
                 table=Identifier(parts=table_name_parts),
@@ -92,7 +92,7 @@ class UpdateToTableCall(BaseStepCall):
             # link nodes with parameters for fast replacing with values
             input_table_alias = step.update_command.from_select_alias
             if input_table_alias is None:
-                raise ErSqlWrongArguments('Subselect in update requires alias')
+                raise WrongArgumentError('Subselect in update requires alias')
 
             def prepare_map_index(node, is_table, **kwargs):
                 if isinstance(node, Identifier) and not is_table:
@@ -115,7 +115,7 @@ class UpdateToTableCall(BaseStepCall):
 
         for param_name, _ in params_map_index:
             if param_name not in data_header:
-                raise ErSqlWrongArguments(f'Field {param_name} not found in input data. Input fields: {data_header}')
+                raise WrongArgumentError(f'Field {param_name} not found in input data. Input fields: {data_header}')
 
         # perform update
         for row in result_data.get_records():

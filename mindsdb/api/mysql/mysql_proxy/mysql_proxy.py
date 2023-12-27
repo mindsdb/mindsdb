@@ -72,8 +72,9 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErWrongCharset,
     SqlApiException,
-    SqlApiUnknownError,
 )
+from mindsdb.api.executor import exceptions as exec_exc
+
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
@@ -759,13 +760,37 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     error_message=str(e),
                 )
 
-            except SqlApiUnknownError as e:
+            except exec_exc.ExecutorException as e:
+                # unclassified
+                error_type = "expected"
+
+                if isinstance(e, exec_exc.NotSupportedYet):
+                    error_code = ERR.ER_NOT_SUPPORTED_YET
+                elif isinstance(e, exec_exc.KeyColumnDoesNotExist):
+                    error_code = ERR.ER_KEY_COLUMN_DOES_NOT_EXIST
+                elif isinstance(e, exec_exc.TableNotExistError):
+                    error_code = ERR.ER_TABLE_EXISTS_ERROR
+                elif isinstance(e, exec_exc.WrongArgumentError):
+                    error_code = ERR.ER_WRONG_ARGUMENTS
+                elif isinstance(e, exec_exc.LogicError):
+                    error_code = ERR.ER_WRONG_USAGE
+                elif isinstance(e, (exec_exc.BadDbError, exec_exc.BadTableError)):
+                    error_code = ERR.ER_BAD_DB_ERROR
+                else:
+                    error_code = ERR.ER_SYNTAX_ERROR
+
+                response = SQLAnswer(
+                    resp_type=RESPONSE_TYPE.ERROR,
+                    error_code=error_code,
+                    error_message=str(e),
+                )
+            except exec_exc.UnknownError as e:
                 # unclassified
                 error_type = "unexpected"
 
                 response = SQLAnswer(
                     resp_type=RESPONSE_TYPE.ERROR,
-                    error_code=e.err_code,
+                    error_code=ERR.ER_UNKNOWN_ERROR,
                     error_message=str(e),
                 )
 

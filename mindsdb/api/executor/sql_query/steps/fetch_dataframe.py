@@ -10,7 +10,7 @@ from mindsdb_sql.planner.steps import FetchDataframeStep
 from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet, Column
-from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiUnknownError
+from mindsdb.api.executor.exceptions import UnknownError
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
 
 from .base import BaseStepCall
@@ -54,7 +54,7 @@ class FetchDataframeStepCall(BaseStepCall):
         query = step.query
 
         if dn is None:
-            raise SqlApiUnknownError(f'Unknown integration name: {step.integration}')
+            raise UnknownError(f'Unknown integration name: {step.integration}')
 
         if query is None:
             table_alias = (self.context.get('database'), 'result', 'result')

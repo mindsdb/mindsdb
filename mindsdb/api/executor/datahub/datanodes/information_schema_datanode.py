@@ -15,7 +15,7 @@ from mindsdb.api.executor.datahub.datanodes.integration_datanode import (
 from mindsdb.api.executor.datahub.datanodes.project_datanode import (
     ProjectDataNode,
 )
-from mindsdb.api.mysql.mysql_proxy.utilities import exceptions as exc
+from mindsdb.api.executor import exceptions as exc
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.database.projects import ProjectController
@@ -445,7 +445,7 @@ class InformationSchemaDataNode(DataNode):
         tn = tableName.upper()
         if tn in self.information_schema:
             return self.information_schema[tn]
-        raise exc.ErTableExistError(
+        raise exc.TableNotExistError(
             f"Table information_schema.{tableName} does not exists"
         )
 
@@ -1028,14 +1028,14 @@ class InformationSchemaDataNode(DataNode):
         query_tables = get_all_tables(query)
 
         if len(query_tables) != 1:
-            raise exc.ErBadTableError(
+            raise exc.BadTableError(
                 f"Only one table can be used in query to information_schema: {query}"
             )
 
         table_name = query_tables[0].upper()
 
         if table_name not in self.get_dataframe_funcs:
-            raise exc.ErNotSupportedYet("Information schema: Not implemented.")
+            raise exc.NotSupportedYet("Information schema: Not implemented.")
 
         dataframe = self.get_dataframe_funcs[table_name](query=query)
         data = query_df(dataframe, query, session=self.session)

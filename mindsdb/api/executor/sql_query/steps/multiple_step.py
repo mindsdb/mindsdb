@@ -1,6 +1,6 @@
 from mindsdb_sql.planner.steps import MultipleSteps
 
-from mindsdb.api.mysql.mysql_proxy.utilities import ErNotSupportedYet
+from mindsdb.api.executor.exceptions import NotSupportedYet
 
 from .base import BaseStepCall
 
@@ -12,7 +12,7 @@ class MultipleStepsCall(BaseStepCall):
     def call(self, step):
 
         if step.reduce != 'union':
-            raise ErNotSupportedYet(f"Only MultipleSteps with type = 'union' is supported. Got '{step.type}'")
+            raise NotSupportedYet(f"Only MultipleSteps with type = 'union' is supported. Got '{step.type}'")
         data = None
         for substep in step.steps:
             subdata = self.sql_query.execute_step(substep)

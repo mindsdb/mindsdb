@@ -26,9 +26,9 @@ from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.interfaces.model.functions import get_model_record
-from mindsdb.api.mysql.mysql_proxy.utilities import (
-    SqlApiUnknownError,
-    ErLogicError,
+from mindsdb.api.executor.exceptions import (
+    UnknownError,
+    LogicError,
 )
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark
@@ -192,7 +192,7 @@ class SQLQuery():
                     step.set_result(data)
                     self.steps_data.append(data)
             except PlanningException as e:
-                raise ErLogicError(e)
+                raise LogicError(e)
 
             statement_info = self.planner.get_statement_info()
 
@@ -236,7 +236,7 @@ class SQLQuery():
                 step.set_result(data)
                 self.steps_data.append(data)
         except PlanningException as e:
-            raise ErLogicError(e)
+            raise LogicError(e)
         except Exception as e:
             raise e
         finally:
@@ -270,7 +270,7 @@ class SQLQuery():
                 result = self.steps_data[-1]
                 self.fetched_data = result
         except Exception as e:
-            raise SqlApiUnknownError("error in preparing result query step") from e
+            raise UnknownError("error in preparing result query step") from e
 
         try:
             if hasattr(self, 'columns_list') is False:
@@ -284,12 +284,12 @@ class SQLQuery():
                 self.fetched_data.del_column(col)
 
         except Exception as e:
-            raise SqlApiUnknownError("error in column list step") from e
+            raise UnknownError("error in column list step") from e
 
     def execute_step(self, step):
         cls_name = step.__class__.__name__
         handler = self.step_handlers.get(cls_name)
         if handler is None:
-            raise SqlApiUnknownError(f"Unknown step: {cls_name}")
+            raise UnknownError(f"Unknown step: {cls_name}")
 
         return handler(self).call(step)

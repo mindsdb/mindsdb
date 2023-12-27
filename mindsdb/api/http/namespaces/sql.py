@@ -10,7 +10,7 @@ from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProx
 from mindsdb.api.executor.data_types.response_type import (
     RESPONSE_TYPE as SQL_RESPONSE_TYPE,
 )
-from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiException, SqlApiUnknownError
+from mindsdb.api.executor.exceptions import ExecutorException, UnknownError
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
@@ -57,21 +57,21 @@ class Query(Resource):
                             for x in result.columns
                         ],
                     }
-            except SqlApiException as e:
+            except ExecutorException as e:
                 # classified error
                 error_type = "expected"
                 query_response = {
                     "type": SQL_RESPONSE_TYPE.ERROR,
-                    "error_code": e.err_code,
+                    "error_code": 0,
                     "error_message": str(e),
                 }
 
-            except SqlApiUnknownError as e:
+            except UnknownError as e:
                 # unclassified
                 error_type = "unexpected"
                 query_response = {
                     "type": SQL_RESPONSE_TYPE.ERROR,
-                    "error_code": e.err_code,
+                    "error_code": 0,
                     "error_message": str(e),
                 }
 

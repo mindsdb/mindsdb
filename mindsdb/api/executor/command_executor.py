@@ -77,13 +77,14 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     SERVER_VARIABLES,
     TYPES,
 )
-from mindsdb.api.mysql.mysql_proxy.utilities import (
-    ErBadDbError,
-    ErBadTableError,
-    ErNotSupportedYet,
-    ErSqlWrongArguments,
-    ErTableExistError,
-    SqlApiException,
+
+from .exceptions import (
+    ExecutorException,
+    BadDbError,
+    BadTableError,
+    NotSupportedYet,
+    WrongArgumentError,
+    TableNotExistError,
 )
 from mindsdb.api.executor.utilities.functions import download_file
 from mindsdb.api.executor.utilities.sql import query_df
@@ -240,7 +241,7 @@ class ExecuteCommands:
                 return self.answer_select(query)
             elif sql_category == "plugins":
                 if statement.where is not None or statement.like:
-                    raise SqlApiException(
+                    raise ExecutorException(
                         "'SHOW PLUGINS' query should be used without filters"
                     )
                 new_statement = Select(
@@ -495,7 +496,7 @@ class ExecuteCommands:
                 if table_name is None:
                     err_str = f"Can't determine table name in query: {sql}"
                     logger.warning(err_str)
-                    raise ErTableExistError(err_str)
+                    raise TableNotExistError(err_str)
                 return self.answer_show_table_status(table_name)
             elif sql_category == "columns":
                 is_full = statement.modes is not None and "full" in statement.modes
@@ -516,7 +517,7 @@ class ExecuteCommands:
                 query = SQLQuery(select_statement, session=self.session)
                 return self.answer_select(query)
             else:
-                raise ErNotSupportedYet(f"Statement not implemented: {sql}")
+                raise NotSupportedYet(f"Statement not implemented: {sql}")
         elif type(statement) in (
             StartTransaction,
             CommitTransaction,
@@ -589,7 +590,7 @@ class ExecuteCommands:
                 self.session.database != "mindsdb"
                 and statement.table.parts[0] != "mindsdb"
             ):
-                raise ErBadTableError(
+                raise BadTableError(
                     "Only 'DELETE' from database 'mindsdb' is possible at this moment"
                 )
 
@@ -663,7 +664,7 @@ class ExecuteCommands:
             return self.answer_evaluate_metric(statement)
         else:
             logger.warning(f"Unknown SQL statement: {sql}")
-            raise ErNotSupportedYet(f"Unknown SQL statement: {sql}")
+            raise NotSupportedYet(f"Unknown SQL statement: {sql}")
 
     def answer_create_trigger(self, statement):
         triggers_controller = TriggersController()
@@ -733,7 +734,7 @@ class ExecuteCommands:
 
         database = self.session.integration_controller.get(statement.database.parts[-1])
         if database is None:
-            raise SqlApiException(f"Database not found: {statement.database}")
+            raise ExecutorException(f"Database not found: {statement.database}")
 
         # Database ID cannot be null
         database_id = database["id"] if database is not None else -1
@@ -774,7 +775,7 @@ class ExecuteCommands:
         if database_name is not None:
             database = self.session.integration_controller.get(database_name)
             if database is None:
-                raise SqlApiException(f"Database with name {database_name} not found")
+                raise ExecutorException(f"Database with name {database_name} not found")
             database_id = database["id"]
 
         updated_chatbot = chatbot_controller.update_chatbot(
@@ -788,7 +789,7 @@ class ExecuteCommands:
             params=statement.params,
         )
         if updated_chatbot is None:
-            raise SqlApiException(f"Chatbot with name {name_no_project} not found")
+            raise ExecutorException(f"Chatbot with name {name_no_project} not found")
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_drop_chatbot(self, statement):
@@ -857,7 +858,7 @@ class ExecuteCommands:
                 model_info = self._get_model_info(Identifier(parts=parts), except_absent=False)
 
         if model_info is None:
-            raise SqlApiException(f"Model not found: {statement.value}")
+            raise ExecutorException(f"Model not found: {statement.value}")
 
         if len(attrs) == 1:
             attrs = attrs[0]
@@ -929,7 +930,7 @@ class ExecuteCommands:
                 shortest_training is not None
                 and shortest_training < datetime.timedelta(hours=1)
             ):
-                raise SqlApiException(
+                raise ExecutorException(
                     f"Can't start {phase_name} process while any other predictor is in status 'training' or 'generating'"
                 )
 
@@ -1023,7 +1024,7 @@ class ExecuteCommands:
             )
             handler_meta = handlers_meta[engine]
             if handler_meta.get("import", {}).get("success") is not True:
-                raise SqlApiException(f"Handler '{engine}' can not be used")
+                raise ExecutorException(f"Handler '{engine}' can not be used")
 
             accept_connection_args = handler_meta.get("connection_args")
             if accept_connection_args is not None and connection_args is not None:
@@ -1031,7 +1032,7 @@ class ExecuteCommands:
                     if arg_name == "as_service":
                         continue
                     if arg_name not in accept_connection_args:
-                        raise SqlApiException(
+                        raise ExecutorException(
                             f"Unknown connection argument: {arg_name}"
                         )
                     arg_meta = accept_connection_args[arg_name]
@@ -1043,7 +1044,7 @@ class ExecuteCommands:
                         # dict: {'url': 'https://host.com/file'}
                         arg_value = connection_args[arg_name]
                         if isinstance(arg_value, (str, dict)) is False:
-                            raise SqlApiException(f"Unknown type of arg: '{arg_value}'")
+                            raise ExecutorException(f"Unknown type of arg: '{arg_value}'")
                         if isinstance(arg_value, str) or "path" in arg_value:
                             path = (
                                 arg_value
@@ -1051,11 +1052,11 @@ class ExecuteCommands:
                                 else arg_value["path"]
                             )
                             if Path(path).is_file() is False:
-                                raise SqlApiException(f"File not found at: '{path}'")
+                                raise ExecutorException(f"File not found at: '{path}'")
                         elif "url" in arg_value:
                             path = download_file(arg_value["url"])
                         else:
-                            raise SqlApiException(
+                            raise ExecutorException(
                                 f"Argument '{arg_name}' must be path or url to the file"
                             )
                         connection_args[arg_name] = path
@@ -1070,7 +1071,7 @@ class ExecuteCommands:
             status.error_message = str(e)
 
         if status.success is False:
-            raise SqlApiException(f"Can't connect to db: {status.error_message}")
+            raise ExecutorException(f"Can't connect to db: {status.error_message}")
 
         integration = self.session.integration_controller.get(name)
         if integration is not None:
@@ -1096,7 +1097,7 @@ class ExecuteCommands:
             )
         )
         if handler_module_meta is None:
-            raise SqlApiException(f"There is no engine '{statement.handler}'")
+            raise ExecutorException(f"There is no engine '{statement.handler}'")
         if handler_module_meta.get("import", {}).get("success") is not True:
             msg = dedent(
                 f"""\
@@ -1114,7 +1115,7 @@ class ExecuteCommands:
                 """
                 )
             logger.info(msg)
-            raise SqlApiException(msg)
+            raise ExecutorException(msg)
 
         integration_id = self.session.integration_controller.add(
             name=name, engine=statement.handler, connection_args=statement.params
@@ -1229,11 +1230,11 @@ class ExecuteCommands:
                         table_name, project_name=db_name
                     )
                 elif statement.if_exists is False:
-                    raise SqlApiException(
+                    raise ExecutorException(
                         f"Cannot delete a table from database '{db_name}': table does not exists"
                     )
             else:
-                raise SqlApiException(
+                raise ExecutorException(
                     f"Cannot delete a table from database '{db_name}'"
                 )
 
@@ -1274,7 +1275,7 @@ class ExecuteCommands:
             try:
                 sqlquery = SQLQuery(query, session=self.session)
                 if sqlquery.fetch()["success"] is not True:
-                    raise SqlApiException("Wrong view query")
+                    raise ExecutorException("Wrong view query")
             finally:
                 query_context_controller.release_context(
                     query_context_controller.IGNORE_CONTEXT
@@ -1316,14 +1317,14 @@ class ExecuteCommands:
 
         if statement.storage is not None:
             if len(statement.storage.parts) != 2:
-                raise SqlApiException(
+                raise ExecutorException(
                     f"Invalid vectordatabase table name: {statement.storage}"
                     "Need the form 'database_name.table_name'"
                 )
 
         if statement.from_query is not None:
             # TODO: implement this
-            raise SqlApiException(
+            raise ExecutorException(
                 "Create a knowledge base from a select is not supported yet"
             )
 
@@ -1375,7 +1376,7 @@ class ExecuteCommands:
             )
         except ValueError as e:
             # Project does not exist or skill already exists.
-            raise SqlApiException(str(e))
+            raise ExecutorException(str(e))
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
@@ -1391,7 +1392,7 @@ class ExecuteCommands:
             self.session.skills_controller.delete_skill(name, project_name)
         except ValueError as e:
             # Project does not exist or skill does not exist.
-            raise SqlApiException(str(e))
+            raise ExecutorException(str(e))
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
@@ -1413,7 +1414,7 @@ class ExecuteCommands:
             )
         except ValueError as e:
             # Project does not exist or skill does not exist.
-            raise SqlApiException(str(e))
+            raise ExecutorException(str(e))
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
@@ -1436,7 +1437,7 @@ class ExecuteCommands:
             )
         except ValueError as e:
             # Project does not exist or agent already exists.
-            raise SqlApiException(str(e))
+            raise ExecutorException(str(e))
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
@@ -1452,7 +1453,7 @@ class ExecuteCommands:
             self.session.agents_controller.delete_agent(name, project_name)
         except ValueError as e:
             # Project does not exist or agent does not exist.
-            raise SqlApiException(str(e))
+            raise ExecutorException(str(e))
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
@@ -1478,7 +1479,7 @@ class ExecuteCommands:
             )
         except ValueError as e:
             # Project does not exist or agent does not exist.
-            raise SqlApiException(str(e))
+            raise ExecutorException(str(e))
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
@@ -1624,7 +1625,7 @@ class ExecuteCommands:
                 else:
                     raise Exception(f"Unknown column '{result}'")
             else:
-                raise ErSqlWrongArguments(f"Unknown constant type: {target_type}")
+                raise WrongArgumentError(f"Unknown constant type: {target_type}")
 
             columns.append(
                 Column(
@@ -2055,4 +2056,4 @@ class ExecuteCommands:
             if self.session.database_controller.exists(db_name):
                 self.session.database = db_name
             else:
-                raise ErBadDbError(f"Database {db_name} does not exists")
+                raise BadDbError(f"Database {db_name} does not exists")

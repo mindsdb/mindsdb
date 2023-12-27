@@ -1,7 +1,7 @@
 import copy
 import pandas as pd
 
-from mindsdb.api.mysql.mysql_proxy.utilities import ErSqlWrongArguments
+from mindsdb.api.executor.exceptions import WrongArgumentError
 
 
 class Column:
@@ -130,7 +130,7 @@ class ResultSet:
                 col_idx = i
                 break
         if col_idx is None:
-            raise ErSqlWrongArguments(f'Column is not found: {col}')
+            raise WrongArgumentError(f'Column is not found: {col}')
         return col_idx
 
     def add_column(self, col, values=None):
@@ -205,7 +205,7 @@ class ResultSet:
 
     def add_record_raw(self, rec):
         if len(rec) != len(self._columns):
-            raise ErSqlWrongArguments(f'Record length mismatch columns length: {len(rec)} != {len(self.columns)}')
+            raise WrongArgumentError(f'Record length mismatch columns length: {len(rec)} != {len(self.columns)}')
         self._records.append(rec)
 
     @property

@@ -3,7 +3,7 @@ import hashlib
 from mindsdb_sql.planner.steps import UnionStep
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
-from mindsdb.api.mysql.mysql_proxy.utilities import ErSqlWrongArguments
+from mindsdb.api.executor.exceptions import WrongArgumentError
 
 from .base import BaseStepCall
 
@@ -18,7 +18,7 @@ class UnionStepCall(BaseStepCall):
 
         # count of columns have to match
         if len(left_result.columns) != len(right_result.columns):
-            raise ErSqlWrongArguments(
+            raise WrongArgumentError(
                 f'UNION columns count mismatch: {len(left_result.columns)} != {len(right_result.columns)} ')
 
         # types have to match

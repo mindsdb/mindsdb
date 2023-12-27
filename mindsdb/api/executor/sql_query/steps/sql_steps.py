@@ -15,9 +15,9 @@ from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.api.executor.utilities.sql import query_df
-from mindsdb.api.mysql.mysql_proxy.utilities import (
-    ErKeyColumnDoesNotExist,
-    ErNotSupportedYet
+from mindsdb.api.executor.exceptions import (
+    KeyColumnDoesNotExist,
+    NotSupportedYet
 )
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
 
@@ -91,7 +91,7 @@ class FilterStepCall(BaseStepCall):
         # analyze condition and change name of columns
         def check_fields(node, is_table=None, **kwargs):
             if is_table:
-                raise ErNotSupportedYet('Subqueries is not supported in WHERE')
+                raise NotSupportedYet('Subqueries is not supported in WHERE')
             if isinstance(node, Identifier):
                 # only column name
                 col_name = node.parts[-1]
@@ -103,7 +103,7 @@ class FilterStepCall(BaseStepCall):
                     key = (table_name, col_name)
 
                 if key not in col_idx:
-                    raise ErKeyColumnDoesNotExist(f'Table not found for column: {key}')
+                    raise KeyColumnDoesNotExist(f'Table not found for column: {key}')
 
                 new_name = col_idx[key]
                 return Identifier(parts=[new_name])

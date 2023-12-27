@@ -7,9 +7,9 @@ from mindsdb_sql.planner.steps import (
 )
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet, Column
-from mindsdb.api.mysql.mysql_proxy.utilities import (
-    ErNotSupportedYet,
-    ErLogicError
+from mindsdb.api.executor.exceptions import (
+    NotSupportedYet,
+    LogicError
 )
 
 from .base import BaseStepCall
@@ -40,7 +40,7 @@ class InsertToTableCall(BaseStepCall):
                 record = [v.value for v in row]
                 data.add_record_raw(record)
         else:
-            raise ErLogicError(f'Data not found for insert: {step}')
+            raise LogicError(f'Data not found for insert: {step}')
 
         if len(step.table.parts) > 1:
             integration_name = step.table.parts[0]
@@ -52,7 +52,7 @@ class InsertToTableCall(BaseStepCall):
         dn = self.session.datahub.get(integration_name)
 
         if hasattr(dn, 'create_table') is False:
-            raise ErNotSupportedYet(f"Creating table in '{integration_name}' is not supporting")
+            raise NotSupportedYet(f"Creating table in '{integration_name}' is not supporting")
 
         #  del 'service' columns
         for col in data.find_columns('__mindsdb_row_id'):

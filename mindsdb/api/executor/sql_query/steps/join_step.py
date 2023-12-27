@@ -13,9 +13,7 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.api.executor.utilities.sql import query_df_with_type_infer_fallback
-from mindsdb.api.mysql.mysql_proxy.utilities import (
-    ErNotSupportedYet
-)
+from mindsdb.api.executor.exceptions import NotSupportedYet
 
 from .base import BaseStepCall
 
@@ -61,7 +59,7 @@ class JoinStepCall(BaseStepCall):
                     return Identifier(parts=['table_b', col_name])
 
             if step.query.condition is None:
-                raise ErNotSupportedYet('Unable to join table without condition')
+                raise NotSupportedYet('Unable to join table without condition')
 
             condition = copy.deepcopy(step.query.condition)
             query_traversal(condition, adapt_condition)

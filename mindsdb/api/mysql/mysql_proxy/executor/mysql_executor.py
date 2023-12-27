@@ -4,7 +4,7 @@ from mindsdb_sql.planner import utils as planner_utils
 import mindsdb.utilities.profiler as profiler
 from mindsdb.api.executor import Column, SQLQuery
 from mindsdb.api.executor.command_executor import ExecuteCommands
-from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiException
+from mindsdb.api.mysql.mysql_proxy.utilities import ErSqlSyntaxError
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -151,7 +151,7 @@ class Executor:
                 # not all statements are parsed by parse_sql
                 logger.warning(f"SQL statement is not parsed by mindsdb_sql: {sql}")
 
-                raise SqlApiException(
+                raise ErSqlSyntaxError(
                     f"SQL statement cannot be parsed by mindsdb_sql - {sql}: {mdb_error}"
                 ) from mdb_error
 

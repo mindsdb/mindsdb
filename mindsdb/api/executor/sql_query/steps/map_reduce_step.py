@@ -12,9 +12,7 @@ from mindsdb_sql.planner.steps import (
 )
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
-from mindsdb.api.mysql.mysql_proxy.utilities import (
-    ErLogicError
-)
+from mindsdb.api.executor.exceptions import LogicError
 
 from .base import BaseStepCall
 from .fetch_dataframe import FetchDataframeStepCall
@@ -68,7 +66,7 @@ class MapReduceStepCall(BaseStepCall):
 
     def call(self, step):
         if step.reduce != 'union':
-            raise ErLogicError(f'Unknown MapReduceStep type: {step.reduce}')
+            raise LogicError(f'Unknown MapReduceStep type: {step.reduce}')
 
         step_data = self.steps_data[step.values.step_num]
         vars = []
@@ -98,12 +96,12 @@ class MapReduceStepCall(BaseStepCall):
         elif type(substep) == MultipleSteps:
             data = self._multiple_steps_reduce(substep, vars)
         else:
-            raise ErLogicError(f'Unknown step type: {step.step}')
+            raise LogicError(f'Unknown step type: {step.step}')
         return data
 
     def _multiple_steps_reduce(self, step, vars):
         if step.reduce != 'union':
-            raise ErLogicError(f'Unknown MultipleSteps type: {step.reduce}')
+            raise LogicError(f'Unknown MultipleSteps type: {step.reduce}')
 
         data = ResultSet()
 
@@ -111,7 +109,7 @@ class MapReduceStepCall(BaseStepCall):
         steps = []
         for substep in step.steps:
             if isinstance(substep, FetchDataframeStep) is False:
-                raise ErLogicError(f'Wrong step type for MultipleSteps: {step}')
+                raise LogicError(f'Wrong step type for MultipleSteps: {step}')
             substep = copy.deepcopy(substep)
             markQueryVar(substep.query.where)
             steps.append(substep)

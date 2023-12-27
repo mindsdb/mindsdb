@@ -48,20 +48,20 @@ class GoogleGeminiHandler(BaseMLEngine):
                 f"{e}: Invalid api key please check your api key"
             )
 
+        args["using"]["api_key"] = api_key
+
         self.model_storage.json_set("args", args)
 
     def predict(
         self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None
     ) -> pd.DataFrame:
         args = self.model_storage.json_get("args")
-        api_key = self._get_google_gemini_api_key(args)
+        api_key = args["using"]["api_key"]
         genai.configure(api_key=api_key)
 
         input_column = args["using"]["column"]
         if input_column not in df.columns:
             raise RuntimeError(f'Column "{input_column}" not found in input data')
-        if "model" not in args["using"]:
-            args["using"]["model"] = self.default_chat_model
 
         self.connection = genai.GenerativeModel(args["using"]["model"])
         result_df = pd.DataFrame()

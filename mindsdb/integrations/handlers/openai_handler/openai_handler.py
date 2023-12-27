@@ -259,12 +259,6 @@ class OpenAIHandler(BaseMLEngine):
                 'best_of': pred_args.get('best_of', None),
                 'logit_bias': pred_args.get('logit_bias', None),
                 'user': pred_args.get('user', None),
-                # 'base_url': pred_args.get(
-                #     'api_base',
-                #     args.get(
-                #         'api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
-                #     ),
-                # ),  # noqa
             }
 
             if (
@@ -653,12 +647,6 @@ class OpenAIHandler(BaseMLEngine):
                 f"This model cannot be finetuned. Supported base models are {self.supported_ft_models}"
             )
 
-        # TODO: The 'openai.api_base' option isn't read in the client API. You will need to pass it when you instantiate the client, e.g. 'OpenAI(api_base=args.get(
-        #             'api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
-        #         ))'
-        # openai.api_base = args.get(
-        #             'api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
-        #         )
         finetune_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
         temp_storage_path = tempfile.mkdtemp()
@@ -673,7 +661,6 @@ class OpenAIHandler(BaseMLEngine):
         for split, file_name in file_names.items():
             if os.path.isfile(os.path.join(temp_storage_path, file_name)):
                 jsons[split] = self.client.files.create(file=open(f"{temp_storage_path}/{file_name}", "rb"),
-                # api_base=openai.api_base,  # TODO: rm
                 purpose='fine-tune')
 
         if type(jsons['train']) is openai.types.FileObject:
@@ -768,10 +755,10 @@ class OpenAIHandler(BaseMLEngine):
 
     @staticmethod
     def _get_ft_model_type(model_name: str):
-        for model_type in ['ada', 'curie', 'babbage', 'davinci']:
+        for model_type in ['davinci-002', 'gpt-3.5-turbo', 'gpt-4','davinci-002', 'babbage-002']:
             if model_type in model_name.lower():
                 return model_type
-        return 'ada'
+        return 'babbage-002'
 
     @staticmethod
     def _add_extra_ft_params(ft_params, using_args):
@@ -827,3 +814,7 @@ class OpenAIHandler(BaseMLEngine):
             result_file_id = result_file_id.id  # legacy endpoint
 
         return ft_stats, result_file_id
+    
+    @staticmethod
+    def get_client(api_key,base_url=OPENAI_API_BASE,org=None):
+        return OpenAI(api_key=api_key,base_url=base_url,organization=org)

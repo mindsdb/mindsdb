@@ -50,7 +50,7 @@ class GoogleGeminiHandler(BaseMLEngine):
 
     def predict(
         self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None
-    ) -> None:
+    ) -> pd.DataFrame:
         args = self.model_storage.json_get("args")
         api_key = self._get_google_gemini_api_key(args)
         genai.configure(api_key=api_key)

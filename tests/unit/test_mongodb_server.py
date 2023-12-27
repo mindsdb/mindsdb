@@ -10,7 +10,7 @@ from pymongo import MongoClient
 from mindsdb_sql import parse_sql
 
 from mindsdb.api.executor.data_types.answer import ExecuteAnswer, ANSWER_TYPE
-from mindsdb.api.executor.sql_query import Column
+from mindsdb.api.executor import Column
 
 # How to run:
 #  env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py

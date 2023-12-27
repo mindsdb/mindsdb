@@ -32,6 +32,7 @@ from mindsdb.integrations.libs.llm_utils import get_completed_prompts
 
 logger = log.getLogger(__name__)
 
+
 class OpenAIHandler(BaseMLEngine):
     name = 'openai'
 

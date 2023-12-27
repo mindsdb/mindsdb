@@ -8,7 +8,7 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Identifier, Select, Star, NativeQuery
 
 import mindsdb.interfaces.storage.db as db
-from mindsdb.api.executor.sql_query import SQLQuery
+from mindsdb.api.executor import SQLQuery
 from mindsdb.integrations.utilities.sql_utils import make_sql_session
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage

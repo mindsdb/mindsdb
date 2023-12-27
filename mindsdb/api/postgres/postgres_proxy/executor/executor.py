@@ -6,7 +6,7 @@ from mindsdb_sql.planner import utils as planner_utils
 from numpy import dtype as np_dtype
 from pandas.api import types as pd_types
 
-from mindsdb.api.executor.sql_query import SQLQuery, Column
+from mindsdb.api.executor import SQLQuery, Column
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiException

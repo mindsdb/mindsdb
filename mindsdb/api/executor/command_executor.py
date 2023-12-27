@@ -70,7 +70,7 @@ from mindsdb_sql.parser.dialects.mysql import Variable
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 import mindsdb.utilities.profiler as profiler
-from mindsdb.api.executor.sql_query import Column, SQLQuery
+from mindsdb.api.executor import Column, SQLQuery
 from mindsdb.api.executor.data_types.answer import ANSWER_TYPE, ExecuteAnswer
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,

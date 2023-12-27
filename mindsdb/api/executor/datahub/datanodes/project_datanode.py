@@ -15,7 +15,7 @@ from mindsdb_sql.parser.ast import (
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
-from mindsdb.api.executor.sql_query import SQLQuery
+from mindsdb.api.executor import SQLQuery
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
 

@@ -37,7 +37,7 @@ class OpenAIHandler(BaseMLEngine):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.client=OpenAI(api_key=get_api_key('openai', args, self.engine_storage))
+        # client=OpenAI(api_key=get_api_key('openai', args, self.engine_storage))
         self.generative = True
         self.default_model = 'gpt-3.5-turbo'
         self.default_image_model = 'dall-e-2'
@@ -121,6 +121,7 @@ class OpenAIHandler(BaseMLEngine):
                 "temperature",
                 "api_key",
                 "openai_api_key",
+                "api_organization",
             }
         )
 
@@ -162,6 +163,11 @@ class OpenAIHandler(BaseMLEngine):
 
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
+        args['base_url']= pred_args.get(
+                    'api_base',
+                    args.get(
+                        'api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
+                    ))
         df = df.reset_index(drop=True)
 
         if pred_args.get('mode'):
@@ -382,11 +388,9 @@ class OpenAIHandler(BaseMLEngine):
         """
 
         @retry_with_exponential_backoff()
-        def _submit_completion(model_name, prompts, api_key, api_args, args, df):
+        def _submit_completion(model_name, prompts, api_args, args, df):
             kwargs = {
                 'model': model_name,
-                # 'api_key': api_key,
-                # 'organization': args.get('api_organization'),
             }
             if model_name in IMAGE_MODELS:
                 return _submit_image_completion(kwargs, prompts, api_args)
@@ -423,7 +427,7 @@ class OpenAIHandler(BaseMLEngine):
             kwargs = {**kwargs, **api_args}
 
             before_openai_query(kwargs)
-            resp = _tidy(self.client.completions.create(**kwargs))
+            resp = _tidy(client.completions.create(**kwargs))
             _log_api_call(kwargs, resp)
             return resp
 
@@ -439,7 +443,7 @@ class OpenAIHandler(BaseMLEngine):
             kwargs = {**kwargs, **api_args}
 
             before_openai_query(kwargs)
-            resp = _tidy(self.client.embeddings.create(**kwargs))
+            resp = _tidy(client.embeddings.create(**kwargs))
             _log_api_call(kwargs, resp)
             return resp
 
@@ -490,7 +494,7 @@ class OpenAIHandler(BaseMLEngine):
                     pkwargs = {**kwargs, **api_args}
 
                     before_openai_query(kwargs)
-                    resp = _tidy(self.client.chat.completions.create(**pkwargs))
+                    resp = _tidy(client.chat.completions.create(**pkwargs))
                     _log_api_call(pkwargs, resp)
 
                     completions.extend(resp)
@@ -499,7 +503,7 @@ class OpenAIHandler(BaseMLEngine):
                     pkwargs = {**kwargs, **api_args}
 
                     before_openai_query(kwargs)
-                    resp = _tidy(self.client.chat.completions.create(**pkwargs))
+                    resp = _tidy(client.chat.completions.create(**pkwargs))
                     _log_api_call(pkwargs, resp)
 
                     completions.extend(resp)
@@ -535,15 +539,21 @@ class OpenAIHandler(BaseMLEngine):
                 ]
 
             completions = [
-                self.client.images.generate(**{'prompt': p, **kwargs, **api_args}).data[0]
+                client.images.generate(**{'prompt': p, **kwargs, **api_args}).data[0]
                 for p in prompts
             ]
             return _tidy(completions)
+        
 
+        client =self._get_client(
+            api_key=api_key,
+            base_url=args.get('api_base'),
+            org=args.get('api_organization')
+            )
         try:
             # check if simple completion works
             completion = _submit_completion(
-                model_name, prompts, api_key, api_args, args, df
+                model_name, prompts, api_args, args, df
             )
             return completion
         except Exception as e:
@@ -603,12 +613,17 @@ class OpenAIHandler(BaseMLEngine):
         # TODO: Update to use update() artifacts
 
         args = self.model_storage.json_get('args')
-
+        api_key = get_api_key('openai', args, self.engine_storage)
+        client= self._get_client(
+            api_key=api_key,
+            base_url=args.get('api_base'),
+            org=args.get('api_organization')
+            )
         if attribute == 'args':
             return pd.DataFrame(args.items(), columns=['key', 'value'])
         elif attribute == 'metadata':
             model_name = args.get('model_name', self.default_model)
-            meta = self.client.models.retrieve(model_name)
+            meta = client.models.retrieve(model_name)
             return pd.DataFrame(dict(meta).items(), columns=['key', 'value'])
         else:
             tables = ['args', 'metadata']
@@ -636,6 +651,11 @@ class OpenAIHandler(BaseMLEngine):
         using_args = args.pop('using') if 'using' in args else {}
         prompt_col = using_args.get('prompt_column', 'prompt')
         completion_col = using_args.get('completion_column', 'completion')
+        
+        api_key=get_api_key('openai', args, self.engine_storage)
+        base_url=self.model_storage.json_get('args').get('api_base')
+        org=self.model_storage.json_get('args').get('api_organization')
+        client= self._get_client(api_key=api_key,base_url=base_url,org=org)
 
         self._check_ft_cols(df, [prompt_col, completion_col])
 
@@ -660,7 +680,7 @@ class OpenAIHandler(BaseMLEngine):
         jsons = {k: None for k in file_names.keys()}
         for split, file_name in file_names.items():
             if os.path.isfile(os.path.join(temp_storage_path, file_name)):
-                jsons[split] = self.client.files.create(file=open(f"{temp_storage_path}/{file_name}", "rb"),
+                jsons[split] = client.files.create(file=open(f"{temp_storage_path}/{file_name}", "rb"),
                 purpose='fine-tune')
 
         if type(jsons['train']) is openai.types.FileObject:
@@ -683,15 +703,15 @@ class OpenAIHandler(BaseMLEngine):
 
         start_time = datetime.datetime.now()
 
-        ft_stats, result_file_id = self._ft_call(ft_params, args.get('hour_budget', 8))
+        ft_stats, result_file_id = self._ft_call(ft_params, client, args.get('hour_budget', 8))
         ft_model_name = ft_stats['fine_tuned_model']
 
         end_time = datetime.datetime.now()
         runtime = end_time - start_time
-        name_extension = self.client.files.retrieve(id=result_file_id).filename
+        name_extension = client.files.retrieve(id=result_file_id).filename
         result_path = f'{temp_storage_path}/ft_{finetune_time}_result_{name_extension}'
         with open(result_path, 'wb') as f:
-            f.write(self.client.files.download(id=result_file_id))
+            f.write(client.files.download(id=result_file_id))
 
         if '.csv' in name_extension:
             # legacy endpoint
@@ -782,13 +802,13 @@ class OpenAIHandler(BaseMLEngine):
         }
         return {**ft_params, **extra_params}
 
-    def _ft_call(self, ft_params, hour_budget):
+    def _ft_call(self, ft_params, client, hour_budget):
         """
         Separate method to account for both legacy and new endpoints.
         Currently, `OpenAIHandler` uses the legacy endpoint.
         Others, like `AnyscaleEndpointsHandler`, use the new endpoint.
         """
-        ft_result = self.client.fine_tuning.jobs.create(
+        ft_result = client.fine_tuning.jobs.create(
             **{k: v for k, v in ft_params.items() if v is not None}
         )
 
@@ -796,7 +816,7 @@ class OpenAIHandler(BaseMLEngine):
             hour_budget=hour_budget,
         )
         def _check_ft_status(model_id):
-            ft_retrieved = self.client.fine_tuning.jobs.retrieve(fine_tune_id=model_id)
+            ft_retrieved = client.fine_tuning.jobs.retrieve(fine_tune_id=model_id)
             if ft_retrieved.status in ('succeeded', 'failed', 'cancelled'):
                 return ft_retrieved
             else:
@@ -809,12 +829,12 @@ class OpenAIHandler(BaseMLEngine):
                 f"Fine-tuning did not complete successfully (status: {ft_stats.status}). Error message: {ft_stats.events[-1].message}"
             )  # noqa
 
-        result_file_id = self.client.fine_tuning.jobs.retrieve(fine_tune_id=ft_result.id).result_files[0]
+        result_file_id = client.fine_tuning.jobs.retrieve(fine_tune_id=ft_result.id).result_files[0]
         if hasattr(result_file_id, 'id'):
             result_file_id = result_file_id.id  # legacy endpoint
 
         return ft_stats, result_file_id
     
     @staticmethod
-    def get_client(api_key,base_url=OPENAI_API_BASE,org=None):
+    def _get_client(api_key,base_url=OPENAI_API_BASE,org=None):
         return OpenAI(api_key=api_key,base_url=base_url,organization=org)

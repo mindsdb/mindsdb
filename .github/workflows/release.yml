@@ -1,11 +1,7 @@
 name: MindsDB Releases
 
 on:
-  pull_request:
-    branches: [stable, staging]
-    paths-ignore:
-      - 'docs/**'
-      - 'README.md'
+  push:
 
 jobs:
   check-version:

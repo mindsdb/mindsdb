@@ -1,8 +1,8 @@
 name: MindsDB Releases
 
 on:
-  release:
-    types: [published]
+  pull_request:
+    branches: [stable, staging]
     paths-ignore:
       - 'docs/**'
       - 'README.md'
@@ -22,28 +22,6 @@ jobs:
     - name: Check Version
       run: |
         PYTHONPATH=./ python tests/scripts/check_version.py ${{ env.CI_REF_NAME }} ${{ github.event.release.prerelease }}
-
-  deploy_to_pypi:
-    runs-on: [self-hosted, dev]
-    needs: check-version
-    if: github.actor != 'mindsdbadmin'
-    steps:
-    - uses: actions/checkout@v3.5.3
-    - name: Set up Python
-      uses: actions/setup-python@v4.7.0
-      with:
-        python-version: ${{ vars.CI_PYTHON_VERSION }}
-    - name: Install dependencies
-      run: |
-        pip install -r requirements/requirements-dev.txt
-    - name: Build and publish
-      env:
-        TWINE_USERNAME:  __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-      run: |
-        # This uses the version string from __about__.py, which we checked matches the git tag above
-        python setup.py sdist
-        twine upload dist/*
 
   deploy_to_dockerhub:
       # Build our docker images based on our bake file

@@ -16,7 +16,7 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install "."
 # Install extras on top of the bare mindsdb
 FROM build as extras
 ARG EXTRAS
-RUN pip install "lightwood[all_extras] >= 23.11.1.0" "type-infer"
+RUN pip install lightwood==23.8.1.0 lightwood[audio]==23.8.1.0 lightwood[extra_ts]==23.8.1.0 lightwood[extra]==23.8.1.0 lightwood[image]==23.8.1.0 lightwood[xai]==23.8.1.0 "type-infer"
 RUN pip install .[huggingface,statsforecast_extra,neuralforecast_extra,timegpt,surrealdb,youtube,ignite,gmail,pgvector]
 
 

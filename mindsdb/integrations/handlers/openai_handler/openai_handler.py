@@ -702,14 +702,13 @@ class OpenAIHandler(BaseMLEngine):
         start_time = datetime.datetime.now()
 
         ft_stats, result_file_id = self._ft_call(ft_params, client, args.get('hour_budget', 8))
-        ft_model_name = ft_stats['fine_tuned_model']
+        ft_model_name = ft_stats.fine_tuned_model
 
         end_time = datetime.datetime.now()
         runtime = end_time - start_time
-        name_extension = client.files.retrieve(id=result_file_id).filename
+        name_extension = client.files.retrieve(file_id=result_file_id).filename
         result_path = f'{temp_storage_path}/ft_{finetune_time}_result_{name_extension}'
-        with open(result_path, 'wb') as f:
-            f.write(client.files.download(id=result_file_id))
+        client.files.content(file_id=result_file_id).stream_to_file(result_path)
 
         if '.csv' in name_extension:
             # legacy endpoint
@@ -718,7 +717,7 @@ class OpenAIHandler(BaseMLEngine):
                 train_stats = train_stats[
                     train_stats['validation_token_accuracy'].notnull()
                 ]
-            args['ft_api_info'] = ft_stats.to_dict_recursive()
+            args['ft_api_info'] = ft_stats.dict()
             args['ft_result_stats'] = train_stats.to_dict()
 
         elif '.json' in name_extension:

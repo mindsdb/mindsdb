@@ -16,7 +16,7 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install "."
 # Install extras on top of the bare mindsdb
 FROM build as extras
 ARG EXTRAS
-RUN --mount=type=cache,target=/root/.cache/pip if [ -n "$EXTRAS" ]; then pip install $EXTRAS; fi
+RUN pip install .[lightwood,huggingface,statsforecast_extra,neuralforecast_extra,timegpt,surrealdb,youtube,ignite,gmail,pgvector]
 
 
 # For use in docker-compose

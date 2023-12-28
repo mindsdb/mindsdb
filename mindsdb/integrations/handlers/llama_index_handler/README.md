@@ -8,7 +8,8 @@ LlamaIndex is a data framework for your LLM application. In this handler, we use
 - [x] LlamaIndex ML Handler
   - [x] [Support Web Page Reader](https://gpt-index.readthedocs.io/en/latest/examples/data_connectors/WebPageDemo.html)
   - [x] [Support Database Reader](https://gpt-index.readthedocs.io/en/latest/examples/data_connectors/DatabaseReaderDemo.html)
-
+  - [x] [Support Github Reader](https://llamahub.ai/l/youtube_transcript?from=loaders)
+  - [x] [Support YoutubeTranscript Reader](https://llamahub.ai/l/youtube_transcript?from=loaders)
 
 
 ## Example Usage

@@ -166,6 +166,8 @@ class OpenAIHandler(BaseMLEngine):
                     args.get(
                         'api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
                     ))
+        if pred_args.get('api_organization'):
+            args['api_organization'] = pred_args['api_organization']
         df = df.reset_index(drop=True)
 
         if pred_args.get('mode'):
@@ -543,10 +545,10 @@ class OpenAIHandler(BaseMLEngine):
             return _tidy(completions)
         
 
-        client =self._get_client(
+        client = self._get_client(
             api_key=api_key,
             base_url=args.get('api_base'),
-            org=args.get('api_organization')
+            org=args.pop('api_organization')
             )
         try:
             # check if simple completion works
@@ -556,7 +558,7 @@ class OpenAIHandler(BaseMLEngine):
             return completion
         except Exception as e:
             # else, we get the max batch size
-            if 'you can currently request up to at most a total of' in e:
+            if 'you can currently request up to at most a total of' in str(e):
                 pattern = 'a total of'
                 max_batch_size = int(e[e.find(pattern) + len(pattern) :].split(').')[0])
             else:
@@ -570,7 +572,6 @@ class OpenAIHandler(BaseMLEngine):
                 partial = _submit_completion(
                     model_name,
                     prompts[i * max_batch_size : (i + 1) * max_batch_size],
-                    api_key,
                     api_args,
                     args,
                     df,
@@ -592,7 +593,6 @@ class OpenAIHandler(BaseMLEngine):
                         _submit_completion,
                         model_name,
                         prompts[i * max_batch_size : (i + 1) * max_batch_size],
-                        api_key,
                         api_args,
                         args,
                         df,

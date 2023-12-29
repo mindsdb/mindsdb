@@ -184,6 +184,7 @@ class LangChainHandler(BaseMLEngine):
             model_kwargs['best_of'] = pred_args.get('best_of', None)
             model_kwargs['logit_bias'] = pred_args.get('logit_bias', None)
             model_kwargs['openai_api_key'] = get_api_key('openai', args, self.engine_storage)
+            model_kwargs['openai_organization'] = args.get('api_organization', None)
 
         model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
         return model_kwargs

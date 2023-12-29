@@ -17,7 +17,7 @@ redis >=5.0.0, < 6.0.0
 walrus==0.9.3
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
-mindsdb-sql ~= 0.8.0
+mindsdb-sql ~= 0.9.0
 mindsdb-evaluator >= 0.0.7, < 0.1.0
 checksumdir >= 1.2.0
 duckdb == 0.9.1
@@ -33,3 +33,6 @@ python-dateutil
 gunicorn
 scikit-learn==1.3.2
 protobuf==3.20.3
+hierarchicalforecast~=0.4.0
+langchain==0.0.347
+google-auth-oauthlib

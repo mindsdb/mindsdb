@@ -48,7 +48,7 @@ target "devel" {
 target "cloud" {
   inherits = ["_common"]
   args = {
-    EXTRAS = ".[lightwood,huggingface,statsforecast_extra,neuralforecast_extra]"
+    EXTRAS = ".[lightwood,huggingface,statsforecast_extra,neuralforecast_extra,timegpt,surrealdb,youtube,ignite,gmail,pgvector]"
   }
   tags = ["${REGISTRY}/${IMAGE}:${VERSION}-cloud", "${REGISTRY}/${IMAGE}:cloud"]
 }

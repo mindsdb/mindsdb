@@ -1,2 +1,1 @@
 auto-sklearn
-type_infer==0.0.17

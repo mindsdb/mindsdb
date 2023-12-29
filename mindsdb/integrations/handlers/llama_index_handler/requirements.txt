@@ -1,2 +1,2 @@
 llama-index==0.8.57
-openai == 0.28.1
+openai==1.6.1

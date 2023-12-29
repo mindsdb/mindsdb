@@ -162,7 +162,7 @@ class OpenAIHandler(BaseMLEngine):
 
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
-        args['base_url']= pred_args.get(
+        args['api_base'] = pred_args.get(
                     'api_base',
                     args.get(
                         'api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
@@ -549,7 +549,7 @@ class OpenAIHandler(BaseMLEngine):
         client = self._get_client(
             api_key=api_key,
             base_url=args.get('api_base'),
-            org=args.pop('api_organization')
+            org=args.pop('api_organization') if 'api_organization' in args else None,
             )
         try:
             # check if simple completion works
@@ -652,9 +652,9 @@ class OpenAIHandler(BaseMLEngine):
         completion_col = using_args.get('completion_column', 'completion')
         
         api_key = get_api_key('openai', args, self.engine_storage)
-        base_url = using_args.get('api_base')
+        api_base = using_args.get('api_base')
         org = using_args.get('api_organization')
-        client = self._get_client(api_key=api_key, base_url=base_url, org=org)
+        client = self._get_client(api_key=api_key, base_url=api_base, org=org)
 
         self._check_ft_cols(df, [prompt_col, completion_col])
 
@@ -833,5 +833,5 @@ class OpenAIHandler(BaseMLEngine):
         return ft_stats, result_file_id
     
     @staticmethod
-    def _get_client(api_key,base_url=OPENAI_API_BASE,org=None):
-        return OpenAI(api_key=api_key,base_url=base_url,organization=org)
+    def _get_client(api_key, base_url=OPENAI_API_BASE, org=None):
+        return OpenAI(api_key=api_key, base_url=base_url, organization=org)

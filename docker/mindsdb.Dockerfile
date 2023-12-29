@@ -16,8 +16,9 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install "."
 # Install extras on top of the bare mindsdb
 FROM build as extras
 ARG EXTRAS
-RUN pip install lightwood==23.11.1.0 lightwood[audio]==23.11.1.0 lightwood[extra_ts]==23.11.1.0 lightwood[extra]==23.11.1.0 lightwood[image]==23.11.1.0 lightwood[xai]==23.11.1.0 type_infer==0.0.17 dataprep_ml==0.0.21
+RUN pip install lightwood==23.11.1.0 lightwood[audio]==23.11.1.0 lightwood[extra_ts]==23.11.1.0 lightwood[extra]==23.11.1.0 lightwood[image]==23.11.1.0 lightwood[xai]==23.11.1.0 type_infer==0.0.17
 RUN pip install .[huggingface,statsforecast_extra,neuralforecast_extra,timegpt,surrealdb,youtube,ignite,gmail,pgvector]
+RUN pip install dataprep_ml==0.0.21
 
 
 # For use in docker-compose

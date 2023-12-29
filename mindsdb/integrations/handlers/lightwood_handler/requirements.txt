@@ -5,4 +5,3 @@ lightwood[extra]==23.11.1.0
 lightwood[image]==23.11.1.0
 lightwood[xai]==23.11.1.0
 type_infer==0.0.17
-dataprep_ml==0.0.21

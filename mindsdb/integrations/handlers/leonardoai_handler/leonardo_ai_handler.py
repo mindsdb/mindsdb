@@ -248,11 +248,14 @@ class LeonardoAIHandler(BaseMLEngine):
     
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         args = self.model_storage.json_get('args')
-        model, target = args['model'], args['target']
+        model, target = args['using']['model'], args['target']
         prompt_template = args.get('prompt_template', 'Generate a picture of {{{{text}}}}')
         
         if attribute == "features":
             return pd.DataFrame([[target, prompt_template]], columns=['target_column', 'mindsdb_prompt_template'])
-        
+        elif attribute == "metadata":
+            api_key = self._get_leonardo_api_key(args, self.engine_storage)
+            return pd.DataFrame([[target, api_key, model]], columns=['target', 'api_key', 'model_name'])
         else:
-            pass
+            tables = ['args', 'api_key']
+            return pd.DataFrame(tables, columns=['tables'])

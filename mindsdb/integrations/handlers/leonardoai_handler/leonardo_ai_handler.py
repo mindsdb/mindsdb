@@ -1,6 +1,4 @@
 import os
-import json
-import contextlib
 from pandas.core.api import DataFrame as DataFrame
 import requests
 import time
@@ -38,53 +36,32 @@ class LeonardoAIHandler(BaseMLEngine):
             
     def create(self, target: str, args=None, **kwargs):
         
-        # args = args['using']
-        # args['target'] = target
+        args['target'] = target
         
-        print("args: ", args)
         if "using" not in args:
             raise Exception(
                 "Leornardo Engine requires a USING clause!"
             )
-    
-        # elif args["using"]["model"] not in self._get_platform_model(args):
-        #     raise Exception("Leornardo Engine requires a valid model")
-        print("ARGS B: ", args)
+
         self.model_storage.json_set("args", args)
         
         available_models = self._get_platform_model(args)
-        print("ARGS: ", args)
         
         if not args['using']['model']:
             args['using']['model'] = self.default_model
         elif args['using']['model'] not in available_models:
             raise Exception(f"Invalid model name. Please use a valid Model")
-        
-    @staticmethod
-    @contextlib.contextmanager
-    def create_validation(self, args=None, **kwargs):
-        if 'using' not in args:
-            raise Exception("LangChain engine requires a USING clause!")
-        else:
-            args = args['using']
     
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None, **kwargs) -> pd.DataFrame:
         
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get("args")
         api_key = self._get_leonardo_api_key(args, self.engine_storage)
-        print("PRED_ARGS: ", pred_args)
         prompt_template = pred_args.get('prompt_template', args.get('prompt_template', 'Generate a picture of {{{{text}}}}'))
         
         # prepare prompts
         prompts, empty_prompt_id = get_completed_prompts(prompt_template, df)
         df['__mdb_prompt'] = prompts
-        print(args.values())
-        
-        print("PROMPTS: ", prompts)
-        
-        # input_column = args["using"]["text"]
-        # print("Testing print: ", input_column)
         
         self.connection = requests.get(
             "https://cloud.leonardo.ai/api/rest/v1/me", 
@@ -93,8 +70,6 @@ class LeonardoAIHandler(BaseMLEngine):
                 "authorization": f"Bearer {api_key}"
             }
         )
-        
-        print(self.connection.json)
         
         result_df = pd.DataFrame(self.predict_answer(prompts))
         
@@ -110,7 +85,6 @@ class LeonardoAIHandler(BaseMLEngine):
         # result_df["predictions"] = df[input_column].apply(self.predict_answer)
         
         # result_df = result_df.rename(columns={"predictions": args["target"]})
-        print(result_df)
         return result_df
         
     def _get_leonardo_api_key(self, args, engine_storage:HandlerStorage, strict=True):
@@ -158,7 +132,6 @@ class LeonardoAIHandler(BaseMLEngine):
                 "authorization": f"Bearer {api_key}"
             }
         )
-        print(self.connection.json())
         
         models = self.connection.json()
         
@@ -169,9 +142,7 @@ class LeonardoAIHandler(BaseMLEngine):
     def predict_answer(self, prompts, **kwargs):
         
         args = self.model_storage.json_get('args')
-        print(f"Args: {args}")
         api_key = self._get_leonardo_api_key(args, self.engine_storage)
-        print(f"API key: {api_key}")
         generation_id = ''
         model = '6bef9f1b-29cb-40c7-b9df-32b51c1f67d3',
         # prompt = 'Oil Painting of a dog' # text
@@ -196,13 +167,9 @@ class LeonardoAIHandler(BaseMLEngine):
             "width": 512
         }
         
-        print(generation_payload)
-        
         # Make a POST request to generate the image
         response_generation = requests.post(generation_url, json=generation_payload, headers=post_headers)
-        print(response_generation.text)
         generation_data = response_generation.json()
-        print(generation_data)
         
         # Wait for 5 seconds
         
@@ -222,27 +189,18 @@ class LeonardoAIHandler(BaseMLEngine):
                 result += i
         
         generation_id = generation_data['sdGenerationJob']['generationId']
-        print(generation_id)
         retrieve_url = f"https://cloud.leonardo.ai/api/rest/v1/generations/{generation_id}"
-        print(retrieve_url)
         response_retrieve = requests.get(retrieve_url, headers=get_headers)
-        print(response_retrieve.json())
         retrieve_data = response_retrieve.json()
-        print(retrieve_data)
-        print(response_retrieve.raw)
-        print(response_retrieve.text)
         
         generated_images = retrieve_data["generations_by_pk"]["generated_images"]
-        print(generated_images)
         image_urls = [image["url"] for image in generated_images]
         
         url_dicts = []
         
         for url in image_urls:
             url_dicts.append({'url': url})
-            print(url)
             
-        print("\nDict : ", url_dicts)
         img_urls = pd.DataFrame(url_dicts, columns=['url'])
         return img_urls
     

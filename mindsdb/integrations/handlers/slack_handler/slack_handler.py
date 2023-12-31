@@ -372,11 +372,11 @@ class SlackThreadsTable(SlackChannelsTable):
                     raise NotImplementedError(f'Unknown op: {op}')
 
                 
-            elif arg1 == 'channel':
-                if op == '=':
-                    params['channel'] = arg2
+            if arg1 == 'channel':
+                if arg2 in channel_ids:
+                    params['channel'] = channel_ids[arg2]
                 else:
-                    raise NotImplementedError(f'Unknown op: {op}')
+                    raise ValueError(f"Channel '{arg2}' not found")
                 
             elif arg1 == 'limit':
                 if op == '=': 
@@ -497,8 +497,8 @@ class SlackThreadsTable(SlackChannelsTable):
             params = dict(zip(columns, row))
 
             # check if required parameters are provided
-            if 'channel' not in params or 'text' not in params:
-                raise Exception("To insert data into Slack, you need to provide the 'channel' and 'text' parameters.")
+            if 'channel' not in params or 'text' not in params or 'ts' not in params:
+                raise Exception("To insert data into Slack, you need to provide the 'channel' and 'text' and 'ts' parameters.")
 
             # post message to Slack channel
             try:

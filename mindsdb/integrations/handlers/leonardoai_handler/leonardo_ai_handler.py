@@ -16,7 +16,7 @@ logger = log.getLogger(__name__)
 LEONARDO_API_BASE = 'https://cloud.leonardo.ai/api/rest/v1'
 
 
-class LeonardoAIHandler(BaseMLEngine):    
+class LeonardoAIHandler(BaseMLEngine):
     """
     This integration seamlessly combines MindsDB and Leonardo AI to create a powerful
     AI-driven solution for creative content generation.

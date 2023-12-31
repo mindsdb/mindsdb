@@ -1,1 +1,1 @@
-lightwood==23.12.4.0
+lightwood==23.11.1.0

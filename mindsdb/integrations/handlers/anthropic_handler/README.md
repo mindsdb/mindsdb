@@ -26,7 +26,7 @@ USING
   engine = 'anthropic',
   api_key = 'your_api_key',
   max_tokens = 300,
-  model = 'claude-2'
+  model = 'claude-2.1'
 ~~~
 
 ~~~ sql

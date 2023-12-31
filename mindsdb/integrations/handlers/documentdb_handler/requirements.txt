@@ -1,2 +1,1 @@
-pymongo[srv] >= 4.1.1
-certifi
+-r mindsdb/integrations/handlers/mongodb_handler/requirements.txt

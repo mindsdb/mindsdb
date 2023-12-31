@@ -1,7 +1,6 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 from .__about__ import __version__ as version, __description__ as description
-from mindsdb.utilities.log import get_log
-log = get_log()
+
 try:
     from .jira_handler import JiraHandler as Handler
     import_error = None

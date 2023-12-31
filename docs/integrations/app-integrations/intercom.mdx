@@ -1,0 +1,68 @@
+---
+title: Intercom
+sidebarTitle: Intercom
+---
+
+[Intercom](https://intercom.com) is a software company that provides customer messaging and engagement tools for businesses. They offer products and services for customer support, marketing, and sales, allowing companies to communicate with their customers through various channels like chat, email, and more.
+
+## Connection
+
+To get started with the Intercom API, you need to initialize the API handler with the required access token for authentication. You can do this as follows:
+
+- `access_token`: Your Intercom access token for authentication.
+
+<Tip>
+Check out [this guide](https://developers.intercom.com/docs/build-an-integration/learn-more/authentication/) on how to get the intercom access token in order to access Intercom data.
+</Tip>
+
+To create a database using the Intercom engine, you can use a SQL-like syntax as shown below:
+
+```sql
+CREATE DATABASE myintercom
+WITH
+  ENGINE = 'intercom',
+  PARAMETERS = {
+    "access_token" : "your-intercom-access-token"
+  };
+```
+
+## Usage
+
+You can retrieve data from Intercom using a `SELECT` statement. For example:
+
+```sql
+SELECT *
+FROM myintercom.articles;
+```
+
+You can filter data based on specific criteria using a `WHERE` clause. Here's an example:
+
+```sql
+SELECT *
+FROM myintercom.articles
+WHERE id = <article-id>;
+```
+
+To create a new article in Intercom, you can use the `INSERT` statement. Here's an example:
+
+```sql
+INSERT INTO myintercom.articles (title, description, body, author_id, state, parent_id, parent_type)
+VALUES (
+  'Thanks for everything',
+  'Description of the Article',
+  'Body of the Article',
+  6840572,
+  'published',
+  6801839,
+  'collection'
+);
+```
+
+You can update existing records in Intercom using the `UPDATE` statement. For instance:
+
+```sql
+UPDATE myintercom.articles
+SET title = 'Christmas is here!',
+    body = '<p>New gifts in store for the jolly season</p>'
+WHERE id = <article-id>;
+```

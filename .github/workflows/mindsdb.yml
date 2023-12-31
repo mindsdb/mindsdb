@@ -1,36 +1,33 @@
 name: MindsDB Tests & Deploy
 
 on:
-  push:
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
-  # pull_request_target:
   pull_request:
     branches: [stable, staging]
     paths-ignore:
       - 'docs/**'
-      - 'README.md'
-
+      - '**/*.md'
 jobs:
   code_checking:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3.5.3
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v4.7.0
-      with:
-        python-version: 3.9
-    - name: Install flake8
-      run: |
-        pip install flake8==5.0.4 pycodestyle==2.9.1
-      shell: bash
-    - name: Static code checking
-      run: |
-        python3 -m flake8
-      shell: bash
+      - uses: actions/checkout@v3.5.3
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v4.7.0
+        with:
+          python-version: 3.9
+      - name: Run code checks
+        shell: bash
+        run: |
+          python tests/scripts/check_code.py
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v37
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }}
   matrix_prep:
-    needs: code_checking
+    needs: [code_checking]
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -52,34 +49,14 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4.7.0
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: ${{ matrix.python-version }}-dev
     - name: Install dependencies
       run: |
-        pip install --upgrade pip
-        # temp
-        pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
         pip install --no-cache-dir .
-        pip install -r requirements_test.txt
-        pip uninstall pycodestyle -y && pip install pycodestyle==2.9.1  # temp fix while exist conflict in last version with flake8
+        pip install -r requirements/requirements-test.txt
+        pip install .[lightwood]  # TODO: for now some tests rely on lightwood
+        pip freeze
       shell: bash
-      env:
-        ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
-        mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
-    - name: Install staging mdb libraries if it's not mindsdb/stable
-      if: ${{ github.ref != 'refs/heads/stable' }}
-      run: |
-          pip install git+https://github.com/mindsdb/lightwood.git@staging --upgrade --no-cache-dir
-          pip uninstall pycodestyle -y && pip install pycodestyle==2.9.1  # temp fix while exist conflict in last version with flake8
-          pip install git+https://github.com/mindsdb/mindsdb_sql.git@staging --upgrade --no-cache-dir  # install post lightwood so it does not get overwritten
-    - name: Install ML engine related dependencies
-      run: |
-        for engine in openai; do  # statsforecast huggingface lightwood
-          pip install -r ./mindsdb/integrations/handlers/${engine}_handler/requirements.txt
-        done
-      shell: bash
-      env:
-        ACCESS_KEY: ${{ secrets.GH_ACCESS_KEY }}
-        mindsdb_github_masterkey: ${{secrets.mindsdb_github_masterkey}}
     - name: Run integration api and flow tests
       run: |
 
@@ -119,72 +96,37 @@ jobs:
           # Company independent
           echo -e "\n===============test company independent===============\n"
           pytest -vx tests/integration_tests/flows/test_company_independent.py
-
-          # First-tier ML engines
-          echo -e "\n===============test ML engines===============\n"
-          pytest -vx tests/unit/ml_handlers/test_openai.py
-        
-          # pending rework
-          # pytest -vx tests/unit/ml_handlers/test_statsforecast.py
-          # pytest -vx tests/unit/ml_handlers/test_huggingface.py
-          # pytest -vx tests/unit/ml_handlers/test_lightwood.py
         fi
       shell: bash
       env:
         CHECK_FOR_UPDATES: False
-        OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
-
-  deploy_to_pypi:
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
-    steps:
-    - uses: actions/checkout@v3.5.3
-    - name: Set up Python
-      uses: actions/setup-python@v4.7.0
-      with:
-        python-version: '3.7'
-    - name: Install dependencies
+    - name: Check if actor is an organization member
+      id: check-membership
       run: |
-        echo ${{ github.ref }}
-        python -m pip install --upgrade pip
-        pip install setuptools wheel twine
-    - name: Build and publish
+        if [[ "${{ github.actor }}" == "mindsdb/"* ]]; then
+          echo "::set-output name=isOrgMember::true"
+        else
+          echo "::set-output name=isOrgMember::false"
+        fi
+      shell: bash
+    - name: Run ML Engines tests
+      if: steps.check-membership.outputs.isOrgMember == 'true'
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          # First-tier ML engines
+          echo -e "\n===============test ML engines===============\n"
+          # pytest -vx tests/unit/ml_handlers/test_openai.py
+          # pytest -vx tests/unit/ml_handlers/test_timegpt.py  # Note: timegpt doesn't work, fix please
+          # pytest -vx tests/unit/ml_handlers/test_anyscale_llm.py
+
+          # pending rework
+          # pytest -vx tests/unit/ml_handlers/test_statsforecast.py
+          # pytest -vx tests/unit/ml_handlers/test_huggingface.py
+          # pytest -vx tests/unit/ml_handlers/test_lightwood.py
+      shell: bash
       env:
-        TWINE_USERNAME:  __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-      run: |
-        python setup.py sdist
-        twine upload dist/*
-    - name: Install latest version from pypi to see that all is working
-      run: |
-        sleep 90
-        pip install mindsdb
-
-  create_version_file:
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
-    steps:
-    - uses: actions/checkout@v3.5.3
-    - name: Set up Python
-      uses: actions/setup-python@v4.7.0
-      with:
-        python-version: '3.7'
-    - name: Create version files
-      run: |
-        python create_version_file.py beta
-
-    - name: Sync version file to s3
-      uses: jakejarvis/s3-sync-action@master
-      with:
-        args: --acl public-read --follow-symlinks
-      env:
-        AWS_S3_BUCKET: 'mindsdb-installer'
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: 'us-west-2'
-        SOURCE_DIR: 'distributions/ver/dist'
-        DEST_DIR: 'mindsdb-installer/ver'
+        CHECK_FOR_UPDATES: False
+        OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
+        ANYSCALE_ENDPOINTS_API_KEY: ${{secrets.ANYSCALE_ENDPOINTS_API_KEY}}

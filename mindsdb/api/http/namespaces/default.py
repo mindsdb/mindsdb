@@ -8,10 +8,10 @@ from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.namespaces.configs.default import ns_conf
 from mindsdb.api.http.utils import http_error
 from mindsdb.utilities.config import Config
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 
-log = get_log('http')
+logger = log.getLogger(__name__)
 
 
 def check_auth() -> bool:
@@ -106,9 +106,9 @@ class StatusRoute(Resource):
             'mindsdb_version': fields.String(description='Current version of mindsdb'),
             'auth': fields.Nested(
                 ns_conf.model('response_status_auth', {
-                    'confirmed': fields.Boolean(description='is current user autentificated'),
-                    'required': fields.Boolean(description='is autentificated required'),
-                    'provider': fields.Boolean(description='current autentification provider: local of 3d-party')
+                    'confirmed': fields.Boolean(description='is current user authenticated'),
+                    'required': fields.Boolean(description='is authenticated required'),
+                    'provider': fields.Boolean(description='current authenticated provider: local of 3d-party')
                 })
             )
         })

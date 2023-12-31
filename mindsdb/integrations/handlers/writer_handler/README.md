@@ -34,10 +34,46 @@ No, this integration doesn't support DESCRIBE syntax.
 No, fine-tuning is not supported.
 
 ## Are there any other noteworthy aspects to this handler?
-The handler has a number of default parameters set, the user only needs to pass  `prompt_template`, `writer_api_key` along with `writer_org_id` or alternatively with `base_url`.
+The handler has a number of default parameters set, the user only needs to pass  `vector_store_folder_name`, `writer_api_key` along with `writer_org_id` or alternatively with `base_url`.
 
 The other parameters have default values
 
+Supported query parameters for USING syntax are as follows:
+
+## For the Writer LLM API
+
+- `prompt_template` - this is the template that is used to generate the prompt. If not provided, the default is `DEFAULT_QA_PROMPT_TEMPLATE` (see `settings.py` in `rag_handler` for more details)
+- `writer_api_key` - this is the API key that is used to authenticate with the Writer LLM API
+- `writer_org_id` - this is the organization ID that is used to authenticate with the Writer LLM API
+- `base_url` - this is the base URL that is used to authenticate with the Writer LLM API, optional, if not provided uses org_id and model_id
+- `model_id` - this is the model ID that is used to authenticate with the Writer LLM API
+- `max_tokens` - this is the maximum number of tokens that generated output will be, the default is 1024
+- `temperature` - this is the temperature that is used to generate the output, the default is 0.0
+- `top_p` - this is the top p that is used to generate the output, the default is 1
+- `stop` - Sequences when completion generation will stop, the default is an empty list
+- `best_of` - this is the number of best of that are used to generate the output, the default is 5
+- `verbose` - this is a boolean that determines if the output is verbose, the default is False
+
+## For the Vector Store and Embeddings Model
+
+- `chunk_size` - this is the number of rows that are ingested at a time, the default is 500
+- `chunk_overlap` - this is the number of rows that are overlapped between chunks, the default is 50
+- `generation_evaluation_metrics` - this is a list of metrics that are used to evaluate the generation task, the default is all of the available metrics
+- `retrieval_evaluation_metrics` - this is a list of metrics that are used to evaluate the retrieval task, the default is all of the available metrics
+- `evaluation_type` - this is the type of evaluation that is run, the default is e2e, this can be set to either `generation` or `retrieval`
+- `n_rows_evaluation` - this is the number of rows that are used to evaluate the model, the default is None, which means all rows are used
+- `retriever_match_threshold` - this is the threshold that is used to determine if the retriever has found a match, the default is 0.7
+- `generator_match_threshold` - this is the threshold that is used to determine if the generator has found a match, the default is 0.8
+- `evaluate_dataset` - this is the dataset that is used to evaluate the model, the default is 'squad_v2_val_100_sample'
+- `run_embeddings` - this is a boolean that determines if the embeddings are run, the default is True
+- `top_k` - this is the number of results that are returned from the retriever, the default is 4
+- `embeddings_model_name` - this is the name of the sentence transformer model that is used to generate the embeddings, the default is `BAAI/bge-base-en`
+- `context_columns` - this is a list of columns that are used to generate the context, the default is None, which means all columns are used
+- `vector_store_name` - this is the name of the vector store that is used to store the embeddings, the default is `chroma`
+- `collection_name` - this is the name of the collection that is used to store the embeddings, the default is `collection`
+- `summarize_context` - this is a boolean that determines if the context is summarized, the default is True
+- `summarization_prompt_template` - this is the template that is used to summarize the context, the default is `SUMMARIZATION_PROMPT_TEMPLATE` (see settings.py in rag_handler for more details)
+- `vector_store_folder_name` - this is the name of the folder that is used to store the vector store - it must be specified by user
 
 ## Any directions for future work in subsequent versions of the handler?
 tbc
@@ -56,13 +92,7 @@ USING
    engine="writer",
    writer_org_id="",
    writer_api_key="",
-   embeddings_model_name="sentence-transformers/all-mpnet-base-v2",
-   vector_store_folder_name="writer_demo_vector_store",
-   prompt_template="Use the following pieces of context to answer the question at the end. If you do not know the answer,
-just say that you do not know, do not try to make up an answer.
-Context: {context}
-Question: {question}
-Helpful Answer:"; --this can be any sentence transformer that is compatible with Hugging Face sentence_transformer library, if none provided defaults to "sentence-transformers/all-mpnet-base-v2"
+   vector_store_folder_name="writer_demo_vector_store";
 
 -- Ask a question on your data using Writer LLM API
 SELECT *
@@ -76,18 +106,12 @@ WHERE question='what product is best for treating a cold?';
 CREATE MODEL writer_demo_evaluate
 PREDICT answer
 USING
-   engine="writer",
-     writer_org_id="",
-writer_api_key="",
-   embeddings_model_name="sentence-transformers/all-mpnet-base-v2",
-evaluate_dataset='squad_v2_val_100_sample',
-n_rows_evaluation=10,
-vector_store_folder_name="writer_demo_eval_vector_store",
-prompt_template="Use the following pieces of context to answer the question at the end. If you do not know the answer,
-just say that you do not know, do not try to make up an answer.
-Context: {context}
-Question: {question}
-Helpful Answer:";
+    engine="writer",
+    writer_org_id="",
+    writer_api_key="",
+    evaluate_dataset='squad_v2_val_100_sample',
+    n_rows_evaluation=10,
+    vector_store_folder_name="writer_demo_eval_vector_store";
 
 -- Evaluate model
 select * from writer_demo_evaluate where run_evaluation = True;

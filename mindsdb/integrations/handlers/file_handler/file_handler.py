@@ -15,12 +15,17 @@ from charset_normalizer import from_bytes
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import DropTables, Select
 from mindsdb_sql.parser.ast.base import ASTNode
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.document_loaders import TextLoader, PyPDFLoader
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 DEFAULT_CHUNK_SIZE = 200
 DEFAULT_CHUNK_OVERLAP = 50
@@ -142,29 +147,33 @@ class FileHandler(DatabaseHandler):
             df = pd.json_normalize(json_doc, max_level=0)
 
         elif fmt == "txt" or fmt == "pdf":
-            from langchain.text_splitter import RecursiveCharacterTextSplitter
-
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=chunk_size, chunk_overlap=chunk_overlap
             )
 
             if fmt == "txt":
-                from langchain.document_loaders import TextLoader
-
                 loader = TextLoader(file_path, encoding="utf8")
                 docs = text_splitter.split_documents(loader.load())
-                df = pd.DataFrame([{"text": doc.page_content} for doc in docs])
+                df = pd.DataFrame(
+                    [
+                        {"content": doc.page_content, "metadata": doc.metadata}
+                        for doc in docs
+                    ]
+                )
 
             elif fmt == "pdf":
-                from langchain.document_loaders import UnstructuredPDFLoader
-
-                loader = UnstructuredPDFLoader(file_path)
-                docs = text_splitter.split_documents(loader.load())
-                df = pd.DataFrame([{"text": doc.page_content} for doc in docs])
+                loader = PyPDFLoader(file_path)
+                docs = text_splitter.split_documents(loader.load_and_split())
+                df = pd.DataFrame(
+                    [
+                        {"content": doc.page_content, "metadata": doc.metadata}
+                        for doc in docs
+                    ]
+                )
 
         else:
             raise ValueError(
-                "Could not load file into any format, supported formats are csv, json, xls, xlsx"
+                "Could not load file into any format, supported formats are csv, json, xls, xlsx, pdf, txt"
             )
 
         header = df.columns.values.tolist()
@@ -223,7 +232,14 @@ class FileHandler(DatabaseHandler):
         data_str.seek(0)
         try:
             csv.Sniffer().sniff(sample)
-            return True
+            # Avoid a false-positive for json files
+            try:
+                json.loads(data_str.read())
+                data_str.seek(0)
+                return False
+            except json.decoder.JSONDecodeError:
+                data_str.seek(0)
+                return True
         except Exception:
             return False
 
@@ -247,7 +263,7 @@ class FileHandler(DatabaseHandler):
             error = "Could not load file, possible exception : {exception}".format(
                 exception=e
             )
-            print(error)
+            logger.error(error)
             raise ValueError(error)
 
         suffix = Path(file_path).suffix.strip(".").lower()
@@ -300,8 +316,8 @@ class FileHandler(DatabaseHandler):
 
                     data_str = StringIO(byte_str.decode(encoding, errors))
         except Exception:
-            print(traceback.format_exc())
-            print("Could not load into string")
+            logger.error(traceback.format_exc())
+            logger.error("Could not load into string")
 
         if suffix not in ("csv", "json"):
             if FileHandler.is_it_json(data_str):
@@ -318,8 +334,8 @@ class FileHandler(DatabaseHandler):
                 if dialect:
                     return data_str, "csv", dialect
             except Exception:
-                print("Could not detect format for this file")
-                print(traceback.format_exc())
+                logger.error("Could not detect format for this file")
+                logger.error(traceback.format_exc())
 
         data_str.seek(0)
         data.seek(0)
@@ -375,8 +391,8 @@ class FileHandler(DatabaseHandler):
             else:
                 raise Exception(f"Response status code is {r.status_code}")
         except Exception as e:
-            print(f"Error during getting {url}")
-            print(e)
+            logger.error(f"Error during getting {url}")
+            logger.error(e)
             raise
         return os.path.join(temp_dir, "file")
 

@@ -39,8 +39,10 @@ These are the optional parameters:
 - `yotpo_app_key`: token needed to access customer reviews via the Yotpo Product Reviews app.
 - `yotpo_access_token`: token needed to access customer reviews via the Yotpo Product Reviews app.
 
-If you want to query customer reviews, use the [Yotpo Product Reviews](https://apps.shopify.com/yotpo-social-reviews) app available in Shopify. To generate `yotpo_app_key` and `yotpo_access_token` keys, refer to [this](https://support.yotpo.com/docs/finding-your-yotpo-app-key-and-secret-key) and [this](https://apidocs.yotpo.com/reference/yotpo-authentication).
-
+If you want to query customer reviews, use the [Yotpo Product Reviews](https://apps.shopify.com/yotpo-social-reviews) app available in Shopify. Here are the steps to follow:
+1. Install the [Yotpo Product Reviews](https://apps.shopify.com/yotpo-social-reviews) app for your Shopify store.
+2. Generate `yotpo_app_key` following [this instruction](https://support.yotpo.com/docs/finding-your-yotpo-app-key-and-secret-key) for retrieving your app key. Learn more about [Yotpo authentication here](https://apidocs.yotpo.com/reference/yotpo-authentication).
+3. Generate `yotpo_access_token` following [this instruction](https://develop.yotpo.com/reference/generate-a-token).
 Watch this video on creating a Shopify access token [here](https://www.youtube.com/watch?v=4f_aiC5oTNc&t=302s).
 
 ## Implemented Features
@@ -51,19 +53,26 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+  - [x] Support UPDATE
+  - [x] Support Insert
+  - [x] Support DELETE
 - [x] Shopify Customers Table for a given Store
   - [x] Support SELECT
     - [x] Support LIMIT
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+  - [x] Support UPDATE
   - [x] Support INSERT
+  - [x] Support DELETE
+  - [x] Support WHERE
 - [x] Shopify Orders Table for a given Store
   - [x] Support SELECT
     - [x] Support LIMIT
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+  - [x] Support DELETE
 - [x] Shopify Customer Reviews Table for a given Store
   - [x] Support SELECT
     - [x] Support LIMIT
@@ -88,6 +97,12 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+- [x] Shopify Sales Channel for a given Store
+  - [x] Support SELECT
+    - [x] Support LIMIT
+    - [x] Support WHERE
+    - [x] Support ORDER BY
+    - [x] Support column selection
 
 ## TODO
 
@@ -96,7 +111,6 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
 - [ ] Shopify Payments table
 - [ ] Shopify Inventory table
 - [ ] Shopify Discounts table
-- [ ] Shopify Sales Channels table
 - [ ] Many more
 
 ## Example Usage
@@ -138,7 +152,7 @@ ORDER BY id
 LIMIT 5
 ~~~~
 
-It is also possible to INSERT data into your Shopify store. At the moment, only the `customers` table supports INSERT:
+It is also possible to INSERT data into your Shopify store. At the moment, only the `customers` and `products` table supports INSERT:
 
 ~~~~sql
 INSERT INTO shopify_datasource.customers(first_name, last_name, email)
@@ -147,6 +161,21 @@ VALUES
 ~~~~
 
 A limited number of columns are supported for INSERT: 'first_name', 'last_name', 'email', 'phone', 'tags' and 'currency'. Of these either 'first_name', 'last_name', 'email' or 'phone' must be provided. 
+
+It is also possible to DELETE data into your Shopify store. At the moment, only the `customers` and `products` table supports DELETE:
+
+~~~~sql
+DELETE FROM shopify_datasource.customers
+WHERE first_name = 'John'
+AND last_name = 'Doe'
+AND email = 'john.doe@example.com';
+~~~~
+
+~~~~sql
+DELETE FROM shopify_datasource.orders
+WHERE id=5632671580477;
+~~~~
+
 
 Inventory details for the products can be queried as follows:
 
@@ -177,4 +206,11 @@ FROM shopify_datasource.customer_reviews
 WHERE score=5
 ORDER BY id
 LIMIT 5
+~~~~
+
+For `customers` table, DELETE is supported too. You can delete the customers as follows:
+
+~~~~sql
+DELETE FROM shopify_datasource.customers
+WHERE verified_email = false;
 ~~~~

@@ -3,31 +3,30 @@ from typing import Dict, Optional
 import pandas as pd
 
 from mindsdb.integrations.handlers.writer_handler.evaluate import WriterEvaluator
-from mindsdb.integrations.handlers.writer_handler.ingest import Ingestor
+from mindsdb.integrations.handlers.writer_handler.ingest import WriterIngestor
 from mindsdb.integrations.handlers.writer_handler.rag import QuestionAnswerer
 from mindsdb.integrations.handlers.writer_handler.settings import (
     DEFAULT_EMBEDDINGS_MODEL,
     EVAL_COLUMN_NAMES,
-    USER_DEFINED_WRITER_LLM_PARAMS,
     WriterHandlerParameters,
+    WriterLLMParameters,
 )
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.datasets.dataset import (
     load_dataset,
     validate_dataframe,
 )
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 # these require no additional arguments
 
-logger = get_log(logger_name=__name__)
-
+logger = log.getLogger(__name__)
 
 def extract_llm_params(args):
     """extract llm params from input query args"""
 
     llm_params = {}
-    for param in USER_DEFINED_WRITER_LLM_PARAMS:
+    for param in WriterLLMParameters.__fields__:
         if param in args:
             llm_params[param] = args.pop(param)
 
@@ -69,12 +68,11 @@ class WriterHandler(BaseMLEngine):
         """
 
         input_args = extract_llm_params(args["using"])
-        # if user doesn't provide a dataset key, use the input in FROM clause in model creation
-        input_args["evaluate_dataset"] = (
-            input_args["evaluate_dataset"]
-            if "evaluate_dataset" in input_args
-            else df.to_dict(orient="records")
-        )
+
+        if "evaluate_dataset" not in input_args and df is not None:
+            # if user doesn't provide an evaluation dataset, use the input df from create query
+            input_args["evaluate_dataset"] = df.to_dict(orient="records")
+
         args = WriterHandlerParameters(**input_args)
 
         # create folder for vector store to persist embeddings
@@ -93,7 +91,7 @@ class WriterHandler(BaseMLEngine):
                     f"No embeddings model provided in query, using default model: {DEFAULT_EMBEDDINGS_MODEL}"
                 )
 
-            ingestor = Ingestor(args=args, df=df)
+            ingestor = WriterIngestor(args=args, df=df)
             ingestor.embeddings_to_vectordb()
 
         else:
@@ -117,8 +115,6 @@ class WriterHandler(BaseMLEngine):
 
         input_args = self.model_storage.json_get("args")
         args = WriterHandlerParameters(**input_args)
-
-        # todo add support for input evaluation_df
 
         if args.evaluation_type:
             # if user adds a WHERE clause with 'run_evaluation = true', run evaluation
@@ -160,7 +156,7 @@ class WriterHandler(BaseMLEngine):
             # if user specifies n_rows_evaluation in create, only use that many rows
             evaluate_df = evaluate_df.head(args.n_rows_evaluation)
 
-        ingestor = Ingestor(df=evaluate_df, args=args)
+        ingestor = WriterIngestor(df=evaluate_df, args=args)
         ingestor.embeddings_to_vectordb()
 
         evaluator = WriterEvaluator(args=args, df=evaluate_df, rag=QuestionAnswerer)

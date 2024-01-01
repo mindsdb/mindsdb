@@ -279,9 +279,9 @@ class MongoDBHandler(DatabaseHandler):
         return response
 
 connection_args = OrderedDict(
-    user={
+    username={
         'type': ARG_TYPE.STR,
-        'description': 'The user name used to authenticate with the MongoDB server.',
+        'description': 'The username used to authenticate with the MongoDB server.',
         'required': True,
         'label': 'User'
     },

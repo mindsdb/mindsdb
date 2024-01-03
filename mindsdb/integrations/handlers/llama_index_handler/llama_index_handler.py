@@ -6,7 +6,8 @@ import pandas as pd
 from langchain.llms import OpenAI
 import llama_index
 from llama_index.readers.schema.base import Document
-from llama_index import SimpleWebPageReader, QuestionAnswerPrompt
+from llama_index.readers import SimpleWebPageReader
+from llama_index.prompts import PromptTemplate
 from llama_index import ServiceContext, StorageContext, load_index_from_storage
 from llama_index import LLMPredictor, OpenAIEmbedding
 from llama_index.indices.vector_store.base import VectorStore
@@ -136,7 +137,7 @@ class LlamaIndexHandler(BaseMLEngine):
                 f'---------------------\n' \
                 f'Given this information, please answer the question: {{query_str}}'
 
-            engine_kwargs['text_qa_template'] = QuestionAnswerPrompt(prompt_template)
+            engine_kwargs['text_qa_template'] = PromptTemplate(prompt_template)
 
         else:
             input_column = args['using'].get('input_column', None)
@@ -144,7 +145,7 @@ class LlamaIndexHandler(BaseMLEngine):
             prompt_template = args['using'].get('prompt_template', args.get('prompt_template', None))
             if prompt_template is not None:
                 _validate_prompt_template(prompt_template)
-                engine_kwargs['text_qa_template'] = QuestionAnswerPrompt(prompt_template)
+                engine_kwargs['text_qa_template'] = PromptTemplate(prompt_template)
 
             if input_column is None:
                 raise Exception(f'`input_column` must be provided at model creation time or through USING clause when predicting. Please try again.')  # noqa

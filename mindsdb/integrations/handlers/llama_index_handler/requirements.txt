@@ -1,3 +1,2 @@
-llama-index==0.8.57
-langchain==0.0.347
-openai == 0.28.1
+llama-index==0.9.23
+openai==1.6.1

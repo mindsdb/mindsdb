@@ -231,7 +231,7 @@ class Components(APITable):
                 try:
                     df[f"translations_name_in_{langCode}"] = df["translations"].apply(lambda x: x.get("name", None)).apply(lambda x: x.get(langCode, None))
                     df[f"translations_desc_in_{langCode}"] = df["translations"].apply(lambda x: x.get("description", None)).apply(lambda x: x.get(langCode, None))
-                except:
+                except AttributeError:
                     df[f"translations_name_in_{langCode}"] = None
                     df[f"translations_desc_in_{langCode}"] = None
             df = df.drop(columns=["translations"])
@@ -258,7 +258,7 @@ class Components(APITable):
                         try:
                             df.at[i, f"translations_name_in_{langCode}"] = df.at[i, "translations"].get("name", {}).get(langCode, None)
                             df.at[i, f"translations_desc_in_{langCode}"] = df.at[i, "translations"].get("description", {}).get(langCode, None)
-                        except:
+                        except AttributeError:
                             df.at[i, f"translations_name_in_{langCode}"] = None
                             df.at[i, f"translations_desc_in_{langCode}"] = None
 

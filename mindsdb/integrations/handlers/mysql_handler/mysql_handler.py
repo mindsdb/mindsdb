@@ -131,7 +131,7 @@ class MySQLHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        config = self._unpack_config();
+        config = self._unpack_config()
 
         if 'conn_attrs' in self.connection_data:
             config['conn_attrs'] = self.connection_data['conn_attrs']

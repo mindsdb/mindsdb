@@ -262,7 +262,7 @@
         {
           "group": "Semantic Search",
           "pages": [
-            "integrations/ai-engines/rag"
+            "sql/tutorials/rag"
           ]
         },
         {
@@ -934,7 +934,6 @@
     {
       "group": "AI Engines",
       "pages": [
-        "ml_engines",
         {
           "group": "Large Language Models",
           "pages": [

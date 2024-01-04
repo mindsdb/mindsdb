@@ -1,6 +1,6 @@
 import os
-import json
 import openai
+import json
 import contextlib
 from typing import Optional, Dict
 
@@ -32,7 +32,6 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         self.rate_limit = 25  # requests per minute
         self.max_batch_size = 20
         self.default_max_tokens = 100
-        self.ft_cls = openai.FineTuningJob  # non-legacy fine-tuning endpoint
 
     @staticmethod
     @contextlib.contextmanager
@@ -90,11 +89,10 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
     def _set_models(self, args):
         if 'api_key' in args:
             args['openai_api_key'] = args['api_key']  # remove this once #7496 is fixed
-        self.all_models = [m['id'] for m in openai.Model.list(
-            api_key=get_api_key('openai', args, self.engine_storage),
-            api_base=ANYSCALE_API_BASE)['data']]
-        self.chat_completion_models = self.all_models
-        self.supported_ft_models = self.all_models  # base models compatible with fine-tuning
+        client = openai.OpenAI(api_key=get_api_key('openai', args, self.engine_storage), base_url=ANYSCALE_API_BASE)
+        self.all_models = [m.id for m in client.models.list()]
+        self.chat_completion_models = [m.id for m in client.models.list() if m.rayllm_metadata['engine_config']['model_type'] == 'text-generation']  # noqa
+        self.supported_ft_models = self.chat_completion_models  # base models compatible with fine-tuning
 
     @staticmethod
     def _check_ft_cols(df, cols):

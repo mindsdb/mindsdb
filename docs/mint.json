@@ -231,6 +231,15 @@
     {
       "group": "Use Cases",
       "pages": [
+        {
+          "group": "Fine-Tuning",
+          "pages": [
+            "finetune/anyscale",
+            "finetune/openai",
+            "finetune/classification",
+            "finetune/regression"
+          ]
+        },
         "agents/agent",
         "agents/knowledge-bases",  
         {
@@ -248,6 +257,12 @@
           "pages": [
             "sql/tutorials/image-generator",
             "nlp/json-from-text"
+          ]
+        },
+        {
+          "group": "Semantic Search",
+          "pages": [
+            "integrations/ai-engines/rag"
           ]
         },
         {
@@ -924,6 +939,7 @@
           "group": "Large Language Models",
           "pages": [
             "integrations/ai-engines/ollama",
+            "integrations/ai-engines/replicate-llm",
             "integrations/ai-engines/vertex",
             "integrations/ai-engines/anthropic",
             "integrations/ai-engines/cohere",
@@ -946,7 +962,8 @@
         {
           "group": "AutoML",
           "pages": [
-            "integrations/ai-engines/lightwood"
+            "integrations/ai-engines/lightwood",
+            "integrations/ai-engines/pycaret"
           ]
         },
         {
@@ -962,6 +979,26 @@
           "pages": [
             "integrations/ai-engines/lightfm",
             "integrations/ai-engines/popularity-recommender"
+          ]
+        },
+        {
+          "group": "Image Models",
+          "pages": [
+            "integrations/ai-engines/replicate-text2img",
+            "integrations/ai-engines/replicate-img2text"
+          ]
+        },
+        {
+          "group": "Large Video Models",
+          "pages": [
+            "integrations/ai-engines/twelvelabs",
+            "integrations/ai-engines/replicate-text2video"
+          ]
+        },
+        {
+          "group": "Audio Models",
+          "pages": [
+            "integrations/ai-engines/replicate-audio"
           ]
         }
       ]

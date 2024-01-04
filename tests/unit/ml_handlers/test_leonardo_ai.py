@@ -5,15 +5,16 @@ from unittest.mock import patch
 
 from .base_ml_test import BaseMLAPITest
 
+
 @pytest.mark.skipif(os.environ.get('LEONARDO_API_KEY') is None, reason='Missing API key!')
 class TestLeonardoAI(BaseMLAPITest):
     """Test Class for LeonardoAI Integration Testing."""
-    
+
     @staticmethod
     def get_api_key():
         """Retrieve Leonardo API key from environment variables."""
         return os.environ.get('LEONARDO_API_KEY')
-    
+
     def setup_method(self):
         """Setup test environment, creating a project"""
         super().setup_method()
@@ -26,11 +27,11 @@ class TestLeonardoAI(BaseMLAPITest):
             api_key = '{self.get_api_key('LEONARDO_API_KEY')}';
             """
         )
-        
+
     def test_invalid_model_parameter(self):
         """Test for invalid Leonardo model parameter"""
         self.run_sql(
-            f"""
+            """
             CREATE MODEL proj.test_leonardo_invalid_model
             PREDICT url
             USING
@@ -41,11 +42,11 @@ class TestLeonardoAI(BaseMLAPITest):
         )
         with pytest.raises(Exception):
             self.wait_predictor("proj", "test_leonardo_invalid_model")
-            
+
     def test_unknown_model_argument(self):
         """Test for unknown argument when creating a Leonardo model"""
         self.run_sql(
-            f"""
+            """
             CREATE MODEL proj.test_leonardo_unknown_argument
             PREDICT url
             USING
@@ -72,7 +73,7 @@ class TestLeonardoAI(BaseMLAPITest):
             """
         )
         self.wait_predictor("proj", "test_leonardo_single_qa")
-        
+
         result_df = self.run_sql(
             """
             SELECT *
@@ -81,7 +82,7 @@ class TestLeonardoAI(BaseMLAPITest):
             """
         )
         assert "stockholm" in result_df["answer"].iloc[0].lower()
-        
+
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_bulk_qa(self, mock_handler):
         """Test for bulk image processing"""
@@ -90,7 +91,7 @@ class TestLeonardoAI(BaseMLAPITest):
             "surreal landscape where mountains are made of candy, and rivers flow with liquid gold."
         ]})
         self.set_handler(mock_handler, name="pg", tables={"df": df})
-        
+
         self.run_sql(
             f"""
             CREATE MODEL proj.test_leonardo_bulk_qa
@@ -103,7 +104,7 @@ class TestLeonardoAI(BaseMLAPITest):
             """
         )
         self.wait_predictor("proj", "test_leonardo_bulk_qa")
-        
+
         result_df = self.run_sql(
             """
             SELECT p.answer
@@ -113,4 +114,3 @@ class TestLeonardoAI(BaseMLAPITest):
         )
         assert "stockholm" in result_df["answer"].iloc[0].lower()
         assert "venus" in result_df["answer"].iloc[1].lower()
-        

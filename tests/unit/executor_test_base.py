@@ -145,6 +145,9 @@ class BaseUnitTest:
         r = db.Integration(name="vertex", data={}, engine="vertex")
         db.session.add(r)
 
+        r = db.Integration(name="google_gemini", data={}, engine="google_gemini")
+        db.session.add(r)
+        
         r = db.Integration(name="leonardo_ai", data={}, engine="leonardo_ai")
         db.session.add(r)
 

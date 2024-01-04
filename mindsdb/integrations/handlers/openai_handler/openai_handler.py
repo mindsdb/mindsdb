@@ -710,23 +710,27 @@ class OpenAIHandler(BaseMLEngine):
         runtime = end_time - start_time
         name_extension = client.files.retrieve(file_id=result_file_id).filename
         result_path = f'{temp_storage_path}/ft_{finetune_time}_result_{name_extension}'
-        client.files.content(file_id=result_file_id).stream_to_file(result_path)
 
-        if '.csv' in name_extension:
-            # legacy endpoint
-            train_stats = pd.read_csv(result_path)
-            if 'validation_token_accuracy' in train_stats.columns:
-                train_stats = train_stats[
-                    train_stats['validation_token_accuracy'].notnull()
-                ]
-            args['ft_api_info'] = ft_stats.dict()
-            args['ft_result_stats'] = train_stats.to_dict()
+        try:
+            client.files.content(file_id=result_file_id).stream_to_file(result_path)
+            if '.csv' in name_extension:
+                # legacy endpoint
+                train_stats = pd.read_csv(result_path)
+                if 'validation_token_accuracy' in train_stats.columns:
+                    train_stats = train_stats[
+                        train_stats['validation_token_accuracy'].notnull()
+                    ]
+                args['ft_api_info'] = ft_stats.dict()
+                args['ft_result_stats'] = train_stats.to_dict()
 
-        elif '.json' in name_extension:
-            train_stats = pd.read_json(
-                path_or_buf=result_path, lines=True
-            )  # new endpoint
-            args['ft_api_info'] = args['ft_result_stats'] = train_stats.to_dict()
+            elif '.json' in name_extension:
+                train_stats = pd.read_json(
+                    path_or_buf=result_path, lines=True
+                )  # new endpoint
+                args['ft_api_info'] = args['ft_result_stats'] = train_stats.to_dict()
+
+        except Exception:
+            logger.info(f'Error retrieving fine-tuning results. Please check manually for information on job {ft_stats.id} (result file {result_file_id}).')
 
         args['model_name'] = ft_model_name
         args['runtime'] = runtime.total_seconds()

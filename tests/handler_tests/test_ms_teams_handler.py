@@ -13,7 +13,7 @@ from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client im
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import ChatsTable, ChatMessagesTable, ChannelsTable, ChannelMessagesTable
 
 
-class TestMSGraphAPITeamsClient(unittest.TestCase):   
+class TestMSGraphAPITeamsClient(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """
@@ -46,7 +46,7 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
         )
 
         self.assertEqual(chat_data["id"], "test_id")
-        self.assertEqual(chat_data["chatType"], "oneOnOne") 
+        self.assertEqual(chat_data["chatType"], "oneOnOne")
 
 
 class TestChatsTable(unittest.TestCase):

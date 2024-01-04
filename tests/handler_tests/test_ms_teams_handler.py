@@ -9,7 +9,44 @@ from mindsdb_sql.parser.ast.select.identifier import Identifier
 
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_handler import MSTeamsHandler
 from mindsdb.integrations.handlers.ms_teams_handler.settings import ms_teams_handler_config
+from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client import MSGraphAPITeamsClient
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import ChatsTable, ChatMessagesTable, ChannelsTable, ChannelMessagesTable
+
+
+class TestMSGraphAPITeamsClient(unittest.TestCase):   
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up the tests.
+        """
+
+        # mock the api client with a dummy access_token parameter (calls to the API that use this parameter will be mocked)
+        cls.api_client = MSGraphAPITeamsClient("test_access_token")
+
+    @patch('requests.get')
+    def test_get_chat_returns_chat_data(self, mock_get):
+        """
+        Test that get_chat returns chat data.
+        """
+
+        # configure the mock to return a response with 'status_code' 200
+        mock_get.return_value = Mock(
+            status_code=200,
+            headers={'Content-Type': 'application/json'},
+            json=Mock(return_value=ms_teams_handler_config.TEST_CHAT_DATA)
+        )
+
+        chat_data = self.api_client.get_chat("test_id")
+
+        # assert the requests.get call was made with the expected arguments
+        mock_get.assert_called_once_with(
+            'https://graph.microsoft.com/v1.0/chats/test_id/',
+            headers={'Authorization': 'Bearer test_access_token'},
+            params={'$expand': 'lastMessagePreview'}
+        )
+
+        self.assertEqual(chat_data["id"], "test_id")
+        self.assertEqual(chat_data["chatType"], "oneOnOne") 
 
 
 class TestChatsTable(unittest.TestCase):

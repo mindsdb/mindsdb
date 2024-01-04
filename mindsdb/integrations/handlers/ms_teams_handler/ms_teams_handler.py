@@ -1,4 +1,3 @@
-import msal  # noqa, required by MSGraphAPIAuthManager
 from typing import Text, Dict
 
 from mindsdb.utilities import log

@@ -144,6 +144,9 @@ class BaseUnitTest:
 
         r = db.Integration(name="vertex", data={}, engine="vertex")
         db.session.add(r)
+        
+        r = db.Integration(name="leonardo_ai", data={}, engine="leonardo_ai")
+        db.session.add(r)
 
         # Lightwood should always be last (else tests break, why?)
         r = db.Integration(name="lightwood", data={}, engine="lightwood")

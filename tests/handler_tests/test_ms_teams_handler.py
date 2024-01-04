@@ -121,7 +121,7 @@ class TestChatsTable(unittest.TestCase):
 
         self.assertListEqual(chats_table.get_columns(), ms_teams_handler_config.CHATS_TABLE_COLUMNS)
 
-    def test_select_star_returns_all_columns(self):
+    def test_select_star_for_single_chat_returns_all_columns(self):
         # patch the api handler to return the chat data
         with patch.object(self.api_handler.connect(), 'get_chat', return_value=ms_teams_handler_config.TEST_CHAT_DATA):
             chats_table = ChatsTable(self.api_handler)
@@ -146,7 +146,10 @@ class TestChatsTable(unittest.TestCase):
             self.assertEqual(first_chat["id"], "test_id")
             self.assertEqual(first_chat["chatType"], "oneOnOne")
 
-    def test_select_returns_only_selected_columns(self):
+    def test_select_star_for_all_chats_returns_all_columns(self):
+        pass
+
+    def test_select_for_single_chat_returns_only_selected_columns(self):
         # patch the api handler to return the chat data
         with patch.object(self.api_handler.connect(), 'get_chat', return_value=ms_teams_handler_config.TEST_CHAT_DATA):
             chats_table = ChatsTable(self.api_handler)
@@ -174,6 +177,9 @@ class TestChatsTable(unittest.TestCase):
             self.assertEqual(first_chat["id"], "test_id")
             self.assertEqual(first_chat["chatType"], "oneOnOne")
 
+    def test_select_for_all_chats_returns_only_selected_columns(self):
+        pass
+
 
 class TestChatMessagesTable(unittest.TestCase):
     """
@@ -198,7 +204,7 @@ class TestChatMessagesTable(unittest.TestCase):
 
         self.assertListEqual(chat_messages_table.get_columns(), ms_teams_handler_config.CHAT_MESSAGES_TABLE_COLUMNS)
 
-    def test_select_star_returns_all_columns(self):
+    def test_select_star_for_single_chat_returns_all_columns(self):
         # patch the api handler to return the chat message data
         with patch.object(self.api_handler.connect(), 'get_chat_message', return_value=ms_teams_handler_config.TEST_CHAT_MESSAGES_DATA):
             chat_messages_table = ChatMessagesTable(self.api_handler)
@@ -232,7 +238,10 @@ class TestChatMessagesTable(unittest.TestCase):
             self.assertEqual(first_chat_message["id"], "test_id")
             self.assertEqual(first_chat_message["messageType"], "message")
 
-    def test_select_returns_only_selected_columns(self):
+    def test_select_star_for_all_chats_returns_all_columns(self):
+        pass
+
+    def test_select_for_single_chat_returns_only_selected_columns(self):
         # patch the api handler to return the chat message data
         with patch.object(self.api_handler.connect(), 'get_chat_message', return_value=ms_teams_handler_config.TEST_CHAT_MESSAGES_DATA):
             chat_messages_table = ChatMessagesTable(self.api_handler)
@@ -268,6 +277,12 @@ class TestChatMessagesTable(unittest.TestCase):
             self.assertEqual(all_chat_messages.shape[1], 2)
             self.assertEqual(first_chat_message["id"], "test_id")
             self.assertEqual(first_chat_message["messageType"], "message")
+
+    def test_select_for_all_chats_returns_only_selected_columns(self):
+        pass
+
+    def test_send_message(self):
+        pass
 
 
 class TestChannelsTable(unittest.TestCase):

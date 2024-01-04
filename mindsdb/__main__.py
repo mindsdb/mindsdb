@@ -35,6 +35,7 @@ from mindsdb.utilities.fs import create_dirs_recursive, clean_process_marks, cle
 from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
+import type_infer  # noqa
 
 try:
     import torch.multiprocessing as mp
@@ -77,7 +78,13 @@ def do_clean_process_marks():
 
 
 if __name__ == '__main__':
-    # ----------------  __init__.py section ------------------
+    # warn if less than 1Gb of free RAM
+    if psutil.virtual_memory().available < (1 << 30):
+        logger.warning(
+            'The system is running low on memory. '
+            + 'This may impact the stability and performance of the program.'
+        )
+
     clean_process_marks()
     ctx.set_default()
     args = args_parse()
@@ -373,7 +380,9 @@ if __name__ == '__main__':
 
     async def join_process(process, name):
         try:
-            process.join()
+            while process.is_alive():
+                process.join(1)
+                await asyncio.sleep(0)
         except KeyboardInterrupt:
             logger.info("Got keyboard interrupt, stopping APIs")
             close_api_gracefully(apis)

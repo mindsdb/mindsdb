@@ -31,7 +31,7 @@ HANDLER_REQS_PATHS = list(
     - set(glob.glob("requirements/requirements*.txt"))
 )
 
-MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers", "pryproject.toml"]
+MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.toml"]
 
 # torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it.
 # Psycopg2 is needed in core codebase for sqlalchemy.
@@ -39,7 +39,7 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers", "pryproject.toml"]
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
     # Ignore Langhchain since the requirements check will still fail even if it's conditionally imported for certain features.
-    "DEP001": ["torch", "hierarchicalforecast", "langchain"],
+    "DEP001": ["torch"],
     "DEP002": ["psycopg2-binary"],
 }
 
@@ -56,7 +56,7 @@ BYOM_HANLDER_DEPS = ["pyarrow"]
 
 HANDLER_RULE_IGNORES = {
     "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS,
-    "DEP001": ["tests", "hierarchicalforecast"]  # 'tests' is the mindsdb tests folder in the repo root
+    "DEP001": ["tests"]  # 'tests' is the mindsdb tests folder in the repo root
 }
 
 PACKAGE_NAME_MAP = {

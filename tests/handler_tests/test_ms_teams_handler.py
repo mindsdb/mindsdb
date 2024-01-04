@@ -48,6 +48,55 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
         self.assertEqual(chat_data["id"], "test_id")
         self.assertEqual(chat_data["chatType"], "oneOnOne")
 
+    @patch('requests.get')
+    def test_get_chats_returns_chats_data(self, mock_get):
+        """
+        Test that get_chats returns chats data.
+        """
+
+        # configure the mock to return a response with 'status_code' 200
+        mock_get.return_value = Mock(
+            status_code=200,
+            headers={'Content-Type': 'application/json'},
+            json=Mock(return_value={"value": [ms_teams_handler_config.TEST_CHAT_DATA]})
+        )
+
+        chats_data = self.api_client.get_chats()
+
+        # assert the requests.get call was made with the expected arguments
+        mock_get.assert_called_once_with(
+            'https://graph.microsoft.com/v1.0/chats/',
+            headers={'Authorization': 'Bearer test_access_token'},
+            params={'$expand': 'lastMessagePreview', '$top': 20}
+        )
+
+        self.assertEqual(chats_data[0]["id"], "test_id")
+        self.assertEqual(chats_data[0]["chatType"], "oneOnOne")
+
+    @patch('requests.get')
+    def test_get_chat_message_returns_chat_message_data(self, mock_get):
+        pass
+
+    @patch('requests.get')
+    def test_get_chat_messages_returns_chat_messages_data(self, mock_get):
+        pass
+
+    @patch('requests.get')
+    def test_get_channel_returns_channel_data(self, mock_get):
+        pass
+
+    @patch('requests.get')
+    def test_get_channels_returns_channels_data(self, mock_get):
+        pass
+
+    @patch('requests.get')
+    def test_get_channel_message_returns_channel_message_data(self, mock_get):
+        pass
+
+    @patch('requests.get')
+    def test_get_channel_messages_returns_channel_messages_data(self, mock_get):
+        pass
+
 
 class TestChatsTable(unittest.TestCase):
     """

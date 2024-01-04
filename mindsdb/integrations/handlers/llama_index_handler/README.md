@@ -9,7 +9,7 @@ LlamaIndex is a data framework for your LLM application. In this handler, we use
   - [x] [Support Web Page Reader](https://gpt-index.readthedocs.io/en/latest/examples/data_connectors/WebPageDemo.html)
   - [x] [Support Database Reader](https://gpt-index.readthedocs.io/en/latest/examples/data_connectors/DatabaseReaderDemo.html)
   - [x] [Support Github Reader](https://llamahub.ai/l/youtube_transcript?from=loaders)
-  - [x] [Support YoutubeTranscript Reader](https://llamahub.ai/l/youtube_transcript?from=loaders)
+  - [x] [Support YoutubeTranscript Reader](https://llamahub.ai/l/youtube_transcript?from=loaders) **Note: To run YoutubeLoader `pip install youtube_transcript_api`**
 
 
 ## Example Usage
@@ -57,3 +57,52 @@ JOIN files.question_table as t;
 ~~~~
 
 ![](https://i.ibb.co/WPgXJDs/Screenshot-2023-05-30-at-7-54-32-PM.png)
+
+## Example usage for GithubLoader
+```sql
+CREATE MODEL github_loader
+PREDICT answer
+USING 
+  engine = 'llama_index', 
+  index_class = 'VectorStoreIndex',
+  owner = 'mindsdb',
+  repo = 'mindsdb',
+  branch = 'staging',
+  reader = 'GithubRepositoryReader',
+  filter_type = 'include',
+  filter_file_extensions = ['.py','.html','.md'],
+  input_column = 'questions',
+  openai_api_key = '<your_openai_key>',
+  github_token = '<your_github_token>';
+```
+
+```sql
+SELECT a.questions, b.answer
+FROM github_loader as b
+JOIN files.questions as a
+```
+
+```sql
+SELECT question, answer
+FROM github_loader
+WHERE questions = 'Explain steps to setup MindsDB on local machine?'
+```
+
+## Example usage for YoutubeTranscriptLoader
+```sql
+CREATE MODEL youtube_loader
+PREDICT answer
+USING 
+  engine = 'llama_index', 
+  index_class = 'VectorStoreIndex',
+  ytlinks = ['<link_of_youtube_videos>'],
+  reader = 'YoutubeTranscriptReader',
+  input_column = 'questions',
+  openai_api_key = '<your_openai_key>';
+```
+
+```sql
+SELECT question, answer
+FROM youtube_loader
+WHERE questions = 'What was the video about?'
+```

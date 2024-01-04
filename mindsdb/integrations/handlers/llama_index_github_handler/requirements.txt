@@ -1,3 +1,0 @@
-llama-hub == 0.0.62
-llama-index == 0.9.21
-openai == 1.6.1

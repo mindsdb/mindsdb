@@ -20,6 +20,7 @@ from mindsdb.integrations.handlers.openai_handler.helpers import (
     retry_with_exponential_backoff,
     truncate_msgs_for_token_limit,
     get_available_models,
+    PendingFT,
 )
 from mindsdb.integrations.handlers.openai_handler.constants import (
     CHAT_MODELS,
@@ -652,7 +653,7 @@ class OpenAIHandler(BaseMLEngine):
         completion_col = using_args.get('completion_column', 'completion')
         
         api_key = get_api_key('openai', args, self.engine_storage)
-        api_base = using_args.get('api_base')
+        api_base = using_args.get('api_base', os.environ['OPENAI_API_BASE'])
         org = using_args.get('api_organization')
         client = self._get_client(api_key=api_key, base_url=api_base, org=org)
 
@@ -709,23 +710,27 @@ class OpenAIHandler(BaseMLEngine):
         runtime = end_time - start_time
         name_extension = client.files.retrieve(file_id=result_file_id).filename
         result_path = f'{temp_storage_path}/ft_{finetune_time}_result_{name_extension}'
-        client.files.content(file_id=result_file_id).stream_to_file(result_path)
 
-        if '.csv' in name_extension:
-            # legacy endpoint
-            train_stats = pd.read_csv(result_path)
-            if 'validation_token_accuracy' in train_stats.columns:
-                train_stats = train_stats[
-                    train_stats['validation_token_accuracy'].notnull()
-                ]
-            args['ft_api_info'] = ft_stats.dict()
-            args['ft_result_stats'] = train_stats.to_dict()
+        try:
+            client.files.content(file_id=result_file_id).stream_to_file(result_path)
+            if '.csv' in name_extension:
+                # legacy endpoint
+                train_stats = pd.read_csv(result_path)
+                if 'validation_token_accuracy' in train_stats.columns:
+                    train_stats = train_stats[
+                        train_stats['validation_token_accuracy'].notnull()
+                    ]
+                args['ft_api_info'] = ft_stats.dict()
+                args['ft_result_stats'] = train_stats.to_dict()
 
-        elif '.json' in name_extension:
-            train_stats = pd.read_json(
-                path_or_buf=result_path, lines=True
-            )  # new endpoint
-            args['ft_api_info'] = args['ft_result_stats'] = train_stats.to_dict()
+            elif '.json' in name_extension:
+                train_stats = pd.read_json(
+                    path_or_buf=result_path, lines=True
+                )  # new endpoint
+                args['ft_api_info'] = args['ft_result_stats'] = train_stats.to_dict()
+
+        except Exception:
+            logger.info(f'Error retrieving fine-tuning results. Please check manually for information on job {ft_stats.id} (result file {result_file_id}).')
 
         args['model_name'] = ft_model_name
         args['runtime'] = runtime.total_seconds()
@@ -817,7 +822,7 @@ class OpenAIHandler(BaseMLEngine):
             if ft_retrieved.status in ('succeeded', 'failed', 'cancelled'):
                 return ft_retrieved
             else:
-                raise openai.OpenAIError('Fine-tuning still pending!')
+                raise PendingFT('Fine-tuning still pending!')
 
         ft_stats = _check_ft_status(ft_result.id)
 

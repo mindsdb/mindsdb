@@ -83,7 +83,7 @@ class TwelveLabsHandlerModel(BaseModel):
         Raises
         ------
         ValueError
-            If there are any typos in the parameters.  
+            If there are any typos in the parameters.
         """
 
         ParameterValidationUtilities.validate_parameter_spelling(cls, values)

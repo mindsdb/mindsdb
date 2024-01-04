@@ -20,6 +20,7 @@ from mindsdb.integrations.handlers.openai_handler.helpers import (
     retry_with_exponential_backoff,
     truncate_msgs_for_token_limit,
     get_available_models,
+    PendingFT,
 )
 from mindsdb.integrations.handlers.openai_handler.constants import (
     CHAT_MODELS,
@@ -652,7 +653,7 @@ class OpenAIHandler(BaseMLEngine):
         completion_col = using_args.get('completion_column', 'completion')
         
         api_key = get_api_key('openai', args, self.engine_storage)
-        api_base = using_args.get('api_base')
+        api_base = using_args.get('api_base', os.environ['OPENAI_API_BASE'])
         org = using_args.get('api_organization')
         client = self._get_client(api_key=api_key, base_url=api_base, org=org)
 
@@ -817,7 +818,7 @@ class OpenAIHandler(BaseMLEngine):
             if ft_retrieved.status in ('succeeded', 'failed', 'cancelled'):
                 return ft_retrieved
             else:
-                raise openai.OpenAIError('Fine-tuning still pending!')
+                raise PendingFT('Fine-tuning still pending!')
 
         ft_stats = _check_ft_status(ft_result.id)
 

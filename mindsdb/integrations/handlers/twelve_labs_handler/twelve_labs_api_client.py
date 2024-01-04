@@ -202,7 +202,7 @@ class TwelveLabsAPIClient:
         -------
         None
         """
-        
+
         for task_id in task_ids:
             logger.info(f"Polling status of video indexing task {task_id}.")
             is_task_running = True

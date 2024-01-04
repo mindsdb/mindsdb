@@ -83,7 +83,7 @@ class TwelveLabsHandlerModel(BaseModel):
         Raises
         ------
         ValueError
-            If there are any typos in the parameters.        
+            If there are any typos in the parameters.  
         """
 
         ParameterValidationUtilities.validate_parameter_spelling(cls, values)
@@ -104,7 +104,7 @@ class TwelveLabsHandlerModel(BaseModel):
         ------
         ValueError
             If neither video_urls, video_files, video_urls_column nor video_files_column have been provided.
-        
+
         """
 
         video_urls = values.get("video_urls")
@@ -132,7 +132,7 @@ class TwelveLabsHandlerModel(BaseModel):
         Raises
         ------
         ValueError
-            If the relevant parameters for the task have not been provided.        
+            If the relevant parameters for the task have not been provided.
         """
 
         task = values.get("task")
@@ -150,7 +150,7 @@ class TwelveLabsHandlerModel(BaseModel):
                 raise ValueError(
                     "search_options should be a subset of index_options."
                 )
-            
+
             query_column = values.get("query_column")
             if not query_column:
                 raise ValueError(
@@ -163,7 +163,7 @@ class TwelveLabsHandlerModel(BaseModel):
             )
 
         return values
-    
+
 
 class TwelveLabsHandlerConfig(BaseSettings):
     """
@@ -181,10 +181,10 @@ class TwelveLabsHandlerConfig(BaseSettings):
     DEFAULT_WAIT_DURATION : int
         Default wait duration when polling video indexing tasks created via the Twelve Labs API.
     """
-    
+
     BASE_URL = "https://api.twelvelabs.io/v1.1"
     DEFAULT_ENGINE = "marengo2.5"
     DEFAULT_WAIT_DURATION = 5
 
-twelve_labs_handler_config = TwelveLabsHandlerConfig()
 
+twelve_labs_handler_config = TwelveLabsHandlerConfig()

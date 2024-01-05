@@ -157,21 +157,57 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
         Test that get_channels returns channels data.
         """
 
+        # check if the group_ids parameter in the API client is set
+        is_group_ids_set = True if self.api_client._group_ids is not None else False
+
         # configure the mock to return a response with 'status_code' 200
-        mock_get.return_value = Mock(
-                status_code=200,
-                headers={'Content-Type': 'application/json'},
-                json=Mock(return_value=ms_teams_handler_config.TEST_CHANNELS_DATA)
-        )
+        # if the group_ids parameter is not set, the mock will return the group data first, then the channels data
+        if not is_group_ids_set:
+            mock_get.side_effect = [
+                Mock(
+                    status_code=200,
+                    headers={'Content-Type': 'application/json'},
+                    json=Mock(return_value=ms_teams_handler_config.TEST_GROUP_DATA)
+                ),
+                Mock(
+                    status_code=200,
+                    headers={'Content-Type': 'application/json'},
+                    json=Mock(return_value=ms_teams_handler_config.TEST_CHANNELS_DATA)
+                )
+            ]
+
+        # if the group_ids parameter is set, the mock will only return the channels data
+        else:
+            mock_get.return_value = Mock(
+                    status_code=200,
+                    headers={'Content-Type': 'application/json'},
+                    json=Mock(return_value=ms_teams_handler_config.TEST_CHANNELS_DATA)
+            )
 
         channels_data = self.api_client.get_channels()
 
-        # assert the requests.get call were made with the expected arguments
-        mock_get.assert_called_once_with(
-            'https://graph.microsoft.com/v1.0/teams/test_team_id/channels/',
-            headers={'Authorization': 'Bearer test_access_token'},
-            params=None
-        )
+        # assert the requests.get calls were made with the expected arguments
+        # if the group_ids parameter is not set, the mock will check the calls to both the groups and channels endpoints
+        if not is_group_ids_set:
+            mock_get.assert_any_call(
+                'https://graph.microsoft.com/v1.0/groups/',
+                headers={'Authorization': 'Bearer test_access_token'},
+                params={'$select': 'id,resourceProvisioningOptions'}
+            )
+
+            mock_get.assert_any_call(
+                'https://graph.microsoft.com/v1.0/teams/test_team_id/channels/',
+                headers={'Authorization': 'Bearer test_access_token'}, 
+                params=None
+            )
+
+        # if the group_ids parameter is set, the mock will only check the call to the channels endpoint
+        else:
+            mock_get.assert_called_once_with(
+                'https://graph.microsoft.com/v1.0/teams/test_team_id/channels/',
+                headers={'Authorization': 'Bearer test_access_token'},
+                params=None
+            )
 
         self.assertEqual(channels_data[0]["id"], "test_id")
         self.assertEqual(channels_data[0]["displayName"], "test_display_name")

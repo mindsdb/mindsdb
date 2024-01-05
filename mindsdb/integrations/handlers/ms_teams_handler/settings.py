@@ -310,4 +310,14 @@ class MSTeamsHandlerConfig(BaseSettings):
         }
     }
 
+    TEST_GROUP_DATA = {
+        '@odata.context': 'test_context', 
+        'value': [
+            {
+                'id': 'test_team_id',
+                'resourceProvisioningOptions': ['Team'],
+            }
+        ]
+    }
+
 ms_teams_handler_config = MSTeamsHandlerConfig()

@@ -58,7 +58,7 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
         mock_get.return_value = Mock(
             status_code=200,
             headers={'Content-Type': 'application/json'},
-            json=Mock(return_value=ms_teams_handler_config.TEST_CHATS_DATA)
+            json=Mock(return_value={'value': ms_teams_handler_config.TEST_CHATS_DATA})
         )
 
         chats_data = self.api_client.get_chats()
@@ -136,7 +136,7 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
             Mock(
                 status_code=200,
                 headers={'Content-Type': 'application/json'},
-                json=Mock(return_value=ms_teams_handler_config.TEST_CHATS_DATA)
+                json=Mock(return_value={'value': ms_teams_handler_config.TEST_CHATS_DATA})
             ),
             Mock(
                 status_code=200,
@@ -444,7 +444,22 @@ class TestChatsTable(unittest.TestCase):
             self.assertEqual(first_chat["chatType"], "oneOnOne")
 
     def test_select_star_for_all_chats_returns_all_columns(self):
-        pass
+        # patch the api handler to return the chat data
+        with patch.object(self.api_handler.connect(), 'get_chats', return_value=ms_teams_handler_config.TEST_CHATS_DATA):
+            chats_table = ChatsTable(self.api_handler)
+
+            select_all = ast.Select(
+                # select all columns
+                targets=[Star()],
+                from_table="chats",
+            )
+
+            all_chats = chats_table.select(select_all)
+            first_chat = all_chats.iloc[0]
+
+            self.assertEqual(all_chats.shape[1], len(ms_teams_handler_config.CHATS_TABLE_COLUMNS))
+            self.assertEqual(first_chat["id"], "test_id")
+            self.assertEqual(first_chat["chatType"], "oneOnOne")
 
     def test_select_for_single_chat_returns_only_selected_columns(self):
         # patch the api handler to return the chat data
@@ -475,7 +490,25 @@ class TestChatsTable(unittest.TestCase):
             self.assertEqual(first_chat["chatType"], "oneOnOne")
 
     def test_select_for_all_chats_returns_only_selected_columns(self):
-        pass
+        # patch the api handler to return the chat data
+        with patch.object(self.api_handler.connect(), 'get_chats', return_value=ms_teams_handler_config.TEST_CHATS_DATA):
+            chats_table = ChatsTable(self.api_handler)
+
+            select_all = ast.Select(
+                # select all columns
+                targets=[
+                    Identifier('id'),
+                    Identifier('chatType'),
+                ],
+                from_table="chats",
+            )
+
+            all_chats = chats_table.select(select_all)
+            first_chat = all_chats.iloc[0]
+
+            self.assertEqual(all_chats.shape[1], 2)
+            self.assertEqual(first_chat["id"], "test_id")
+            self.assertEqual(first_chat["chatType"], "oneOnOne")
 
 
 class TestChatMessagesTable(unittest.TestCase):

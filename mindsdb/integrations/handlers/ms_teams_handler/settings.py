@@ -253,7 +253,11 @@ class MSTeamsHandlerConfig(BaseSettings):
         'teamId': 'test_team_id'
     }
 
-    TEST_CHANNEL_MESSAGES_DATA = {
+    TEST_CHANNELS_DATA = {
+        "value": [TEST_CHANNEL_DATA]
+    }
+
+    TEST_CHANNEL_MESSAGE_DATA = {
         '@odata.context': 'test_context', 
         'id': 'test_id', 
         'replyToId': None, 
@@ -318,12 +322,26 @@ class MSTeamsHandlerConfig(BaseSettings):
         }
     }
 
+    TEST_CHANNEL_MESSAGES_DATA = {
+        "value": [TEST_CHANNEL_MESSAGE_DATA]
+    }
+
     TEST_GROUP_DATA = {
         '@odata.context': 'test_context', 
         'value': [
             {
                 'id': 'test_team_id',
                 'resourceProvisioningOptions': ['Team'],
+            }
+        ]
+    }
+
+    TEST_CHANNEL_ID_DATA = {
+        '@odata.context': 'test_context', 
+        '@odata.count': 1,
+        'value': [
+            {
+                'id': 'test_channel_id',
             }
         ]
     }

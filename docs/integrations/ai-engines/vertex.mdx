@@ -1,9 +1,14 @@
 ---
-title: Vertex
-sidebarTitle: Vertex
+title: Google's Vertex AI 
+sidebarTitle: Vertex AI
 ---
 
-Create ml engine. service_account is content of service_account.json
+This allows you to bring any Vertex AI model as a virtual AI-Table that you can query via SQL and JOIN with data from any datasource.
+
+## Setup
+
+You will need to get the service_account.json and copy the content in the corresponding <strong> service account </strong> attribute: 
+
 ```sql
 create ml_engine vertex from vertex
 using 
@@ -17,7 +22,19 @@ service_account = {
 };
 ```
 
-Create model:
+<Tip>
+To create a service_account.json follow the following steps: 
+
+ - Go to https://console.cloud.google.com/apis/credentials
+ - On the top left there is a blue "create credentials" button click it and select "service account key." (see below if its not there)
+ - Choose the service account you want, and select "JSON" as the key type.
+ - It should allow give you a json to download
+</Tip>
+
+## Bring your model as an AI-Table
+
+Create model, in this example, assuming that you have a model called 'diamonds_anomaly_detection' in Vertex:
+
 ```sql
 CREATE MODEL mindsdb.vertex_anomaly_detection_model
 PREDICT cut
@@ -27,7 +44,10 @@ USING
     custom_model = True;
 ```
 
-Call prediction
+## Use your model
+
+Call prediction (for example in bulk predictions using JOIN)
+
 ```sql
 SELECT t.cut, m.cut as anomaly
 FROM files.vertex_anomaly_detection as t

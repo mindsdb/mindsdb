@@ -180,7 +180,7 @@ class TestLangchainEmbedding(BaseExecutorTest):
                 "content2": ["world", "hello", "bar", "foo"],
             }
         )
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.save_file("df", df)
 
         # create the model with no input columns specified should use
         # all columns when embedding the documents
@@ -217,7 +217,7 @@ class TestLangchainEmbedding(BaseExecutorTest):
         ret = self.run_sql(
             """
             SELECT * FROM proj.test_dummy_no_input_columns
-            JOIN pg.df
+            JOIN files.df
             """
         )
 
@@ -231,7 +231,7 @@ class TestLangchainEmbedding(BaseExecutorTest):
         ret = self.run_sql(
             """
             CREATE MODEL proj.test_dummy_no_input_columns_from_df
-            FROM pg (
+            FROM files (
                 SELECT *, NULL as embeddings FROM df  -- this requires an empty column called embeddings
             )
             PREDICT embeddings

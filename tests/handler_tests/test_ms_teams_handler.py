@@ -246,33 +246,55 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
         Test that get_channel_messages returns channel messages data.
         """
 
+        # check if the group_ids parameter in the API client is set
+        is_group_ids_set = True if self.api_client._group_ids is not None else False
+
         # configure the mocks to return a response with 'status_code' 200
-        mock_get.side_effect = [
-            Mock(
-                status_code=200,
-                headers={'Content-Type': 'application/json'},
-                json=Mock(return_value=ms_teams_handler_config.TEST_GROUP_DATA)
-            ),
-            Mock(
-                status_code=200,
-                headers={'Content-Type': 'application/json'},
-                json=Mock(return_value=ms_teams_handler_config.TEST_CHANNEL_ID_DATA)
-            ),
-            Mock(
-                status_code=200,
-                headers={'Content-Type': 'application/json'},
-                json=Mock(return_value=ms_teams_handler_config.TEST_CHANNEL_MESSAGES_DATA)
-            ),
-        ]
+        # if the group_ids parameter is not set, the mocks will return the group data first, then the channel ID data, then the channel messages data
+        if not is_group_ids_set:
+            mock_get.side_effect = [
+                Mock(
+                    status_code=200,
+                    headers={'Content-Type': 'application/json'},
+                    json=Mock(return_value=ms_teams_handler_config.TEST_GROUP_DATA)
+                ),
+                Mock(
+                    status_code=200,
+                    headers={'Content-Type': 'application/json'},
+                    json=Mock(return_value=ms_teams_handler_config.TEST_CHANNEL_ID_DATA)
+                ),
+                Mock(
+                    status_code=200,
+                    headers={'Content-Type': 'application/json'},
+                    json=Mock(return_value=ms_teams_handler_config.TEST_CHANNEL_MESSAGES_DATA)
+                ),
+            ]
+
+        # if the group_ids parameter is set, the mocks will only return the channel ID data, then the channel messages data
+        else:
+            mock_get.side_effect = [
+                Mock(
+                    status_code=200,
+                    headers={'Content-Type': 'application/json'},
+                    json=Mock(return_value=ms_teams_handler_config.TEST_CHANNEL_ID_DATA)
+                ),
+                Mock(
+                    status_code=200,
+                    headers={'Content-Type': 'application/json'},
+                    json=Mock(return_value=ms_teams_handler_config.TEST_CHANNEL_MESSAGES_DATA)
+                ),
+            ]       
 
         channel_messages_data = self.api_client.get_channel_messages()
 
         # assert the requests.get calls were made with the expected arguments
-        mock_get.assert_any_call(
-            'https://graph.microsoft.com/v1.0/groups/',
-            headers={'Authorization': 'Bearer test_access_token'},
-            params={'$select': 'id,resourceProvisioningOptions'}
-        )
+        # if the group_ids parameter is not set, check the calls to the groups endpoint
+        if not is_group_ids_set:
+            mock_get.assert_any_call(
+                'https://graph.microsoft.com/v1.0/groups/',
+                headers={'Authorization': 'Bearer test_access_token'},
+                params={'$select': 'id,resourceProvisioningOptions'}
+            )
 
         mock_get.assert_any_call(
             'https://graph.microsoft.com/v1.0/teams/test_team_id/channels/',

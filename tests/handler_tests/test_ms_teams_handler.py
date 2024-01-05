@@ -125,6 +125,27 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
         self.assertEqual(chat_messages_data[0]["messageType"], "message")
         self.assertEqual(chat_messages_data[0]["chatId"], "test_chat_id")
 
+    @patch('requests.post')
+    def test_send_chat_message(self, mock_post):
+        """
+        Test that send_chat_message sends a chat message.
+        """
+
+        # configure the mock to return a response with 'status_code' 201
+        mock_post.return_value = Mock(
+            status_code=201,
+            headers={'Content-Type': 'application/json'},
+        )
+
+        self.api_client.send_chat_message("test_chat_id", "test_message", "test_subject")
+
+        # assert the requests.post call was made with the expected arguments
+        mock_post.assert_called_once_with(
+            'https://graph.microsoft.com/v1.0/chats/test_chat_id/messages/',
+            headers={'Authorization': 'Bearer test_access_token'},
+            json={'subject': 'test_subject', 'body': {'content': 'test_message'}}
+        )
+
     @patch('requests.get')
     def test_get_channel_returns_channel_data(self, mock_get):
         """

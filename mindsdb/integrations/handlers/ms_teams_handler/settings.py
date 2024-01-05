@@ -193,7 +193,11 @@ class MSTeamsHandlerConfig(BaseSettings):
         }
     }
 
-    TEST_CHAT_MESSAGES_DATA = {
+    TEST_CHATS_DATA = {
+        "value": [TEST_CHAT_DATA]
+    }
+
+    TEST_CHAT_MESSAGE_DATA = {
         '@odata.context': 'test_context', 
         'id': 'test_id', 
         'replyToId': None, 
@@ -229,6 +233,10 @@ class MSTeamsHandlerConfig(BaseSettings):
             'contentType': 'text',
             'content': '\n\nTest message.'
         }
+    }
+
+    TEST_CHAT_MESSAGES_DATA = {
+        "value": [TEST_CHAT_MESSAGE_DATA]
     }
 
     TEST_CHANNEL_DATA = {

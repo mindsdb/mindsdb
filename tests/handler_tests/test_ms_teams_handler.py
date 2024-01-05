@@ -58,7 +58,7 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
         mock_get.return_value = Mock(
             status_code=200,
             headers={'Content-Type': 'application/json'},
-            json=Mock(return_value={"value": [ms_teams_handler_config.TEST_CHAT_DATA]})
+            json=Mock(return_value=ms_teams_handler_config.TEST_CHATS_DATA)
         )
 
         chats_data = self.api_client.get_chats()
@@ -83,7 +83,7 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
         mock_get.return_value = Mock(
             status_code=200,
             headers={'Content-Type': 'application/json'},
-            json=Mock(return_value=ms_teams_handler_config.TEST_CHAT_MESSAGES_DATA)
+            json=Mock(return_value=ms_teams_handler_config.TEST_CHAT_MESSAGE_DATA)
         )
 
         chat_message_data = self.api_client.get_chat_message("test_chat_id", "test_id")
@@ -109,7 +109,7 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
         mock_get.return_value = Mock(
             status_code=200,
             headers={'Content-Type': 'application/json'},
-            json=Mock(return_value={"value": [ms_teams_handler_config.TEST_CHAT_MESSAGES_DATA]})
+            json=Mock(return_value=ms_teams_handler_config.TEST_CHAT_MESSAGES_DATA)
         )
 
         chat_messages_data = self.api_client.get_chat_messages("test_chat_id")
@@ -330,7 +330,7 @@ class TestChatMessagesTable(unittest.TestCase):
 
     def test_select_star_for_single_chat_returns_all_columns(self):
         # patch the api handler to return the chat message data
-        with patch.object(self.api_handler.connect(), 'get_chat_message', return_value=ms_teams_handler_config.TEST_CHAT_MESSAGES_DATA):
+        with patch.object(self.api_handler.connect(), 'get_chat_message', return_value=ms_teams_handler_config.TEST_CHAT_MESSAGE_DATA):
             chat_messages_table = ChatMessagesTable(self.api_handler)
 
             select_all = ast.Select(
@@ -367,7 +367,7 @@ class TestChatMessagesTable(unittest.TestCase):
 
     def test_select_for_single_chat_returns_only_selected_columns(self):
         # patch the api handler to return the chat message data
-        with patch.object(self.api_handler.connect(), 'get_chat_message', return_value=ms_teams_handler_config.TEST_CHAT_MESSAGES_DATA):
+        with patch.object(self.api_handler.connect(), 'get_chat_message', return_value=ms_teams_handler_config.TEST_CHAT_MESSAGE_DATA):
             chat_messages_table = ChatMessagesTable(self.api_handler)
 
             select_all = ast.Select(

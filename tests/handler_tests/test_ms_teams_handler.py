@@ -125,6 +125,45 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
         self.assertEqual(chat_messages_data[0]["messageType"], "message")
         self.assertEqual(chat_messages_data[0]["chatId"], "test_chat_id")
 
+    @patch('requests.get')
+    def test_get_all_chat_messages_returns_all_chat_messages_data(self, mock_get):
+        """
+        Test that get_all_chat_messages returns all chat messages data.
+        """
+
+        # configure the mock to return a response with 'status_code' 200
+        mock_get.side_effect = [
+            Mock(
+                status_code=200,
+                headers={'Content-Type': 'application/json'},
+                json=Mock(return_value=ms_teams_handler_config.TEST_CHATS_DATA)
+            ),
+            Mock(
+                status_code=200,
+                headers={'Content-Type': 'application/json'},
+                json=Mock(return_value=ms_teams_handler_config.TEST_CHAT_MESSAGES_DATA)
+            )
+        ]
+
+        chat_messages_data = self.api_client.get_all_chat_messages()
+
+        # assert the requests.get calls were made with the expected arguments
+        mock_get.assert_any_call(
+            'https://graph.microsoft.com/v1.0/chats/',
+            headers={'Authorization': 'Bearer test_access_token'},
+            params={'$expand': 'lastMessagePreview', '$top': 20}
+        )
+
+        mock_get.assert_any_call(
+            'https://graph.microsoft.com/v1.0/chats/test_id/messages/',
+            headers={'Authorization': 'Bearer test_access_token'},
+            params={'$top': 20}
+        )
+
+        self.assertEqual(chat_messages_data[0]["id"], "test_id")
+        self.assertEqual(chat_messages_data[0]["messageType"], "message")
+        self.assertEqual(chat_messages_data[0]["chatId"], "test_chat_id")
+
     @patch('requests.post')
     def test_send_chat_message(self, mock_post):
         """

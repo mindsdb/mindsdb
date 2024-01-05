@@ -1,5 +1,5 @@
 from typing import List
-import json
+import json as JSON
 import pandas as pd
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilities import INSERTQueryParser
@@ -10,9 +10,6 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 class MessageTable(APITable):
     """The SNS message Table implementation for publish (insert) messages"""
     name: str = "messages"
-    supported_columns = {'id', 'subject', 'message_deduplication_id', 'message_group_id', 'message', 'topic_arn',
-                         'message_attributes'}
-    columns: List[str] = list(supported_columns)
 
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
@@ -33,15 +30,18 @@ class MessageTable(APITable):
     def insert(self, query: ast.Insert) -> pd.DataFrame:
         """  Args: query (ast.Insert): SQL query to parse.
         """
+        supported_columns = {'id', 'subject', 'message_deduplication_id', 'message_group_id', 'message', 'topic_arn',
+                         'message_attributes'}
+        columns: List[str] = list(supported_columns)
         insert_statement_parser = INSERTQueryParser(
             query,
             mandatory_columns=['message', 'topic_arn'],
-            supported_columns=list(self.supported_columns),
+            supported_columns=list(supported_columns),
             all_mandatory=False
         )
         columns = [col.name for col in query.columns]
-        if not set(columns).issubset(self.supported_columns):
-            unsupported_columns = set(columns).difference(self.supported_columns)
+        if not set(columns).issubset(supported_columns):
+            unsupported_columns = set(columns).difference(supported_columns)
             raise ValueError(
                 "Unsupported columns for publish message: "
                 + ", ".join(unsupported_columns)
@@ -52,8 +52,7 @@ class MessageTable(APITable):
             for message_row in message_rows:
                 message = message_row['message']
                 topic_arn = message_row['topic_arn']
-                param = {"message": message_row['message'], "topic_arn": message_row['topic_arn']}
-                self.handler.call_sns_api("publish_message", param)
+                self.handler.connection.publish(TopicArn=message_row['topic_arn'], Message=message_row['message'])
         else:
             request_entries = []
             topic_arn = ""
@@ -81,8 +80,8 @@ class MessageTable(APITable):
                                  'MessageDeduplicationId': message_deduplication_id, 'MessageGroupId': message_group_id,
                                  'MessageAttributes': message_attributes}
                 request_entries.append(request_entry)
-            param = {"batch_request_entries": request_entries, "topic_arn": topic_arn}
-            self.handler.call_sns_api('publish_batch', param)
+            self.handler.connection.publish_batch(TopicArn=topic_arn,
+                                                 PublishBatchRequestEntries=request_entries)
 
 
 class TopicTable(APITable):
@@ -115,7 +114,11 @@ class TopicTable(APITable):
                 params[arg1] = arg2
             else:
                 raise NotImplementedError
-        return self.handler.call_sns_api("topic_list", params)
+        print("params===" + str(params))    
+        if bool(params) == False:
+            return self.topic_list()
+        else:              
+            return self.topic_list(topic_arn=params["TopicArn"])
 
     def insert(self, query: ast.Insert) -> pd.DataFrame:
         mandatory_columns = {'name'}
@@ -133,8 +136,31 @@ class TopicTable(APITable):
             )
         topic_names = insert_statement_parser.parse_values()
         for topic_name in topic_names:
-            self.handler.call_sns_api("create_topic", {"name": topic_name[0]})
-
+            self.handler.connection.create_topic(Name =topic_name[0])
+    
+    def topic_list(self, topic_arn=None) -> pd.DataFrame:
+        """
+        Returns topic arns as a pandas DataFrame.
+        Args:
+            topic_arn (str): topic TopicArn (str)
+        """
+        #response = self.connection.list_topics()
+        response = self.handler.connection.list_topics()
+        if len(response['Topics']) == 0:
+            return pd.DataFrame({'TopicArn': []})
+        json_response = str(response)
+        print(str(response))
+        if topic_arn is not None:
+            for topic_arn_row in response['Topics']:
+                topic_arn_response_name = topic_arn_row['TopicArn']
+                if topic_arn == topic_arn_response_name:
+                    return pd.DataFrame([{'TopicArn': topic_arn_response_name}])
+        if topic_arn is not None:
+            return pd.DataFrame({'TopicArn': []})
+        json_response = json_response.replace("\'", "\"")
+        data = JSON.loads(str(json_response))
+        return pd.DataFrame(data["Topics"])
+    
     def get_columns(self, ignore: List[str] = []) -> List[str]:
         """columns
 

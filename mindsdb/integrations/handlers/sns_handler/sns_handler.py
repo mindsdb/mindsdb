@@ -79,33 +79,12 @@ class SnsHandler(APIHandler):
             aws_secret_access_key=self.connection_data['aws_secret_access_key'],
             # verify=False,
             # using  for testing locally with localstack
-            # endpoint_url=self.connection_data['endpoint_url'],
+            endpoint_url=self.connection_data['endpoint_url'],
             region_name=self.connection_data['region_name'])
         self.is_connected = True
         return self.connection
 
-    def topic_list(self, params: Dict = None) -> DataFrame:
-        """
-        Returns topic arns as a pandas DataFrame.
-        Args:
-            params (Dict): topic TopicArn (str)
-        """
-        response = self.connection.list_topics()
-        if len(response['Topics']) == 0:
-            return DataFrame({'TopicArn': []})
-        json_response = str(response)
-        if params is not None and 'TopicArn' in params:
-            topic_arn = params["TopicArn"]
-            for topic_arn_row in response['Topics']:
-                topic_arn_response_name = topic_arn_row['TopicArn']
-                if topic_arn == topic_arn_response_name:
-                    return DataFrame([{'TopicArn': topic_arn_response_name}])
-        if params is not None and 'TopicArn' in params:
-            return DataFrame({'TopicArn': []})
-        json_response = json_response.replace("\'", "\"")
-        data = JSON.loads(str(json_response))
-        return DataFrame(data["Topics"])
-
+    
     def publish_message(self, params: Dict = None) -> DataFrame:
         """
         get topic_arn and message from params and sends message to amazon topic
@@ -128,45 +107,25 @@ class SnsHandler(APIHandler):
                                                  PublishBatchRequestEntries=params['batch_request_entries'])
         return DataFrame(response['Successful'])
 
-    def create_topic(self, params: Dict = None) -> DataFrame:
+    def create_topic(self, name: None) -> DataFrame:
         """
         create topic
         Args:
-           params (Dict):
+           params (name):
         Returns results as a pandas DataFrame.
         """
-        name = params["name"]
-        response = self.connection.create_topic(Name=name)
+        response = self.connection.create_topic(Name = name)
         return DataFrame(response)
 
-    def delete_topic(self, params: Dict = None) -> DataFrame:
+    def delete_topic(self, topic_arn: None) -> DataFrame:
         """
         delete topic by TopicArn
         Args:
            params (Dict):
         Returns results as a pandas DataFrame.
         """
-        topic_arn = params["TopicArn"]
         response = self.connection.delete_topic(TopicArn=topic_arn)
         return DataFrame(response)
-
-    def call_sns_api(self, method_name: str = None, params: dict = None) -> DataFrame:
-        """Calls the sns API method with the given params.
-           Returns results as a pandas DataFrame.
-        """
-        if method_name == 'create_topic':
-            return self.create_topic(params)
-        elif method_name == 'topic_list':
-            return self.topic_list(params)
-        elif method_name == 'publish_message':
-            return self.publish_message(params)
-        elif method_name == 'publish_batch':
-            return self.publish_batch(params)
-        elif method_name == 'delete_topic':
-            return self.delete_topic(params)
-        else:
-            raise NotImplementedError(f'Unknown method {method_name}')
-
 
 connection_args = OrderedDict(
     aws_access_key_id={

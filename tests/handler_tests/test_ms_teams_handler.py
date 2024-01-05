@@ -239,9 +239,9 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
         # if the group_ids parameter is set, the mock will only return the channels data
         else:
             mock_get.return_value = Mock(
-                    status_code=200,
-                    headers={'Content-Type': 'application/json'},
-                    json=Mock(return_value=ms_teams_handler_config.TEST_CHANNELS_DATA)
+                status_code=200,
+                headers={'Content-Type': 'application/json'},
+                json=Mock(return_value=ms_teams_handler_config.TEST_CHANNELS_DATA)
             )
 
         channels_data = self.api_client.get_channels()
@@ -257,7 +257,7 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
 
             mock_get.assert_any_call(
                 'https://graph.microsoft.com/v1.0/teams/test_team_id/channels/',
-                headers={'Authorization': 'Bearer test_access_token'}, 
+                headers={'Authorization': 'Bearer test_access_token'},
                 params=None
             )
 
@@ -343,7 +343,7 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
                     headers={'Content-Type': 'application/json'},
                     json=Mock(return_value=ms_teams_handler_config.TEST_CHANNEL_MESSAGES_DATA)
                 ),
-            ]       
+            ]
 
         channel_messages_data = self.api_client.get_channel_messages()
 
@@ -358,13 +358,13 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
 
         mock_get.assert_any_call(
             'https://graph.microsoft.com/v1.0/teams/test_team_id/channels/',
-            headers={'Authorization': 'Bearer test_access_token'}, 
+            headers={'Authorization': 'Bearer test_access_token'},
             params=None
         )
 
         mock_get.assert_any_call(
             'https://graph.microsoft.com/v1.0/teams/test_team_id/channels/test_channel_id/messages/',
-            headers={'Authorization': 'Bearer test_access_token'}, 
+            headers={'Authorization': 'Bearer test_access_token'},
             params={'$top': 20}
         )
 
@@ -787,4 +787,4 @@ class TestChannelMessagesTable(unittest.TestCase):
 
 
 if __name__ == "__main__":
-   unittest.main()
+    unittest.main()

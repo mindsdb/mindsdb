@@ -75,11 +75,53 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
 
     @patch('requests.get')
     def test_get_chat_message_returns_chat_message_data(self, mock_get):
-        pass
+        """
+        Test that get_chat_message returns chat message data.
+        """
+
+        # configure the mock to return a response with 'status_code' 200
+        mock_get.return_value = Mock(
+            status_code=200,
+            headers={'Content-Type': 'application/json'},
+            json=Mock(return_value=ms_teams_handler_config.TEST_CHAT_MESSAGES_DATA)
+        )
+
+        chat_message_data = self.api_client.get_chat_message("test_id", "test_chat_id")
+
+        # assert the requests.get call was made with the expected arguments
+        mock_get.assert_called_once_with(
+            'https://graph.microsoft.com/v1.0/chats/test_id/messages/test_chat_id/',
+            headers={'Authorization': 'Bearer test_access_token'},
+            params=None
+        )
+
+        self.assertEqual(chat_message_data["id"], "test_id")
+        self.assertEqual(chat_message_data["messageType"], "message")
 
     @patch('requests.get')
     def test_get_chat_messages_returns_chat_messages_data(self, mock_get):
-        pass
+        """
+        Test that get_chat_messages returns chat messages data.
+        """
+
+        # configure the mock to return a response with 'status_code' 200
+        mock_get.return_value = Mock(
+            status_code=200,
+            headers={'Content-Type': 'application/json'},
+            json=Mock(return_value={"value": [ms_teams_handler_config.TEST_CHAT_MESSAGES_DATA]})
+        )
+
+        chat_messages_data = self.api_client.get_chat_messages("test_chat_id")
+
+        # assert the requests.get call was made with the expected arguments
+        mock_get.assert_called_once_with(
+            'https://graph.microsoft.com/v1.0/chats/test_chat_id/messages/',
+            headers={'Authorization': 'Bearer test_access_token'},
+            params={'$top': 20}
+        )
+
+        self.assertEqual(chat_messages_data[0]["id"], "test_id")
+        self.assertEqual(chat_messages_data[0]["messageType"], "message")
 
     @patch('requests.get')
     def test_get_channel_returns_channel_data(self, mock_get):

@@ -157,7 +157,30 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
 
     @patch('requests.get')
     def test_get_channel_message_returns_channel_message_data(self, mock_get):
-        pass
+        """
+        Test that get_channel_message returns channel message data.
+        """
+
+        # configure the mock to return a response with 'status_code' 200
+        mock_get.return_value = Mock(
+            status_code=200,
+            headers={'Content-Type': 'application/json'},
+            json=Mock(return_value=ms_teams_handler_config.TEST_CHANNEL_MESSAGES_DATA)
+        )
+
+        channel_message_data = self.api_client.get_channel_message("test_team_id", "test_channel_id", "test_id")
+
+        # assert the requests.get call was made with the expected arguments
+        mock_get.assert_called_once_with(
+            'https://graph.microsoft.com/v1.0/teams/test_team_id/channels/test_channel_id/messages/test_id/',
+            headers={'Authorization': 'Bearer test_access_token'},
+            params=None
+        )
+
+        self.assertEqual(channel_message_data["id"], "test_id")
+        self.assertEqual(channel_message_data["messageType"], "message")
+        self.assertEqual(channel_message_data["channelIdentity"]["channelId"], "test_channel_id")
+        self.assertEqual(channel_message_data["channelIdentity"]["teamId"], "test_team_id")
 
     @patch('requests.get')
     def test_get_channel_messages_returns_channel_messages_data(self, mock_get):

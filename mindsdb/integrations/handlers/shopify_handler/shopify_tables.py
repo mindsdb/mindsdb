@@ -415,7 +415,6 @@ class OrdersTable(APITable):
         ValueError
             If the query contains an unsupported condition
         """
-        print(f"**************************************{query}********")
         update_statement_parser = UPDATEQueryParser(query)
         values_to_update, where_conditions = update_statement_parser.parse_query()
         orders_df = pd.json_normalize(self.get_orders())

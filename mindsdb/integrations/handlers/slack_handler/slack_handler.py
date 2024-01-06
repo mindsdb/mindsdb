@@ -358,7 +358,7 @@ class SlackThreadsTable(SlackChannelsTable):
         
         # Extract comparison conditions from the query
         conditions = extract_comparison_conditions(query.where)
-        channel_name = conditions[0][2]
+        channel_name=None
         filters = []
         params = {}
         order_by_conditions = {}
@@ -375,6 +375,7 @@ class SlackThreadsTable(SlackChannelsTable):
             if arg1 == 'channel':
                 if arg2 in channel_ids:
                     params['channel'] = channel_ids[arg2]
+                    channel_name=arg2
                 else:
                     raise ValueError(f"Channel '{arg2}' not found")
                 

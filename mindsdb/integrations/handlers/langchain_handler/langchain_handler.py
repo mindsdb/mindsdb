@@ -184,6 +184,7 @@ class LangChainHandler(BaseMLEngine):
             model_kwargs['best_of'] = pred_args.get('best_of', None)
             model_kwargs['logit_bias'] = pred_args.get('logit_bias', None)
             model_kwargs['openai_api_key'] = get_api_key('openai', args, self.engine_storage)
+            model_kwargs['openai_organization'] = args.get('api_organization', None)
 
         model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
         return model_kwargs
@@ -418,9 +419,9 @@ class LangChainHandler(BaseMLEngine):
     def sql_agent_completion(self, df, args=None, pred_args=None):
         """This completion will be used to answer based on information passed by any MindsDB DB or API engine."""
         db = MindsDBSQL(engine=args['executor'], metadata=args['executor'].session.integration_controller)
-        toolkit = SQLDatabaseToolkit(db=db)
         model_name = args.get('model_name', self.default_model)
-        llm = OpenAI(temperature=0) if model_name not in OPEN_AI_CHAT_MODELS else ChatOpenAI(temperature=0)
+        llm = OpenAI(temperature=0) if model_name not in OPEN_AI_CHAT_MODELS else self._create_chat_model(args, pred_args)  # noqa
+        toolkit = SQLDatabaseToolkit(db=db, llm=llm)
         agent = create_sql_agent(
             llm=llm,
             toolkit=toolkit,

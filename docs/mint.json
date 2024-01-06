@@ -150,6 +150,7 @@
           "group": "Setup/Install",
           "pages": [
             "setup/self-hosted/docker",
+            
             {
               "group": "pip",
               "pages": [
@@ -167,6 +168,7 @@
                 "setup/community-deploys-mindsdb"
               ]
             },
+            "setup/self-hosted/docker-desktop",
             {
               "group": "Configuration",
               "pages": [

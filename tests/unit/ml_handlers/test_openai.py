@@ -7,8 +7,10 @@ from mindsdb_sql import parse_sql
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
 from ..executor_test_base import BaseExecutorTest
 
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
-@pytest.mark.skipif(os.environ.get('OPENAI_API_KEY') is None, reason='Missing API key!')
+
+@pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing API key!')
 class TestOpenAI(BaseExecutorTest):
     """Test Class for OpenAI Integration Testing"""
 
@@ -224,6 +226,9 @@ class TestOpenAI(BaseExecutorTest):
         class MockHandlerStorage:
             def json_get(self, key):
                 return {'ft-suffix': {'ft-suffix': '$'}}[key]  # finetuning suffix, irrelevant for this test but needed for init  # noqa
+
+            def get_connection_args(self):
+                return {'api_key': OPENAI_API_KEY}    # noqa
 
         # create project
         handler = OpenAIHandler(

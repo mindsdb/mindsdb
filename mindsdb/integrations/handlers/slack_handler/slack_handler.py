@@ -62,7 +62,7 @@ class SlackChannelsTable(APITable):
         
         # Extract comparison conditions from the query
         conditions = extract_comparison_conditions(query.where)
-        channel_name = conditions[0][2]
+        channel_name = None
         filters = []
         params = {}
         order_by_conditions = {}
@@ -72,6 +72,7 @@ class SlackChannelsTable(APITable):
             if arg1 == 'channel':
                 if arg2 in channel_ids:
                     params['channel'] = channel_ids[arg2]
+                    channel_name=arg2
                 else:
                     raise ValueError(f"Channel '{arg2}' not found")
 
@@ -193,6 +194,17 @@ class SlackChannelsTable(APITable):
         for target in query.targets:
             if target.alias:
                 result.rename(columns={target.parts[-1]: str(target.alias)}, inplace=True)
+        
+        q='' 
+        for i in filters:
+            if i[0]=='=':
+                i[0]='=='
+            if type(i[2])==str:
+                q+=f"{i[1]}{i[0]}'{i[2] }'"
+            else:
+                q+=f"{i[1]}{i[0]}{i[2] }"
+        if q:
+            result.query(q,inplace=True)
 
         # ensure the data in the table is of string type
         return result.astype(str)

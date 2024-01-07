@@ -1,5 +1,6 @@
 import pandas as pd
 from typing import List
+from datetime import datetime as dt
 
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
@@ -33,7 +34,7 @@ class ConversionEventsTable(APITable):
 
         # Get the order by from the query.
         if query.order_by is not None:
-                raise NotImplementedError
+            raise NotImplementedError
 
         if query.limit is not None:
             raise NotImplementedError
@@ -58,6 +59,41 @@ class ConversionEventsTable(APITable):
             for col in set(events.columns).difference(set(selected_columns)):
                 events = events.drop(col, axis=1)
         return events
+
+    def insert(self, query: ast.Insert):
+        """
+        Inserts an event into the calendar.
+
+        Args:
+            query (ast.Insert): SQL query to parse.
+
+        Returns:
+            Response: Response object containing the results.
+        """
+        columns = [col.name for col in query.columns]
+
+        supported_columns = {'name', 'event_name', 'create_time', 'deletable', 'custom', 'countingMethod'}
+        if not set(columns).issubset(supported_columns):
+            unsupported_columns = set(columns).difference(supported_columns)
+            raise ValueError(
+                "Unsupported columns for create email: "
+                + ", ".join(unsupported_columns)
+            )
+        params = {}
+
+        for row in query.values:
+            params = dict(zip(columns, row))
+
+        # Parse the input date string
+        input_date = dt.strptime(params['create_time'], "%Y-%m-%d")
+        # Get the current time
+        current_time = dt.now().time()
+        # Combine the input date with the current time
+        ct = dt.combine(input_date, current_time)
+        params['create_time'] = ct
+
+        # Insert the event into the Google Analytics Admin API.
+        self.handler.call_application_api(method_name='create_conversion_event', params=params)
 
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses

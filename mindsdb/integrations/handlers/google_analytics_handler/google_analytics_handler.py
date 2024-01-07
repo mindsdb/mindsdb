@@ -10,11 +10,11 @@ from mindsdb.integrations.handlers.google_analytics_handler.google_analytics_tab
 import os
 import pandas as pd
 
-from google.analytics.admin_v1beta import AnalyticsAdminServiceClient, ListConversionEventsRequest
-from google.oauth2.service_account import Credentials
+from google.analytics.admin_v1beta import AnalyticsAdminServiceClient, ListConversionEventsRequest, ConversionEvent, \
+    CreateConversionEventRequest
+from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from googleapiclient.errors import HttpError
-
 
 DEFAULT_SCOPES = ['https://www.googleapis.com/auth/analytics.readonly',
                   'https://www.googleapis.com/auth/analytics.edit',
@@ -56,7 +56,7 @@ class GoogleAnalyticsHandler(APIHandler):
         creds = None
 
         if os.path.isfile(self.credentials_file):
-            creds = Credentials.from_service_account_file(self.credentials_file, scopes=self.scopes)
+            creds = service_account.Credentials.from_service_account_file(self.credentials_file, scopes=self.scopes)
 
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
@@ -137,27 +137,21 @@ class GoogleAnalyticsHandler(APIHandler):
         """
         service = self.connect()
         page_token = None
-        counting_method_mapping = {
-            0: 'CONVERSION_COUNTING_METHOD_UNSPECIFIED',
-            1: 'ONCE_PER_EVENT',
-            2: 'ONCE_PER_SESSION',
-        }
         conversion_events = pd.DataFrame(columns=self.conversion_events.get_columns())
+
         while True:
             request = ListConversionEventsRequest(parent=f'properties/{self.property_id}',
                                                   page_token=page_token, **params)
             result = service.list_conversion_events(request)
             conversion_events_data = []
             for conversion_event in result.conversion_events:
-                counting_method = conversion_event.counting_method
-
                 data_row = [
                     conversion_event.name,
                     conversion_event.event_name,
                     conversion_event.create_time,
                     conversion_event.deletable,
                     conversion_event.custom,
-                    counting_method_mapping.get(counting_method),
+                    conversion_event.ConversionCountingMethod(conversion_event.counting_method).name,
                 ]
                 conversion_events_data.append(data_row)
 
@@ -165,9 +159,75 @@ class GoogleAnalyticsHandler(APIHandler):
                 [conversion_events, pd.DataFrame(conversion_events_data, columns=self.conversion_events.get_columns())],
                 ignore_index=True
             )
+
             page_token = result.next_page_token
             if not page_token:
                 break
+        return conversion_events
+
+    def create_conversion_event(self, params: dict = None):
+        """
+        Create a conversion event in your property.
+        Args:
+            params (dict): query parameters
+        Returns:
+            DataFrame
+        """
+        service = self.connect()
+        name = params['name']
+        method = 1
+        conversion_events = pd.DataFrame(columns=self.conversion_events.get_columns())
+
+        if params['deletable'] in ['True', True, 1, 'true']:
+            params['deletable'] = True
+        else:
+            params['deletable'] = False
+
+        if params['custom'] in ['True', True, 1, 'true']:
+            params['custom'] = True
+        else:
+            params['custom'] = False
+
+        if params['countingMethod'] in [0, 1, 2, 'ONCE_PER_EVENT', 'ONCE_PER_SESSION',
+                                        'CONVERSION_COUNTING_METHOD_UNSPECIFIED', '1', '2', '0']:
+            if params['countingMethod'] == 1 or params['countingMethod'] == 'ONCE_PER_EVENT':
+                method = 1
+            elif params['countingMethod'] == 2 or params['countingMethod'] == 'ONCE_PER_SESSION':
+                method = 2
+            elif (params['countingMethod'] == 0
+                  or params['countingMethod'] == 'CONVERSION_COUNTING_METHOD_UNSPECIFIED'):
+                method = 0
+            else:
+                method = 1
+
+        data = {
+            'name': f'properties/{self.property_id}/conversionEvents/{name}',
+            'event_name': params['event_name'],
+            'create_time': params['create_time'],
+            'deletable': params['deletable'],
+            'custom': params['custom'],
+            'counting_method': method,
+        }
+        conversion_event = ConversionEvent(data)
+        request = CreateConversionEventRequest(conversion_event=conversion_event,
+                                               parent=f'properties/{self.property_id}')
+        result = service.create_conversion_event(request)
+        conversion_events_data = []
+        data_row = [
+            result.name,
+            result.event_name,
+            result.create_time,
+            result.deletable,
+            result.custom,
+            result.ConversionCountingMethod(result.counting_method).name,
+        ]
+        conversion_events_data.append(data_row)
+
+        conversion_events = pd.concat(
+            [conversion_events, pd.DataFrame(conversion_events_data, columns=self.conversion_events.get_columns())],
+            ignore_index=True
+        )
+
         return conversion_events
 
     def call_application_api(self, method_name: str = None, params: dict = None) -> pd.DataFrame:
@@ -181,10 +241,7 @@ class GoogleAnalyticsHandler(APIHandler):
         """
         if method_name == 'get_conversion_events':
             return self.get_conversion_events(params)
+        elif method_name == 'create_conversion_event':
+            return self.create_conversion_event(params)
         else:
             raise NotImplementedError(f'Unknown method {method_name}')
-
-
-
-
-

@@ -54,7 +54,7 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
     - [x] Support ORDER BY
     - [x] Support column selection
   - [x] Support UPDATE
-  - [x] Support Insert
+  - [x] Support INSERT
   - [x] Support DELETE
 - [x] Shopify Customers Table for a given Store
   - [x] Support SELECT
@@ -72,6 +72,7 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+  - [x] Support INSERT
   - [x] Support DELETE
 - [x] Shopify Customer Reviews Table for a given Store
   - [x] Support SELECT
@@ -107,7 +108,8 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
 ## TODO
 
 - [ ] Support UPDATE and DELETE for Customers table
-- [ ] Support INSERT, UPDATE and DELETE for Product and Orders tables
+- [ ] Support UPDATE for Orders table
+- [ ] Support INSERT, UPDATE and DELETE for Product table
 - [ ] Shopify Payments table
 - [ ] Shopify Inventory table
 - [ ] Shopify Discounts table
@@ -152,7 +154,7 @@ ORDER BY id
 LIMIT 5
 ~~~~
 
-It is also possible to INSERT data into your Shopify store. At the moment, only the `customers` and `products` table supports INSERT:
+It is also possible to INSERT data into your Shopify store. At the moment, only the `customers`, `products`, and `orders` tables support INSERT:
 
 ~~~~sql
 INSERT INTO shopify_datasource.customers(first_name, last_name, email)
@@ -160,9 +162,27 @@ VALUES
 ('John', 'Doe', 'john.doe@example.com')
 ~~~~
 
-A limited number of columns are supported for INSERT: 'first_name', 'last_name', 'email', 'phone', 'tags' and 'currency'. Of these either 'first_name', 'last_name', 'email' or 'phone' must be provided. 
+~~~~sql
+INSERT INTO shopify_datasource.products(title, vendor, tags)
+VALUES 
+('Product Name', 'Vendor Name', 'new, sale, winter')
+~~~~
 
-It is also possible to DELETE data into your Shopify store. At the moment, only the `customers` and `products` table supports DELETE:
+~~~~sql
+INSERT INTO shopify_datasource.orders(line_items, test)
+VALUES 
+('[{"title":"Product Name","price":25.00,"quantity":1}]', true)
+~~~~
+
+A limited number of columns are supported for INSERT for each table: 
+
+The `products` table supports the following columns: 'title', 'body_html', 'vendor', 'product_type', 'tags', and 'status'. Of these, 'title' must be provided.
+
+The `customers` table supports the following columns: 'first_name', 'last_name', 'email', 'phone', 'tags' and 'currency'. Of these, either 'first_name', 'last_name', 'email' or 'phone' must be provided. 
+
+The `orders` table supports the following columns: 'currency', 'email', 'fulfillment_status', 'note', 'line_items', 'phone', 'processed_at', 'tags', and 'test'. Of these, 'line_items' must be provided.
+
+It is also possible to DELETE data from your Shopify store. At the moment, only the `customers`, `products`, and `orders` tables support DELETE:
 
 ~~~~sql
 DELETE FROM shopify_datasource.customers

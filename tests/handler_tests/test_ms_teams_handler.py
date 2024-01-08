@@ -109,7 +109,7 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
         mock_get.return_value = Mock(
             status_code=200,
             headers={'Content-Type': 'application/json'},
-            json=Mock(return_value=ms_teams_handler_config.TEST_CHAT_MESSAGES_DATA)
+            json=Mock(return_value={'value': ms_teams_handler_config.TEST_CHAT_MESSAGES_DATA})
         )
 
         chat_messages_data = self.api_client.get_chat_messages("test_chat_id")
@@ -141,7 +141,7 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
             Mock(
                 status_code=200,
                 headers={'Content-Type': 'application/json'},
-                json=Mock(return_value=ms_teams_handler_config.TEST_CHAT_MESSAGES_DATA)
+                json=Mock(return_value={'value': ms_teams_handler_config.TEST_CHAT_MESSAGES_DATA})
             )
         ]
 
@@ -568,8 +568,32 @@ class TestChatMessagesTable(unittest.TestCase):
             self.assertEqual(first_chat_message["id"], "test_id")
             self.assertEqual(first_chat_message["messageType"], "message")
 
-    def test_select_star_for_all_chats_returns_all_columns(self):
-        pass
+    def test_select_star_for_multiple_chats_returns_all_columns(self):
+        # patch the api handler to return the chat message data
+        with patch.object(self.api_handler.connect(), 'get_chat_messages', return_value=ms_teams_handler_config.TEST_CHAT_MESSAGES_DATA):
+            chat_messages_table = ChatMessagesTable(self.api_handler)
+
+            select_all = ast.Select(
+                # select all columns
+                targets=[Star()],
+                from_table="chat_messages",
+                where=[
+                    BinaryOperation(
+                        op='=',
+                        args=[
+                            Identifier('chatId'),
+                            Constant("test_chat_id")
+                        ]
+                    )
+                ]
+            )
+
+            all_chat_messages = chat_messages_table.select(select_all)
+            first_chat_message = all_chat_messages.iloc[0]
+
+            self.assertEqual(all_chat_messages.shape[1], len(ms_teams_handler_config.CHAT_MESSAGES_TABLE_COLUMNS))
+            self.assertEqual(first_chat_message["id"], "test_id")
+            self.assertEqual(first_chat_message["messageType"], "message")
 
     def test_select_for_single_chat_returns_only_selected_columns(self):
         # patch the api handler to return the chat message data

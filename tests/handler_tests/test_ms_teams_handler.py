@@ -165,7 +165,7 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
         self.assertEqual(chat_messages_data[0]["chatId"], "test_chat_id")
 
     @patch('requests.post')
-    def test_send_chat_message(self, mock_post):
+    def test_send_chat_message_sends_correct_request(self, mock_post):
         """
         Test that send_chat_message sends a chat message.
         """
@@ -374,7 +374,7 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
         self.assertEqual(channel_messages_data[0]["channelIdentity"]["teamId"], "test_team_id")
 
     @patch('requests.post')
-    def test_send_channel_message(self, mock_post):
+    def test_send_channel_message_sends_correct_request(self, mock_post):
         """
         Test that send_channel_message sends a channel message.
         """

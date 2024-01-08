@@ -10,12 +10,8 @@ from mindsdb.integrations.handlers.litellm_handler.settings import CompletionPar
 
 from litellm import completion, batch_completion
 
-# these require no additional arguments
 
 logger = log.getLogger(__name__)
-
-
-# todo add support for multiple api_keys in create engine. i.e. pass in keys for openai, anthropic, etc.
 
 
 class LiteLLMHandler(BaseMLEngine):
@@ -59,24 +55,6 @@ class LiteLLMHandler(BaseMLEngine):
 
         # store args
         self.model_storage.json_set("args", export_args)
-
-    def update(self, args) -> None:
-
-        """
-        Dispatch is updating args, validating args and storing args in model_storage
-        """
-
-        # get current model args
-        current_model_args = self.model_storage.json_get("args")
-
-        # update current args with new args
-        current_model_args.update(args)
-
-        # validate updated args are valid
-        CompletionParameters(**current_model_args)
-
-        # if valid, update model args
-        self.model_storage.json_set("args", current_model_args)
 
     def predict(self, df: pd.DataFrame = None, args: dict = None):
         """

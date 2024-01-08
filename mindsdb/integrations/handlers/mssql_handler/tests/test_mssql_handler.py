@@ -18,7 +18,7 @@ def sql_server_handler():
             "host": "localhost",
             "port": "1433",
             "user": "sa",
-            "password": "admin5678@",
+            "password": "supersecret",
             "database": "master",
         }
     }

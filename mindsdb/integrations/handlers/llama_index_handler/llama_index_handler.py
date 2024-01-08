@@ -10,7 +10,7 @@ from llama_index.readers.schema.base import Document
 from llama_index.readers import SimpleWebPageReader
 from llama_index.prompts import PromptTemplate
 from llama_index import ServiceContext, StorageContext, load_index_from_storage
-from llama_index import LLMPredictor, OpenAIEmbedding
+from llama_index import OpenAIEmbedding
 from llama_index.indices.vector_store.base import VectorStore
 
 from llama_hub.github_repo import GithubClient, GithubRepositoryReader
@@ -122,21 +122,8 @@ class LlamaIndexHandler(BaseMLEngine):
             reader = SimpleWebPageReader(html_to_text=True).load_data([url])
 
         elif args["using"]["reader"] == "GithubRepositoryReader":
-            engine_storage = self.engine_storage
-
-            key = "GITHUB_TOKEN"
-            github_token = get_api_key(
-                key, "llama_index", args["using"], engine_storage, strict=False
-            )
-            if github_token is None:
-                github_token = get_api_key(
-                    key.lower(),
-                    "llama_index",
-                    args["using"],
-                    engine_storage,
-                    strict=True,
-                )
-
+            engine_storage = self.engine_storage.get_connection_args()
+            github_token = _get_github_token(args["using"], engine_storage)
             github_client = GithubClient(github_token)
             owner = args["using"]["owner"]
             repo = args["using"]["repo"]
@@ -269,31 +256,22 @@ class LlamaIndexHandler(BaseMLEngine):
 
     def _get_service_context(self):
         args = self.model_storage.json_get("args")
-        engine_storage = self.engine_storage
-
-        key = "OPENAI_API_KEY"
-        openai_api_key = get_api_key(
-            key, "llama_index", args["using"], engine_storage, strict=False
-        )
-        if openai_api_key is None:
-            openai_api_key = get_api_key(
-                key.lower(), "llama_index", args["using"], engine_storage, strict=True
-            )
-
+        openai_api_key = self._get_llama_index_api_key(args["using"])
         openai.api_key = openai_api_key  # TODO: shouldn't have to do this! bug?
-        llm_kwargs = {"openai_api_key": openai_api_key}
+        llm_kwargs = {
+            "openai_api_key": openai_api_key,
+            "model": "gpt-3.5-turbo-instruct",
+        }
         if "temperature" in args["using"]:
             llm_kwargs["temperature"] = args["using"]["temperature"]
         if "model_name" in args["using"]:
-            llm_kwargs["model_name"] = args["using"]["model_name"]
+            llm_kwargs["model"] = args["using"]["model_name"]
         if "max_tokens" in args["using"]:
             llm_kwargs["max_tokens"] = args["using"]["max_tokens"]
 
         llm = OpenAI(**llm_kwargs)  # TODO: all usual params should go here
         embed_model = OpenAIEmbedding(openai_api_key=openai_api_key)
-        service_context = ServiceContext.from_defaults(
-            llm_predictor=LLMPredictor(llm=llm), embed_model=embed_model
-        )
+        service_context = ServiceContext.from_defaults(llm=llm, embed_model=embed_model)
         return service_context
 
     def _setup_index(self, documents):
@@ -304,3 +282,37 @@ class LlamaIndexHandler(BaseMLEngine):
         )
 
         return index
+
+    def _get_llama_index_api_key(self, args, strict=True):
+        """
+        API_KEY preference order:
+            1. provided at model creation
+            2. provided at engine creation
+            3. OPENAI_API_KEY env variable
+            4. llama_index.OPENAI_API_KEY setting in config.json
+
+        Note: method is not case-sensitive.
+        """
+        key = "OPENAI_API_KEY"
+        for k in key, key.lower():
+            # 1
+            if args.get(k):
+                return args[k]
+            # 2
+            connection_args = self.engine_storage.get_connection_args()
+            if k in connection_args:
+                return connection_args[k]
+            # 3
+            api_key = os.getenv(k)
+            if api_key is not None:
+                return api_key
+            # 4
+            config = Config()
+            openai_cfg = config.get("llama_index", {})
+            if k in openai_cfg:
+                return openai_cfg[k]
+
+        if strict:
+            raise Exception(
+                f'Missing API key "{k}". Either re-create this ML_ENGINE specifying the `{k}` parameter, or re-create this model and pass the API key with `USING` syntax.'
+            )  # noqa

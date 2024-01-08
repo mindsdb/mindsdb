@@ -232,7 +232,7 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
                 Mock(
                     status_code=200,
                     headers={'Content-Type': 'application/json'},
-                    json=Mock(return_value=ms_teams_handler_config.TEST_CHANNELS_DATA)
+                    json=Mock(return_value={'value': ms_teams_handler_config.TEST_CHANNELS_DATA})
                 )
             ]
 
@@ -241,7 +241,7 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
             mock_get.return_value = Mock(
                 status_code=200,
                 headers={'Content-Type': 'application/json'},
-                json=Mock(return_value=ms_teams_handler_config.TEST_CHANNELS_DATA)
+                json=Mock(return_value={'value': ms_teams_handler_config.TEST_CHANNELS_DATA})
             )
 
         channels_data = self.api_client.get_channels()
@@ -728,7 +728,7 @@ class TestChannelsTable(unittest.TestCase):
 
         self.assertListEqual(channels_table.get_columns(), ms_teams_handler_config.CHANNELS_TABLE_COLUMNS)
 
-    def test_select_star_returns_all_columns(self):
+    def test_select_star_for_single_channel_returns_all_columns(self):
         # patch the api handler to return the channel data
         with patch.object(self.api_handler.connect(), 'get_channel', return_value=ms_teams_handler_config.TEST_CHANNEL_DATA):
             channels_table = ChannelsTable(self.api_handler)
@@ -762,7 +762,25 @@ class TestChannelsTable(unittest.TestCase):
             self.assertEqual(first_channel["id"], "test_id")
             self.assertEqual(first_channel["displayName"], "test_display_name")
 
-    def test_select_returns_only_selected_columns(self):
+    def test_select_star_for_all_channels_returns_all_columns(self):
+        # patch the api handler to return the channel data
+        with patch.object(self.api_handler.connect(), 'get_channels', return_value=ms_teams_handler_config.TEST_CHANNELS_DATA):
+            channels_table = ChannelsTable(self.api_handler)
+
+            select_all = ast.Select(
+                # select all columns
+                targets=[Star()],
+                from_table="channels",
+            )
+
+            all_channels = channels_table.select(select_all)
+            first_channel = all_channels.iloc[0]
+
+            self.assertEqual(all_channels.shape[1], len(ms_teams_handler_config.CHANNELS_TABLE_COLUMNS))
+            self.assertEqual(first_channel["id"], "test_id")
+            self.assertEqual(first_channel["displayName"], "test_display_name")
+
+    def test_select_for_single_channel_returns_only_selected_columns(self):
         # patch the api handler to return the channel data
         with patch.object(self.api_handler.connect(), 'get_channel', return_value=ms_teams_handler_config.TEST_CHANNEL_DATA):
             channels_table = ChannelsTable(self.api_handler)
@@ -790,6 +808,27 @@ class TestChannelsTable(unittest.TestCase):
                         ]
                     )
                 ]
+            )
+
+            all_channels = channels_table.select(select_all)
+            first_channel = all_channels.iloc[0]
+
+            self.assertEqual(all_channels.shape[1], 2)
+            self.assertEqual(first_channel["id"], "test_id")
+            self.assertEqual(first_channel["displayName"], "test_display_name")
+
+    def test_select_for_all_channels_returns_only_selected_columns(self):
+        # patch the api handler to return the channel data
+        with patch.object(self.api_handler.connect(), 'get_channels', return_value=ms_teams_handler_config.TEST_CHANNELS_DATA):
+            channels_table = ChannelsTable(self.api_handler)
+
+            select_all = ast.Select(
+                # select only the id and displayName columns
+                targets=[
+                    Identifier('id'),
+                    Identifier('displayName'),
+                ],
+                from_table="channels",
             )
 
             all_channels = channels_table.select(select_all)

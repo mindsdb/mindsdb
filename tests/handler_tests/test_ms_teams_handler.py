@@ -701,7 +701,7 @@ class TestChatMessagesTable(unittest.TestCase):
             self.assertEqual(first_chat_message["id"], "test_id")
             self.assertEqual(first_chat_message["messageType"], "message")
 
-    def test_send_chat_message_sends_correct_request(self):
+    def test_insert_chat_message_calls_correct_method_in_client(self):
         """
         Test that send_chat_message sends a chat message.
         """
@@ -1010,6 +1010,36 @@ class TestChannelMessagesTable(unittest.TestCase):
             self.assertEqual(all_channel_messages.shape[1], 2)
             self.assertEqual(first_channel_message["id"], "test_id")
             self.assertEqual(first_channel_message["messageType"], "message")
+
+    def test_insert_channel_message_calls_correct_method_in_client(self):
+        """
+        Test that insert_channel_message calls the correct method in the client.
+        """
+
+        # patch the api handler to return the channel message data
+        with patch.object(self.api_handler.connect(), 'send_channel_message', return_value=None) as mock_send_channel_message:
+            channel_messages_table = ChannelMessagesTable(self.api_handler)
+
+            insert = ast.Insert(
+                table="channel_messages",
+                columns=[
+                    Identifier('channelIdentity_teamId'),
+                    Identifier('channelIdentity_channelId'),
+                    Identifier('body_content'),
+                    Identifier('subject'),
+                ],
+                values=[
+                    ("test_team_id",
+                    "test_channel_id",
+                    "test_message",
+                    "test_subject")
+                ]
+            )
+
+            channel_messages_table.insert(insert)
+
+            # assert the api handler's send_channel_message method was called with the expected arguments
+            mock_send_channel_message.assert_called_once_with(group_id='test_team_id', channel_id='test_channel_id', message='test_message', subject='test_subject')
 
 
 if __name__ == "__main__":

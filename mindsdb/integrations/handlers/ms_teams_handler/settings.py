@@ -265,9 +265,7 @@ class MSTeamsHandlerConfig(BaseSettings):
         'teamId': 'test_team_id'
     }
 
-    TEST_CHANNELS_DATA = {
-        "value": [TEST_CHANNEL_DATA]
-    }
+    TEST_CHANNELS_DATA = [TEST_CHANNEL_DATA]
 
     TEST_CHANNEL_MESSAGE_DATA = {
         '@odata.context': 'test_context', 
@@ -334,9 +332,7 @@ class MSTeamsHandlerConfig(BaseSettings):
         }
     }
 
-    TEST_CHANNEL_MESSAGES_DATA = {
-        "value": [TEST_CHANNEL_MESSAGE_DATA]
-    }
+    TEST_CHANNEL_MESSAGES_DATA = [TEST_CHANNEL_MESSAGE_DATA]
 
     TEST_GROUP_DATA = {
         '@odata.context': 'test_context', 

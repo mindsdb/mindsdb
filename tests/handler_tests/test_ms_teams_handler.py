@@ -326,7 +326,7 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
                 Mock(
                     status_code=200,
                     headers={'Content-Type': 'application/json'},
-                    json=Mock(return_value=ms_teams_handler_config.TEST_CHANNEL_MESSAGES_DATA)
+                    json=Mock(return_value={'value': ms_teams_handler_config.TEST_CHANNEL_MESSAGES_DATA})
                 ),
             ]
 
@@ -341,7 +341,7 @@ class TestMSGraphAPITeamsClient(unittest.TestCase):
                 Mock(
                     status_code=200,
                     headers={'Content-Type': 'application/json'},
-                    json=Mock(return_value=ms_teams_handler_config.TEST_CHANNEL_MESSAGES_DATA)
+                    json=Mock(return_value={'value': ms_teams_handler_config.TEST_CHANNEL_MESSAGES_DATA})
                 ),
             ]
 
@@ -862,7 +862,7 @@ class TestChannelMessagesTable(unittest.TestCase):
 
         self.assertListEqual(channel_messages_table.get_columns(), ms_teams_handler_config.CHANNEL_MESSAGES_TABLE_COLUMNS)
 
-    def test_select_star_returns_all_columns(self):
+    def test_select_star_for_single_channel_message_returns_all_columns(self):
         # patch the api handler to return the channel message data
         with patch.object(self.api_handler.connect(), 'get_channel_message', return_value=ms_teams_handler_config.TEST_CHANNEL_MESSAGE_DATA):
             channel_messages_table = ChannelMessagesTable(self.api_handler)
@@ -903,7 +903,25 @@ class TestChannelMessagesTable(unittest.TestCase):
             self.assertEqual(first_channel_message["id"], "test_id")
             self.assertEqual(first_channel_message["messageType"], "message")
 
-    def test_select_returns_only_selected_columns(self):
+    def test_select_star_for_all_channel_messages_returns_all_columns(self):
+        # patch the api handler to return the channel message data
+        with patch.object(self.api_handler.connect(), 'get_channel_messages', return_value=ms_teams_handler_config.TEST_CHANNEL_MESSAGES_DATA):
+            channel_messages_table = ChannelMessagesTable(self.api_handler)
+
+            select_all = ast.Select(
+                # select all columns
+                targets=[Star()],
+                from_table="channel_messages",
+            )
+
+            all_channel_messages = channel_messages_table.select(select_all)
+            first_channel_message = all_channel_messages.iloc[0]
+
+            self.assertEqual(all_channel_messages.shape[1], len(ms_teams_handler_config.CHANNEL_MESSAGES_TABLE_COLUMNS))
+            self.assertEqual(first_channel_message["id"], "test_id")
+            self.assertEqual(first_channel_message["messageType"], "message")
+
+    def test_select_for_single_channel_message_returns_only_selected_columns(self):
         # patch the api handler to return the channel message data
         with patch.object(self.api_handler.connect(), 'get_channel_message', return_value=ms_teams_handler_config.TEST_CHANNEL_MESSAGE_DATA):
             channel_messages_table = ChannelMessagesTable(self.api_handler)
@@ -938,6 +956,27 @@ class TestChannelMessagesTable(unittest.TestCase):
                         ]
                     )
                 ]
+            )
+
+            all_channel_messages = channel_messages_table.select(select_all)
+            first_channel_message = all_channel_messages.iloc[0]
+
+            self.assertEqual(all_channel_messages.shape[1], 2)
+            self.assertEqual(first_channel_message["id"], "test_id")
+            self.assertEqual(first_channel_message["messageType"], "message")
+
+    def test_select_for_all_channel_messages_returns_only_selected_columns(self):
+        # patch the api handler to return the channel message data
+        with patch.object(self.api_handler.connect(), 'get_channel_messages', return_value=ms_teams_handler_config.TEST_CHANNEL_MESSAGES_DATA):
+            channel_messages_table = ChannelMessagesTable(self.api_handler)
+
+            select_all = ast.Select(
+                # select only the id and messageType columns
+                targets=[
+                    Identifier('id'),
+                    Identifier('messageType'),
+                ],
+                from_table="channel_messages",
             )
 
             all_channel_messages = channel_messages_table.select(select_all)

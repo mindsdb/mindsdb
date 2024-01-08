@@ -62,7 +62,7 @@ class ConversionEventsTable(APITable):
 
     def insert(self, query: ast.Insert):
         """
-        Inserts an event into the calendar.
+        Inserts a conversion event into your GA4 property.
 
         Args:
             query (ast.Insert): SQL query to parse.
@@ -72,7 +72,7 @@ class ConversionEventsTable(APITable):
         """
         columns = [col.name for col in query.columns]
 
-        supported_columns = {'name', 'event_name', 'create_time', 'deletable', 'custom', 'countingMethod'}
+        supported_columns = {'event_name', 'countingMethod'}
         if not set(columns).issubset(supported_columns):
             unsupported_columns = set(columns).difference(supported_columns)
             raise ValueError(
@@ -84,16 +84,33 @@ class ConversionEventsTable(APITable):
         for row in query.values:
             params = dict(zip(columns, row))
 
-        # Parse the input date string
-        input_date = dt.strptime(params['create_time'], "%Y-%m-%d")
-        # Get the current time
-        current_time = dt.now().time()
-        # Combine the input date with the current time
-        ct = dt.combine(input_date, current_time)
-        params['create_time'] = ct
+        method = 1
+
+        if params['countingMethod'] in [0, 1, 2, 'ONCE_PER_EVENT', 'ONCE_PER_SESSION',
+                                        'CONVERSION_COUNTING_METHOD_UNSPECIFIED', '1', '2', '0']:
+            if (params['countingMethod'] == 1
+                    or params['countingMethod'] == 'ONCE_PER_EVENT'
+                    or params['countingMethod'] == '1'):
+                method = 1
+            elif (params['countingMethod'] == 2
+                  or params['countingMethod'] == 'ONCE_PER_SESSION'
+                  or params['countingMethod'] == '2'):
+                method = 2
+            else:
+                method = 0
+
+        params['countingMethod'] = method
+
+        event_name = params['event_name']
+        countingMethod = params['countingMethod']
+
+        data = {
+            'event_name': event_name,
+            'countingMethod': countingMethod
+        }
 
         # Insert the event into the Google Analytics Admin API.
-        self.handler.call_application_api(method_name='create_conversion_event', params=params)
+        self.handler.call_application_api(method_name='create_conversion_event', params=data)
 
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses

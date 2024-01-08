@@ -143,22 +143,8 @@ class GoogleAnalyticsHandler(APIHandler):
             request = ListConversionEventsRequest(parent=f'properties/{self.property_id}',
                                                   page_token=page_token, **params)
             result = service.list_conversion_events(request)
-            conversion_events_data = []
-            for conversion_event in result.conversion_events:
-                data_row = [
-                    conversion_event.name,
-                    conversion_event.event_name,
-                    conversion_event.create_time,
-                    conversion_event.deletable,
-                    conversion_event.custom,
-                    conversion_event.ConversionCountingMethod(conversion_event.counting_method).name,
-                ]
-                conversion_events_data.append(data_row)
-
-            conversion_events = pd.concat(
-                [conversion_events, pd.DataFrame(conversion_events_data, columns=self.conversion_events.get_columns())],
-                ignore_index=True
-            )
+            conversion_events_data = self.extract_conversion_events_data(result.conversion_events)
+            conversion_events = self.concat_dataframes(conversion_events, conversion_events_data)
 
             page_token = result.next_page_token
             if not page_token:
@@ -174,61 +160,55 @@ class GoogleAnalyticsHandler(APIHandler):
             DataFrame
         """
         service = self.connect()
-        name = params['name']
-        method = 1
         conversion_events = pd.DataFrame(columns=self.conversion_events.get_columns())
 
-        if params['deletable'] in ['True', True, 1, 'true']:
-            params['deletable'] = True
-        else:
-            params['deletable'] = False
-
-        if params['custom'] in ['True', True, 1, 'true']:
-            params['custom'] = True
-        else:
-            params['custom'] = False
-
-        if params['countingMethod'] in [0, 1, 2, 'ONCE_PER_EVENT', 'ONCE_PER_SESSION',
-                                        'CONVERSION_COUNTING_METHOD_UNSPECIFIED', '1', '2', '0']:
-            if params['countingMethod'] == 1 or params['countingMethod'] == 'ONCE_PER_EVENT':
-                method = 1
-            elif params['countingMethod'] == 2 or params['countingMethod'] == 'ONCE_PER_SESSION':
-                method = 2
-            elif (params['countingMethod'] == 0
-                  or params['countingMethod'] == 'CONVERSION_COUNTING_METHOD_UNSPECIFIED'):
-                method = 0
-            else:
-                method = 1
-
-        data = {
-            'name': f'properties/{self.property_id}/conversionEvents/{name}',
-            'event_name': params['event_name'],
-            'create_time': params['create_time'],
-            'deletable': params['deletable'],
-            'custom': params['custom'],
-            'counting_method': method,
-        }
-        conversion_event = ConversionEvent(data)
+        conversion_event = ConversionEvent(
+            event_name=params['event_name'],
+            counting_method=params['countingMethod']
+        )
         request = CreateConversionEventRequest(conversion_event=conversion_event,
                                                parent=f'properties/{self.property_id}')
         result = service.create_conversion_event(request)
-        conversion_events_data = []
-        data_row = [
-            result.name,
-            result.event_name,
-            result.create_time,
-            result.deletable,
-            result.custom,
-            result.ConversionCountingMethod(result.counting_method).name,
-        ]
-        conversion_events_data.append(data_row)
-
-        conversion_events = pd.concat(
-            [conversion_events, pd.DataFrame(conversion_events_data, columns=self.conversion_events.get_columns())],
-            ignore_index=True
-        )
+        conversion_events_data = self.extract_conversion_events_data([result])
+        conversion_events = self.concat_dataframes(conversion_events, conversion_events_data)
 
         return conversion_events
+
+    @staticmethod
+    def extract_conversion_events_data(conversion_events):
+        """
+        Extract conversion events data and return a list of lists.
+        Args:
+            conversion_events: List of ConversionEvent objects
+        Returns:
+            List of lists containing conversion event data
+        """
+        conversion_events_data = []
+        for conversion_event in conversion_events:
+            data_row = [
+                conversion_event.name,
+                conversion_event.event_name,
+                conversion_event.create_time,
+                conversion_event.deletable,
+                conversion_event.custom,
+                conversion_event.ConversionCountingMethod(conversion_event.counting_method).name,
+            ]
+            conversion_events_data.append(data_row)
+        return conversion_events_data
+
+    def concat_dataframes(self, existing_df, data):
+        """
+        Concatenate existing DataFrame with new data.
+        Args:
+            existing_df: Existing DataFrame
+            data: New data to be added to the DataFrame
+        Returns:
+            Concatenated DataFrame
+        """
+        return pd.concat(
+            [existing_df, pd.DataFrame(data, columns=self.conversion_events.get_columns())],
+            ignore_index=True
+        )
 
     def call_application_api(self, method_name: str = None, params: dict = None) -> pd.DataFrame:
         """

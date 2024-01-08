@@ -1,4 +1,2 @@
 google-api-python-client
-google-auth-httplib2
-oauth2client
 google-analytics-admin

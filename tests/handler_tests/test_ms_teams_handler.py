@@ -718,9 +718,11 @@ class TestChatMessagesTable(unittest.TestCase):
                     Identifier('subject'),
                 ],
                 values=[
-                    ("test_chat_id",
-                    "test_message",
-                    "test_subject")
+                    (
+                        "test_chat_id",
+                        "test_message",
+                        "test_subject"
+                    )
                 ]
             )
 
@@ -1029,10 +1031,12 @@ class TestChannelMessagesTable(unittest.TestCase):
                     Identifier('subject'),
                 ],
                 values=[
-                    ("test_team_id",
-                    "test_channel_id",
-                    "test_message",
-                    "test_subject")
+                    (
+                        "test_team_id",
+                        "test_channel_id",
+                        "test_message",
+                        "test_subject"
+                    )
                 ]
             )
 

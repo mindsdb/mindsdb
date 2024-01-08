@@ -193,9 +193,7 @@ class MSTeamsHandlerConfig(BaseSettings):
         }
     }
 
-    TEST_CHATS_DATA = {
-        "value": [TEST_CHAT_DATA]
-    }
+    TEST_CHATS_DATA = [TEST_CHAT_DATA]
 
     TEST_CHAT_MESSAGE_DATA = {
         '@odata.context': 'test_context', 
@@ -232,12 +230,26 @@ class MSTeamsHandlerConfig(BaseSettings):
         'body': {
             'contentType': 'text',
             'content': '\n\nTest message.'
+        },
+        'eventDetail': {
+            '@odata.type': 'test_type',
+            'visibleHistoryStartDateTime': '2023-12-08T17:09:22.241Z',
+            'members': [],
+            'initiator': {
+                'device': None,
+                'application': None,
+                'user': {
+                    '@odata.type': 'test_type',
+                    'id': 'test_user_id',
+                    'displayName': 'test_user_display_name',
+                    'userIdentityType': 'aadUser',
+                    'tenantId': 'test_tenant_id'
+                }
+            },
         }
     }
 
-    TEST_CHAT_MESSAGES_DATA = {
-        "value": [TEST_CHAT_MESSAGE_DATA]
-    }
+    TEST_CHAT_MESSAGES_DATA = [TEST_CHAT_MESSAGE_DATA]
 
     TEST_CHANNEL_DATA = {
         '@odata.context': 'test_context', 

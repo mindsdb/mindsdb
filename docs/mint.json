@@ -43,8 +43,8 @@
   ],
   "tabs": [
     {
-        "name": "Integrations",
-        "url": "integrations"
+      "name": "Integrations",
+      "url": "integrations"
     },
     {
         "name": "Contribute",
@@ -150,6 +150,7 @@
           "group": "Setup/Install",
           "pages": [
             "setup/self-hosted/docker",
+            
             {
               "group": "pip",
               "pages": [
@@ -167,6 +168,7 @@
                 "setup/community-deploys-mindsdb"
               ]
             },
+            "setup/self-hosted/docker-desktop",
             {
               "group": "Configuration",
               "pages": [
@@ -241,7 +243,7 @@
           ]
         },
         "agents/agent",
-        "agents/knowledge-bases",  
+        "agents/knowledge-bases", 
         {
           "group": "Chatbots",
           "pages": [
@@ -1026,6 +1028,198 @@
         "faqs/persist-predictions",
         "faqs/mindsdb-with-php",
         "faqs/benefits"
+      ]
+    },
+    {
+      "group": "Integrations",
+      "pages": [
+        "integrations/integrations",
+        
+        {
+          "group": "Data Sources",
+          "pages": [
+            {
+              "group": "Applications",
+              "pages": [
+                "integrations/app-integrations/binance",
+                "integrations/app-integrations/confluence",
+                "integrations/app-integrations/dockerhub",
+                "integrations/app-integrations/email",
+                "integrations/app-integrations/github",
+                "integrations/app-integrations/gitlab",
+                "integrations/app-integrations/gmail",
+                "integrations/app-integrations/google-calendar",
+                "integrations/app-integrations/hackernews",
+                "integrations/app-integrations/instatus",
+                "integrations/app-integrations/intercom",
+                "integrations/app-integrations/mediawiki",
+                "integrations/app-integrations/microsoft-teams",
+                "integrations/app-integrations/newsapi",
+                "integrations/app-integrations/paypal",
+                "integrations/app-integrations/plaid",
+                "integrations/app-integrations/pypi",
+                "integrations/app-integrations/reddit",
+                "integrations/app-integrations/sendinblue",
+                "integrations/app-integrations/shopify",
+                "integrations/app-integrations/slack",
+                "integrations/app-integrations/strapi",
+                "integrations/app-integrations/stripe",
+                "integrations/app-integrations/twitter",
+                "integrations/app-integrations/web-crawler",
+                "integrations/app-integrations/youtube"
+              ]
+            },
+            {
+              "group": "Databases",
+              "pages": [
+                "integrations/data-integrations/all-data-integrations",
+                "integrations/data-integrations/airtable",
+                "integrations/data-integrations/amazon-aurora",
+                "integrations/data-integrations/amazon-dynamodb",
+                "integrations/data-integrations/amazon-redshift",
+                "integrations/data-integrations/amazon-s3",
+                "integrations/data-integrations/apache-cassandra",
+                "integrations/data-integrations/apache-druid",
+                "integrations/data-integrations/apache-hive",
+                "integrations/data-integrations/apache-ignite",
+                "integrations/data-integrations/apache-impala",
+                "integrations/data-integrations/apache-pinot",
+                "integrations/data-integrations/apache-solr",
+                "integrations/data-integrations/ckan",
+                "integrations/data-integrations/clickhouse",
+                "integrations/data-integrations/cloud-spanner",
+                "integrations/data-integrations/cockroachdb",
+                "integrations/data-integrations/couchbase",
+                "integrations/data-integrations/cratedb",
+                "integrations/data-integrations/d0lt",
+                "integrations/data-integrations/databend",
+                "integrations/data-integrations/databricks",
+                "integrations/data-integrations/datastax",
+                "integrations/data-integrations/duckdb",
+                "integrations/data-integrations/edgelessdb",
+                "integrations/data-integrations/elasticsearch",
+                "integrations/data-integrations/firebird",
+                "integrations/data-integrations/google-bigquery",
+                "integrations/data-integrations/google-cloud-sql",
+                "integrations/data-integrations/google-sheets",
+                "integrations/data-integrations/ibm-db2",
+                "integrations/data-integrations/ibm-informix",
+                "integrations/data-integrations/influxdb",
+                "integrations/data-integrations/mariadb",
+                "integrations/data-integrations/matrixone",
+                "integrations/data-integrations/microsoft-access",
+                "integrations/data-integrations/microsoft-sql-server",
+                "integrations/data-integrations/monetdb",
+                "integrations/data-integrations/mongodb",
+                "integrations/data-integrations/mysql",
+                "integrations/data-integrations/oceanbase",
+                "integrations/data-integrations/opengauss",
+                "integrations/data-integrations/oracle",
+                "integrations/data-integrations/orioledb",
+                "integrations/data-integrations/planetscale",
+                "integrations/data-integrations/postgresql",
+                "integrations/data-integrations/questdb",
+                "integrations/data-integrations/sap-hana",
+                "integrations/data-integrations/sap-sql-anywhere",
+                "integrations/data-integrations/scylladb",
+                "integrations/data-integrations/singlestore",
+                "integrations/data-integrations/snowflake",
+                "integrations/data-integrations/sqlite",
+                "integrations/data-integrations/starrocks",
+                "integrations/data-integrations/supabase",
+                "integrations/data-integrations/surrealdb",
+                "integrations/data-integrations/tdengine",
+                "integrations/data-integrations/teradata",
+                "integrations/data-integrations/tidb",
+                "integrations/data-integrations/timescaledb",
+                "integrations/data-integrations/trino",
+                "integrations/data-integrations/vertica",
+                "integrations/data-integrations/vitess",
+                "integrations/data-integrations/yugabytedb"
+              ]
+            },
+            {
+              "group": "Vector Databases",
+              "pages": [
+                "integrations/vector-db-integrations/chromadb",
+                "integrations/vector-db-integrations/pgvector",
+                "integrations/vector-db-integrations/pinecone",
+                "integrations/vector-db-integrations/weaviate"
+              ]
+            }
+          ]
+        },
+        {
+          "group": "AI Engines",
+          "pages": [
+            {
+              "group": "Large Language Models",
+              "pages": [
+                "integrations/ai-engines/ollama",
+                "integrations/ai-engines/replicate-llm",
+                "integrations/ai-engines/vertex",
+                "integrations/ai-engines/anthropic",
+                "integrations/ai-engines/cohere",
+                "integrations/ai-engines/openai",
+                "integrations/ai-engines/huggingface",
+                "integrations/ai-engines/langchain",
+                "integrations/ai-engines/llamaindex",
+                "integrations/ai-engines/monkeylearn"        
+              ]
+            },
+            {
+              "group": "Bring Your Own Models",
+              "pages": [
+                "integrations/ai-engines/byom",
+                "integrations/ai-engines/ray-serve",
+                "integrations/ai-engines/mlflow"
+              ]
+            },
+            {
+              "group": "AutoML",
+              "pages": [
+                "integrations/ai-engines/lightwood",
+                "integrations/ai-engines/pycaret"
+              ]
+            },
+            {
+              "group": "Time Series Models",
+              "pages": [
+                "integrations/ai-engines/statsforecast",
+                "integrations/ai-engines/neuralforecast",
+                "integrations/ai-engines/timegpt"
+              ]
+            },
+            {
+              "group": "Recommender Models",
+              "pages": [
+                "integrations/ai-engines/lightfm",
+                "integrations/ai-engines/popularity-recommender"
+              ]
+            },
+            {
+              "group": "Image Models",
+              "pages": [
+                "integrations/ai-engines/replicate-text2img",
+                "integrations/ai-engines/replicate-img2text"
+              ]
+            },
+            {
+              "group": "Large Video Models",
+              "pages": [
+                "integrations/ai-engines/twelvelabs",
+                "integrations/ai-engines/replicate-text2video"
+              ]
+            },
+            {
+              "group": "Audio Models",
+              "pages": [
+                "integrations/ai-engines/replicate-audio"
+              ]
+            }
+          ]
+        }
+       
       ]
     }
   ],

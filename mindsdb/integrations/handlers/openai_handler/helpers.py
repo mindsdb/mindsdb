@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional
+from typing import List
 import random
 import time
 import math
@@ -13,12 +13,19 @@ import mindsdb.utilities.profiler as profiler
 from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE
 
 
+class PendingFT(openai.OpenAIError):
+    message: str
+    def __init__(self, message) -> None:
+        super().__init__()
+        self.message = message
+
+
 def retry_with_exponential_backoff(
     initial_delay: float = 1,
     hour_budget: float = 0.3,
     jitter: bool = False,
     exponential_base: int = 2,
-    conn_errors: tuple = (openai.APITimeoutError, openai.APIConnectionError),
+    wait_errors: tuple = (openai.APITimeoutError, openai.APIConnectionError, PendingFT),
     status_errors: tuple = (openai.APIStatusError, openai.APIResponseValidationError),
 ):
     """
@@ -64,7 +71,7 @@ def retry_with_exponential_backoff(
                         f'Error status {e.status_code} raised by OpenAI API: {e.body.get("message", "Please refer to `https://platform.openai.com/docs/guides/error-codes` for more information.")}'   # noqa
                     )  # noqa
 
-                except conn_errors:
+                except wait_errors:
                     num_retries += 1
                     if num_retries > max_retries:
                         raise Exception(
@@ -76,7 +83,7 @@ def retry_with_exponential_backoff(
 
                 except openai.OpenAIError as e:
                     raise Exception(
-                        f'General {e.__name__} error raised by OpenAI. Please refer to `https://platform.openai.com/docs/guides/error-codes` for more information.'    # noqa
+                        f'General {str(e)} error raised by OpenAI. Please refer to `https://platform.openai.com/docs/guides/error-codes` for more information.'    # noqa
                     )
 
                 except Exception as e:

@@ -1,3 +1,5 @@
+from pandas import DataFrame
+
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -11,7 +13,7 @@ import os
 import pandas as pd
 
 from google.analytics.admin_v1beta import AnalyticsAdminServiceClient, ListConversionEventsRequest, ConversionEvent, \
-    CreateConversionEventRequest
+    CreateConversionEventRequest, UpdateConversionEventRequest, DeleteConversionEventRequest
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from googleapiclient.errors import HttpError
@@ -174,6 +176,39 @@ class GoogleAnalyticsHandler(APIHandler):
 
         return conversion_events
 
+    def update_conversion_events(self, params: dict = None):
+        """
+        Update a conversion event in your property.
+        Args:
+            params (dict): query parameters
+        Returns:
+            DataFrame
+        """
+        service = self.connect()
+        conversion_events = pd.DataFrame(columns=self.conversion_events.get_columns())
+
+        conversion_event = ConversionEvent(
+            name=params['name'],
+            counting_method=params['countingMethod']
+        )
+        request = UpdateConversionEventRequest(conversion_event=conversion_event,update_mask='*')
+        result = service.update_conversion_event(request)
+
+        conversion_events_data = self.extract_conversion_events_data([result])
+        conversion_events = self.concat_dataframes(conversion_events, conversion_events_data)
+
+        return conversion_events
+
+    def delete_conversion_event(self, params: dict = None):
+        """
+        Delete a conversion event in your property.
+        Args:
+            params (dict): query parameters
+        """
+        service = self.connect()
+        request = DeleteConversionEventRequest(name=params['name'])
+        service.delete_conversion_event(request)
+
     @staticmethod
     def extract_conversion_events_data(conversion_events):
         """
@@ -210,7 +245,7 @@ class GoogleAnalyticsHandler(APIHandler):
             ignore_index=True
         )
 
-    def call_application_api(self, method_name: str = None, params: dict = None) -> pd.DataFrame:
+    def call_application_api(self, method_name: str = None, params: dict = None) -> DataFrame | None:
         """
         Call Google Analytics Admin API and map the data to pandas DataFrame
         Args:
@@ -223,5 +258,9 @@ class GoogleAnalyticsHandler(APIHandler):
             return self.get_conversion_events(params)
         elif method_name == 'create_conversion_event':
             return self.create_conversion_event(params)
+        elif method_name == 'update_conversion_event':
+            return self.update_conversion_events(params)
+        elif method_name == 'delete_conversion_event':
+            return self.delete_conversion_event(params)
         else:
             raise NotImplementedError(f'Unknown method {method_name}')

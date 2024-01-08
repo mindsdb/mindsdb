@@ -1,6 +1,6 @@
 import pandas as pd
 from typing import List
-from datetime import datetime as dt
+import re
 
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
@@ -76,7 +76,7 @@ class ConversionEventsTable(APITable):
         if not set(columns).issubset(supported_columns):
             unsupported_columns = set(columns).difference(supported_columns)
             raise ValueError(
-                "Unsupported columns for create email: "
+                "Unsupported columns for create conversion event: "
                 + ", ".join(unsupported_columns)
             )
         params = {}
@@ -84,33 +84,76 @@ class ConversionEventsTable(APITable):
         for row in query.values:
             params = dict(zip(columns, row))
 
-        method = 1
+        if params['countingMethod'] == 1 or params['countingMethod'] == 0:
+            params['countingMethod'] = 1
+        else:
+            params['countingMethod'] = 2
 
-        if params['countingMethod'] in [0, 1, 2, 'ONCE_PER_EVENT', 'ONCE_PER_SESSION',
-                                        'CONVERSION_COUNTING_METHOD_UNSPECIFIED', '1', '2', '0']:
-            if (params['countingMethod'] == 1
-                    or params['countingMethod'] == 'ONCE_PER_EVENT'
-                    or params['countingMethod'] == '1'):
-                method = 1
-            elif (params['countingMethod'] == 2
-                  or params['countingMethod'] == 'ONCE_PER_SESSION'
-                  or params['countingMethod'] == '2'):
-                method = 2
+        # Insert the conversion event into the Google Analytics Admin API.
+        self.handler.call_application_api(method_name='create_conversion_event', params=params)
+
+    def update(self, query: ast.Update):
+        """
+        Updates a conversion event into your GA4 property.
+
+        Args:
+            query (ast.Update): SQL query to parse.
+
+        Returns:
+            Response: Response object containing the results.
+        """
+        # Get the values from the query.
+        values = query.update_columns.items()
+        data_list = list(values)
+        # Get the conversion event data from the values.
+        params = {}
+        for col, val in zip(query.update_columns, data_list):
+            params[col] = val
+
+        conditions = extract_comparison_conditions(query.where)
+        for op, arg1, arg2 in conditions:
+            if arg1 == 'name':
+                if op == '=':
+                    params['name'] = arg2
+                else:
+                    raise NotImplementedError
             else:
-                method = 0
+                raise NotImplementedError
 
-        params['countingMethod'] = method
+        counting_method_value = str(params['countingMethod'][1])
 
-        event_name = params['event_name']
-        countingMethod = params['countingMethod']
+        # Use regex to check if the expression contains 1 or 0
+        if re.search(r'[01]', counting_method_value):
+            params['countingMethod'] = 1
+        else:
+            params['countingMethod'] = 2
 
-        data = {
-            'event_name': event_name,
-            'countingMethod': countingMethod
-        }
+        # Update the conversion event in the Google Analytics Admin API.
+        self.handler.call_application_api(method_name='update_conversion_event', params=params)
 
-        # Insert the event into the Google Analytics Admin API.
-        self.handler.call_application_api(method_name='create_conversion_event', params=data)
+    def delete(self, query: ast.Delete):
+        """
+        Deletes a conversion event into your GA4 property.
+
+        Args:
+            query (ast.Delete): SQL query to parse.
+
+        Returns:
+            Response: Response object containing the results.
+        """
+
+        # Parse the query to get the conditions.
+        conditions = extract_comparison_conditions(query.where)
+        for op, arg1, arg2 in conditions:
+            if op == 'or':
+                raise NotImplementedError(f'OR is not supported')
+            if arg1 == 'name':
+                if op == '=':
+                    self.handler.call_application_api(method_name='delete_conversion_event', params={'name': arg2})
+                else:
+                    raise NotImplementedError(f'Unknown op: {op}')
+            else:
+                raise NotImplementedError(f'Unknown clause: {arg1}')
 
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses

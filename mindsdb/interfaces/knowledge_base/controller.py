@@ -13,6 +13,7 @@ from mindsdb_sql.parser.ast import (
     Delete,
     Star
 )
+from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
@@ -184,6 +185,7 @@ class KnowledgeBaseTable:
             if target != TableField.EMBEDDINGS.value:
                 # adapt output for vectordb
                 df_out = df_out.rename(columns={target: TableField.EMBEDDINGS.value})
+            df_out = df_out[[TableField.EMBEDDINGS.value]]
 
         return df_out
 
@@ -236,17 +238,22 @@ class KnowledgeBaseController:
                 return kb
             raise EntityExistsError("Knowledge base already exists", name)
 
-        # model
-        model_name = embedding_model.parts[-1]
+        if embedding_model is None:
+            # create default embedding model
+            model_name = self._create_default_embedding_model(project.name, name)
 
-        if len(embedding_model.parts) > 1:
+        else:
+            # get embedding model from input
+            model_name = embedding_model.parts[-1]
+
+        if embedding_model is not None and len(embedding_model.parts) > 1:
             # model project is set
             model_project = self.session.database_controller.get_project(embedding_model.parts[-2])
         else:
             model_project = project
 
         model = self.session.model_controller.get_model(
-            model_name,
+            name=model_name,
             project_name=model_project.name
         )
         model_record = db.Predictor.query.get(model['id'])
@@ -297,6 +304,28 @@ class KnowledgeBaseController:
 
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
         return vector_store_name
+
+    def _create_default_embedding_model(self, project_name, kb_name, engine="sentence_transformers"):
+        """create a default embedding model for knowledge base, if not specified"""
+        model_name = f"{kb_name}_default_model"
+
+        statement = CreatePredictor(
+            name=Identifier(parts=[project_name, model_name]),
+            using={},
+            targets=[
+                Identifier(parts=[TableField.CONTENT.value])
+            ]
+        )
+        ml_handler = self.session.integration_controller.get_handler(
+            engine
+        )
+
+        self.session.model_controller.create_model(
+            statement,
+            ml_handler
+        )
+
+        return model_name
 
     def delete(self, name: str, project_name: str, if_exists: bool = False) -> None:
         """

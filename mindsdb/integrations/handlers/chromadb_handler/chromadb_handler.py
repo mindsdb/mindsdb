@@ -1,3 +1,4 @@
+import sys
 from collections import OrderedDict
 from typing import List, Optional
 
@@ -28,15 +29,15 @@ def get_chromadb():
     see https://docs.trychroma.com/troubleshooting#sqlite
     """
 
-    try:
-        import sys
-
-        __import__("pysqlite3")
-        sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
-    except ImportError:
-        logger.error(
-            "[Chromadb-handler] pysqlite3 is not installed, this is not a problem for local usage"
-        )  # noqa: E501
+    # if we are using python 3.10 or above, we don't need pysqlite
+    if sys.hexversion < 0x30A0000:
+        try:
+            __import__("pysqlite3")
+            sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+        except ImportError:
+            logger.warn(
+                "Python version < 3.10 and pysqlite3 is not installed. ChromaDB may not work without solving one of these: https://docs.trychroma.com/troubleshooting#sqlite"
+            )  # noqa: E501
 
     try:
         import chromadb
@@ -55,6 +56,8 @@ class ChromaDBHandler(VectorStoreHandler):
         super().__init__(name)
         self.handler_storage = HandlerStorage(kwargs.get("integration_id"))
         self._client = None
+        self.persist_directory = None
+        self.is_connected = False
 
         config = self.validate_connection_parameters(name, **kwargs)
 
@@ -101,7 +104,14 @@ class ChromaDBHandler(VectorStoreHandler):
             )
 
     def __del__(self):
-        super().__del__()
+        """Close the database connection."""
+
+        if self.is_connected is True:
+            if self.persist_directory:
+                # sync folder to handler storage
+                self.handler_storage.folder_sync(self.persist_directory)
+
+            self.disconnect()
 
     def connect(self):
         """Connect to a ChromaDB database."""
@@ -113,8 +123,8 @@ class ChromaDBHandler(VectorStoreHandler):
             self.is_connected = True
             return self._client
         except Exception as e:
-            logger.error(f"Error connecting to ChromaDB client, {e}!")
             self.is_connected = False
+            raise Exception(f"Error connecting to ChromaDB client, {e}!")
 
     def disconnect(self):
         """Close the database connection."""
@@ -315,6 +325,14 @@ class ChromaDBHandler(VectorStoreHandler):
 
         data.dropna(axis=1, inplace=True)
 
+        # ensure metadata is a dict, convert to dict if it is a string
+        if data.get(TableField.METADATA.value) is not None:
+            data[TableField.METADATA.value] = data[TableField.METADATA.value].apply(
+                lambda x: x if isinstance(x, dict) else eval(x)
+            )
+
+        # convert to dict
+
         data = data.to_dict(orient="list")
 
         collection.upsert(
@@ -424,7 +442,7 @@ connection_args = OrderedDict(
     },
     persist_directory={
         "type": ARG_TYPE.STR,
-        "description": "persistence directory for chroma",
+        "description": "persistence directory for ChromaDB",
         "required": False,
     },
 )
@@ -432,5 +450,5 @@ connection_args = OrderedDict(
 connection_args_example = OrderedDict(
     host="localhost",
     port="8000",
-    persist_directory="chroma",
+    persist_directory="chromadb",
 )

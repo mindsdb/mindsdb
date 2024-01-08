@@ -24,7 +24,9 @@ class RAGQuestionAnswerer:
 
         self.args = args
 
-        self.embeddings_model = load_embeddings_model(args.embeddings_model_name)
+        self.embeddings_model = args.embeddings_model
+        if self.embeddings_model is None:
+            self.embeddings_model = load_embeddings_model(args.embeddings_model_name)
 
         self.persist_directory = args.vector_store_storage_path
 
@@ -120,10 +122,10 @@ class RAGQuestionAnswerer:
         sources = defaultdict(list)
 
         for idx, document in enumerate(vector_store_response):
-            sources["sources_document"].append(document.metadata["source"])
-            sources["column"].append(document.metadata.get("column"))
-            sources["sources_row"].append(document.metadata.get("row"))
             sources["sources_content"].append(document.page_content)
+            sources["sources_document"].append(document.metadata.get("source", None))
+            sources["column"].append(document.metadata.get("column", None))
+            sources["sources_row"].append(document.metadata.get("row", None))
 
         result["source_documents"].append(dict(sources))
 

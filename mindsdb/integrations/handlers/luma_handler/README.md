@@ -66,3 +66,14 @@ SELECT * FROM mindsdb_luma.events;
 SELECT * FROM mindsdb_luma.events where event_id="evt-HQ36IFDwncocuGy";
 ~~~~
 
+Create an Event
+
+~~~~sql
+INSERT INTO mindsdb_luma.events (name, start_at, timezone, end_at, require_rsvp_approval, geo_address_json_type, geo_address_json_place_id, geo_address_json_description, geo_latitude, geo_longitude, meeting_url)
+VALUES 
+('New York Party', '2023-12-31T23:59:00Z', 'America/New_York', '2024-01-01T00:01:00Z', False, 'google', 'ChIJmQJIxlVYwokRLgeuocVOGVU', 'Landmark - twin towers', '40.756072', '-73.986834', '');
+~~~~
+
+For creating an event, please refer https://docs.lu.ma/reference/create-event-1.
+
+Fields `name`, `start_at` and `timezone` are mandatory in the insert query.

@@ -739,10 +739,18 @@ class ExecuteCommands:
         # Database ID cannot be null
         database_id = database["id"] if database is not None else -1
 
+        model_name = None
+        if statement.model is not None:
+            model_name = statement.model.parts[-1]
+
+        agent_name = None
+        if statement.agent is not None:
+            agent_name = statement.agent.parts[-1]
         chatbot_controller.add_chatbot(
             name.parts[-1],
             project_name=project_name,
-            model_name=statement.model.parts[-1],
+            model_name=model_name,
+            agent_name=agent_name,
             database_id=database_id,
             is_running=is_running,
             params=statement.params,
@@ -759,6 +767,7 @@ class ExecuteCommands:
         # From SET keyword parameters
         updated_name = statement.params.pop("name", None)
         model_name = statement.params.pop("model", None)
+        agent_name = statement.params.pop("agent", None)
         database_name = statement.params.pop("database", None)
         is_running = statement.params.pop("is_running", None)
 
@@ -774,6 +783,7 @@ class ExecuteCommands:
             project_name=project_name,
             name=updated_name,
             model_name=model_name,
+            agent_name=agent_name,
             database_id=database_id,
             is_running=is_running,
             params=statement.params,

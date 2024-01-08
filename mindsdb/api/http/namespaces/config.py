@@ -109,8 +109,10 @@ class Integration(Resource):
     @ns_conf.doc('put_integration')
     def put(self, name):
         params = {}
-        params.update((request.json or {}).get('params', {}))
-        params.update(request.form or {})
+        if request.is_json:
+            params.update((request.json or {}).get('params', {}))
+        else:
+            params.update(request.form or {})
 
         if len(params) == 0:
             abort(400, "type of 'params' must be dict")

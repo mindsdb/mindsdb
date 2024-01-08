@@ -1,4 +1,4 @@
-from ..postgres_handler import Handler as PostgresHandler
+from mindsdb.integrations.handlers.postgres_handler import Handler as PostgresHandler
 
 
 class QuestDBHandler(PostgresHandler):

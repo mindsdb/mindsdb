@@ -7,10 +7,22 @@ on:
 
 jobs:
   add-to-project:
-    name: Add issue to project
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/add-to-project@v0.5.0
-        with:
-          project-url: https://github.com/orgs/mindsdb/projects/65
-          github-token: ${{ secrets.ADD_TO_PR }}
+    - name: Check if actor is an organization member
+      id: check-membership
+      run: |
+        if [[ "${{ github.actor }}" == "mindsdb/"* ]]; then
+          echo "::set-output name=isOrgMember::true"
+        else
+          echo "::set-output name=isOrgMember::false"
+        fi
+      shell: bash
+
+    - name: Add issue to project
+      if: steps.check-membership.outputs.isOrgMember == 'true'
+      uses: actions/add-to-project@v0.5.0
+      with:
+        project-url: https://github.com/orgs/mindsdb/projects/65
+        github-token: ${{ secrets.ADD_TO_PR }}

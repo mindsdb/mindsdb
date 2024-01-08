@@ -11,7 +11,10 @@ from mindsdb_sql.parser.ast import Insert, Identifier, CreateTable, TableColumn,
 from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
 from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
-import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities import log
+from mindsdb.utilities.profiler import profiler
+
+logger = log.getLogger(__name__)
 
 
 class DBHandlerException(Exception):
@@ -46,6 +49,15 @@ class IntegrationDataNode(DataNode):
 
     def get_table_columns(self, tableName):
         return []
+
+    def drop_table(self, name: Identifier, if_exists=False):
+        drop_ast = DropTables(
+            tables=[name],
+            if_exists=if_exists
+        )
+        result = self.integration_handler.query(drop_ast)
+        if result.type == RESPONSE_TYPE.ERROR:
+            raise Exception(result.error_message)
 
     def create_table(self, table_name: Identifier, result_set, is_replace=False, is_create=False):
         # is_create - create table
@@ -163,12 +175,12 @@ class IntegrationDataNode(DataNode):
         try:
             df = df.replace(np.NaN, pd.NA)
         except Exception as e:
-            print(f'Issue with clearing DF from NaN values: {e}')
+            logger.error(f"Issue with clearing DF from NaN values: {e}")
 
         try:
             df = df.where(pd.notnull(df), None)
         except Exception as e:
-            print(f'Issue with clearing DF from NaN values: {e}')
+            logger.error(f"Issue with clearing DF from NaN values: {e}")
         # endregion
 
         columns_info = [

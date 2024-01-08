@@ -18,6 +18,8 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 )
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
+
 
 class QdrantHandler(VectorStoreHandler):
     """Handles connection and execution of the Qdrant statements."""
@@ -46,7 +48,7 @@ class QdrantHandler(VectorStoreHandler):
             self.is_connected = True
             return self._client
         except Exception as e:
-            log.logger.error(f"Error instantiating a Qdrant client: {e}")
+            logger.error(f"Error instantiating a Qdrant client: {e}")
             self.is_connected = False
 
     def disconnect(self):
@@ -70,7 +72,7 @@ class QdrantHandler(VectorStoreHandler):
             self._client.get_locks()
             response_code = StatusResponse(True)
         except Exception as e:
-            log.logger.error(f"Error connecting to a Qdrant instance: {e}")
+            logger.error(f"Error connecting to a Qdrant instance: {e}")
             response_code = StatusResponse(False, error_message=str(e))
         finally:
             if response_code.success and need_to_close:
@@ -457,7 +459,7 @@ connection_args = OrderedDict(
     },
     path={
         "type": ARG_TYPE.STR,
-        "description": "Persistence path for a local Qdrant instance(:memory:).",
+        "description": "Persistence path for a local Qdrant instance.",
         "required": False,
     },
     collection_config={

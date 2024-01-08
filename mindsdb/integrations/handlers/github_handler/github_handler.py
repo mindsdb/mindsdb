@@ -7,7 +7,9 @@ from mindsdb.integrations.handlers.github_handler.github_tables import (
     GithubCommitsTable,
     GithubReleasesTable,
     GithubBranchesTable,
-    GithubContributorsTable
+    GithubContributorsTable,
+    GithubMilestonesTable,
+    GithubProjectsTable
 )
 
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -16,12 +18,11 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
 
-logger = get_log("integrations.github_handler")
-
+logger = log.getLogger(__name__)
 
 class GithubHandler(APIHandler):
     """The GitHub handler implementation"""
@@ -50,12 +51,17 @@ class GithubHandler(APIHandler):
         github_releases_data = GithubReleasesTable(self)
         github_branches_data = GithubBranchesTable(self)
         github_contributors_data = GithubContributorsTable(self)
+        github_milestones_data = GithubMilestonesTable(self)
+        github_projects_data = GithubProjectsTable(self)
+
         self._register_table("issues", github_issues_data)
         self._register_table("pull_requests", github_pull_requests_data)
         self._register_table("commits", github_commits_data)
         self._register_table("releases", github_releases_data)
         self._register_table("branches", github_branches_data)
         self._register_table("contributors", github_contributors_data)
+        self._register_table("milestones", github_milestones_data)
+        self._register_table("projects", github_projects_data)
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.

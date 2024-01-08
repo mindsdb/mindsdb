@@ -21,6 +21,8 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 from mindsdb.utilities import log
 from weaviate.util import generate_uuid5
 
+logger = log.getLogger(__name__)
+
 
 class WeaviateDBHandler(VectorStoreHandler):
     """This handler handles connection and execution of the Weaviate statements."""
@@ -96,7 +98,7 @@ class WeaviateDBHandler(VectorStoreHandler):
             self.is_connected = True
             return self._client
         except Exception as e:
-            log.logger.error(f"Error connecting to weaviate client, {e}!")
+            logger.error(f"Error connecting to weaviate client, {e}!")
             self.is_connected = False
 
     def disconnect(self):
@@ -120,7 +122,7 @@ class WeaviateDBHandler(VectorStoreHandler):
             if self._client.is_live():
                 response_code.success = True
         except Exception as e:
-            log.logger.error(f"Error connecting to weaviate , {e}!")
+            logger.error(f"Error connecting to weaviate , {e}!")
             response_code.error_message = str(e)
         finally:
             if response_code.success and not self.is_connected:

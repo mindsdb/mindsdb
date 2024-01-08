@@ -8,11 +8,10 @@ GitHub handler for MindsDB provides interfaces to connect to GitHub via APIs and
 
 - [GitHub Handler](#github-handler)
   - [Table of Contents](#table-of-contents)
-  - [About GithHub](#about-githhub)
+  - [About GitHub](#about-github)
   - [GitHub Handler Implementation](#github-handler-implementation)
   - [GitHub Handler Initialization](#github-handler-initialization)
   - [Implemented Features](#implemented-features)
-  - [TODO](#todo)
   - [Example Usage](#example-usage)
 
 ---
@@ -50,6 +49,10 @@ Read about creating a GitHub API key [here](https://docs.github.com/en/github/au
   - [x] Support INSERT
     - [x] Support title, body, assignee, milestone, and labels columns
 - [x] GitHub Pull Requests Table for a given Repository
+- [x] GitHub Commits Table for a given Repository
+- [x] GitHub Releases Table for a given Repository
+- [x] GitHub Branches Table for a given Repositorytory
+- [x] GitHub Projects Table for a given Repository
   - [x] Support SELECT
     - [x] Support LIMIT
     - [x] Support WHERE
@@ -82,6 +85,10 @@ SELECT * FROM mindsdb_github.branches
 
 ~~~~sql
 SELECT * FROM mindsdb_github.contributors
+~~~~
+
+~~~~sql
+SELECT * FROM mindsdb_github.projects
 ~~~~
 
 Run more advanced queries:

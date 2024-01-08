@@ -6,6 +6,7 @@ services:
     build:
       context: .
       dockerfile: docker/mindsdb.Dockerfile
+      target: dev
     platform: linux/amd64
     restart: always
     ports:

@@ -1,0 +1,9 @@
+__title__ = 'MindsDB Eventbrite handler'
+__package_name__ = 'mindsdb_eventbrite_handler'
+__version__ = '0.0.1'
+__description__ = "MindsDB handler for the Eventbrite API"
+__author__ = 'Ton Hoang Nguyen (Bill)'
+__github__ = 'https://github.com/mindsdb/mindsdb'
+__pypi__ = 'https://pypi.org/project/mindsdb/'
+__license__ = 'MIT'
+__copyright__ = 'Copyright 2023 - mindsdb'

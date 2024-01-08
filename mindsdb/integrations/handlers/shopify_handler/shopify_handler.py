@@ -9,7 +9,9 @@ from mindsdb.integrations.libs.response import (
 
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
+from mindsdb.integrations.libs.api_handler_exceptions import InvalidNativeQuery, ConnectionFailed, MissingConnectionParams
 
+logger = log.getLogger(__name__)
 
 class ShopifyHandler(APIHandler):
     """
@@ -26,6 +28,9 @@ class ShopifyHandler(APIHandler):
             **kwargs: arbitrary keyword arguments.
         """
         super().__init__(name)
+
+        if kwargs.get("connection_data") is None:
+            raise MissingConnectionParams(f"Incomplete parameters passed to Shopify Handler")
 
         connection_data = kwargs.get("connection_data", {})
         self.connection_data = connection_data
@@ -45,7 +50,7 @@ class ShopifyHandler(APIHandler):
 
         inventory_level_data = InventoryLevelTable(self)
         self._register_table("inventory_level", inventory_level_data)
-    
+
         location_data = LocationTable(self)
         self._register_table("locations", location_data)
 
@@ -71,6 +76,9 @@ class ShopifyHandler(APIHandler):
         """
         if self.is_connected is True:
             return self.connection
+
+        if self.kwargs.get("connection_data") is None:
+            raise MissingConnectionParams(f"Incomplete parameters passed to Shopify Handler")
 
         api_session = shopify.Session(self.connection_data['shop_url'], '2021-10', self.connection_data['access_token'])
 
@@ -98,7 +106,8 @@ class ShopifyHandler(APIHandler):
             shopify.Shop.current()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Shopify!')
+            logger.error(f'Error connecting to Shopify!')
+            raise ConnectionFailed(f"Conenction to Shopify failed.")
             response.error_message = str(e)
 
         if self.yotpo_app_key is not None and self.yotpo_access_token is not None:
@@ -127,5 +136,8 @@ class ShopifyHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query, dialect="mindsdb")
+        try:
+            ast = parse_sql(query, dialect="mindsdb")
+        except Exception as e:
+            raise InvalidNativeQuery(f"The query {query} is invalid.")
         return self.query(ast)

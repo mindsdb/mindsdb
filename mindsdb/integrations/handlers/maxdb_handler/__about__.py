@@ -5,5 +5,5 @@ __description__ = "MindsDB handler for SAP MAXDB"
 __author__ = 'Marsid Mali & Sergi Poula'
 __github__ = 'https://github.com/mindsdb/mindsdb'
 __pypi__ = 'https://pypi.org/project/mindsdb/'
-__license__ = 'GPL-3.0'
+__license__ = 'MIT'
 __copyright__ = 'Copyright 2023- mindsdb'

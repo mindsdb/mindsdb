@@ -701,8 +701,33 @@ class TestChatMessagesTable(unittest.TestCase):
             self.assertEqual(first_chat_message["id"], "test_id")
             self.assertEqual(first_chat_message["messageType"], "message")
 
-    def test_send_message(self):
-        pass
+    def test_send_chat_message_sends_correct_request(self):
+        """
+        Test that send_chat_message sends a chat message.
+        """
+
+        # patch the api handler to return the chat message data
+        with patch.object(self.api_handler.connect(), 'send_chat_message', return_value=None) as mock_send_chat_message:
+            chat_messages_table = ChatMessagesTable(self.api_handler)
+
+            insert = ast.Insert(
+                table="chat_messages",
+                columns=[
+                    Identifier('chatId'),
+                    Identifier('body_content'),
+                    Identifier('subject'),
+                ],
+                values=[
+                    ("test_chat_id",
+                    "test_message",
+                    "test_subject")
+                ]
+            )
+
+            chat_messages_table.insert(insert)
+
+            # assert the api handler's send_chat_message method was called with the expected arguments
+            mock_send_chat_message.assert_called_once_with(chat_id='test_chat_id', message='test_message', subject='test_subject')
 
 
 class TestChannelsTable(unittest.TestCase):

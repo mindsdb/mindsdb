@@ -300,6 +300,7 @@ class Jobs(Base):
     id = Column(Integer, primary_key=True)
     company_id = Column(Integer)
     user_class = Column(Integer, nullable=True)
+    active = Column(Boolean, default=True)
 
     name = Column(String, nullable=False)
     project_id = Column(Integer, nullable=False)

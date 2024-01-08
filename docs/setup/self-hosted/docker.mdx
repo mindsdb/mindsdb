@@ -9,9 +9,9 @@ sidebarTitle: Docker
     height="286"
     src="https://www.youtube.com/embed/Bmuavy0MelQ"
     title="Deploy MindsDB using Docker"
-    frameborder="0"
+    frameBorder="0"
     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-    allowfullscreen
+    allowFullScreen
 ></iframe>
 
 ## Install Docker
@@ -128,10 +128,10 @@ The default configuration for MindsDB's Docker image is stored as a JSON code, a
 
 ### Custom Configuration
 
-To override the default configuration, you can provide values via the `MDB_CONFIG_CONTENT` environment variable, as below.
+To override the default configuration, you can mount a config file over `/root/mindsdb_config.json`, as below.
 
 ```bash
-docker run -e MDB_CONFIG_CONTENT='{"api":{"http": {"host": "0.0.0.0","port": "8080"}}}' mindsdb/mindsdb
+docker run -v mbd_config.json:/root/mindsdb_config.json mindsdb/mindsdb
 ```
 
 ## Known Issues

@@ -1,0 +1,33 @@
+name: MindsDB Testing
+
+on:
+  push:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+
+  test-file-handler:
+    name: Test file_handler
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4.7.0
+        with:
+          python-version: 3.9
+      - name: Install python deps
+        run: |
+          pip install .
+          pip install -r requirements/requirements-test.txt
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            file_handler:
+              - 'mindsdb/integrations/handlers/file_handler/**'
+
+      - if: steps.changes.outputs.file_handler == 'true'
+        run: |
+          pytest mindsdb/integrations/handlers/file_handler/

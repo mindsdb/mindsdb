@@ -1,1 +1,6 @@
-lightwood[all_extras] >= 22.8.1.0
+lightwood==23.11.1.0
+lightwood[audio]==23.11.1.0
+lightwood[extra_ts]==23.11.1.0
+lightwood[extra]==23.11.1.0
+lightwood[image]==23.11.1.0
+lightwood[xai]==23.11.1.0

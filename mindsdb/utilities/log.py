@@ -1,151 +1,78 @@
-import os
-import sys
 import logging
-import traceback
+import os
+from logging.config import dictConfig
 
-from mindsdb.utilities.config import Config
-from functools import partial
-
-
-class LoggerWrapper(object):
-    def __init__(self, writer_arr, default_writer_pos):
-        self._writer_arr = writer_arr
-        self.default_writer_pos = default_writer_pos
-
-    def write(self, message):
-        if len(message.strip(' \n')) == 0:
-            return
-        if 'DEBUG:' in message:
-            self._writer_arr[0](message)
-        elif 'INFO:' in message:
-            self._writer_arr[1](message)
-        elif 'WARNING:' in message:
-            self._writer_arr[2](message)
-        elif 'ERROR:' in message:
-            self._writer_arr[3](message)
-        else:
-            self._writer_arr[self.default_writer_pos](message)
-
-    def flush(self):
-        pass
-
-    def isatty(self):
-        return True  # assumes terminal attachment
-
-    def fileno(self):
-        return 1  # stdout
-
-# class DbHandler(logging.Handler):
-#     def __init__(self):
-#         logging.Handler.__init__(self)
-#         self.company_id = os.environ.get('MINDSDB_COMPANY_ID', None)
-#
-#     def emit(self, record):
-#         self.format(record)
-#         if (
-#             len(record.message.strip(' \n')) == 0
-#             or (record.threadName == 'ray_print_logs' and 'mindsdb-logger' not in record.message)
-#         ):
-#             return
-#
-#         log_type = record.levelname
-#         source = f'file: {record.pathname} - line: {record.lineno}'
-#         payload = record.msg
-#
-#         if telemtry_enabled:
-#             pass
-#             # @TODO: Enable once we are sure no sensitive info is being outputed in the logs
-#             # if log_type in ['INFO']:
-#             #    add_breadcrumb(
-#             #        category='auth',
-#             #        message=str(payload),
-#             #        level='info',
-#             #    )
-#             # Might be too much traffic if we send this for users with slow networks
-#             # if log_type in ['DEBUG']:
-#             #    add_breadcrumb(
-#             #        category='auth',
-#             #        message=str(payload),
-#             #        level='debug',
-#             #    )
-#
-#         if log_type in ['ERROR', 'WARNING']:
-#             trace = str(traceback.format_stack(limit=20))
-#             trac_log = Log(log_type='traceback', source=source, payload=trace, company_id=self.company_id)
-#             session.add(trac_log)
-#             session.commit()
-#
-#             if telemtry_enabled:
-#                 add_breadcrumb(
-#                     category='stack_trace',
-#                     message=trace,
-#                     level='info',
-#                 )
-#                 if log_type in ['ERROR']:
-#                     capture_message(str(payload))
-#                 if log_type in ['WARNING']:
-#                     capture_message(str(payload))
-#
-#         log = Log(log_type=str(log_type), source=source, payload=str(payload), company_id=self.company_id)
-#         session.add(log)
-#         session.commit()
-
-# default logger
-logger = logging.getLogger('dummy')
+logging_initialized = False
 
 
-def initialize_log(config=None, logger_name='main', wrap_print=False):
-    global logger
-    if config is None:
-        config = Config().get_all()
+class ColorFormatter(logging.Formatter):
 
-    telemtry_enabled = os.getenv('CHECK_FOR_UPDATES', '1').lower() not in ['0', 'false', 'False']
+    green = "\x1b[32;20m"
+    default = "\x1b[39;20m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
+    format = "%(asctime)s %(processName)15s %(levelname)-8s %(name)s: %(message)s"
 
-    if telemtry_enabled:
-        try:
-            import sentry_sdk
-            from sentry_sdk import capture_message, add_breadcrumb
-            sentry_sdk.init(
-                "https://29e64dbdf325404ebf95473d5f4a54d3@o404567.ingest.sentry.io/5633566",
-                traces_sample_rate=0  # Set to `1` to experiment with performance metrics
-            )
-        except (ImportError, ModuleNotFoundError) as e:
-            raise Exception(f"to use telemetry please install 'pip install mindsdb[telemetry]': {e}")
+    FORMATS = {
+        logging.DEBUG: logging.Formatter(green + format + reset),
+        logging.INFO: logging.Formatter(default + format + reset),
+        logging.WARNING: logging.Formatter(yellow + format + reset),
+        logging.ERROR: logging.Formatter(red + format + reset),
+        logging.CRITICAL: logging.Formatter(bold_red + format + reset),
+    }
 
-    ''' Create new logger
-    :param config: object, app config
-    :param logger_name: str, name of logger
-    :param wrap_print: bool, if true, then print() calls will be wrapped by log.debug() function.
-    '''
-    log = logging.getLogger(f'mindsdb.{logger_name}')
-    log.propagate = False
-    log.setLevel(min(
-        getattr(logging, config['log']['level']['console']),
-        getattr(logging, config['log']['level']['file'])
-    ))
-
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(config['log']['level'].get('console', logging.INFO))
-    console_handler.setFormatter(formatter)
-    log.addHandler(console_handler)
-
-    # db_handler = DbHandler()
-    # db_handler.setLevel(config['log']['level'].get('db', logging.WARNING))
-    # db_handler.setFormatter(formatter)
-    # log.addHandler(db_handler)
-
-    if wrap_print:
-        sys.stdout = LoggerWrapper([log.debug, log.info, log.warning, log.error], 1)
-        sys.stderr = LoggerWrapper([log.debug, log.info, log.warning, log.error], 3)
-
-    log.error = partial(log.error, exc_info=True)
-    logger = log
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        return log_fmt.format(record)
 
 
-def get_log(logger_name=None):
-    if logger_name is None:
-        return logging.getLogger('mindsdb')
-    return logging.getLogger(f'mindsdb.{logger_name}')
+def configure_logging():
+    mindsdb_level = os.environ.get("MINDSDB_LOG_LEVEL", None)
+    if mindsdb_level is not None:
+        mindsdb_level = getattr(logging, mindsdb_level)
+    else:
+        mindsdb_level = logging.INFO
 
+    logging_config = dict(
+        version=1,
+        formatters={"f": {"()": ColorFormatter}},
+        handlers={
+            "console": {
+                "class": "logging.StreamHandler",
+                "formatter": "f",
+            }
+        },
+        loggers={
+            "": {  # root logger
+                "handlers": ["console"],
+                "level": logging.WARNING,
+            },
+            "__main__": {
+                "level": mindsdb_level,
+            },
+            "mindsdb": {
+                "level": mindsdb_level,
+            },
+            "alembic": {
+                "level": logging.DEBUG,
+            },
+        },
+    )
+    dictConfig(logging_config)
+
+
+# I would prefer to leave code to use logging.getLogger(), but there are a lot of complicated situations
+# in MindsDB with processes being spawned that require logging to be configured again in a lot of cases.
+# Using a custom logger-getter like this lets us do that logic here, once.
+def getLogger(name=None):
+    """
+    Get a new logger, configuring logging first if it hasn't been done yet.
+    """
+    global logging_initialized
+    if not logging_initialized:
+        configure_logging()
+        logging_initialized = True
+
+    return logging.getLogger(name)

@@ -1,10 +1,12 @@
 
-Execution alembic should perform in mindsdb/migrations directory 
+Execution alembic should perform in mindsdb/migrations directory
 with adding mindsdb folder to python path. Example:
-- cd mindsdb/migrations
-- env PYTHONPATH=../../ alembic upgrade head
 
-## Create migration 
+`cd mindsdb/migrations`
+
+`env PYTHONPATH=../../ alembic upgrade head`
+
+## Create migration
 
 - alembic revision --autogenerate -m <migration_name>
 
@@ -12,7 +14,7 @@ Creating migration is required after changing database models during development
 
 ## Apply all migrations
 
-Migrations are applying automatically at start of application 
+Migrations are applying automatically at start of application
 In case when database version is newer than backend then not perform migrations.
 
 ## Manual manage database version
@@ -20,4 +22,3 @@ In case when database version is newer than backend then not perform migrations.
 - alembic downgrade -1
 - alembic upgrade <revision_name>
 - and other alembic commands
-

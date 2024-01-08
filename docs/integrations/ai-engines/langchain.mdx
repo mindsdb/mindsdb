@@ -18,7 +18,7 @@ MindsDB provides the [LangChain handler](https://github.com/mindsdb/mindsdb/tree
 Before creating a model, it is required to create an AI engine based on the provided handler.
 
 <Tip>
-If you installed MindsDB locally, make sure to install all LangChain dependencies from the [requirements.txt](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/langchain_handler/requirements.txt) file.
+If you installed MindsDB locally, make sure to install all LangChain dependencies by running `pip install .[langchain]` or from the [requirements.txt](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/langchain_handler/requirements.txt) file.
 </Tip>
 
 You can create a LangChain engine using this command:
@@ -40,15 +40,14 @@ PREDICT column_to_be_predicted
 USING
     engine = 'langchain_engine',
     model_name = 'anthropic-or-openai-model'
-    anthropic_api_key = 'if-anthropic-model-is-used',
-    openai_api_key = 'if-openai-model-is-used',
+    api_key = 'either-openai-or-anthropic-api-key',
     serper_api_key = 'if-serper-dev-search-is-used',
     prompt_template = 'message to the model that may include some {{input}} columns as variables',
     ...;
 ```
 
 <Tip>
-The available models include OpenAI models, like `gpt-3` or `gpt-4`, and Anthropic models, like `claude`. Please note that you need to provide an API key for the model you choose.
+The available models include [OpenAI](/integrations/ai-engines/openai) models, like `gpt-3` or `gpt-4`, and [Anthropic](/integrations/ai-engines/anthropic) models, like `claude-1` or `claude-2`. Please note that you need to provide an API key for the model you choose.
 </Tip>
 
 Currently, this integration supports exposing OpenAI and Anthrophic LLMs with normal text completion support. They are then wrapped in a zero shot react description agent that offers a few third party tools out of the box, with support for additional ones (like Serper) if an API key is provided. Ongoing memory is also provided.
@@ -118,7 +117,7 @@ We can ask questions to analyze the available data.
 ```sql
 SELECT input, completion
 FROM tool_based_agent
-WHERE input = 'I want to know the average number of beds in the downtown neighbourhood as per the `mysql_demo_db.home_rentals` table'
+WHERE input = 'I want to know the average number of beds in the downtown neighborhood as per the `mysql_demo_db.home_rentals` table'
 USING
     verbose = True,
     tools = [],
@@ -131,7 +130,7 @@ On execution, we get:
 +-----------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
 | input                                                                                                                 | completion                                                                                                     |
 +-----------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
-| I want to know the average number of beds in the downtown neighbourhood as per the `mysql_demo_db.home_rentals` table | The average number of beds in the downtown neighbourhood as per the `mysql_demo_db.home_rentals` table is 1.6. |
+| I want to know the average number of beds in the downtown neighborhood as per the `mysql_demo_db.home_rentals` table | The average number of beds in the downtown neighborhood as per the `mysql_demo_db.home_rentals` table is 1.6. |
 +-----------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
 ```
 
@@ -152,7 +151,7 @@ We can ask the model to retrieve specific data.
 ```sql
 SELECT input, completion
 FROM tool_based_agent
-WHERE input = 'There is a property in the south_side neighborhood with an initial price of 2543 the `mysql_demo_db.home_rentals` table. What are some other deatils of this listing?'
+WHERE input = 'There is a property in the south_side neighborhood with an initial price of 2543 the `mysql_demo_db.home_rentals` table. What are some other details of this listing?'
 USING
     verbose = True,
     tools = [],
@@ -165,7 +164,7 @@ On execution, we get:
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | input                                                                                                                                                                 | completion                                                                                                                                                                              |
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| There is a property in the south_side neighborhood with an initial price of 2543 the `mysql_demo_db.home_rentals` table. What are some other deatils of this listing? | The property in the south_side neighborhood with an initial price of 2543 has 1 bedroom, 1 bathroom, is 630 sqft, has been on the market for 11 days, and has a rental price of 2543.0. |
+| There is a property in the south_side neighborhood with an initial price of 2543 the `mysql_demo_db.home_rentals` table. What are some other details of this listing? | The property in the south_side neighborhood with an initial price of 2543 has 1 bedroom, 1 bathroom, is 630 sqft, has been on the market for 11 days, and has a rental price of 2543.0. |
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
@@ -174,7 +173,7 @@ Here, the model uses the Metadata tool again to fetch information about the tabl
 ```sql
 SELECT *
 FROM mysql_demo_db.home_rentals
-WHERE neightborhood = 'south_side'
+WHERE neighborhood = 'south_side'
 AND initial_price = 2543;
 ```
 

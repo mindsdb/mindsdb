@@ -1,0 +1,92 @@
+---
+title: Anthropic
+sidebarTitle: Anthropic
+---
+
+In this section, we present how to bring Anthropic models to MindsDB.
+
+[Anthropic](https://www.anthropic.com/) is an AI safety and research company based in San Francisco. Their interdisciplinary team has experience across ML, physics, policy, and product. Together, they generate research and create reliable, beneficial AI systems.
+
+Read on to find out how to use Anthropic models within MinsdDB.
+
+## Setup
+
+MindsDB provides the [Anthropic handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/anthropic_handler) that enables you to create Anthropic models within MindsDB.
+
+### AI Engine
+
+Before creating a model, it is required to create an AI engine based on the provided handler.
+
+<Tip>
+If you installed MindsDB locally, make sure to install all Anthropic dependencies by running `pip install .[anthropic]` or from the [requirements.txt](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/anthropic_handler/requirements.txt) file.
+</Tip>
+
+You can create an Anthropic engine using this command:
+
+```sql
+CREATE ML_ENGINE anthropic_engine
+FROM anthropic
+USING
+    api_key = 'your-anthropic-api-key';
+```
+
+<Tip>
+Please note that you need to provide your Anthropic API key. See Anthropic’s [documentation](https://docs.anthropic.com/claude/docs/getting-access-to-claude) on how to get access.
+</Tip>
+
+The name of the engine (here, `anthropic_engine`) should be used as a value for the `engine` parameter in the `USING` clause of the `CREATE MODEL` statement.
+
+### AI Model
+
+The [`CREATE MODEL`](/sql/create/model) statement is used to create, train, and deploy models within MindsDB.
+
+```sql
+CREATE MODEL anthropic_model
+PREDICT answer
+USING
+    column = 'question',
+    engine = 'anthropic_engine',
+    api_key = 'your-anthropic-api-key',
+    max_tokens = 300,
+    model = 'claude-1'; -- choose one of claude-1 or claude-2
+```
+
+Where:
+
+| Name              | Description                                                               |
+|-------------------|---------------------------------------------------------------------------|
+| `column`          | It defines the prompt to the model.                                       |
+| `engine`          | It defines the Anthropic engine.                                          |
+| `api_key`         | It is used to provide your Anthropic API key to gain access to the model. |
+| `max_tokens`      | It defines the maximum number of tokens to generate before stopping.      |
+| `model`           | It defines model that will complete your prompt.                          |
+
+<Info>
+**Default Model**
+When you create an Anthropic model in MindsDB, it uses the `claude-2` model by default. But you can use the `claude-1` model as well by passing it to the `model` parameter in the `USING` clause of the `CREATE MODEL` statement.
+</Info>
+
+<Info>
+**Default Max Tokens**
+When you create an Anthropic model in MindsDB, it uses 100 tokens as the maximum by default. But you can adjust this value by passing it to the `max_tokens` parameter in the `USING` clause of the `CREATE MODEL` statement.
+</Info>
+
+## Usage
+
+Once you have created an Anthropic model, you can use it to make predictions.
+
+```sql
+SELECT question, answer
+FROM mindsdb.anthropic_model
+WHERE question = 'Where is Stockholm located?';
+```
+
+On execution, we get:
+
+```sql
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+| question                    | completion                                                                                                                                                                 |
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+| Where is Stockholm located? |  Stockholm is the capital and largest city of Sweden. It is located on Sweden's south-central east coast, where Lake Mälaren meets the Baltic Sea.                         |
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+```

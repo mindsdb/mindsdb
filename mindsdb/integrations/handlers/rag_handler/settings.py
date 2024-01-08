@@ -16,7 +16,6 @@ from langchain.embeddings.base import Embeddings
 from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS, Chroma, VectorStore
 from pydantic import BaseModel, Extra, Field, validator
-from writer.models import shared
 
 from mindsdb.integrations.handlers.chromadb_handler.chromadb_handler import get_chromadb
 from mindsdb.integrations.handlers.rag_handler.exceptions import (
@@ -29,7 +28,7 @@ from mindsdb.integrations.handlers.rag_handler.exceptions import (
 
 DEFAULT_EMBEDDINGS_MODEL = "BAAI/bge-base-en"
 
-SUPPORTED_VECTOR_STORES = ("chroma", "faiss")
+SUPPORTED_VECTOR_STORES = ("chromadb", "faiss")
 
 SUPPORTED_LLMS = ("writer", "openai")
 
@@ -54,9 +53,9 @@ When summarizing, please keep the following in mind the following question:
 
 DEFAULT_CHUNK_SIZE = 500
 DEFAULT_CHUNK_OVERLAP = 50
-DEFAULT_VECTOR_STORE_NAME = "chroma"
+DEFAULT_VECTOR_STORE_NAME = "chromadb"
 DEFAULT_VECTOR_STORE_COLLECTION_NAME = "collection"
-DEFAULT_PERSISTED_VECTOR_STORE_FOLDER_NAME = "vector_store_folder"
+MAX_EMBEDDINGS_BATCH_SIZE = 2000
 
 chromadb = get_chromadb()
 
@@ -69,7 +68,7 @@ class VectorStoreFactory:
     """Factory class for vector stores"""
 
     @staticmethod
-    def get_vectorstore_class(name):
+    def get_vectorstore_class(name) -> Union[FAISS, Chroma, VectorStore]:
 
         if not isinstance(name, str):
             raise TypeError("name must be a string")
@@ -80,7 +79,7 @@ class VectorStoreFactory:
         if name == "faiss":
             return FAISS
 
-        if name == "chroma":
+        if name == "chromadb":
             return Chroma
 
 
@@ -93,7 +92,7 @@ def get_available_writer_model_ids(args: dict) -> list:
     """Get available writer LLM model ids"""
 
     writer_client = writer.Writer(
-        security=shared.Security(api_key=args["writer_api_key"]),
+        api_key=args["writer_api_key"],
         organization_id=args["writer_org_id"],
     )
 
@@ -109,9 +108,9 @@ def get_available_openai_model_ids(args: dict) -> list:
 
     openai.api_key = args["openai_api_key"]
 
-    res = openai.Engine.list()
+    models = openai.OpenAI().models.list().data
 
-    return [models["id"] for models in res.data]
+    return [models.id for models in models]
 
 
 @dataclass
@@ -140,7 +139,7 @@ class PersistedVectorStoreSaver:
         method_name = f"save_{self.config.vector_store_name}"
         getattr(self, method_name)(vector_store)
 
-    def save_chroma(self, vector_store: Chroma):
+    def save_chromadb(self, vector_store: Chroma):
         """Save Chroma vector store to disk"""
         # no need to save chroma vector store to disk, auto save
         pass
@@ -159,12 +158,12 @@ class PersistedVectorStoreLoader:
         self.config = config
 
     def load_vector_store_client(
-        self,
-        vector_store: str,
+            self,
+            vector_store: str,
     ):
         """Load vector store from the persisted vector store"""
 
-        if vector_store == "chroma":
+        if vector_store == "chromadb":
 
             return Chroma(
                 collection_name=self.config.collection_name,
@@ -188,9 +187,9 @@ class PersistedVectorStoreLoader:
         method_name = f"load_{self.config.vector_store_name}"
         return getattr(self, method_name)()
 
-    def load_chroma(self) -> Chroma:
+    def load_chromadb(self) -> Chroma:
         """Load Chroma vector store from the persisted vector store"""
-        return self.load_vector_store_client(vector_store="chroma")
+        return self.load_vector_store_client(vector_store="chromadb")
 
     def load_faiss(self) -> FAISS:
         """Load FAISS vector store from the persisted vector store"""
@@ -220,7 +219,7 @@ class OpenAIParameters(LLMParameters):
     model_id: str = Field(default="text-davinci-003", title="model name")
     n: int = Field(default=1, title="number of responses to return")
 
-    @validator("model_id")
+    @validator("model_id", allow_reuse=True)
     def openai_model_must_be_supported(cls, v, values):
         supported_models = get_available_openai_model_ids(values)
         if v not in supported_models:
@@ -240,7 +239,7 @@ class WriterLLMParameters(LLMParameters):
     callbacks: List[StreamingStdOutCallbackHandler] = [StreamingStdOutCallbackHandler()]
     verbose: bool = False
 
-    @validator("model_id")
+    @validator("model_id", allow_reuse=True)
     def writer_model_must_be_supported(cls, v, values):
         supported_models = get_available_writer_model_ids(values)
         if v not in supported_models:
@@ -267,24 +266,29 @@ class LLMLoader(BaseModel):
 
     def load_openai_llm(self) -> partial:
         """Load OpenAI LLM API interface"""
-        openai.api_key = self.config_dict["openai_api_key"]
+        client = openai.OpenAI(api_key=self.config_dict["openai_api_key"])
         config = self.config_dict.copy()
         config.pop("openai_api_key")
         config["model"] = config.pop("model_id")
 
-        return partial(openai.Completion.create, **config)
+        return partial(client.completions.create, **config)
 
 
 class RAGBaseParameters(BaseModel):
     """Base model parameters for RAG Handler"""
 
     llm_params: Any
+    vector_store_folder_name: str
+    use_gpu: bool = False
+    embeddings_batch_size: int = MAX_EMBEDDINGS_BATCH_SIZE
     prompt_template: str = DEFAULT_QA_PROMPT_TEMPLATE
     chunk_size: int = DEFAULT_CHUNK_SIZE
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
     url: Union[str, List[str]] = None
+    url_column_name: str = None
     run_embeddings: bool = True
     top_k: int = 4
+    embeddings_model: Embeddings = None
     embeddings_model_name: str = DEFAULT_EMBEDDINGS_MODEL
     context_columns: Union[List[str], str] = None
     vector_store_name: str = DEFAULT_VECTOR_STORE_NAME
@@ -292,15 +296,16 @@ class RAGBaseParameters(BaseModel):
     collection_name: str = DEFAULT_VECTOR_STORE_COLLECTION_NAME
     summarize_context: bool = True
     summarization_prompt_template: str = DEFAULT_SUMMARIZATION_PROMPT_TEMPLATE
-    vector_store_folder_name: str = DEFAULT_PERSISTED_VECTOR_STORE_FOLDER_NAME
-    vector_store_storage_path: str = None
+    vector_store_storage_path: str = Field(
+        default=None, title="don't use this field, it's for internal use only"
+    )
 
     class Config:
         extra = Extra.forbid
         arbitrary_types_allowed = True
         use_enum_values = True
 
-    @validator("prompt_template")
+    @validator("prompt_template", allow_reuse=True)
     def prompt_format_must_be_valid(cls, v):
         if "{context}" not in v or "{question}" not in v:
             raise InvalidPromptTemplate(
@@ -309,15 +314,15 @@ class RAGBaseParameters(BaseModel):
             )
         return v
 
-    @validator("vector_store_name")
+    @validator("vector_store_name", allow_reuse=True)
     def name_must_be_lower(cls, v):
         return v.lower()
 
-    @validator("vector_store_name")
+    @validator("vector_store_name", allow_reuse=True)
     def vector_store_must_be_supported(cls, v):
         if not is_valid_store(v):
             raise UnsupportedVectorStore(
-                f"currently we only support {', '.join(str(v) for v in SUPPORTED_VECTOR_STORES)} vector store"
+                f"we don't support {v}. currently we only support {', '.join(str(v) for v in SUPPORTED_VECTOR_STORES)} vector store"
             )
         return v
 
@@ -328,7 +333,7 @@ class RAGHandlerParameters(RAGBaseParameters):
     llm_type: str
     llm_params: LLMParameters
 
-    @validator("llm_type")
+    @validator("llm_type", allow_reuse=True)
     def llm_type_must_be_supported(cls, v):
         if v not in SUPPORTED_LLMS:
             raise UnsupportedLLM(f"'llm_type' must be one of {SUPPORTED_LLMS}, got {v}")
@@ -369,7 +374,9 @@ class DfLoader(DataFrameLoader):
 
 
 def df_to_documents(
-    df: pd.DataFrame, page_content_columns: Union[List[str], str]
+        df: pd.DataFrame,
+        page_content_columns: Union[List[str], str],
+        url_column_name: str = None,
 ) -> List[Document]:
     """Converts a given dataframe to a list of documents"""
     documents = []
@@ -382,6 +389,9 @@ def df_to_documents(
             raise ValueError(
                 f"page_content_column {page_content_column} not in dataframe columns"
             )
+        if url_column_name is not None and page_content_column == url_column_name:
+            documents.extend(url_to_documents(df[page_content_column].tolist()))
+            continue
 
         loader = DfLoader(data_frame=df, page_content_column=page_content_column)
         documents.extend(loader.load())
@@ -403,13 +413,11 @@ def url_to_documents(urls: Union[List[str], str]) -> List[Document]:
     return documents
 
 
-# todo issue#7361 hard coding device to cpu, add support for gpu later on
-# e.g. {"device": "gpu" if torch.cuda.is_available() else "cpu"}
 @lru_cache()
-def load_embeddings_model(embeddings_model_name):
+def load_embeddings_model(embeddings_model_name, use_gpu=False):
     """Load embeddings model from Hugging Face Hub"""
     try:
-        model_kwargs = {"device": "cpu"}
+        model_kwargs = dict(device="cuda" if use_gpu else "cpu")
         embedding_model = HuggingFaceEmbeddings(
             model_name=embeddings_model_name, model_kwargs=model_kwargs
         )
@@ -421,7 +429,7 @@ def load_embeddings_model(embeddings_model_name):
 
 
 def on_create_build_llm_params(
-    args: dict, llm_config_class: Union[WriterLLMParameters, OpenAIParameters]
+        args: dict, llm_config_class: Union[WriterLLMParameters, OpenAIParameters]
 ) -> Dict:
     """build llm params from create args"""
 

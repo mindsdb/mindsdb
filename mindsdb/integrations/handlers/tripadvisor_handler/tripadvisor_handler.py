@@ -5,7 +5,6 @@ import pandas as pd
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 
-
 from mindsdb.integrations.libs.api_handler import APIHandler
 
 from mindsdb.integrations.libs.response import (
@@ -19,6 +18,8 @@ from .tripadvisor_table import PhotosTable
 from .tripadvisor_table import NearbyLocationTable
 from .tripadvisor_api import TripAdvisorAPI
 from .tripadvisor_api import TripAdvisorAPICall
+
+logger = log.getLogger(__name__)
 
 
 class TripAdvisorHandler(APIHandler):
@@ -88,7 +89,7 @@ class TripAdvisorHandler(APIHandler):
 
         except Exception as e:
             response.error_message = f"Error connecting to TripAdvisor api: {e}"
-            log.logger.error(response.error_message)
+            logger.error(response.error_message)
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False
@@ -259,8 +260,6 @@ class TripAdvisorHandler(APIHandler):
 
         locations = self.api.getTripAdvisorData(TripAdvisorAPICall.NEARBY_SEARCH, **params)
         result = []
-
-        print("RESULT: ", result)
 
         for loc in locations:
             data = {

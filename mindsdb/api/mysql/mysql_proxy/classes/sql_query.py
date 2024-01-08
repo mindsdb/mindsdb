@@ -36,6 +36,7 @@ from mindsdb_sql.parser.ast import (
     Parameter,
     Tuple,
 )
+from mindsdb_sql.planner.step_result import Result
 from mindsdb_sql.planner.steps import (
     ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
@@ -65,10 +66,7 @@ from mindsdb_sql.planner import query_planner
 from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df, query_df_with_type_infer_fallback
-from mindsdb.interfaces.model.functions import (
-    get_model_records,
-    get_predictor_project
-)
+from mindsdb.interfaces.model.functions import get_model_record
 from mindsdb.api.mysql.mysql_proxy.utilities import (
     ErKeyColumnDoesNotExist,
     ErNotSupportedYet,
@@ -466,57 +464,65 @@ class SQLQuery():
         databases = self.session.database_controller.get_list()
 
         predictor_metadata = []
-        predictors_records = get_model_records()
 
         query_tables = []
 
         def get_all_query_tables(node, is_table, **kwargs):
             if is_table and isinstance(node, Identifier):
                 table_name = node.parts[-1]
+                table_version = None
+                project_name = self.session.database
                 if table_name.isdigit():
                     # is predictor version
+                    table_version = int(table_name)
                     table_name = node.parts[-2]
-                query_tables.append(table_name)
+                if table_name != node.parts[0]:
+                    project_name = node.parts[0]
+                query_tables.append((table_name, table_version, project_name))
 
         query_traversal(self.query, get_all_query_tables)
 
-        for predictor_record in predictors_records:
-            model_name = predictor_record.name
+        for table_name, table_version, project_name in query_tables:
+            args = {
+                'name': table_name,
+                'project_name': project_name
+            }
+            if table_version is not None:
+                args['active'] = None
+                args['version'] = table_version
 
-            if model_name not in query_tables:
+            model_record = get_model_record(**args)
+            if model_record is None:
                 continue
 
-            project_record = get_predictor_project(predictor_record)
-            if project_record is None:
+            if isinstance(model_record.data, dict) is False or 'error' in model_record.data:
                 continue
-            project_name = project_record.name
 
-            if isinstance(predictor_record.data, dict) and 'error' not in predictor_record.data:
-                ts_settings = predictor_record.learn_args.get('timeseries_settings', {})
-                predictor = {
-                    'name': model_name,
-                    'integration_name': project_name,   # integration_name,
-                    'timeseries': False,
-                    'id': predictor_record.id
-                }
-                if ts_settings.get('is_timeseries') is True:
-                    window = ts_settings.get('window')
-                    order_by = ts_settings.get('order_by')
-                    if isinstance(order_by, list):
-                        order_by = order_by[0]
-                    group_by = ts_settings.get('group_by')
-                    if isinstance(group_by, list) is False and group_by is not None:
-                        group_by = [group_by]
-                    predictor.update({
-                        'timeseries': True,
-                        'window': window,
-                        'horizon': ts_settings.get('horizon'),
-                        'order_by_column': order_by,
-                        'group_by_columns': group_by
-                    })
-                predictor_metadata.append(predictor)
+            ts_settings = model_record.learn_args.get('timeseries_settings', {})
+            predictor = {
+                'name': table_name,
+                'integration_name': project_name,   # integration_name,
+                'timeseries': False,
+                'id': model_record.id
+            }
+            if ts_settings.get('is_timeseries') is True:
+                window = ts_settings.get('window')
+                order_by = ts_settings.get('order_by')
+                if isinstance(order_by, list):
+                    order_by = order_by[0]
+                group_by = ts_settings.get('group_by')
+                if isinstance(group_by, list) is False and group_by is not None:
+                    group_by = [group_by]
+                predictor.update({
+                    'timeseries': True,
+                    'window': window,
+                    'horizon': ts_settings.get('horizon'),
+                    'order_by_column': order_by,
+                    'group_by_columns': group_by
+                })
+            predictor_metadata.append(predictor)
 
-                self.model_types.update(predictor_record.data.get('dtypes', {}))
+            self.model_types.update(model_record.data.get('dtypes', {}))
 
         database = None if self.session.database == '' else self.session.database.lower()
 
@@ -908,7 +914,7 @@ class SQLQuery():
 
                 params = step.params or {}
 
-                for table in data.get_tables():
+                for table in data.get_tables()[:1]:  # add  __mindsdb_row_id only for first table
                     row_id_col = Column(
                         name='__mindsdb_row_id',
                         database=table['database'],
@@ -924,6 +930,19 @@ class SQLQuery():
                 predictor_name = step.predictor.parts[0]
 
                 where_data = data.get_records()
+
+                # add constants from where
+                row_dict = {}
+                if step.row_dict is not None:
+                    for k, v in step.row_dict.items():
+                        if isinstance(v, Result):
+                            prev_result = steps_data[v.step_num]
+                            # TODO we await only one value: model.param = (subselect)
+                            v = prev_result.get_records_raw()[0][0]
+                        row_dict[k] = v
+
+                    for record in where_data:
+                        record.update(row_dict)
 
                 predictor_metadata = {}
                 for pm in self.predictor_metadata:
@@ -1072,6 +1091,9 @@ class SQLQuery():
                 names_a.update(names_b)
                 data = ResultSet().from_df_cols(resp_df, col_names=names_a)
 
+                for col in data.find_columns('__mindsdb_row_id'):
+                    data.del_column(col)
+
             except Exception as e:
                 raise SqlApiUnknownError(f'error in join step: {e}') from e
 
@@ -1108,6 +1130,7 @@ class SQLQuery():
             where_query = step.query
             query_traversal(where_query, check_fields)
 
+            query_context_controller.remove_lasts(where_query)
             query = Select(targets=[Star()], from_table=Identifier('df'), where=where_query)
 
             res = query_df(df, query)
@@ -1126,10 +1149,10 @@ class SQLQuery():
 
                 records = step_data.get_records_raw()
 
-                if isinstance(step.offset, Constant) and isinstance(step.offset.value, int):
-                    records = records[step.offset.value:]
-                if isinstance(step.limit, Constant) and isinstance(step.limit.value, int):
-                    records = records[:step.limit.value]
+                if isinstance(step.offset, int):
+                    records = records[step.offset:]
+                if isinstance(step.limit, int):
+                    records = records[:step.limit]
 
                 for record in records:
                     step_data2.add_record_raw(record)
@@ -1436,9 +1459,12 @@ class SQLQuery():
 
                 dn.query(query=update_query, session=self.session)
         elif type(step) == DeleteStep:
-
-            integration_name = step.table.parts[0]
-            table_name_parts = step.table.parts[1:]
+            if len(step.table.parts) > 1:
+                integration_name = step.table.parts[0]
+                table_name_parts = step.table.parts[1:]
+            else:
+                integration_name = self.database
+                table_name_parts = step.table.parts
 
             dn = self.datahub.get(integration_name)
 

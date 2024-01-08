@@ -3,42 +3,51 @@ title: MindsDB AI SQL Server
 sidebarTitle: Introduction
 ---
 
-<strong>MindsDB enhances SQL with AI Building Blocks</strong> for developers creating AI tools that need access to realtime data:
-
+<strong>MindsDB enhances SQL with AI Building Blocks</strong> for developers creating AI applications that need to be coupled to realtime data:
 
 
 |  |  |
 | -------- | ------- |
-| [AI Tables](/integrations/ml-engines-overview): |  One of MindsDB's innovations is the ability to treat AI ([MODELS](/model-types), [AGENTS](/agents/agent), [KNOWLEDGE BASES](/agents/knowledge-bases)) as [virtual tables](/generative-ai-tables) that you can [SELECT FROM](/sql/get-single-prediction), [JOIN](/sql/get-batch-predictions), and [FINE-TUNE](/sql/api/finetune) from any datasource using any [AI-Engine](/integrations/ml-engines-overview). |
+| [AI Tables](/ai-engines/overview): |  One of MindsDB's innovations is the ability to treat AI ([MODELS](/model-types), [AGENTS](/agents/agent), [KNOWLEDGE BASES](/agents/knowledge-bases)) as [virtual tables](/generative-ai-tables) that you can [SELECT FROM](/sql/get-single-prediction), [JOIN](/sql/get-batch-predictions), and [FINE-TUNE](/sql/api/finetune) from any datasource using any [AI-Engine](/ai-engines/overview). |
 | [JOBS](/sql/create/jobs): | You can [automate tasks](/sql/create/jobs) in MindsDB, by scheduling any query, at whatever frequency or by using [TRIGGERS](/sql/create/trigger). |
-| [Datasources](/datasources/overview): | MindsDB excels at translating SQL queries into requests that can access and combine data from a wide range of sources, including [Databases](/datasources/overview#databases), [Applications](/datasources/overview#applications), [Vector stores](/datasources/overview#vector-databases), and much more. |
+| [Datasources](/datasources/overview): | Connect any data to MindsDB,  ths server then excels at translating SQL queries into requests that can access and combine data from a wide range of sources, including [Databases](/datasources/overview#databases), [Applications](/datasources/overview#applications), [Vector stores](/datasources/overview#vector-databases), and much more. |
+
+<p align="center">
+  <img src="https://docs.google.com/drawings/d/e/2PACX-1vRAViEKpgXsOrwgqHUL-E2XSeo48ZLFYFJAiU69qE0OH__mcNvp1I8Dx4KebH1Rvp-9GjUTz4MtCVBp/pub?w=903&h=500"/>
+</p>  
 
 <Tip>
 <strong>Why MindsDB?</strong>, because SQL is an effective declarative language for data manipulation, it's also an ideal foundation for constructing <strong>data-centric AI</strong>. 
 </Tip>
 
-## Build with MindsDB
+## Use Cases
 
-As you can connect any data source with any AI/ML model, you can build and automate any AI/ML use case.
 
 Here are some AI/LLM use cases:
-      - [knowledge bases](/agents/knowledge-bases)
-      - [Agents](/agents/agent)
       - [Fine-Tune](sql/api/finetune#example-3-openai-model)
+      - [Knowledge bases](/agents/knowledge-bases)
+      - [Agents](/agents/agent)
       - [Chatbots](/sql/tutorials/twitterbot-mariadb-enterprise-server-skysql)
       - [Classification](/nlp/nlp-extended-examples#text-classification)
       - [Sentiment Analysis](/nlp/sentiment-analysis-inside-mysql-with-openai)
       - [Summarisation](/nlp/text-summarization-inside-mysql-with-openai)
       - [Translation](/nlp/nlp-extended-examples#translation)
-      - [RAG](/integrations/ai-engines/rag)
+      - [RAG/Semantic Search](/integrations/ai-engines/rag)
       - [Q&A](/nlp/question-answering-inside-mysql-with-openai)
 
-You can use MindsDB for the following machine learning use cases:
+You can use MindsDB for the following Machine Learning use cases:
       - [Anomaly Detection](/integrations/ai-engines/anomaly)
       - [Forecasting](/sql/tutorials/eeg-forecasting)
       - [Recommenders](sql/tutorials/recommenders)
       - [Classification](/sql/tutorials/customer-churn)
       - [Regression](/sql/tutorials/home-rentals)
+
+And for the following multi-media use cases:
+      - [Video Semantic Search](/integrations/ai-engines/twelvelabs)
+      - [Text Semantic Search](/integrations/ai-engines/replicate-img2text)
+      - [Text to Audio](/integrations/ai-engines/replicate-audio)
+      - [Text to Video](/integrations/ai-engines/replicate-text2video)
+      - [Text to Image](/integrations/ai-engines/replicate-text2img)
 
 You can use one of MindsDB’s AutoMLs or you can bring your own, pre-trained model.
 
@@ -58,9 +67,9 @@ For example: AI workflow featuring integrations with [Binance](/integrations/app
 Check out the **Use Cases** section for more examples and tutorials.
 
 <Note>
-To find out about data sources available in MindsDB, follow [this link](/integrations/data-sources-overview).
+To find out about data sources available in MindsDB, follow [this link](/datasources/overview).
 
-To find out about AI frameworks available in MindsDB, follow [this link](/integrations/ml-engines-overview).
+To find out about AI frameworks available in MindsDB, follow [this link](/ai-engines/overview).
 </Note>
 
 ## FAQ/Tips

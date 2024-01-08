@@ -8,7 +8,6 @@ on:
       - 'README.md'
 
 jobs:
-
   check-version:
     runs-on: [self-hosted, dev]
     if: github.actor != 'mindsdbadmin'
@@ -23,7 +22,6 @@ jobs:
     - name: Check Version
       run: |
         PYTHONPATH=./ python tests/scripts/check_version.py ${{ env.CI_REF_NAME }} ${{ github.event.release.prerelease }}
-
 
   deploy_to_pypi:
     runs-on: [self-hosted, dev]

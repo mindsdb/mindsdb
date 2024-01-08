@@ -17,11 +17,49 @@ Please follow this [link](https://dashboard.instatus.com/developer) to get the a
 ## Implemented Features
 
 - [x] Instatus status pages table
-  - [x] Get status pages
-  - [x] Create a status page
-  - [x] Update a status page
+  - [x] Support SELECT
+  - [x] Support INSERT
+  - [x] Support UPDATE
+- [x] Instatus components table
+  - [x] Support SELECT
+  - [x] Support INSERT
+  - [x] Support UPDATE
 
-## Example Usage
+## TODO
+- [ ] Instatus Incidents table
+  - [ ] Support SELECT
+  - [ ] Support INSERT
+  - [ ] Support UPDATE
+- [ ] Instatus Incidents updates table
+  - [ ] Support SELECT
+  - [ ] Support INSERT
+  - [ ] Support UPDATE
+- [ ] Instatus Maintenances table
+  - [ ] Support SELECT
+  - [ ] Support INSERT
+  - [ ] Support UPDATE
+- [ ] Instatus Maintenance updates table
+  - [ ] Support SELECT
+  - [ ] Support INSERT
+  - [ ] Support UPDATE
+- [ ] Instatus Templates table
+  - [ ] Support SELECT
+  - [ ] Support INSERT
+  - [ ] Support UPDATE
+- [ ] Instatus Teammates table
+  - [ ] Support SELECT
+  - [ ] Support INSERT
+  - [ ] Support UPDATE
+- [ ] Instatus Subscribers table
+  - [ ] Support SELECT
+  - [ ] Support INSERT
+  - [ ] Support UPDATE
+- [ ] Instatus Metrics table
+  - [ ] Support SELECT
+  - [ ] Support INSERT
+  - [ ] Support UPDATE
+
+## Connection
 
 The first step is to create a database with the new `instatus` engine.
 
@@ -33,24 +71,16 @@ WITH
     "api_key": "<your-instatus-api-key>" --- Instatus API key to use for authentication.
   };
 ```
+## Usage (Status pages table)
 
-### Get your status pages
-
-Example 1: Select all columns
+### SELECT
 
 ```sql
 SELECT *
 FROM mindsdb_instatus.status_pages;
 ```
 
-Example 2: Select specific columns
-
-```sql
-SELECT id, name, status
-FROM mindsdb_instatus.status_pages;
-```
-
-Example 3: Get specific status page
+### WHERE
 
 ```sql
 SELECT *
@@ -58,22 +88,7 @@ FROM mindsdb_instatus.status_pages
 WHERE id = '<status-page-id>';
 ```
 
-Example 4: Apply limit
-
-```sql
-SELECT *
-FROM mindsdb_instatus.status_pages
-LIMIT 10;
-```
-
-### Create a status page
-
-```sql
-INSERT INTO mindsdb_instatus.status_pages (column1, column2, column3, ...)
-VALUES (value1, value2, value3, ...);
-```
-
-Example:
+### INSERT
 
 ```sql
 INSERT INTO mindsdb_instatus.status_pages (email, name, subdomain, components, logoUrl, faviconUrl, websiteUrl, language, useLargeHeader, brandColor, okColor, disruptedColor, degradedColor, downColor, noticeColor, unknownColor, googleAnalytics, subscribeBySms, smsService, twilioSid, twilioToken, twilioSender, nexmoKey, nexmoSecret, nexmoSender, htmlInMeta, htmlAboveHeader, htmlBelowHeader, htmlAboveFooter, htmlBelowFooter, htmlBelowSummary, cssGlobal, launchDate, dateFormat, dateFormatShort, timeFormat)
@@ -88,15 +103,7 @@ Note:
 - `components` is required field (Example: '["Website", "App", "API"]')
 - other fields are optional
 
-### Update a status page
-
-```sql
-UPDATE mindsdb_instatus.status_pages
-SET column1 = value1, column2 = value2, ...
-WHERE id = '<status-page-id>';
-```
-
-Example:
+### UPDATE
 
 ```sql
 UPDATE mindsdb_instatus.status_pages
@@ -144,4 +151,57 @@ SET name = 'mindsdb',
       }
     }'
 WHERE id = '<status-page-id>';
+```
+
+## Usage (Components table)
+
+### SELECT
+
+```sql
+SELECT *
+FROM mindsdb_instatus.components
+WHERE page_id = '<status-page-id>';
+```
+
+### WHERE
+
+```sql
+SELECT *
+FROM mindsdb_instatus.components
+WHERE page_id = '<status-page-id>'
+AND component_id = '<component-id>';
+```
+
+### CREATE
+
+```sql
+INSERT INTO mindsdb_instatus.components (page_id, name, description, status, order, showUptime, grouped, translations_name_in_fr, translations_desc_in_fr)
+VALUES (
+  '<page-id>',
+  'Test component',
+  'Testing',
+  'OPERATIONAL',
+  6,
+  true,
+  false,
+  "Composant de test",
+  "En test"
+);
+```
+
+### UPDATE
+
+```sql
+UPDATE mindsdb_instatus.components
+SET
+  name = 'Test component 4',
+  description = 'Test test test',
+  status = 'OPERATIONAL',
+  order = 6,
+  showUptime = true,
+  grouped = false,
+  translations_name_in_fr = "Composant de test 4",
+  translations_desc_in_fr = "Test test test"
+WHERE page_id = '<status-page-id>'
+AND component_id = '<component-id>';
 ```

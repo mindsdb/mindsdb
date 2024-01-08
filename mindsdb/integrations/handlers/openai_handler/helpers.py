@@ -1,14 +1,23 @@
 import os
-from typing import List, Optional
+from typing import List
 import random
 import time
 import math
 
 import openai
+from openai import OpenAI
+
 import tiktoken
 
 import mindsdb.utilities.profiler as profiler
 from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE
+
+
+class PendingFT(openai.OpenAIError):
+    message: str
+    def __init__(self, message) -> None:
+        super().__init__()
+        self.message = message
 
 
 def retry_with_exponential_backoff(
@@ -16,7 +25,8 @@ def retry_with_exponential_backoff(
     hour_budget: float = 0.3,
     jitter: bool = False,
     exponential_base: int = 2,
-    errors: tuple = (openai.error.RateLimitError, openai.error.APIConnectionError),
+    wait_errors: tuple = (openai.APITimeoutError, openai.APIConnectionError, PendingFT),
+    status_errors: tuple = (openai.APIStatusError, openai.APIResponseValidationError),
 ):
     """
     Wrapper to enable optional arguments. It means this decorator always needs to be called with parenthesis:
@@ -55,20 +65,13 @@ def retry_with_exponential_backoff(
             while True:
                 try:
                     return func(*args, **kwargs)
-                except errors as e:
-                    if e.error is not None:
-                        if (
-                            e.error['type'] == 'invalid_request_error'
-                            and 'Too many parallel completions' in e.error['message']
-                            or 'Please reduce the length of the messages'
-                            in e.error['message']
-                        ):
-                            raise e  # InvalidRequestError triggers batched mode in the previous call
-                        if e.error['type'] == 'insufficient_quota':
-                            raise Exception(
-                                'API key has exceeded its quota, please try 1) increasing it or 2) using another key.'
-                            )  # noqa
 
+                except status_errors as e:
+                    raise Exception(
+                        f'Error status {e.status_code} raised by OpenAI API: {e.body.get("message", "Please refer to `https://platform.openai.com/docs/guides/error-codes` for more information.")}'   # noqa
+                    )  # noqa
+
+                except wait_errors:
                     num_retries += 1
                     if num_retries > max_retries:
                         raise Exception(
@@ -78,12 +81,10 @@ def retry_with_exponential_backoff(
                     delay *= exponential_base * (1 + jitter * random.random())
                     time.sleep(delay)
 
-                except openai.error.OpenAIError as e:
-                    if e.error is not None and e.error['type'] == 'insufficient_quota':
-                        raise Exception(
-                            'API key has exceeded its quota, please try 1) increasing it or 2) using another key.'
-                        )  # noqa
-                    raise e
+                except openai.OpenAIError as e:
+                    raise Exception(
+                        f'General {str(e)} error raised by OpenAI. Please refer to `https://platform.openai.com/docs/guides/error-codes` for more information.'    # noqa
+                    )
 
                 except Exception as e:
                     raise e
@@ -146,6 +147,6 @@ def get_available_models(api_key: str) -> List[str]:
     """
 
     api_base = os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
-    res = openai.Model.list(api_key=api_key, api_base=api_base)
+    res = OpenAI(api_key=api_key, base_url=api_base).models.list()
 
-    return [models["id"] for models in res.data]
+    return [models.id for models in res.data]

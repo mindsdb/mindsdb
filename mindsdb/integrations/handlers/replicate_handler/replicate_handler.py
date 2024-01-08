@@ -22,7 +22,8 @@ class ReplicateHandler(BaseMLEngine):
 
             # Checking if passed model_name and version  are correct or not
         try:
-            replicate.default_client.api_token = args['api_key']
+            os.environ['REPLICATE_API_TOKEN'] = str(args['api_key'])
+            replicate.default_client.api_token = os.environ.get('REPLICATE_API_TOKEN')
             replicate.models.get(args['model_name']).versions.get(args['version'])
 
         except Exception as e:

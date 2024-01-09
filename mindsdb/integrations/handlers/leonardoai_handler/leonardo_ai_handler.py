@@ -25,7 +25,7 @@ class LeonardoAIHandler(BaseMLEngine):
     models for creative content production. From realistic images to artistic text, Leonardo
     AI opens up new possibilities for content creators.
     """
-    name = "leonardoai"
+    name = "leonardo_ai"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -56,20 +56,20 @@ class LeonardoAIHandler(BaseMLEngine):
             }
         )
 
-        # if valid, check if the model is valid
-        if(self.connection.status_code == 200):
+            # if valid, check if the model is valid
+        try:
+            if(self.connection.status_code == 200):
             # get all the available models
-            available_models = self._get_platform_model(args)
-
-            if not args['using']['model']:
-                args['using']['model'] = self.default_model
-            elif args['using']['model'] not in available_models:    # if invalid model_id is provided
-                raise Exception("Invalid Model ID. Please use a valid Model")
-
-        # API key is invalid
-        else:
-            raise Exception("Unable to make connection, please verify the API key.")
-
+                available_models = self._get_platform_model(args)
+                if not args['using']['model']:
+                    args['using']['model'] = self.default_model
+                elif args['using']['model'] not in available_models:    # if invalid model_id is provided
+                    raise Exception("Invalid Model ID. Please use a valid Model")
+            else:
+                raise Exception("Unable to make connection, please verify the API key.")
+        except Exception:
+            raise Exception ("Auth Connection Error, please check the API key")
+            
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None, **kwargs) -> pd.DataFrame:
 
         pred_args = args['predict_params'] if args else {}
@@ -152,6 +152,9 @@ class LeonardoAIHandler(BaseMLEngine):
             - New GET request with the `generation_id` will fetch the generated pictures as URLs
         """
         args = self.model_storage.json_get('args')
+        tmp_args = args['using']
+        height = tmp_args.get('height', 512)
+        width = tmp_args.get('width', 512)
         api_key = self._get_leonardo_api_key(args, self.engine_storage)  # fetch API key
         generation_id = ''
 
@@ -171,10 +174,10 @@ class LeonardoAIHandler(BaseMLEngine):
 
         # payload
         generation_payload = {
-            "height": 512,
+            "height": height,
             "modelId": args['using']['model'],
             "prompt": f"{prompts}",
-            "width": 512
+            "width": width,
         }
 
         # Make a POST request to generate the image
@@ -183,19 +186,21 @@ class LeonardoAIHandler(BaseMLEngine):
 
         # Wait for 15 seconds
 
-        # Set the desired duration in seconds
-        duration = 15
+        # # Set the desired duration in seconds
+        # duration = 15
 
-        # Record the start time
-        start_time = time.time()
+        # # Record the start time
+        # start_time = time.time()
 
-        # Run a busy loop for the specified duration
-        while time.time() - start_time < duration:
-            # Perform some lightweight computation to keep the program busy
-            # calculating the sum of numbers
-            result = 0
-            for i in range(100000):
-                result += i
+        # # Run a busy loop for the specified duration
+        # while time.time() - start_time < duration:
+        #     # Perform some lightweight computation to keep the program busy
+        #     # calculating the sum of numbers
+        #     result = 0
+        #     for i in range(100000):
+        #         result += i
+
+        time.sleep(15)
 
         # extract generationID from the response
         generation_id = generation_data['sdGenerationJob']['generationId']

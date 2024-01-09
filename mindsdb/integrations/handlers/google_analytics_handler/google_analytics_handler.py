@@ -1,11 +1,7 @@
-from pandas import DataFrame
-
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response
+    HandlerStatusResponse as StatusResponse
 )
-from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
+from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.utilities import log
 from mindsdb.integrations.handlers.google_analytics_handler.google_analytics_tables import ConversionEventsTable
 
@@ -85,7 +81,8 @@ class GoogleAnalyticsHandler(APIHandler):
         return self.service
 
     def check_connection(self) -> StatusResponse:
-        """Check connection to the handler.
+        """
+        Check connection to the handler.
 
         Returns
         -------
@@ -97,7 +94,6 @@ class GoogleAnalyticsHandler(APIHandler):
         try:
             # Call the Google Analytics API
             service = self.connect()
-
             result = service.list_conversion_events(parent=f'properties/{self.property_id}')
 
             if result is not None:
@@ -111,24 +107,6 @@ class GoogleAnalyticsHandler(APIHandler):
 
         return response
 
-    def native_query(self, query: str = None) -> Response:
-        """
-        Receive raw query and act upon it somehow.
-        Args:
-            query (Any): query in native format (str for sql databases,
-                dict for mongo, api's json etc.)
-        Returns:
-            HandlerResponse
-        """
-        method_name, params = FuncParser().from_string(query)
-
-        df = self.call_application_api(method_name, params)
-
-        return Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=df
-        )
-
     def get_conversion_events(self, params: dict = None) -> pd.DataFrame:
         """
         Get conversion events from Google Analytics Admin API
@@ -139,19 +117,16 @@ class GoogleAnalyticsHandler(APIHandler):
         """
         service = self.connect()
         page_token = None
-        conversion_events = pd.DataFrame(columns=self.conversion_events.get_columns())
 
         while True:
             request = ListConversionEventsRequest(parent=f'properties/{self.property_id}',
                                                   page_token=page_token, **params)
             result = service.list_conversion_events(request)
-            conversion_events_data = self.extract_conversion_events_data(result.conversion_events)
-            conversion_events = self.concat_dataframes(conversion_events, conversion_events_data)
 
             page_token = result.next_page_token
             if not page_token:
                 break
-        return conversion_events
+        return result
 
     def create_conversion_event(self, params: dict = None):
         """
@@ -162,7 +137,6 @@ class GoogleAnalyticsHandler(APIHandler):
             DataFrame
         """
         service = self.connect()
-        conversion_events = pd.DataFrame(columns=self.conversion_events.get_columns())
 
         conversion_event = ConversionEvent(
             event_name=params['event_name'],
@@ -171,12 +145,10 @@ class GoogleAnalyticsHandler(APIHandler):
         request = CreateConversionEventRequest(conversion_event=conversion_event,
                                                parent=f'properties/{self.property_id}')
         result = service.create_conversion_event(request)
-        conversion_events_data = self.extract_conversion_events_data([result])
-        conversion_events = self.concat_dataframes(conversion_events, conversion_events_data)
 
-        return conversion_events
+        return result
 
-    def update_conversion_events(self, params: dict = None):
+    def update_conversion_event(self, params: dict = None):
         """
         Update a conversion event in your property.
         Args:
@@ -185,19 +157,15 @@ class GoogleAnalyticsHandler(APIHandler):
             DataFrame
         """
         service = self.connect()
-        conversion_events = pd.DataFrame(columns=self.conversion_events.get_columns())
 
         conversion_event = ConversionEvent(
             name=params['name'],
             counting_method=params['countingMethod']
         )
-        request = UpdateConversionEventRequest(conversion_event=conversion_event,update_mask='*')
+        request = UpdateConversionEventRequest(conversion_event=conversion_event, update_mask='*')
         result = service.update_conversion_event(request)
 
-        conversion_events_data = self.extract_conversion_events_data([result])
-        conversion_events = self.concat_dataframes(conversion_events, conversion_events_data)
-
-        return conversion_events
+        return result
 
     def delete_conversion_event(self, params: dict = None):
         """
@@ -208,59 +176,3 @@ class GoogleAnalyticsHandler(APIHandler):
         service = self.connect()
         request = DeleteConversionEventRequest(name=params['name'])
         service.delete_conversion_event(request)
-
-    @staticmethod
-    def extract_conversion_events_data(conversion_events):
-        """
-        Extract conversion events data and return a list of lists.
-        Args:
-            conversion_events: List of ConversionEvent objects
-        Returns:
-            List of lists containing conversion event data
-        """
-        conversion_events_data = []
-        for conversion_event in conversion_events:
-            data_row = [
-                conversion_event.name,
-                conversion_event.event_name,
-                conversion_event.create_time,
-                conversion_event.deletable,
-                conversion_event.custom,
-                conversion_event.ConversionCountingMethod(conversion_event.counting_method).name,
-            ]
-            conversion_events_data.append(data_row)
-        return conversion_events_data
-
-    def concat_dataframes(self, existing_df, data):
-        """
-        Concatenate existing DataFrame with new data.
-        Args:
-            existing_df: Existing DataFrame
-            data: New data to be added to the DataFrame
-        Returns:
-            Concatenated DataFrame
-        """
-        return pd.concat(
-            [existing_df, pd.DataFrame(data, columns=self.conversion_events.get_columns())],
-            ignore_index=True
-        )
-
-    def call_application_api(self, method_name: str = None, params: dict = None) -> DataFrame | None:
-        """
-        Call Google Analytics Admin API and map the data to pandas DataFrame
-        Args:
-            method_name (str): method name
-            params (dict): query parameters
-        Returns:
-            DataFrame
-        """
-        if method_name == 'get_conversion_events':
-            return self.get_conversion_events(params)
-        elif method_name == 'create_conversion_event':
-            return self.create_conversion_event(params)
-        elif method_name == 'update_conversion_event':
-            return self.update_conversion_events(params)
-        elif method_name == 'delete_conversion_event':
-            return self.delete_conversion_event(params)
-        else:
-            raise NotImplementedError(f'Unknown method {method_name}')

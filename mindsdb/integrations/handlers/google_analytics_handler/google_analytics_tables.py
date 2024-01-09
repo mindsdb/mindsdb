@@ -4,9 +4,6 @@ import re
 
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
-from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
-)
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
 
@@ -40,7 +37,10 @@ class ConversionEventsTable(APITable):
             raise NotImplementedError
 
         # Get the conversion events from the Google Analytics Admin API.
-        events = self.handler.call_application_api(method_name='get_conversion_events', params=params)
+        conversion_events = pd.DataFrame(columns=self.get_columns())
+        result = self.handler.get_conversion_events(params=params)
+        conversion_events_data = self.extract_conversion_events_data(result.conversion_events)
+        events = self.concat_dataframes(conversion_events, conversion_events_data)
 
         selected_columns = []
         for target in query.targets:
@@ -90,7 +90,10 @@ class ConversionEventsTable(APITable):
             params['countingMethod'] = 2
 
         # Insert the conversion event into the Google Analytics Admin API.
-        self.handler.call_application_api(method_name='create_conversion_event', params=params)
+        conversion_events = pd.DataFrame(columns=self.get_columns())
+        result = self.handler.create_conversion_event(params=params)
+        conversion_events_data = self.extract_conversion_events_data([result])
+        self.concat_dataframes(conversion_events, conversion_events_data)
 
     def update(self, query: ast.Update):
         """
@@ -129,7 +132,10 @@ class ConversionEventsTable(APITable):
             params['countingMethod'] = 2
 
         # Update the conversion event in the Google Analytics Admin API.
-        self.handler.call_application_api(method_name='update_conversion_event', params=params)
+        conversion_events = pd.DataFrame(columns=self.get_columns())
+        result = self.handler.update_conversion_event(params=params)
+        conversion_events_data = self.extract_conversion_events_data([result])
+        self.concat_dataframes(conversion_events, conversion_events_data)
 
     def delete(self, query: ast.Delete):
         """
@@ -146,22 +152,57 @@ class ConversionEventsTable(APITable):
         conditions = extract_comparison_conditions(query.where)
         for op, arg1, arg2 in conditions:
             if op == 'or':
-                raise NotImplementedError(f'OR is not supported')
+                raise NotImplementedError('OR is not supported')
             if arg1 == 'name':
                 if op == '=':
-                    self.handler.call_application_api(method_name='delete_conversion_event', params={'name': arg2})
+                    self.handler.delete_conversion_event(params={'name': arg2})
                 else:
                     raise NotImplementedError(f'Unknown op: {op}')
             else:
                 raise NotImplementedError(f'Unknown clause: {arg1}')
 
-    def get_columns(self) -> List[str]:
-        """Gets all columns to be returned in pandas DataFrame responses
+    @staticmethod
+    def extract_conversion_events_data(conversion_events):
+        """
+        Extract conversion events data and return a list of lists.
+        Args:
+            conversion_events: List of ConversionEvent objects
+        Returns:
+            List of lists containing conversion event data
+        """
+        conversion_events_data = []
+        for conversion_event in conversion_events:
+            data_row = [
+                conversion_event.name,
+                conversion_event.event_name,
+                conversion_event.create_time,
+                conversion_event.deletable,
+                conversion_event.custom,
+                conversion_event.ConversionCountingMethod(conversion_event.counting_method).name,
+            ]
+            conversion_events_data.append(data_row)
+        return conversion_events_data
 
-        Returns
-        -------
-        List[str]
-            List of columns
+    def concat_dataframes(self, existing_df, data):
+        """
+        Concatenate existing DataFrame with new data.
+        Args:
+            existing_df: Existing DataFrame
+            data: New data to be added to the DataFrame
+        Returns:
+            Concatenated DataFrame
+        """
+        return pd.concat(
+            [existing_df, pd.DataFrame(data, columns=self.get_columns())],
+            ignore_index=True
+        )
+
+    def get_columns(self) -> List[str]:
+        """
+        Gets all columns to be returned in pandas DataFrame responses
+
+        Returns:
+        List[str]: List of columns
         """
         return [
             'name',

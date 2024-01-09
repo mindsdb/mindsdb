@@ -36,7 +36,10 @@ CREATE MODEL mindsdb.leo
 PREDICT url
 USING
    engine = 'leo_engine',
-   model = '6bef9f1b-29cb-40c7-b9df-32b51c1f67d3', --default model
+   model = '6bef9f1b-29cb-40c7-b9df-32b51c1f67d3', -- default model
+   -- api_key = 'your_api_key, either pass the api_key here or while engine creation
+   -- height = 512, optional to pass height
+   -- width = 768, optional to pass width
    prompt_template = '{{text}}, 8K | highly detailed realistic 3d oil painting style cyberpunk by MAD DOG JONES combined with Van Gogh  |  cinematic lighting | happy colors';
 ~~~~
 

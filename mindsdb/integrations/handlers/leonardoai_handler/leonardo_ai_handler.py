@@ -68,7 +68,7 @@ class LeonardoAIHandler(BaseMLEngine):
             else:
                 raise Exception("Unable to make connection, please verify the API key.")
         except Exception:
-            raise Exception("Auth Connection Error, please check the API key")
+            raise Exception("Auth Connection Error, please the modelId or API key")
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None, **kwargs) -> pd.DataFrame:
 
@@ -185,20 +185,6 @@ class LeonardoAIHandler(BaseMLEngine):
         generation_data = response_generation.json()
 
         # Wait for 15 seconds
-
-        # # Set the desired duration in seconds
-        # duration = 15
-
-        # # Record the start time
-        # start_time = time.time()
-
-        # # Run a busy loop for the specified duration
-        # while time.time() - start_time < duration:
-        #     # Perform some lightweight computation to keep the program busy
-        #     # calculating the sum of numbers
-        #     result = 0
-        #     for i in range(100000):
-        #         result += i
 
         time.sleep(15)
 

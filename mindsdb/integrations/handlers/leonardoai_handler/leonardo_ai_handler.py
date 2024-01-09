@@ -56,10 +56,10 @@ class LeonardoAIHandler(BaseMLEngine):
             }
         )
 
-            # if valid, check if the model is valid
+        # if valid, check if the model is valid
         try:
             if(self.connection.status_code == 200):
-            # get all the available models
+                # get all the available models
                 available_models = self._get_platform_model(args)
                 if not args['using']['model']:
                     args['using']['model'] = self.default_model
@@ -68,8 +68,8 @@ class LeonardoAIHandler(BaseMLEngine):
             else:
                 raise Exception("Unable to make connection, please verify the API key.")
         except Exception:
-            raise Exception ("Auth Connection Error, please check the API key")
-            
+            raise Exception("Auth Connection Error, please check the API key")
+
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None, **kwargs) -> pd.DataFrame:
 
         pred_args = args['predict_params'] if args else {}

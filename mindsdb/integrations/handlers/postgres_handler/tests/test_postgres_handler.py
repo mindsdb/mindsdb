@@ -1,4 +1,7 @@
 import pytest
+import psycopg2
+import os
+import time
 
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import (
     PostgresHandler,
@@ -7,34 +10,57 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_
 
 HANDLER_KWARGS = {
     "connection_data": {
-        "host": "127.0.0.1",
-        "port": "5432",
-        "user": "postgres",
-        "password": "supersecret",
-        "database": "postgres",
+        "host": os.environ.get("MDB_TEST_POSTGRES_HOST", "127.0.0.1"),
+        "port": os.environ.get("MDB_TEST_POSTGRES_PORT", "5432"),
+        "user": os.environ.get("MDB_TEST_POSTGRES_USER", "postgres"),
+        "password": os.environ.get("MDB_TEST_POSTGRES_PASSWORD", "supersecret"),
+        "database": os.environ.get("MDB_TEST_POSTGRES_DATABASE", "postgres_db_handler_test"),
     }
 }
 
 table_for_creation = "test_mdb"
 expected_columns = ["col_one", "col_two", "col_three", "col_four"]
-container_name = "postgres_handler_test"
 
 
-@pytest.fixture(scope="module", params=[{"ssl": False}], ids=["NoSSL"])
+curr_dir = os.path.dirname(os.path.realpath(__file__))
+
+def seed_db():
+    """Seed the test DB with some data"""
+
+    conn_info = HANDLER_KWARGS["connection_data"].copy()
+    conn_info["database"] = "postgres"
+    db = psycopg2.connect(**conn_info)
+    db.autocommit = True
+    cursor = db.cursor()
+
+    try:
+        cursor.execute("DROP DATABASE IF EXISTS postgres_db_handler_test;")
+        db.commit()
+        
+        # Create the test database
+        cursor.execute("CREATE DATABASE postgres_db_handler_test;")
+
+        # Reconnect to the new database
+        conn_info["database"] = "postgres_db_handler_test"
+        db = psycopg2.connect(**conn_info)
+        db.autocommit = True
+        cursor = db.cursor()
+
+        # Seed the database with data
+        with open(os.path.join(curr_dir, "seed.sql"), "r") as f:
+            cursor.execute(f.read())
+        db.commit()
+
+    finally:
+        # Close the cursor and the connection
+        cursor.close()
+        db.close()
+
+@pytest.fixture(scope="module")
 def handler(request):
-    handler = PostgresHandler(container_name, **HANDLER_KWARGS)
+    seed_db()
+    handler = PostgresHandler(**HANDLER_KWARGS)
     yield handler
-
-
-def get_table_names(handler):
-    res = handler.get_tables()
-    tables = res.data_frame
-    assert tables is not None, "expected to have some tables in the db, but got None"
-    assert (
-        "table_name" in tables
-    ), f"expected to get 'table_name' column in the response:\n{tables}"
-    return list(tables["table_name"])
-
 
 def check_valid_response(res):
     if res.resp_type == RESPONSE_TYPE.TABLE:
@@ -45,6 +71,15 @@ def check_valid_response(res):
     assert (
         res.error_message is None
     ), f"expected to have None in error message, but got {res.error_message}"
+
+def get_table_names(handler):
+    res = handler.get_tables()
+    tables = res.data_frame
+    assert tables is not None, "expected to have some tables in the db, but got None"
+    assert (
+        "table_name" in tables
+    ), f"expected to get 'table_name' column in the response:\n{tables}"
+    return list(tables["table_name"])
 
 
 class TestPostgresConnection:

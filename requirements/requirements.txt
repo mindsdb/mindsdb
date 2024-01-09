@@ -31,7 +31,6 @@ pytz
 botocore
 boto3
 python-dateutil
-pymupdf
 gunicorn
 scikit-learn==1.3.2
 protobuf==3.20.3

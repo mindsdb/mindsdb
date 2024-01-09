@@ -40,7 +40,10 @@ from . steps.base import BaseStepCall
 superset_subquery = re.compile(r'from[\s\n]*(\(.*\))[\s\n]*as[\s\n]*virtual_table', flags=re.IGNORECASE | re.MULTILINE | re.S)
 
 
-class SQLQuery():
+class SQLQuery:
+
+    step_handlers = {}
+
     def __init__(self, sql, session, execute=True):
         self.session = session
 
@@ -55,7 +58,6 @@ class SQLQuery():
         self.planner = None
         self.parameters = []
         self.fetched_data = None
-        self.step_handlers = None
 
         self.outer_query = None
 
@@ -80,19 +82,19 @@ class SQLQuery():
 
         self.create_planner()
 
-        self.register_steps()
         if execute:
             self.prepare_query(prepare=False)
             self.execute_query()
 
-    def register_steps(self):
+    @classmethod
+    def register_steps(cls):
 
-        self.step_handlers = {}
-        for _, cls in inspect.getmembers(steps):
-            if inspect.isclass(cls) and issubclass(cls, BaseStepCall):
-                if cls.bind is not None:
-                    step_name = cls.bind.__name__
-                    self.step_handlers[step_name] = cls
+        cls.step_handlers = {}
+        for _, cl in inspect.getmembers(steps):
+            if inspect.isclass(cl) and issubclass(cl, BaseStepCall):
+                if cl.bind is not None:
+                    step_name = cl.bind.__name__
+                    cls.step_handlers[step_name] = cl
 
     @profiler.profile()
     def create_planner(self):
@@ -293,3 +295,6 @@ class SQLQuery():
             raise UnknownError(f"Unknown step: {cls_name}")
 
         return handler(self).call(step)
+
+
+SQLQuery.register_steps()

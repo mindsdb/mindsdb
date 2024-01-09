@@ -31,17 +31,9 @@ class ClickHouseHandler(DatabaseHandler):
         self.connection_data = connection_data
         self.renderer = SqlalchemyRender(ClickHouseDialect)
         self.is_connected = False
-        self.protocol = connection_data.get('protocol', 'clickhouse')
+        self.protocol = connection_data.get('protocol', 'clickhouse+native')
 
-        # region added for back-compatibility with connections creatad before 11.05.2023
-        protocols_map = {
-            'native': 'clickhouse+native',
-            'http': 'clickhouse+http',
-            'https': 'clickhouse+https',
-        }
-        if self.protocol in protocols_map:
-            self.protocol = protocols_map[self.protocol]
-        # endregion
+        
 
     def __del__(self):
         if self.is_connected is True:
@@ -54,14 +46,14 @@ class ClickHouseHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        protocol = self.protocol
+        protocol = "clickhouse+native" if self.protocol == 'native' else "clickhouse+http"
         host = quote(self.connection_data['host'])
         port = self.connection_data['port']
         user = quote(self.connection_data['user'])
         password = quote(self.connection_data['password'])
         database = quote(self.connection_data['database'])
         url = f'{protocol}://{user}:{password}@{host}:{port}/{database}'
-        if self.protocol == 'clickhouse+https':
+        if self.protocol == 'https':
             url = url + "?protocol=https"
 
         engine = create_engine(url)
@@ -165,8 +157,8 @@ class ClickHouseHandler(DatabaseHandler):
 connection_args = OrderedDict(
     protocol={
         'type': ARG_TYPE.STR,
-        'description': 'The protocol to query clickhouse. Supported: clickhouse, clickhouse+native, clickhouse+http, clickhouse+https. Default: clickhouse',
-        'required': True,
+        'description': 'The protocol to query clickhouse. Supported: clickhouse+native, clickhouse+http, clickhouse+https. Default: clickhouse+native',
+        'required': False,
         'label': 'Protocol'
     },
     user={

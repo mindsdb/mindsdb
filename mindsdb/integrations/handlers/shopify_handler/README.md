@@ -181,25 +181,6 @@ The `products` table supports the following columns: 'title', 'body_html', 'vend
 The `customers` table supports the following columns: 'first_name', 'last_name', 'email', 'phone', 'tags' and 'currency'. Of these, either 'first_name', 'last_name', 'email' or 'phone' must be provided. 
 
 The `orders` table supports the following columns: 'currency', 'email', 'fulfillment_status', 'gift_card', 'grams', 'note', 'phone', 'price', 'processed_at', 'quantity', 'tags', 'test', 'title', and 'vendor'. Of these, 'price' and 'title' must be provided.
-~~~~sql
-INSERT INTO shopify_datasource.products(title, vendor, tags)
-VALUES 
-('Product Name', 'Vendor Name', 'new, sale, winter')
-~~~~
-
-~~~~sql
-INSERT INTO shopify_datasource.orders(title, price, quantity, test)
-VALUES 
-("Product Name", 25.00, 3, true)
-~~~~
-
-A limited number of columns are supported for INSERT for each table: 
-
-The `products` table supports the following columns: 'title', 'body_html', 'vendor', 'product_type', 'tags', and 'status'. Of these, 'title' must be provided.
-
-The `customers` table supports the following columns: 'first_name', 'last_name', 'email', 'phone', 'tags' and 'currency'. Of these, either 'first_name', 'last_name', 'email' or 'phone' must be provided. 
-
-The `orders` table supports the following columns: 'currency', 'email', 'fulfillment_status', 'gift_card', 'grams', 'note', 'phone', 'price', 'processed_at', 'quantity', 'tags', 'test', 'title', and 'vendor'. Of these, 'price' and 'title' must be provided.
 
 It is also possible to DELETE data from your Shopify store. At the moment, only the `customers`, `products`, and `orders` tables support DELETE:
 

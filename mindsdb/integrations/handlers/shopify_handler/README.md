@@ -109,7 +109,6 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
 ## TODO
 
 - [ ] Support UPDATE and DELETE for Customers table
-- [ ] Support UPDATE for Orders table
 - [ ] Support INSERT, UPDATE and DELETE for Product table
 - [ ] Shopify Payments table
 - [ ] Shopify Inventory table

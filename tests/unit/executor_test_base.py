@@ -150,6 +150,9 @@ class BaseUnitTest:
         r = db.Integration(name="google_gemini", data={}, engine="google_gemini")
         db.session.add(r)
 
+        r = db.Integration(name="leonardo_ai", data={}, engine="leonardo_ai")
+        db.session.add(r)
+
         # Lightwood should always be last (else tests break, why?)
         r = db.Integration(name="lightwood", data={}, engine="lightwood")
         db.session.add(r)

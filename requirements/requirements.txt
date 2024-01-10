@@ -23,8 +23,7 @@ checksumdir >= 1.2.0
 duckdb == 0.9.1
 requests >= 2.30.0
 pydateinfer==0.3.0
-dataprep_ml==0.0.21
-type_infer==0.0.17
+dataprep_ml==0.0.22
 dill == 0.3.6
 numpy
 pytz

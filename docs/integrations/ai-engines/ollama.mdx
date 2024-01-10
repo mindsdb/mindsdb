@@ -4,15 +4,15 @@ sidebarTitle: Ollama
 ---
 
 
-## Briefly describe the ML framework this handler integrates with MindsDB, and how?
-[Ollama](https://ollama.ai/) is a project that enables easy local deployment of Large Language Models (LLMs). All models supported by Ollama are available in MindsDB through this integration.
+[Ollama](https://ollama.ai/) is a project that enables easy local deployment of Large Language Models (LLMs). 
 
+All models supported by Ollama are available in MindsDB through this integration.
+
+<Warning>
 For now, this integration will only work in MacOS, with Linux and Windows to come later.
+</Warning>
 
-Call this handler by
-`USING ENGINE="ollama"`, you can see a full example at the end of this readme.
 
-## Why is this integration useful? What does the ideal predictive use case for this integration look like? When would you definitely not use this integration?
 Locally deployed LLMs can be desirable for a wide variety of reasons. In this case, data privacy, developer feedback-loop speed and inference cost reduction can be powerful reasons to opt for a local LLM.
 
 Ideal predictive use cases, as in other LLM-focused integrations (e.g. OpenAI, Anthropic, Cohere), will be anything involving language understanding and generation, including but not limited to:
@@ -22,16 +22,8 @@ Ideal predictive use cases, as in other LLM-focused integrations (e.g. OpenAI, A
 - summarization
 - translation
 
-Some current limitations of local LLMs:
-- overall weaker performance (ranging from "somewhat" to "a lot") than commercial cloud-based LLMs, particularly GPT-4. Please study options carefully and benchmark thoroughly to ensure your LLM is at the right level of performance for your use case before deploying to production.
-- steep entry barrier due to required hardware specs (macOS only, M1 chip or greater, a lot of RAM depending on model size)
 
-## Are models created with this integration fast and scalable, in general?
-Model training is not required, as these are pretrained models. 
-
-Inference is generally fast, however stream generation is not supported at this time in MindsDB, so completions are only returned once the model has finished generating the entire sequence.
-
-## What are the recommended system specifications?
+## Setup
 
 * A macOS machine, M1 chip or greater. 
 * A working Ollama installation. For instructions refer to their [webpage](https://ollama.ai). This step should be really simple.
@@ -41,48 +33,51 @@ Inference is generally fast, however stream generation is not supported at this 
 
 More information [here](https://ollama.ai/library/llama2). Minimum specs can vary depending on the model.
 
-## To what degree can users control the underlying framework by passing parameters via the USING syntax?
-The prompt template can be overridden at prediction time, e.g.:
+### AI Engine
+
+Before creating a model, it is required to create an AI engine based on the provided handler.
+
+
+You can create an Ollama engine using this command:
 
 ```sql
--- example: override template at prediction time
-SELECT text, completion
-FROM my_llama2
-WHERE text = 'hi there!';
-USING 
-prompt_template = 'Answer using exactly five words: {{text}}:';
+CREATE ML_ENGINE ollama FROM ollama;
 ```
 
-## Does this integration offer model explainability or insights via the DESCRIBE syntax?
-It replicates the information exposed by the Ollama API, plus a few additional MindsDB-specific fields.
+The name of the engine (here, `ollama`) should be used as a value for the `engine` parameter in the `USING` clause of the `CREATE MODEL` statement.
 
-Supported commands are:
+### AI Model
+
+The [`CREATE MODEL`](/sql/create/model) statement is used to create, train, and deploy models within MindsDB.
+
+```sql
+CREATE MODEL mindsdb.my_llama2
+PREDICT completion
+USING 
+    engine = 'ollama',
+    model_name = 'llama2'
+```
+
+Where:
+
+| Name              | Description                                                               |
+|-------------------|---------------------------------------------------------------------------|
+| `engine`          | It defines the Ollama engine.                                          |
+| `model_name`      | It is used to provide the name of the model to be used |
+
+Supported commands for describing Ollama models are:
+
 1. `DESCRIBE ollama_model;`
 2. `DESCRIBE ollama_model.model;`
 3. `DESCRIBE ollama_model.features;`
 
-## Does this integration support fine-tuning pre-existing models (i.e. is the update() method implemented)? Are there any caveats?
-Not at this time.
 
-## Any directions for future work in subsequent versions of the handler?
-A few are commented in the code:
-1. add support for overriding modelfile params (e.g. temperature)
-2. add support for storing `context` short conversational memory
-3. actually store all model artifacts in the engine storage, instead of the internal Ollama mechanism. This may require upstream changes, though.
 
-## Please provide a minimal SQL example that uses this ML engine (pointers to integration tests in the PR also valid)
+## Usage
+
+Once you have connected to an Ollama model, you can use it to make predictions.
+
 ```sql
-CREATE ML_ENGINE ollama FROM ollama;
-
-CREATE MODEL my_llama2
-PREDICT completion
-USING
-model_name = 'llama2',
-engine = 'ollama';
-
-DESCRIBE my_llama2.model;
-DESCRIBE my_llama2.features;
-
 SELECT text, completion
 FROM my_llama2
 WHERE text = 'hi there!';

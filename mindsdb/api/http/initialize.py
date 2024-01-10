@@ -168,7 +168,8 @@ def initialize_static():
         if last_gui_version_lv is False:
             return False
 
-        if current_gui_version_lv is not None:
+        # ignore versions like '23.9.2.2'
+        if current_gui_version_lv is not None and len(current_gui_version_lv.version) < 3:
             if current_gui_version_lv >= last_gui_version_lv:
                 return True
         logger.debug("Updating gui..")

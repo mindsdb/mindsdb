@@ -399,6 +399,36 @@ class OrdersTable(APITable):
 
         return orders_df
 
+    def insert(self, query: ast.Insert) -> None:
+        """
+        Inserts data into the Shopify "POST /orders" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Insert
+            Given SQL INSERT query
+        
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        insert_statement_parser = INSERTQueryParser(
+            query,
+            supported_columns=['currency', 'email', 'fulfillment_status', 'gift_card',
+                               'grams', 'note', 'phone', 'price', 'processed_at', 'quantity',
+                               'tags', 'test', 'title', 'vendor'],
+            mandatory_columns=['price', 'title'],
+            all_mandatory=False
+        )
+        order_data = insert_statement_parser.parse_query()
+        self.create_orders(order_data)
+
+
     def update(self, query: ast.Update) -> None:
         """Updates data in the Shopify "PUT /orders" API endpoint.
 
@@ -427,35 +457,6 @@ class OrdersTable(APITable):
         orders_df = update_statement_executor.execute_query()
         orders_ids = orders_df['id'].tolist()
         self.update_orders(orders_ids, values_to_update)
-
-    
-    def insert(self, query: ast.Insert) -> None:
-        """
-        Inserts data into the Shopify "POST /orders" API endpoint.
-
-        Parameters
-        ----------
-        query : ast.Insert
-            Given SQL INSERT query
-        
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-        insert_statement_parser = INSERTQueryParser(
-            query,
-            supported_columns=['currency', 'email', 'fulfillment_status', 'note', 
-                               'line_items', 'phone', 'processed_at', 'tags', 'test'],
-            mandatory_columns=['line_items'],
-            all_mandatory=False
-        )
-        order_data = insert_statement_parser.parse_query()
-        self.create_orders(order_data)
 
     def delete(self, query: ast.Delete) -> None:
         """Deletes data from the Shopify "DELETE /orders" API endpoint.
@@ -500,20 +501,33 @@ class OrdersTable(APITable):
             order.save()
             logger.info(f'Order {order_id} updated')
 
-    
     def create_orders(self, order_data: List[Dict[Text, Any]]) -> None:
         api_session = self.handler.connect()
         shopify.ShopifyResource.activate_session(api_session)
+        # build line_items object
+        line_item_columns = ['gift_card', 'grams', 'price', 'quantity', 'title', 'vendor']
+        modified_order_data = []
 
         for order in order_data:
+            # separate values related to 'line_items'
+            order_data_trimmed = {key: val for key, val in order.items()
+                                if key not in line_item_columns}
+            line_items_data = {key: val for key, val in order.items()
+                            if key in line_item_columns}
+
+            # add JSON string to dictionary as 'line_items'
+            order_data_trimmed['line_items'] = json.dumps([line_items_data])
+            modified_order_data.append(order_data_trimmed)
+
+        for order in modified_order_data:
             if 'line_items' in order and isinstance(order['line_items'], str):
                 order['line_items'] = json.loads(order['line_items'])
 
             created_order = shopify.Order.create(order)
             if 'id' not in created_order.to_dict():
                 raise Exception('Order creation failed')
-            else:
-                logger.info(f'Order {created_order.to_dict()["id"]} created')
+
+            logger.info(f'Order {created_order.to_dict()["id"]} created')
 
     def delete_orders(self, order_ids: List[int]) -> None:
         api_session = self.handler.connect()
@@ -523,7 +537,6 @@ class OrdersTable(APITable):
             order = shopify.Order.find(order_id)
             order.destroy()
             logger.info(f'Order {order_id} deleted')
-    
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_orders(limit=1)).columns.tolist()

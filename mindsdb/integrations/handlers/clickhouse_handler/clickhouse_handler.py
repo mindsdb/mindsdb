@@ -31,7 +31,7 @@ class ClickHouseHandler(DatabaseHandler):
         self.connection_data = connection_data
         self.renderer = SqlalchemyRender(ClickHouseDialect)
         self.is_connected = False
-        self.protocol = connection_data.get('protocol', 'clickhouse+native')
+        self.protocol = connection_data.get('protocol', 'native')
 
         
 

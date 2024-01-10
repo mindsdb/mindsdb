@@ -8,10 +8,6 @@ from tpot import TPOTClassifier, TPOTRegressor
 from sklearn.preprocessing import LabelEncoder
 
 
-
-
-
-
 class TPOTHandler(BaseMLEngine):
     name = "TPOT"
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:

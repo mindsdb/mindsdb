@@ -24,7 +24,6 @@ duckdb == 0.9.1
 requests >= 2.30.0
 pydateinfer==0.3.0
 dataprep_ml==0.0.22
-type_infer==0.0.18
 dill == 0.3.6
 numpy
 pytz

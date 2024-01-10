@@ -157,7 +157,7 @@ class ClickHouseHandler(DatabaseHandler):
 connection_args = OrderedDict(
     protocol={
         'type': ARG_TYPE.STR,
-        'description': 'The protocol to query clickhouse. Supported: clickhouse+native, clickhouse+http, clickhouse+https. Default: clickhouse+native',
+        'description': 'The protocol to query clickhouse. Supported: native, http, https. Default: native',
         'required': False,
         'label': 'Protocol'
     },

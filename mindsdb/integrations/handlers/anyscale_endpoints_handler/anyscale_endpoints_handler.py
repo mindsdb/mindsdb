@@ -1,6 +1,6 @@
 import os
-import json
 import openai
+import json
 import contextlib
 from typing import Optional, Dict
 
@@ -8,15 +8,12 @@ import pandas as pd
 
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
 from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE
+from mindsdb.integrations.utilities.handler_utils import get_api_key
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
-# TODO: retrieve these from API once possible
-CHAT_MODELS = (
-    'meta-llama/Llama-2-7b-chat-hf',
-    'meta-llama/Llama-2-13b-chat-hf',
-    'meta-llama/Llama-2-70b-chat-hf',
-    'codellama/CodeLlama-34b-Instruct-hf',
-)
 ANYSCALE_API_BASE = 'https://api.endpoints.anyscale.com/v1'
 
 
@@ -25,17 +22,16 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.all_models = list(CHAT_MODELS)
-        self.chat_completion_models = CHAT_MODELS
-        self.supported_ft_models = CHAT_MODELS  # base models compatible with fine-tuning
-        self.default_model = CHAT_MODELS[0]
+        self.all_models = []
+        self.chat_completion_models = []
+        self.supported_ft_models = []
+        self.default_model = 'meta-llama/Llama-2-7b-chat-hf'
         self.base_api = ANYSCALE_API_BASE
         self.default_mode = 'default'  # can also be 'conversational' or 'conversational-full'
         self.supported_modes = ['default', 'conversational', 'conversational-full']
         self.rate_limit = 25  # requests per minute
         self.max_batch_size = 20
         self.default_max_tokens = 100
-        self.ft_cls = openai.FineTuningJob  # non-legacy fine-tuning endpoint
 
     @staticmethod
     @contextlib.contextmanager
@@ -50,7 +46,8 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     def create(self, target, args=None, **kwargs):
         with self._anyscale_base_api():
-            # load fine-tuned models, then hand over
+            # load base and fine-tuned models, then hand over
+            self._set_models(args.get('using', {}))
             _args = self.model_storage.json_get('args')
             base_models = self.chat_completion_models
             self.chat_completion_models = _args.get('chat_completion_models', base_models) if _args else base_models
@@ -58,7 +55,8 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         with self._anyscale_base_api():
-            # load fine-tuned models, then hand over
+            # load base and fine-tuned models, then hand over
+            self._set_models(args.get('using', {}))
             _args = self.model_storage.json_get('args')
             base_models = self.chat_completion_models
             self.chat_completion_models = _args.get('chat_completion_models', base_models) if _args else base_models
@@ -66,6 +64,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         with self._anyscale_base_api():
+            self._set_models(args.get('using', {}))
             super().finetune(df, args)
             # rewrite chat_completion_models to include the newly fine-tuned model
             args = self.model_storage.json_get('args')
@@ -88,6 +87,14 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             tables = ['args', 'metadata']
             return pd.DataFrame(tables, columns=['tables'])
 
+    def _set_models(self, args):
+        if 'api_key' in args:
+            args['openai_api_key'] = args['api_key']  # remove this once #7496 is fixed
+        client = self._get_client(get_api_key('openai', args, self.engine_storage))
+        self.all_models = [m.id for m in client.models.list()]
+        self.chat_completion_models = [m.id for m in client.models.list() if m.rayllm_metadata['engine_config']['model_type'] == 'text-generation']  # noqa
+        self.supported_ft_models = self.chat_completion_models  # base models compatible with fine-tuning
+
     @staticmethod
     def _check_ft_cols(df, cols):
         for col in ['role', 'content']:
@@ -99,19 +106,46 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             df: has exactly two columns, `role` and `content`. Rows contain >= 1 chats in long (stacked) format.
             For more details, check `FineTuning -> Data Format` in the Anyscale API reference.
         """
+        def _is_valid(chat):
+            """ Check if chat is valid according to Anyscale criteria."""
+            roles = [m['role'] for m in chat]
+            transitions = {None: ['system', 'user'], 'system': ['user'], 'user': ['assistant'], 'assistant': ['user']}
+
+            # check base condition
+            if not ('user' in roles and 'assistant' in roles):
+                return False
+
+            # check order is valid
+            state = None
+            for role in roles:
+                if role not in transitions[state]:
+                    return False
+                else:
+                    state = role
+
+            # chat is valid, return
+            return True
+
         # 1. aggregate each chat sequence into one row
         chats = []
         chat = []
         for i, row in df.iterrows():
             if row['role'] == 'system' and len(chat) > 0:
-                chats.append({'messages': chat})
+                if _is_valid(chat):
+                    chats.append({'messages': chat})
                 chat = []
             event = {'role': row['role'], 'content': row['content']}
             chat.append(event)
-        chats.append({'messages': chat})
+
+        if _is_valid(chat):
+            chats.append({'messages': chat})
+
         series = pd.Series(chats)
-        train = series.iloc[:int(len(series) * (1 - test_size))]
-        val = series.iloc[-int(len(series) * test_size) - 1:]
+        if len(series) < 20 * 2:
+            raise Exception("Dataset is too small to finetune. Please include at least 40 samples (complete chats).")
+        val_size = max(20, int(len(series) * test_size))  # at least 20 samples required by Anyscale
+        train = series.iloc[:-val_size]
+        val = series.iloc[-val_size:]
 
         # 2. write as jsonl
         file_names = {
@@ -126,12 +160,12 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         self._validate_jsonl(os.path.join(temp_storage_path, file_names['val']))
         return file_names
 
-    @staticmethod
-    def _get_ft_model_type(model_name: str):
-        for base_model in CHAT_MODELS:
+    def _get_ft_model_type(self, model_name: str):
+        for base_model in self.chat_completion_models:
             if base_model.lower() in model_name.lower():
                 return base_model
-        raise Exception(f'Model {model_name} cannot be finetuned.')
+        logger.warning(f'Cannot recognize model {model_name}. Finetuning may fail.')
+        return model_name.lower()
 
     @staticmethod
     def _add_extra_ft_params(ft_params, using_args):
@@ -182,3 +216,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             check_data_for_format_errors(items)
         except Exception as e:
             raise Exception(f"Fine-tuning data format is not valid. Got: {e}")
+
+    @staticmethod
+    def _get_client(api_key, base_url=ANYSCALE_API_BASE, org=None):
+        return openai.OpenAI(api_key=api_key, base_url=base_url, organization=org)

@@ -1,2 +1,2 @@
 tpot<=0.11.7
-type-infer
+type_infer==0.0.18

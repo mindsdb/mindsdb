@@ -1,107 +1,96 @@
 ---
-title: Introduction to MindsDB
+title: MindsDB AI SQL Server
 sidebarTitle: Introduction
 ---
 
-MindsDB is an AI Automation platform for building AI/ML powered features and applications. It works by connecting any source of data with any AI/ML model or framework and automating how real-time data flows between them.
+<strong>MindsDB enhances SQL with AI Building Blocks</strong> for developers creating AI applications that need to be coupled to realtime data:
 
-MindsDB allows you to easily:
 
- - Connect to any store of data or end-user application.
- - Pass data to an AI model from any store of data or end-user application.
- - Plug the output of an AI model into any store of data or end-user application.
- - Fully automate these workflows to build AI-powered features and applications.
+|  |  |
+| -------- | ------- |
+| [AI Tables](/ai-engines/overview): |  One of MindsDB's innovations is the ability to treat AI ([MODELS](/model-types), [AGENTS](/agents/agent), [KNOWLEDGE BASES](/agents/knowledge-bases)) as [virtual tables](/generative-ai-tables) that you can [SELECT FROM](/sql/get-single-prediction), [JOIN](/sql/get-batch-predictions), and [FINE-TUNE](/sql/api/finetune) from any datasource using any [AI-Engine](/ai-engines/overview). |
+| [JOBS](/sql/create/jobs): | You can [automate tasks](/sql/create/jobs) in MindsDB, by scheduling any query, at whatever frequency or by using [TRIGGERS](/sql/create/trigger). |
+| [Datasources](/datasources/overview): | Connect any data to MindsDB,  ths server then excels at translating SQL queries into requests that can access and combine data from a wide range of sources, including [Databases](/datasources/overview#databases), [Applications](/datasources/overview#applications), [Vector stores](/datasources/overview#vector-databases), and much more. |
 
-![What is MindsDB](/assets/what_is_mindsdb2.png)
+<p align="center">
+  <img src="https://docs.google.com/drawings/d/e/2PACX-1vRAViEKpgXsOrwgqHUL-E2XSeo48ZLFYFJAiU69qE0OH__mcNvp1I8Dx4KebH1Rvp-9GjUTz4MtCVBp/pub?w=903&h=500"/>
+</p>  
 
-## Build with MindsDB
+<Tip>
+<strong>Why MindsDB?</strong>, because SQL is an effective declarative language for data manipulation, it's also an ideal foundation for constructing <strong>data-centric AI</strong>. 
+</Tip>
 
-As you can connect any data source with any AI/ML model, you can build and automate any AI/ML use case.
+## Use Cases
+
 
 Here are some AI/LLM use cases:
-      - [Semantic Search and Q&A/RAG](/nlp/question-answering-inside-mysql-with-openai)
+      - [Fine-Tune](sql/api/finetune#example-3-openai-model)
+      - [Knowledge bases](/agents/knowledge-bases)
+      - [Agents](/agents/agent)
       - [Chatbots](/sql/tutorials/twitterbot-mariadb-enterprise-server-skysql)
       - [Classification](/nlp/nlp-extended-examples#text-classification)
       - [Sentiment Analysis](/nlp/sentiment-analysis-inside-mysql-with-openai)
       - [Summarisation](/nlp/text-summarization-inside-mysql-with-openai)
       - [Translation](/nlp/nlp-extended-examples#translation)
+      - [RAG/Semantic Search](/integrations/ai-engines/rag)
+      - [Q&A](/nlp/question-answering-inside-mysql-with-openai)
 
-You can use MindsDB for the following machine learning use cases:
+You can use MindsDB for the following Machine Learning use cases:
+      - [Anomaly Detection](/integrations/ai-engines/anomaly)
       - [Forecasting](/sql/tutorials/eeg-forecasting)
+      - [Recommenders](sql/tutorials/recommenders)
       - [Classification](/sql/tutorials/customer-churn)
       - [Regression](/sql/tutorials/home-rentals)
-      - Anomaly Detection
-      - Recommenders
+
+And for the following multi-media use cases:
+      - [Video Semantic Search](/integrations/ai-engines/twelvelabs)
+      - [Text Semantic Search](/integrations/ai-engines/replicate-img2text)
+      - [Text to Audio](/integrations/ai-engines/replicate-audio)
+      - [Text to Video](/integrations/ai-engines/replicate-text2video)
+      - [Text to Image](/integrations/ai-engines/replicate-text2img)
 
 You can use one of MindsDB’s AutoMLs or you can bring your own, pre-trained model.
 
 ## Sample AI Workflow
 
-We can automate any workflow end-to-end using MindsDB’s Jobs command. Take an AI workflow featuring integrations with [Binance](/integrations/app-integrations/binance) (our data source), [TimeGPT](/integrations/ai-engines/timegpt) (our forecasting model), and [Slack](/integrations/app-integrations/slack) (where we’ll publish the outputs from the forecasting model). In this scenario, you can seamlessly retrieve real-time trading data from Binance, utilize it as input for a TimeGPT model to generate forecasts, and receive these forecasts as Slack notifications.
+We can automate any workflow end-to-end using MindsDB’s Jobs command.
+
+<p align="center">
+  <img src="https://docs.google.com/drawings/d/e/2PACX-1vTlROMTlXiYUecoAogwjBVI0eQDYWWI-aY5npcxVjfLzGL6Fs2-YN-aOcUeWFCDzZDxveYe5Dxwilia/pub?w=1438&h=703"/>
+</p>
+
+There are many tutorials that you can follow to see the full workflows in action. 
+
+For example: AI workflow featuring integrations with [Binance](/integrations/app-integrations/binance) (our data source), [TimeGPT](/integrations/ai-engines/timegpt) (our forecasting model), and [Slack](/integrations/app-integrations/slack) (where we’ll publish the outputs from the forecasting model). In this scenario, you can seamlessly retrieve real-time trading data from Binance, utilize it as input for a TimeGPT model to generate forecasts, and receive these forecasts as Slack notifications.
+
 
 Check out the **Use Cases** section for more examples and tutorials.
 
 <Note>
-To find out about data sources available in MindsDB, follow [this link](/integrations/data-sources-overview).
+To find out about data sources available in MindsDB, follow [this link](/datasources/overview).
 
-To find out about AI frameworks available in MindsDB, follow [this link](/integrations/ml-engines-overview).
+To find out about AI frameworks available in MindsDB, follow [this link](/ai-engines/overview).
 </Note>
 
-## Benefits of MindsDB
-
-1. **Unified AI Deployment and Management**<br></br>
-    MindsDB integrates directly with the database, warehouse, or stream. This eliminates the need to build and maintain custom, complex data pipelines or separate systems for AI/ML deployment.
-
-2. **Automated AI Workflows**<br></br>
-    MindsDB automates the entire AI workflow to execute on time-based or event-based triggers. No need to build custom automation logic to get predictions, move data, or (re)train models.
-
-3. **Turn every developer into an AI Engineer**<br></br>
-    MindsDB enables developers to leverage their existing SQL skills, accelerating the adoption of AI across teams and departments, turning every developer into an AI Engineer.
-
-4. **Enhanced Scalability and Performance**<br></br>
-    Whether in your private cloud or using MindsDB’s managed service, MindsDB enables you to handle large-scale AI/ML workloads efficiently. MindsDB can scale to meet the demands of your use case, ensuring optimal performance and responsiveness.
-
-## Contributing to MindsDB
-
-Here is what you can do to help democratize AI:
-
-* Go ahead and try out MindsDB by following our tutorials. If you find something is not right, you can [report an issue here](https://github.com/mindsdb/mindsdb/issues/new/choose).
-
-* Are you familiar with Python? You can then help us out in resolving open issues. Have a look at [issues labeled with the `help wanted` tag](https://github.com/mindsdb/mindsdb/labels/help%20wanted).
-
-* You can also help us with documentation and tutorials. Here is how you can contribute by writing [documentation](/contribute/docs/) and [tutorials](/contribute/tutorials). Don't forget to follow the [style guide](/docs-rules/).
-
-* Share with your friends and spread the word about MindsDB.
-
-* Join our team! We are a fast-growing company, so we always have [a few open positions](https://mindsdb.com/careers/).
-
+## FAQ/Tips
 <Tip>
-**From Our Community**
-
-Check out the articles and video guides created by our community:
-
-- Article on [What is MindsDB?](https://medium.com/@okekeebubechukwu08/what-is-mindsdb-b6862af21492)
+- [What are the benefits of using Mindsdb](/faq/benefits)
+- [How to contrinute/join to the MindsDB project?](contribute/contribute)
+- [What is MindsDB?](https://medium.com/@okekeebubechukwu08/what-is-mindsdb-b6862af21492)
   by [Gloria Okeke E.J](https://medium.com/@okekeebubechukwu08)
-
-- Article on [What is MindsDB? How to get started with it ](https://medium.com/@hritikd3/what-is-mindsdb-how-to-get-started-2b3cf6d99707)
+- [How to get started with it? ](https://medium.com/@hritikd3/what-is-mindsdb-how-to-get-started-2b3cf6d99707)
   by [Hritik Dangi](https://github.com/hritikd3)
-
 - Video guide on [Video: What is MindsDB?](https://www.youtube.com/watch?v=SrDPYqQrzaw) by
   [Alissa Troiano](https://github.com/alissatroiano)
-
-- Video guide on [What is MindsDB | How to Get Started | A Cloud/AI Enabled Database](https://www.youtube.com/watch?v=XWDVxYVGH9M)
+- [What is MindsDB | How to Get Started | A Cloud/AI Enabled Database](https://www.youtube.com/watch?v=XWDVxYVGH9M)
   by [Arman Chand](https://github.com/ArmanChand)
-
-- Video guide on [What is MindsDB and How to Get Started](https://youtu.be/zHReFuFUI34) by
+- [What is MindsDB and How to Get Started](https://youtu.be/zHReFuFUI34) by
   [Hritik Dangi](https://www.linkedin.com/in/hritikd3/)
-
-- Video guide on [What is MindsDB?](https://www.youtube.com/watch?v=i2tMs4MX_yw) uploaded on
+- [What is MindsDB?](https://www.youtube.com/watch?v=i2tMs4MX_yw) uploaded on
   [ExploringTech](https://www.youtube.com/channel/UCBMdmavh3528_4Yn6WR7p7Q) by
   [Rutam Prita Mishra](https://community.ops.io/rutamhere)
-
-- Video guide on [What is MindsDB - AI Database Prediction](https://www.youtube.com/watch?v=8ySq7Y3sfJs)
+- [What is MindsDB - AI Database Prediction](https://www.youtube.com/watch?v=8ySq7Y3sfJs)
   by [Bhavesh Mishra](https://github.com/thefool76)
-
-- Video guide on [What is MindsDB ?](https://www.youtube.com/watch?v=81Q2aQWuwDM) by
+- [What is MindsDB ?](https://www.youtube.com/watch?v=81Q2aQWuwDM) by
   [Syed Zubeen](https://github.com/syedzubeen)
 </Tip>

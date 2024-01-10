@@ -4,7 +4,7 @@ import dill
 import pandas as pd
 
 from autogluon.tabular import TabularPredictor
-from type_infer.infer import infer_types
+from type_infer.api import infer_types
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log

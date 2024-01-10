@@ -3,7 +3,7 @@ title: Data Sources
 sidebarTitle: Overview
 ---
 
-MindsDB enables you to connect various data sources, including relational and non-relational databases, data warehourses, data streams, and applications. It uses the connected data for training AI models and generating predictions. Furthermore, MindsDB abstracts AI models as virtual tables, leveraging the power of data infrastructure.
+MindsDB allows querying hundreds of data sources, such as databases (both relational and non-relational), data warehouses, streams, and SaaS application data, <strong>using standard SQL</strong>. This capability stems from MindsDB's unique ability to translate SQL into real-time data requests.
 
 <Tip>
 MindsDB provides over 100 data handlers to connect the available data sources.
@@ -13,7 +13,7 @@ If you don't find a data source of your interest, you can [request a feature her
 
 This section contains instructions on how to connect data sources to MindsDB.
 
-### Applications
+### Application Data Sources
 
 <CardGroup cols={4}>
     <Card title="Binance" icon="diamond" href="/integrations/app-integrations/binance"></Card>
@@ -21,7 +21,7 @@ This section contains instructions on how to connect data sources to MindsDB.
     <Card title="Docker Hub" icon="docker" href="/integrations/app-integrations/dockerhub"></Card>
     <Card title="Email" icon="at" href="/integrations/app-integrations/email"></Card>
     <Card title="GitHub" icon="github" href="/integrations/app-integrations/github"></Card>
-    <Card title="GitLab" icon="link" href="/integrations/app-integrations/gitlab"></Card>
+    <Card title="GitLab" icon="gitlab" href="/integrations/app-integrations/gitlab"></Card>
     <Card title="Gmail" icon="envelope" href="/integrations/app-integrations/gmail"></Card>
     <Card title="Google Calendar" icon="calendar" href="/integrations/app-integrations/google-calendar"></Card>
     <Card title="Hacker News" icon="square-hacker-news" href="/integrations/app-integrations/hackernews"></Card>
@@ -29,7 +29,7 @@ This section contains instructions on how to connect data sources to MindsDB.
     <Card title="Intercom" icon="intercom" href="/integrations/app-integrations/intercom"></Card>
     <Card title="Microsoft Teams" icon="people-group" href="/app-integrations/microsoft-teams"></Card>
     <Card title="MediaWiki" icon="certificate" href="/integrations/app-integrations/mediawiki"></Card>
-    <Card title="PayPal" icon="link" href="/integrations/app-integrations/paypal"></Card>
+    <Card title="PayPal" icon="paypal" href="/integrations/app-integrations/paypal"></Card>
     <Card title="Plaid" icon="stroopwafel" href="/integrations/app-integrations/plaid"></Card>
     <Card title="PyPI" icon="cube" href="/integrations/app-integrations/pypi"></Card>
     <Card title="Reddit" icon="reddit" href="/integrations/app-integrations/reddit"></Card>
@@ -115,39 +115,10 @@ This section contains instructions on how to connect data sources to MindsDB.
 ### Vector Databases
 
 <CardGroup cols={4}>
-    <Card title="ChromaDB" icon="link" href="/integrations/vector-db-integrations/chromadb.mdx"></Card>
+    <Card title="ChromaDB" icon="link" href="/integrations/vector-db-integrations/chromadb"></Card>
+    <Card title="PGVector" icon="link" href="/integrations/vector-db-integrations/pgvector"></Card>
+    <Card title="PineCone" icon="link" href="/integrations/vector-db-integrations/pinecone"></Card>
+    <Card title="Weaviate" icon="link" href="/integrations/vector-db-integrations/weaviate"></Card>
 </CardGroup>
 
 <br></br>
-
-<Info>
-Here is how you can query for all the available data handlers used to create database connections.
-
-  ```sql
-  SELECT *
-  FROM information_schema.handlers
-  WHERE type = 'data';
-  ```
-
-  Or, alternatively:
-
-  ```sql
-  SHOW HANDLERS
-  WHERE type = 'data';
-  ```
-
-And here is how you can query for all the connected databases:
-
-  ```sql
-  SELECT *
-  FROM information_schema.databases;
-  ```
-
-  Or, alternatively:
-
-  ```sql
-  SHOW DATABASES;
-
-  SHOW FULL DATABASES;
-  ```
-</Info>

@@ -2,7 +2,7 @@ from typing import Optional, Dict
 
 import dill
 import pandas as pd
-from type_infer.infer import infer_types
+from type_infer.api import infer_types
 import autosklearn.classification as automl_classification
 import autosklearn.regression as automl_regression
 

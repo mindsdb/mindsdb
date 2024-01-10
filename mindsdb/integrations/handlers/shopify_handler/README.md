@@ -72,6 +72,7 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
     - [x] Support WHERE
     - [x] Support ORDER BY
     - [x] Support column selection
+  - [x] Support UPDATE
   - [x] Support DELETE
 - [x] Shopify Customer Reviews Table for a given Store
   - [x] Support SELECT
@@ -107,7 +108,8 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
 ## TODO
 
 - [ ] Support UPDATE and DELETE for Customers table
-- [ ] Support INSERT, UPDATE and DELETE for Product and Orders tables
+- [ ] Support INSERT, UPDATE and DELETE for Product
+- [ ] Support INSERT For Orders tables
 - [ ] Shopify Payments table
 - [ ] Shopify Inventory table
 - [ ] Shopify Discounts table
@@ -213,4 +215,11 @@ For `customers` table, DELETE is supported too. You can delete the customers as 
 ~~~~sql
 DELETE FROM shopify_datasource.customers
 WHERE verified_email = false;
+~~~~
+
+For `Orders` table, UPDATE is supported. You can update the orders as follows:
+~~~~sql
+UPDATE shopify_datasource.orders
+SET email="abc@your_domain.com"
+WHERE id=5632671580477;
 ~~~~

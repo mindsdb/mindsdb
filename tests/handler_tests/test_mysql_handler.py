@@ -7,7 +7,7 @@ import pytest
 import docker
 
 from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 HANDLER_KWARGS = {
     "connection_data": {
@@ -138,13 +138,13 @@ class TestMySQLHandler:
 
     def test_insert_table(self, handler):
         new_table = "test_mdb"
-        res = handler.native_query(f"INSERT INTO {new_table} (test_col) values (1), (2), (3))")
+        res = handler.native_query(f"INSERT INTO {new_table} (test_col) values (1), (2), (3)")
         self.check_valid_response(res)
         handler.disconnect()
         handler.connect()
-        res = handler.query(f"SELECT count(*) FROM {new_table}")
+        res = handler.query(f"SELECT count(*) as x FROM {new_table}")
         self.check_valid_response(res)
-        got_rows = res.data_frame.shape[0]
+        got_rows = res.data_frame['x'][0]
         assert got_rows == 3
 
     def test_drop_table(self, handler):

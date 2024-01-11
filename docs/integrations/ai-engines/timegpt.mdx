@@ -9,11 +9,13 @@ You can learn more about its features [here](https://nixtla.github.io/nixtla/).
 
 ## How to bring TimeGPT Models to MindsDB
 
-Before creating a model, you will need to create an ML engine for TimeGPT using the `CREATE ML_ENGINE` statement:
+Before creating a model, you will need to create an ML engine for TimeGPT using the `CREATE ML_ENGINE` statement and providing the TimeGPT API key:
 
 ```sql
 CREATE ML_ENGINE timegpt
-FROM timegpt;
+FROM timegpt
+USING
+    api_key = 'timegpt_api_key';
 ```
 
 Once the ML engine is created, we use the `CREATE MODEL` statement to create the TimeGPT model in MindsDB.
@@ -51,7 +53,9 @@ Please note that before using the TimeGPT engine, you should create it from the 
 
 ```sql
 CREATE ML_ENGINE timegpt
-FROM timegpt;
+FROM timegpt
+USING
+    api_key = 'timegpt_api_key';
 ```
 
 You can check the available engines with this command:

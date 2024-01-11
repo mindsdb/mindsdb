@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.handlers.instatus_handler.instatus_handler import InstatusHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 import pandas as pd
 import os
 
@@ -10,6 +10,10 @@ class InstatusHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.handler = InstatusHandler(name='mindsdb_instatus', connection_data={'api_key': os.environ.get('INSTATUS_API_KEY')})
+
+    def setUp(self):
+        self.pageId = self.handler.call_instatus_api(endpoint='/v2/pages')['id'][0]
+        self.componentId = self.handler.call_instatus_api(endpoint=f'/v1/{self.pageId}/components')['id'][0]
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -22,21 +26,23 @@ class InstatusHandlerTest(unittest.TestCase):
         assert tables.type is not RESPONSE_TYPE.ERROR
 
     def test_3_get_columns(self):
-        columns = self.handler.get_columns(table_name='status_pages')
-        assert type(columns) is not RESPONSE_TYPE.ERROR
+        status_pages_columns = self.handler.get_columns(table_name='status_pages')
+        components_columns = self.handler.get_columns(table_name='components')
+        assert type(status_pages_columns) is not RESPONSE_TYPE.ERROR
+        assert type(components_columns) is not RESPONSE_TYPE.ERROR
 
-    def test_4_select(self):
+    def test_4_select_status_pages(self):
         query = '''SELECT *
                     FROM mindsdb_instatus.status_pages'''
         self.assertTrue(self.handler.native_query(query))
 
-    def test_5_select_by_conditions(self):
+    def test_5_select_status_pages_by_conditions(self):
         query = '''SELECT name, status, subdomain
                     FROM mindsdb_instatus.status_pages
                     WHERE id = "clo3xshsk1114842hkn377y3lrap"'''
         self.assertTrue(self.handler.native_query(query))
 
-    def test_6_insert(self):
+    def test_6_insert_status_pages(self):
         query = f'''INSERT INTO mindsdb_instatus.status_pages (email, name, subdomain, components, logoUrl) VALUES ('{os.environ.get('EMAIL_ID')}', 'mindsdb', 'somtirtha-roy', '["Website", "App", "API"]', 'https://instatus.com/sample.png')'''
         try:
             self.assertTrue(self.handler.native_query(query))
@@ -45,9 +51,7 @@ class InstatusHandlerTest(unittest.TestCase):
             if "This subdomain is taken by another status page" in error_message:
                 print("Subdomain is already taken. Choose a different one.")
 
-    def test_7_update(self):
-        # get the id of the row to be updated
-        _id = self.handler.call_instatus_api(endpoint='/v2/pages')['id'][0]
+    def test_7_update_status_pages(self):
         # update the row with the id obtained
         query = f'''UPDATE mindsdb_instatus.status_pages
                 SET logoUrl = 'https://instatus.com/sample.png',
@@ -89,7 +93,50 @@ class InstatusHandlerTest(unittest.TestCase):
                         "fr": "nasa"
                         }}
                     }}'
-                WHERE id = "{_id}"'''
+                WHERE id = "{self.pageId}"'''
+        self.assertTrue(self.handler.native_query(query))
+
+    def test_8_select_components(self):
+        query = f'''SELECT *
+                    FROM mindsdb_instatus.components
+                    WHERE page_id = '{self.pageId}';'''
+        self.assertTrue(self.handler.native_query(query))
+
+    def test_9_select_components_by_conditions(self):
+        query = f'''SELECT *
+                    FROM mindsdb_instatus.components
+                    WHERE page_id = '{self.pageId}'
+                    AND component_id = '{self.componentId}';'''
+        self.assertTrue(self.handler.native_query(query))
+
+    def test_10_insert_components(self):
+        query = f'''INSERT INTO mindsdb_instatus.components (page_id, name, description, status, order, showUptime, grouped, translations_name_in_fr, translations_desc_in_fr)
+                    VALUES (
+                        '{self.pageId}',
+                        'Test component',
+                        'Testing',
+                        'OPERATIONAL',
+                        6,
+                        true,
+                        false,
+                        "Composant de test",
+                        "En test"
+                    );'''
+        self.assertTrue(self.handler.native_query(query))
+
+    def test_11_update_components(self):
+        query = f'''UPDATE mindsdb_instatus.components
+                    SET
+                        name = 'Test component 4',
+                        description = 'Test test test',
+                        status = 'OPERATIONAL',
+                        order = 6,
+                        showUptime = true,
+                        grouped = false,
+                        translations_name_in_fr = "Composant de test 4",
+                        translations_desc_in_fr = "Test test test"
+                    WHERE page_id = '{self.pageId}'
+                    AND component_id = '{self.componentId}';'''
         self.assertTrue(self.handler.native_query(query))
 
 

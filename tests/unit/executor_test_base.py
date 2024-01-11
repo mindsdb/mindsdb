@@ -136,6 +136,8 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="dummy_llm", data={}, engine="dummy_llm")
         db.session.add(r)
+        r = db.Integration(name="litellm", data={}, engine="litellm")
+        db.session.add(r)
         r = db.Integration(name="sentence_transformers", data={}, engine="sentence_transformers")
         db.session.add(r)
 
@@ -143,6 +145,12 @@ class BaseUnitTest:
         db.session.add(r)
 
         r = db.Integration(name="vertex", data={}, engine="vertex")
+        db.session.add(r)
+
+        r = db.Integration(name="google_gemini", data={}, engine="google_gemini")
+        db.session.add(r)
+
+        r = db.Integration(name="leonardo_ai", data={}, engine="leonardo_ai")
         db.session.add(r)
 
         # Lightwood should always be last (else tests break, why?)
@@ -184,10 +192,10 @@ class BaseExecutorTest(BaseUnitTest):
         import_dummy_llm=False,
     ):
         # creates executor instance with mocked model_interface
-        from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import (
+        from mindsdb.api.executor.controllers.session_controller import (
             SessionController,
         )
-        from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import (
+        from mindsdb.api.executor.command_executor import (
             ExecuteCommands,
         )
         from mindsdb.interfaces.database.integrations import integration_controller
@@ -241,7 +249,7 @@ class BaseExecutorTest(BaseUnitTest):
         sql_session.database = "mindsdb"
         sql_session.integration_controller = integration_controller
 
-        self.command_executor = ExecuteCommands(sql_session, executor=None)
+        self.command_executor = ExecuteCommands(sql_session)
 
         # disable cache. it is need to check predictor input
         config_patch = mock.patch("mindsdb.utilities.cache.FileCache.get")

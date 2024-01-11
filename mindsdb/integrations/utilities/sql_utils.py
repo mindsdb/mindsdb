@@ -1,13 +1,13 @@
 import pandas as pd
 
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb_sql.parser import ast
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.planner.utils import query_traversal
 
 
 def make_sql_session():
-    from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+    from mindsdb.api.executor.controllers.session_controller import SessionController
 
     sql_session = SessionController()
     sql_session.database = 'mindsdb'

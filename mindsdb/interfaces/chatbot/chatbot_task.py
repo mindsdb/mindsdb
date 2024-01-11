@@ -3,7 +3,7 @@ import datetime as dt
 
 from mindsdb.integrations.libs.api_handler import APIChatHandler
 
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.tasks.task import BaseTask
 

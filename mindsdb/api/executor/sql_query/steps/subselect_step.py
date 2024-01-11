@@ -68,7 +68,7 @@ class QueryStepCall(BaseStepCall):
         query = step.query
 
         if step.from_table is not None:
-            result_set = self.steps_data[step.dataframe.step_num]
+            result_set = self.steps_data[step.from_table.step_num]
         else:
             # only from_table can content result
             prev_step_num = query.from_table.value.step_num

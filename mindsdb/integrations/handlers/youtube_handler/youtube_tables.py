@@ -225,7 +225,12 @@ class YoutubeCommentsTable(APITable):
 
         youtube_comments_df = pd.json_normalize(data, 'replies', ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at"], record_prefix='replies.')
         youtube_comments_df = youtube_comments_df.rename(columns={'replies.user_id': 'reply_user_id', 'replies.reply_author': 'reply_author', 'replies.reply': 'reply'})
-        return youtube_comments_df[['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at", 'reply_user_id', 'reply_author', 'reply']]
+        
+        # check if DataFrame is empty
+        if youtube_comments_df.empty:
+            return youtube_comments_df
+        else:
+            return youtube_comments_df[['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at", 'reply_user_id', 'reply_author', 'reply']]
 
 
 class YoutubeChannelsTable(APITable):

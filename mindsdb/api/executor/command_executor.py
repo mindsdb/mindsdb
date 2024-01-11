@@ -35,6 +35,7 @@ from mindsdb_sql.parser.ast import (
     Union,
     Update,
     Use,
+    Variable
 )
 
 # typed models
@@ -66,7 +67,6 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     UpdateChatBot,
     UpdateSkill
 )
-from mindsdb_sql.parser.dialects.mysql import Variable
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 import mindsdb.utilities.profiler as profiler
@@ -526,18 +526,22 @@ class ExecuteCommands:
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) == Set:
             category = (statement.category or "").lower()
-            if category == "" and type(statement.arg) == BinaryOperation:
-                if isinstance(statement.arg.args[0], Variable):
-                    return ExecuteAnswer(ANSWER_TYPE.OK)
-                if statement.arg.args[0].parts[0].lower() == "profiling":
-                    if statement.arg.args[1].value in (1, True):
+            if category == "" and isinstance(statement.name, Identifier):
+                param = statement.name.parts[0].lower()
+
+                value = None
+                if isinstance(statement.value, Constant):
+                    value = statement.value.value
+
+                if param == "profiling":
+                    if value in (1, True):
                         profiler.enable()
                         self.session.profiling = True
                     else:
                         profiler.disable()
                         self.session.profiling = False
-                elif statement.arg.args[0].parts[0].lower() == "predictor_cache":
-                    if statement.arg.args[1].value in (1, True):
+                elif param == "predictor_cache":
+                    if value in (1, True):
                         self.session.predictor_cache = True
                     else:
                         self.session.predictor_cache = False
@@ -550,7 +554,7 @@ class ExecuteCommands:
                     "utf8": CHARSET_NUMBERS["utf8_general_ci"],
                     "utf8mb4": CHARSET_NUMBERS["utf8mb4_general_ci"],
                 }
-                self.charset = statement.arg.parts[0]
+                self.charset = statement.value.value
                 self.charset_text_type = charsets.get(self.charset)
                 if self.charset_text_type is None:
                     logger.warning(

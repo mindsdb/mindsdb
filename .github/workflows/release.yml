@@ -62,6 +62,8 @@ jobs:
           with:
             username: ${{ secrets.DOCKER_USERNAME }}
             password: ${{ secrets.DOCKER_PASSWORD }}
+        - name: Login to Amazon ECR
+          uses: aws-actions/amazon-ecr-login@v1
         - name: Build and push
           shell: bash
           run: |

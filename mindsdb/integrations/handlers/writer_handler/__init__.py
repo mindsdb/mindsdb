@@ -4,7 +4,7 @@ from .__about__ import __description__ as description
 from .__about__ import __version__ as version
 
 try:
-    from .writer_handler import WriterHandler as Handler
+    from.writer_handler import WriterHandler as Handler
 
     import_error = None
 except Exception as e:

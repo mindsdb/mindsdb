@@ -23,9 +23,9 @@ function "get_tags" {
   params = [target]
   result = [
     "454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}:${VERSION}${notequal(target, "") ? "-" : ""}${target}",
-    "454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}:${target}",
+    "454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}:${notequal(target, "") ? target : "latest"}",
     PUSH_TO_DOCKERHUB ? "mindsdb/${IMAGE}:${VERSION}${notequal(target, "") ? "-" : ""}${target}" : "",
-    PUSH_TO_DOCKERHUB ? "mindsdb/${IMAGE}:${target}" : ""
+    PUSH_TO_DOCKERHUB ? "mindsdb/${IMAGE}:${notequal(target, "") ? target : "latest"}" : ""
   ]
 } 
 

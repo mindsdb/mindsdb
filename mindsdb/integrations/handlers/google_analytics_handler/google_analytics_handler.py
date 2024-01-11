@@ -6,10 +6,8 @@ from mindsdb.utilities import log
 from mindsdb.integrations.handlers.google_analytics_handler.google_analytics_tables import ConversionEventsTable
 
 import os
-import pandas as pd
 
-from google.analytics.admin_v1beta import AnalyticsAdminServiceClient, ListConversionEventsRequest, ConversionEvent, \
-    CreateConversionEventRequest, UpdateConversionEventRequest, DeleteConversionEventRequest
+from google.analytics.admin_v1beta import AnalyticsAdminServiceClient
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from googleapiclient.errors import HttpError
@@ -36,6 +34,7 @@ class GoogleAnalyticsHandler(APIHandler):
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
+        self.page_size = 500
         self.connection_args = kwargs.get('connection_data', {})
 
         self.credentials_file = self.connection_args['credentials_file']
@@ -106,73 +105,3 @@ class GoogleAnalyticsHandler(APIHandler):
             self.is_connected = False
 
         return response
-
-    def get_conversion_events(self, params: dict = None) -> pd.DataFrame:
-        """
-        Get conversion events from Google Analytics Admin API
-        Args:
-            params (dict): query parameters
-        Returns:
-            DataFrame
-        """
-        service = self.connect()
-        page_token = None
-
-        while True:
-            request = ListConversionEventsRequest(parent=f'properties/{self.property_id}',
-                                                  page_token=page_token, **params)
-            result = service.list_conversion_events(request)
-
-            page_token = result.next_page_token
-            if not page_token:
-                break
-        return result
-
-    def create_conversion_event(self, params: dict = None):
-        """
-        Create a conversion event in your property.
-        Args:
-            params (dict): query parameters
-        Returns:
-            DataFrame
-        """
-        service = self.connect()
-
-        conversion_event = ConversionEvent(
-            event_name=params['event_name'],
-            counting_method=params['countingMethod']
-        )
-        request = CreateConversionEventRequest(conversion_event=conversion_event,
-                                               parent=f'properties/{self.property_id}')
-        result = service.create_conversion_event(request)
-
-        return result
-
-    def update_conversion_event(self, params: dict = None):
-        """
-        Update a conversion event in your property.
-        Args:
-            params (dict): query parameters
-        Returns:
-            DataFrame
-        """
-        service = self.connect()
-
-        conversion_event = ConversionEvent(
-            name=params['name'],
-            counting_method=params['countingMethod']
-        )
-        request = UpdateConversionEventRequest(conversion_event=conversion_event, update_mask='*')
-        result = service.update_conversion_event(request)
-
-        return result
-
-    def delete_conversion_event(self, params: dict = None):
-        """
-        Delete a conversion event in your property.
-        Args:
-            params (dict): query parameters
-        """
-        service = self.connect()
-        request = DeleteConversionEventRequest(name=params['name'])
-        service.delete_conversion_event(request)

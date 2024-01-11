@@ -2,6 +2,8 @@ import pandas as pd
 from typing import List
 import re
 
+from google.analytics.admin_v1beta import ListConversionEventsRequest, ConversionEvent, CreateConversionEventRequest, \
+    UpdateConversionEventRequest, DeleteConversionEventRequest
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
@@ -21,7 +23,7 @@ class ConversionEventsTable(APITable):
         """
         # Parse the query to get the conditions.
         conditions = extract_comparison_conditions(query.where)
-        # Get the start and end times from the conditions.
+        # Get the page size from the conditions.
         params = {}
         for op, arg1, arg2 in conditions:
             if arg1 == 'page_size':
@@ -38,7 +40,7 @@ class ConversionEventsTable(APITable):
 
         # Get the conversion events from the Google Analytics Admin API.
         conversion_events = pd.DataFrame(columns=self.get_columns())
-        result = self.handler.get_conversion_events(params=params)
+        result = self.get_conversion_events(params=params)
         conversion_events_data = self.extract_conversion_events_data(result.conversion_events)
         events = self.concat_dataframes(conversion_events, conversion_events_data)
 
@@ -66,9 +68,6 @@ class ConversionEventsTable(APITable):
 
         Args:
             query (ast.Insert): SQL query to parse.
-
-        Returns:
-            Response: Response object containing the results.
         """
         columns = [col.name for col in query.columns]
 
@@ -91,7 +90,7 @@ class ConversionEventsTable(APITable):
 
         # Insert the conversion event into the Google Analytics Admin API.
         conversion_events = pd.DataFrame(columns=self.get_columns())
-        result = self.handler.create_conversion_event(params=params)
+        result = self.create_conversion_event(params=params)
         conversion_events_data = self.extract_conversion_events_data([result])
         self.concat_dataframes(conversion_events, conversion_events_data)
 
@@ -101,9 +100,6 @@ class ConversionEventsTable(APITable):
 
         Args:
             query (ast.Update): SQL query to parse.
-
-        Returns:
-            Response: Response object containing the results.
         """
         # Get the values from the query.
         values = query.update_columns.items()
@@ -133,7 +129,7 @@ class ConversionEventsTable(APITable):
 
         # Update the conversion event in the Google Analytics Admin API.
         conversion_events = pd.DataFrame(columns=self.get_columns())
-        result = self.handler.update_conversion_event(params=params)
+        result = self.update_conversion_event(params=params)
         conversion_events_data = self.extract_conversion_events_data([result])
         self.concat_dataframes(conversion_events, conversion_events_data)
 
@@ -143,9 +139,6 @@ class ConversionEventsTable(APITable):
 
         Args:
             query (ast.Delete): SQL query to parse.
-
-        Returns:
-            Response: Response object containing the results.
         """
 
         # Parse the query to get the conditions.
@@ -155,11 +148,87 @@ class ConversionEventsTable(APITable):
                 raise NotImplementedError('OR is not supported')
             if arg1 == 'name':
                 if op == '=':
-                    self.handler.delete_conversion_event(params={'name': arg2})
+                    self.delete_conversion_event(params={'name': arg2})
                 else:
                     raise NotImplementedError(f'Unknown op: {op}')
             else:
                 raise NotImplementedError(f'Unknown clause: {arg1}')
+
+    def get_conversion_events(self, params: dict = None):
+        """
+        List all conversion events in your GA4 property
+        Args:
+            params (dict): query parameters
+        Returns:
+            ConversionEvent objects
+        """
+        service = self.handler.connect()
+        page_token = None
+        url = self.get_api_url('properties')
+
+        while True:
+            request = ListConversionEventsRequest(parent=url,
+                                                  page_token=page_token, **params)
+            result = service.list_conversion_events(request)
+
+            page_token = result.next_page_token
+            if not page_token:
+                break
+        return result
+
+    def create_conversion_event(self, params: dict = None):
+        """
+        Create a conversion event in your property.
+        Args:
+            params (dict): query parameters
+        Returns:
+            ConversionEvent object
+        """
+        service = self.handler.connect()
+        url = self.get_api_url('properties')
+
+        conversion_event = ConversionEvent(
+            event_name=params['event_name'],
+            counting_method=params['countingMethod']
+        )
+        request = CreateConversionEventRequest(conversion_event=conversion_event,
+                                               parent=url)
+        result = service.create_conversion_event(request)
+
+        return result
+
+    def update_conversion_event(self, params: dict = None):
+        """
+        Update a conversion event in your property.
+        Args:
+            params (dict): query parameters
+        Returns:
+            ConversionEvent object
+        """
+        service = self.handler.connect()
+
+        conversion_event = ConversionEvent(
+            name=params['name'],
+            counting_method=params['countingMethod']
+        )
+        request = UpdateConversionEventRequest(conversion_event=conversion_event,
+                                               update_mask='*')
+        result = service.update_conversion_event(request)
+
+        return result
+
+    def delete_conversion_event(self, params: dict = None):
+        """
+        Delete a conversion event in your property.
+        Args:
+            params (dict): query parameters
+        """
+        service = self.handler.connect()
+        request = DeleteConversionEventRequest(name=params['name'])
+        service.delete_conversion_event(request)
+
+    def get_api_url(self, endpoint):
+        return f'{endpoint}/{self.handler.property_id}'
 
     @staticmethod
     def extract_conversion_events_data(conversion_events):

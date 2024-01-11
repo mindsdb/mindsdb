@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.handlers.cloud_sql_handler.cloud_sql_handler import CloudSQLHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class CloudSQLMySQLHandlerTest(unittest.TestCase):

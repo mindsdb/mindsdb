@@ -13,10 +13,10 @@ from mindsdb_sql.parser.ast import (
 )
 
 from mindsdb.utilities.exception import EntityNotExistsError
-from mindsdb.api.mysql.mysql_proxy.datahub.datanodes.datanode import DataNode
-from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
+from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
+from mindsdb.api.executor import SQLQuery
+from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
 
 
@@ -172,7 +172,7 @@ class ProjectDataNode(DataNode):
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert
 
-        from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+        from mindsdb.api.executor.controllers.session_controller import SessionController
         session = SessionController()
 
         table_name = table_name.parts[-1]

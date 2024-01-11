@@ -14,7 +14,7 @@ from uuid import uuid4
 
 import requests
 
-from mindsdb.api.mysql.mysql_proxy.datahub import init_datahub
+from mindsdb.api.executor.datahub.datahub import init_datahub
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.model.model_controller import ModelController

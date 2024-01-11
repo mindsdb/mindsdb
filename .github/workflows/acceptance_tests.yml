@@ -22,6 +22,7 @@ jobs:
         pip install .
         pip install .[huggingface]
         pip install -r requirements/requirements-test.txt
+        pip install .[lightwood]
       shell: bash
       env:
         ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}

@@ -1110,8 +1110,10 @@ class ExecuteCommands:
                 msg += dedent(
                     f"""
 
-                If error is related to missing dependencies, then try to run command in shell and restart mindsdb:
-                    pip install mindsdb[{handler_module_meta['name']}]
+                If the error is related to missing dependencies, then try to run one of the following commands in a shell and restart mindsdb:
+                    If you have cloned the github repo, run "pip install '.[{handler_module_meta['name']}]'"
+                    If you have installed via pip, run "pip install 'mindsdb[{handler_module_meta['name']}]'"
+                    If you are using docker, run "docker exec <container_name> pip install 'mindsdb[{handler_module_meta['name']}]'"
                 """
                 )
             logger.info(msg)

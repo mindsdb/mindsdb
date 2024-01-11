@@ -136,6 +136,8 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="dummy_llm", data={}, engine="dummy_llm")
         db.session.add(r)
+        r = db.Integration(name="litellm", data={}, engine="litellm")
+        db.session.add(r)
         r = db.Integration(name="sentence_transformers", data={}, engine="sentence_transformers")
         db.session.add(r)
 
@@ -143,6 +145,12 @@ class BaseUnitTest:
         db.session.add(r)
 
         r = db.Integration(name="vertex", data={}, engine="vertex")
+        db.session.add(r)
+
+        r = db.Integration(name="google_gemini", data={}, engine="google_gemini")
+        db.session.add(r)
+
+        r = db.Integration(name="leonardo_ai", data={}, engine="leonardo_ai")
         db.session.add(r)
 
         # Lightwood should always be last (else tests break, why?)

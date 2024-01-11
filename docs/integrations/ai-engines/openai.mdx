@@ -70,7 +70,7 @@ Please note that the examples presented here use SQL. To see how to create OpenA
 Here is how to create a model that answers questions without context:
 
 ```sql
-CREATE MODEL project_a.openai_test_a
+CREATE MODEL openai_model
 PREDICT answer
 USING
     engine = 'openai',
@@ -83,17 +83,17 @@ Where:
 
 | Expression                   | Description                                                                                                                                                            |
 |------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `project_a.openai_test_a`    | The model name is `openai_test_a` and it resides inside the `project_a` project. Learn more about [MindsDB projects here](/sql/project/).                              |
+| `openai_model`    | The model name is `openai_model` and it resides inside the `mindsdb` project by default. Learn more about [MindsDB projects here](/sql/project/).                              |
 | `answer`                     | It is the value to be predicted.                                                                                                                                       |
 | `engine`                     | The `openai` engine is used.                                                                                                                                           |
 | `question_column`            | It is the column that stores input data.                                                                                                                               |
 | `model_name`                 | Optional. By default, the `text-davinci-002` model is used. If you prefer to use a cheaper model or a model that was fine-tuned outside of MindsDB, use this parameter.|
-| `api_key`                    | Optional. If it is left blank, or the `env` value is passed, then MindsDB fetches the `OPENAI_API_KEY` environment variable value.                                     |
+| `api_key`             | Your OpenAI API key.                                     |
 
 Let's look at an example.
 
 ```sql
-CREATE MODEL project_a.openai_test_a
+CREATE MODEL openai_model
 PREDICT answer
 USING
     engine = 'openai',
@@ -110,7 +110,7 @@ Now we can query for answers.
 
 ```sql
 SELECT question, answer
-FROM project_a.openai_test_a
+FROM openai_model
 WHERE question = 'Where is Stockholm located?';
 ```
 
@@ -129,7 +129,7 @@ On execution, we get:
 Here is how to create a model that answers questions with context:
 
 ```sql
-CREATE MODEL project_a.openai_test_b
+CREATE MODEL openai_model
 PREDICT answer
 USING
     engine = 'openai',
@@ -142,17 +142,17 @@ Where:
 
 | Expression                   | Description                                                                                                                          |
 |------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
-| `project_a.openai_test_b`    | The model name is `openai_test_b` and it resides inside the `project_a` project.                                                     |
+| `openai_model`    | The model name is `openai_model` and it resides inside the `mindsdb` project by default.                                                     |
 | `answer`                     | It is the value to be predicted.                                                                                                     |
 | `engine`                     | The `openai` engine is used.                                                                                                         |
 | `question_column`            | It is the column that stores input data being a question.                                                                            |
 | `context_column`             | It is the column that stores input data being a context.                                                                             |
-| `api_key`                    | Optional. If it is left blank, or the `env` value is passed, then MindsDB fetches the `OPENAI_API_KEY` environment variable value.   |
+| `api_key`             | Your OpenAI API key.   |
 
 Let's look at an example.
 
 ```sql
-CREATE MODEL project_a.openai_test_b
+CREATE MODEL openai_model
 PREDICT answer
 USING
     engine = 'openai',
@@ -170,7 +170,7 @@ Now we can query for answers.
 
 ```sql
 SELECT context, question, answer
-FROM project_a.openai_test_b
+FROM openai_model
 WHERE context = 'Answer with a joke'
 AND question = 'How to cook soup?';
 ```
@@ -194,7 +194,7 @@ Good prompts are the key to getting great completions out of large language mode
 </Tip>
 
 ```sql
-CREATE MODEL project_a.openai_test_c
+CREATE MODEL openai_model
 PREDICT answer
 USING
     engine = 'openai',
@@ -208,18 +208,18 @@ Where:
 
 | Expression                   | Description                                                                                                                          |
 |------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
-| `project_a.openai_test_c`    | The model name is `openai_test_c` and it resides inside the `project_a` project.                                                     |
+| `openai_model`    | The model name is `openai_model` and it resides inside the `mindsdb` project by default.                                                     |
 | `answer`                     | It is the value to be predicted.                                                                                                     |
 | `engine`                     | The `openai` engine is used.                                                                                                         |
 | `prompt_template`            | It is the column that stores a query to be answered. *Please note that this parameter can be overridden at prediction time.*            |
 | `max_tokens`                 | It defines the maximum token cost of the prediction. *Please note that this parameter can be overridden at prediction time.*            |
 | `temperature`                | It defines how *risky* the answers are. The value of `0` marks a well-defined answer, and the value of `0.9` marks a more creative answer. *Please note that this parameter can be overridden at prediction time.*|
-| `api_key`                    | Optional. If it is left blank, or the `env` value is passed, then MindsDB fetches the `OPENAI_API_KEY` environment variable value.   |
+| `api_key`             | Your OpenAI API key.   |
 
 Let's create a model:
 
 ```sql
-CREATE MODEL project_a.openai_test_c
+CREATE MODEL openai_model
 PREDICT answer
 USING
     engine = 'openai',
@@ -232,7 +232,7 @@ Let's look at an example that uses parameters provided at model creation time.
 
 ```sql
 SELECT context, question, answer
-FROM project_a.openai_test_c
+FROM openai_model
 WHERE context = 'Answer accurately'
 AND question = 'How many planets exist in the solar system?';
 ```
@@ -251,7 +251,7 @@ Now let's look at an example that overrides parameters at prediction time.
 
 ```sql
 SELECT instruction, answer
-FROM project_a.openai_test_c
+FROM openai_model
 WHERE instruction = 'Speculate extensively'
 USING
     prompt_template = '{{instruction}}. What does Tom Hanks like?',

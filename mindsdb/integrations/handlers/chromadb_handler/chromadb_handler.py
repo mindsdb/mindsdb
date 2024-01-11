@@ -401,10 +401,7 @@ class ChromaDBHandler(VectorStoreHandler):
             if if_exists:
                 return Response(resp_type=RESPONSE_TYPE.OK)
             else:
-                return Response(
-                    resp_type=RESPONSE_TYPE.ERROR,
-                    error_message=f"Table {table_name} does not exist!",
-                )
+                raise Exception(f"Collection {table_name} does not exist!")
 
     def get_tables(self) -> HandlerResponse:
         """

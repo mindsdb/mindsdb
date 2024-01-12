@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 import pytest
 
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from .conftest import CONFIG_PATH
 from .http_test_helpers import HTTPHelperMixin
 
@@ -44,7 +44,7 @@ class QueryStorage:
                     CREATE MODEL sentiment_classifier_gpt3
                     PREDICT sentiment
                     USING
-                    engine = 'openai',
+                    engine = 'openai2',
                     prompt_template = 'describe the sentiment of the reviews
                     strictly as "positive", "neutral", or "negative".
                     "I love the product":positive

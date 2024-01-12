@@ -1,7 +1,11 @@
 from collections import OrderedDict
 
 from mindsdb.integrations.handlers.dockerhub_handler.dockerhub_tables import (
-    DockerHubRepoImagesSummaryTable
+    DockerHubRepoImagesSummaryTable,
+    DockerHubRepoImagesTable,
+    DockerHubRepoTagTable,
+    DockerHubRepoTagsTable,
+    DockerHubOrgSettingsTable
 )
 from mindsdb.integrations.handlers.dockerhub_handler.dockerhub import DockerHubClient
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -10,11 +14,10 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
-
-logger = get_log("integrations.dockerhub_handler")
+logger = log.getLogger(__name__)
 
 
 class DockerHubHandler(APIHandler):
@@ -38,6 +41,18 @@ class DockerHubHandler(APIHandler):
 
         repo_images_stats_data = DockerHubRepoImagesSummaryTable(self)
         self._register_table("repo_images_summary", repo_images_stats_data)
+        
+        repo_images_data = DockerHubRepoImagesTable(self)
+        self._register_table("repo_images", repo_images_data)
+
+        repo_tag_details_data = DockerHubRepoTagTable(self)
+        self._register_table("repo_tag_details", repo_tag_details_data)
+        
+        repo_tags_data = DockerHubRepoTagsTable(self)
+        self._register_table("repo_tags", repo_tags_data)
+
+        org_settings = DockerHubOrgSettingsTable(self)
+        self._register_table("org_settings", org_settings)
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.

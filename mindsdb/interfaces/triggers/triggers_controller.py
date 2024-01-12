@@ -6,7 +6,7 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.context import context as ctx
 
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+from mindsdb.api.executor.controllers.session_controller import SessionController
 
 
 class TriggersController:
@@ -20,7 +20,7 @@ class TriggersController:
         project_controller = ProjectController()
         project = project_controller.get(name=project_name)
 
-        from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+        from mindsdb.api.executor.controllers.session_controller import SessionController
         session = SessionController()
 
         # check exists
@@ -43,7 +43,9 @@ class TriggersController:
 
         df = db_handler.get_tables().data_frame
         tables = list(df[df.columns[0]])
-        if table_name not in tables:
+
+        # check only if tables are visible
+        if len(tables) > 0 and table_name not in tables:
             raise Exception(f'Table {table_name} not found in {db_name}')
 
         columns_str = None

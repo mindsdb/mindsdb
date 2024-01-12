@@ -1,10 +1,7 @@
-from slack_sdk import WebClient
-from slack_sdk.errors import SlackApiError
-from ..slack_handler import SlackHandler
+from mindsdb.integrations.handlers.slack_handler import SlackHandler
 import unittest
 from unittest.mock import patch
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
-from mindsdb_sql import parse_sql
+
 
 class SlackHandlerTest(unittest.TestCase):
 

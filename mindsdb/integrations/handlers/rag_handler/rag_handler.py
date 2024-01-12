@@ -2,19 +2,19 @@ from typing import Dict, Optional
 
 import pandas as pd
 
-from mindsdb.integrations.handlers.rag_handler.ingest import Ingestor
-from mindsdb.integrations.handlers.rag_handler.rag import QuestionAnswerer
+from mindsdb.integrations.handlers.rag_handler.ingest import RAGIngestor
+from mindsdb.integrations.handlers.rag_handler.rag import RAGQuestionAnswerer
 from mindsdb.integrations.handlers.rag_handler.settings import (
     DEFAULT_EMBEDDINGS_MODEL,
     RAGHandlerParameters,
     build_llm_params,
 )
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 # these require no additional arguments
 
-logger = get_log(logger_name=__name__)
+logger = log.getLogger(__name__)
 
 
 class RAGHandler(BaseMLEngine):
@@ -65,8 +65,8 @@ class RAGHandler(BaseMLEngine):
             args.vector_store_folder_name
         )
 
-        if args.run_embeddings and df is not None:
-            if "context_columns" not in args:
+        if args.run_embeddings:
+            if "context_columns" not in args and df is not None:
 
                 # if no context columns provided, use all columns in df
                 logger.info("No context columns provided, using all columns in df")
@@ -77,13 +77,12 @@ class RAGHandler(BaseMLEngine):
                     f"No embeddings model provided in query, using default model: {DEFAULT_EMBEDDINGS_MODEL}"
                 )
 
-            if not df.empty:
-                ingestor = Ingestor(args=args, df=df)
+            if df is not None or args.url is not None:
+                # if user provides a dataframe or url, run embeddings and store in vector store
+
+                ingestor = RAGIngestor(args=args, df=df)
                 ingestor.embeddings_to_vectordb()
-            else:
-                logger.info(
-                    "Input data provided is empty, skipping embeddings and ingestion"
-                )
+
         else:
             # Note this should only be run if run_embeddings is false or if no data is provided in query
             logger.info("Skipping embeddings and ingestion into Chroma VectorDB")
@@ -130,7 +129,7 @@ class RAGHandler(BaseMLEngine):
         )
 
         # get question answering results
-        question_answerer = QuestionAnswerer(args=args)
+        question_answerer = RAGQuestionAnswerer(args=args)
 
         # get question from sql query
         # e.g. where question = 'What is the capital of France?'

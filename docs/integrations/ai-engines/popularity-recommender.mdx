@@ -3,9 +3,10 @@ title: Popularity Recommender
 sidebarTitle: Popularity Recommender
 ---
 
-The popularity recommender is built using polars to create a simple but fast popularity recommender, recommending items based on global popularity and personal past interaction. It calculates the most popular items across the whole input data and for each user removes any that have already been interacted with. It is very simple in how it works, thus, it serves as a useful benchmark when evaluating more complex recommendation engines.
-
-The ideal use cases include ecommerce rating data, web page browsing data, or past purchase data for serving users recommendations.
+The popularity recommender is built using [Polars](https://pola.rs/) to create a simple but fast popularity recommender, recommending items based on global popularity and personal past interaction. 
+It identifies the most popular items from the entire dataset and excludes any items a user has already interacted with. 
+Its straightforward methodology makes it an excellent benchmark for comparing more sophisticated recommendation engines.
+The ideal use cases for this handler include analyzing ecommerce rating data, web page browsing data, or past purchase data for serving users recommendations.
 
 As the current implementations stand, the input data should be a table containing user-item interaction data:
 

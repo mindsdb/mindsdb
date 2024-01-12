@@ -1,16 +1,16 @@
 import ast
 import inspect
-import logging
 import textwrap
 from _ast import AnnAssign, AugAssign
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
 from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.utilities import log
 
 from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse
 
-LOG = logging.getLogger(__name__)
+logger = log.getLogger(__name__)
 
 
 class BaseHandler:
@@ -208,7 +208,7 @@ class ArgProbeMixin:
         try:
             source_code = self.get_source_code(method_name)
         except Exception as e:
-            LOG.error(
+            logger.error(
                 f"Failed to get source code of method {method_name} in {self.__class__.__name__}. Reason: {e}"
             )
             return []
@@ -347,6 +347,13 @@ class BaseMLEngine(ArgProbeMixin):
         Optional.
 
         Used to connect with external sources (e.g. a REST API) that the engine will require to use any other methods.
+        """
+        raise NotImplementedError
+
+    def update_engine(self, connection_args: dict):
+        """Optional.
+
+        Used when need to change connection args or do any make any other changes to the engine
         """
         raise NotImplementedError
 

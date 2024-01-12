@@ -2,7 +2,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 from collections import OrderedDict
 
 
-from ..mysql_handler import Handler as MysqlHandler
+from mindsdb.integrations.handlers.mysql_handler import Handler as MysqlHandler
 
 
 class StarRocksHandler(MysqlHandler):

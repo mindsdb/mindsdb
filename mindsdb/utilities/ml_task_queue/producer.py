@@ -1,6 +1,5 @@
 import pickle
 
-from redis.exceptions import ConnectionError
 from walrus import Database
 from pandas import DataFrame
 
@@ -8,14 +7,18 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.ml_task_queue.utils import RedisKey, to_bytes
 from mindsdb.utilities.ml_task_queue.task import Task
+from mindsdb.utilities.ml_task_queue.base import BaseRedisQueue
 from mindsdb.utilities.ml_task_queue.const import (
     TASKS_STREAM_NAME,
     ML_TASK_TYPE,
     ML_TASK_STATUS
 )
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
-class MLTaskProducer:
+class MLTaskProducer(BaseRedisQueue):
     """ Interface around the redis for putting tasks to the queue
 
         Attributes:
@@ -27,6 +30,7 @@ class MLTaskProducer:
 
     def __init__(self) -> None:
         config = Config().get('ml_task_queue', {})
+
         self.db = Database(
             host=config.get('host', 'localhost'),
             port=config.get('port', 6379),
@@ -35,11 +39,8 @@ class MLTaskProducer:
             password=config.get('password'),
             protocol=3
         )
-        try:
-            self.db.ping()
-        except ConnectionError:
-            print('Cant connect to redis')
-            raise
+        self.wait_redis_ping(60)
+
         self.stream = self.db.Stream(TASKS_STREAM_NAME)
         self.cache = self.db.cache()
         self.pubsub = self.db.pubsub()
@@ -67,6 +68,7 @@ class MLTaskProducer:
                 "redis_key": redis_key.base
             }
 
+            self.wait_redis_ping()
             if dataframe is not None:
                 self.cache.set(redis_key.dataframe, to_bytes(dataframe), 180)
             self.cache.set(redis_key.status, ML_TASK_STATUS.WAITING, 180)
@@ -74,5 +76,5 @@ class MLTaskProducer:
             self.stream.add(message)
             return Task(self.db, redis_key)
         except ConnectionError:
-            print('Cant send message to redis: connect failed')
+            logger.error('Cant send message to redis: connect failed')
             raise

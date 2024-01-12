@@ -4,11 +4,13 @@ from typing import List
 
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
 from mindsdb_sql.parser import ast
+from mindsdb.integrations.handlers.utilities.query_utilities.select_query_utilities import SELECTQueryParser, SELECTQueryExecutor
 
-logger = get_log("integrations.InfluxDB_handler")
+
+logger = log.getLogger(__name__)
 
 class InfluxDBTables(APITable):
     """InfluxDB Tables implementation"""
@@ -27,58 +29,23 @@ class InfluxDBTables(APITable):
         ValueError
             If the query contains an unsupported condition
         """
-        conditions = extract_comparison_conditions(query.where)
+        
+        table_name=self.handler.connection_data['influxdb_table_name']
+        select_statement_parser = SELECTQueryParser(
+            query,
+            "tables",
+            self.get_columns()
+        )
+        selected_columns, where_conditions, order_by_conditions, _ = select_statement_parser.parse_query()
+        
+        try:
+            selected_columns.remove("name")
+            selected_columns.remove("tags")
+        except Exception as e:
+            logger.warn(e)
 
-       
-        order_by_conditions = {}
-
-        if query.order_by and len(query.order_by) > 0:
-            order_by_conditions["columns"] = []
-            order_by_conditions["ascending"] = []
-
-            for an_order in query.order_by:
-                if an_order.field.parts[0] != "":
-                    next    
-                if an_order.field.parts[1] in self.get_columns():
-                    order_by_conditions["columns"].append(an_order.field.parts[1])
-
-                    if an_order.direction == "ASC":
-                        order_by_conditions["ascending"].append(True)
-                    else:
-                        order_by_conditions["ascending"].append(False)
-                else:
-                    raise ValueError(
-                        f"Order by unknown column {an_order.field.parts[1]}"
-                    )
-
-        influxdb_tables_df = self.handler.call_influxdb_tables()
-
-        selected_columns = []
-        for target in query.targets:
-            if isinstance(target, ast.Star):
-                selected_columns = self.get_columns()
-                break
-            elif isinstance(target, ast.Identifier):
-                selected_columns.append(target.parts[-1])
-            else:
-                raise ValueError(f"Unknown query target {type(target)}")
-
-
-        if len(influxdb_tables_df) == 0:
-            influxdb_tables_df = pd.DataFrame([], columns=selected_columns)
-        else:
-            influxdb_tables_df.columns = self.get_columns()
-            for col in set(influxdb_tables_df.columns).difference(set(selected_columns)):
-                influxdb_tables_df = influxdb_tables_df.drop(col, axis=1)
-
-            if len(order_by_conditions.get("columns", [])) > 0:
-                influxdb_tables_df = influxdb_tables_df.sort_values(
-                    by=order_by_conditions["columns"],
-                    ascending=order_by_conditions["ascending"],
-                )
-
-        if query.limit:
-            influxdb_tables_df = influxdb_tables_df.head(query.limit.value)
+        formatted_query=self.get_select_query(table_name,selected_columns,where_conditions,order_by_conditions,query.limit)
+        influxdb_tables_df  = self.handler.call_influxdb_tables(formatted_query)
 
         return influxdb_tables_df
 
@@ -89,6 +56,26 @@ class InfluxDBTables(APITable):
         List[str]
             List of columns
         """
-        influxdb_df_fields = self.handler.call_influxdb_tables()
+        
+        dataframe = self.handler.call_influxdb_tables(f"SELECT * FROM {self.handler.connection_data['influxdb_table_name']} LIMIT 1")
 
-        return list(influxdb_df_fields.columns)
+        return list(dataframe.columns)
+    def get_select_query(self,table_name,selected_columns, where_conditions, order_by_conditions, result_limit):
+        """Gets Well formed Query
+        Returns
+        -------
+        str
+        """
+        columns=", ".join([f'"{column}"' for column in selected_columns])
+        query=f'SELECT {columns} FROM "{table_name}"'
+        if(where_conditions is not None and len(where_conditions)>0):
+            query+=" WHERE "
+            query+=" AND ".join([f"{i[1]} {i[0]} {i[2]}" for i in where_conditions])
+        if (order_by_conditions!={} and order_by_conditions['columns'] is not None and len(order_by_conditions['columns'])>0):
+            query+=" ORDER BY "
+            query+=", ".join([f'{column_name} {"ASC"if asc else "DESC"}' for column_name,asc in zip(order_by_conditions['columns'],order_by_conditions['ascending'])] )
+        if(result_limit is not None):
+            query+=f" LIMIT {result_limit}"
+        query+=";"
+        return query
+

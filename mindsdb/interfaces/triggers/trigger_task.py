@@ -6,12 +6,15 @@ from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.interfaces.storage import db
 
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
-from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+from mindsdb.api.executor.controllers.session_controller import SessionController
+from mindsdb.api.executor.command_executor import ExecuteCommands
 
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities import log
 from mindsdb.interfaces.tasks.task import BaseTask
+from mindsdb.utilities.context import context as ctx
+
+logger = log.getLogger(__name__)
 
 
 class TriggerTask(BaseTask):
@@ -19,6 +22,9 @@ class TriggerTask(BaseTask):
         super().__init__(*args, **kwargs)
         self.command_executor = None
         self.query = None
+
+        # callback might be without context
+        self._ctx_dump = ctx.dump()
 
     def run(self, stop_event):
         trigger = db.Triggers.query.get(self.object_id)
@@ -34,7 +40,7 @@ class TriggerTask(BaseTask):
 
         session.database = project.name
 
-        self.command_executor = ExecuteCommands(session, executor=None)
+        self.command_executor = ExecuteCommands(session)
 
         # subscribe
         database = session.integration_controller.get_by_id(trigger.database_id)
@@ -49,11 +55,15 @@ class TriggerTask(BaseTask):
 
         data_handler.subscribe(stop_event, self._callback, trigger.table_name, columns)
 
-    def _callback(self, row, key):
-        log.logger.debug(f'trigger call: {row}, {key}')
+    def _callback(self, row, key=None):
+        logger.debug(f'trigger call: {row}, {key}')
+
+        # set up environment
+        ctx.load(self._ctx_dump)
 
         try:
-            row.update(key)
+            if key is not None:
+                row.update(key)
             table = [
                 row
             ]

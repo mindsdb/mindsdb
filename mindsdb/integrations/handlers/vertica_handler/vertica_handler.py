@@ -20,7 +20,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 # from sqlalchemy_vertica.dialect_pyodbc  import VerticaDialect
 from sqla_vertica_python.vertica_python import VerticaDialect
 
-
+logger = log.getLogger(__name__)
 
 
 class VerticaHandler(DatabaseHandler):
@@ -76,7 +76,7 @@ class VerticaHandler(DatabaseHandler):
             connection = self.connect()
             result.success = connection.opened()
         except Exception as e:
-            log.logger.error(f'Error connecting to Vertica {self.connection_data["database"]}, {e}!')
+            logger.error(f'Error connecting to Vertica {self.connection_data["database"]}, {e}!')
             result.error_message = str(e)
 
         if result.success is True and need_to_close:
@@ -113,7 +113,7 @@ class VerticaHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
                 connection.commit()
             except Exception as e:
-                log.logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
+                logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_message=str(e)

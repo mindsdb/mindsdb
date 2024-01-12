@@ -11,9 +11,9 @@ from mindsdb.integrations.handlers.utilities.query_utilities import INSERTQueryP
 from mindsdb.integrations.handlers.utilities.query_utilities import DELETEQueryParser, DELETEQueryExecutor
 from mindsdb.integrations.handlers.utilities.query_utilities import UPDATEQueryParser, UPDATEQueryExecutor
 
-from mindsdb.utilities.log import get_log
+from mindsdb.utilities import log
 
-logger = get_log("integrations.shopify_handler")
+logger = log.getLogger(__name__)
 
 
 class ProductsTable(APITable):
@@ -291,7 +291,7 @@ class CustomersTable(APITable):
 
         Parameters
         ----------
-        query : ast.Insert
+        query : ast.Delete
            Given SQL DELETE query
 
         Returns
@@ -303,7 +303,6 @@ class CustomersTable(APITable):
         ValueError
             If the query contains an unsupported condition
         """
-
         delete_statement_parser = DELETEQueryParser(query)
         where_conditions = delete_statement_parser.parse_query()
 
@@ -318,7 +317,6 @@ class CustomersTable(APITable):
 
         customer_ids = customers_df['id'].tolist()
         self.delete_customers(customer_ids)
-
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_customers(limit=1)).columns.tolist()
@@ -357,9 +355,8 @@ class CustomersTable(APITable):
 
         for customer_id in customer_ids:
             customer = shopify.Customer.find(customer_id)
-            customer.destroy()
+            customer.delete()
             logger.info(f'Customer {customer_id} deleted')
-
 
 
 class OrdersTable(APITable):
@@ -400,6 +397,88 @@ class OrdersTable(APITable):
         orders_df = select_statement_executor.execute_query()
 
         return orders_df
+
+    def update(self, query: ast.Update) -> None:
+        """Updates data in the Shopify "PUT /orders" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Update
+           Given SQL UPDATE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        update_statement_parser = UPDATEQueryParser(query)
+        values_to_update, where_conditions = update_statement_parser.parse_query()
+        orders_df = pd.json_normalize(self.get_orders())
+
+        update_statement_executor = UPDATEQueryExecutor(
+            orders_df,
+            where_conditions
+        )
+        orders_df = update_statement_executor.execute_query()
+        orders_ids = orders_df['id'].tolist()
+        self.update_orders(orders_ids, values_to_update)
+
+    def delete(self, query: ast.Delete) -> None:
+        """Deletes data from the Shopify "DELETE /orders" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Delete
+           Given SQL DELETE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        delete_statement_parser = DELETEQueryParser(query)
+        where_conditions = delete_statement_parser.parse_query()
+
+        orders_df = pd.json_normalize(self.get_orders())
+
+        delete_query_executor = DELETEQueryExecutor(
+            orders_df,
+            where_conditions
+        )
+
+        orders_df = delete_query_executor.execute_query()
+
+        order_ids = orders_df['id'].tolist()
+        self.delete_orders(order_ids)
+
+    def update_orders(self, order_ids: List[int], values_to_update: Dict[Text, Any]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for order_id in order_ids:
+            order = shopify.Order.find(order_id)
+            for key, value in values_to_update.items():
+                setattr(order, key, value)
+            order.save()
+            logger.info(f'Order {order_id} updated')
+
+    def delete_orders(self, order_ids: List[int]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for order_id in order_ids:
+            order = shopify.Order.find(order_id)
+            order.destroy()
+            logger.info(f'Order {order_id} deleted')
+    
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_orders(limit=1)).columns.tolist()
@@ -641,6 +720,97 @@ class CarrierServiceTable(APITable):
         carrier_service_df = select_statement_executor.execute_query()
 
         return carrier_service_df
+    
+    def insert(self, query: ast.Insert) -> None:
+        """Inserts data into the Shopify "POST /carrier_services" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Insert
+           Given SQL INSERT query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        insert_statement_parser = INSERTQueryParser(
+            query,
+            supported_columns=['name', 'callback_url', 'service_discovery'],
+            mandatory_columns=['name', 'callback_url', 'service_discovery'],
+            all_mandatory=True
+        )
+        carrier_service_data = insert_statement_parser.parse_query()
+        self.create_carrier_service(carrier_service_data)
+
+    def delete(self, query: ast.Delete) -> None:
+        """
+        Deletes data from the Shopify "DELETE /carrier_services" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Delete
+           Given SQL DELETE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        delete_statement_parser = DELETEQueryParser(query)
+        where_conditions = delete_statement_parser.parse_query()
+
+        carrier_services_df = pd.json_normalize(self.get_carrier_service())
+
+        delete_query_executor = DELETEQueryExecutor(
+            carrier_services_df,
+            where_conditions
+        )
+
+        carrier_services_df = delete_query_executor.execute_query()
+
+        carrier_service_ids = carrier_services_df['id'].tolist()
+        self.delete_carrier_services(carrier_service_ids)
+
+
+    def update(self, query: ast.Update) -> None:
+        """Updates data from the Shopify "PUT /carrier_services" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Update
+           Given SQL UPDATE query
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        update_statement_parser = UPDATEQueryParser(query)
+        values_to_update, where_conditions = update_statement_parser.parse_query()
+        carrier_services_df = pd.json_normalize(self.get_carrier_service())
+        update_query_executor = UPDATEQueryExecutor(
+            carrier_services_df,
+            where_conditions
+        )
+
+        carrier_services_df = update_query_executor.execute_query()
+        carrier_service_ids = carrier_services_df['id'].tolist()
+        self.update_carrier_service(carrier_service_ids, values_to_update)
+
+
 
     def get_columns(self) -> List[Text]:
         return ["id", "name", "active", "service_discovery", "carrier_service_type", "admin_graphql_api_id"]
@@ -650,6 +820,38 @@ class CarrierServiceTable(APITable):
         shopify.ShopifyResource.activate_session(api_session)
         services = shopify.CarrierService.find()
         return [service.to_dict() for service in services]
+    
+    def create_carrier_service(self, carrier_service_data: List[Dict[Text, Any]]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for carrier_service in carrier_service_data:
+            created_carrier_service = shopify.CarrierService.create(carrier_service)
+            if 'id' not in created_carrier_service.to_dict():
+                raise Exception('Product creation failed')
+            else:
+                logger.info(f'Product {created_carrier_service.to_dict()["id"]} created')
+
+    def delete_carrier_services(self, carrier_service_ids: List[int]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+
+        for carrier_service_id in carrier_service_ids:
+            product = shopify.CarrierService.find(carrier_service_id)
+            product.destroy()
+            logger.info(f'Carrier Service {carrier_service_id} deleted')
+
+    def update_carrier_service(self, carrier_service_id: int, values_to_update: Dict[Text, Any]) -> None:
+        # Update the carrier service using the Shopify API
+        session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(session)
+
+        carrier_service = shopify.CarrierService.find(carrier_service_id)
+        for key, value in values_to_update.items():
+            setattr(carrier_service, key, value)
+        carrier_service.save()
+        logger.info(f'Carrier Service {carrier_service_id} updated')
+
 
 
 class ShippingZoneTable(APITable):

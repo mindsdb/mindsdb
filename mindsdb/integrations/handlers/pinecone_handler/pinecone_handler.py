@@ -18,6 +18,8 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 )
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
+
 
 class PineconeHandler(VectorStoreHandler):
     """This handler handles connection and execution of the Pinecone statements."""
@@ -140,7 +142,7 @@ class PineconeHandler(VectorStoreHandler):
             pinecone.list_indexes()
             self.is_connected = True
         except Exception as e:
-            log.logger.error(f"Error connecting to Pinecone client, {e}!")
+            logger.error(f"Error connecting to Pinecone client, {e}!")
             self.is_connected = False
 
     def disconnect(self):
@@ -157,7 +159,7 @@ class PineconeHandler(VectorStoreHandler):
             pinecone.list_indexes()
             response_code.success = True
         except Exception as e:
-            log.logger.error(f"Error connecting to pinecone , {e}!")
+            logger.error(f"Error connecting to pinecone , {e}!")
             response_code.error_message = str(e)
         return response_code
 

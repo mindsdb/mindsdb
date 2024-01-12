@@ -6,7 +6,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
 from mindsdb.integrations.libs.response import (
@@ -14,6 +14,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
 )
 from mindsdb.utilities import log
+logger = log.getLogger(__name__)
 
 from mindsdb.integrations.handlers.gmail_handler.utils import AuthException, google_auth_flow, save_creds_to_file
 
@@ -114,7 +115,7 @@ class GoogleCalendarHandler(APIHandler):
             return response
 
         except Exception as e:
-            log.logger.error(f'Error connecting to Google Calendar API: {e}!')
+            logger.error(f'Error connecting to Google Calendar API: {e}!')
             response.error_message = e
 
         self.is_connected = response.success

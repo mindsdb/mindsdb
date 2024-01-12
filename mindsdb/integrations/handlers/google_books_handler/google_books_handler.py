@@ -5,7 +5,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 import pandas as pd
 from pandas import DataFrame
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from .google_books_tables import BookshelvesTable, VolumesTable
 from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
 from mindsdb.integrations.libs.response import (
@@ -14,6 +14,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 class GoogleBooksHandler(APIHandler):
     """
@@ -83,7 +84,7 @@ class GoogleBooksHandler(APIHandler):
             service = self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Google Books API: {e}!')
+            logger.error(f'Error connecting to Google Books API: {e}!')
             response.error_message = e
 
         self.is_connected = response.success

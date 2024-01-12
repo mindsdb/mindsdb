@@ -2,7 +2,10 @@ from typing import List
 
 import pandas as pd
 
-from mindsdb_sql.parser.ast import Identifier, Select, OrderBy, NullConstant, Constant, BinaryOperation, ASTNode
+from mindsdb_sql.parser.ast import (
+    Identifier, BinaryOperation, Last, Constant, ASTNode
+)
+from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
@@ -62,6 +65,18 @@ class QueryContextController:
 
         return query_out, callback
 
+    def remove_lasts(self, query):
+        def replace_lasts(node, **kwargs):
+
+            # find last in where
+            if isinstance(node, BinaryOperation):
+                if isinstance(node.args[0], Identifier) and isinstance(node.args[1], Last):
+                    # memorize node
+                    return BinaryOperation(op='=', args=[Constant(0), Constant(0)])
+
+        # find lasts
+        query_traversal(query, replace_lasts)
+
     def _result_callback(self, l_query: LastQuery,
                          context_name: str, query_str: str,
                          data: List[dict], columns_info: list):
@@ -81,7 +96,7 @@ class QueryContextController:
         if len(data) == 0:
             return
 
-        max_vals = pd.DataFrame(data).max().to_dict()
+        df = pd.DataFrame(data)
         values = {}
         # get max values
         for info in l_query.get_last_columns():
@@ -89,10 +104,25 @@ class QueryContextController:
             if target_idx is not None:
                 # get by index
                 col_name = columns_info[target_idx]['name']
-                value = max_vals.get(col_name)
             else:
+                col_name = info['column_name']
                 # get by name
-                value = max_vals.get(info['column_name'])
+            if col_name not in df:
+                continue
+
+            column_values = df[col_name].dropna()
+            try:
+                value = max(column_values)
+            except (TypeError, ValueError):
+                try:
+                    # try to convert to float
+                    value = max(map(float, column_values))
+                except (TypeError, ValueError):
+                    try:
+                        # try to convert to str
+                        value = max(map(str, column_values))
+                    except (TypeError, ValueError):
+                        continue
 
             if value is not None:
                 values[info['table_name']] = {info['column_name']: value}
@@ -121,26 +151,7 @@ class QueryContextController:
            'select <col> from <table> order by <col> desc limit 1"
         """
         last_values = {}
-        for info in l_query.get_last_columns():
-            col = Identifier(info['column_name'])
-
-            query = Select(
-                targets=[
-                    col
-                ],
-                from_table=info['table'],
-                order_by=[
-                    OrderBy(col, direction='DESC')
-                ],
-                where=BinaryOperation(
-                    op='is not',
-                    args=[
-                        col,
-                        NullConstant()
-                    ]
-                ),
-                limit=Constant(1)
-            )
+        for query, info in l_query.get_init_queries():
 
             data, columns_info = dn.query(
                 query=query,

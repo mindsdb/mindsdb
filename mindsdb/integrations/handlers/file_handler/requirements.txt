@@ -1,0 +1,4 @@
+charset-normalizer
+python-magic >= 0.4.27
+openpyxl  # Optional dep of langchain for txt files
+pymupdf   # Optional dep for PDF files

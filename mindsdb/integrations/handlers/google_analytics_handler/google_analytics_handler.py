@@ -1,9 +1,11 @@
-from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse
-)
+from mindsdb_sql import parse_sql
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.utilities import log
 from mindsdb.integrations.handlers.google_analytics_handler.google_analytics_tables import ConversionEventsTable
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+)
 
 import os
 
@@ -27,7 +29,7 @@ class GoogleAnalyticsHandler(APIHandler):
         credentials_file (str): The path to the Google Auth Credentials file for authentication
         and interacting with the Google Analytics API on behalf of the user.
 
-        scopes (List[str], Optional): The scopes to use when authenticating with the Google Analytics API.
+        Scopes (List[str], Optional): The scopes to use when authenticating with the Google Analytics API.
     """
 
     name = 'google_analytics'
@@ -64,7 +66,7 @@ class GoogleAnalyticsHandler(APIHandler):
         return AnalyticsAdminServiceClient(credentials=creds)
 
     def connect(self):
-        """Authenticate with the Google Analytics Admin API using the credentials file.
+        """Authenticate with the Google Analytics Admin API using the credential file.
 
         Returns
         -------
@@ -85,7 +87,7 @@ class GoogleAnalyticsHandler(APIHandler):
 
         Returns
         -------
-        StatusResponse
+        response
             Status confirmation
         """
         response = StatusResponse(False)
@@ -105,3 +107,11 @@ class GoogleAnalyticsHandler(APIHandler):
             self.is_connected = False
 
         return response
+
+    def native_query(self, query_string: str = None) -> Response:
+        ast = parse_sql(query_string, dialect="mindsdb")
+
+        return self.query(ast)
+
+    def get_api_url(self, endpoint):
+        return f'{endpoint}/{self.property_id}'

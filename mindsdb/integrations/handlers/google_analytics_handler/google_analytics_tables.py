@@ -1,9 +1,9 @@
 import pandas as pd
 from typing import List
-import re
 
 from google.analytics.admin_v1beta import ListConversionEventsRequest, ConversionEvent, CreateConversionEventRequest, \
     UpdateConversionEventRequest, DeleteConversionEventRequest
+from mindsdb_sql import Constant
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
@@ -83,10 +83,18 @@ class ConversionEventsTable(APITable):
         for row in query.values:
             params = dict(zip(columns, row))
 
-        if params['countingMethod'] == 1 or params['countingMethod'] == 0:
-            params['countingMethod'] = 1
+        # get params values of a type <Constant>
+        if isinstance(params['countingMethod'], str):
+            params['countingMethod'] = int(params['countingMethod'])
+        elif isinstance(params['countingMethod'], Constant):
+            params['countingMethod'] = params['countingMethod'].value
         else:
-            params['countingMethod'] = 2
+            params['countingMethod'] = params['countingMethod']
+
+        if isinstance(params['event_name'], Constant):
+            params['event_name'] = params['event_name'].value
+        else:
+            params['event_name'] = params['event_name']
 
         # Insert the conversion event into the Google Analytics Admin API.
         conversion_events = pd.DataFrame(columns=self.get_columns())
@@ -119,13 +127,8 @@ class ConversionEventsTable(APITable):
             else:
                 raise NotImplementedError
 
-        counting_method_value = str(params['countingMethod'][1])
-
-        # Use regex to check if the expression contains 1 or 0
-        if re.search(r'[01]', counting_method_value):
-            params['countingMethod'] = 1
-        else:
-            params['countingMethod'] = 2
+        # get params values of a type <Constant>
+        params['countingMethod'] = params['countingMethod'][1].value
 
         # Update the conversion event in the Google Analytics Admin API.
         conversion_events = pd.DataFrame(columns=self.get_columns())
@@ -164,7 +167,7 @@ class ConversionEventsTable(APITable):
         """
         service = self.handler.connect()
         page_token = None
-        url = self.get_api_url('properties')
+        url = self.handler.get_api_url('properties')
 
         while True:
             request = ListConversionEventsRequest(parent=url,
@@ -185,7 +188,7 @@ class ConversionEventsTable(APITable):
             ConversionEvent object
         """
         service = self.handler.connect()
-        url = self.get_api_url('properties')
+        url = self.handler.get_api_url('properties')
 
         conversion_event = ConversionEvent(
             event_name=params['event_name'],
@@ -226,9 +229,6 @@ class ConversionEventsTable(APITable):
         service = self.handler.connect()
         request = DeleteConversionEventRequest(name=params['name'])
         service.delete_conversion_event(request)
-
-    def get_api_url(self, endpoint):
-        return f'{endpoint}/{self.handler.property_id}'
 
     @staticmethod
     def extract_conversion_events_data(conversion_events):

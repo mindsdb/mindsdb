@@ -6,6 +6,44 @@ from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilit
 from mindsdb.integrations.libs.api_handler import APITable, APIHandler
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
+class SubscriptionTable(APITable):
+    
+    def get_columns(self) -> List[str]:
+        """Gets all columns to be returned in pandas DataFrame responses
+
+        Returns
+        -------
+        List[str]
+            List of columns
+        """
+        return [
+            "SubscriptionArn"
+        ]
+    
+    
+    def __init__(self, handler: APIHandler):
+        super().__init__(handler)
+        self.handler.connect()
+    
+    def insert(self, query: ast.Insert) -> pd.DataFrame:
+        mandatory_columns = {'TopicArn','Protocol'}
+        supported_columns = {'Endpoint'}
+        insert_statement_parser = INSERTQueryParser(
+            query,
+            mandatory_columns=list(mandatory_columns),
+            supported_columns=list(supported_columns),
+            all_mandatory=True
+        )
+        subscription_values= insert_statement_parser.parse_values()
+        for subscription_value in subscription_values:
+            topic_arn=subscription_value['TopicArn']
+            protocol=subscription_value['Protocol']
+            endpoint=subscription_value['Endpoint']
+            response=self.handler.connection.subscribe(TopicArn=topic_arn,Protocol=protocol,Endpoint=endpoint)
+            return pd.DataFrame(response)
+            
+            
+            
 
 class MessageTable(APITable):
     """The SNS message Table implementation for publish (insert) messages"""
@@ -94,6 +132,7 @@ class TopicTable(APITable):
     def __init__(self, handler: APIHandler):
         super().__init__(handler)
         self.handler.connect()
+        
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """triggered at the SELECT query
@@ -113,8 +152,7 @@ class TopicTable(APITable):
                     raise NotImplementedError
                 params[arg1] = arg2
             else:
-                raise NotImplementedError
-        print("params===" + str(params))    
+                raise NotImplementedError  
         if bool(params) == False:
             return self.topic_list()
         else:              
@@ -144,12 +182,10 @@ class TopicTable(APITable):
         Args:
             topic_arn (str): topic TopicArn (str)
         """
-        #response = self.connection.list_topics()
         response = self.handler.connection.list_topics()
         if len(response['Topics']) == 0:
             return pd.DataFrame({'TopicArn': []})
         json_response = str(response)
-        print(str(response))
         if topic_arn is not None:
             for topic_arn_row in response['Topics']:
                 topic_arn_response_name = topic_arn_row['TopicArn']

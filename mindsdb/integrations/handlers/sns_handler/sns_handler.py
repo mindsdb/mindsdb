@@ -1,4 +1,5 @@
 from mindsdb.integrations.handlers.sns_handler.sns_tables import TopicTable
+from mindsdb.integrations.handlers.sns_handler.sns_tables import SubscriptionTable
 from mindsdb.integrations.handlers.sns_handler.sns_tables import MessageTable
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb_sql import parse_sql
@@ -6,6 +7,7 @@ from pandas import DataFrame
 from collections import OrderedDict
 from typing import Optional
 import boto3
+import boto.sqs
 from typing import Dict
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 import json as JSON
@@ -25,6 +27,7 @@ class SnsHandler(APIHandler):
 
     name = 'sns'
     connection = None
+    sqs_client = None
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs) -> None:
         """initializer method
@@ -41,7 +44,7 @@ class SnsHandler(APIHandler):
         self.is_connected = False
 
         _tables = [
-            TopicTable, MessageTable
+            TopicTable, MessageTable, SubscriptionTable
         ]
 
         for Table in _tables:
@@ -81,7 +84,14 @@ class SnsHandler(APIHandler):
             # using  for testing locally with localstack
             endpoint_url=self.connection_data['endpoint_url'],
             region_name=self.connection_data['region_name'])
-        self.is_connected = True
+        if self.connection_data['queue-url'] is not None:
+            self.sqs_client = boto.sqs.connect_to_region(
+                self.connection_data['region_name'],
+                aws_access_key_id=self.connection_data['aws_access_key_id'],
+                aws_secret_access_key=self.connection_data['aws_secret_access_key']
+                )
+            
+        self.is_connected = True     
         return self.connection
 
     

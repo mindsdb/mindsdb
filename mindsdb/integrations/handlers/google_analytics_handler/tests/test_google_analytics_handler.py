@@ -9,7 +9,7 @@ class GoogleAnalyticsTest(unittest.TestCase):
         cls.kwargs = {
             "connection_data": {
                 "credentials_file": "/home/talaat/Downloads/credentials.json",
-                "property_id": '371809744'
+                "property_id": '<YOUR_PROPERTY_ID>'
             }
         }
 

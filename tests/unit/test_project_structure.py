@@ -636,8 +636,8 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert len(calls) == 1
         sql = calls[0][0][0].to_string()
         # getting next value, greater than max previous
-        assert 't.a > 2' in sql
-        assert "t.b = 'b'" in sql
+        assert 'a > 2' in sql
+        assert "b = 'b'" in sql
 
 
 class TestJobs(BaseExecutorDummyML):

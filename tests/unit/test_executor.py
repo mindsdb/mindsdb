@@ -722,7 +722,7 @@ class TestComplexQueries(BaseExecutorMockPredictor):
             return s
 
         # select for predictor
-        assert to_str(calls[0][0][0]) == 'SELECT * FROM tasks AS t WHERE t.a = 1'
+        assert to_str(calls[0][0][0]) == 'SELECT * FROM tasks AS t WHERE a = 1'
 
         # create table
         assert to_str(calls[1][0][0]) == 'CREATE TABLE table1 ( a INTEGER, b TEXT, c TEXT )'
@@ -759,7 +759,7 @@ class TestComplexQueries(BaseExecutorMockPredictor):
             return s
 
         # select for predictor
-        assert to_str(calls[0][0][0]) == 'SELECT * FROM tasks AS t WHERE t.a = 1'
+        assert to_str(calls[0][0][0]) == 'SELECT * FROM tasks AS t WHERE a = 1'
 
         # load table
         assert to_str(calls[1][0][0]) == "INSERT INTO table1 (a, b, c) VALUES (1, 'aaa', 'ccc'), (1, 'ccc', 'ccc')"

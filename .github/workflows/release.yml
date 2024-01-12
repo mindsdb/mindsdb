@@ -73,7 +73,7 @@ jobs:
   trigger_deploy:
     # Trigger private repo to deploy to prod env
     runs-on: [self-hosted, dev]
-    needs: deploy_to_dockerhub
+    needs: docker_build
     if: github.actor != 'mindsdbadmin'
     environment:
       name: prod

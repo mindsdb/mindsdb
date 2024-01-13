@@ -22,7 +22,7 @@ from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.integrations.libs.api_handler import APIChatHandler, APITable, FuncParser
 
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
+from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, filter_dataframe
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -62,7 +62,7 @@ class SlackChannelsTable(APITable):
         
         # Extract comparison conditions from the query
         conditions = extract_comparison_conditions(query.where)
-        channel_name = None
+        channel_name = conditions[0][2]
         filters = []
         params = {}
         order_by_conditions = {}
@@ -81,6 +81,11 @@ class SlackChannelsTable(APITable):
                     params['limit'] = int(arg2)
                 else:
                     raise NotImplementedError(f'Unknown op: {op}')
+            elif arg1 == 'with_threads':
+                if op == '=':
+                    param['with_threads']=arg2
+                else:
+                    raise NotImplementedError
 
             elif arg1 == 'created_at':
                 date = parse_utc_date(arg2)
@@ -120,6 +125,20 @@ class SlackChannelsTable(APITable):
         except SlackApiError as e:
             logger.error("Error creating conversation: {}".format(e))
             raise e
+        
+        
+        if params.get('with_threads'):
+            def return_threads(ts):
+                threads=c.conversations_replies(channel=channel_ids['general'],ts=x)['messages']
+                return [t['text'] for t in threads]
+
+            try:
+                result['threads']=result['ts'].apply(lambda x: return_threads(x))
+            except SlackApiError as e:
+                logger.error("Error creating conversation: {}".format(e))
+                raise e
+
+
 
         # Get columns for the query and convert SlackResponse object to pandas DataFrame
         columns = []
@@ -195,16 +214,7 @@ class SlackChannelsTable(APITable):
             if target.alias:
                 result.rename(columns={target.parts[-1]: str(target.alias)}, inplace=True)
         
-        q='' 
-        for i in filters:
-            if i[0]=='=':
-                i[0]='=='
-            if type(i[2])==str:
-                q+=f"{i[1]}{i[0]}'{i[2] }'"
-            else:
-                q+=f"{i[1]}{i[0]}{i[2] }"
-        if q:
-            result.query(q,inplace=True)
+        result = filter_dataframe(result, filters)
 
         # ensure the data in the table is of string type
         return result.astype(str)

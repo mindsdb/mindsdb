@@ -83,7 +83,7 @@ class SlackChannelsTable(APITable):
                     raise NotImplementedError(f'Unknown op: {op}')
             elif arg1 == 'with_threads':
                 if op == '=':
-                    param['with_threads']=arg2
+                    params['with_threads']=arg2
                 else:
                     raise NotImplementedError
 
@@ -127,16 +127,7 @@ class SlackChannelsTable(APITable):
             raise e
         
         
-        if params.get('with_threads'):
-            def return_threads(ts):
-                threads=c.conversations_replies(channel=channel_ids['general'],ts=x)['messages']
-                return [t['text'] for t in threads]
-
-            try:
-                result['threads']=result['ts'].apply(lambda x: return_threads(x))
-            except SlackApiError as e:
-                logger.error("Error creating conversation: {}".format(e))
-                raise e
+        
 
 
 
@@ -160,7 +151,8 @@ class SlackChannelsTable(APITable):
                     'reply_count', 
                     'reply_users_count', 
                     'latest_reply',
-                    'reply_users'
+                    'reply_users',
+                    'threads'
                 ]
                 break
             elif isinstance(target, ast.Identifier):
@@ -174,6 +166,18 @@ class SlackChannelsTable(APITable):
 
         # convert SlackResponse object to pandas DataFrame
         result = pd.DataFrame(result['messages'])
+
+        # threads are returned
+        if params.get('with_threads'):
+            def return_threads(ts):
+                threads = self.client.conversations_replies(channel=channel_ids['general'],ts=ts)['messages']
+                return [t['text'] for t in threads]
+
+            try:
+                result['threads']=result['ts'].apply(lambda x: return_threads(x))
+            except SlackApiError as e:
+                logger.error("Error creating conversation: {}".format(e))
+                raise e
 
         # Remove null rows from the result
         result = result[result['text'].notnull()]

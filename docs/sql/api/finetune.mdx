@@ -18,7 +18,7 @@ Imagine you have a model that was trained with a certain dataset. Now there is m
 Here is the syntax:
 
 ```sql
-FINETUNE project_name.model_name
+FINETUNE [MODEL] project_name.model_name
 FROM integration_name
     (SELECT column_name, ... FROM table_name)
 [USING

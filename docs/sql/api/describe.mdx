@@ -17,6 +17,12 @@ Here is how to retrieve general information on the model:
 DESCRIBE model_name;
 ```
 
+Or:
+
+```sql
+DESCRIBE MODEL model_name;
+```
+
 This command is similar to the below command:
 
 ```sql
@@ -34,7 +40,7 @@ One difference between these two commands is that `DESCRIBE` outputs an addition
 MindsDB uses the Lightwood engine by default. Let's see how to describe such models.
 
 ```sql
-DESCRIBE home_rentals_model;
+DESCRIBE [MODEL] home_rentals_model;
 ```
 
 On execution we get:
@@ -53,7 +59,7 @@ The `tables` output column lists all available options to describe a model.
 <Tab title='DESCRIBE info'>
 
 ```sql
-DESCRIBE home_rentals_model.info;
+DESCRIBE [MODEL] home_rentals_model.info;
 ```
 
 The above command returns the following output columns:
@@ -89,7 +95,7 @@ The above command returns the following output columns:
 <Tab title='DESCRIBE features'>
 
 ```sql
-DESCRIBE home_rentals_model.features;
+DESCRIBE [MODEL] home_rentals_model.features;
 ```
 
 The above command returns the following output columns:
@@ -125,7 +131,7 @@ The above command returns the following output columns:
 <Tab title='DESCRIBE model'>
 
 ```sql
-DESCRIBE home_rentals_model.model;
+DESCRIBE [MODEL] home_rentals_model.model;
 ```
 
 The above command returns the following output columns:
@@ -165,7 +171,7 @@ The above command returns the following output columns:
 <Tab title='DESCRIBE jsonai'>
 
 ```sql
-DESCRIBE home_rentals_model.jsonai;
+DESCRIBE [MODEL] home_rentals_model.jsonai;
 ```
 
 The above command returns the following output column:
@@ -193,7 +199,7 @@ The above command returns the following output column:
 MindsDB offers NLP models that utilize either Hugging Face or OpenAI engines. Let's see how to describe such models.
 
 ```sql
-DESCRIBE sentiment_classifier;
+DESCRIBE [MODEL] sentiment_classifier;
 ```
 
 On execution we get:
@@ -212,7 +218,7 @@ The `tables` output column lists all available options to describe a model.
 <Tab title='DESCRIBE args'>
 
 ```sql
-DESCRIBE sentiment_classifier.args;
+DESCRIBE [MODEL] sentiment_classifier.args;
 ```
 
 The above command returns the following output columns:
@@ -240,7 +246,7 @@ The above command returns the following output columns:
 <Tab title='DESCRIBE metadata'>
 
 ```sql
-DESCRIBE sentiment_classifier.metadata;
+DESCRIBE [MODEL] sentiment_classifier.metadata;
 ```
 
 The above command returns the following output columns:
@@ -272,7 +278,7 @@ The above command returns the following output columns:
 MindsDB integrates Nixtla engines, such as StatsForecast, NeuralForecast, and HierarchicalForecast. Let's see how to describe models based on Nixtla engines.
 
 ```sql
-DESCRIBE quarterly_expenditure_forecaster;
+DESCRIBE [MODEL] quarterly_expenditure_forecaster;
 ```
 
 On execution we get:
@@ -291,7 +297,7 @@ The `tables` output column lists all available options to describe a model.
 <Tab title='DESCRIBE info'>
 
 ```sql
-DESCRIBE quarterly_expenditure_forecaster.info;
+DESCRIBE [MODEL] quarterly_expenditure_forecaster.info;
 ```
 
 The above command returns the following output columns:
@@ -323,7 +329,7 @@ The above command returns the following output columns:
 <Tab title='DESCRIBE features'>
 
 ```sql
-DESCRIBE quarterly_expenditure_forecaster.features;
+DESCRIBE [MODEL] quarterly_expenditure_forecaster.features;
 ```
 
 The above command returns the following output columns:
@@ -355,7 +361,7 @@ The above command returns the following output columns:
 <Tab title='DESCRIBE model'>
 
 ```sql
-DESCRIBE quarterly_expenditure_forecaster.model;
+DESCRIBE [MODEL] quarterly_expenditure_forecaster.model;
 ```
 
 The above command returns the following output columns:
@@ -395,13 +401,13 @@ The above command returns the following output columns:
 Models that utlize LangChain or are brought to MindsDB via MLflow can be described as follows:
 
 ```sql
-DESCRIBE other_model;
+DESCRIBE [MODEL] other_model;
 ```
 
 The above command returs `["info"]` in its first output column.
 
 ```sql
-DESCRIBE other_model.info;
+DESCRIBE [MODEL] other_model.info;
 ```
 
 The above command lists basic model information.

@@ -18,7 +18,7 @@ The required arguments to establish a connection are as follows:
 
 <Tip>
 Please note that a Google account with enabled Google Analytics Admin API is required. You can find more information [here](https://developers.google.com/analytics/devguides/config/admin/v1/quickstart-client-libraries).<br></br>
-Also You must have an active website connected with Google Analytics is required. You can find more information [here](https://support.google.com/analytics/answer/9304153?hl=en).
+Also an active website connected with Google Analytics is required. You can find more information [here](https://support.google.com/analytics/answer/9304153?hl=en).
 </Tip>
 
 <Tip>
@@ -60,7 +60,7 @@ You need a Google account in order to use this integration. Here is how to get t
 
     2.4 Click on ` Google Analytics Admin API `, then click `Enable`.
 
-3. Create credentials for the  Google Calendar API :
+3. Create credentials for the  Google Analytics Admin API :
 
     3.1 Navigate to `APIs & Services` > `Credentials`.
 
@@ -117,7 +117,7 @@ Now you can use your Google Analytics data, like this:
     VALUES ('mindsdb_event', 2);
     ```
 
-* updating one conversion event at a time:
+* updating one conversion event:
 
     ```sql
     UPDATE my_ga.conversion_events
@@ -125,7 +125,7 @@ Now you can use your Google Analytics data, like this:
     WHERE name = '<mindsdb_event_name>';
     ```
 
-* deleting one or more events:
+* deleting one conversion event:
 
     ```sql
     DELETE

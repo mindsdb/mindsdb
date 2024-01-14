@@ -92,9 +92,24 @@ def define_deps():
     Returns:
          list of packages, extras and dependency links.
     """
-    with open(os.path.normpath('requirements/requirements.txt')) as req_file:
-        defaults = [req.strip() for req in req_file.read().splitlines()]
+    defaults = read_requirements_file('requirements/requirements.txt')
+    links, requirements = process_defaults(defaults)
+    extra_requirements = process_extra_requirements()
+    full_handlers_requirements = process_handlers_requirements()
 
+    extra_requirements['all_handlers_extras'] = list(set(full_handlers_requirements))
+
+    Deps.pkgs = requirements
+    Deps.extras = extra_requirements
+    Deps.new_links = links
+
+    return Deps
+
+def read_requirements_file(file_path):
+    with open(os.path.normpath(file_path)) as req_file:
+        return [req.strip() for req in req_file.read().splitlines()]
+
+def process_defaults(defaults):
     links = []
     requirements = []
     for r in defaults:
@@ -104,7 +119,9 @@ def define_deps():
             requirements.append(pkg.replace('egg=', ''))
         else:
             requirements.append(r.strip())
+    return links, requirements
 
+def process_extra_requirements():
     extra_requirements = {}
     full_requirements = []
     for fn in os.listdir(os.path.normpath('./requirements')):
@@ -117,54 +134,56 @@ def define_deps():
             full_requirements += extra
 
     extra_requirements['all_extras'] = list(set(full_requirements))
+    return extra_requirements
 
+def process_handlers_requirements():
     full_handlers_requirements = []
     handlers_dir_path = os.path.normpath('./mindsdb/integrations/handlers')
     for fn in os.listdir(handlers_dir_path):
-        if os.path.isdir(os.path.join(handlers_dir_path, fn)) and fn.endswith(
-            "_handler"
-        ):
-            extra = []
-            for req_file_path in glob.glob(
-                os.path.join(handlers_dir_path, fn, "requirements*.txt")
-            ):
-                extra_name = fn.replace("_handler", "")
-                file_name = os.path.basename(req_file_path)
-                if file_name != "requirements.txt":
-                    extra_name += "-" + file_name.replace("requirements_", "").replace(
-                        ".txt", ""
-                    )
+        if is_handler_directory(fn):
+            extra_name = get_extra_name(fn)
+            req_file_path = get_requirements_file_path(handlers_dir_path, fn)
+            if req_file_path:
+                extra = get_extra_requirements(req_file_path)
+                add_extra_requirements(extra_name, extra)
+                full_handlers_requirements += extra
+            else:
+                add_empty_extra_requirements(extra_name)
+            if should_install_default_extras(extra_name, extra):
+                add_default_requirements(extra)
 
-                # If requirements.txt in our handler folder, import them as our extra's requirements
-                if os.path.exists(req_file_path):
-                    with open(req_file_path) as fp:
-                        extra = expand_requirements_links(
-                            [req.strip() for req in fp.read().splitlines()]
-                        )
+    return full_handlers_requirements
 
-                    extra_requirements[extra_name] = extra
-                    full_handlers_requirements += extra
+def is_handler_directory(handlers_dir_path, fn):
+    return os.path.isdir(os.path.join(handlers_dir_path, fn)) and fn.endswith("_handler")
 
-                # Even with no requirements in our handler, list the handler as an extra (with no reqs)
-                else:
-                    extra_requirements[extra_name] = []
+def get_extra_name(fn):
+    extra_name = fn.replace("_handler", "")
+    return extra_name
 
-                # If this is a default extra and if we want to install defaults (enabled by default)
-                #   then add it to the default requirements needing to install
-                if (
-                    MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS
-                    and extra_name in DEFAULT_PIP_EXTRAS
-                    and extra
-                ):
-                    requirements += extra
+def get_requirements_file_path(handlers_dir_path, fn):
+    req_file_path = os.path.join(handlers_dir_path, fn, "requirements.txt")
+    if os.path.exists(req_file_path):
+        return req_file_path
+    return None
 
-    extra_requirements['all_handlers_extras'] = list(set(full_handlers_requirements))
+extra_requirements = {}  # Define the extra_requirements dictionary
 
-    Deps.pkgs = requirements
-    Deps.extras = extra_requirements
-    Deps.new_links = links
+def get_extra_requirements(req_file_path):
+    with open(req_file_path) as fp:
+        return expand_requirements_links([req.strip() for req in fp.read().splitlines()])
 
-    return Deps
+def add_extra_requirements(extra_name, extra):
+    extra_requirements[extra_name] = extra
+
+def add_empty_extra_requirements(extra_name):
+    extra_requirements[extra_name] = []
+
+def should_install_default_extras(extra_name, extra):
+    return MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS and extra_name in DEFAULT_PIP_EXTRAS and extra
+
+def add_default_requirements(extra):
+    requirements += extra
 
 
 deps = define_deps()

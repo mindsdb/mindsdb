@@ -66,4 +66,4 @@ jobs:
           github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
           workflow_file_name: dev-deploy.yml
           ref: master
-          client_payload: '{"sha": "${{ env.CI_SHA }}", "deploy-env": "${{matrix.deploy-env}}"}'
+          client_payload: '{"image-tag-prefix": "${{ env.CI_SHA }}", "deploy-env": "${{matrix.deploy-env}}"}'

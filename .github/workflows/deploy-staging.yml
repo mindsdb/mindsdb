@@ -1,0 +1,41 @@
+name: Deploy to staging
+
+on:
+  push:
+    branches:
+      - stable
+
+jobs:
+  build:
+    # Build our docker images based on our bake file
+    runs-on: [self-hosted, dev]
+    steps:
+    - uses: actions/checkout@v2
+    # Get clean environment variables via https://github.com/marketplace/actions/github-environment-variables-action
+    - uses: FranzDiebold/github-env-vars-action@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    - name: Login to Amazon ECR
+      uses: aws-actions/amazon-ecr-login@v1
+    - name: Build and push
+      shell: bash
+      run: |
+        docker buildx create --name=remote-buildkit-agent --driver=remote --use tcp://remote-buildkit-agent.infrastructure.svc.cluster.local:80 || true # Create the builder (might already exist)
+        VERSION=${{ env.CI_SHA }} docker buildx bake --push --progress plain -f docker/docker-bake.hcl
+
+  trigger_deploy:
+    # Trigger private repo to deploy to staging env
+    runs-on: [self-hosted, dev]
+    needs: [build]
+    environment:
+      name: staging
+    steps:
+      - uses: FranzDiebold/github-env-vars-action@v2
+      - uses: convictional/trigger-workflow-and-wait@v1.6.5
+        with:
+          owner: mindsdb
+          repo: INTERNAL-mindsdb-build-deploy-to-kubernetes
+          github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
+          workflow_file_name: deploy-dev.yml
+          ref: master
+          client_payload: '{"image-tag-prefix": "${{ env.CI_SHA }}", "deploy-env": "staging"}'

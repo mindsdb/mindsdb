@@ -1,4 +1,4 @@
-name: MindsDB Docker Build
+name: Deploy to dev
 
 on:
   pull_request:
@@ -64,6 +64,6 @@ jobs:
           owner: mindsdb
           repo: INTERNAL-mindsdb-build-deploy-to-kubernetes
           github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
-          workflow_file_name: dev-deploy.yml
+          workflow_file_name: deploy-dev.yml
           ref: master
           client_payload: '{"image-tag-prefix": "${{ env.CI_SHA }}", "deploy-env": "${{matrix.deploy-env}}"}'

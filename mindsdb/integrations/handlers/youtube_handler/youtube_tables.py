@@ -381,6 +381,11 @@ class YoutubeVideosTable(APITable):
 
     def get_videos_by_video_ids(self, video_ids):
         data = []
+
+        if not isinstance(video_ids, list):
+            logger.error(f"video_ids must be a list. Received {type(video_ids)} instead.")
+            return pd.DataFrame()
+
         # loop over 50 video ids at a time
         # an invalid request error is caused otherwise
         for i in range(0, len(video_ids), 50):

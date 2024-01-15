@@ -2,23 +2,11 @@
 	<img width="300" src="https://github.com/mindsdb/mindsdb_native/blob/stable/assets/MindsDBColorPurp@3x.png?raw=true" alt="MindsDB">
 	<br>
 </h1>
-<h4 align="center"> <blockquote> With our AI SQL Server, the future of data isn't just a possibility, it's in your SQL queries, happening in real-time. </blockquote> </h4>
+<h4 align="center"> <blockquote> With our AI SQL Server, personalizing AI using your data is just a matter of simple SQL queries.</blockquote> </h4>
 
 <div align="center">
 
-<a
-     href="https://runacap.com/ross-index/annual-2022/"
-     target="_blank"
-     rel="noopener"
-/>
-    <img
-        style="width: 260px; height: 56px"
-        src="https://runacap.com/wp-content/uploads/2023/02/Annual_ROSS_badge_white_2022.svg"
-        alt="ROSS Index - Fastest Growing Open-Source Startups | Runa Capital"
-        width="260"
-        height="56"
-    />
-</a>
+
 
 <p>
 	<a href="https://github.com/mindsdb/mindsdb/actions"><img src="https://github.com/mindsdb/mindsdb/actions/workflows/release.yml/badge.svg" alt="MindsDB Release"></a>
@@ -30,9 +18,7 @@
 	<a href="https://www.mindsdb.com/"><img src="https://img.shields.io/website?url=https%3A%2F%2Fwww.mindsdb.com%2F" alt="MindsDB Website"></a>
 	<a href="https://mindsdb.com/joincommunity" target="_blank"><img src="https://img.shields.io/badge/slack-@mindsdbcommunity-brightgreen.svg?logo=slack " alt="MindsDB Community"></a>
 	<br />
-	<a href="https://deepnote.com/project/Machine-Learning-With-SQL-8GDF7bc7SzKlhBLorqoIcw/%2Fmindsdb_demo.ipynb" target="_blank"><img src="https://deepnote.com/buttons/launch-in-deepnote-white.svg" alt="Launch in Deepnote"></a>
-	<br />
-	<a href="https://gitpod.io/#https://github.com/mindsdb/mindsdb" target="_blank"><img src="https://gitpod.io/button/open-in-gitpod.svg" alt="Open in Gitpod"></a>
+	
 </p>
 
 <h3 align="center">

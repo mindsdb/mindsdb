@@ -122,6 +122,7 @@ class OpenAIHandler(BaseMLEngine):
                 "api_key",
                 "openai_api_key",
                 "api_organization",
+                "api_base"
             }
         )
 
@@ -653,7 +654,7 @@ class OpenAIHandler(BaseMLEngine):
         completion_col = using_args.get('completion_column', 'completion')
         
         api_key = get_api_key('openai', args, self.engine_storage)
-        api_base = using_args.get('api_base', os.environ['OPENAI_API_BASE'])
+        api_base = using_args.get('api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
         org = using_args.get('api_organization')
         client = self._get_client(api_key=api_key, base_url=api_base, org=org)
 

@@ -7,14 +7,14 @@ sidebarTitle: Retrain a Model
 
 The `RETRAIN` statement is used to retrain the already trained predictors with the new data. The predictor is updated to leverage the new data in optimizing its predictive capabilities.
 
-Retraining takes at least as much time as the training process of the predictor did because now the dataset used to retrain has new or updated data.
+Retraining takes at least as much time as the training process of the predictor did because now the dataset used to retrain has new or updated data in addition to the *old* data.
 
 ## Syntax
 
 Here is the syntax:
 
 ```sql
-RETRAIN project_name.predictor_name
+RETRAIN [MODEL] project_name.predictor_name
 [FROM integration_name
     (SELECT column_name, ... FROM table_name)
 PREDICT target_name

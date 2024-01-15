@@ -33,9 +33,9 @@ HANDLER_REQS_PATHS = list(
 
 MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.toml"]
 
-# torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it.
+# Torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it.
 # Psycopg2 is needed in core codebase for sqlalchemy.
-# hierarchicalforecast is an optional dep of neural/statsforecast
+# Hierarchicalforecast is an optional dep of neural/statsforecast
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
     # Ignore Langhchain since the requirements check will still fail even if it's conditionally imported for certain features.
@@ -50,7 +50,8 @@ OPTIONAL_HANDLER_DEPS = ["pysqlite3", "torch", "openai", "tiktoken", "wikipedia"
 
 # List of rules we can ignore for specific packages
 # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in a given handler
-MAIN_REQUIREMENTS_DEPS = get_requirements_from_file(MAIN_REQS_PATH) + get_requirements_from_file(TEST_REQS_PATH) + get_requirements_from_file(GRPC_REQS_PATH)
+MAIN_REQUIREMENTS_DEPS = get_requirements_from_file(MAIN_REQS_PATH) + get_requirements_from_file(
+    TEST_REQS_PATH) + get_requirements_from_file(GRPC_REQS_PATH)
 
 BYOM_HANLDER_DEPS = ["pyarrow"]
 
@@ -70,6 +71,7 @@ PACKAGE_NAME_MAP = {
     "google-cloud-spanner": ["google"],
     "google-auth-httplib2": ["google"],
     "google-generativeai": ["google"],
+    "google-analytics-admin": ["google"],
     "protobuf": ["google"],
     "google-api-python-client": ["googleapiclient"],
     "binance-connector": ["binance"],
@@ -153,7 +155,8 @@ def run_deptry(reqs, rule_ignores, path, extra_args=""):
         with open("deptry.json", "r") as f:
             deptry_results = json.loads(f.read())
         for r in deptry_results:
-            errors.append(f"{r['location']['line']}:{r['location']['column']}: {r['error']['code']} {r['error']['message']}")
+            errors.append(
+                f"{r['location']['line']}:{r['location']['column']}: {r['error']['code']} {r['error']['message']}")
     finally:
         if os.path.exists("deptry.json"):
             os.remove("deptry.json")
@@ -161,7 +164,7 @@ def run_deptry(reqs, rule_ignores, path, extra_args=""):
 
 
 def check_for_requirements_duplicates():
-    """Checks that handler requirements.txt and the main requirements.txt dont contain any of the same packages"""
+    """Checks that handler requirements.txt and the main requirements.txt don't contain any of the same packages"""
 
     global success
     main_reqs = get_requirements_from_file(MAIN_REQS_PATH)
@@ -182,7 +185,7 @@ def check_relative_reqs():
     If a parent handler imports another handler in code, we should define that dependency
     in the parent handler's requirements.txt like:
 
-    -r mindsdb/integrations/handlers/child_handler/requirements.txt
+    -R mindsdb/integrations/handlers/child_handler/requirements.txt
 
     This is important to ensure that "pip install mindsdb[parent_handler]" works correctly.
     This function checks that for each handler imported from another handler, there is a
@@ -202,7 +205,8 @@ def check_relative_reqs():
                 for line in fh.readlines():
                     line = line.lower().strip()
                     if line.startswith("-r mindsdb/integrations/handlers/"):
-                        entries.append(line.split("mindsdb/integrations/handlers/")[1].split("/")[0])  # just return the handler name
+                        entries.append(line.split("mindsdb/integrations/handlers/")[1].split("/")[0])  # just return
+                        # the handler name
 
         return entries
 
@@ -211,10 +215,12 @@ def check_relative_reqs():
 
         # regex for finding imports of other handlers like "from mindsdb.integrations.handlers.file_handler import FileHandler"
         # excludes the current handler importing parts of itself
-        import_pattern = re.compile(f"(?:\s|^)(?:from|import) mindsdb\.integrations\.handlers\.(?!{handler_name})\w+_handler")  # noqa: W605
+        import_pattern = re.compile(
+            f"(?:\s|^)(?:from|import) mindsdb\.integrations\.handlers\.(?!{handler_name})\w+_handler")  # noqa: W605
 
         # requirements entries for this handler that point to another handler's requirements file
-        required_handlers = get_relative_requirements([file for file in HANDLER_REQS_PATHS if file.startswith(handler_dir)])
+        required_handlers = get_relative_requirements(
+            [file for file in HANDLER_REQS_PATHS if file.startswith(handler_dir)])
 
         all_imported_handlers = []
 
@@ -222,13 +228,15 @@ def check_relative_reqs():
         for file in glob.glob(f"{handler_dir}/**/*.py", recursive=True):
             errors = []
 
-            # find all of the imports of handlers
+            # find all the imports of handlers
             with open(file, "r") as f:
                 file_content = f.read()
-                relative_imported_handlers = [match.strip() for match in re.findall(relative_import_pattern, file_content)]
+                relative_imported_handlers = [match.strip() for match in
+                                              re.findall(relative_import_pattern, file_content)]
                 handler_import_lines = [match.strip() for match in re.findall(import_pattern, file_content)]
 
-            imported_handlers = {line: line.split("_handler")[0].split(".")[-1] + "_handler" for line in handler_import_lines}
+            imported_handlers = {line: line.split("_handler")[0].split(".")[-1] + "_handler" for line in
+                                 handler_import_lines}
             all_imported_handlers += imported_handlers.values()
 
             # Report on relative imports (like "from ..file_handler import FileHandler")
@@ -238,13 +246,15 @@ def check_relative_reqs():
             # Report on imports of other handlers that are missing a corresponding requirements.txt entry
             for line, imported_handler_name in imported_handlers.items():
                 if imported_handler_name not in required_handlers:
-                    errors.append(f"{line} <- {imported_handler_name} not in handler requirements.txt. Add it like: \"-r mindsdb/integrations/handlers/{imported_handler_name}/requirements.txt\"")
+                    errors.append(
+                        f"{line} <- {imported_handler_name} not in handler requirements.txt. Add it like: \"-r mindsdb/integrations/handlers/{imported_handler_name}/requirements.txt\"")
 
-            # Print all of the errors for this .py file
+            # Print all the errors for this .py file
             print_errors(file, errors)
 
         # Report on requirements.txt entries that point to a handler that isn't used
-        requirements_errors = [required_handler_name for required_handler_name in required_handlers if required_handler_name not in all_imported_handlers]
+        requirements_errors = [required_handler_name for required_handler_name in required_handlers if
+                               required_handler_name not in all_imported_handlers]
         print_errors(handler_dir, requirements_errors)
 
 

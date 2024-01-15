@@ -10,7 +10,7 @@ from mindsdb_sql import parse_sql
 from mindsdb.integrations.handlers.merlion_handler.adapters import DefaultForecasterAdapter, SarimaForecasterAdapter, \
     ProphetForecasterAdapter, MSESForecasterAdapter, IsolationForestDetectorAdapter, \
     WindStatsDetectorAdapter, ProphetDetectorAdapter
-from .executor_test_base import BaseExecutorTest
+from ..executor_test_base import BaseExecutorTest
 
 import pandas as pd
 

@@ -104,7 +104,12 @@ class FileController:
             file_dir.mkdir(parents=True, exist_ok=True)
             source = file_dir.joinpath(file_name)
             # NOTE may be delay between db record exists and file is really in folder
-            shutil.move(file_path, str(source))
+            try:
+                shutil.move(file_path, str(source))
+            except PermissionError as e:
+                logger.warning('Permission error while moving file %s: %s', file_path, str(e))
+            except Exception as e:
+                raise e
 
             self.fs_store.put(store_file_path, base_dir=self.dir)
         except Exception as e:

@@ -10,9 +10,11 @@ from pathlib import Path
 import duckdb
 import numpy as np
 import pandas as pd
+from mindsdb.utilities import log
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql import parse_sql
 
+logger = log.getLogger(__name__)
 
 def unload_module(path):
     # remove all modules started with path
@@ -74,7 +76,11 @@ class BaseUnitTest:
     def teardown_class(cls):
         # remove tmp db file
         cls.db.session.close()
-        os.unlink(cls.db_file)
+        try:
+            os.unlink(cls.db_file)
+        except PermissionError as e:
+            logger.warning('Unable to clean up temporary database file: %s', str(e))
+
 
         # remove environ for next tests
         del os.environ["MINDSDB_DB_CON"]

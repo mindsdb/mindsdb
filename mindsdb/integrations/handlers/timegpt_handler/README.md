@@ -56,7 +56,6 @@ FROM mindsdb
 PREDICT open_price
 ORDER BY open_time
 GROUP BY symbol
-WINDOW 160
 HORIZON 15
 USING engine = 'timegpt';
 

@@ -955,7 +955,7 @@ class ExecuteCommands:
 
             if "engine" in statement.using:
                 ml_integration_name = statement.using.pop("engine")
-                ml_handler = self.session.integration_controller.get_handler(
+                ml_handler = self.session.integration_controller.get_ml_handler(
                     ml_integration_name
                 )
 
@@ -964,7 +964,7 @@ class ExecuteCommands:
             integration_record = get_predictor_integration(model_record)
             if integration_record is None:
                 raise Exception("ML engine model was trained with does not esxists")
-            ml_handler = self.session.integration_controller.get_handler(
+            ml_handler = self.session.integration_controller.get_ml_handler(
                 integration_record.name
             )
 
@@ -994,7 +994,7 @@ class ExecuteCommands:
             raise Exception(
                 "The ML engine that the model was trained with does not exist."
             )
-        ml_handler = self.session.integration_controller.get_handler(
+        ml_handler = self.session.integration_controller.get_ml_handler(
             integration_record.name
         )
 
@@ -1501,7 +1501,7 @@ class ExecuteCommands:
 
             ml_integration_name = statement.using.pop("engine", ml_integration_name)
 
-        ml_handler = self.session.integration_controller.get_handler(
+        ml_handler = self.session.integration_controller.get_ml_handler(
             ml_integration_name
         )
 

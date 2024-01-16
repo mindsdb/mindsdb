@@ -427,11 +427,56 @@ class IntegrationController:
         shutil.copytree(folder_from, folder_to, dirs_exist_ok=True)
         storage_to.folder_sync(root_path)
 
-    def get_ml_handler(self, name):
-        pass
+    def _get_integration_record(self, name, case_sensitive: bool):
+        # TODO static
+        # TODO same as self.get
+        if case_sensitive:
+            integration_records = db.session.query(db.Integration).filter_by(
+                company_id=ctx.company_id,
+                name=name
+            ).all()
+            if len(integration_records) > 1:
+                raise Exception(f"There is {len(integration_records)} integrations with name '{name}'")
+            if len(integration_records) == 0:
+                raise Exception(f"There is no integration with name '{name}'")
+            integration_record = integration_records[0]
+        else:
+            integration_record = db.session.query(db.Integration).filter(
+                (db.Integration.company_id == ctx.company_id)
+                & (func.lower(db.Integration.name) == func.lower(name))
+            ).first()
+            if integration_record is None:
+                raise Exception(f"There is no integration with name '{name}'")
+
+        return integration_record
+
+    def get_ml_handler(self, name: str, case_sensitive: bool = False) -> BaseMLEngine:
+        """
+        Args:
+
+        Returns:
+        """
+        integration_record = self._get_integration_record(name, case_sensitive)
+        integration_engine = integration_record.engine
+
+        integration_meta = self.handlers_import_status[integration_engine]
+        if integration_meta.get('type') != HANDLER_TYPE.ML:
+            raise Exception(f"Engine '{name}' must be ML type")
+
+        ml_handler_args = {
+            'name': integration_record.name,
+            'integration_id': integration_record.id,
+            'integration_engine': integration_engine,
+            'integration_meta': integration_meta,
+            'handler_module': self.handler_modules[integration_engine]
+        }
+        logger.info("%s.get_handler: create a ML client, params - %s", self.__class__.__name__, ml_handler_args)
+        handler = BaseMLEngineExec(**ml_handler_args)
+
+        return handler
 
     @profiler.profile()
-    def get_handler(self, name, case_sensitive=False):  # <<< must return ml_exec_base (with 'remote' spec?)
+    def get_handler(self, name: str, case_sensitive: bool = False):  # <<< must return ml_exec_base (with 'remote' spec?)
         """
         Args:
             name (str): name of the handler
@@ -444,13 +489,7 @@ class IntegrationController:
         if handler is not None:
             return handler
 
-        if case_sensitive:
-            integration_record = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, name=name).first()
-        else:
-            integration_record = db.session.query(db.Integration).filter(
-                (db.Integration.company_id == ctx.company_id)
-                & (func.lower(db.Integration.name) == func.lower(name))
-            ).first()
+        integration_record = self._get_integration_record(name, case_sensitive)
 
         integration_data = self._get_integration_record_data(integration_record, True)
         if integration_data is None:
@@ -464,22 +503,22 @@ class IntegrationController:
             raise Exception(f"Can't find handler for '{integration_name}' ({integration_engine})")
 
         integration_meta = self.handlers_import_status[integration_engine]
-        # !!!!!!!
         # check if this is 'remote' mode, if so - try to get base_ml_engine
-        # if integration_meta["import"]["success"] is False:
-        #     msg = dedent(f'''\
-        #         Handler '{integration_engine}' cannot be used. Reason is:
-        #             {integration_meta['import']['error_message']}
-        #     ''')
-        #     is_cloud = Config().get('cloud', False)
-        #     if is_cloud is False:
-        #         msg += dedent(f'''
+        # TODO check error if ML handler can not be used
+        if integration_meta["import"]["success"] is False:
+            msg = dedent(f'''\
+                Handler '{integration_engine}' cannot be used. Reason is:
+                    {integration_meta['import']['error_message']}
+            ''')
+            is_cloud = Config().get('cloud', False)
+            if is_cloud is False:
+                msg += dedent(f'''
 
-        #         If error is related to missing dependencies, then try to run command in shell and restart mindsdb:
-        #             pip install mindsdb[{integration_engine}]
-        #         ''')
-        #     logger.debug(msg)
-        #     raise Exception(msg)
+                If error is related to missing dependencies, then try to run command in shell and restart mindsdb:
+                    pip install mindsdb[{integration_engine}]
+                ''')
+            logger.debug(msg)
+            raise Exception(msg)
 
         connection_args = integration_meta.get('connection_args')
         logger.debug("%s.get_handler: connection args - %s", self.__class__.__name__, connection_args)

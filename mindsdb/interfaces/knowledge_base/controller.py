@@ -316,9 +316,7 @@ class KnowledgeBaseController:
                 Identifier(parts=[TableField.CONTENT.value])
             ]
         )
-        ml_handler = self.session.integration_controller.get_handler(
-            engine
-        )
+        ml_handler = self.session.integration_controller.get_ml_handler(engine)
 
         self.session.model_controller.create_model(
             statement,

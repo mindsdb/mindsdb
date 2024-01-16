@@ -118,7 +118,7 @@ class ModelController():
 
         integration_record = db.Integration.query.get(model_record.integration_id)
 
-        ml_handler_base = session.integration_controller.get_handler(integration_record.name)
+        ml_handler_base = session.integration_controller.get_ml_handler(integration_record.name)
 
         # ml_handler = ml_handler_base.get_ml_handler(model_record.id)
 
@@ -413,7 +413,7 @@ class ModelController():
         )
         integration_record = db.Integration.query.get(model_record.integration_id)
 
-        ml_handler_base = session.integration_controller.get_handler(integration_record.name)
+        ml_handler_base = session.integration_controller.get_ml_handler(integration_record.name)
 
         ml_handler = ml_handler_base.get_ml_handler(model_record.id)
         if not hasattr(ml_handler, 'update'):

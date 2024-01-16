@@ -8,7 +8,7 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Identifier, Select, Star, NativeQuery
 
 import mindsdb.interfaces.storage.db as db
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery
+from mindsdb.api.executor import SQLQuery
 from mindsdb.integrations.utilities.sql_utils import make_sql_session
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
@@ -81,13 +81,13 @@ def predict_process(payload, dataframe):
         args['learn_args'] = predictor_record.learn_args
 
     if ml_engine_name == 'langchain':
-        from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
-        from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+        from mindsdb.api.executor.controllers import SessionController
+        from mindsdb.api.executor.command_executor import ExecuteCommands
 
         sql_session = SessionController()
         sql_session.database = 'mindsdb'
 
-        command_executor = ExecuteCommands(sql_session, executor=None)
+        command_executor = ExecuteCommands(sql_session)
 
         args['executor'] = command_executor
 

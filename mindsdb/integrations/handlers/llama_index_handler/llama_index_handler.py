@@ -258,14 +258,15 @@ class LlamaIndexHandler(BaseMLEngine):
         args = self.model_storage.json_get("args")
         openai_api_key = self._get_llama_index_api_key(args["using"])
         openai.api_key = openai_api_key  # TODO: shouldn't have to do this! bug?
+        # TODO: remove this when we have a proper way to pass kwargs(once langchain is updated)
         llm_kwargs = {
             "openai_api_key": openai_api_key,
-            "model": "gpt-3.5-turbo-instruct",
+            "model_name": "gpt-3.5-turbo-instruct",
         }
         if "temperature" in args["using"]:
             llm_kwargs["temperature"] = args["using"]["temperature"]
         if "model_name" in args["using"]:
-            llm_kwargs["model"] = args["using"]["model_name"]
+            llm_kwargs["model_name"] = args["using"]["model_name"]
         if "max_tokens" in args["using"]:
             llm_kwargs["max_tokens"] = args["using"]["max_tokens"]
 

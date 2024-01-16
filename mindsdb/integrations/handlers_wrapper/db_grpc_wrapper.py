@@ -9,7 +9,7 @@ from mindsdb.microservices_grpc.db import db_pb2, common_pb2
 
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.libs.handler_helpers import get_handler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
 

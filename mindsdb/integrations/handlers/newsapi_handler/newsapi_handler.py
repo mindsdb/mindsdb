@@ -8,7 +8,7 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.parser import ast
 from newsapi import NewsApiClient
 
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse

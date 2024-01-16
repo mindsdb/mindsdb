@@ -12,7 +12,7 @@ from pandas.core.frame import DataFrame
 from mindsdb.api.http.namespaces.configs.analysis import ns_conf
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import (
+from mindsdb.api.executor.data_types.response_type import (
     RESPONSE_TYPE as SQL_RESPONSE_TYPE,
 )
 from mindsdb.utilities import log

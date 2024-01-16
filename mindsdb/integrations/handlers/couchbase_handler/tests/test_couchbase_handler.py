@@ -3,7 +3,7 @@ import unittest
 from mindsdb.integrations.handlers.couchbase_handler.couchbase_handler import (
     CouchbaseHandler,
 )
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class CouchbaseHandlerTest(unittest.TestCase):

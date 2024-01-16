@@ -370,13 +370,13 @@ class JobsExecutor:
                     sql = sql.replace('{{START_DATETIME}}', value)
                 query = parse_sql(sql, dialect='mindsdb')
 
-                from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
-                from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+                from mindsdb.api.executor.controllers.session_controller import SessionController
+                from mindsdb.api.executor.command_executor import ExecuteCommands
 
                 sql_session = SessionController()
                 sql_session.database = project.name
 
-                command_executor = ExecuteCommands(sql_session, executor=None)
+                command_executor = ExecuteCommands(sql_session)
 
                 executed_sql += sql + '; '
 

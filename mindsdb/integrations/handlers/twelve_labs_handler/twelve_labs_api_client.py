@@ -287,7 +287,7 @@ class TwelveLabsAPIClient:
         )
         data.extend(result['data'])
 
-        while('next_page_token' in result['page_info']):
+        while 'next_page_token' in result['page_info']:
             result = self._submit_request(
                 method="GET",
                 endpoint=f"search/{result['page_info']['next_page_token']}"

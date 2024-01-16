@@ -387,7 +387,7 @@ class LangChainHandler(BaseMLEngine):
         except TimeoutError:
             completions.append("I'm sorry! I couldn't come up with a response in time. Please try again.")
         # Can't use ThreadPoolExecutor as context manager since we need wait=False.
-        executor.shutdown(wait=False, cancel_futures=True)
+        executor.shutdown(wait=False)
 
         # add null completion for empty prompts
         for i in sorted(empty_prompt_ids):

@@ -15,7 +15,7 @@ Yes.
 N/A - no model training or inference is done on premise.
 
 # To what degree can users control the underlying framework by passing parameters via the USING syntax?
-Usual time series related arguments can be passed (forecast "horizon", "window", and what columns to order and group by).
+Usual time series related arguments can be passed (forecast "horizon" and what columns to order and group by).
 
 Frequency of the series can be manually set, although by default it is automatically inferred from the data.
 

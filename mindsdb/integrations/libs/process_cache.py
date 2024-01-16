@@ -9,7 +9,12 @@ from pandas import DataFrame
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.ml_task_queue.const import ML_TASK_TYPE
-from mindsdb.integrations.libs.learn_process import learn_process, predict_process
+from mindsdb.integrations.libs.learn_process import (
+    learn_process,
+    predict_process,
+    describe_process,
+    create_validation_process
+)
 
 
 def init_ml_handler(module_path):
@@ -233,8 +238,26 @@ class ProcessCache:
         """
         if task_type in (ML_TASK_TYPE.LEARN, ML_TASK_TYPE.FINETUNE):
             func = learn_process
+            kwargs = {
+                'payload': payload
+            }
         elif task_type == ML_TASK_TYPE.PREDICT:
             func = predict_process
+            kwargs = {
+                'payload': payload,
+                'dataframe': dataframe
+            }
+        elif task_type == ML_TASK_TYPE.DESCRIBE:
+            func = describe_process
+            kwargs = {
+                'payload': payload,
+                'model_id': model_id
+            }
+        elif task_type == ML_TASK_TYPE.CREATE_VALIDATION:
+            func = create_validation_process
+            kwargs = {
+                'payload': payload
+            }
         else:
             raise Exception(f'Unknown ML task type: {task_type}')
 
@@ -271,7 +294,7 @@ class ProcessCache:
                     warm_process = WarmProcess(init_ml_handler, (handler_module_path,))
                     self.cache[handler_name]['processes'].append(warm_process)
 
-            task = warm_process.apply_async(warm_function, func, payload['context'], payload, dataframe)
+            task = warm_process.apply_async(warm_function, func, payload['context'], **kwargs)
             self.cache[handler_name]['last_usage_at'] = time.time()
             warm_process.add_marker(model_marker)
         return task

@@ -62,7 +62,7 @@ class ProjectDataNode(DataNode):
         model_metadata = model_metadata['metadata']
         if model_metadata['update_status'] == 'available':
             raise Exception(f"model '{model_name}' is obsolete and needs to be updated. Run 'RETRAIN {model_name};'")
-        handler = self.integration_controller.get_handler(model_metadata['engine_name'])
+        handler = self.integration_controller.get_handler(model_metadata['engine_name'])        # must be base handler here
         return handler.predict(model_name, data, project_name=self.project.name, version=version, params=params)
 
     def query(self, query=None, native_query=None, session=None):

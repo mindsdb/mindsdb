@@ -427,8 +427,19 @@ class IntegrationController:
         shutil.copytree(folder_from, folder_to, dirs_exist_ok=True)
         storage_to.folder_sync(root_path)
 
+    def get_ml_handler(self, name):
+        pass
+
     @profiler.profile()
-    def get_handler(self, name, case_sensitive=False):
+    def get_handler(self, name, case_sensitive=False):  # <<< must return ml_exec_base (with 'remote' spec?)
+        """
+        Args:
+            name (str): name of the handler
+            case_sensitive (bool): should case be taken into account when searching by name
+
+        Returns:
+            BaseMLEngine | BaseHandler
+        """
         handler = self.handlers_cache.get(name)
         if handler is not None:
             return handler
@@ -453,20 +464,22 @@ class IntegrationController:
             raise Exception(f"Can't find handler for '{integration_name}' ({integration_engine})")
 
         integration_meta = self.handlers_import_status[integration_engine]
-        if integration_meta["import"]["success"] is False:
-            msg = dedent(f'''\
-                Handler '{integration_engine}' cannot be used. Reason is:
-                    {integration_meta['import']['error_message']}
-            ''')
-            is_cloud = Config().get('cloud', False)
-            if is_cloud is False:
-                msg += dedent(f'''
+        # !!!!!!!
+        # check if this is 'remote' mode, if so - try to get base_ml_engine
+        # if integration_meta["import"]["success"] is False:
+        #     msg = dedent(f'''\
+        #         Handler '{integration_engine}' cannot be used. Reason is:
+        #             {integration_meta['import']['error_message']}
+        #     ''')
+        #     is_cloud = Config().get('cloud', False)
+        #     if is_cloud is False:
+        #         msg += dedent(f'''
 
-                If error is related to missing dependencies, then try to run command in shell and restart mindsdb:
-                    pip install mindsdb[{integration_engine}]
-                ''')
-            logger.debug(msg)
-            raise Exception(msg)
+        #         If error is related to missing dependencies, then try to run command in shell and restart mindsdb:
+        #             pip install mindsdb[{integration_engine}]
+        #         ''')
+        #     logger.debug(msg)
+        #     raise Exception(msg)
 
         connection_args = integration_meta.get('connection_args')
         logger.debug("%s.get_handler: connection args - %s", self.__class__.__name__, connection_args)
@@ -497,19 +510,22 @@ class IntegrationController:
             handler_storage=handler_storage
         )
 
-        HandlerClass = self.handler_modules[integration_engine].Handler
+        # HandlerClass = self.handler_modules[integration_engine].Handler
 
         if integration_meta.get('type') == HANDLER_TYPE.ML:
             ml_handler_args = {
                 'name': handler_ars['name'],
                 'integration_id': handler_ars['integration_id'],
                 'integration_engine': integration_engine,
-                'handler_class': HandlerClass
+                'integration_meta': integration_meta,
+                'handler_module': self.handler_modules[integration_engine]
+                # 'handler_class': HandlerClass
             }
             logger.info("%s.get_handler: create a ML client, params - %s", self.__class__.__name__, ml_handler_args)
             handler = BaseMLEngineExec(**ml_handler_args)
         else:
             logger.info("%s.get_handler: create a client to db service of %s type, args - %s", self.__class__.__name__, integration_engine, handler_ars)
+            HandlerClass = self.handler_modules[integration_engine].Handler
             handler = HandlerClass(**handler_ars)
             # handler = DBClient(integration_engine, HandlerClass, **handler_ars)
             self.handlers_cache.set(handler)

@@ -10,6 +10,8 @@ class ML_TASK_TYPE(Enum):
     LEARN = b'learn'
     PREDICT = b'predict'
     FINETUNE = b'finetune'
+    DESCRIBE = b'describe'
+    CREATE_VALIDATION = b'create_validation'
 
 
 class ML_TASK_STATUS(Enum):

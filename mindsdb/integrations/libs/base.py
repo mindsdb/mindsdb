@@ -113,17 +113,6 @@ class DatabaseHandler(BaseHandler):
         super().__init__(name)
 
 
-class PredictiveHandler(BaseHandler):
-    """
-    DEPRECATED. Please refer to BaseMLEngine for integrations with machine learning frameworks.
-
-    Base class for handlers associated to predictive systems.
-    """
-
-    def __init__(self, name: str):
-        super().__init__(name)
-
-
 class ArgProbeMixin:
     """
     A mixin class that provides probing of arguments that

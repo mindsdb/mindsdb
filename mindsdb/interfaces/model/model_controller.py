@@ -120,13 +120,13 @@ class ModelController():
 
         ml_handler_base = session.integration_controller.get_handler(integration_record.name)
 
-        ml_handler = ml_handler_base.get_ml_handler(model_record.id)
+        # ml_handler = ml_handler_base.get_ml_handler(model_record.id)
 
         if attribute is None:
             model_info = self.get_model_info(model_record)
 
             try:
-                df = ml_handler.describe(attribute)
+                df = ml_handler_base.describe(model_record.id, attribute)   # ml_handler.describe(attribute)
             except NotImplementedError:
                 df = pd.DataFrame()
 
@@ -141,7 +141,7 @@ class ModelController():
             model_info.insert(0, 'TABLES', [attributes])
             return model_info
         else:
-            return ml_handler.describe(attribute)
+            return ml_handler_base.describe(model_record.id, attribute)
 
     def get_model(self, name, version=None, ml_handler_name=None, project_name=None):
         show_active = True if version is None else None

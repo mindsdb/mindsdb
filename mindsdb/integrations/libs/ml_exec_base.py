@@ -62,7 +62,7 @@ class MLEngineException(Exception):
 
 class BaseMLEngineExec:
 
-    def __init__(self, name, integration_id, integration_engine, handler_class):
+    def __init__(self, name, integration_id, integration_engine, integration_meta, handler_module):  #, handler_class):
         """ ML handler interface converter
 
             Args:
@@ -77,7 +77,9 @@ class BaseMLEngineExec:
         self.config = Config()
         self.integration_id = integration_id
         self.engine = integration_engine
-        self.handler_class = handler_class
+        # self.handler_class = handler_class
+        self.integration_meta = integration_meta
+        self.handler_module = handler_module
 
         self.model_controller = ModelController()
         self.database_controller = DatabaseController()
@@ -156,7 +158,6 @@ class BaseMLEngineExec:
         is_retrain=False,
         set_active=True,
     ):
-        # TODO move to model_controller
         """ Trains a model given some data-gathering SQL statement. """
 
         # may or may not be provided (e.g. 0-shot models do not need it), so engine will handle it
@@ -164,12 +165,13 @@ class BaseMLEngineExec:
 
         project = self.database_controller.get_project(name=project_name)
 
-        if hasattr(self.handler_class, 'create_validation'):
-            self.handler_class.create_validation(
-                target,
-                args=problem_definition,
-                handler_storage=HandlerStorage(self.integration_id)
-            )
+        self.create_validation(target, problem_definition, self.integration_id)
+        # if hasattr(self.handler_class, 'create_validation'):
+        #     self.handler_class.create_validation(
+        #         target,
+        #         args=problem_definition,
+        #         handler_storage=HandlerStorage(self.integration_id)
+        #     )
 
         predictor_record = db.Predictor(
             company_id=ctx.company_id,
@@ -231,6 +233,33 @@ class BaseMLEngineExec:
             task.add_done_callback(empty_callback)
 
         return predictor_record
+
+    def describe(self, model_id: int, attribute: Optional[str] = None) -> pd.DataFrame:
+        try:
+            module_path = self.handler_module.__package__    # mindsdb.integrations.handlers.lightwood_handler.lightwood_handler -> mindsdb.integrations.handlers.lightwood_handler
+            class_name = 'Handler'    # LightwoodHandler -> handler
+            task = self.base_ml_executor.apply_async(
+                task_type=ML_TASK_TYPE.DESCRIBE,
+                model_id=model_id,
+                payload={
+                    'handler_meta': {
+                        'module_path': module_path,
+                        'class_name': class_name,
+                        'engine': self.engine,
+                        'integration_id': self.integration_id
+                    },
+                    'attribute': attribute,
+                    'context': ctx.dump()
+                }
+            )
+            result = task.result()
+        except Exception as e:
+            msg = str(e).strip()
+            if msg == '':
+                msg = e.__class__.__name__
+            msg = f'[{self.name}/{model_id}]: {msg}'
+            raise MLEngineException(msg) from e
+        return result
 
     @profiler.profile()
     @mark_process(name='predict')
@@ -300,6 +329,35 @@ class BaseMLEngineExec:
             rows_out_count=len(predictions)
         )
         return predictions
+
+    def create_validation(self, target, args, integration_id):
+        try:
+            task = self.base_ml_executor.apply_async(
+                task_type=ML_TASK_TYPE.CREATE_VALIDATION,
+                model_id=0,     # can not be None
+                payload={
+                    'context': ctx.dump(),
+                    'target': target,
+                    'args': args,
+                    'integration_id': integration_id,
+                    'handler_meta': {
+                        'module_path': self.handler_module.__package__,
+                        'engine': self.handler_module.name
+                        # 'module_path': self.handler_class.__module__,
+                        # 'class_name': self.handler_class.__name__,
+                        # 'engine': self.engine,
+                        # 'integration_id': self.integration_id
+                    },
+                }
+            )
+            result = task.result()
+        except Exception as e:
+            msg = str(e).strip()
+            if msg == '':
+                msg = e.__class__.__name__
+            msg = f'[{self.name}]: {msg}'
+            raise MLEngineException(msg) from e
+        return result
 
     @profiler.profile()
     def finetune(
